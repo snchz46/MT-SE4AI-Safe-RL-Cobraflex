@@ -71,3 +71,7 @@ local_config.yaml
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Misc
+docs/.phases*
+docs/.temp_templates/

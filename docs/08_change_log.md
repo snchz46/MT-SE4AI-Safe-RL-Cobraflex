@@ -5,12 +5,12 @@ This document records every change made to the living documents under `docs/` an
 Each entry has the following structure:
 
 ```
-## [YYYY-MM-DD] — Short summary
+## [DD.MM.YYYY] — Short summary
 
-**Document(s) affected:** ...
-**Phase:** F0 / F1 / ...
-**Gate context:** before/after Gate G?
-**Author:** ...
+**Document(s) affected:** ...  
+**Phase:** F0 / F1 / ...  
+**Gate context:** before/after Gate G?  
+**Author:** ...  
 
 ### Change
 What was changed, where.
@@ -27,12 +27,12 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
-## [YYYY-MM-DD] — Initial baseline (Phase 0)
+## [30.04.2026] — Initial baseline (Phase 0)
 
-**Document(s) affected:** all `docs/*.md` files.
-**Phase:** F0.
-**Gate context:** before G0.
-**Author:** [name].
+**Document(s) affected:** all `docs/*.md` files.  
+**Phase:** F0.  
+**Gate context:** before G0.  
+**Author:** Samuel.  
 
 ### Change
 Initial creation of living documents from Phase 0 templates. Hazard Register seeded with H-01 to H-07. SRS seeded with SR-001 to SR-008. Cage Specification seeded with C-01 to C-06. Scenario Library seeded with 9 scenarios across 3 categories. Metrics catalogue seeded with M-P, M-S, M-I, M-C families. Traceability Matrix seeded with the chains derived from the above.

@@ -6,7 +6,7 @@ The central methodological commitment of this work is **traceability**: every ha
 
 ## Repository organisation
 
-```
+```text
 .
 ├── docs/                  Living engineering documents (HARA, SRS, Cage Spec, ...)
 ├── cage/                  Safety cage implementation as ROS2 node + rules
@@ -44,7 +44,7 @@ A living document is *closed* (frozen) only when the corresponding Gate review a
 ## Identifier conventions (summary)
 
 | Prefix | Meaning | Example |
-|--------|---------|---------|
+| -------- | --------- | --------- |
 | H-XX | Hazard | H-01 |
 | SR-XXX | Safety Requirement | SR-001 |
 | C-XX | Cage rule | C-03 |

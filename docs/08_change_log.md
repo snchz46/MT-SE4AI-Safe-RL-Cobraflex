@@ -4,7 +4,7 @@ This document records every change made to the living documents under `docs/` an
 
 Each entry has the following structure:
 
-```
+```text
 ## [DD.MM.YYYY] — Short summary
 
 **Document(s) affected:** ...  

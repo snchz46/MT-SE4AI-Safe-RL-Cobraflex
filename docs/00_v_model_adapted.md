@@ -58,7 +58,7 @@ The output of A5 is not a single "validated" verdict but a pair of statements: w
 ## Mapping to thesis chapters
 
 | V-Model level (adapted) | Thesis chapter |  
-|-------------------------|----------------|
+| ------------------------- | ---------------- |
 | System Requirements + ODD | Ch. 4 (Systems Engineering Challenges) and Ch. 5 (SE4AI Framework, ODD section) |
 | Hazard Register (HARA) | Ch. 5 (HARA section) |
 | Safety Requirements Specification | Ch. 5 (SRS section) |

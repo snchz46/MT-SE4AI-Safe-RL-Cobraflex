@@ -21,7 +21,7 @@ A scenario is *closed* when its YAML definition under `scenarios/<category>/sc_<
 Every scenario specifies, at minimum:
 
 | Field | Meaning |
-|-------|---------|
+| ------- | --------- |
 | `id` | The identifier (SC-NOM-01, etc.) |
 | `category` | nominal, edge, or perturbed |
 | `description` | Free-text |

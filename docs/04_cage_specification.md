@@ -62,7 +62,7 @@ The cage implements six rules, C-01 through C-06. Each rule is an independent mo
 
 **Logic.**
 
-```
+```python
 if abs(d) > (d_max - h_d) and policy_action_increases_abs_d():
     correction = bounded_steering_toward_centre(d, d_max, h_d)
     fire = True
@@ -89,7 +89,7 @@ elif abs(d) < (d_max - 2*h_d) for last 2 cycles:
 
 **Logic.**
 
-```
+```python
 if abs(theta) > (theta_max - h_theta) and policy_action_increases_abs_theta():
     correction = bounded_steering_toward_alignment(theta, theta_max, h_theta)
     fire = True
@@ -116,7 +116,7 @@ elif abs(theta) < (theta_max - 2*h_theta) for last 2 cycles:
 
 **Logic.**
 
-```
+```python
 ttlc = compute_ttlc(d, theta, v, d_max)
 if ttlc < t_min:
     correction = precautionary_steering_toward_centre(d, magnitude=urgency(ttlc))
@@ -143,7 +143,7 @@ The function `compute_ttlc` projects the trajectory under the assumption of zero
 
 **Logic.**
 
-```
+```python
 v_ceiling = compute_v_max(kappa)  # from cage.yaml table
 if v > v_ceiling:
     correction = throttle_command_to_reach(v_target=v_ceiling)
@@ -205,7 +205,7 @@ if v > v_ceiling:
 
 **Logic.**
 
-```
+```python
 delta_steering = current_steering_cmd - prev_steering_cmd
 if abs(delta_steering) > delta_max_steering:
     current_steering_cmd = prev_steering_cmd + sign(delta_steering) * delta_max_steering

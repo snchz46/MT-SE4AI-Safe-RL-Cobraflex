@@ -82,7 +82,7 @@ Every update is recorded in `docs/08_change_log.md`.
 `tools/traceability_matrix.csv` has the following columns:
 
 | Column | Type | Description |
-|--------|------|-------------|
+| ------ | ---- | ----------- |
 | `hazard_id` | string | H-XX |
 | `sr_id` | string | SR-XXX |
 | `cage_rule_id` | string | C-XX or empty if implementation is not a cage rule |

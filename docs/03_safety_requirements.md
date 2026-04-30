@@ -35,6 +35,7 @@ The SRs use a small set of recurring patterns:
 **Pattern.** Direct threshold.
 
 **Parameters.**
+
 - `d_max = 0.16 m` (lane width 0.40 m, safety margin 0.04 m absorbing the joint uncertainty of LiDAR-observed lateral noise around 0.01 m and a control latency of 50 ms).
 
 **References hazard.** H-01.
@@ -56,6 +57,7 @@ The SRs use a small set of recurring patterns:
 **Pattern.** Direct threshold.
 
 **Parameters.**
+
 - `θ_max = 25 degrees (0.44 rad)` — chosen as the angle beyond which the kinematic model of the vehicle predicts non-recoverable lane departure within the response time of the cage.
 
 **References hazard.** H-02.
@@ -77,6 +79,7 @@ The SRs use a small set of recurring patterns:
 **Pattern.** Predictive threshold.
 
 **Parameters.**
+
 - `t_min = 1.0 s` — sum of approximately 0.3 s margin for the cage to apply a complete correction and approximately 0.7 s margin for the policy to recover.
 - 5th percentile floor: 0.5 s.
 
@@ -99,6 +102,7 @@ The SRs use a small set of recurring patterns:
 **Pattern.** Direct threshold (parameterised by curvature).
 
 **Parameters.**
+
 - `v_max_straight = 0.5 m/s` (on straight sections, |κ| < 0.05 rad/m).
 - `v_max_curve = 0.25 m/s` (on curved sections, |κ| ≥ 0.05 rad/m).
 - Smooth interpolation: `v_max(κ) = max(v_max_curve, v_max_straight − k_κ · |κ|)` with `k_κ = 0.3 m/s per unit curvature`.
@@ -118,6 +122,7 @@ The SRs use a small set of recurring patterns:
 ## SR-005 — Emergency mode for compound state
 
 **Statement.** If the system simultaneously observes a heading error magnitude greater than `θ_warning` and a lateral offset magnitude greater than `d_warning` for more than `Δt_max` consecutive seconds, the system shall transition into an emergency mode characterised by:
+
 - a deceleration of at least `a_min` until full stop,
 - the steering command frozen at its value at the instant of transition,
 - an emergency signal published on the dedicated topic.
@@ -125,6 +130,7 @@ The SRs use a small set of recurring patterns:
 **Pattern.** Emergency mode (composite trigger, deterministic response).
 
 **Parameters.**
+
 - `θ_warning = 20 degrees`.
 - `d_warning = 0.12 m`.
 - `Δt_max = 0.2 s`.
@@ -149,6 +155,7 @@ The SRs use a small set of recurring patterns:
 **Pattern.** Bounded derivative.
 
 **Parameters.**
+
 - `δ_max_steering = 0.15` (normalised units per 50 ms cycle).
 - `δ_max_throttle = 0.10` (normalised units per 50 ms cycle).
 
@@ -167,6 +174,7 @@ The SRs use a small set of recurring patterns:
 ## SR-007 — State validity and freshness
 
 **Statement.** The cage shall trigger emergency mode if any of the following holds:
+
 - the most recent state observation has a timestamp older than `staleness_max`;
 - any field of the state vector falls outside its physically plausible range;
 - the state observation has been entirely missing for more than `N_missing_max` consecutive control cycles.
@@ -174,6 +182,7 @@ The SRs use a small set of recurring patterns:
 **Pattern.** Availability + emergency mode.
 
 **Parameters.**
+
 - `staleness_max = 200 ms`.
 - `N_missing_max = 5 cycles`.
 - Plausible ranges: defined per state field in `cage/cage.yaml` (see `state_validity_ranges`).
@@ -197,6 +206,7 @@ The SRs use a small set of recurring patterns:
 **Pattern.** Emergency mode (external trigger).
 
 **Parameters.**
+
 - `t_stop_max = 1.5 s`.
 - `d_max = 0.16 m` (same as SR-001).
 

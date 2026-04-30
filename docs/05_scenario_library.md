@@ -44,6 +44,7 @@ The full YAML schema is in `scenarios/_schema.yaml`.
 **Description.** Vehicle initialises at the start of a straight section with zero offset and zero heading error. Nominal commanded speed (0.4 m/s). No perturbations. Run for the time required to traverse the straight twice.
 
 **Initial conditions.**
+
 - Pose: `(x=0, y=0, θ=0)` ± uniform noise `[-0.02 m, +0.02 m]` lateral, `[-2 deg, +2 deg]` heading.
 - Speed: 0.
 
@@ -202,6 +203,7 @@ The full YAML schema is in `scenarios/_schema.yaml`.
 **Initial conditions.** Nominal start (SC-NOM-01).
 
 **Perturbations.** Continuous throughout the run: `d_observed = d_true + N(0, σ)`. Three levels:
+
 - σ = 0.01 m
 - σ = 0.03 m
 - σ = 0.05 m

@@ -47,6 +47,7 @@ Format: `SC-` followed by category code (`NOM`, `EDGE`, `PERT`) followed by `-` 
 Examples: SC-NOM-01, SC-EDGE-04, SC-PERT-02.
 
 Categories:
+
 - `NOM` — nominal operational conditions within the ODD.
 - `EDGE` — edge cases at the boundary of the ODD.
 - `PERT` — perturbed conditions (sensor noise, latency, etc.).
@@ -58,6 +59,7 @@ Scenarios are defined in `docs/05_scenario_library.md` and as YAML files under `
 Format: `M-` followed by a one-letter category prefix followed by a digit.
 
 Categories and examples:
+
 - `M-PN` — Performance metrics (M-P1: lateral RMSE, M-P2: completion rate, M-P3: heading error mean, M-P4: heading error max, M-P5: speed compliance).
 - `M-SN` — Safety metrics (M-S1: max lateral offset, M-S2: boundary violations, M-S3: emergency stop rate, M-S4: TTLC 5th percentile).
 - `M-IN` — Intervention metrics (M-I1: total intervention rate, M-I2: per-rule intervention rate, M-I3: intervention duration distribution, M-I4: intervention-hazard correlation, M-I5: action correction magnitude).

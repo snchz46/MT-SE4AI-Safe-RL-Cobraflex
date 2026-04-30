@@ -102,6 +102,7 @@ A companion CSV (`docs/data/metrics.csv`) is generated automatically.
 **Computation.** Aggregate over runs: `M_S3 = count(emergency_activated) / count(runs) * 100`.
 
 **Subfields per emergency activation:**
+
 - Activation reason (compound state / stale / invalid / missing / external).
 - Time from activation to v=0.
 - Lateral offset during stop.
@@ -157,6 +158,7 @@ A companion CSV (`docs/data/metrics.csv`) is generated automatically.
 **Units.** Percentage, one per rule.
 
 **Computation.** Hazard-compatibility is defined per rule:
+
 - C-01 hazard-compatible: `|d| > 0.5 * d_max`.
 - C-02 hazard-compatible: `|theta| > 0.5 * theta_max`.
 - C-03 hazard-compatible: `ttlc < 2 * t_min`.

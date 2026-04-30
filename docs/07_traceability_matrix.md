@@ -58,6 +58,7 @@ The thesis can defend "Satisfied" or "Partially satisfied" verdicts with full ri
 ## Verdict by source of evidence
 
 Verdicts can be split between simulation evidence and physical evidence:
+
 - **Sim**: as evaluated in Phase 4 across the simulation campaign.
 - **Phys**: as evaluated in Phase 5 across the physical experiments, when scope permits.
 

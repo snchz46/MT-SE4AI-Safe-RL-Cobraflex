@@ -13,17 +13,20 @@ The format is structured to enable mechanical extraction into the Traceability M
 ## Rating scales
 
 **Severity (S)** — ISO 26262 scale:
+
 - S1: light, manageable injury (analogue interpretation: minor scratches in scaled context)
 - S2: severe injury, survivable (analogue: noticeable mechanical damage)
 - S3: life-threatening or fatal injury (analogue: full loss of platform integrity)
 
 **Exposure (E)** — frequency of the situation:
+
 - E1: very rare (probability < 1% of operating time)
 - E2: low (1–10%)
 - E3: medium (10–50%)
 - E4: high (>50%)
 
 **Controllability (C)** — driver's or system's ability to avoid harm:
+
 - C1: simply controllable (>99% of cases)
 - C2: normally controllable (>90%)
 - C3: difficult to control (<90%)
@@ -41,6 +44,7 @@ The format is structured to enable mechanical extraction into the Traceability M
 **Consequence (scaled context).** Loss of the ability to follow the track; physical contact with track edges.
 
 **Hypothesised root causes.**
+
 - Policy producing accumulating lateral offset without correction.
 - Sensor noise inducing biased state estimation.
 - Sudden curvature changes that the policy cannot anticipate at the operating frequency.
@@ -51,6 +55,7 @@ The format is structured to enable mechanical extraction into the Traceability M
 **Mitigated by.** SR-001 (lane departure prevention, direct), SR-003 (TTLC-based predictive constraint).
 
 **STPA-light findings (where applicable).**
+
 - *Unsafe Control Action: action not provided when needed.* Policy fails to produce a corrective steering command when the vehicle is drifting toward a boundary. → Mitigated by C-01 (lane boundary hard limit).
 - *Unsafe Control Action: action provided with inappropriate magnitude.* Policy produces a corrective steering command of insufficient magnitude. → Mitigated by C-01 amplification when threshold approached.
 - *Unsafe Control Action: action provided at the wrong time.* Corrective command is delayed beyond the time-to-cross. → Mitigated by C-03 (predictive TTLC rule).
@@ -66,6 +71,7 @@ The format is structured to enable mechanical extraction into the Traceability M
 **Consequence (scaled context).** Same, with possible escalation to mechanical damage if oscillation amplitude grows.
 
 **Hypothesised root causes.**
+
 - Policy poorly conditioned to recover from heading perturbations.
 - Oscillatory feedback in lateral control (insufficient damping).
 - Initialisation in perturbed state without recovery capability.
@@ -75,6 +81,7 @@ The format is structured to enable mechanical extraction into the Traceability M
 **Mitigated by.** SR-002 (heading stability), SR-003 (TTLC, partial).
 
 **STPA-light findings.**
+
 - *Unsafe Control Action: action provided with inappropriate magnitude.* Policy oscillates between over- and under-correction. → Mitigated by C-02 (heading limit) and C-06 (rate limiter).
 
 ---
@@ -88,6 +95,7 @@ The format is structured to enable mechanical extraction into the Traceability M
 **Consequence (scaled context).** Lateral slip in tight curves, loss of traction, potential platform damage.
 
 **Hypothesised root causes.**
+
 - Policy learning to prioritise progress without sufficient curvature-dependent penalisation.
 - Reward function incentivising forward motion without regard to safety margin.
 
@@ -106,6 +114,7 @@ The format is structured to enable mechanical extraction into the Traceability M
 **Consequence (scaled context).** Catastrophic loss of track-following, possible platform damage.
 
 **Hypothesised root causes.**
+
 - Accumulated perturbations not seen during training.
 - Sensor noise compounding with control latency.
 - Absence of dedicated training in this combinatorial regime.
@@ -115,6 +124,7 @@ The format is structured to enable mechanical extraction into the Traceability M
 **Mitigated by.** SR-005 (emergency mode for compound state).
 
 **STPA-light findings.**
+
 - *Unsafe Control Action: action provided when policy is no longer trustworthy.* The policy continues to issue commands while the system has entered an unrecoverable state. → Mitigated by C-05 (emergency mode), which substitutes commands rather than modifying them.
 
 ---
@@ -128,6 +138,7 @@ The format is structured to enable mechanical extraction into the Traceability M
 **Consequence (scaled context).** Mechanical instability, possible partial wheel lift, oscillations propagating noise into state estimation.
 
 **Hypothesised root causes.**
+
 - Lack of regularisation on action smoothness during training.
 - Reward function not penalising action variability.
 
@@ -146,6 +157,7 @@ The format is structured to enable mechanical extraction into the Traceability M
 **Consequence (scaled context).** Same. Particularly relevant in physical deployment where ROS2 message drops, sensor failures and temporal desynchronisation are non-negligible.
 
 **Hypothesised root causes.**
+
 - ROS2 message drop.
 - Sensor failure.
 - Temporal desynchronisation.
@@ -166,6 +178,7 @@ The format is structured to enable mechanical extraction into the Traceability M
 **Consequence (scaled context).** Same; physical impact at the end of the track.
 
 **Hypothesised root causes.**
+
 - Absence of emergency-stop mechanism.
 - Policy not trained to brake on demand.
 - Brake actuator that does not produce useful deceleration.

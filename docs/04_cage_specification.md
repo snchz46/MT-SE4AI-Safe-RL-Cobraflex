@@ -25,20 +25,24 @@ Each form motivates a distinct family of cage rules.
 The cage is a dedicated ROS2 node, distinct from the policy node. Its interface:
 
 **Inputs (subscribed topics):**
+
 - `/raw_action` (from policy node) — proposed steering and throttle commands.
 - `/state_obs` (from perception node) — current state vector.
 - `/external_stop` — external emergency stop signal.
 
 **Outputs (published topics):**
+
 - `/safe_action` — the corrected (or substituted) command sent to the actuators.
 - `/cage_status` — per-cycle log entry: which rules fired, with what magnitude, on what state.
 
 **Internal state:**
+
 - Previous command (for rate limiting).
 - Emergency mode flag.
 - Last valid state timestamp.
 
 **Operating modes:**
+
 - `enforcement` — corrections are applied to `/safe_action`.
 - `monitoring` — corrections are computed and logged but not applied; `/safe_action` equals `/raw_action`. Used for the causal comparison in the experimental campaign.
 
@@ -57,6 +61,7 @@ The cage implements six rules, C-01 through C-06. Each rule is an independent mo
 **Observed variable.** Lateral offset `d`.
 
 **Logic.**
+
 ```
 if abs(d) > (d_max - h_d) and policy_action_increases_abs_d():
     correction = bounded_steering_toward_centre(d, d_max, h_d)
@@ -66,6 +71,7 @@ elif abs(d) < (d_max - 2*h_d) for last 2 cycles:
 ```
 
 **Parameters (from `cage.yaml`).**
+
 - `d_max = 0.16 m` (from SR-001).
 - `h_d = 0.02 m` (hysteresis margin).
 
@@ -82,6 +88,7 @@ elif abs(d) < (d_max - 2*h_d) for last 2 cycles:
 **Observed variable.** Heading error `θ`.
 
 **Logic.**
+
 ```
 if abs(theta) > (theta_max - h_theta) and policy_action_increases_abs_theta():
     correction = bounded_steering_toward_alignment(theta, theta_max, h_theta)
@@ -91,6 +98,7 @@ elif abs(theta) < (theta_max - 2*h_theta) for last 2 cycles:
 ```
 
 **Parameters.**
+
 - `theta_max = 0.44 rad (25 deg)` (from SR-002).
 - `h_theta = 0.035 rad (2 deg)` (hysteresis).
 
@@ -107,6 +115,7 @@ elif abs(theta) < (theta_max - 2*h_theta) for last 2 cycles:
 **Observed variables.** Lateral offset `d`, heading error `θ`, forward speed `v`.
 
 **Logic.**
+
 ```
 ttlc = compute_ttlc(d, theta, v, d_max)
 if ttlc < t_min:
@@ -117,6 +126,7 @@ if ttlc < t_min:
 The function `compute_ttlc` projects the trajectory under the assumption of zero corrective action and returns the time at which `|d|` would equal `d_max`. If the projection does not lead to a crossing within a long horizon, returns infinity.
 
 **Parameters.**
+
 - `t_min = 1.0 s` (from SR-003).
 
 **Correction strategy.** Gradient-like bounded correction. Magnitude scales with urgency: lower TTLC means larger correction, capped at the rate-limit envelope. Operates simultaneously with C-01; if both fire on steering, the larger-magnitude correction wins.
@@ -132,6 +142,7 @@ The function `compute_ttlc` projects the trajectory under the assumption of zero
 **Observed variables.** Forward speed `v`, local curvature `κ` (estimated from the recent trajectory).
 
 **Logic.**
+
 ```
 v_ceiling = compute_v_max(kappa)  # from cage.yaml table
 if v > v_ceiling:
@@ -140,6 +151,7 @@ if v > v_ceiling:
 ```
 
 **Parameters.**
+
 - `v_max_straight = 0.5 m/s`.
 - `v_max_curve = 0.25 m/s`.
 - `k_kappa = 0.3 m/s per unit curvature`.
@@ -155,6 +167,7 @@ if v > v_ceiling:
 **Type.** Trigger-based (procedural safety).
 
 **Triggers (any of these activates emergency mode):**
+
 1. Compound state: `abs(theta) > theta_warning AND abs(d) > d_warning` for more than `Δt_max` consecutive seconds.
 2. Stale state: timestamp of last `/state_obs` older than `staleness_max`.
 3. Invalid state field: any field outside its plausible range.
@@ -162,6 +175,7 @@ if v > v_ceiling:
 5. External stop: `/external_stop` signal received.
 
 **On activation:**
+
 - Replace throttle command with a deceleration target producing at least `a_min`.
 - Freeze steering at its value at the instant of transition.
 - Publish emergency signal on `/cage_status`.
@@ -169,6 +183,7 @@ if v > v_ceiling:
 **On deactivation:** only via explicit reset signal AND underlying condition cleared. This prevents oscillatory entry/exit.
 
 **Parameters.**
+
 - `theta_warning = 0.35 rad (20 deg)`.
 - `d_warning = 0.12 m`.
 - `delta_t_max = 0.2 s`.
@@ -189,6 +204,7 @@ if v > v_ceiling:
 **Observed variables.** Previous and current commanded steering and throttle.
 
 **Logic.**
+
 ```
 delta_steering = current_steering_cmd - prev_steering_cmd
 if abs(delta_steering) > delta_max_steering:
@@ -198,6 +214,7 @@ if abs(delta_steering) > delta_max_steering:
 ```
 
 **Parameters.**
+
 - `delta_max_steering = 0.15` (normalised units per 50 ms cycle).
 - `delta_max_throttle = 0.10` (normalised units per 50 ms cycle).
 
@@ -244,6 +261,7 @@ The mode is set at launch and recorded in `metadata.json` of every run.
 ## Unit tests
 
 Each rule has a dedicated test file under `cage/tests/`:
+
 - `test_c01_lane_boundary.py`
 - `test_c02_heading_limit.py`
 - `test_c03_ttlc.py`

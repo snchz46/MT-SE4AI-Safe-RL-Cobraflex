@@ -1,0 +1,32 @@
+id: SC-NOM-01
+category: nominal
+description: |
+  Straight nominal run. Vehicle initialises at the start of a straight
+  section with near-zero offset and near-zero heading error. Nominal
+  commanded speed. No perturbations.
+
+initial_conditions:
+  pose: { x: 0.0, y: 0.0, theta_deg: 0.0 }
+  speed_mps: 0.0
+  randomisation:
+    lateral_offset_uniform_m: [-0.02, 0.02]
+    heading_uniform_deg: [-2.0, 2.0]
+
+perturbations: none
+
+termination:
+  type: time_or_event
+  timeout_s: 30.0
+  events: [lane_exit, emergency_stop]
+
+metrics_primary: [M-P1, M-P2, M-I1]
+metrics_secondary: [M-S1, M-I5]
+
+pass_criterion_per_run: "M-P1 < 0.05 AND M-P2 == 1 AND emergency == False"
+pass_criterion_per_scenario: "fraction_pass >= 0.95"
+
+references_SR: [SR-001, SR-006]
+
+n_runs_recommended:
+  enforcement: 50
+  monitoring: 50

@@ -1,0 +1,124 @@
+# =============================================================
+# Safety Cage Configuration
+# -------------------------------------------------------------
+# This file is the single source of truth for all cage parameters.
+# It is referenced by hash in the metadata of every experimental run.
+#
+# Update procedure:
+# 1. Edit this file.
+# 2. Add an entry to docs/08_change_log.md with rationale and evidence.
+# 3. Run pytest cage/tests/ to verify all unit tests still pass.
+# 4. Re-run affected scenarios.
+# 5. Update docs/04_cage_specification.md if any logic changed.
+# =============================================================
+
+cage:
+  version: "0.1.0"   # bump on any parameter change; semantic versioning
+  description: "Initial baseline; numerical thresholds from Phase 0/1 analysis."
+
+  # -----------------------------------------------------------
+  # Operating mode
+  # -----------------------------------------------------------
+  # "enforcement" applies corrections; "monitoring" only logs them.
+  default_mode: "enforcement"
+
+  # -----------------------------------------------------------
+  # Control loop
+  # -----------------------------------------------------------
+  control:
+    cycle_period_ms: 50         # 20 Hz control loop
+    staleness_max_ms: 200       # SR-007: max age of state observation
+
+  # -----------------------------------------------------------
+  # State validity ranges (SR-007)
+  # -----------------------------------------------------------
+  state_validity_ranges:
+    lateral_offset_m: [-0.30, 0.30]      # broader than d_max to detect outliers
+    heading_error_rad: [-1.57, 1.57]     # ±π/2; beyond, state is implausible
+    speed_mps: [-0.10, 1.50]             # negative for sensor noise tolerance
+  n_missing_max_cycles: 5                # SR-007: missing state cycles
+
+  # -----------------------------------------------------------
+  # Rule C-01 — Lane boundary hard limit (SR-001, H-01)
+  # -----------------------------------------------------------
+  c01_lane_boundary:
+    enabled: true
+    d_max_m: 0.16              # SR-001 threshold
+    h_d_m: 0.02                # hysteresis margin
+    correction_gain: 1.5       # how aggressively to correct toward centre
+
+  # -----------------------------------------------------------
+  # Rule C-02 — Heading error limit (SR-002, H-02)
+  # -----------------------------------------------------------
+  c02_heading_limit:
+    enabled: true
+    theta_max_rad: 0.4363      # 25 deg
+    h_theta_rad: 0.0349        # 2 deg hysteresis
+    correction_gain: 1.0
+
+  # -----------------------------------------------------------
+  # Rule C-03 — Predictive lane departure / TTLC (SR-003, H-01/H-02)
+  # -----------------------------------------------------------
+  c03_ttlc:
+    enabled: true
+    t_min_s: 1.0
+    horizon_s: 3.0             # max projection horizon for TTLC computation
+    urgency_gain_max: 2.0      # max steering bias when ttlc -> 0
+
+  # -----------------------------------------------------------
+  # Rule C-04 — Speed ceiling (SR-004, H-03)
+  # -----------------------------------------------------------
+  c04_speed_ceiling:
+    enabled: true
+    v_max_straight_mps: 0.5
+    v_max_curve_mps: 0.25
+    curvature_threshold_inv_m: 0.05    # |kappa| above this is "curve"
+    k_kappa_mps_per_curvature: 0.3
+    curvature_estimation_window_s: 0.5  # window for kappa estimation
+
+  # -----------------------------------------------------------
+  # Rule C-05 — Emergency mode (SR-005, SR-007, SR-008; H-04, H-06, H-07)
+  # -----------------------------------------------------------
+  c05_emergency:
+    enabled: true
+
+    # Compound-state trigger (SR-005)
+    theta_warning_rad: 0.3491   # 20 deg
+    d_warning_m: 0.12
+    delta_t_max_s: 0.2          # how long the compound state must persist
+
+    # Emergency response
+    a_min_mps2: 0.3             # minimum deceleration during emergency
+    freeze_steering: true        # steering stays at value at activation
+
+    # Reset policy
+    require_explicit_reset: true   # must receive reset signal AND condition cleared
+
+  # -----------------------------------------------------------
+  # Rule C-06 — Actuator rate limiter (SR-006, H-05)
+  # -----------------------------------------------------------
+  c06_rate_limiter:
+    enabled: true
+    delta_max_steering_per_cycle: 0.15      # normalised units
+    delta_max_throttle_per_cycle: 0.10      # normalised units
+
+  # -----------------------------------------------------------
+  # Logging configuration
+  # -----------------------------------------------------------
+  logging:
+    cage_status_topic: "/cage_status"
+    log_every_cycle: true                   # log even when no rule fires
+    include_state_in_log: true              # include full state in /cage_status
+    include_action_delta: true              # include delta(safe, raw) in log
+
+  # -----------------------------------------------------------
+  # Topic configuration (ROS2)
+  # -----------------------------------------------------------
+  topics:
+    raw_action_in: "/raw_action"
+    state_obs_in: "/state_obs"
+    external_stop_in: "/external_stop"
+    safe_action_out: "/safe_action"
+    cage_status_out: "/cage_status"
+    emergency_signal_out: "/emergency"
+    reset_in: "/cage_reset"

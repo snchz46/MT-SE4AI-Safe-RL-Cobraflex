@@ -1,0 +1,30 @@
+id: SC-EDGE-01
+category: edge
+description: |
+  Initial heading perturbation. Vehicle initialises with a 15-degree
+  heading error but zero lateral offset. Tests the policy's ability to
+  recover heading without lane exit, and the activation of C-02 / C-03.
+
+initial_conditions:
+  pose: { x: 0.0, y: 0.0, theta_deg: 15.0 }
+  speed_mps: 0.3
+  randomisation: none   # fixed condition for exact reproducibility
+
+perturbations: none
+
+termination:
+  type: time_or_event
+  timeout_s: 15.0
+  events: [lane_exit, emergency_stop, straight_completed]
+
+metrics_primary: [M-I1, M-S3, M-P4, time_to_recovery_heading]
+metrics_secondary: [M-S1, M-S4]
+
+pass_criterion_per_run: "emergency == False AND time_to_recovery_heading < 2.0 AND M-S1 < 0.16"
+pass_criterion_per_scenario: "fraction_pass >= 0.90"
+
+references_SR: [SR-002, SR-003]
+
+n_runs_recommended:
+  enforcement: 30
+  monitoring: 30

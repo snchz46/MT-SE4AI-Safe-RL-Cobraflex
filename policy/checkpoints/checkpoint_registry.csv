@@ -1,0 +1,3 @@
+checkpoint_id,seed,training_steps,scenario_evaluated,timestamp,git_commit,cage_yaml_hash,notes
+# Phase 3 will populate this registry as training runs complete.
+# Each row records one checkpoint with full reproducibility metadata.

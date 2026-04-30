@@ -1,0 +1,13 @@
+# Placeholder. Full specification in docs/05_scenario_library.md.
+# To be expanded during Phase 2 with all schema fields.
+
+id: SC-EDGE-03
+category: edge
+description: "TODO — see docs/05_scenario_library.md for the full spec."
+
+# Required fields not yet specified:
+# initial_conditions, perturbations, termination,
+# metrics_primary, metrics_secondary,
+# pass_criterion_per_run, pass_criterion_per_scenario,
+# references_SR, n_runs_recommended
+status: stub

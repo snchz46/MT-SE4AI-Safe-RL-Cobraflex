@@ -1,0 +1,73 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ROS2
+build/
+install/
+log/
+
+# Experimental data — large logs are not version-controlled,
+# only their summary CSVs and aggregated tables.
+experiments/sim/run_*/raw_logs/
+experiments/physical/run_*/raw_logs/
+*.bag
+*.mcap
+
+# Policy checkpoints — large binary files
+policy/checkpoints/*.zip
+policy/checkpoints/*.pt
+policy/checkpoints/*.pth
+!policy/checkpoints/.gitkeep
+!policy/checkpoints/checkpoint_registry.csv
+
+# Generated figures (regenerable from data)
+manuscript/figures/auto/
+
+# Local configuration
+.env
+local_config.yaml
+
+# Coverage
+.coverage
+htmlcov/
+.pytest_cache/

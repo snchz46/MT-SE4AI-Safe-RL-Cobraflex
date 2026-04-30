@@ -1,0 +1,42 @@
+# Scenario YAML schema
+# ------------------------------------------------------------
+# Every scenario YAML under scenarios/<category>/ must conform to this schema.
+# Validated by tools/check_scenario_yaml.py before any Gate review.
+
+# Required top-level keys:
+#
+# id:                   string, format SC-{NOM|EDGE|PERT}-NN
+# category:             nominal | edge | perturbed
+# description:          free-text summary
+# initial_conditions:   block of pose, speed, randomisation
+# perturbations:        block describing applied perturbations (or "none")
+# termination:          block of termination criteria
+# metrics_primary:      list of metric IDs (M-*)
+# metrics_secondary:    list of metric IDs
+# pass_criterion_per_run:   string with rule for pass/fail per run
+# pass_criterion_per_scenario: string with aggregate rule
+# references_SR:        list of SR IDs (SR-XXX)
+# n_runs_recommended:   integer per mode
+
+# Example minimal scenario:
+#
+# id: SC-NOM-01
+# category: nominal
+# description: Straight nominal run.
+# initial_conditions:
+#   pose: { x: 0.0, y: 0.0, theta_deg: 0.0 }
+#   speed_mps: 0.0
+#   randomisation:
+#     lateral_offset_uniform_m: [-0.02, 0.02]
+#     heading_uniform_deg: [-2, 2]
+# perturbations: none
+# termination:
+#   type: time_or_event
+#   timeout_s: 30.0
+#   events: [lane_exit, emergency_stop]
+# metrics_primary: [M-P1, M-P2, M-I1]
+# metrics_secondary: [M-S1, M-I5]
+# pass_criterion_per_run: "M-P1 < 0.05 AND M-P2 == 1 AND emergency==False"
+# pass_criterion_per_scenario: "fraction_pass >= 0.95"
+# references_SR: [SR-001, SR-006]
+# n_runs_recommended: 50

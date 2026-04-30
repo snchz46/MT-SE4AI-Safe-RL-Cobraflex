@@ -1,0 +1,19 @@
+hazard_id,sr_id,cage_rule_id,implementation_kind,scenario_id,metric_id,verdict_sim,verdict_phys,evidence_path,notes
+H-01,SR-001,C-01,cage_rule,SC-NOM-01,M-S1,tbd,tbd,,baseline chain
+H-01,SR-001,C-01,cage_rule,SC-NOM-02,M-S1,tbd,tbd,,baseline chain
+H-01,SR-001,C-01,cage_rule,SC-EDGE-02,M-S1,tbd,tbd,,baseline chain
+H-01,SR-001,C-01,cage_rule,SC-NOM-01,M-S2,tbd,tbd,,for enforcement-vs-monitoring comparison
+H-01,SR-003,C-03,cage_rule,SC-NOM-02,M-S4,tbd,tbd,,predictive chain
+H-01,SR-003,C-03,cage_rule,SC-EDGE-01,M-S4,tbd,tbd,,predictive chain
+H-02,SR-002,C-02,cage_rule,SC-EDGE-01,M-P4,tbd,tbd,,heading limit chain
+H-02,SR-002,C-02,cage_rule,SC-EDGE-04,M-P4,tbd,tbd,,heading limit chain
+H-02,SR-003,C-03,cage_rule,SC-EDGE-01,M-S4,tbd,tbd,,partial mitigation
+H-03,SR-004,C-04,cage_rule,SC-NOM-02,M-P3,tbd,tbd,,speed compliance
+H-03,SR-004,C-04,cage_rule,SC-EDGE-03,M-P3,tbd,tbd,,speed compliance under perturbation
+H-04,SR-005,C-05,cage_rule,SC-EDGE-04,M-S3,tbd,tbd,,emergency mode for compound state
+H-05,SR-006,C-06,cage_rule,SC-NOM-01,M-I5,tbd,tbd,,actuator smoothness (rate limiter always active)
+H-05,SR-006,C-06,cage_rule,SC-NOM-02,M-I5,tbd,tbd,,actuator smoothness
+H-06,SR-007,C-05,cage_rule,SC-PERT-02,M-S3,tbd,tbd,,state validity triggers
+H-07,SR-005,C-05,cage_rule,SC-EDGE-04,M-S3,tbd,tbd,,emergency mode partial coverage
+H-07,SR-008,C-05,cage_rule,SC-NOM-03,M-S3,tbd,tbd,,controlled stop
+H-07,SR-008,C-05,cage_rule,SC-EDGE-04,M-S3,tbd,tbd,,controlled stop

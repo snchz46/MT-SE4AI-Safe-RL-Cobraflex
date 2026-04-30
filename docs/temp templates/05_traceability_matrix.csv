@@ -1,0 +1,6 @@
+hazard_id;sr_id;cage_rule_id;scenario_id;metric_id;evidence_ref;conclusion;notes
+H-01;SR-001;C-01;SC-NOM-01;M-S1;exp/sc_nom_01/agg.csv;TBD;
+H-01;SR-001;C-01;SC-NOM-02;M-S1;exp/sc_nom_02/agg.csv;TBD;
+H-01;SR-001;C-01;SC-EDGE-02;M-S1;exp/sc_edge_02/agg.csv;TBD;
+H-01;SR-003;C-03;SC-NOM-02;M-S4;exp/sc_nom_02/agg.csv;TBD;
+H-02;SR-002;C-02;SC-EDGE-01;M-I2;exp/sc_edge_01/agg.csv;TBD;

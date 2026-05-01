@@ -11,7 +11,7 @@ This repository contains the full research artefacts for a master's thesis inves
 **Key pillars of the research:**
 
 | Pillar | Description |
-|--------|-------------|
+| ------ | ----------- |
 | 🔍 **Hazard analysis** | Systematic identification and classification of failure modes |
 | 📋 **Safety requirements** | Formal requirements derived from each hazard |
 | 🔒 **Runtime safety cage** | ROS2 node that enforces safety rules over the RL policy at runtime |
@@ -21,7 +21,7 @@ This repository contains the full research artefacts for a master's thesis inves
 
 The central methodological commitment of this work is **traceability**: every hazard identified in the analysis must reach a final validation verdict through a chain of explicitly linked artefacts:
 
-```
+```text
 Hazard → Safety Requirement → Cage Rule → Scenario → Metric → Logged Evidence → Verdict
 ```
 
@@ -77,7 +77,7 @@ A living document is *closed* (frozen) only when the corresponding Gate review a
 All artefacts in this repository follow a strict naming scheme to enable automated traceability verification.
 
 | Prefix | Meaning | Example |
-|--------|---------|---------|
+| ------ | ------- | ------- |
 | `H-XX` | Hazard | `H-01` |
 | `SR-XXX` | Safety Requirement | `SR-001` |
 | `C-XX` | Cage rule | `C-03` |
@@ -100,6 +100,7 @@ python tools/check_traceability.py
 ```
 
 This script verifies that:
+
 - Every hazard is referenced by at least one Safety Requirement.
 - Every Safety Requirement is implemented by at least one cage rule.
 - Every cage rule is exercised by at least one scenario.
@@ -134,7 +135,7 @@ The thesis follows a **20-week plan** organised in seven phases (F0 through F6),
 ## 👤 Author and Supervision
 
 | Role | Name |
-|------|------|
+| ---- | ---- |
 | **Author** | [name placeholder] |
 | **Supervisor** | [name placeholder] |
 | **Institution** | [institution placeholder] |

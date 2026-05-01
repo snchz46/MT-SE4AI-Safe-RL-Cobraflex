@@ -75,3 +75,4 @@ htmlcov/
 # Misc
 docs/.phases*
 docs/.temp_templates/
+manuscript/chapters

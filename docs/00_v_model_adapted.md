@@ -1,7 +1,7 @@
 # V-Model Adapted for Systems with Learned Components
 
 **Status:** Living document — Phase 0 deliverable
-**Last update:** [date]
+**Last update:** 30.01.2026
 **Approved at Gate:** G0 (pending)
 
 ## Purpose

@@ -76,3 +76,4 @@ htmlcov/
 docs/.phases*
 docs/.temp_templates/
 manuscript/chapters
+manuscript/figures

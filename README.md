@@ -1,10 +1,10 @@
-# 🛡️ Safety Cages and Safe RL within an SE4AI Framework for Autonomous Driving
+# Safety Cages and Safe RL within an SE4AI Framework for Autonomous Driving
 
 > **Master's Thesis** — Systems Engineering for AI (SE4AI) applied to lane-following with Reinforcement Learning, validated in simulation and on the CobraFlex 1:14 scale physical platform.
 
 ---
 
-## 📌 At a Glance
+## At a Glance
 
 This repository contains the full research artefacts for a master's thesis investigating how **runtime safety cages** can constrain a Reinforcement Learning (RL) agent operating in an autonomous driving context. The work is structured under a Systems Engineering for AI (SE4AI) methodology, meaning every design decision is traceable from a formal hazard down to experimental evidence.
 
@@ -12,12 +12,12 @@ This repository contains the full research artefacts for a master's thesis inves
 
 | Pillar | Description |
 | ------ | ----------- |
-| 🔍 **Hazard analysis** | Systematic identification and classification of failure modes |
-| 📋 **Safety requirements** | Formal requirements derived from each hazard |
-| 🔒 **Runtime safety cage** | ROS2 node that enforces safety rules over the RL policy at runtime |
-| 🤖 **RL policy** | Lane-following policy trained and deployed under cage supervision |
-| 🧪 **Validation scenarios** | Nominal, edge-case, and perturbed scenarios for systematic testing |
-| 🔗 **Full traceability** | Every hazard is linked to evidence through an auditable chain |
+| **Hazard analysis** | Systematic identification and classification of failure modes |
+| **Safety requirements** | Formal requirements derived from each hazard |
+| **Runtime safety cage** | ROS2 node that enforces safety rules over the RL policy at runtime |
+| **RL policy** | Lane-following policy trained and deployed under cage supervision |
+| **Validation scenarios** | Nominal, edge-case, and perturbed scenarios for systematic testing |
+| **Full traceability** | Every hazard is linked to evidence through an auditable chain |
 
 The central methodological commitment of this work is **traceability**: every hazard identified in the analysis must reach a final validation verdict through a chain of explicitly linked artefacts:
 
@@ -29,25 +29,25 @@ Absence of orphans on either side of this chain is verified mechanically before 
 
 ---
 
-## 🗂️ Repository Structure
+## Repository Structure
 
 ```text
 .
-├── 📄 docs/           Living engineering documents (HARA, SRS, Cage Spec, ...)
-├── 🔒 cage/           Safety cage implementation as ROS2 node + rules
-├── 🤖 policy/         RL training pipeline and policy ROS2 node
-├── 🧪 scenarios/      Scenario library (nominal, edge, perturbed)
-├── 📊 experiments/    Experimental data and analysis scripts
-├── ✅ tests/           Unit and integration tests
-├── 🔧 tools/          Verification tooling (traceability check, etc.)
-└── 📝 manuscript/     Thesis manuscript and figures
+├── docs/           Living engineering documents (HARA, SRS, Cage Spec, ...)
+├── cage/           Safety cage implementation as ROS2 node + rules
+├── policy/         RL training pipeline and policy ROS2 node
+├── scenarios/      Scenario library (nominal, edge, perturbed)
+├── experiments/    Experimental data and analysis scripts
+├── tests/           Unit and integration tests
+├── tools/          Verification tooling (traceability check, etc.)
+└── manuscript/     Thesis manuscript and figures
 ```
 
 Every top-level subdirectory contains its own `README.md` explaining its internal organisation and the conventions specific to it.
 
 ---
 
-## 📖 How to Read This Repository
+## How to Read This Repository
 
 If you are new to the project, the suggested reading order is:
 
@@ -64,7 +64,7 @@ After reading the documents above, the implementation directories (`cage/`, `pol
 
 ---
 
-## 📋 Living Documents
+## Living Documents
 
 The files under `docs/` are *living* in the strict sense: they are updated as the work progresses, every change is recorded in [`docs/08_change_log.md`](docs/08_change_log.md) with rationale, and every change triggers a re-run of `tools/check_traceability.py` to verify that no orphan references have been introduced.
 
@@ -72,7 +72,7 @@ A living document is *closed* (frozen) only when the corresponding Gate review a
 
 ---
 
-## 🏷️ Identifier Conventions
+## Identifier Conventions
 
 All artefacts in this repository follow a strict naming scheme to enable automated traceability verification.
 
@@ -91,7 +91,7 @@ Full specification in [`docs/01_id_conventions.md`](docs/01_id_conventions.md).
 
 ---
 
-## ✅ Traceability Verification
+## Traceability Verification
 
 Before each Gate review (G0 through G6), the following command must pass without errors:
 
@@ -111,7 +111,7 @@ This script verifies that:
 
 ---
 
-## 🔁 Reproducibility
+## Reproducibility
 
 Every experimental run produces logs under `experiments/sim/` or `experiments/physical/` with a unique run identifier. The metadata for each run records:
 
@@ -126,23 +126,17 @@ Reproducing a run requires checking out the recorded git commit, recovering the 
 
 ---
 
-## 🗓️ Research Plan
-
-The thesis follows a **20-week plan** organised in seven phases (F0 through F6), four milestones (M1 through M4), and seven Gate reviews (G0 through G6). The detailed phase-by-phase plan is documented in [`docs/00_v_model_adapted.md`](docs/00_v_model_adapted.md).
-
----
-
-## 👤 Author and Supervision
+## Author and Supervision
 
 | Role | Name |
 | ---- | ---- |
-| **Author** | [name placeholder] |
-| **Supervisor** | [name placeholder] |
-| **Institution** | [institution placeholder] |
-| **Programme** | [programme placeholder] |
+| **Author** | Samuel Sanchez |
+| **Supervisor** | Ralf Schuler |
+| **Institution** | Hochschule Esslingen |
+| **Programme** | Automotive Systems |
 
 ---
 
-## ⚖️ License
+## License
 
-License to be decided with the supervisor before public release.
+MIT License

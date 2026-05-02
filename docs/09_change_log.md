@@ -58,5 +58,40 @@ None upstream (this is the baseline). Downstream: Phase 1 will refine numerical 
 Update of Chapter 3 Metodology with comparison between classical V model and adapted for this thesis
 
 ---
+---
 
+## [02.05.2026] — Update of chapter 1
+
+**Document(s) affected:** chapter_01_metodology.md  
+**Phase:** F0  
+**Gate context:** before G0  
+**Author:** Samuel Sanchez
+
+Update of Chapter 1 and double check all references
+
+---
+---
+
+## [02.05.2026] — Update of chapter 2
+
+**Document(s) affected:** chapter_02_metodology.md  
+**Phase:** F0  
+**Gate context:** before G0  
+**Author:** Samuel Sanchez
+
+Update of Chapter 2 with related work, double check of references pending
+
+---
+---
+
+## [02.05.2026] — Rename of templates + added 00_odd_specification.md
+
+**Document(s) affected:** chapter_02_metodology.md  
+**Phase:** F1  
+**Gate context:** before G1  
+**Author:** Samuel Sanchez
+
+Added 00_odd_specification.md, changed of names of templates for better understanding
+
+---
 <!-- Subsequent entries appended below -->

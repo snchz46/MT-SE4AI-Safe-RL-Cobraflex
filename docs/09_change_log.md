@@ -94,4 +94,16 @@ Update of Chapter 2 with related work, double check of references pending
 Added 00_odd_specification.md, changed of names of templates for better understanding
 
 ---
+---
+
+## [04.05.2026] — Update of Chapters 1, 2 & 3 with new papers
+
+**Document(s) affected:** chapters 1, 2 and 3  
+**Phase:** F1  
+**Gate context:** before G0  
+**Author:** Samuel Sanchez
+
+Update of Chapters 1,2 and 3 with related work, double check of references pending
+
+---
 <!-- Subsequent entries appended below -->

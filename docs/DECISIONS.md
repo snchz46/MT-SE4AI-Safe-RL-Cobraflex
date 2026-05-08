@@ -1,899 +1,870 @@
-# DECISIONS.md — Registro de decisiones del proyecto
+# DECISIONS.md — Project decision log
 
 <!--
-Estado: D9 (cierre Fase 0).
-Última actualización: ver fecha de commit en Git.
+Status: D9 (Phase 0 close).
+Last update: see Git commit date.
 -->
 
-## Propósito de este archivo
+## Purpose of this file
 
-Este fichero es el **registro central de decisiones** del proyecto. Cada
-decisión técnica, metodológica o de alcance que tiene impacto en la
-trayectoria del trabajo se documenta aquí con un identificador único
-(`D-NN`), independientemente de si la decisión queda confirmada,
-diferida a una fase posterior, o eventualmente revisada.
+This file is the **central decision log** of the project. Every technical,
+methodological, or scope decision that has impact on the trajectory of the
+work is documented here with a unique identifier (`D-NN`), regardless of
+whether the decision is confirmed, deferred to a later phase, or eventually
+revised.
 
-El archivo cumple tres funciones que la metodología del Capítulo 3 hace
-explícitas. Primero, sirve como *instrumento auditable* de mitigación
-del sesgo del autor (cf. §3.2.3): un tercero que repitiera el ejercicio
-sobre los artefactos del proyecto puede inspeccionar aquí qué se
-decidió y por qué, sin tener que reconstruirlo de los capítulos.
-Segundo, sirve como *instrumento de medida del coste de adopción* del
-marco (cf. §3.7, criterio 4): el peso de las decisiones registradas es
-uno de los indicadores que el Capítulo 11 retoma para evaluar el marco.
-Tercero, sirve como *memoria operativa* durante el desarrollo: cuando
-una decisión posterior depende de una anterior, se cita por su ID en
-lugar de reabrir la discusión.
+The file serves three functions that the methodology of Chapter 3 makes
+explicit. First, it acts as an *auditable instrument* to mitigate author
+bias (cf. §3.2.3): a third party who replicated the exercise on the
+project artefacts can inspect here what was decided and why, without
+having to reconstruct it from the chapters. Second, it acts as a
+*measurement instrument for the framework's adoption cost* (cf. §3.7,
+criterion 4): the weight of registered decisions is one of the indicators
+that Chapter 11 retakes when evaluating the framework. Third, it acts as
+*operational memory* during development: when a later decision depends on
+an earlier one, it is cited by ID rather than reopening the discussion.
 
-El formato de cada entrada es consistente y se inspira en los
-*Architecture Decision Records* (ADR) propuestos por Michael Nygard,
-adaptado al léxico de la tesis. Cada decisión incluye una pequeña tabla
-de metadatos (sección donde se documenta en los capítulos, estado
-actual, fecha de toma de decisión, fecha prevista de revisión si
-procede) y un cuerpo en prosa con cuatro bloques: *decisión*
-(declarativa, una o dos frases), *alternativas consideradas y
-descartadas* (con motivos), *justificación* (la respuesta a "¿por qué
-esto y no aquello?" si el tribunal pregunta), y *consecuencias* (qué
-implica para el resto del proyecto).
+The format of each entry is consistent and inspired by the *Architecture
+Decision Records* (ADR) proposed by Michael Nygard, adapted to the
+vocabulary of this thesis. Each decision includes a small metadata table
+(section where it is documented in the chapters, current status, decision
+date, planned review date if applicable) and a prose body with four
+blocks: *decision* (declarative, one or two sentences), *alternatives
+considered and rejected* (with reasons), *rationale* (the answer to "why
+this and not that?" if the committee asks), and *consequences* (what it
+implies for the rest of the project).
 
-Cuando una decisión cita literatura, se referencia con el formato
-`Apellido (año)` consistente con los capítulos.
+When a decision cites the literature, it uses the format `Author (year)`
+consistent with the chapters.
 
 ---
 
-## Índice de decisiones
+## Decision index
 
-| ID | Título | Capítulo / Sección | Estado |
+| ID | Title | Chapter / Section | Status |
 | --- | --- | --- | --- |
-| D-01 | No adoptar arquitectura *end-to-end* para la integración de la *policy* RL | §3.5.1 (motivación adicional en §3.4) | CONFIRMADA |
-| D-02 | Estructura de tres hipótesis encadenadas (H1, H2, H3) | §1.3 | CONFIRMADA |
-| D-03 | Siete objetivos específicos (OE1–OE7) con mapeo 1:1 a capítulos | §1.4 | CONFIRMADA |
-| D-04 | Alcance acotado: SAE Nivel 2, caso único *lane-following*, pista controlada | §1.6 | CONFIRMADA |
-| D-05 | Posicionamiento epistemológico: *design science research* | §3.2.1 | CONFIRMADA |
-| D-06 | Estrategia de evaluación: caso único + plausibilidad estructural | §3.2.2 | CONFIRMADA |
-| D-07 | A1 — Desdoblamiento del nivel L4 en Cage Spec + Training Spec | §3.4.1 | CONFIRMADA |
-| D-08 | A2 — Desdoblamiento del nivel L4' en Cage Unit Tests + Policy Behavioral Evaluation | §3.4.2 | CONFIRMADA |
-| D-09 | A3 — Nuevo nivel transversal Runtime Monitoring | §3.4.3 | CONFIRMADA |
-| D-10 | A4 — Trazabilidad bidireccional como restricción dura aplicada por herramienta | §3.4.4 | CONFIRMADA |
-| D-11 | A5 — Validación operacional acotada con caracterización del gap sim-to-real | §3.4.5 | CONFIRMADA |
-| D-12 | Simulador adoptado: Gazebo (sustituye CARLA en versión preliminar) | §3.6.1 | CONFIRMADA |
-| D-13 | Middleware: ROS2 distribución Humble | §3.6.2 | CONFIRMADA |
-| D-14 | Algoritmo de aprendizaje: PPO | §3.6.3 | CONFIRMADA |
-| D-15 | Stack tecnológico: Stable-Baselines3 + PyTorch + pytest + Python 3.10+ | §3.6.4 | CONFIRMADA |
-| D-16 | Plataforma física: vehículo radio-controlado escala 1:14 | §3.6.5 | CONFIRMADA |
-| D-17 | QED diferida a Fase 4: inspiración conceptual con calibración pendiente | §3.6.6 | DIFERIDA |
-| D-18 | Documentación en plain-text Markdown (no MBSE industrial) | §3.6.7 | CONFIRMADA |
-| D-19 | Cinco criterios de meta-evaluación del marco | §3.7 | CONFIRMADA |
+| D-01 | No *end-to-end* architecture for the integration of the RL *policy* | §3.5.1 (additional motivation in §3.4) | CONFIRMED |
+| D-02 | Three chained hypotheses (H1, H2, H3) | §1.3 | CONFIRMED |
+| D-03 | Seven specific objectives (OE1–OE7) with 1:1 mapping to chapters | §1.4 | CONFIRMED |
+| D-04 | Bounded scope: SAE Level 2, single *lane-following* case, controlled track | §1.6 | CONFIRMED |
+| D-05 | Epistemological positioning: *design science research* | §3.2.1 | CONFIRMED |
+| D-06 | Evaluation strategy: single case + structural plausibility | §3.2.2 | CONFIRMED |
+| D-07 | A1 — Splitting level L4 into Cage Spec + Training Spec | §3.4.1 | CONFIRMED |
+| D-08 | A2 — Splitting level L4' into Cage Unit Tests + Policy Behavioral Evaluation | §3.4.2 | CONFIRMED |
+| D-09 | A3 — New transversal Runtime Monitoring level | §3.4.3 | CONFIRMED |
+| D-10 | A4 — Bidirectional traceability as hard constraint enforced by tooling | §3.4.4 | CONFIRMED |
+| D-11 | A5 — Bounded operational validation with sim-to-real gap characterization | §3.4.5 | CONFIRMED |
+| D-12 | Adopted simulator: Gazebo (supersedes CARLA in preliminary version) | §3.6.1 | CONFIRMED |
+| D-13 | Middleware: ROS2 Humble distribution | §3.6.2 | CONFIRMED |
+| D-14 | Learning algorithm: PPO | §3.6.3 | CONFIRMED |
+| D-15 | Technology stack: Stable-Baselines3 + PyTorch + pytest + Python 3.10+ | §3.6.4 | CONFIRMED |
+| D-16 | Physical platform: 1:14 scale radio-controlled vehicle | §3.6.5 | CONFIRMED |
+| D-17 | QED deferred to Phase 4: conceptual inspiration with calibration pending | §3.6.6 | DEFERRED |
+| D-18 | Documentation in plain-text Markdown (no industrial MBSE) | §3.6.7 | CONFIRMED |
+| D-19 | Five meta-evaluation criteria for the framework | §3.7 | CONFIRMED |
 
 ---
 
-## Decisiones
+## Decisions
 
-### D-01 — No adoptar arquitectura *end-to-end* para la integración de la *policy* RL
+### D-01 — No *end-to-end* architecture for the integration of the RL *policy*
 
-| Campo | Valor |
+| Field | Value |
 | --- | --- |
-| Sección | §3.5.1 (con motivación adicional en §3.4) |
-| Estado | CONFIRMADA |
-| Fecha | D9 (Fase 0) |
-| Revisión prevista | No procede (decisión arquitectónica fundacional) |
+| Section | §3.5.1 (additional motivation in §3.4) |
+| Status | CONFIRMED |
+| Date | D9 (Phase 0) |
+| Planned review | None (foundational architectural decision) |
 
-**Decisión.** El sistema NO adopta una aproximación *end-to-end* en la
-que una única red neuronal mapee directamente píxeles de cámara a
-comandos de actuación. La arquitectura mantiene una descomposición
-modular explícita —percepción, *policy* PPO, cage de reglas, actuación,
-logger— donde el componente aprendido por refuerzo ocupa una posición
-acotada dentro del grafo ROS2.
+**Decision.** The system does NOT adopt an *end-to-end* approach where a
+single neural network maps camera pixels directly to actuation commands.
+The architecture maintains an explicit modular decomposition —perception,
+PPO *policy*, rule-based cage, actuation, logger— in which the
+reinforcement-learned component occupies a bounded position within the
+ROS2 graph.
 
-**Alternativas consideradas y descartadas.** Aproximación *end-to-end*
-tipo PilotNet (Bojarski et al., 2016), donde una CNN procesa
-imagen→comando de volante directamente, descartada por las dos razones
-que articula Salay et al. (2017): las arquitecturas *end-to-end*
-desafían el supuesto de descomposición jerárquica estable que sostiene
-buena parte de las técnicas de seguridad funcional clásicas, y suelen
-requerir conjuntos de entrenamiento exponencialmente mayores que las
-arquitecturas modulares para alcanzar prestaciones equivalentes
-(Shalev-Shwartz y Shashua, 2016).
+**Alternatives considered and rejected.** *End-to-end* approach in the
+PilotNet style (Bojarski et al., 2016), where a CNN processes
+image→steering-command directly, rejected for the two reasons articulated
+by Salay et al. (2017): *end-to-end* architectures challenge the stable
+hierarchical decomposition assumption that underpins much of classical
+functional safety methodology, and they typically require training sets
+exponentially larger than modular architectures to achieve equivalent
+performance (Shalev-Shwartz and Shashua, 2016).
 
-**Justificación.** Esta tesis es un trabajo metodológico cuya
-contribución es el marco V-Model adaptado, no un sistema *end-to-end*
-novedoso. La arquitectura modular es además condición necesaria para
-varias adaptaciones del marco: A1 separa Cage Spec de Training Spec, lo
-que solo es posible si cage y *policy* son módulos distintos; A2 separa
-Cage Unit Tests de Policy Behavioral Evaluation, lo que requiere que la
-cage sea verificable independientemente; A4 (trazabilidad obligatoria)
-es trivial sobre componentes modulares y ardua sobre una caja negra
-unificada. Adoptar *end-to-end* haría inviables varias adaptaciones del
-marco propuesto.
+**Rationale.** This thesis is a methodological piece of work whose
+contribution is the adapted V-Model framework, not a novel *end-to-end*
+system. The modular architecture is moreover a necessary condition for
+several adaptations of the framework: A1 separates Cage Spec from
+Training Spec, which is only possible if cage and *policy* are distinct
+modules; A2 separates Cage Unit Tests from Policy Behavioral Evaluation,
+which requires that the cage be independently verifiable; A4 (mandatory
+traceability) is trivial over modular components and difficult over a
+unified black box. Adopting *end-to-end* would render several adaptations
+of the proposed framework unviable.
 
-**Consecuencias.** El sistema produce evidencia para safety case más
-fácilmente; pero asume el coste adicional de mantener varios componentes
-y sus interfaces. La policy PPO opera sobre observaciones procesadas por
-un módulo de percepción simplificado, no sobre píxeles directamente.
+**Consequences.** The system produces evidence for the safety case more
+easily; but it bears the additional cost of maintaining several
+components and their interfaces. The PPO policy operates on observations
+processed by a simplified perception module, not on pixels directly.
 
-**Referencias.** Salay, Queiroz y Czarnecki (2017); Bojarski et al.
-(2016); Shalev-Shwartz y Shashua (2016).
+**References.** Salay, Queiroz, and Czarnecki (2017); Bojarski et al.
+(2016); Shalev-Shwartz and Shashua (2016).
 
 ---
 
-### D-02 — Estructura de tres hipótesis encadenadas (H1, H2, H3)
+### D-02 — Three chained hypotheses (H1, H2, H3)
 
-| Campo | Valor |
+| Field | Value |
 | --- | --- |
-| Sección | §1.3 |
-| Estado | CONFIRMADA |
-| Fecha | D9 (Fase 0) |
-| Revisión prevista | Tras Gate 0 (cierre Fase 1), si la formulación de SRs lo motiva |
+| Section | §1.3 |
+| Status | CONFIRMED |
+| Date | D9 (Phase 0) |
+| Planned review | After Gate 0 (Phase 1 close), if SR formulation motivates it |
 
-**Decisión.** La tesis adopta una estructura de tres hipótesis
-encadenadas: H1 (de constructo: existe un conjunto pequeño y enumerable
-de adaptaciones que cubren los modos de fallo de los componentes RL/IA
-sin romper la estructura del estándar), H2 (de operatividad: cada
-adaptación es operacionalizable como artefactos concretos con coste
-proporcional al resto del proyecto), y H3 (de utilidad: el marco
-resultante produce evidencia trazable que permite emitir un veredicto
-fundamentado sobre el comportamiento del sistema). Las tres se evalúan
-al cierre del trabajo en el Capítulo 11.
+**Decision.** The thesis adopts a structure of three chained hypotheses:
+H1 (construct: there exists a small enumerable set of adaptations that
+cover the failure modes of RL/AI components without breaking the standard's
+structure); H2 (operationalisability: each adaptation is operationalisable
+as concrete artefacts with cost proportional to the rest of the project);
+and H3 (utility: the resulting framework produces traceable evidence that
+allows a grounded verdict on the system's behaviour to be issued). All
+three are evaluated at the close of the work in Chapter 11.
 
-**Alternativas consideradas y descartadas.** Hipótesis única ("el
-V-Model adaptado permite incorporar componentes RL en sistemas de
-conducción autónoma sin sacrificar la trazabilidad"), descartada porque
-colapsa los tres niveles en un único veredicto binario y pierde
-granularidad en la evaluación: H1 puede salir verdadera y H3 falsa, lo
-cual sería un resultado interesante pero invisible bajo hipótesis única.
+**Alternatives considered and rejected.** Single hypothesis ("the adapted
+V-Model allows incorporating RL components into autonomous driving systems
+without sacrificing traceability"), rejected because it collapses the
+three levels into a single binary verdict and loses granularity in
+evaluation: H1 may turn out true and H3 false, which would be an
+interesting result but invisible under a single-hypothesis formulation.
 
-**Justificación.** La estructura encadenada permite veredictos parciales
-en el Capítulo 11. Si H1 se confirma pero H2 falla, el aporte sigue
-siendo válido a nivel de marco conceptual aunque la operacionalización
-requiera revisión. Si H1 y H2 se confirman pero H3 falla, queda
-evidencia útil para futuras refinaciones por terceros.
+**Rationale.** The chained structure allows partial verdicts in Chapter
+11. If H1 is confirmed but H2 fails, the contribution remains valid at
+the conceptual framework level although the operationalisation requires
+revision. If H1 and H2 are confirmed but H3 fails, useful evidence for
+future refinements by third parties remains.
 
-**Consecuencias.** El Capítulo 11 debe emitir tres veredictos separados
-y argumentados. Los criterios meta de §3.7 (cf. D-19) deben mapear a
-las tres hipótesis con explicitud.
+**Consequences.** Chapter 11 must issue three separate, argued verdicts.
+The meta-criteria of §3.7 (cf. D-19) must map to the three hypotheses
+explicitly.
 
 ---
 
-### D-03 — Siete objetivos específicos (OE1–OE7) con mapeo 1:1 a capítulos
+### D-03 — Seven specific objectives (OE1–OE7) with 1:1 mapping to chapters
 
-| Campo | Valor |
+| Field | Value |
 | --- | --- |
-| Sección | §1.4 |
-| Estado | CONFIRMADA |
-| Fecha | D9 (Fase 0) |
-| Revisión prevista | No procede |
+| Section | §1.4 |
+| Status | CONFIRMED |
+| Date | D9 (Phase 0) |
+| Planned review | None |
 
-**Decisión.** El objetivo general se descompone en siete objetivos
-específicos OE1–OE7, cada uno asignado de forma unívoca a un capítulo
-del bloque metodológico/experimental (Capítulos 3–11).
+**Decision.** The general objective is decomposed into seven specific
+objectives OE1–OE7, each uniquely assigned to one chapter of the
+methodological/experimental block (Chapters 3–11).
 
-**Alternativas consideradas y descartadas.** Tres a cinco objetivos
-específicos con mapeo n:m a capítulos (formato más común en TFM en
-algunas escuelas españolas). Descartado porque el mapeo n:m diluye la
-verificabilidad: ¿qué capítulo "cumple" cada objetivo? El mapeo 1:1
-facilita la defensa porque cada objetivo tiene un capítulo entero como
-evidencia explícita de cumplimiento.
+**Alternatives considered and rejected.** Three to five specific
+objectives with n:m mapping to chapters (a more common format in master's
+theses at some Spanish schools). Rejected because the n:m mapping dilutes
+verifiability: which chapter "fulfils" each objective? The 1:1 mapping
+makes the defence easier because each objective has an entire chapter as
+explicit fulfilment evidence.
 
-**Justificación.** Estructura estándar de tesis de investigación con
-contribución metodológica. Al final cada OE tiene un veredicto claro de
-cumplimiento basado en el contenido del capítulo correspondiente.
+**Rationale.** Standard structure of research theses with methodological
+contribution. At the end, each OE has a clear verdict of fulfilment based
+on the content of the corresponding chapter.
 
-**Consecuencias.** El Capítulo 11 debe revisar OE1–OE7 sistemáticamente
-y emitir veredicto por cada uno. Si una escuela específica exige menos
-objetivos, la fusión natural sería OE1+OE2 (caracterización + propuesta
-del marco) y OE5+OE6 (caracterización del gap + verdicto de validación).
+**Consequences.** Chapter 11 must review OE1–OE7 systematically and issue
+a verdict for each. If a specific school requires fewer objectives, the
+natural fusion would be OE1+OE2 (framework characterisation + proposal)
+and OE5+OE6 (gap characterisation + validation verdict).
 
 ---
 
-### D-04 — Alcance acotado: SAE Nivel 2, caso único *lane-following*, pista controlada
+### D-04 — Bounded scope: SAE Level 2, single *lane-following* case, controlled track
 
-| Campo | Valor |
+| Field | Value |
 | --- | --- |
-| Sección | §1.6 |
-| Estado | CONFIRMADA |
-| Fecha | D9 (Fase 0) |
-| Revisión prevista | No procede (decisión de alcance fundacional) |
+| Section | §1.6 |
+| Status | CONFIRMED |
+| Date | D9 (Phase 0) |
+| Planned review | None (foundational scope decision) |
 
-**Decisión.** El proyecto se acota explícitamente a tres ejes: caso
-único de aplicación (no estudio multi-caso, no comparación contra grupo
-de control con V clásico); tarea de seguimiento de carril en pista
-delimitada (no planificación, no interacción con otros agentes); nivel
-SAE 2 (asistencia continua bajo supervisión humana, no SAE 4–5).
+**Decision.** The project is explicitly bounded along three axes: single
+case of application (no multi-case study, no comparison against a control
+group with classical V-Model); lane-following task on a delimited track
+(no planning, no interaction with other agents); SAE Level 2 (continuous
+assistance under human supervision, not SAE 4–5).
 
-**Alternativas consideradas y descartadas.** Estudio multi-caso
-(descartado por superficialidad incompatible con el rigor que el propio
-marco exige). Comparación contra grupo de control con V clásico
-(descartada: requeriría doble proyecto, inviable para una tesis
-individual). Nivel SAE 4 (descartado: requeriría reformular A1 para
-safety cases más exhaustivos y A4 para extender la trazabilidad a
-runtime reasoning, no solo a artefactos de diseño).
+**Alternatives considered and rejected.** Multi-case study (rejected for
+superficiality incompatible with the rigour the framework itself demands).
+Comparison against a control group with classical V-Model (rejected:
+would require a double project, infeasible for an individual thesis).
+Level SAE 4 (rejected: would require reformulating A1 for more exhaustive
+safety cases and A4 to extend traceability to runtime reasoning, not only
+to design artefacts).
 
-**Justificación.** Un caso de aplicación que cubra el ciclo completo
-desde HARA hasta despliegue físico con caracterización del gap
-sim-to-real es ya un compromiso ambicioso para una tesis de máster. Es
-preferible un caso profundo que varios casos superficiales. La
-generalización se argumenta por plausibilidad estructural (D-06), no
-por evidencia empírica multi-caso.
+**Rationale.** A case of application that covers the complete cycle from
+HARA to physical deployment with sim-to-real gap characterisation is
+already an ambitious commitment for a master's thesis. A deep single case
+is preferable to several superficial cases. Generalisation is argued by
+structural plausibility (D-06), not by multi-case empirical evidence.
 
-**Consecuencias.** El Capítulo 12 distingue explícitamente qué partes
-del marco son razonablemente trasladables a otros dominios (otras
-escalas, otras tareas, otros niveles SAE) y cuáles requieren
-replanteamiento. El Capítulo 11 evalúa el marco con las limitaciones de
-N=1 declaradas explícitamente.
+**Consequences.** Chapter 12 must explicitly distinguish which parts of
+the framework are reasonably transferable to other domains (other scales,
+other tasks, other SAE levels) and which require reformulation. Chapter
+11 evaluates the framework with N=1 limitations declared explicitly.
 
 ---
 
-### D-05 — Posicionamiento epistemológico: *design science research*
+### D-05 — Epistemological positioning: *design science research*
 
-| Campo | Valor |
+| Field | Value |
 | --- | --- |
-| Sección | §3.2.1 |
-| Estado | CONFIRMADA |
-| Fecha | D9 (Fase 0) |
+| Section | §3.2.1 |
+| Status | CONFIRMED |
+| Date | D9 (Phase 0) |
 
-**Decisión.** La tesis se inscribe en la tradición del *design science
-research* (Hevner et al., 2004) o, en formulación próxima, *constructive
-research* (March y Smith, 1995). La contribución académica es un
-*artefacto* —el marco V-Model adaptado, articulado en cinco adaptaciones
-A1–A5 más sus plantillas y validadores— que aborda un problema
-previamente identificado en la literatura, evaluado mediante un caso de
-aplicación.
+**Decision.** The thesis is inscribed in the tradition of *design science
+research* (Hevner et al., 2004) or, in a closely related formulation,
+*constructive research* (March and Smith, 1995). The academic
+contribution is an *artefact* —the adapted V-Model framework, articulated
+as five adaptations A1–A5 plus its templates and validators— that
+addresses a problem previously identified in the literature, evaluated
+through a case of application.
 
-**Alternativas consideradas y descartadas.** Tesis empírica clásica
-(descubrir un fenómeno, refutar hipótesis estadística), descartada
-porque no hay un fenómeno por descubrir, hay un artefacto por
-construir. Tesis teórica deductiva, descartada porque el problema no es
-demostrable analíticamente —involucra decisiones de ingeniería y
-métodos que solo se evalúan por construcción y aplicación—.
+**Alternatives considered and rejected.** Classical empirical thesis
+(discover a phenomenon, refute a statistical hypothesis), rejected
+because there is no phenomenon to discover, there is an artefact to
+build. Deductive theoretical thesis, rejected because the problem is not
+analytically demonstrable —it involves engineering and methods decisions
+that are only evaluated by construction and application—.
 
-**Justificación.** El problema que aborda esta tesis es de ingeniería y
-de método: cómo se adapta un ciclo de vida ISO 26262 para acomodar
-componentes RL. La respuesta natural es construir un marco y demostrar
-su funcionamiento, lo cual define con precisión el design science
-research. Esto tiene tres consecuencias prácticas que el Capítulo 3
-desarrolla: la tesis no busca la contribución típica de una tesis
-empírica; la evaluación se hace sobre el artefacto, lo que exige el
-Capítulo 11; la generalización se argumenta por plausibilidad
-estructural, no por inducción estadística.
+**Rationale.** The problem this thesis addresses is one of engineering
+and method: how to adapt an ISO 26262 lifecycle to accommodate RL
+components. The natural answer is to build a framework and demonstrate
+its functioning, which precisely defines design science research. This
+has three practical consequences that Chapter 3 develops: the thesis does
+not seek the typical contribution of an empirical thesis; the evaluation
+is performed on the artefact, which requires Chapter 11; generalisation
+is argued by structural plausibility, not by statistical induction.
 
-**Consecuencias.** El Capítulo 11 está dedicado a evaluar el marco como
-artefacto (cf. D-19). El argumento de generalización del Capítulo 12
-sigue la lógica de plausibilidad estructural (D-06).
+**Consequences.** Chapter 11 is dedicated to evaluating the framework as
+an artefact (cf. D-19). The generalisation argument in Chapter 12 follows
+the structural plausibility logic (D-06).
 
-**Referencias.** Hevner et al. (2004); March y Smith (1995).
+**References.** Hevner et al. (2004); March and Smith (1995).
 
 ---
 
-### D-06 — Estrategia de evaluación: caso único + argumento de plausibilidad estructural
+### D-06 — Evaluation strategy: single case + structural plausibility argument
 
-| Campo | Valor |
+| Field | Value |
 | --- | --- |
-| Sección | §3.2.2 |
-| Estado | CONFIRMADA |
-| Fecha | D9 (Fase 0) |
+| Section | §3.2.2 |
+| Status | CONFIRMED |
+| Date | D9 (Phase 0) |
 
-**Decisión.** El marco se evalúa sobre un único caso de aplicación
-(consistente con D-04). La generalización a otros dominios se argumenta
-por *plausibilidad estructural*: las adaptaciones A1–A5 atacan supuestos
-del V-Model que fallan para cualquier sistema con componente aprendido,
-no solo para *lane-following*. La inferencia es por plausibilidad, no
-por experimentación controlada multi-caso.
+**Decision.** The framework is evaluated on a single case of application
+(consistent with D-04). Generalisation to other domains is argued by
+*structural plausibility*: the A1–A5 adaptations attack assumptions of
+the V-Model that fail for any system with a learned component, not only
+for *lane-following*. The inference is by plausibility, not by controlled
+multi-case experimentation.
 
-**Alternativas consideradas y descartadas.** Estudio multi-caso
-(descartado: superficialidad incompatible con el rigor del marco).
-Comparación contra grupo de control donde se aplicara V clásico al mismo
-sistema (descartado: requeriría doble proyecto, inviable para una tesis
-individual).
+**Alternatives considered and rejected.** Multi-case study (rejected:
+superficiality incompatible with the rigour of the framework). Comparison
+against a control group where the classical V-Model would be applied to
+the same system (rejected: would require a double project, infeasible
+for an individual thesis).
 
-**Justificación.** Inherente al *design science research* (D-05). Un
-caso profundo y completo es preferible a varios casos superficiales
-para validar un marco metodológico. La validez externa se acota
-explícitamente y se discute en §3.9 y Capítulo 12.
+**Rationale.** Inherent to *design science research* (D-05). A complete
+deep case is preferable to several superficial cases for validating a
+methodological framework. External validity is bounded explicitly and
+discussed in §3.9 and Chapter 12.
 
-**Consecuencias.** El Capítulo 11 evalúa el marco con N=1, declarando
-explícitamente los límites de la inferencia. El Capítulo 12 distingue
-qué partes del marco son razonablemente trasladables y cuáles requieren
-replanteamiento. La defensa del trabajo debe articular el argumento de
-plausibilidad estructural cuando el tribunal pregunte por la
-generalización.
+**Consequences.** Chapter 11 evaluates the framework with N=1, declaring
+explicitly the limits of inference. Chapter 12 distinguishes which parts
+of the framework are reasonably transferable and which require
+reformulation. The defence of the work must articulate the structural
+plausibility argument when the committee asks about generalisation.
 
-**Referencias.** Hevner et al. (2004); March y Smith (1995).
+**References.** Hevner et al. (2004); March and Smith (1995).
 
 ---
 
-### D-07 — A1: Desdoblamiento del nivel L4 (*Module Design*) en Cage Spec + Training Spec
+### D-07 — A1: Splitting level L4 (*Module Design*) into Cage Spec + Training Spec
 
-| Campo | Valor |
+| Field | Value |
 | --- | --- |
-| Sección | §3.4.1 |
-| Estado | CONFIRMADA |
-| Fecha | D9 (Fase 0) |
+| Section | §3.4.1 |
+| Status | CONFIRMED |
+| Date | D9 (Phase 0) |
 
-**Decisión.** El nivel L4 del V-Model clásico se desdobla en L4a (Cage
-Specification, especificación clásica determinista de módulo) y L4b
-(Training Specification, *meta-design* del proceso de entrenamiento).
-La Cage Spec sigue el formato tradicional de spec de módulo: cada regla
-Cᵢ es una función pura, testeable, con entradas y salidas definidas. El
-Training Spec especifica el proceso (función de recompensa, espacios de
-estado y acción, ODD de entrenamiento, hiperparámetros, criterios de
-convergencia, restricciones activas), no el comportamiento aprendido.
+**Decision.** Level L4 of the classical V-Model is split into L4a (Cage
+Specification, classical deterministic module specification) and L4b
+(Training Specification, *meta-design* of the training process). The
+Cage Spec follows the traditional module-spec format: each rule Cᵢ is a
+pure, testable function with defined inputs and outputs. The Training
+Spec specifies the process (reward function, state and action spaces,
+training ODD, hyperparameters, convergence criteria, active constraints),
+not the learned behaviour.
 
-**Alternativas consideradas y descartadas.** Mantener L4 sin desdoblar
-(descartado: forzar la *policy* a una especificación clásica rompe la
-honestidad del proceso, eximirla rompe la trazabilidad). Tres niveles
-L4a/L4b/L4c añadiendo una "data spec" separada (descartado: redundante
-con Training Spec).
+**Alternatives considered and rejected.** Keep L4 unsplit (rejected:
+forcing the *policy* into a classical specification breaks the integrity
+of the process; exempting it breaks traceability). Three levels
+L4a/L4b/L4c adding a separate "data spec" (rejected: redundant with
+Training Spec).
 
-**Justificación.** Coherente con el *three-stage realization principle*
-de ISO/IEC TR 5469:2024 (cláusula 7), que distingue las fases de
-adquisición desde entradas, inducción de conocimiento desde datos, y
-procesamiento y generación de salidas. Coherente también con la
-distinción entre elementos Clase I (cage, verificación tradicional
-aplicable) y Clase II (policy, técnicas específicas requeridas) del
-mismo TR. Permite aplicar técnicas clásicas allí donde son aplicables y
-técnicas estadísticas allí donde son necesarias, sin forzar metáforas.
+**Rationale.** Consistent with the *three-stage realization principle*
+of ISO/IEC TR 5469:2024 (clause 7), which distinguishes the phases of
+acquisition from inputs, induction of knowledge from data, and
+processing and generation of outputs. Also consistent with the
+distinction between Class I elements (cage, traditional verification
+applicable) and Class II (policy, specific techniques required) in the
+same TR. It allows applying classical techniques where they apply and
+statistical techniques where they are needed, without forcing metaphors.
 
-**Consecuencias.** Se producen dos artefactos versionados separados:
-`cage_specification.md` (con C-01..C-0n formalmente definidas) y
-`training_specification.md` (con función de recompensa, hiperparámetros,
-ODD y criterios de convergencia). La trazabilidad H↔SR↔C debe distinguir
-entre componentes Clase I y Clase II.
+**Consequences.** Two separately versioned artefacts are produced:
+`cage_specification.md` (with C-01..C-0n formally defined) and
+`training_specification.md` (with reward function, hyperparameters, ODD,
+and convergence criteria). The H↔SR↔C traceability must distinguish
+Class I from Class II components.
 
-**Referencias.** Kuutti et al. (2019b, 2021); ISO/IEC TR 5469:2024.
+**References.** Kuutti et al. (2019b, 2021); ISO/IEC TR 5469:2024.
 
 ---
 
-### D-08 — A2: Desdoblamiento del nivel L4' (*Unit Testing*) en Cage Unit Tests + Policy Behavioral Evaluation
+### D-08 — A2: Splitting level L4' (*Unit Testing*) into Cage Unit Tests + Policy Behavioral Evaluation
 
-| Campo | Valor |
+| Field | Value |
 | --- | --- |
-| Sección | §3.4.2 |
-| Estado | CONFIRMADA |
-| Fecha | D9 (Fase 0) |
+| Section | §3.4.2 |
+| Status | CONFIRMED |
+| Date | D9 (Phase 0) |
 
-**Decisión.** El nivel L4' del V-Model clásico se desdobla en L4a'
-(Cage Unit Tests, suite determinista pass/fail con pytest sobre cada
-regla de cage) y L4b' (Policy Behavioral Evaluation, caracterización
-estadística del comportamiento de la *policy* sobre la *scenario
-library* con medias, varianzas, percentiles e intervalos de confianza).
+**Decision.** Level L4' of the classical V-Model is split into L4a'
+(Cage Unit Tests, deterministic pass/fail suite using pytest over each
+cage rule) and L4b' (Policy Behavioral Evaluation, statistical
+characterisation of the *policy*'s behaviour over the *scenario library*
+with means, variances, percentiles, and confidence intervals).
 
-**Alternativas consideradas y descartadas.** Mantener L4' sin desdoblar
-(descartado: no existe "salida correcta" para tests unitarios sobre la
-*policy*; todo test unitario clásico sobre ella sería inválido por
-construcción). Sustituir L4' enteramente por evaluación estadística
-(descartado: la cage admite tests clásicos y conviene mantenerlos como
-verificación de Clase I).
+**Alternatives considered and rejected.** Keep L4' unsplit (rejected:
+there is no "correct output" for unit tests on the *policy*; any
+classical unit test on it would be invalid by construction). Replace L4'
+entirely with statistical evaluation (rejected: the cage admits classical
+tests and it is appropriate to keep them as Class I verification).
 
-**Justificación.** Espejo simétrico de D-07. Reconoce que la
-verificación clásica no es aplicable a componentes aprendidos pero
-sigue siendo aplicable a la cage. La asimetría es coherente con la
-distinción Clase I/II de ISO/IEC TR 5469:2024. La caracterización
-estadística se inspira en QED (Gao et al., 2021) y en *Behavior
-Metrics* (Paniego et al., 2024), instrumentos abiertos para evaluación
-cuantitativa.
+**Rationale.** Symmetric mirror of D-07. It acknowledges that classical
+verification is not applicable to learned components but remains
+applicable to the cage. The asymmetry is consistent with the Class I/II
+distinction in ISO/IEC TR 5469:2024. The statistical characterisation is
+inspired by QED (Gao et al., 2021) and *Behavior Metrics* (Paniego et
+al., 2024), open instruments for quantitative evaluation.
 
-**Consecuencias.** Se producen dos suites de evaluación:
-`tests/cage/test_rules.py` (determinista, ejecutable en CI) y el
-Capítulo 8 como Policy Behavioral Evaluation estructurada. La adopción
-definitiva de QED como métrica oficial queda diferida a Fase 4 (D-17).
+**Consequences.** Two evaluation suites are produced:
+`tests/cage/test_rules.py` (deterministic, executable in CI) and Chapter
+8 as a structured Policy Behavioral Evaluation. Definitive adoption of
+QED as official metric is deferred to Phase 4 (D-17).
 
-**Referencias.** Gao et al. (2021); Paniego et al. (2024); ISO/IEC
-TR 5469:2024.
+**References.** Gao et al. (2021); Paniego et al. (2024); ISO/IEC TR
+5469:2024.
 
 ---
 
-### D-09 — A3: Nuevo nivel transversal Runtime Monitoring
+### D-09 — A3: New transversal Runtime Monitoring level
 
-| Campo | Valor |
+| Field | Value |
 | --- | --- |
-| Sección | §3.4.3 |
-| Estado | CONFIRMADA |
-| Fecha | D9 (Fase 0) |
+| Section | §3.4.3 |
+| Status | CONFIRMED |
+| Date | D9 (Phase 0) |
 
-**Decisión.** Se añade al V-Model adaptado un nivel horizontal,
-*Runtime Monitoring*, representado como banda transversal debajo del V
-(no como sub-nivel colgando del vértice de Implementación). El nivel se
-alimenta de los logs de intervención de la cage durante operación y
-realimenta los niveles superiores de validación (L1' y, eventualmente,
-L2 cuando emergen hazards no anticipados).
+**Decision.** A horizontal level —*Runtime Monitoring*— is added to the
+adapted V-Model, represented as a transversal band beneath the V (not as
+a sub-level hanging from the implementation vertex). The level is fed by
+cage intervention logs during operation and feeds back to higher
+validation levels (L1' and, eventually, L2 when unanticipated hazards
+emerge).
 
-**Alternativas consideradas y descartadas.** Brazo derecho extendido
-del V al estilo Wang et al. (2024) (descartado: rompe la simetría
-visual del V, dificulta la lectura). Bucle de retroalimentación cerrado
-externo al V (descartado: gráficamente más denso, requiere leyenda
-explícita). No añadir A3 y dejar el monitoring como práctica recomendada
-genérica (descartado: convierte el runtime monitoring en una intención,
-no en un nivel auditable del ciclo).
+**Alternatives considered and rejected.** Extended right arm of the V in
+the style of Wang et al. (2024) (rejected: breaks the visual symmetry of
+the V, hinders readability). Closed feedback loop external to the V
+(rejected: graphically denser, requires explicit legend). Not adding A3
+and leaving monitoring as a generic recommended practice (rejected: turns
+runtime monitoring into an intention rather than an auditable level of
+the cycle).
 
-**Justificación.** La validación estática es insuficiente para sistemas
-que operan en entornos no completamente especificados (filosofía SOTIF,
-ISO 21448:2022). El runtime monitoring eleva esta filosofía de práctica
-recomendada a nivel arquitectónico explícito del lifecycle. Antecedente
-técnico directo en Mohseni et al. (2019), que conceptualiza la
-*monitoring function* como categoría arquitectónica propia y revisa
-tres familias de técnicas para implementarla (uncertainty estimation,
-in-distribution error detectors, OOD detectors). La reformulación del
-V-Model con fase de operación continua de Wang et al. (2024) y Ullrich
-et al. (2025) refuerza la dirección.
+**Rationale.** Static validation is insufficient for systems operating
+in environments not completely specified (SOTIF philosophy, ISO
+21448:2022). Runtime monitoring elevates this philosophy from recommended
+practice to explicit architectural level of the lifecycle. A direct
+technical antecedent is found in Mohseni et al. (2019), who conceptualise
+the *monitoring function* as an architectural category in its own right
+and review three families of techniques to implement it (uncertainty
+estimation, in-distribution error detectors, OOD detectors). The
+reformulation of the V-Model with a continuous operation phase by Wang
+et al. (2024) and Ullrich et al. (2025) reinforces the direction.
 
-**Consecuencias.** El Logger Node de la arquitectura ROS2 (Capítulo 5)
-es el instrumento primario de A3, no un componente auxiliar. El
-Capítulo 10 incorpora el concepto de "validación continua como
-sustituto parcial de validación estática completa". La versión inicial
-del marco se acota a una cage basada en reglas más logging agregado;
-incorporar detectores de incertidumbre o de distribución queda como
-línea de extensión natural (Capítulo 12).
+**Consequences.** The Logger Node of the ROS2 architecture (Chapter 5)
+is the primary instrument of A3, not an auxiliary component. Chapter 10
+incorporates the concept of "continuous validation as partial substitute
+for complete static validation". The initial version of the framework
+is bounded to a rules-based cage plus aggregated logging; incorporating
+uncertainty or distribution detectors remains a natural extension line
+(Chapter 12).
 
-**Referencias.** Mohseni et al. (2019); Wang et al. (2024); Ullrich et
-al. (2025); ISO 21448:2022.
+**References.** Mohseni et al. (2019); Wang et al. (2024); Ullrich et al.
+(2025); ISO 21448:2022.
 
 ---
 
-### D-10 — A4: Trazabilidad bidireccional como restricción dura aplicada por herramienta
+### D-10 — A4: Bidirectional traceability as hard constraint enforced by tooling
 
-| Campo | Valor |
+| Field | Value |
 | --- | --- |
-| Sección | §3.4.4 |
-| Estado | CONFIRMADA |
-| Fecha | D9 (Fase 0) |
+| Section | §3.4.4 |
+| Status | CONFIRMED |
+| Date | D9 (Phase 0) |
 
-**Decisión.** La trazabilidad bidireccional H↔SR↔C↔SC↔M es una
-restricción dura, no una buena práctica. Toda regla de cage debe
-trazarse a SRs; todo SR a hazards o argumento explícito de riesgo
-aceptado; todo escenario a SRs; toda métrica a SRs. Un script
-automatizado (`check_traceability.py`) se ejecuta en cada commit y
-diariamente, fallando si detecta huérfanos en cualquier dirección.
+**Decision.** Bidirectional traceability H↔SR↔C↔SC↔M is a hard
+constraint, not a good practice. Every cage rule must be traced to SRs;
+every SR to hazards or an explicit accepted-risk argument; every scenario
+to SRs; every metric to SRs. An automated script
+(`check_traceability.py`) runs on every commit and daily, failing if it
+detects orphans in any direction.
 
-**Alternativas consideradas y descartadas.** Trazabilidad como buena
-práctica documental al estilo AMLAS (Paterson et al., 2025), descartada
-porque depende de revisiones manuales auditables a posteriori, lo que
-en una tesis individual es inviable de garantizar. Trazabilidad parcial
-solo de SRs a cage, descartada por dejar la rama derecha del V sin
-auditoría automatizada.
+**Alternatives considered and rejected.** Traceability as documentary
+good practice in the AMLAS style (Paterson et al., 2025), rejected
+because it depends on manual reviews auditable a posteriori, which is
+infeasible to guarantee in an individual thesis. Partial traceability
+only from SRs to cage, rejected because it leaves the right branch of
+the V without automated audit.
 
-**Justificación.** En sistemas con componentes aprendidos, la tentación
-de atribuir comportamientos a "propiedades emergentes" del aprendizaje
-es alta. Sin trazabilidad estricta automatizada, cualquier
-comportamiento puede justificarse retrospectivamente como "algo que la
-*policy* aprendió", lo que vacía de contenido el concepto de
-responsabilidad ingenieril. La filosofía es próxima a los patrones GSN
-(*Goal Structuring Notation*) de AMLAS pero va un paso más allá al
-convertir la trazabilidad en propiedad verificable por herramienta
-automatizada en lugar de práctica documental revisable.
+**Rationale.** In systems with learned components, the temptation to
+attribute behaviours to "emergent properties" of learning is high.
+Without strict automated traceability, any behaviour can be justified
+retrospectively as "something the *policy* learned", which empties the
+concept of engineering responsibility of content. The philosophy is
+close to the GSN (*Goal Structuring Notation*) patterns of AMLAS but
+goes one step further by turning traceability into a property
+verifiable by automated tooling rather than reviewable documentary
+practice.
 
-**Consecuencias.** La Fase 1 (HARA + SR) se simplifica porque obliga al
-autor a pensar "¿qué cage rule voy a tener para esto?" desde el primer
-SR. El resultado son SRs más operativos y menos abstractos. Se producen
-dos artefactos: `traceability_matrix.csv` (matriz viva) y
-`check_traceability.py` (validador automatizado), más Anexo F como
-versión consolidada al cierre.
+**Consequences.** Phase 1 (HARA + SR) becomes simpler because it forces
+the author to think "what cage rule am I going to have for this?" from
+the very first SR. The result is more operational, less abstract SRs.
+Two artefacts are produced: `traceability_matrix.csv` (living matrix)
+and `check_traceability.py` (automated validator), plus Annex F as the
+consolidated version at close.
 
-**Referencias.** Paterson et al. (2025) AMLAS; Koopman (2023) UL 4600.
+**References.** Paterson et al. (2025) AMLAS; Koopman (2023) UL 4600.
 
 ---
 
-### D-11 — A5: Validación operacional acotada con caracterización explícita del gap sim-to-real
+### D-11 — A5: Bounded operational validation with explicit sim-to-real gap characterization
 
-| Campo | Valor |
+| Field | Value |
 | --- | --- |
-| Sección | §3.4.5 |
-| Estado | CONFIRMADA |
-| Fecha | D9 (Fase 0) |
+| Section | §3.4.5 |
+| Status | CONFIRMED |
+| Date | D9 (Phase 0) |
 
-**Decisión.** El nivel L1' (Acceptance Testing) del V-Model clásico se
-reformula como **Operational Validation** con dos componentes
-obligatorios: L1'-a (Scenario-Based System Validation, equivalente al
-acceptance testing clásico estructurado por escenarios ligados a SRs,
-con métricas de cobertura sobre el ODD en la línea de De Gelder et al.,
-2024) y L1'-b (Sim-to-Real Gap Characterization, cuantificación
-explícita y empírica del gap entre el entorno de entrenamiento y el
-entorno operacional para cada métrica y modo de fallo relevante). La
-conclusión de validación NO es "el sistema es seguro" sino "el sistema
-satisface los SRs bajo las condiciones del ODD X con un gap medido de Y
-respecto a las condiciones de entrenamiento, y con los siguientes
-riesgos residuales documentados".
+**Decision.** Level L1' (Acceptance Testing) of the classical V-Model is
+reformulated as **Operational Validation** with two mandatory
+components: L1'-a (Scenario-Based System Validation, equivalent to
+classical acceptance testing structured by scenarios linked to SRs, with
+ODD coverage metrics in the line of De Gelder et al., 2024) and L1'-b
+(Sim-to-Real Gap Characterization, explicit and empirical
+quantification of the gap between training environment and operational
+environment for each relevant metric and failure mode). The validation
+conclusion is NOT "the system is safe" but rather "the system satisfies
+the SRs under conditions of ODD X with a measured gap of Y with respect
+to training conditions, and with the following residual risks
+documented".
 
-**Alternativas consideradas y descartadas.** Mantener L1' como
-acceptance testing binario (descartado: implícitamente asume que las
-condiciones de testing son representativas de las operacionales, lo
-cual es falso para sistemas entrenados en simulación). Validación
-cualitativa sin métricas del gap (descartada: incompatible con el
-principio claim-argument-evidence de UL 4600).
+**Alternatives considered and rejected.** Keep L1' as binary acceptance
+testing (rejected: implicitly assumes that testing conditions are
+representative of operational ones, which is false for systems trained
+in simulation). Qualitative validation without gap metrics (rejected:
+incompatible with UL 4600's claim-argument-evidence principle).
 
-**Justificación.** Para un sistema entrenado en simulación, las
-condiciones de testing en sim no son representativas de las condiciones
-operacionales físicas. El gap es un riesgo de primer orden; un
-"acceptance test passed" en simulación no implica operación segura en
-el mundo real. La adaptación A5 hace este sesgo visible y mensurable.
-Coherente con la filosofía SOTIF y con el principio
-claim-argument-evidence de UL 4600.
+**Rationale.** For a system trained in simulation, testing conditions
+in simulation are not representative of physical operational conditions.
+The gap is a first-order risk; an "acceptance test passed" in simulation
+does not imply safe operation in the real world. Adaptation A5 makes
+this bias visible and measurable. Consistent with SOTIF philosophy and
+with the claim-argument-evidence principle of UL 4600.
 
-**Consecuencias.** El Capítulo 9 está dedicado al gap sim-to-real con
-métricas M-T1 a M-T4 que lo cuantifican. El Capítulo 10 emite veredicto
-acotado con tabla de riesgos residuales documentados (Anexo H). La
-elección de Gazebo como simulador (D-12) hace especialmente relevante
-esta caracterización.
+**Consequences.** Chapter 9 is dedicated to the sim-to-real gap with
+metrics M-T1 to M-T4 that quantify it. Chapter 10 issues a bounded
+verdict with a residual risks table (Annex H). The choice of Gazebo as
+simulator (D-12) makes this characterisation particularly relevant.
 
-**Referencias.** De Gelder et al. (2024); ISO 21448:2022; Koopman
-(2023).
+**References.** De Gelder et al. (2024); ISO 21448:2022; Koopman (2023).
 
 ---
 
-### D-12 — Simulador adoptado: Gazebo (sustituye CARLA en versión preliminar)
+### D-12 — Adopted simulator: Gazebo (supersedes CARLA in preliminary version)
 
-| Campo | Valor |
+| Field | Value |
 | --- | --- |
-| Sección | §3.6.1 |
-| Estado | CONFIRMADA |
-| Fecha | D9 (Fase 0) — revisión interna D9+ |
-| Revisión prevista | No procede (validada tras análisis comparativo) |
+| Section | §3.6.1 |
+| Status | CONFIRMED |
+| Date | D9 (Phase 0) — internal review D9+ |
+| Planned review | None (validated after comparative analysis) |
 
-**Decisión.** El simulador adoptado es Gazebo (Koenig y Howard, 2004)
-en su variante moderna con integración ROS2 nativa, operado a través
-de una interfaz gymnasium-Gazebo-ROS2 que reutiliza un entorno
-previamente construido por el autor en un trabajo de investigación
-anterior. Esta decisión sustituye a una elección preliminar de CARLA
-registrada en una versión inicial del Capítulo 3 y obliga a actualizar
-todas las menciones del simulador en los Capítulos 1, 2 y 3.
+**Decision.** The adopted simulator is Gazebo (Koenig and Howard, 2004)
+in its modern variant with native ROS2 integration, operated through a
+gymnasium-Gazebo-ROS2 interface that reuses an environment previously
+built by the author in earlier research work. This decision supersedes a
+preliminary choice of CARLA registered in an initial version of Chapter
+3 and requires updating all simulator mentions in Chapters 1, 2, and 3.
 
-**Alternativas consideradas y descartadas.** **CARLA** (Dosovitskiy et
-al., 2017): candidato más fuerte y dominante en investigación de
-conducción autónoma reciente; ofrece fidelidad sensorial superior y un
-ecosistema maduro de benchmarks; descartado por requerir bridge ROS2
-con sus complicaciones, no admitir reutilización del trabajo previo del
-autor, y mayor coste de cómputo. **Highway-Env** y derivados de Gym
-(sin sensores realistas, espacio de observación abstracto, no aptos
-para policies basadas en cámara). **LGSVL** (proyecto discontinuado en
-2022, ecosistema en descomposición). **AirSim** (foco aeroespacial,
-soporte automotriz secundario y desarrollo en pausa).
+**Alternatives considered and rejected.** **CARLA** (Dosovitskiy et al.,
+2017): strongest candidate and dominant choice in recent autonomous
+driving research; offers superior sensor fidelity and a mature benchmark
+ecosystem; rejected because it requires a ROS2 bridge with its own
+complications, does not allow reuse of the author's prior work, and its
+higher compute cost is an operational drag. **Highway-Env** and other
+Gym-derived environments (no realistic sensors, abstract observation
+space, not suitable for camera-based policies). **LGSVL** (project
+discontinued in 2022, ecosystem in decay). **AirSim** (aerospace focus,
+secondary automotive support, development on hold).
 
-**Justificación.** Cuatro razones articuladas en §3.6.1: integración
-ROS2 nativa sin capas de bridge intermedias, lo que reduce superficie
-de falla y mejora la fiabilidad de las métricas de integración M-I;
-reutilización del trabajo previo del autor, coherente con el enfoque
-*design science* (la contribución no está en el simulador sino en el
-marco); disponibilidad de la interfaz gymnasium-Gazebo-ROS2 que separa
-limpiamente algoritmo, entorno y sistema, facilitando A1; requisitos de
-cómputo más modestos, relevantes para una tesis individual sin acceso a
-infraestructura dedicada.
+**Rationale.** Four reasons articulated in §3.6.1: native ROS2
+integration without intermediate bridge layers, which reduces the
+failure surface and improves the reliability of the M-I integration
+metrics; reuse of the author's prior work, consistent with the *design
+science* approach (the contribution is not in the simulator but in the
+framework); availability of the gymnasium-Gazebo-ROS2 interface that
+cleanly separates algorithm, environment, and system, facilitating A1;
+more modest compute requirements, relevant for an individual thesis
+without access to dedicated infrastructure.
 
-**Compromisos reconocidos.** Fidelidad visual inferior a la del motor
-Unreal Engine subyacente a CARLA (consecuencia: el gap sim-to-real
-puede ser más pronunciado en características visuales de la cámara; A5
-hace este efecto visible y medible). La comunidad específica de
-investigación AD usa mayoritariamente CARLA, lo que limita la
-disponibilidad inmediata de scenario libraries reutilizables en formato
-Gazebo (consecuencia: la *scenario library* del proyecto debe
-construirse explícitamente en el Capítulo 6).
+**Acknowledged trade-offs.** Visual fidelity inferior to that of the
+Unreal Engine motor underlying CARLA (consequence: the sim-to-real gap
+may be more pronounced in the camera's visual features; A5 makes this
+effect visible and measurable). The specific autonomous-driving research
+community uses CARLA predominantly, which limits the immediate
+availability of reusable scenario libraries in Gazebo format
+(consequence: the project's *scenario library* must be built explicitly
+in Chapter 6).
 
-**Consecuencias.** Capítulos 1, 2 y 3 actualizados consistentemente.
-QED (Gao et al., 2021) pasa a inspiración conceptual con pesos a
-recalibrar (D-17), porque su calibración original es sobre CARLA. El
-Capítulo 12 incluye como línea de extensión natural la replicación del
-experimento sobre CARLA para comparar magnitudes del gap entre
-simuladores con distinta fidelidad visual.
+**Consequences.** Chapters 1, 2, and 3 are updated consistently. QED
+(Gao et al., 2021) becomes conceptual inspiration with weights to be
+recalibrated (D-17), because its original calibration is on CARLA.
+Chapter 12 includes as a natural extension line the replication of the
+experiment on CARLA to compare gap magnitudes between simulators with
+different visual fidelity.
 
-**Referencias.** Koenig y Howard (2004); Dosovitskiy et al. (2017) como
-alternativa descartada y como referencia del estado del arte en §2.4.
+**References.** Koenig and Howard (2004); Dosovitskiy et al. (2017) as
+rejected alternative and as state-of-the-art reference in §2.4.
 
 ---
 
-### D-13 — Middleware: ROS2 distribución Humble
+### D-13 — Middleware: ROS2 Humble distribution
 
-| Campo | Valor |
+| Field | Value |
 | --- | --- |
-| Sección | §3.6.2 |
-| Estado | CONFIRMADA |
-| Fecha | D9 (Fase 0) |
+| Section | §3.6.2 |
+| Status | CONFIRMED |
+| Date | D9 (Phase 0) |
 
-**Decisión.** ROS2 distribución Humble (LTS) como middleware de
-comunicación entre nodos del proyecto.
+**Decision.** ROS2 Humble distribution (LTS) as the communication
+middleware between project nodes.
 
-**Alternativas consideradas y descartadas.** ROS1 Noetic (EOL en 2025,
-sin sucesor de soporte; descartado). Middleware propio basado en ZMQ o
-gRPC (descartado: descarta tooling existente, coste de desarrollo
-prohibitivo).
+**Alternatives considered and rejected.** ROS1 Noetic (EOL in 2025, no
+support successor; rejected). Proprietary middleware based on ZMQ or gRPC
+(rejected: discards existing tooling, prohibitive development cost).
 
-**Justificación.** ROS2 es el estándar de facto en investigación
-robótica desde la transición ROS1→ROS2 hacia 2020. El modelo
-publish/subscribe casa naturalmente con la arquitectura
-monitor-actuador de la cage: la *policy* publica acciones candidatas, la
-cage las suscribe, las evalúa, y publica las acciones efectivas. El
-soporte para *bag recording* permite implementar el Logger Node de A3
-sin código adicional. La distribución Humble se adopta por
-compatibilidad con la versión de Gazebo del entorno reutilizado (D-12)
-y con el SBC embarcado en el coche físico.
+**Rationale.** ROS2 is the de facto standard in robotics research since
+the ROS1→ROS2 transition around 2020. The publish/subscribe model fits
+naturally with the cage's monitor-actuator architecture: the *policy*
+publishes candidate actions, the cage subscribes, evaluates, and
+publishes effective actions. Bag recording support allows implementing
+the A3 Logger Node without additional code. The Humble distribution is
+adopted for compatibility with the Gazebo version of the reused
+environment (D-12) and with the SBC embedded in the physical car.
 
-**Consecuencias.** Toda la arquitectura del Capítulo 5 es ROS2 desde su
-concepción. Las herramientas de inspección (rqt, ros2 topic, ros2 bag)
-son utilizables tal cual, sin desarrollo adicional.
+**Consequences.** The entire architecture of Chapter 5 is ROS2 from its
+inception. Inspection tools (rqt, ros2 topic, ros2 bag) are usable as is,
+without additional development.
 
 ---
 
-### D-14 — Algoritmo de aprendizaje: PPO (*Proximal Policy Optimization*)
+### D-14 — Learning algorithm: PPO (*Proximal Policy Optimization*)
 
-| Campo | Valor |
+| Field | Value |
 | --- | --- |
-| Sección | §3.6.3 |
-| Estado | CONFIRMADA |
-| Fecha | D9 (Fase 0) |
+| Section | §3.6.3 |
+| Status | CONFIRMED |
+| Date | D9 (Phase 0) |
 
-**Decisión.** PPO (Schulman et al., 2017) como algoritmo de aprendizaje
-por refuerzo, implementado mediante Stable-Baselines3.
+**Decision.** PPO (Schulman et al., 2017) as the reinforcement learning
+algorithm, implemented via Stable-Baselines3.
 
-**Alternativas consideradas y descartadas.** **SAC** (Haarnoja et al.,
-2018): competitivo en eficiencia de muestras y en robustez a
-hiperparámetros, pero su carácter *off-policy* hace el Training Spec
-menos interpretable —la noción de "qué política produjo qué experiencia"
-se difumina en el *replay buffer*— y su naturaleza estocástica con
-*temperature tuning* añade complejidad al diseño del experimento;
-descartado. **DDPG / TD3**: deterministas *off-policy*, más inestables
-que SAC y superados por este en casi todos los benchmarks; descartados.
-**A3C / A2C**: menos eficientes en muestras y virtualmente abandonados
-a favor de PPO desde 2018; descartados.
+**Alternatives considered and rejected.** **SAC** (Haarnoja et al.,
+2018): competitive in sample efficiency and hyperparameter robustness,
+but its *off-policy* character makes the Training Spec less interpretable
+—the notion of "which policy produced which experience" blurs in the
+*replay buffer*— and its stochastic nature with *temperature tuning*
+adds complexity to experimental design; rejected. **DDPG / TD3**:
+deterministic *off-policy*, more unstable than SAC and superseded by it
+in almost all benchmarks; rejected. **A3C / A2C**: less sample-efficient
+and virtually abandoned in favour of PPO since 2018; rejected.
 
-**Justificación.** Cuatro motivos coherentes con el marco metodológico.
-*Estabilidad de entrenamiento*: el *clipped surrogate objective* limita
-la divergencia de actualización sin requerir restricción explícita de
-KL, lo que reduce la sensibilidad a hiperparámetros y mejora la
-reproducibilidad —propiedad importante para un trabajo individual con
-limitada compute para *sweeps* exhaustivos—.
-*Interpretabilidad del Training Spec*: al ser *on-policy*, los
-hiperparámetros tienen un significado semántico relativamente directo
-(tamaño de rollout, épocas por update, ratio de clipping, coeficiente
-de entropía), lo que facilita escribir el Training Spec del nivel L4b
-como documento legible. *Soporte en herramientas abiertas*: la
-implementación de Stable-Baselines3 está madura y admite integración
-directa con Gazebo a través de la interfaz gymnasium-Gazebo-ROS2.
-*Compatibilidad con extensiones*: si en futuras iteraciones la tesis
-explorase *constrained RL* (al estilo de RECPO de Zhao et al., 2024),
-PPO admite extensión natural a CMDP.
+**Rationale.** Four reasons consistent with the methodological framework.
+*Training stability*: the *clipped surrogate objective* limits update
+divergence without requiring explicit KL constraint, which reduces
+hyperparameter sensitivity and improves reproducibility —an important
+property for an individual work with limited compute for exhaustive
+*sweeps*—. *Training Spec interpretability*: being *on-policy*, the
+hyperparameters have relatively direct semantic meaning (rollout size,
+epochs per update, clipping ratio, entropy coefficient), which makes
+writing the L4b Training Spec as a readable document easier. *Open-tool
+support*: the Stable-Baselines3 implementation is mature and admits
+direct integration with Gazebo through the gymnasium-Gazebo-ROS2
+interface. *Compatibility with extensions*: if future iterations of the
+thesis explored *constrained RL* (in the style of RECPO from Zhao et
+al., 2024), PPO admits natural extension to CMDP.
 
-**Consecuencias.** El Training Spec del Capítulo 7 es legible para un
-revisor sin entrenamiento profundo en RL. Los hiperparámetros
-documentados en `training_specification.md` tienen significado
-trazable a propiedades del bucle de entrenamiento.
+**Consequences.** The Training Spec of Chapter 7 is readable for a
+reviewer without deep RL training. The hyperparameters documented in
+`training_specification.md` have meaning traceable to properties of the
+training loop.
 
-**Referencias.** Schulman et al. (2017); Haarnoja et al. (2018) como
-alternativa descartada; Zhao et al. (2024) RECPO como extensión futura.
+**References.** Schulman et al. (2017); Haarnoja et al. (2018) as rejected
+alternative; Zhao et al. (2024) RECPO as future extension.
 
 ---
 
-### D-15 — Stack tecnológico: Stable-Baselines3 + PyTorch + pytest + Python 3.10+
+### D-15 — Technology stack: Stable-Baselines3 + PyTorch + pytest + Python 3.10+
 
-| Campo | Valor |
+| Field | Value |
 | --- | --- |
-| Sección | §3.6.4 |
-| Estado | CONFIRMADA |
-| Fecha | D9 (Fase 0) |
+| Section | §3.6.4 |
+| Status | CONFIRMED |
+| Date | D9 (Phase 0) |
 
-**Decisión.** Stack tecnológico del proyecto: Stable-Baselines3 como
-implementación de PPO; PyTorch como backend de redes neuronales;
-pytest como framework de testing para Cage Unit Tests (L4a' del V
-adaptado) y suite de regresión general; Python 3.10+ con herramientas
-de calidad ruff (linting), mypy (type checking) y pre-commit
-(automatización en commits).
+**Decision.** Project technology stack: Stable-Baselines3 as PPO
+implementation; PyTorch as neural network backend; pytest as testing
+framework for Cage Unit Tests (L4a' of the adapted V) and general
+regression suite; Python 3.10+ with quality tooling ruff (linting), mypy
+(type checking), and pre-commit (commit-time automation).
 
-**Alternativas consideradas y descartadas.** Stable-Baselines (v2)
-sobre TensorFlow (descartado: comunidad migrada a SB3/PyTorch). RLlib
-sobre Ray (descartado: complejidad innecesaria para un proyecto
-individual). unittest estándar (descartado: pytest tiene mejor
-ergonomía y fixtures).
+**Alternatives considered and rejected.** Stable-Baselines (v2) on
+TensorFlow (rejected: community migrated to SB3/PyTorch). RLlib on Ray
+(rejected: unnecessary complexity for an individual project). Standard
+unittest (rejected: pytest has better ergonomics and fixtures).
 
-**Justificación.** Decisiones de tooling bien establecidas en
-investigación contemporánea, todas con código auditable.
-Stable-Baselines3 admite integración directa con gymnasium-Gazebo-ROS2
-(cf. D-12). PyTorch es estándar de facto en investigación reciente y
-tiene herramientas de profiling maduras. pytest con fixtures simplifica
-los Cage Unit Tests de A2 (D-08).
+**Rationale.** Tooling decisions well established in contemporary
+research, all with auditable code. Stable-Baselines3 admits direct
+integration with gymnasium-Gazebo-ROS2 (cf. D-12). PyTorch is the de
+facto standard in recent research and has mature profiling tools.
+pytest with fixtures simplifies the Cage Unit Tests of A2 (D-08).
 
-**Consecuencias.** Las plantillas y CI/CD del proyecto se construyen
-sobre este stack. La reproducibilidad del proyecto exige documentar
-estas dependencias en `pyproject.toml` y fijarlas en `requirements.lock`.
+**Consequences.** Project templates and CI/CD are built on this stack.
+Project reproducibility requires documenting these dependencies in
+`pyproject.toml` and pinning them in `requirements.lock`.
 
 ---
 
-### D-16 — Plataforma física: vehículo radio-controlado escala 1:14
+### D-16 — Physical platform: 1:14 scale radio-controlled vehicle
 
-| Campo | Valor |
+| Field | Value |
 | --- | --- |
-| Sección | §3.6.5 |
-| Estado | CONFIRMADA |
-| Fecha | D9 (Fase 0) |
+| Section | §3.6.5 |
+| Status | CONFIRMED |
+| Date | D9 (Phase 0) |
 
-**Decisión.** Vehículo RC escala 1:14 instrumentado con cámara frontal
-monocular, IMU para estimación de actitud, encoder de motor para
-velocidad longitudinal, y SBC con soporte ROS2 para cómputo embebido.
+**Decision.** 1:14 scale RC vehicle instrumented with monocular front
+camera, IMU for attitude estimation, motor encoder for longitudinal
+velocity, and SBC with ROS2 support for embedded compute.
 
-**Alternativas consideradas y descartadas.** Escala 1:5 (descartada:
-discrepancias dinámicas dominantes con simulación, mayor coste, mayor
-riesgo en operación). Escala 1:1 (descartada: coste prohibitivo, riesgo
-de operación, requerimientos legales fuera del alcance). Escala 1:24 o
-menor (descartada: dinámica demasiado distante de la de un coche real
-para ser informativa sobre el gap sim-to-real).
+**Alternatives considered and rejected.** 1:5 scale (rejected: dynamic
+discrepancies dominant against simulation, higher cost, higher
+operational risk). 1:1 scale (rejected: prohibitive cost, operational
+risk, legal requirements outside the scope). 1:24 scale or smaller
+(rejected: dynamics too distant from a real car to be informative about
+the sim-to-real gap).
 
-**Justificación.** Tres motivos articulados en §3.6.5. *Coste*: un 1:14
-es manipulable, las piezas son asequibles y el riesgo de daño en
-operación es acotado. *Seguridad de operación*: velocidades bajas,
-energía cinética baja, riesgo para terceros despreciable en pista
-cerrada. *Transferibilidad de la simulación*: la dinámica de un 1:14
-admite aproximación razonable en Gazebo mediante un modelo plugin-based
-con parámetros ajustables (masa, distribución de carga, fricción de
-neumáticos, parámetros de actuación), mientras escalas mayores
-introducirían discrepancias dinámicas que dominarían el gap sim-to-real.
+**Rationale.** Three reasons articulated in §3.6.5. *Cost*: a 1:14 is
+manageable, parts are affordable, and the operational damage risk is
+bounded. *Operational safety*: low speeds, low kinetic energy,
+negligible third-party risk on a closed track. *Simulation
+transferability*: the dynamics of a 1:14 admit reasonable approximation
+in Gazebo through a plugin-based model with adjustable parameters (mass,
+load distribution, tyre friction, actuation parameters), while larger
+scales would introduce dynamic discrepancies that would dominate the
+sim-to-real gap.
 
-**Consecuencias.** Las especificaciones detalladas (motor, ESC,
-controlador de bajo nivel, cámara, plataforma de cómputo) se documentan
-en el Capítulo 5 y en el Anexo correspondiente. El gap sim-to-real
-caracterizado en el Capítulo 9 es específico de esta escala y no
-extrapolable directamente a escalas mayores; esta limitación se declara
-explícitamente en §3.9 y se discute en el Capítulo 12.
+**Consequences.** Detailed specifications (motor, ESC, low-level
+controller, camera, compute platform) are documented in Chapter 5 and
+the corresponding Annex. The sim-to-real gap characterised in Chapter 9
+is specific to this scale and not directly extrapolable to larger scales;
+this limitation is declared explicitly in §3.9 and discussed in Chapter
+12.
 
 ---
 
-### D-17 — QED diferida a Fase 4: inspiración conceptual con calibración pendiente
+### D-17 — QED deferred to Phase 4: conceptual inspiration with calibration pending
 
-| Campo | Valor |
+| Field | Value |
 | --- | --- |
-| Sección | §3.6.6 |
-| Estado | DIFERIDA |
-| Fecha | D9 (Fase 0) |
-| Revisión prevista | Fase 4 (cuando se cuente con la *policy* entrenada y un conjunto de evaluaciones humanas de referencia) |
+| Section | §3.6.6 |
+| Status | DEFERRED |
+| Date | D9 (Phase 0) |
+| Planned review | Phase 4 (when the trained *policy* and a reference set of human evaluations are available) |
 
-**Decisión.** La métrica compuesta QED (Gao et al., 2021) se considera
-como *inspiración conceptual* del proyecto: una métrica calibrada
-contra evaluadores humanos para tareas de conducción autónoma. La
-adopción directa requiere matización porque QED fue desarrollada y
-calibrada sobre CARLA, mientras el simulador adoptado es Gazebo
-(D-12); la fórmula conceptual puede transferirse, pero los pesos
-calibrados deberían recomputarse para el escenario *lane-following* en
-Gazebo si se quiere una métrica con significado equivalente. Behavior
-Metrics (Paniego et al., 2024) se considera como herramienta auxiliar
-de evaluación cuantitativa, dado que su diseño es relativamente
-agnóstico al simulador subyacente. La decisión sobre adopción
-definitiva como métrica oficial del proyecto se difiere a Fase 4.
+**Decision.** The composite QED metric (Gao et al., 2021) is considered
+as *conceptual inspiration* of the project: a metric calibrated against
+human evaluators for autonomous driving tasks. Direct adoption requires
+nuance because QED was developed and calibrated on CARLA, while the
+adopted simulator is Gazebo (D-12); the conceptual formula can transfer,
+but the calibrated weights would need to be recomputed for the
+*lane-following* scenario in Gazebo to obtain a metric with equivalent
+meaning. Behavior Metrics (Paniego et al., 2024) is considered as an
+auxiliary quantitative evaluation tool, given that its design is
+relatively agnostic to the underlying simulator. The decision on
+definitive adoption as the project's official metric is deferred to
+Phase 4.
 
-**Justificación.** No procede comprometerse a una métrica calibrada
-sobre otra plataforma sin verificación. Diferir permite tomar la
-decisión cuando se disponga de la *policy* entrenada y un conjunto de
-evaluaciones humanas de referencia sobre el simulador efectivamente
-adoptado.
+**Rationale.** It is not appropriate to commit to a metric calibrated on
+another platform without verification. Deferring allows taking the
+decision when the trained *policy* and a reference set of human
+evaluations on the actually adopted simulator are available.
 
-**Consecuencias.** El Capítulo 4 define las métricas oficiales del
-proyecto (M-P, M-S, M-I, M-C, M-T) sin comprometerse a QED como
-obligatoria. La Fase 4 retoma la decisión y la confirma o la sustituye
-por una métrica compuesta propia con calibración explícita.
+**Consequences.** Chapter 4 defines the project's official metrics
+(M-P, M-S, M-I, M-C, M-T) without committing to QED as mandatory. Phase
+4 retakes the decision and either confirms it or replaces it with a
+proprietary composite metric with explicit calibration.
 
-**Referencias.** Gao et al. (2021); Paniego et al. (2024).
+**References.** Gao et al. (2021); Paniego et al. (2024).
 
 ---
 
-### D-18 — Documentación en plain-text Markdown (no MBSE industrial)
+### D-18 — Documentation in plain-text Markdown (no industrial MBSE)
 
-| Campo | Valor |
+| Field | Value |
 | --- | --- |
-| Sección | §3.6.7 |
-| Estado | CONFIRMADA |
-| Fecha | D9 (Fase 0) |
+| Section | §3.6.7 |
+| Status | CONFIRMED |
+| Date | D9 (Phase 0) |
 
-**Decisión.** Todos los artefactos del proyecto —documentos, código,
-plantillas, matriz de trazabilidad, scripts de validación— viven en un
-único repositorio Git en formato plain-text. Markdown con extensiones
-mínimas: citas en formato `Apellido (año)`, ecuaciones LaTeX, figuras
-como SVG/PNG en carpeta dedicada. NO se adoptan herramientas MBSE
-industriales (Cameo, Capella o similar).
+**Decision.** All project artefacts —documents, code, templates,
+traceability matrix, validation scripts— live in a single Git repository
+in plain-text format. Markdown with minimal extensions: citations in
+`Author (year)` format, LaTeX equations, figures as SVG/PNG in dedicated
+folder. Industrial MBSE tools (Cameo, Capella, or similar) are NOT
+adopted.
 
-**Alternativas consideradas y descartadas.** SysML + MBSE industrial al
-estilo de Sprockhoff et al. (2023), descartado por coste cognitivo y
-económico significativo, licencias inaccesibles para una tesis
-individual, ROI negativo en proyecto de un autor. Documentación en
-Word/Google Docs, descartada por no ser versionable de forma granular,
-no auditable por línea, no integrable con CI/CD.
+**Alternatives considered and rejected.** SysML + industrial MBSE in the
+style of Sprockhoff et al. (2023), rejected for significant cognitive
+and economic cost, licences inaccessible for an individual thesis,
+negative ROI in a single-author project. Documentation in Word/Google
+Docs, rejected because it is not granularly versionable, not
+line-auditable, not integrable with CI/CD.
 
-**Justificación.** El repositorio *es* el proyecto. Una tesis
-individual obtiene mejor relación coste/beneficio con archivos de texto
-versionados, manteniendo equivalencia funcional en cuanto a
-trazabilidad (vía `traceability_matrix.csv` + `check_traceability.py`,
-cf. D-10) y consistencia (vía revisión por pares automatizada en cada
-commit). Conjetura, declarada en §3.6.7: escalar el marco a un equipo
-industrial mediano sí motivaría el cambio a MBSE.
+**Rationale.** The repository *is* the project. An individual thesis
+obtains a better cost/benefit ratio with versioned text files,
+maintaining functional equivalence in terms of traceability (via
+`traceability_matrix.csv` + `check_traceability.py`, cf. D-10) and
+consistency (via automated peer review on each commit). Conjecture,
+declared in §3.6.7: scaling the framework to a medium-sized industrial
+team would motivate the move to MBSE.
 
-**Consecuencias.** Toda la trazabilidad de D-10 se materializa en
-archivos de texto más script Python. Los diagramas se mantienen como
-SVG editables. La tesis es íntegramente reproducible desde el
-repositorio: cualquier persona con Git y un editor de texto puede
-inspeccionar todo el trabajo.
+**Consequences.** All the traceability of D-10 is materialised in text
+files plus a Python script. Diagrams are kept as editable SVG. The
+thesis is fully reproducible from the repository: anyone with Git and a
+text editor can inspect the entire work.
 
-**Referencias.** Sprockhoff et al. (2023) como contraste explícito.
+**References.** Sprockhoff et al. (2023) as explicit contrast.
 
 ---
 
-### D-19 — Cinco criterios de meta-evaluación del marco
+### D-19 — Five meta-evaluation criteria for the framework
 
-| Campo | Valor |
+| Field | Value |
 | --- | --- |
-| Sección | §3.7 |
-| Estado | CONFIRMADA |
-| Fecha | D9 (Fase 0) |
-| Revisión prevista | Capítulo 11 (aplicación de los criterios al cierre del trabajo) |
+| Section | §3.7 |
+| Status | CONFIRMED |
+| Date | D9 (Phase 0) |
+| Planned review | Chapter 11 (application of criteria at the close of the work) |
 
-**Decisión.** El propio marco metodológico se evalúa al cierre del
-trabajo (Capítulo 11) mediante cinco criterios meta con indicadores
-concretos. *Integridad de la trazabilidad*: número de huérfanos en la
-última ejecución de `check_traceability.py`; criterio de éxito: cero.
-*Cobertura de SRs por evidencia experimental*: porcentaje de SRs con
-veredicto pass/fail respaldado por evidencia cuantitativa; criterio de
-éxito: 100% con veredicto, aunque sea fail. *Grado de anticipación de
-hazards*: proporción de hazards anticipados en HARA frente a no
-anticipados que emergen en operación. *Coste de adopción*: tiempo
-dedicado a artefactos del marco vs artefactos técnicos puros, registrado
-en este DECISIONS.md. *Productividad de la matriz*: número de cambios
-técnicos cuyo análisis de impacto fue acelerado por la trazabilidad.
+**Decision.** The framework itself is evaluated at the close of the work
+(Chapter 11) through five meta-criteria with concrete indicators.
+*Traceability integrity*: number of orphans in the last execution of
+`check_traceability.py`; success criterion: zero. *SR coverage by
+experimental evidence*: percentage of SRs with a pass/fail verdict
+backed by quantitative evidence; success criterion: 100% with verdict,
+even if fail. *Hazard anticipation degree*: proportion of hazards
+anticipated in HARA versus unanticipated ones that emerge in operation.
+*Adoption cost*: time spent on framework artefacts versus pure
+technical artefacts, recorded in this DECISIONS.md. *Matrix
+productivity*: number of technical changes whose impact analysis was
+accelerated by traceability.
 
-**Alternativas consideradas y descartadas.** Evaluación binaria del
-marco "funcionó / no funcionó" (descartada: poca granularidad, pierde
-información sobre qué partes funcionaron). Evaluación cuantitativa
-única tipo NPS o equivalente (descartada: el marco no es un producto
-comercial). Evaluación únicamente cualitativa (descartada: no admite
-refutación clara, vulnerable a sesgo del autor).
+**Alternatives considered and rejected.** Binary evaluation of the
+framework "worked / did not work" (rejected: low granularity, loses
+information about which parts worked). Single quantitative evaluation
+NPS-type or equivalent (rejected: the framework is not a commercial
+product). Purely qualitative evaluation (rejected: does not admit clear
+refutation, vulnerable to author bias).
 
-**Justificación.** Un marco metodológico exitoso aplicado a un sistema
-modesto, y un sistema brillante producido a pesar del marco, son dos
-resultados distintos que conviene poder distinguir. Los cinco criterios
-separan eficacia del marco de eficacia técnica del sistema. Coherente
-con el design science research (D-05): la evaluación del artefacto es
-distinta de la evaluación de su aplicación.
+**Rationale.** A successful methodological framework applied to a modest
+system, and a brilliant system produced in spite of the framework, are
+two distinct outcomes that must be distinguishable. The five criteria
+separate framework efficacy from technical system efficacy. Consistent
+with design science research (D-05): evaluation of the artefact is
+distinct from evaluation of its application.
 
-**Consecuencias.** El Capítulo 11 retoma los cinco criterios y emite
-veredicto fundamentado sobre cada uno. Este DECISIONS.md sirve como
-instrumento de medida del coste de adopción (criterio 4): cada decisión
-añadida documenta tiempo invertido en marco vs tiempo invertido en
-técnica.
+**Consequences.** Chapter 11 retakes the five criteria and issues a
+grounded verdict on each. This DECISIONS.md serves as the measurement
+instrument for adoption cost (criterion 4): each added decision
+documents time invested in framework versus time invested in technique.
 
 ---
 
-## Decisiones futuras y pendientes
+## Future and pending decisions
 
-Las siguientes decisiones están explícitamente diferidas a fases
-posteriores y se documentarán aquí cuando se tomen.
+The following decisions are explicitly deferred to later phases and will
+be documented here when taken.
 
-| ID provisional | Asunto | Fase de decisión |
+| Provisional ID | Subject | Decision phase |
 | --- | --- | --- |
-| D-20 (provisional) | Cierre de IDs definitivos en matriz de trazabilidad (SR-001..SR-00*k*, C-01..C-0*n*) | Fase 1 (D15–D19) |
-| D-21 (provisional) | Confirmación o sustitución de QED como métrica oficial (cf. D-17) | Fase 4 |
-| D-22 (provisional) | Adopción de Behavior Metrics como herramienta auxiliar oficial | Fase 4 |
-| D-23 (provisional) | Decisión sobre fusión de `V-Model_Adaptado.md` con Capítulo 3 o conservación como anexo | Fase 6 |
-| D-24 (provisional) | Estilo bibliográfico definitivo (IEEE numérico vs APA autor-año) | Fase 6 |
+| D-20 (provisional) | Closing definitive IDs in the traceability matrix (SR-001..SR-00*k*, C-01..C-0*n*) | Phase 1 (D15–D19) |
+| D-21 (provisional) | Confirmation or replacement of QED as official metric (cf. D-17) | Phase 4 |
+| D-22 (provisional) | Adoption of Behavior Metrics as official auxiliary tool | Phase 4 |
+| D-23 (provisional) | Decision on merging `V-Model_Adaptado.md` with Chapter 3 or keeping it as annex | Phase 6 |
+| D-24 (provisional) | Definitive bibliographic style (numerical IEEE vs author-year APA) | Phase 6 |
 
 ---
 
-## Convenciones de uso del archivo
+## Conventions for using this file
 
-**Cómo añadir una decisión.** Toda decisión nueva se añade al final de
-la sección "Decisiones" con el siguiente identificador disponible
-(D-NN). Se añade también una fila al "Índice de decisiones" al inicio
-del archivo. Se actualiza la "Última actualización" en el comentario
-HTML del encabezado.
+**How to add a decision.** Every new decision is added at the end of the
+"Decisions" section with the next available identifier (D-NN). A row is
+also added to the "Decision index" at the start of the file. The "Last
+update" in the HTML comment of the header is updated.
 
-**Cómo modificar una decisión.** Las decisiones registradas no se
-sobrescriben. Si una decisión cambia, se añade una nueva entrada que
-**supersede** a la anterior, indicando explícitamente "Sustituye a
-D-NN". La decisión anterior cambia su estado a "SUPERSEDIDA por D-MM"
-pero su contenido se conserva. Esta convención preserva el historial
-auditable y permite reconstruir la trayectoria de decisiones a
-posteriori.
+**How to modify a decision.** Recorded decisions are not overwritten. If
+a decision changes, a new entry is added that **supersedes** the
+previous one, indicating explicitly "Supersedes D-NN". The previous
+decision changes its status to "SUPERSEDED by D-MM" but its content is
+preserved. This convention preserves the auditable history and allows
+reconstructing the trajectory of decisions a posteriori.
 
-**Estados posibles.** *CONFIRMADA*: decisión tomada y vigente.
-*DIFERIDA*: decisión diferida a una fase posterior, con fecha estimada
-de revisión. *TENTATIVA*: decisión preliminar en fase de validación.
-*SUPERSEDIDA*: reemplazada por una decisión posterior.
+**Possible statuses.** *CONFIRMED*: decision taken and current.
+*DEFERRED*: decision deferred to a later phase, with an estimated review
+date. *TENTATIVE*: preliminary decision in validation phase.
+*SUPERSEDED*: replaced by a later decision.
 
-**Relación con la matriz de trazabilidad.** Las decisiones de este
-archivo NO entran en la matriz `traceability_matrix.csv` salvo que
-generen artefactos H, SR, C, SC o M. Sin embargo, los artefactos de la
-matriz pueden citar decisiones de este archivo en su campo de
-*justificación* mediante la referencia `cf. D-NN`.
+**Relation to the traceability matrix.** Decisions in this file do NOT
+enter the `traceability_matrix.csv` matrix unless they generate H, SR,
+C, SC, or M artefacts. However, matrix artefacts may cite decisions in
+this file in their *justification* field via the reference `cf. D-NN`.
 
-**Coste de adopción (criterio D-19).** Cada nueva entrada añade entre
-diez y veinte minutos de coste de adopción (redacción + revisión). Este
-coste se considera explícitamente al evaluar el marco en el Capítulo 11.
+**Adoption cost (criterion D-19).** Each new entry adds between ten and
+twenty minutes of adoption cost (drafting + review). This cost is
+explicitly considered when evaluating the framework in Chapter 11.

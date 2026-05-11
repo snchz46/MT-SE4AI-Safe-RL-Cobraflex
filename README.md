@@ -130,10 +130,10 @@ Reproducing a run requires checking out the recorded git commit, recovering the 
 
 | Role | Name |
 | ---- | ---- |
-| **Author** | Samuel Sanchez |
-| **Supervisor** | Ralf Schuler |
+| **Author** | Ing. Samuel Sanchez |
+| **Supervisor** | Prof. Dr.-Ing. Ralf Schüler |
 | **Institution** | Hochschule Esslingen |
-| **Programme** | Automotive Systems |
+| **Programme** | Automotive Systems Master |
 
 ---
 

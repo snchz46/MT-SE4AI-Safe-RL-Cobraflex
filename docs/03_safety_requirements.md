@@ -1,8 +1,8 @@
 # Safety Requirements Specification
 
-**Status:** Living document — Phase 1 deliverable
-**Last update:** [date]
-**Approved at Gate:** G1 (pending)
+**Status:** Living document — Phase 1 deliverable  
+**Last update:** 11.05.2026  
+**Approved at Gate:** G1 (pending)  
 
 ## Purpose
 
@@ -238,4 +238,4 @@ Current coverage at the time of this document's last update: see the change log 
 
 ## Change log
 
-See `docs/08_change_log.md`.
+See `docs/CHANGELOG.md`.

@@ -5,11 +5,13 @@ This document explains how to maintain and regenerate the traceability artifacts
 ## Overview
 
 The thesis uses a **manuscript-first approach** where:
+
 1. All key information (hazards, requirements, adaptations, etc.) lives in Markdown files in `manuscript/chapters/`
 2. Structured data (CSV, JSON) is **generated automatically** from these Markdown sources
 3. Tools and CI/CD pipelines consume the generated CSVs
 
 This approach ensures:
+
 - **Single source of truth**: Update Markdown, regenerate CSVs
 - **Version control friendly**: Markdown diffs are readable
 - **Testable**: Scripts validate structure and consistency
@@ -65,6 +67,7 @@ The following artifacts are currently placeholders but follow the same pattern:
 When writing a chapter with hazards or requirements:
 
 1. **Create a structured table in Markdown**:
+
    ```markdown
    ## 5.2 Hazard Analysis
    
@@ -85,11 +88,13 @@ When writing a chapter with hazards or requirements:
 ### For Build/CI
 
 1. **Regenerate artifacts**:
+
    ```bash
    python tools/sync_hazard_register.py
    ```
 
 2. **Validate consistency**:
+
    ```bash
    python tools/validate_traceability.py  # (to be implemented)
    ```
@@ -122,7 +127,7 @@ git commit -m "F3: Add HARA results and hazard register"
 
 ### `sync_hazard_register.py`
 
-```
+```text
 Usage:
     python tools/sync_hazard_register.py [--input INPUT] [--output OUTPUT] [--verbose]
 
@@ -175,11 +180,13 @@ The scripts use flexible header name matching. These are recognized:
 ## Validation and Quality Checks
 
 Currently basic validation is built into the scripts:
+
 - Hazard IDs must match pattern `H-\d+` or similar
 - Table structure is validated (correct number of columns)
 - Headers are matched flexibly
 
 Future planned checks:
+
 - Uniqueness of IDs within a document
 - Cross-references to adaptations (A1–A5) are valid
 - Severity levels match defined taxonomy
@@ -192,6 +199,7 @@ To add validation, implement `tools/validate_traceability.py`.
 ### No artifacts generated?
 
 1. Check Markdown file locations:
+
    ```bash
    ls manuscript/chapters/chapter_*.md
    ```
@@ -202,6 +210,7 @@ To add validation, implement `tools/validate_traceability.py`.
    - Header row with ID/Description columns
 
 3. Run with verbose mode:
+
    ```bash
    python tools/sync_hazard_register.py --verbose
    ```

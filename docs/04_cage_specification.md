@@ -1,8 +1,8 @@
 # Cage Specification
 
-**Status:** Living document — Phase 2 deliverable
-**Last update:** [date]
-**Approved at Gate:** G2 (pending)
+**Status:** Living document — Phase 2 deliverable  
+**Last update:** 11.05.2026  
+**Approved at Gate:** G2 (pending)  
 
 ## Purpose
 
@@ -108,9 +108,9 @@ elif abs(theta) < (theta_max - 2*h_theta) for last 2 cycles:
 
 ### C-03 Predictive lane departure (TTLC)
 
-**Implements.** SR-003.
-**Mitigates.** H-01 (primarily), H-02 (partially).
-**Type.** Predictive.
+**Implements.** SR-003.  
+**Mitigates.** H-01 (primarily), H-02 (partially).  
+**Type.** Predictive.  
 
 **Observed variables.** Lateral offset `d`, heading error `θ`, forward speed `v`.
 
@@ -275,4 +275,4 @@ In addition, `test_evaluation_order.py` covers the interaction between rules.
 
 ## Change log
 
-See `docs/08_change_log.md`.
+See `docs/CHANGELOG.md`.

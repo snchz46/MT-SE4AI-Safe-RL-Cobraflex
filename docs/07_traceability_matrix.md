@@ -1,8 +1,8 @@
 # Traceability Matrix
 
-**Status:** Living document — Phase 0 baseline, refined through every phase, closed at G6
-**Last update:** [date]
-**Approved at Gate:** every Gate (incrementally)
+**Status:** Living document — Phase 0 baseline, refined through every phase, closed at G6  
+**Last update:** 11.05.2026  
+**Approved at Gate:** every Gate (incrementally)  
 
 ## Purpose
 
@@ -13,7 +13,7 @@ The matrix exists in two complementary forms:
 1. **Human-readable form** — this Markdown document, organised as a tabular summary.
 2. **Machine-readable form** — `tools/traceability_matrix.csv`, generated and verified by `tools/check_traceability.py`.
 
-The two forms are kept in sync by `tools/sync_traceability.py` (to be implemented in Phase 0).
+The two forms are kept in sync by `tools/sync_traceability.py`.
 
 ## Coverage requirements
 
@@ -35,7 +35,7 @@ Any violation is a blocker for the next Gate review.
 The full matrix is in `tools/traceability_matrix.csv`. The summary below shows the chain Hazard → SR → Cage Rule → Scenario.
 
 | Hazard | Safety Requirement | Cage Rule(s) | Scenarios | Verifying Metric(s) | Verdict |
-|--------|--------------------|--------------|-----------|---------------------|---------|
+| ------ | ------------------ | ------------ | --------- | ------------------- | ------- |
 | H-01 | SR-001 | C-01, C-03 | SC-NOM-01, SC-NOM-02, SC-EDGE-02 | M-S1, M-S2 | TBD |
 | H-01, H-02 | SR-003 | C-03 | SC-NOM-02, SC-EDGE-01 | M-S4 | TBD |
 | H-02 | SR-002 | C-02 | SC-EDGE-01, SC-EDGE-04 | M-P4 | TBD |
@@ -102,4 +102,4 @@ Each row of the CSV represents one chain from a hazard to a metric (with possibl
 
 ## Change log
 
-See `docs/08_change_log.md`.
+See `docs/CHANGELOG.md`.

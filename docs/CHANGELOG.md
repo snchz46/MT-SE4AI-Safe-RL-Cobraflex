@@ -118,4 +118,14 @@ Update of Chapters 1,2 and 3 with related work, double check of references pendi
 Update of Chapters 1,2 and 3
 
 ---
+---
+
+## [11.05.2026] — Added HARA script check
+
+**Document(s) affected:** chapters 1, 2 and 3  
+**Phase:** F1  
+**Gate context:** before G0  
+**Author:** Samuel Sanchez
+
+---
 <!-- Subsequent entries appended below -->

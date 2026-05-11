@@ -1,8 +1,8 @@
 # Metrics Catalogue
 
-**Status:** Living document — Phase 0 baseline, refined through Phase 1
-**Last update:** [date]
-**Approved at Gate:** G1
+**Status:** Living document — Phase 0 baseline, refined through Phase 1  
+**Last update:** 11.05.2026  
+**Approved at Gate:** G1  
 
 ## Purpose
 
@@ -222,4 +222,4 @@ Significance threshold: p < 0.05 for the primary comparisons, p < 0.01 for any c
 
 ## Change log
 
-See `docs/08_change_log.md`.
+See `docs/CHANGELOG.md`.

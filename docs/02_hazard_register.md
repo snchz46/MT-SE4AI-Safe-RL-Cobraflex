@@ -34,7 +34,9 @@ The format is structured to enable mechanical extraction into the Traceability M
 **Criticality** — derived qualitative aggregation of S, E, C, used for prioritisation only.
 
 ---
-**PLACEHOLDERS**
+
+**PLACEHOLDERS**  
+
 ---
 
 ## H-01 — Unintended lane exit
@@ -204,4 +206,4 @@ The following potential hazards are under active consideration but not yet regis
 
 ## Change log
 
-See `docs/08_change_log.md`.
+See `docs/CHANGELOG.md`.

@@ -1,7 +1,7 @@
 # Scenario Library
 
-**Status:** Living document — Phase 2 deliverable, closed at G2; updated through G3 and G4
-**Last update:** [date]
+**Status:** Living document — Phase 2 deliverable, closed at G2; updated through G3 and G4  
+**Last update:** 11.05.2026
 **Approved at Gate:** G2 (initial), G4 (final)
 
 ## Purpose
@@ -266,4 +266,4 @@ Every SR is referenced by at least one scenario. Every scenario references at le
 
 ## Change log
 
-See `docs/08_change_log.md`.
+See `docs/CHANGELOG.md`.

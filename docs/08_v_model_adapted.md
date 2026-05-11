@@ -1,8 +1,8 @@
 # V-Model Adapted for Systems with Learned Components
 
-**Status:** Living document — Phase 0 deliverable
-**Last update:** 30.01.2026
-**Approved at Gate:** G0 (pending)
+**Status:** Living document — Phase 0 deliverable  
+**Last update:** 11.05.2026  
+**Approved at Gate:** G0 (pending)  
 
 ## Purpose
 
@@ -80,4 +80,4 @@ The output of A5 is not a single "validated" verdict but a pair of statements: w
 
 ## Change log
 
-See `docs/08_change_log.md` for the history of changes to this document.
+See `docs/CHANGELOG.md` for the history of changes to this document.

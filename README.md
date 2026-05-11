@@ -59,6 +59,7 @@ If you are new to the project, the suggested reading order is:
 6. [`docs/05_scenario_library.md`](docs/05_scenario_library.md) — the validation scenarios.
 7. [`docs/06_metrics_catalogue.md`](docs/06_metrics_catalogue.md) — the metrics computed on every experimental run.
 8. [`docs/07_traceability_matrix.md`](docs/07_traceability_matrix.md) — the master matrix that connects everything.
+9. [`docs/08_odd_specification.md`](docs/08_odd_specification.md) — the specification of the Operational Design Domains.
 
 After reading the documents above, the implementation directories (`cage/`, `policy/`, `scenarios/`) will provide full context.
 

@@ -1,8 +1,8 @@
 # Hazard Register
 
-**Status:** Living document — Phase 1 deliverable
-**Last update:** [date]
-**Approved at Gate:** G1 (pending)
+**Status:** Living document — Phase 1 deliverable  
+**Last update:** 11.05.2026  
+**Approved at Gate:** G1 (pending)  
 
 ## Purpose
 
@@ -33,6 +33,8 @@ The format is structured to enable mechanical extraction into the Traceability M
 
 **Criticality** — derived qualitative aggregation of S, E, C, used for prioritisation only.
 
+---
+**PLACEHOLDERS**
 ---
 
 ## H-01 — Unintended lane exit

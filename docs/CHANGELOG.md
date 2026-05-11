@@ -88,7 +88,7 @@ Update of Chapter 2 with related work, double check of references pending
 
 **Document(s) affected:** chapter_02_metodology.md  
 **Phase:** F1  
-**Gate context:** before G1  
+**Gate context:** before G0  
 **Author:** Samuel Sanchez
 
 Added 00_odd_specification.md, changed of names of templates for better understanding
@@ -104,6 +104,18 @@ Added 00_odd_specification.md, changed of names of templates for better understa
 **Author:** Samuel Sanchez
 
 Update of Chapters 1,2 and 3 with related work, double check of references pending
+
+---
+---
+
+## [11.05.2026] — Update of Chapters 1, 2 & 3
+
+**Document(s) affected:** chapters 1, 2 and 3  
+**Phase:** F1  
+**Gate context:** before G0  
+**Author:** Samuel Sanchez
+
+Update of Chapters 1,2 and 3
 
 ---
 <!-- Subsequent entries appended below -->

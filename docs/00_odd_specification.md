@@ -1,12 +1,12 @@
 # ODD Specification — SE4AI Lane Following Thesis
 
-**Document ID:** `ODD-SPEC`
-**Version:** 0.1 (draft, D11 of Phase 1)
-**Owner:** Samuel Sánchez
-**Phase of birth:** F0 — Phase of maturity: F1 — Phase of revision: F5 (physical ODD)
-**Status:** DRAFT — contains TBD values that must be filled before Gate 1
-**Last updated:** 2026-05-02
-**Approving reviewer (Gate 1):** [supervisor name]
+**Document ID:** `ODD-SPEC`  
+**Version:** 0.1 (draft, D11 of Phase 1)  
+**Owner:** Samuel Sánchez  
+**Phase of birth:** F0 — Phase of maturity: F1 — Phase of revision: F5 (physical ODD)  
+**Status:** DRAFT — contains TBD values that must be filled before Gate 1  
+**Last updated:** 2026-05-02  
+**Approving reviewer (Gate 1):** [supervisor name]  
 
 <!--
 TEACHER NOTE: This is the cover block. Treat the version as a strict integer-decimal:

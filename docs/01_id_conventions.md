@@ -1,8 +1,8 @@
 # Identifier Conventions
 
-**Status:** Living document — Phase 0 deliverable
-**Last update:** [date]
-**Approved at Gate:** G0 (pending)
+**Status:** Living document — Phase 0 deliverable  
+**Last update:** 11.05.2026  
+**Approved at Gate:** G0 (pending)  
 
 ## Purpose
 
@@ -75,7 +75,7 @@ Range: F0 through F6.
 
 Examples: F0, F2, F5.
 
-Phases are defined in the project plan (outside the repository, see `docs/00_v_model_adapted.md` for the cross-reference).
+Phases are defined in the project plan (outside the repository, see `docs/08_v_model_adapted.md` for the cross-reference).
 
 ## Gates: G-N
 
@@ -119,4 +119,4 @@ When referencing an identifier in the manuscript or in any document, use the ide
 
 ## Change log
 
-See `docs/08_change_log.md`.
+See `docs/CHANGELOG.md`.

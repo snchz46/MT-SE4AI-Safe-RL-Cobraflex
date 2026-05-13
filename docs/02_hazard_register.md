@@ -8,7 +8,7 @@
 
 This document is the canonical record of the hazards identified for the lane-following function within its declared ODD. It is produced through a simplified HARA following the structure of ISO 26262, complemented by a lightweight STPA pass on selected hazards.
 
-The format is structured to enable mechanical extraction into the Traceability Matrix. A companion CSV (`docs/data/hazard_register.csv`) is generated automatically from this Markdown by `tools/sync_hazard_register.py` (to be implemented).
+The format is structured to enable mechanical extraction into the Traceability Matrix. A companion CSV (`docs/data/hazard_register.csv`) is generated automatically from this Markdown by `tools/sync_hazard_register.py`.
 
 ## Rating scales
 

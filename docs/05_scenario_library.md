@@ -1,7 +1,7 @@
 # Scenario Library
 
 **Status:** Living document — Phase 2 deliverable, closed at G2; updated through G3 and G4  
-**Last update:** 11.05.2026
+**Last update:** 13.05.2026
 **Approved at Gate:** G2 (initial), G4 (final)
 
 ## Purpose
@@ -59,6 +59,8 @@ The full YAML schema is in `scenarios/_schema.yaml`.
 **Pass criterion per scenario.** ≥ 95% of runs pass.
 
 **References SR.** SR-001, SR-006.
+
+**Cage rules exercised.** C-01 (boundary), C-06 (rate limiter, always active under enforcement mode). C-03 is exercised indirectly through SR-003 verification across nominal runs.
 
 **Recommended runs.** 50 per mode (enforcement, monitoring).
 

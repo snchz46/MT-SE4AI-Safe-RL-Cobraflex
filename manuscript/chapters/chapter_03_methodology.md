@@ -518,20 +518,22 @@ entrenamiento exponencialmente mayores que las arquitecturas modulares
 para alcanzar prestaciones equivalentes. Esta decisión se documenta en
 `DECISIONS.md` como decisión D-01 del proyecto.
 
-### 3.5.2 Mapeo del framework al caso  [COMPLETAR FASE 1 — IDs definitivos]
+### 3.5.2 Mapeo del framework al caso
 
 La tabla siguiente proyecta cada nivel del V-Model adaptado sobre el
-artefacto específico que lo materializa en el proyecto. Los identificadores
-con dígitos abiertos (SR-00*k*, C-0*n*) se cierran al término de la Fase 1
-(D15–D19), cuando el HARA y la Cage Specification quedan congelados; la
-estructura del mapeo, sin embargo, está fijada desde D9.
+artefacto específico que lo materializa en el proyecto. Los
+identificadores quedaron cerrados al término de la Fase 1 con los
+valores definitivos `SR-001..SR-008` para los Safety Requirements y
+`C-01..C-06` para las cage rules; la estructura del mapeo había
+quedado fijada desde D9 y los rangos numéricos definitivos al cierre
+del HARA (D13) y de la Cage Specification (D19).
 
 | Nivel V-Model adaptado | Artefacto en lane-following | Capítulo |
 | --- | --- | --- |
 | L1 — Stakeholder Req. | ODD + caso de uso | Cap. 4 |
-| L2 — System Safety Req. | SR-001..SR-00*k* (HARA + derivación) | Cap. 4 |
+| L2 — System Safety Req. | SR-001..SR-008 (HARA + derivación) | Cap. 4 |
 | L3 — Architecture Design | Grafo ROS2 (perception, policy, cage, actuation, logger) | Cap. 5 |
-| L4a — Cage Specification | Reglas C-01..C-0*n* | Cap. 5 |
+| L4a — Cage Specification | Reglas C-01..C-06 | Cap. 5 |
 | L4b — Training Specification | Reward + ODD entrenamiento + hiperparámetros + criterios | Cap. 7 |
 | L5 — Implementation | ROS2 cage node + PPO policy | Cap. 6, Cap. 7 |
 | L4a' — Cage Unit Tests | `tests/cage/test_rules.py` | Cap. 6 |

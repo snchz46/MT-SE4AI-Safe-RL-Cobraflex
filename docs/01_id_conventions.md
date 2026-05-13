@@ -10,6 +10,16 @@ Every artefact in this thesis carries an identifier. Identifiers are the basis o
 
 Identifiers are assigned exactly once. Once an identifier is used, it is never reused even if its referent is deprecated; deprecated entries are marked as such in their respective living document but their identifier is preserved.
 
+## System Requirements: SyR-XXX
+
+Format: `SyR-` followed by three digits, zero-padded.
+
+Range: SyR-001 through SyR-999.
+
+Examples: SyR-001, SyR-005.
+
+System Requirements are high-level properties that the system as a whole must satisfy. They sit one level above the Safety Requirements in the V-Model adapted: each SyR is refined into zero or more SRs that operationalise it. SyRs are defined in the manuscript chapter on safety analysis (`manuscript/chapters/chapter_04_safety_analysis_and_requirements.md` §4.2.2) and act as the L1 anchor of the V-Model. SyRs are not currently part of the `tools/check_traceability.py` verification chain (which covers `H↔SR↔C↔SC↔M`); they are maintained as a documentary layer above SRs and their refinement into SRs is reviewed manually at Gate G1.
+
 ## Hazards: H-XX
 
 Format: `H-` followed by two digits, zero-padded.
@@ -75,7 +85,7 @@ Range: F0 through F6.
 
 Examples: F0, F2, F5.
 
-Phases are defined in the project plan (outside the repository, see `docs/08_v_model_adapted.md` for the cross-reference).
+Phases are defined in the project plan (outside the repository, see `docs/00_v_model_adapted.md` for the cross-reference).
 
 ## Gates: G-N
 

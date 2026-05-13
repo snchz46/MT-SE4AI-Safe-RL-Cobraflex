@@ -30,13 +30,13 @@ The SRs use a small set of recurring patterns:
 
 ## SR-001 — Lane departure prevention (direct)
 
-**Statement.** Under the operational ODD, the absolute lateral offset of the vehicle relative to the lane centreline shall not exceed `d_max` at any time during autonomous operation.
+**Statement.** Under the operational ODD, the absolute lateral offset of the vehicle relative to the road centreline shall not exceed `d_max` at any time during autonomous operation.
 
 **Pattern.** Direct threshold.
 
 **Parameters.**
 
-- `d_max = 0.16 m` (lane width 0.40 m, safety margin 0.04 m absorbing the joint uncertainty of LiDAR-observed lateral noise around 0.01 m and a control latency of 50 ms).
+- `d_max = 0.16 m`, derived as `ODD-1.ROAD_WIDTH/2 − Δ = 0.25 − 0.09 = 0.16 m`, where `ODD-1.ROAD_WIDTH = 0.50 m` per the ODD Specification (`docs/08_odd_specification.md` §4.2) and `Δ = 0.09 m` aggregates three independent contributions: lateral-noise estimator uncertainty ≈ 0.01 m, drift over one nominal control latency `v_max · ODD-1.LATENCY_NOMINAL = 0.5 m/s · 50 ms = 0.025 m`, and the half-width of the CobraFlex 1:14 lateral footprint ≈ 0.05 m.
 
 **References hazard.** H-01.
 

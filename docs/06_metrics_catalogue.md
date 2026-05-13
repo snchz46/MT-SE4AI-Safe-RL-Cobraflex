@@ -69,6 +69,16 @@ A companion CSV (`docs/data/metrics.csv`) is generated automatically.
 
 **Contributes evidence to.** SR-002 (general behaviour).
 
+### M-P6 — Stall rate
+
+**Definition.** Fraction of *eligible* nominal-mode time steps in which the trailing sliding window of `t_window` seconds has accumulated less than `Δs_min` of forward longitudinal progress. A time step is *eligible* if it is in nominal mode (not emergency, no active stop signal) **and** at least `Δt_settle` seconds have elapsed since the most recent transition into nominal mode.
+
+**Units.** Percentage (0 % = no stall observed; 100 % = full-run stall under nominal mode).
+
+**Computation.** For each control step `t` in the run: (i) determine eligibility per the definition above; (ii) compute trailing-window progress `Δs(t) = ∫_{t-t_window}^{t} v(τ) dτ`; (iii) flag as stall step if `Δs(t) < Δs_min`. Aggregate as `M_P6 = (stall_steps / eligible_steps) * 100`. If `eligible_steps == 0` (e.g., scenario entirely in emergency mode), `M_P6` is undefined and the verdict for SR-009 falls through to scenario semantics.
+
+**Contributes evidence to.** SR-009.
+
 ## Safety metrics
 
 ### M-S1 — Max lateral offset

@@ -1,4 +1,4 @@
-id,description,severity,mitigation,related_cage_rules,status,notes
+id,description,severity,mitigation,implementation_type,status,notes
 H-01,Unintended lane exit,S3/E3/C2 - High,"SR-001, SR-003","C-01, C-03",Open,TTLC predictive constraint
 H-02,Divergent or oscillatory heading error,S2/E3/C2 - Medium-High,"SR-002, SR-003","C-02, C-03",Open,Heading stability hazard
 H-03,Excessive speed for current conditions,S3/E2/C1 - Medium,SR-004,C-04,Open,Curvature-dependent speed ceiling
@@ -6,3 +6,5 @@ H-04,Compound unrecoverable state,S3/E1/C3 - High,SR-005,C-05,Open,Emergency sub
 H-05,Excessively abrupt actuator command,S1/E3/C1 - Medium,SR-006,C-06,Open,Actuator rate limiting
 H-06,Operation under invalid or unobservable state,S3/E2/C2 - High,SR-007,C-05,Open,ROS2 state freshness and validity
 H-07,Inability to perform a controlled stop,S3/E1/C1 - High,"SR-005, SR-008",C-05,Open,Emergency stop behaviour
+H-08,Progress stall via reward exploitation,S2/E3/C2 - Medium-High,SR-009,training,Open,Policy convergence to inaction equilibrium
+H-09,Cage rule conflict,S3/E1/C2 - Medium,SR-010,arbiter,Open,Composition hazard across C-01..C-06

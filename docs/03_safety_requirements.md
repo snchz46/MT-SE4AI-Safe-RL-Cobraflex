@@ -25,6 +25,7 @@ The SRs use a small set of recurring patterns:
 - **Availability** — a service or signal shall be available within timing constraints.
 - **Emergency mode** — under specified conditions, a specified mode shall be entered.
 - **Operational envelope** — the joint state of variables shall remain within a defined region.
+- **Liveness** — a measurable progress quantity shall not remain below a threshold for longer than a specified window. Distinct from the other patterns above, which are all *safety* (a forbidden condition shall not occur); liveness asserts that a desired condition *shall* occur within bounded time.
 
 ---
 
@@ -222,9 +223,59 @@ The SRs use a small set of recurring patterns:
 
 ---
 
+## SR-009 — Minimum forward progress (liveness)
+
+**Statement.** Under the operational ODD, the vehicle shall accumulate at least `Δs_min` of forward longitudinal progress in any sliding window of `t_window` seconds that is *eligible* — i.e., the window lies entirely within an interval during which (i) the system is in nominal mode, (ii) no external stop signal is active, and (iii) at least `Δt_settle` seconds have elapsed since the most recent transition into nominal mode.
+
+**Pattern.** Liveness.
+
+**Parameters.**
+
+- `Δs_min = 0.10 m` (10 cm of forward progress per window). Derived from the lower bound of meaningful forward motion: at the minimum operationally useful speed `v_min ≈ 0.05 m/s` over the window `t_window = 2 s`, the kinematic floor is `0.05 · 2 = 0.10 m`. Below this threshold the vehicle is effectively stationary at the operating timescale.
+- `t_window = 2.0 s` = 40 control cycles at 20 Hz. Long enough to admit legitimate transient slowdowns (curve negotiation, recovery after a cage intervention) without false-positive stall detection, short enough that a converged-to-inaction policy is detected within a single test scenario.
+- `Δt_settle = 1.0 s` = 20 control cycles. *Settling clause to resolve conflict with SR-005 / SR-008.* When the system transitions back into nominal mode after an emergency mode (SR-005) or a controlled stop (SR-008), the vehicle is at `v = 0` and must ramp up. A naive sliding window evaluated at `t = 0+` after the transition would catch a ramp-up phase whose progress is by construction below `Δs_min` (e.g., linear ramp from `v = 0` to `v_min` over 1 s yields `≈ 0.075 m`, below the floor). `Δt_settle = 1.0 s` is set to the upper bound of the expected ramp-up duration: at `a_min = 0.3 m/s²` (SR-005) the time to reach `v_min = 0.05 m/s` from rest is `v_min/a_min ≈ 0.17 s`; the floor is set 5× higher to absorb actuator-response latency, command-smoothing through C-06, and policy-side ramp-up that may be slower than `a_min` allows. The settling window does **not** suspend SR-005 or SR-008 — those continue to apply at every instant — it only suspends the SR-009 liveness check.
+
+**References hazard.** H-08.
+
+**Implemented by.** *Training constraint* (reward shaping). The mitigation lives at the policy-training specification level rather than at the runtime cage level: the reward function shall include a non-trivial positive progress term and/or a stall penalty calibrated such that the optimal policy under finite training does not converge to inaction. A runtime cage rule that forced `throttle > 0` would be ortogonal to the cage's filosofía (correct unsafe commands, not inject progress) and is therefore explicitly out of scope; the cage instead provides *observation* of stall through M-P6 and the optional emission of a stall-detection signal that is consumed by the test harness (not by the vehicle-control node).
+
+**Verified by scenarios.** SC-NOM-01, SC-NOM-02, SC-NOM-03 (nominal scenarios; M-P6 is computed over the eligible interval of each run).
+
+**Verifying metric.** M-P6 (stall rate). Distinguishes a stalled policy from a legitimately interrupted run: M-P6 is computed only over *eligible* nominal-mode time (post-settling, no stop signal, not in emergency), so a run aborted by SR-005 for a non-stall hazard (e.g., compound state) does not falsely fail SR-009.
+
+**Satisfaction criterion.** Across all runs of the verifying scenarios under the released policy, M-P6 shall be 0 % — i.e., no eligible sliding window of `t_window` records less than `Δs_min` of forward progress.
+
+**Conflict-resolution note.** SR-009 deliberately yields to SR-005 and SR-008. During emergency mode (SR-005), during stop-signal-driven deceleration (SR-008), and during the post-transition settling window (`Δt_settle`), the liveness check is suspended. This priority ordering is by design: a transient absence of progress while the cage executes a legitimate safety response is not a SR-009 violation, even though it superficially resembles one.
+
+---
+
+## SR-010 — Cage rule conflict resolution and convergence
+
+**Statement.** When two or more cage rules activate within the same control cycle, the cage shall produce a single output command according to a deterministic priority ordering declared in `cage/cage.yaml`, and the sequence of internal corrections within any single control cycle shall converge to a fixed point in at most `N_resolve_max` arbiter iterations. The final emitted command shall lie within the safe envelope of every individually activated rule.
+
+**Pattern.** Operational envelope (joint cage-output consistency) + bounded resolution (finite arbiter iterations).
+
+**Parameters.**
+
+- **Priority ordering** (declared in `cage/cage.yaml`, mirrored here for traceability): emergency mode (C-05) > lane boundary hard limit (C-01) > heading error limit (C-02) > predictive TTLC (C-03) > speed ceiling (C-04) > actuator rate limiter (C-06). Rationale: hard kinematic limits (C-01, C-02) override predictive limits (C-03); deterministic substitution (C-05) overrides everything because by construction the policy commands are untrusted in compound state (cf. H-04 STPA rationale); the rate limiter (C-06) is last because its role is to *attenuate* the final command rather than to *replace* it.
+- `N_resolve_max = 3` arbiter iterations per control cycle. The bound is set such that the worst-case multi-rule cascade — emergency triggers → emergency command is rate-limited → rate-limited command is checked against hard limit and accepted — completes within three passes. A cascade requiring more iterations is by definition non-convergent and shall trigger emergency mode as a fallback (the cage degrades to C-05 if SR-010 cannot resolve within the budget).
+- **Joint-envelope assertion.** The emitted command shall satisfy every individually activated rule's safe-envelope predicate simultaneously: there is no rule R such that R was active in the cycle, R's safe-envelope predicate `P_R(command_out)` is false, and the cage emitted `command_out` without entering emergency mode.
+
+**References hazard.** H-09.
+
+**Implemented by.** *Cage architecture (arbiter)* — not a single new cage rule. The cage's main control loop shall implement: (a) collection of activation flags from all rules; (b) priority-ordered application of corrections; (c) joint-envelope assertion at the end of each cycle; (d) fallback to emergency mode if the joint-envelope assertion fails or if iteration count exceeds `N_resolve_max`. *Verified by scenario test* and dedicated cage unit tests covering all rule-pair and rule-triple activation combinations.
+
+**Verified by scenarios.** SC-EDGE-04 (compound state, the principal scenario in which multiple cage rules are expected to activate simultaneously) and dedicated cage unit tests enumerating rule-pair and rule-triple activation combinations. A new scenario covering injected rule conflict may be added in Phase 2 if unit tests reveal corner cases not covered by SC-EDGE-04.
+
+**Verifying metric.** M-S2 (boundary violations). A boundary violation post-cage is the direct empirical signature of a SR-010 failure: it means the cage emitted a command that breached at least one safe envelope despite at least one rule being active to defend it.
+
+**Satisfaction criterion.** Across all runs of the verifying scenarios in enforcement mode, M-S2 shall be 0 (zero boundary violations of any lane or heading limit) and the cage shall not log any arbiter-iteration overrun. The unit-test suite for the cage shall pass for every documented rule-pair and rule-triple activation combination.
+
+---
+
 ## Machine-readable Safety Requirements Table
 
-| SR ID | Statement | Pattern | Hazards | Cage Rule | Scenarios | Metric | Status | Notes |
+| SR ID | Statement | Pattern | Hazards | implementation_type | Scenarios | Metric | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | SR-001 | Lane departure prevention (direct) | Direct threshold | H-01 | C-01 | SC-NOM-01, SC-NOM-02, SC-EDGE-02 | M-S1 | Open | d_max = 0.16 m |
 | SR-002 | Heading stability | Direct threshold | H-02 | C-02 | SC-EDGE-01, SC-EDGE-04 | M-P4 | Open | θ_max = 25 deg |
@@ -234,6 +285,8 @@ The SRs use a small set of recurring patterns:
 | SR-006 | Actuator smoothness | Bounded derivative | H-05 | C-06 | ALL | M-I5 | Open | Always active |
 | SR-007 | State validity and freshness | Availability + emergency | H-06 | C-05 | SC-PERT-02 | M-S3 | Open | staleness_max = 200 ms |
 | SR-008 | Controlled stop on demand | Emergency mode | H-07 | C-05 | SC-NOM-03, SC-EDGE-04 | M-S3 | Open | t_stop_max = 1.7 s |
+| SR-009 | Minimum forward progress (liveness) | Liveness | H-08 | training | SC-NOM-01, SC-NOM-02, SC-NOM-03 | M-P6 | Open | Δs_min = 0.10 m / t_window = 2.0 s / Δt_settle = 1.0 s |
+| SR-010 | Cage rule conflict resolution and convergence | Operational envelope + bounded resolution | H-09 | arbiter | SC-EDGE-04 | M-S2 | Open | Priority ordering + N_resolve_max = 3 |
 
 ---
 
@@ -249,7 +302,6 @@ Current coverage at the time of this document's last update: see the change log 
 ## Open SRs under consideration
 
 - *SR-???* on calibration drift detection during physical operation. To be registered if Phase 5 reveals the need.
-- *SR-???* on cage rule conflict resolution. To be registered if unit testing reveals such cases.
 
 ## Change log
 

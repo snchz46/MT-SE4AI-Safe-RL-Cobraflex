@@ -224,9 +224,58 @@ Two further STPA-informed design findings sit outside the standard UCA grid and 
 
 ---
 
+## H-08 — Progress stall via reward exploitation
+
+**Description.** The policy converges to a degenerate behaviour — zero or near-zero throttle, in-place oscillation, or sustained immobility — because the cumulative reward of inaction under the trained reward function exceeds the cumulative reward of active lane-following. Distinct from H-04 (compound state, a recovery failure) and from H-07 (inability to stop, an actuator/mechanism failure): H-08 is a **policy-convergence pathology**, a specification-gaming equilibrium produced during training rather than a runtime fault.
+
+**Consequence (analogue real-vehicle interpretation).** Vehicle stopped or barely moving in a live traffic lane. Rear-end collision risk from following vehicles; obstruction of traffic flow; the function fails silently in the sense that no safety threshold is breached at any instant, but the system has stopped performing its intended task.
+
+**Consequence (scaled context).** Episode does not progress; the platform freezes on track. Indistinguishable at instant level from a normal stop, but detectable as absence of forward motion over a window.
+
+**Hypothesised root causes.**
+
+- Reward function with strong per-step penalties for lateral/heading error but weak or absent positive reward for forward progress, so the optimal policy under finite training is to minimise interaction with the environment.
+- Early-termination criteria that penalise risky exploration without compensating reward, biasing the policy toward conservative inaction.
+- Discount factor or episode length that makes long-horizon progress less attractive than short-horizon penalty avoidance.
+
+**Rating.** S=2, E=3, C=2 (with liveness check), Criticality=Medium-High.
+
+**Rating rationale.** S=2 under the analogue-real-vehicle interpretation: stopping in a live lane is a severe-injury survivable hazard (rear-end collision is the canonical scenario), not strictly the same severity as lane departure into oncoming traffic (S=3 for H-01). E=3 reflects that this failure mode is well-documented in RL: policies trained under reward functions that penalise risky behaviour without sufficiently rewarding progress routinely converge to inaction (Skalse et al., 2022, "Defining and Characterizing Reward Hacking"; Krakovna et al., 2020, "Specification gaming examples"). C=2 is conditional on the existence of a liveness monitor (cf. SR-009): without it, the failure is not detected at runtime and C collapses to C=3.
+
+**Mitigated by.** SR-009 (minimum forward progress / liveness).
+
+**STPA-light findings.** Not analysed with STPA: H-08's causal structure is not a control-action defect but a *training-time* convergence pathology. The four UCA categories do not apply because the policy is, from its own perspective, behaving optimally — the unsafe outcome arises from misaligned reward specification rather than mis-issued commands. Mitigation accordingly lives at the training-specification level (reward shaping, scenario test) rather than at the runtime cage level.
+
+---
+
+## H-09 — Cage rule conflict
+
+**Description.** Multiple cage rules activate within the same control cycle and produce a sequence of corrections that interact destructively: the corrected command from one rule violates the precondition of another, producing an oscillation between cage outputs across consecutive cycles, a non-convergent correction within a single cycle, or a final command that — although emitted by the cage — is itself outside any safe envelope. Distinct from each individual hazard H-01..H-08, which assume cage rules acting in isolation; H-09 is the *composition* hazard.
+
+**Consequence (analogue real-vehicle interpretation).** The cage stops being a safety guarantee and becomes a source of unsafe commands. The system's trust assumption — that any command emitted post-cage is safer than the raw policy command — is violated. Downstream consequences inherit the severity of the strongest individual hazard whose safe envelope is breached (worst case S=3, analogous to H-01 or H-04).
+
+**Consequence (scaled context).** Same: oscillation in actuator commands, propagation of noise into state estimation, possible escalation into H-02 (heading oscillation) or H-05 (abrupt actuator command) as side effects.
+
+**Hypothesised root causes.**
+
+- Cage rules designed in isolation without an explicit priority ordering or arbiter, so when two rules disagree on the corrected command, the resolution is implementation-defined.
+- State coupling between rules: e.g., the speed ceiling (C-04) lowers speed because curvature is high; the rate limiter (C-06) prevents the deceleration from occurring fast enough; the predictive TTLC rule (C-03) then fires because the un-decelerated trajectory projects a lane crossing.
+- Rate limiter (C-06) interacting with hard limits (C-01, C-02) such that the rate-limited correction cannot reach the safe band within a single cycle, requiring multiple cycles and producing an apparent oscillation.
+- Emergency mode (C-05) triggering during a cage cascade, with ambiguous interaction between the substitution command and the in-flight corrections from C-01/C-02.
+
+**Rating.** S=3, E=1, C=2 (with explicit arbiter), Criticality=Medium.
+
+**Rating rationale.** S=3 inherits from the strongest individual hazard whose envelope a conflict could breach (H-01, H-04). E=1 reflects that the conflict regime is rare by design — the cage rules are intended to be orthogonal in their trigger conditions — and that empirically the joint-activation pattern requires a specific compound state already covered by H-04's E=1 reasoning. C=2 is conditional on the existence of an explicit priority ordering and convergence guarantee in the cage architecture (cf. SR-010): without these, the cage's resolution is implementation-defined and C collapses to C=3.
+
+**Mitigated by.** SR-010 (cage rule conflict resolution and convergence).
+
+**STPA-light findings.** Not analysed with the four-UCA grid because H-09 is structurally a *composition* hazard rather than a single control-action defect: the question is not "is action X unsafe in context Y" but "is the joint response of multiple safety mechanisms self-consistent". The STPA literature would treat this through the lens of "unsafe control action arising from coordination" — registered here as a design-level finding to be addressed by SR-010's explicit priority ordering and convergence requirement rather than by additional UCA enumeration.
+
+---
+
 ## Machine-readable Hazard Table
 
-| Hazard ID | Description | Severity | Mitigation | related_cage_rules | Status | Notes |
+| Hazard ID | Description | Severity | Mitigation | implementation_type | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | H-01 | Unintended lane exit | S3/E3/C2 - High | SR-001, SR-003 | C-01, C-03 | Open | TTLC predictive constraint |
 | H-02 | Divergent or oscillatory heading error | S2/E3/C2 - Medium-High | SR-002, SR-003 | C-02, C-03 | Open | Heading stability hazard |
@@ -235,6 +284,8 @@ Two further STPA-informed design findings sit outside the standard UCA grid and 
 | H-05 | Excessively abrupt actuator command | S1/E3/C1 - Medium | SR-006 | C-06 | Open | Actuator rate limiting |
 | H-06 | Operation under invalid or unobservable state | S3/E2/C2 - High | SR-007 | C-05 | Open | ROS2 state freshness and validity |
 | H-07 | Inability to perform a controlled stop | S3/E1/C1 - High | SR-005, SR-008 | C-05 | Open | Emergency stop behaviour |
+| H-08 | Progress stall via reward exploitation | S2/E3/C2 - Medium-High | SR-009 | training | Open | Policy convergence to inaction equilibrium |
+| H-09 | Cage rule conflict | S3/E1/C2 - Medium | SR-010 | arbiter | Open | Composition hazard across C-01..C-06 |
 
 ---
 
@@ -242,7 +293,7 @@ Two further STPA-informed design findings sit outside the standard UCA grid and 
 
 The STPA-light pass covers H-01, H-02 and H-04, where the unsafe-control-action perspective adds value beyond what HARA alone captures. For these three hazards, the pass applies the four canonical UCA categories — *action not provided when needed*, *action provided when not needed*, *action provided with inappropriate magnitude*, *action provided at the wrong time* — systematically to each principal control action (steering, throttle), with the exception of H-04 where the categories collapse into a single substitution-rather-than-modification mitigation (cf. §H-04 above).
 
-Hazards H-03, H-05, H-06 and H-07 are not analysed with STPA because their causal structure is sufficiently localised (speed ceiling, rate limiter, state-validity triggers and stop mechanism respectively) that the additional perspective produces no new actionable insight beyond what the HARA-derived SRs already capture.
+Hazards H-03, H-05, H-06 and H-07 are not analysed with STPA because their causal structure is sufficiently localised (speed ceiling, rate limiter, state-validity triggers and stop mechanism respectively) that the additional perspective produces no new actionable insight beyond what the HARA-derived SRs already capture. H-08 is also outside STPA scope: it is a training-time convergence pathology rather than a runtime control-action defect, so the UCA categories do not apply (see rationale in §H-08). H-09 is registered as a *composition* hazard whose treatment is at the cage-architecture level (priority ordering, arbiter, convergence guarantee) rather than at the per-UCA level; see rationale in §H-09.
 
 The systematic pass does not introduce new cage rules: it produces additional confidence in the existing design and refinements of the SR rationale (notably the Δt_max persistence requirement and the asymmetric reset for emergency mode), both of which are now incorporated into the rationale of SR-005 in the SRS.
 
@@ -250,7 +301,6 @@ The systematic pass does not introduce new cage rules: it produces additional co
 
 The following potential hazards are under active consideration but not yet registered:
 
-- *H-?? Cage rule conflict.* The simultaneous activation of multiple cage rules produces a corrected command that is itself unsafe (e.g. infinite loop of corrections). To be registered if any unit test or scenario reveals such a case.
 - *H-?? Sensor calibration drift over physical operation.* Specific to physical deployment; to be addressed in Phase 5.
 
 ## Change log

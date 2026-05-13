@@ -1,4 +1,4 @@
-id,statement,pattern,hazards,cage_rule,scenarios,metric,status,notes
+id,statement,pattern,hazards,implementation_type,scenarios,metric,status,notes
 SR-001,Lane departure prevention (direct),Direct threshold,H-01,C-01,"SC-NOM-01, SC-NOM-02, SC-EDGE-02",M-S1,Open,d_max = 0.16 m
 SR-002,Heading stability,Direct threshold,H-02,C-02,"SC-EDGE-01, SC-EDGE-04",M-P4,Open,θ_max = 25 deg
 SR-003,Predictive lane departure prevention (TTLC),Predictive threshold,"H-01, H-02",C-03,"SC-NOM-02, SC-EDGE-01",M-S4,Open,t_min = 1.0 s; provisional
@@ -7,3 +7,5 @@ SR-005,Emergency mode for compound state,Emergency mode,"H-04, H-07",C-05,SC-EDG
 SR-006,Actuator smoothness,Bounded derivative,H-05,C-06,ALL,M-I5,Open,Always active
 SR-007,State validity and freshness,Availability + emergency,H-06,C-05,SC-PERT-02,M-S3,Open,staleness_max = 200 ms
 SR-008,Controlled stop on demand,Emergency mode,H-07,C-05,"SC-NOM-03, SC-EDGE-04",M-S3,Open,t_stop_max = 1.7 s
+SR-009,Minimum forward progress (liveness),Liveness,H-08,training,"SC-NOM-01, SC-NOM-02, SC-NOM-03",M-P6,Open,Δs_min = 0.10 m / t_window = 2.0 s / Δt_settle = 1.0 s
+SR-010,Cage rule conflict resolution and convergence,Operational envelope + bounded resolution,H-09,arbiter,SC-EDGE-04,M-S2,Open,Priority ordering + N_resolve_max = 3

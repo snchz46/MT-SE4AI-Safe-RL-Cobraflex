@@ -30,7 +30,7 @@ This approach ensures:
 ```markdown
 ## HARA Results — Hazards
 
-| Hazard ID | Description | Severity | Mitigation | related_cage_rules | Status | Notes |
+| Hazard ID | Description | Severity | Mitigation | implementation_type | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | H-01 | Unintended lane exit | S3/E3/C2 - High | SR-001, SR-003 | C-01, C-03 | Open | TTLC predictive constraint |
 | H-02 | Divergent heading error | S2/E3/C2 - Medium-High | SR-002, SR-003 | C-02, C-03 | Open | Heading stability |
@@ -39,7 +39,7 @@ This approach ensures:
 **Generated CSV Structure**:
 
 ```csv
-id, description, severity, mitigation, related_cage_rules, status, notes
+id, description, severity, mitigation, implementation_type, status, notes
 H-01, Unintended lane exit, S3/E3/C2 - High, "SR-001, SR-003", "C-01, C-03", Open, TTLC predictive constraint
 ```
 
@@ -71,7 +71,7 @@ When writing a chapter with hazards or requirements:
    ```markdown
    ## 5.2 Hazard Analysis
    
-   | Hazard ID | Description | Severity | Mitigation | related_cage_rules |
+   | Hazard ID | Description | Severity | Mitigation | implementation_type |
    | --- | --- | --- | --- | --- |
    | H-01 | ... | S3/E3/C2 - High | SR-001, SR-003 | C-01, C-03 |
    ```
@@ -148,7 +148,7 @@ The scripts use flexible header name matching. These are recognized:
 | `description` | Description, Hazard, Desc |
 | `severity` | Severity, Risk Level, Risk_Level |
 | `mitigation` | Mitigation, Mitigation_Measure, Control |
-| `related_cage_rules` | Related Cage Rules, Cage Rules, Cage_Rules, Related C-XX |
+| `implementation_type` | Implementation Type, Implementation, Implemented_By, Related Cage Rules, Cage_Rules |
 | `status` | Status, State |
 
 **Example Markdown headers that will be recognized**:

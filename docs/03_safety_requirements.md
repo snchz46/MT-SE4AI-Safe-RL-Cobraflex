@@ -13,7 +13,7 @@ This document specifies the Safety Requirements (SRs) derived from the Hazard Re
 3. **Traceable** — references at least one hazard, and is referenced by at least one cage rule and at least one scenario.
 4. **Atomic** — captures a single property rather than several.
 
-A companion CSV (`docs/data/safety_requirements.csv`) is generated automatically from this Markdown.
+A companion CSV (`docs/data/safety_requirements.csv`) is generated automatically from the machine-readable table at the bottom of this document by `tools/sync_safety_requirements.py`.
 
 ## Pattern catalogue
 
@@ -219,6 +219,21 @@ The SRs use a small set of recurring patterns:
 **Verifying metric.** M-S3 and stopping-distance log.
 
 **Satisfaction criterion.** In every run where the stop signal is issued, the vehicle reaches v=0 within `t_stop_max` and never exceeds `d_max` lateral offset during the stop.
+
+---
+
+## Machine-readable Safety Requirements Table
+
+| SR ID | Statement | Pattern | Hazards | Cage Rule | Scenarios | Metric | Status | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| SR-001 | Lane departure prevention (direct) | Direct threshold | H-01 | C-01 | SC-NOM-01, SC-NOM-02, SC-EDGE-02 | M-S1 | Open | d_max = 0.16 m |
+| SR-002 | Heading stability | Direct threshold | H-02 | C-02 | SC-EDGE-01, SC-EDGE-04 | M-P4 | Open | θ_max = 25 deg |
+| SR-003 | Predictive lane departure prevention (TTLC) | Predictive threshold | H-01, H-02 | C-03 | SC-NOM-02, SC-EDGE-01 | M-S4 | Open | t_min = 1.0 s; provisional |
+| SR-004 | Speed compliance | Direct threshold | H-03 | C-04 | SC-NOM-02, SC-EDGE-03 | M-P3 | Open | Curvature-parameterised ceiling |
+| SR-005 | Emergency mode for compound state | Emergency mode | H-04, H-07 | C-05 | SC-EDGE-04 | M-S3 | Open | Δt_max = 0.2 s; a_min provisional |
+| SR-006 | Actuator smoothness | Bounded derivative | H-05 | C-06 | ALL | M-I5 | Open | Always active |
+| SR-007 | State validity and freshness | Availability + emergency | H-06 | C-05 | SC-PERT-02 | M-S3 | Open | staleness_max = 200 ms |
+| SR-008 | Controlled stop on demand | Emergency mode | H-07 | C-05 | SC-NOM-03, SC-EDGE-04 | M-S3 | Open | t_stop_max = 1.7 s |
 
 ---
 

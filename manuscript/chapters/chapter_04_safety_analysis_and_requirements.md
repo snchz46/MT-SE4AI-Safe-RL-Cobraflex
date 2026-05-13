@@ -873,7 +873,8 @@ funcional se presenta a continuación. El script consume los artefactos
 en formato Markdown (`docs/02_hazard_register.md`,
 `docs/03_safety_requirements.md`) junto con los CSV compañeros
 generados automáticamente por `tools/sync_hazard_register.py`
-(`docs/data/hazard_register.csv` y `docs/data/safety_requirements.csv`),
+(`docs/data/hazard_register.csv`) y `tools/sync_safety_requirements.py`
+(`docs/data/safety_requirements.csv`),
 y la matriz consolidada como `docs/07_traceability_matrix.md`. El
 script parsea las relaciones declaradas y verifica cuatro condiciones: (a) cada hazard del Hazard Register
 aparece en al menos una entrada de la matriz como antecedente; (b)
@@ -1028,7 +1029,8 @@ D14-D16 (derivación y cierre de SRS):
 D17 (matriz de trazabilidad):
   [ ] Consolidación de docs/07_traceability_matrix.md y de los CSV
        compañeros generados por tools/sync_hazard_register.py
-       (docs/data/hazard_register.csv, docs/data/safety_requirements.csv)
+       (docs/data/hazard_register.csv) y tools/sync_safety_requirements.py
+       (docs/data/safety_requirements.csv)
   [ ] Especificación funcional de tools/check_traceability.py
        (a desarrollar en §6.5.4)
   [ ] Verificación de no-huérfanos en H ↔ SR; resolución de

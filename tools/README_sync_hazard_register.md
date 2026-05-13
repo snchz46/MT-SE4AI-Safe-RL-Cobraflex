@@ -38,11 +38,11 @@ Hazard tables in Markdown should follow this structure:
 ```markdown
 ## HARA Results — Hazards and Risk Assessment
 
-| Hazard ID | Description | Severity | Mitigation | Related A1–A5 | Status | Notes |
+| Hazard ID | Description | Severity | Mitigation | related_cage_rules | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| H1 | Policy fails to respond to lane markings | High | A3: Runtime monitoring detects OOD + cage fallback | A1, A3 | Active | Detectability via lane encoder confidence |
-| H2 | Insufficient training data for edge cases | Medium | A2: Data curation + coverage metrics | A2 | Active | Addresses S3 |
-| H3 | Sim-to-real gap on tire friction | High | A5: Empirical characterization on physical platform | A5 | Active | See §9 |
+| H-01 | Unintended lane exit | S3/E3/C2 - High | SR-001, SR-003 | C-01, C-03 | Open | TTLC predictive constraint |
+| H-02 | Divergent heading error | S2/E3/C2 - Medium-High | SR-002, SR-003 | C-02, C-03 | Open | Heading stability |
+| H-03 | Excessive speed for conditions | S3/E2/C1 - Medium | SR-004 | C-04 | Open | Curvature-dependent ceiling |
 ```
 
 ### Supported Column Headers
@@ -55,15 +55,14 @@ The script is flexible and recognizes variations of these header names:
 | `description` | Description, Hazard, Hazard_Description, Desc |
 | `severity` | Severity, Risk Level, Risk_Level, Level |
 | `mitigation` | Mitigation, Mitigation_Measure, Control, Treatment |
-| `related_adaptations` | Related_Adaptations, Related A1–A5, Related A, Adaptations, A1–A5 |
+| `related_cage_rules` | Related_Cage_Rules, Related Cage Rules, Cage Rules, Cage_Rules, Related C-XX |
 | `status` | Status, State |
-| `owner` | Owner, Responsible, Assignee |
 | `notes` | Notes, Remarks, Comments, Additional_Info |
 
 ### Best Practices
 
 1. **Use consistent IDs**: H1, H2, H3... or similar naming scheme
-2. **Link to adaptations**: Reference A1–A5 in the "Related Adaptations" column for traceability
+2. **Link to cage rules**: Reference C-01..C-06 in the `related_cage_rules` column for traceability
 3. **Keep descriptions concise**: Under 100 characters when possible
 4. **Update severity based on analysis**: High/Medium/Low or ASIL ratings
 5. **Track status**: Mark as Active, Mitigated, Closed, or similar
@@ -73,24 +72,24 @@ The script is flexible and recognizes variations of these header names:
 The generated CSV has columns:
 
 ```
-id, description, severity, mitigation, related_adaptations, status, owner, notes
+id, description, severity, mitigation, related_cage_rules, status, notes
 ```
 
 Example output:
 
 ```csv
-id,description,severity,mitigation,related_adaptations,status,owner,notes
-H1,Policy fails to respond to lane markings,High,A3: Runtime monitoring detects OOD + cage fallback,A1 A3,Active,
-H2,Insufficient training data for edge cases,Medium,A2: Data curation + coverage metrics,A2,Active,
-H3,Sim-to-real gap on tire friction,High,A5: Empirical characterization on physical platform,A5,Active,
+id,description,severity,mitigation,related_cage_rules,status,notes
+H-01,Unintended lane exit,S3/E3/C2 - High,"SR-001, SR-003","C-01, C-03",Open,TTLC predictive constraint
+H-02,Divergent or oscillatory heading error,S2/E3/C2 - Medium-High,"SR-002, SR-003","C-02, C-03",Open,Heading stability
+H-03,Excessive speed for current conditions,S3/E2/C1 - Medium,SR-004,C-04,Open,Curvature-dependent ceiling
 ```
 
 ## Integration with Traceability Matrix
 
-The CSV output (`docs/data/hazard_register.csv`) is designed to be imported into the Traceability Matrix tool. Each hazard ID (H1, H2, ...) can be traced to:
+The CSV output (`docs/data/hazard_register.csv`) is designed to be imported into the Traceability Matrix tool. Each hazard ID (H-01, H-02, ...) can be traced to:
 
-- **Requirements** (from ISO 26262 HARA phase)
-- **Adaptations** (A1–A5, the thesis contribution)
+- **Safety Requirements** (SR-001..SR-008, mitigation column)
+- **Cage Rules** (C-01..C-06, `related_cage_rules` column)
 - **Verification** (test cases, validation scenarios)
 - **Validation** (physical deployment results)
 
@@ -133,9 +132,9 @@ The script will:
    
    ## 5.1 Hazard Identification
    
-   | Hazard ID | Description | Severity | Mitigation | Related A1–A5 |
+   | Hazard ID | Description | Severity | Mitigation | related_cage_rules |
    | --- | --- | --- | --- | --- |
-   | H1 | ... | High | ... | A1, A3 |
+   | H-01 | ... | S3/E3/C2 - High | SR-001, SR-003 | C-01, C-03 |
    ```
 
 2. **Run sync script**:

@@ -30,17 +30,17 @@ This approach ensures:
 ```markdown
 ## HARA Results — Hazards
 
-| Hazard ID | Description | Severity | Mitigation | Related A1–A5 | Status | Notes |
+| Hazard ID | Description | Severity | Mitigation | related_cage_rules | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| H-01 | Policy fails on unseen road texture | High | A3: Runtime OOD detection + cage fallback | A1, A3 | Active | See §5.2 |
-| H-02 | Insufficient training diversity for edge cases | Medium | A2: Data augmentation + coverage analysis | A2 | Active | ISO 26262 Part 6, technique 6.4.6 |
+| H-01 | Unintended lane exit | S3/E3/C2 - High | SR-001, SR-003 | C-01, C-03 | Open | TTLC predictive constraint |
+| H-02 | Divergent heading error | S2/E3/C2 - Medium-High | SR-002, SR-003 | C-02, C-03 | Open | Heading stability |
 ```
 
 **Generated CSV Structure**:
 
 ```csv
-id, description, severity, mitigation, related_adaptations, status, owner, notes
-H-01, Policy fails on unseen road texture, High, A3: Runtime OOD detection + cage fallback, A1 A3, Active,
+id, description, severity, mitigation, related_cage_rules, status, notes
+H-01, Unintended lane exit, S3/E3/C2 - High, "SR-001, SR-003", "C-01, C-03", Open, TTLC predictive constraint
 ```
 
 **Update Command**:
@@ -71,15 +71,16 @@ When writing a chapter with hazards or requirements:
    ```markdown
    ## 5.2 Hazard Analysis
    
-   | Hazard ID | Description | Severity | Mitigation | Related A1–A5 |
+   | Hazard ID | Description | Severity | Mitigation | related_cage_rules |
    | --- | --- | --- | --- | --- |
-   | H-01 | ... | High | ... | A1, A3 |
+   | H-01 | ... | S3/E3/C2 - High | SR-001, SR-003 | C-01, C-03 |
    ```
 
 2. **Use consistent ID patterns**:
    - Hazards: `H-01`, `H-02`, ... (or `H-1`, `H_1`)
    - Requirements: `SR-001`, `SR-002`, ... (Safety Requirement)
-   - Adaptations: `A1`, `A2`, ..., `A5`
+   - Cage rules: `C-01`, `C-02`, ..., `C-06`
+   - Adaptations: `A1`, `A2`, ..., `A5` (methodology-level, not used in the hazard table)
 
 3. **Link to thesis sections**: Use references like "See §5.2" for cross-referencing
 
@@ -147,9 +148,8 @@ The scripts use flexible header name matching. These are recognized:
 | `description` | Description, Hazard, Desc |
 | `severity` | Severity, Risk Level, Risk_Level |
 | `mitigation` | Mitigation, Mitigation_Measure, Control |
-| `related_adaptations` | Related A1–A5, Related A, Adaptations |
+| `related_cage_rules` | Related Cage Rules, Cage Rules, Cage_Rules, Related C-XX |
 | `status` | Status, State |
-| `owner` | Owner, Responsible, Assignee |
 
 **Example Markdown headers that will be recognized**:
 

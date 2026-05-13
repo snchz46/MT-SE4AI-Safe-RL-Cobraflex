@@ -113,10 +113,9 @@ def normalize_hazard(hazard: Dict[str, str]) -> Dict[str, str]:
         'description': ['description', 'hazard', 'hazard_description', 'desc'],
         'severity': ['severity', 'risk level', 'risk_level', 'level'],
         'mitigation': ['mitigation', 'mitigation_measure', 'control', 'treatment'],
-        'related_adaptations': ['related_adaptations', 'related a1-a5', 'related a', 'adaptations', 'a1-a5'],
+        'related_cage_rules': ['related_cage_rules', 'related cage rules', 'cage rules', 'cage_rules', 'related c-xx'],
         'notes': ['notes', 'remarks', 'comments', 'additional_info'],
         'status': ['status', 'state'],
-        'owner': ['owner', 'responsible', 'assignee'],
     }
 
     # Flatten input keys to lowercase for matching
@@ -183,9 +182,8 @@ def write_hazard_register_csv(hazards: List[Dict[str, str]], output_path: str) -
         'description',
         'severity',
         'mitigation',
-        'related_adaptations',
+        'related_cage_rules',
         'status',
-        'owner',
         'notes',
     ]
 

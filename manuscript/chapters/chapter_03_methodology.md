@@ -559,8 +559,6 @@ fases es ortogonal al V-Model: una fase produce artefactos pertenecientes a
 varios niveles del V simultáneamente, y un nivel del V puede ir
 construyéndose a lo largo de varias fases.
 
-El detalle completo de fases, entregables y gates se documenta en los
-ficheros `fase_N_detallada.md` versionados en el repositorio del proyecto.
 A nivel de resumen para este capítulo: la **Fase 0** establece marco,
 plantillas y este capítulo de metodología; la **Fase 1** produce HARA,
 SRs, ODD formal y arquitectura preliminar (rama izquierda superior del V);
@@ -1308,9 +1306,9 @@ D9 (cierre):
        gymnasium-Gazebo-ROS2, requisitos de cómputo más modestos.
        
 Fase 1 (D15–D19):
-  [ ] Cerrar IDs definitivos en tabla §3.5.2 (SR-001..SR-00k, C-01..C-0n)
+  [x] Cerrar IDs definitivos en tabla §3.5.2 (SR-001..SR-00k, C-01..C-0n)
   [ ] Producir figura 4 — diagrama de fases del proyecto
-  [ ] Confirmar que la lista de fases en §3.5.3 coincide con el plan
+  [x] Confirmar que la lista de fases en §3.5.3 coincide con el plan
        definitivo de fases del repositorio
   [ ] Producir figura 3 — diagrama de flujo de check_traceability.py
        (cuando el script esté implementado)

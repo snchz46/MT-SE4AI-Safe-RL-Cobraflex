@@ -280,20 +280,20 @@ resolved value attached. Do NOT delete TBDs from this list silently; close them
 with an explicit value.
 -->
 
-| Tag      | Question                                                                                                                              | Owner | Target close | Resolution |
-|----------|---------------------------------------------------------------------------------------------------------------------------------------|-------|--------------|------------|
-| TBD-Q1   | What friction coefficient is configured in the MuJoCo material of `odd1_straight_road`? Is it identical for ODD-3 and ODD-4 maps?        | SS    | D11 PM       |            |
-| TBD-Q2   | What is the maximum commanded lateral acceleration in ODD-1, derived from FRICTION and V_MAX?                                         | SS    | D11 PM       |            |
-| TBD-Q3   | What is the numerical "drivable-corridor edge" used by the simulator's episode-termination logic? Why does it differ from LANE_EDGE?              | SS    | D11 PM       |            |
-| TBD-Q4   | What are the lighting-degradation parameters and observation-noise σ in `odd2_nominal_adverse`?                                              | SS    | D11 PM       |            |
-| TBD-Q5   | What are the latency, jitter, and actuation-imperfection parameters in `odd2_adverse_with_latency`?                                        | SS    | D11 PM       |            |
-| TBD-Q6   | What are the obstacle geometry, position distribution, and quantity in `odd2_adverse_with_obstacle`?                                      | SS    | D11 PM       |            |
-| TBD-Q7   | What is the full parameterisation of `odd2_adverse_full` (combining all preceding profiles)?                                              | SS    | D11 PM       |            |
-| TBD-Q8   | What is the total loop length of the `odd3_curvy_loop` map?                                                                               | SS    | D11 PM       |            |
-| TBD-Q9   | What is the minimum curvature radius of the `odd3_curvy_loop` map (equivalently, KAPPA_MAX)?                                              | SS    | D11 PM       |            |
-| TBD-Q10  | What is the maximum commanded lateral acceleration in ODD-3, derived from FRICTION and V_MAX_CURVE?                                   | SS    | D11 PM       |            |
-| TBD-Q11  | What is the stuck-criterion timeout in seconds?                                                                                            | SS    | D11 PM       |            |
-| TBD-Q12  | Do the ODD-4 named profiles introduce any stressor not present in their ODD-2 counterparts? If yes, document them.                          | SS    | D11 PM       |            |
+| Tag | Question | Owner | Target close | Resolution |
+| --- | -------- | ----- | ------------ | ---------- |
+| TBD-Q1 | What friction coefficient is configured in the MuJoCo material of `odd1_straight_road`? Is it identical for ODD-3 and ODD-4 maps? | SS | D11 PM | |
+| TBD-Q2 | What is the maximum commanded lateral acceleration in ODD-1, derived from FRICTION and V_MAX? | SS | D11 PM | |
+| TBD-Q3 | What is the numerical "drivable-corridor edge" used by the simulator's episode-termination logic? Why does it differ from LANE_EDGE? | SS | D11 PM | |
+| TBD-Q4 | What are the lighting-degradation parameters and observation-noise σ in `odd2_nominal_adverse`? | SS | D11 PM | |
+| TBD-Q5 | What are the latency, jitter, and actuation-imperfection parameters in `odd2_adverse_with_latency`? | SS | D11 PM | |
+| TBD-Q6 | What are the obstacle geometry, position distribution, and quantity in `odd2_adverse_with_obstacle`? | SS | D11 PM | |
+| TBD-Q7 | What is the full parameterisation of `odd2_adverse_full` (combining all preceding profiles)? | SS | D11 PM | |
+| TBD-Q8 | What is the total loop length of the `odd3_curvy_loop` map? | SS | D11 PM | |
+| TBD-Q9 | What is the minimum curvature radius of the `odd3_curvy_loop` map (equivalently, KAPPA_MAX)? | SS | D11 PM | |
+| TBD-Q10 | What is the maximum commanded lateral acceleration in ODD-3, derived from FRICTION and V_MAX_CURVE? | SS | D11 PM | |
+| TBD-Q11 | What is the stuck-criterion timeout in seconds? | SS | D11 PM | |
+| TBD-Q12 | Do the ODD-4 named profiles introduce any stressor not present in their ODD-2 counterparts? If yes, document them. | SS | D11 PM | |
 
 ---
 

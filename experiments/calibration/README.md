@@ -21,13 +21,13 @@ experiment with a procedure, an expected output format, and a decision
 rule that determines whether the corresponding SR parameter is confirmed
 or must be revised.
 
-| Measurement | Closes                              | Effort | Requires                              |
+| Measurement | Closes | Effort | Requires |
 | ----------- | ----------------------------------- | ------ | ------------------------------------- |
-| [M-1](M1_lidar_static_noise.md) | SR-001 d_max margin (lateral noise σ) | <1 h   | sim perception pipeline               |
-| [M-2](M2_control_latency.md)    | SR-001 latency assumption             | <1 h   | full sim stack running                |
-| [M-3](M3_max_deceleration.md)   | SR-005 a_min, SR-008 t_stop_max       | 1 h    | physical platform                     |
-| [M-4](M4_speed_vs_curvature.md) | SR-004 v_max_curve                    | 2 h    | physical platform + hand-tuned PD     |
-| [M-5](M5_actuator_rate.md)      | SR-006 δ_max for steering and throttle | 1 h   | physical platform                     |
+| [M-1](M1_lidar_static_noise.md) | SR-001 d_max margin (lateral noise σ) | <1 h | sim perception pipeline |
+| [M-2](M2_control_latency.md) | SR-001 latency assumption | <1 h | full sim stack running |
+| [M-3](M3_max_deceleration.md) | SR-005 a_min, SR-008 t_stop_max | 1 h | physical platform |
+| [M-4](M4_speed_vs_curvature.md) | SR-004 v_max_curve | 2 h | physical platform + hand-tuned PD |
+| [M-5](M5_actuator_rate.md) | SR-006 δ_max for steering and throttle | 1 h | physical platform |
 
 Total effort estimate: approximately 6 hours of empirical work,
 distributed across simulator and platform.

@@ -92,7 +92,7 @@ The format is structured to enable mechanical extraction into the Traceability M
 
 **Rating rationale.** S=2 reflects the immediate severity of a heading divergence in isolation (analogue-real-vehicle: erratic trajectory that degrades but does not immediately fail the function). The rating is *not* upgraded to match H-01 because the C rating already accounts for the fact that the cage interrupts the H-02 → H-01 escalation chain via C-02 and C-03 well before lateral exit becomes imminent; promoting S to 3 would double-count the escalation already captured in the controllability column. E=3 follows from the same RL-policy observation as H-01: heading drift and oscillation are common failure modes of policies trained without explicit heading regularisation. C=2 is conditional on C-02 firing within the response time of the cage.
 
-**Mitigated by.** SR-002 (heading stability), SR-003 (TTLC, partial).
+**Mitigated by.** SR-002 (heading stability — divergence branch), SR-003 (TTLC, partial), SR-011 (heading stability — oscillation branch).
 
 **STPA-light findings (systematic pass).**
 
@@ -226,7 +226,7 @@ Two further STPA-informed design findings sit outside the standard UCA grid and 
 
 ## H-08 — Progress stall via reward exploitation
 
-**Description.** The policy converges to a degenerate behaviour — zero or near-zero throttle, in-place oscillation, or sustained immobility — because the cumulative reward of inaction under the trained reward function exceeds the cumulative reward of active lane-following. Distinct from H-04 (compound state, a recovery failure) and from H-07 (inability to stop, an actuator/mechanism failure): H-08 is a **policy-convergence pathology**, a specification-gaming equilibrium produced during training rather than a runtime fault.
+**Description.** The policy converges to a degenerate behaviour driven by reward exploitation, manifesting in one of two related modes: (i) **stall** — zero or near-zero throttle, in-place oscillation, or sustained immobility — because the cumulative reward of inaction under the trained reward function exceeds the cumulative reward of active lane-following; or (ii) **adversarial direction** — steering or throttle commands that *systematically* push the vehicle away from the safe trajectory because that behaviour, under the trained reward, accumulates more reward than nominal lane-following (e.g., the policy learns to drift toward a band where a reward-shaping term happens to peak). Both modes share the same root cause — misaligned reward specification — and both are detected at the system level through scenario non-completion or post-cage boundary stress, but each requires a distinct verification metric: M-P6 catches stall, M-S2-in-monitoring-mode catches adversarial direction. Distinct from H-04 (compound state, a recovery failure) and from H-07 (inability to stop, an actuator/mechanism failure): H-08 is a **policy-convergence pathology**, a specification-gaming equilibrium produced during training rather than a runtime fault.
 
 **Consequence (analogue real-vehicle interpretation).** Vehicle stopped or barely moving in a live traffic lane. Rear-end collision risk from following vehicles; obstruction of traffic flow; the function fails silently in the sense that no safety threshold is breached at any instant, but the system has stopped performing its intended task.
 
@@ -238,9 +238,9 @@ Two further STPA-informed design findings sit outside the standard UCA grid and 
 - Early-termination criteria that penalise risky exploration without compensating reward, biasing the policy toward conservative inaction.
 - Discount factor or episode length that makes long-horizon progress less attractive than short-horizon penalty avoidance.
 
-**Rating.** S=2, E=3, C=2 (with liveness check), Criticality=Medium-High.
+**Rating.** S=2, E=3, C=2 (with liveness check and monitoring-mode boundary check), Criticality=Medium-High.
 
-**Rating rationale.** S=2 under the analogue-real-vehicle interpretation: stopping in a live lane is a severe-injury survivable hazard (rear-end collision is the canonical scenario), not strictly the same severity as lane departure into oncoming traffic (S=3 for H-01). E=3 reflects that this failure mode is well-documented in RL: policies trained under reward functions that penalise risky behaviour without sufficiently rewarding progress routinely converge to inaction (Skalse et al., 2022, "Defining and Characterizing Reward Hacking"; Krakovna et al., 2020, "Specification gaming examples"). C=2 is conditional on the existence of a liveness monitor (cf. SR-009): without it, the failure is not detected at runtime and C collapses to C=3.
+**Rating rationale.** S=2 under the analogue-real-vehicle interpretation: the stall sub-mode is a severe-injury survivable hazard (rear-end collision is the canonical scenario), and the adversarial-direction sub-mode is upper-bounded by H-01's S=3 but mitigated by the cage's runtime envelope; we retain S=2 because either sub-mode is, on its own, severe-injury survivable rather than universally fatal. E=3 reflects that reward exploitation is well-documented in RL: policies trained under misaligned reward functions routinely converge to either inaction or adversarial behaviour (Skalse et al., 2022, "Defining and Characterizing Reward Hacking"; Krakovna et al., 2020, "Specification gaming examples"). C=2 is conditional on (a) the liveness monitor M-P6 catching the stall sub-mode and (b) the monitoring-mode boundary-violation rate (M-S2 in monitoring mode) catching the adversarial-direction sub-mode by exhibiting elevated values that would have been hazardous without the cage. Without either of these observables, the failure is silent at runtime and C collapses to C=3.
 
 **Mitigated by.** SR-009 (minimum forward progress / liveness).
 
@@ -267,7 +267,7 @@ Two further STPA-informed design findings sit outside the standard UCA grid and 
 
 **Rating rationale.** S=3 inherits from the strongest individual hazard whose envelope a conflict could breach (H-01, H-04). E=1 reflects that the conflict regime is rare by design — the cage rules are intended to be orthogonal in their trigger conditions — and that empirically the joint-activation pattern requires a specific compound state already covered by H-04's E=1 reasoning. C=2 is conditional on the existence of an explicit priority ordering and convergence guarantee in the cage architecture (cf. SR-010): without these, the cage's resolution is implementation-defined and C collapses to C=3.
 
-**Mitigated by.** SR-010 (cage rule conflict resolution and convergence).
+**Mitigated by.** SR-010 (cage rule composition consistency).
 
 **STPA-light findings.** Not analysed with the four-UCA grid because H-09 is structurally a *composition* hazard rather than a single control-action defect: the question is not "is action X unsafe in context Y" but "is the joint response of multiple safety mechanisms self-consistent". The STPA literature would treat this through the lens of "unsafe control action arising from coordination" — registered here as a design-level finding to be addressed by SR-010's explicit priority ordering and convergence requirement rather than by additional UCA enumeration.
 
@@ -278,7 +278,7 @@ Two further STPA-informed design findings sit outside the standard UCA grid and 
 | Hazard ID | Description | Severity | Mitigation | implementation_type | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | H-01 | Unintended lane exit | S3/E3/C2 - High | SR-001, SR-003 | C-01, C-03 | Open | TTLC predictive constraint |
-| H-02 | Divergent or oscillatory heading error | S2/E3/C2 - Medium-High | SR-002, SR-003 | C-02, C-03 | Open | Heading stability hazard |
+| H-02 | Divergent or oscillatory heading error | S2/E3/C2 - Medium-High | SR-002, SR-003, SR-011 | C-02, C-03, C-06 | Open | Heading stability (divergence + oscillation branches) |
 | H-03 | Excessive speed for current conditions | S3/E2/C1 - Medium | SR-004 | C-04 | Open | Curvature-dependent speed ceiling |
 | H-04 | Compound unrecoverable state | S3/E1/C3 - High | SR-005 | C-05 | Open | Emergency substitution mode |
 | H-05 | Excessively abrupt actuator command | S1/E3/C1 - Medium | SR-006 | C-06 | Open | Actuator rate limiting |

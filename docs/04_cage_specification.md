@@ -168,11 +168,13 @@ if v > v_ceiling:
 
 **Triggers (any of these activates emergency mode):**
 
-1. Compound state: `abs(theta) > theta_warning AND abs(d) > d_warning` for more than `Δt_max` consecutive seconds.
-2. Stale state: timestamp of last `/state_obs` older than `staleness_max`.
-3. Invalid state field: any field outside its plausible range.
-4. Missing state: no `/state_obs` received for `N_missing_max` consecutive cycles.
-5. External stop: `/external_stop` signal received.
+1. Compound state, low-energy: `abs(theta) > theta_warning AND abs(d) > d_warning` for more than `delta_t_max` consecutive seconds.
+2. Compound state, high-energy: `abs(theta) > theta_warning AND abs(d) > d_warning AND v > v_warning` for more than `delta_t_max_fast` consecutive seconds. The high-energy variant shortens the persistence requirement because the kinematic margin at elevated speed is smaller.
+3. Stale state: timestamp of last `/state_obs` older than `staleness_max`.
+4. Invalid state field: any field outside its plausible range.
+5. Missing state: no `/state_obs` received for `N_missing_max` consecutive cycles.
+6. External stop: `/external_stop` signal received.
+7. Joint-envelope assertion failure (see §Joint-envelope assertion below).
 
 **On activation:**
 
@@ -186,7 +188,9 @@ if v > v_ceiling:
 
 - `theta_warning = 0.35 rad (20 deg)`.
 - `d_warning = 0.12 m`.
-- `delta_t_max = 0.2 s`.
+- `v_warning = 0.4 m/s` (80 % of `v_max_straight`; from SR-005 Trigger B).
+- `delta_t_max = 0.2 s` (Trigger 1).
+- `delta_t_max_fast = 0.1 s` (Trigger 2).
 - `a_min = 0.3 m/s²`.
 - `staleness_max = 0.2 s`.
 - `N_missing_max = 5 cycles`.
@@ -231,6 +235,32 @@ The rules are evaluated in a fixed deterministic order at every control cycle:
 5. **C-06 last.** Applied to the result of all upstream rules to ensure the final command satisfies the smoothness bound regardless.
 
 This order is encoded in `cage/cage_node.py` and exercised by dedicated unit tests in `cage/tests/test_evaluation_order.py`.
+
+## Joint-envelope assertion and conflict resolution
+
+The evaluation order above is a single-pass deterministic pipeline; corrections compose by additive merging (C-01 + C-02 on steering), max-merging (C-01 + C-03 on steering, worst-case envelope), independent channels (C-04 on throttle), and final smoothing (C-06). The pipeline is therefore non-iterative by construction — there is no inner fixed-point loop and no risk of an "infinite correction" within a single cycle.
+
+What can still fail, however, is the *joint* envelope: it is in principle possible for the composed correction (e.g., C-01 + C-02 additive, then capped by C-06's rate limit) to lie outside the safe-envelope predicate of one of the individually firing rules — for instance, if C-06's rate cap prevents the C-01 correction from reaching the boundary band within a single cycle. SR-010 makes this case explicit and the cage shall handle it via an end-of-cycle check:
+
+**End-of-cycle assertion (implements SR-010).** After the C-06 step and before publishing `/safe_action`:
+
+```python
+for rule in active_rules_this_cycle:
+    if not rule.safe_envelope_predicate_holds(command_out):
+        log_joint_envelope_failure(rule.id, command_out)
+        trigger_emergency_mode()  # Trigger 7 of C-05
+        break
+```
+
+**Inter-cycle oscillation check (implements SR-010).** A monitoring counter tracks consecutive cycles in which contradictory rules fire (e.g., C-01 firing left in cycle `n` and C-01 firing right in cycle `n+1`). If the alternation frequency exceeds `f_osc_max = 5 Hz` over a `t_osc_window = 1 s` window, the cage logs the event for offline review; sustained oscillation beyond `t_osc_persist = 3 s` triggers emergency mode (the alternation is taken as evidence of a degenerate policy-cage feedback that requires human intervention).
+
+**Parameters.**
+
+- `f_osc_max = 5 Hz` (from SR-010).
+- `t_osc_window = 1 s`.
+- `t_osc_persist = 3 s`.
+
+The joint-envelope assertion and the oscillation check are exercised by `cage/tests/test_joint_envelope.py` (covering rule pairs and triples) and by scenario SC-EDGE-05 (cage rule co-activation matrix).
 
 ## Parameters and configuration management
 

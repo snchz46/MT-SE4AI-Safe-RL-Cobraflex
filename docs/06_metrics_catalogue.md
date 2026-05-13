@@ -79,6 +79,18 @@ A companion CSV (`docs/data/metrics.csv`) is generated automatically.
 
 **Contributes evidence to.** SR-009.
 
+### M-P7 — Heading variability
+
+**Definition.** Standard deviation of the heading-error signal θ over sliding windows of `t_psd = 1.0 s` (20 control cycles at 20 Hz). Reported as the 95th percentile of the per-step values across the eligible portion of the run.
+
+**Units.** Radians (degrees in display).
+
+**Computation.** For each control step `t` with `t > t_psd`, compute `σ_θ(t) = std(θ[t - t_psd : t])`. Aggregate over the run as `M_P7 = percentile_95(σ_θ(t) for eligible t)`. Eligibility excludes (i) emergency mode, (ii) the first `t_psd` seconds of any nominal interval (insufficient history), and (iii) any active stop-signal period. A run with no eligible window produces `M_P7 = undefined`.
+
+**Rationale.** Distinguishes a vehicle whose heading is *bounded but oscillating* (high `σ_θ`, low `M-P4 - M-P5`) from one whose heading is *bounded and stable* (low `σ_θ`). M-P4 and M-P5 alone cannot make this distinction.
+
+**Contributes evidence to.** SR-002 (general behaviour), SR-011 (oscillation detection).
+
 ## Safety metrics
 
 ### M-S1 — Max lateral offset
@@ -99,9 +111,9 @@ A companion CSV (`docs/data/metrics.csv`) is generated automatically.
 
 **Computation.** `M_S2 = count(abs(d[t]) > d_max for t in run) / duration`.
 
-**Note.** In enforcement mode, M-S2 should be 0 by design of C-01. In monitoring mode, M-S2 reflects what the policy alone would have produced.
+**Note.** In enforcement mode, M-S2 should be 0 by design of C-01 (single-rule activation) and SR-010 (multi-rule activation — the joint-envelope assertion guarantees the final command satisfies C-01's envelope even under co-activation with other rules). In monitoring mode, M-S2 reflects what the policy alone would have produced.
 
-**Contributes evidence to.** SR-001, and crucial for the enforcement-vs-monitoring causal comparison.
+**Contributes evidence to.** SR-001 (primary), SR-010 (joint-envelope assertion under multi-rule activation), and crucial for the enforcement-vs-monitoring causal comparison.
 
 ### M-S3 — Emergency stop rate
 

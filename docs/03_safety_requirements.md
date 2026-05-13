@@ -26,6 +26,7 @@ The SRs use a small set of recurring patterns:
 - **Emergency mode** — under specified conditions, a specified mode shall be entered.
 - **Operational envelope** — the joint state of variables shall remain within a defined region.
 - **Liveness** — a measurable progress quantity shall not remain below a threshold for longer than a specified window. Distinct from the other patterns above, which are all *safety* (a forbidden condition shall not occur); liveness asserts that a desired condition *shall* occur within bounded time.
+- **Bounded variance** — a derived statistic (typically standard deviation) of a state variable over a sliding window shall not exceed a threshold. A strengthening of "direct threshold" that catches *within-band oscillation* — a signal that is bounded in magnitude but exhibits high-frequency content.
 
 ---
 
@@ -37,7 +38,7 @@ The SRs use a small set of recurring patterns:
 
 **Parameters.**
 
-- `d_max = 0.16 m`, derived as `ODD-1.ROAD_WIDTH/2 − Δ = 0.25 − 0.09 = 0.16 m`, where `ODD-1.ROAD_WIDTH = 0.50 m` per the ODD Specification (`docs/08_odd_specification.md` §4.2) and `Δ = 0.09 m` aggregates three independent contributions: lateral-noise estimator uncertainty ≈ 0.01 m, drift over one nominal control latency `v_max · ODD-1.LATENCY_NOMINAL = 0.5 m/s · 50 ms = 0.025 m`, and the half-width of the CobraFlex 1:14 lateral footprint ≈ 0.05 m.
+- `d_max = 0.16 m`, derived as `ODD-1.ROAD_WIDTH/2 − Δ = 0.25 − 0.09 = 0.16 m`, where `ODD-1.ROAD_WIDTH = 0.50 m` per the ODD Specification (`docs/08_odd_specification.md` §4.2) and `Δ = 0.09 m` aggregates three independent contributions: lateral-noise estimator uncertainty ≈ 0.01 m, drift over one nominal control latency `v_max · ODD-1.LATENCY_NOMINAL = 0.5 m/s · 50 ms = 0.025 m`, and the half-width of the CobraFlex 1:14 lateral footprint ≈ 0.05 m. The arithmetic sum is 0.085 m; `Δ` is **rounded up to 0.09 m** to absorb the residual uncertainty in each of the three contributions (each value is itself a first-order estimate). The round-up is conservative: it shrinks `d_max` by 5 mm relative to the arithmetic floor.
 
 **References hazard.** H-01.
 
@@ -122,7 +123,12 @@ The SRs use a small set of recurring patterns:
 
 ## SR-005 — Emergency mode for compound state
 
-**Statement.** If the system simultaneously observes a heading error magnitude greater than `θ_warning` and a lateral offset magnitude greater than `d_warning` for more than `Δt_max` consecutive seconds, the system shall transition into an emergency mode characterised by:
+**Statement.** The system shall transition into an emergency mode when any of the following triggers fires:
+
+- **Trigger A (compound state, low-energy):** `|θ| > θ_warning AND |d| > d_warning`, sustained for at least `Δt_max` consecutive seconds.
+- **Trigger B (compound state, high-energy):** `|θ| > θ_warning AND |d| > d_warning AND v > v_warning`, sustained for at least `Δt_max_fast` consecutive seconds. Trigger B is the high-speed shortcut: at elevated speed, the kinematic margin is smaller and the persistence requirement is shortened accordingly. (Triggers C–F covering staleness, invalid range, missing messages, and external stop are specified in SR-007 / SR-008 respectively and use C-05's broader trigger set.)
+
+The emergency mode is characterised by:
 
 - a deceleration of at least `a_min` until full stop,
 - the steering command frozen at its value at the instant of transition,
@@ -134,7 +140,9 @@ The SRs use a small set of recurring patterns:
 
 - `θ_warning = 20 degrees`. Set strictly below `θ_max = 25°` (SR-002) to provide an early-warning band of approximately 5° during which the compound trigger can engage before the heading-stability limit is breached.
 - `d_warning = 0.12 m`. Set strictly below `d_max = 0.16 m` (SR-001) to provide an early-warning lateral band of 0.04 m, equivalent to roughly two control-cycles of drift at maximum operating speed.
-- `Δt_max = 0.2 s` = 4 control cycles. The sustained-condition requirement (STPA-informed, cf. Hazard Register §H-04) guards against transient glitches triggering emergency mode unnecessarily: a single noisy state observation that briefly violates both warning thresholds should not trigger emergency, but a genuine compound state persisting across four cycles or more should. An instantaneous trigger (Δt_max = 0) would produce spurious activations under benign sensor noise.
+- `v_warning = 0.4 m/s` (80 % of `v_max_straight`). Above this speed, the compound state with heading and lateral warning is treated as high-energy: at `v_warning · sin(θ_warning) · Δt_max ≈ 0.4 · 0.34 · 0.2 ≈ 0.027 m`, the additional drift accumulated during the standard persistence interval already approaches half of the early-warning band, so the kinematic margin to recover compound state under correction is materially smaller than at low speed. Trigger B closes this gap with a shorter persistence requirement.
+- `Δt_max = 0.2 s` = 4 control cycles (Trigger A). The sustained-condition requirement (STPA-informed, cf. Hazard Register §H-04) guards against transient glitches triggering emergency mode unnecessarily: a single noisy state observation that briefly violates both warning thresholds should not trigger emergency, but a genuine compound state persisting across four cycles or more should.
+- `Δt_max_fast = 0.1 s` = 2 control cycles (Trigger B). At high speed, the kinematic margin halves with the persistence requirement; two cycles is the minimum to distinguish persistent compound state from single-cycle sensor noise while preserving the time-to-action budget under elevated speed.
 - `a_min = 0.3 m/s²` (minimum deceleration during emergency). The value is **provisional pending measurement M-3** (maximum platform deceleration). The choice is conservative: the kinematic stopping time at `v = v_max_straight = 0.5 m/s` is `t_stop = v / a_min ≈ 1.67 s`, which is consistent with SR-008's `t_stop_max = 1.7 s`. If M-3 demonstrates a higher achievable deceleration on the platform, `a_min` may be raised in a subsequent revision (with consequent tightening of `t_stop_max` in SR-008); if M-3 demonstrates a lower achievable deceleration, `a_min` must be reduced and the operating-speed envelope tightened accordingly.
 
 **References hazard.** H-04 (primarily), H-07 (partially).
@@ -239,37 +247,61 @@ The SRs use a small set of recurring patterns:
 
 **Implemented by.** *Training constraint* (reward shaping). The mitigation lives at the policy-training specification level rather than at the runtime cage level: the reward function shall include a non-trivial positive progress term and/or a stall penalty calibrated such that the optimal policy under finite training does not converge to inaction. A runtime cage rule that forced `throttle > 0` would be ortogonal to the cage's filosofía (correct unsafe commands, not inject progress) and is therefore explicitly out of scope; the cage instead provides *observation* of stall through M-P6 and the optional emission of a stall-detection signal that is consumed by the test harness (not by the vehicle-control node).
 
-**Verified by scenarios.** SC-NOM-01, SC-NOM-02, SC-NOM-03 (nominal scenarios; M-P6 is computed over the eligible interval of each run).
+**Verified by scenarios.** SC-NOM-01, SC-NOM-02, SC-NOM-03 (nominal scenarios; M-P6 and M-S2-monitoring are both computed across the eligible interval of each run). SC-PERT-03 (reward-injection negative test, ensures the verification machinery detects induced stall — see scenario library).
 
-**Verifying metric.** M-P6 (stall rate). Distinguishes a stalled policy from a legitimately interrupted run: M-P6 is computed only over *eligible* nominal-mode time (post-settling, no stop signal, not in emergency), so a run aborted by SR-005 for a non-stall hazard (e.g., compound state) does not falsely fail SR-009.
+**Verifying metric.** M-P6 (stall rate, catches the inaction sub-mode of H-08) **and** M-S2 measured under monitoring mode (catches the adversarial-direction sub-mode by quantifying how often the policy alone — without cage corrections — would have breached the boundary). The two metrics together cover both sub-modes of H-08; either being non-zero on the released policy is grounds for retraining.
 
-**Satisfaction criterion.** Across all runs of the verifying scenarios under the released policy, M-P6 shall be 0 % — i.e., no eligible sliding window of `t_window` records less than `Δs_min` of forward progress.
+**Satisfaction criterion.** Across all runs of the verifying scenarios under the released policy: (i) M-P6 shall be 0 %, i.e., no eligible sliding window of `t_window` records less than `Δs_min` of forward progress; (ii) the ratio `M-S2(monitoring) / M-S2(enforcement)` shall not be substantially elevated relative to a reference baseline policy — a sustained increase indicates the policy depends on cage corrections to a degree that suggests adversarial behaviour rather than benign reliance.
 
 **Conflict-resolution note.** SR-009 deliberately yields to SR-005 and SR-008. During emergency mode (SR-005), during stop-signal-driven deceleration (SR-008), and during the post-transition settling window (`Δt_settle`), the liveness check is suspended. This priority ordering is by design: a transient absence of progress while the cage executes a legitimate safety response is not a SR-009 violation, even though it superficially resembles one.
 
 ---
 
-## SR-010 — Cage rule conflict resolution and convergence
+## SR-010 — Cage rule composition consistency
 
-**Statement.** When two or more cage rules activate within the same control cycle, the cage shall produce a single output command according to a deterministic priority ordering declared in `cage/cage.yaml`, and the sequence of internal corrections within any single control cycle shall converge to a fixed point in at most `N_resolve_max` arbiter iterations. The final emitted command shall lie within the safe envelope of every individually activated rule.
+**Statement.** When two or more cage rules activate within the same control cycle, the cage's deterministic evaluation pipeline (specified in §Evaluation order of the Cage Specification) shall produce a final command that satisfies the safe-envelope predicate of every individually activated rule, and the cage's intervention pattern across consecutive cycles shall not exhibit sustained oscillation between contradictory rules.
 
-**Pattern.** Operational envelope (joint cage-output consistency) + bounded resolution (finite arbiter iterations).
+**Pattern.** Operational envelope (joint cage-output consistency) + bounded oscillation (inter-cycle stability).
 
 **Parameters.**
 
-- **Priority ordering** (declared in `cage/cage.yaml`, mirrored here for traceability): emergency mode (C-05) > lane boundary hard limit (C-01) > heading error limit (C-02) > predictive TTLC (C-03) > speed ceiling (C-04) > actuator rate limiter (C-06). Rationale: hard kinematic limits (C-01, C-02) override predictive limits (C-03); deterministic substitution (C-05) overrides everything because by construction the policy commands are untrusted in compound state (cf. H-04 STPA rationale); the rate limiter (C-06) is last because its role is to *attenuate* the final command rather than to *replace* it.
-- `N_resolve_max = 3` arbiter iterations per control cycle. The bound is set such that the worst-case multi-rule cascade — emergency triggers → emergency command is rate-limited → rate-limited command is checked against hard limit and accepted — completes within three passes. A cascade requiring more iterations is by definition non-convergent and shall trigger emergency mode as a fallback (the cage degrades to C-05 if SR-010 cannot resolve within the budget).
-- **Joint-envelope assertion.** The emitted command shall satisfy every individually activated rule's safe-envelope predicate simultaneously: there is no rule R such that R was active in the cycle, R's safe-envelope predicate `P_R(command_out)` is false, and the cage emitted `command_out` without entering emergency mode.
+- **Evaluation order.** The composition of rule corrections is defined by the deterministic pipeline declared in §Evaluation order of `docs/04_cage_specification.md`. In short: (i) C-05 short-circuits all subsequent rules; (ii) C-01 and C-02 operate co-equally on steering with additive combination; (iii) C-03's correction is max-merged with C-01's (worst-case envelope wins); (iv) C-04 operates independently on throttle; (v) C-06 is applied last and bounds the rate of the final command. This ordering is the source of truth; SR-010 asserts properties *over* this composition rather than dictating a different one.
+- **Joint-envelope assertion.** At the end of every control cycle, the emitted command `command_out` shall satisfy the safe-envelope predicate `P_R(command_out)` of every rule R that fired in the cycle. Formally: `∄ R : fired(R, cycle) ∧ ¬P_R(command_out) ∧ ¬emergency_active`. If the assertion fails, the cage shall (a) log the failure with the offending rule set, and (b) fall back to C-05 (emergency mode) for the remainder of the run.
+- **Bounded inter-cycle oscillation.** The rule-activation pattern across cycles shall not exhibit alternation at a frequency above `f_osc_max = 5 Hz` between contradictory rules. *Contradictory* means: rules whose corrections push the command in opposite directions on the same channel (e.g., C-01 firing left in cycle `n` and C-01 firing right in cycle `n+1`).
 
 **References hazard.** H-09.
 
-**Implemented by.** *Cage architecture (arbiter)* — not a single new cage rule. The cage's main control loop shall implement: (a) collection of activation flags from all rules; (b) priority-ordered application of corrections; (c) joint-envelope assertion at the end of each cycle; (d) fallback to emergency mode if the joint-envelope assertion fails or if iteration count exceeds `N_resolve_max`. *Verified by scenario test* and dedicated cage unit tests covering all rule-pair and rule-triple activation combinations.
+**Implemented by.** *Cage architecture* — specifically the post-C-06 joint-envelope assertion and the fallback logic, neither of which is a numbered cage rule but rather a structural property of the cage pipeline. The implementation lives in `cage/cage_node.py::end_of_cycle_check()` and is documented in §Joint-envelope assertion of `docs/04_cage_specification.md`. *Verified by scenario test* and dedicated cage unit tests enumerating rule-pair and rule-triple activation combinations.
 
-**Verified by scenarios.** SC-EDGE-04 (compound state, the principal scenario in which multiple cage rules are expected to activate simultaneously) and dedicated cage unit tests enumerating rule-pair and rule-triple activation combinations. A new scenario covering injected rule conflict may be added in Phase 2 if unit tests reveal corner cases not covered by SC-EDGE-04.
+**Verified by scenarios.** SC-EDGE-04 (compound state, where multiple cage rules are expected to activate simultaneously), SC-EDGE-05 (cage rule co-activation matrix, dedicated to enumerating pair and triple activations), and unit tests under `cage/tests/test_evaluation_order.py`.
 
-**Verifying metric.** M-S2 (boundary violations). A boundary violation post-cage is the direct empirical signature of a SR-010 failure: it means the cage emitted a command that breached at least one safe envelope despite at least one rule being active to defend it.
+**Verifying metric.** M-S2 (boundary violations) and M-I3 (intervention duration). M-S2 detects joint-envelope failures: if the cage emits a command outside any active rule's envelope, the boundary violation count is non-zero. M-I3 detects oscillation: a sustained alternation between two contradictory rules appears as a bimodal intervention-duration distribution with both modes ≤ 2 cycles.
 
-**Satisfaction criterion.** Across all runs of the verifying scenarios in enforcement mode, M-S2 shall be 0 (zero boundary violations of any lane or heading limit) and the cage shall not log any arbiter-iteration overrun. The unit-test suite for the cage shall pass for every documented rule-pair and rule-triple activation combination.
+**Satisfaction criterion.** Across all runs of the verifying scenarios in enforcement mode: (i) M-S2 = 0 (zero boundary violations of any lane or heading limit); (ii) no run logs a joint-envelope assertion failure; (iii) the M-I3 distribution per rule does not show a peak at ≤ 2 cycles paired with consecutive opposite-direction firings exceeding `f_osc_max`. The cage unit-test suite shall pass for every documented rule-pair and rule-triple activation combination.
+
+---
+
+## SR-011 — Heading stability without sustained oscillation
+
+**Statement.** Under the operational ODD and in eligible nominal-mode intervals, the heading-error signal `θ(t)` shall satisfy two conditions: (i) the magnitude bound of SR-002 (`|θ| ≤ θ_max`), and (ii) the standard deviation of θ over any sliding window of `t_psd = 1.0 s` shall not exceed `σ_θ_max`.
+
+**Pattern.** Bounded variance (a strengthening of the magnitude bound in SR-002 to also constrain in-band oscillation).
+
+**Parameters.**
+
+- `σ_θ_max = 0.087 rad (5 degrees)`. The value is set such that a bounded oscillation of amplitude `A` at frequency `f` produces `σ_θ ≈ A/√2`; thus `σ_θ_max = 5°` admits oscillations up to ≈ 7° amplitude, which is well below `θ_max = 25°` but tight enough to flag the within-bounds-but-oscillatory failure mode described in H-02. The choice will be revisited after Phase 3 against the trained policy's natural heading-variance distribution; if the policy's median `σ_θ` already lies well below 5°, the limit may be tightened.
+- `t_psd = 1.0 s` = 20 control cycles. The window must be long enough to capture at least one full period of the lowest-frequency oscillation of concern (≈ 1 Hz, the timescale at which sustained heading oscillation becomes perceptually and dynamically significant) and short enough to avoid masking by drift on longer timescales.
+- **Eligibility carve-outs.** The verdict on σ_θ excludes (i) the first 0.5 s of any nominal interval (admits the legitimate corrective response after a perturbation, in symmetry with SR-009's settling logic), (ii) any interval during which C-02 is actively firing (the rule's intervention transient is not a SR-011 violation), and (iii) any emergency-mode interval.
+
+**References hazard.** H-02 (oscillation branch; SR-002 covers the divergence branch).
+
+**Implemented by.** C-06 (rate limiter, indirect — bounds the rate of policy commands and thus attenuates high-frequency content in θ) *and* a *training constraint* on the reward function: the reward shall include a heading-variance penalty calibrated such that the optimal policy under finite training does not exhibit sustained in-band oscillation. The runtime cage does not directly enforce SR-011 — the cage attenuates but cannot remove a policy's tendency to oscillate — so the principal mitigation lives at the training level.
+
+**Verified by scenarios.** SC-EDGE-01 (initial heading perturbation, the principal stress test for heading dynamics), SC-EDGE-04 (compound state, secondary).
+
+**Verifying metric.** M-P7 (heading variability — 95th-percentile σ_θ over eligible windows).
+
+**Satisfaction criterion.** Across all runs of the verifying scenarios under the released policy, M-P7 (95th percentile across eligible windows) shall be ≤ `σ_θ_max`.
 
 ---
 
@@ -285,8 +317,9 @@ The SRs use a small set of recurring patterns:
 | SR-006 | Actuator smoothness | Bounded derivative | H-05 | C-06 | ALL | M-I5 | Open | Always active |
 | SR-007 | State validity and freshness | Availability + emergency | H-06 | C-05 | SC-PERT-02 | M-S3 | Open | staleness_max = 200 ms |
 | SR-008 | Controlled stop on demand | Emergency mode | H-07 | C-05 | SC-NOM-03, SC-EDGE-04 | M-S3 | Open | t_stop_max = 1.7 s |
-| SR-009 | Minimum forward progress (liveness) | Liveness | H-08 | training | SC-NOM-01, SC-NOM-02, SC-NOM-03 | M-P6 | Open | Δs_min = 0.10 m / t_window = 2.0 s / Δt_settle = 1.0 s |
-| SR-010 | Cage rule conflict resolution and convergence | Operational envelope + bounded resolution | H-09 | arbiter | SC-EDGE-04 | M-S2 | Open | Priority ordering + N_resolve_max = 3 |
+| SR-009 | Minimum forward progress (liveness) | Liveness | H-08 | training | SC-NOM-01, SC-NOM-02, SC-NOM-03, SC-PERT-03 | M-P6, M-S2 (monitoring) | Open | Δs_min = 0.10 m / t_window = 2.0 s / Δt_settle = 1.0 s |
+| SR-010 | Cage rule composition consistency | Operational envelope + bounded oscillation | H-09 | arbiter | SC-EDGE-04, SC-EDGE-05 | M-S2, M-I3 | Open | Joint-envelope assertion + f_osc_max = 5 Hz |
+| SR-011 | Heading stability without sustained oscillation | Bounded variance | H-02 | C-06 + training | SC-EDGE-01, SC-EDGE-04 | M-P7 | Open | σ_θ_max = 5°, t_psd = 1.0 s |
 
 ---
 

@@ -113,6 +113,35 @@ def extract_referenced_ids(text: str, pattern: re.Pattern) -> Set[str]:
     return set(pattern.findall(text))
 
 
+# Any markdown h2 heading (used to bound section blocks)
+_ANY_H2 = re.compile(r"^##\s+", re.MULTILINE)
+
+
+def extract_section_blocks(text: str, heading_pattern: re.Pattern) -> Dict[str, str]:
+    """Extract markdown section bodies keyed by the ID captured in heading_pattern.
+
+    Each section ends at the next h2 heading (any h2, not just one of the same kind).
+    This avoids the pitfall in which the last section of a kind extends to EOF and
+    swallows unrelated trailing content such as a machine-readable summary table.
+
+    Args:
+        text: Full markdown document.
+        heading_pattern: Compiled regex matching headings whose first capture group is the section ID.
+
+    Returns:
+        Ordered dict mapping section ID -> block content (heading line included).
+    """
+    all_h2_starts = sorted(m.start() for m in _ANY_H2.finditer(text))
+    blocks: Dict[str, str] = {}
+    for match in heading_pattern.finditer(text):
+        section_id = match.group(1)
+        block_start = match.start()
+        next_starts = [s for s in all_h2_starts if s > block_start]
+        block_end = min(next_starts) if next_starts else len(text)
+        blocks[section_id] = text[block_start:block_end]
+    return blocks
+
+
 # ---------- Checks ----------------------------------------------------------
 
 def check_hazards_to_srs(result: CheckResult, defined_h: Set[str], srs_text: str) -> None:
@@ -129,13 +158,9 @@ def check_hazards_to_srs(result: CheckResult, defined_h: Set[str], srs_text: str
 def check_srs_to_hazards(result: CheckResult, defined_sr: Set[str], hazards_text: str, srs_text: str) -> None:
     """(2) Every SR-XXX references >= 1 H-XX."""
     referenced_h_in_hazards = extract_defined_ids(hazards_text, RX_H_DEF)
+    sr_blocks = extract_section_blocks(srs_text, RX_SR_DEF)
 
-    # For each SR, find the hazards it references in its definition block
-    sr_definitions = re.split(r"^##\s+SR-\d{3}", srs_text, flags=re.MULTILINE)
-    sr_ids_ordered = RX_SR_DEF.findall(srs_text)
-
-    for i, sr_id in enumerate(sr_ids_ordered):
-        block = sr_definitions[i + 1] if i + 1 < len(sr_definitions) else ""
+    for sr_id, block in sr_blocks.items():
         referenced = extract_referenced_ids(block, RX_HAZARD)
         valid_refs = referenced & referenced_h_in_hazards
         if not valid_refs:
@@ -147,18 +172,14 @@ def check_srs_to_hazards(result: CheckResult, defined_sr: Set[str], hazards_text
 
 def check_srs_to_cage(result: CheckResult, defined_sr: Set[str], srs_text: str) -> Dict[str, Set[str]]:
     """(3) Every SR-XXX implemented by >= 1 C-XX (or other implementation kind)."""
-    sr_definitions = re.split(r"^##\s+SR-\d{3}", srs_text, flags=re.MULTILINE)
-    sr_ids_ordered = RX_SR_DEF.findall(srs_text)
-
+    sr_blocks = extract_section_blocks(srs_text, RX_SR_DEF)
     sr_to_cage: Dict[str, Set[str]] = {}
 
-    for i, sr_id in enumerate(sr_ids_ordered):
-        block = sr_definitions[i + 1] if i + 1 < len(sr_definitions) else ""
+    for sr_id, block in sr_blocks.items():
         cage_refs = extract_referenced_ids(block, RX_CAGE)
-        # If no cage rule, look for "training_constraint" or "scenario_test" markers
         if not cage_refs:
-            if "training constraint" in block.lower() or "scenario test" in block.lower():
-                result.note(f"SR {sr_id} implemented via non-cage mechanism (training/scenario).")
+            if "training constraint" in block.lower() or "scenario test" in block.lower() or "training)" in block.lower() or "arbiter" in block.lower():
+                result.note(f"SR {sr_id} implemented via non-cage mechanism (training/scenario/arbiter).")
                 sr_to_cage[sr_id] = set()
             else:
                 result.fail(f"Constraint (3): SR {sr_id} has no implementing cage rule or alternative mechanism.")
@@ -171,11 +192,9 @@ def check_srs_to_cage(result: CheckResult, defined_sr: Set[str], srs_text: str) 
 
 def check_cage_to_srs(result: CheckResult, defined_c: Set[str], cage_text: str) -> None:
     """(4) Every C-XX implements >= 1 SR-XXX."""
-    cage_definitions = re.split(r"^###\s+C-\d{2}", cage_text, flags=re.MULTILINE)
-    cage_ids_ordered = RX_C_DEF.findall(cage_text)
+    cage_blocks = extract_section_blocks(cage_text, RX_C_DEF)
 
-    for i, c_id in enumerate(cage_ids_ordered):
-        block = cage_definitions[i + 1] if i + 1 < len(cage_definitions) else ""
+    for c_id, block in cage_blocks.items():
         sr_refs = extract_referenced_ids(block, RX_SR)
         if not sr_refs:
             result.fail(f"Constraint (4): cage rule {c_id} does not implement any SR.")
@@ -186,21 +205,13 @@ def check_cage_to_srs(result: CheckResult, defined_c: Set[str], cage_text: str) 
 
 def check_cage_to_scenarios(result: CheckResult, defined_c: Set[str], scenarios_text: str) -> None:
     """(5) Every C-XX exercised by >= 1 SC-*."""
-    # Approximation: look for cage rule references inside scenario blocks
-    sc_definitions = re.split(r"^##\s+SC-(?:NOM|EDGE|PERT)-\d{2}", scenarios_text, flags=re.MULTILINE)
-    referenced_c_in_scenarios = set()
-    for block in sc_definitions:
+    sc_blocks = extract_section_blocks(scenarios_text, RX_SC_DEF)
+    referenced_c_in_scenarios: Set[str] = set()
+    for block in sc_blocks.values():
         referenced_c_in_scenarios |= extract_referenced_ids(block, RX_CAGE)
-
-    # Also check via SR -> cage chain
-    # If a scenario references SR-001, and SR-001 is implemented by C-01, then C-01 is exercised.
-    # We do a simpler check here: look for at least one scenario per cage rule via direct mention
-    # OR via the indirect chain (covered by other constraints).
-    # For Phase 0 baseline, we accept indirect coverage if all other constraints hold.
 
     orphan_cage = defined_c - referenced_c_in_scenarios
     if orphan_cage:
-        # Demote to warning since indirect coverage is acceptable
         for c in sorted(orphan_cage):
             result.warn(f"Constraint (5): cage rule {c} not directly mentioned in any scenario; verify indirect coverage via SR chain.")
     else:
@@ -209,11 +220,9 @@ def check_cage_to_scenarios(result: CheckResult, defined_c: Set[str], scenarios_
 
 def check_scenarios_to_srs(result: CheckResult, scenarios_text: str) -> None:
     """(6) Every SC-* references >= 1 SR-XXX."""
-    sc_definitions = re.split(r"^##\s+SC-(?:NOM|EDGE|PERT)-\d{2}", scenarios_text, flags=re.MULTILINE)
-    sc_ids_ordered = RX_SC_DEF.findall(scenarios_text)
+    sc_blocks = extract_section_blocks(scenarios_text, RX_SC_DEF)
 
-    for i, sc_id in enumerate(sc_ids_ordered):
-        block = sc_definitions[i + 1] if i + 1 < len(sc_definitions) else ""
+    for sc_id, block in sc_blocks.items():
         sr_refs = extract_referenced_ids(block, RX_SR)
         if not sr_refs:
             result.fail(f"Constraint (6): scenario {sc_id} does not reference any SR.")
@@ -224,11 +233,9 @@ def check_scenarios_to_srs(result: CheckResult, scenarios_text: str) -> None:
 
 def check_srs_to_metrics(result: CheckResult, srs_text: str) -> None:
     """(7) Every SR-XXX has >= 1 verifying metric M-*."""
-    sr_definitions = re.split(r"^##\s+SR-\d{3}", srs_text, flags=re.MULTILINE)
-    sr_ids_ordered = RX_SR_DEF.findall(srs_text)
+    sr_blocks = extract_section_blocks(srs_text, RX_SR_DEF)
 
-    for i, sr_id in enumerate(sr_ids_ordered):
-        block = sr_definitions[i + 1] if i + 1 < len(sr_definitions) else ""
+    for sr_id, block in sr_blocks.items():
         m_refs = extract_referenced_ids(block, RX_METRIC)
         if not m_refs:
             result.fail(f"Constraint (7): SR {sr_id} has no verifying metric.")

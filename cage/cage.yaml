@@ -13,8 +13,20 @@
 # =============================================================
 
 cage:
-  version: "0.1.0"   # bump on any parameter change; semantic versioning
-  description: "Initial baseline; numerical thresholds from Phase 0/1 analysis."
+  version: "0.2.0"   # bump on any parameter change; semantic versioning
+  description: |
+    F1 consolidation of parameter rationale (13.05.2026). Numerical values
+    unchanged from 0.1.0 except where flagged below; the bump reflects (a)
+    consolidated SR rationale now traceable per-parameter via the comments
+    in this file, and (b) the SR-005 ↔ SR-008 consistency reconciliation
+    documented in `docs/CHANGELOG.md` (t_stop_max raised from 1.5 s to
+    1.7 s at the SRS level; t_stop_max is a system-level requirement and
+    is not encoded in this file, but a_min_mps2 below is the cage-side
+    parameter that participates in the same consistency relation).
+    Parameters flagged "[provisional, M-X]" remain at conservative defaults
+    pending the corresponding measurement of the pre-G1 campaign
+    (`experiments/calibration/`); when those measurements close, the
+    affected parameters will be revised in a 0.3.0 bump.
 
   # -----------------------------------------------------------
   # Operating mode
@@ -41,55 +53,83 @@ cage:
   # -----------------------------------------------------------
   # Rule C-01 — Lane boundary hard limit (SR-001, H-01)
   # -----------------------------------------------------------
+  # Rationale: SR-001 §Parameters traces d_max to
+  #   ODD-1.ROAD_WIDTH/2 - Δ = 0.25 - 0.09 = 0.16 m
+  # where Δ aggregates LiDAR lateral noise (~0.01 m, [provisional, M-1]),
+  # one-cycle drift v_max·LATENCY_NOMINAL = 0.025 m ([provisional, M-2]),
+  # and CobraFlex 1:14 half-footprint (~0.05 m).
   c01_lane_boundary:
     enabled: true
-    d_max_m: 0.16              # SR-001 threshold
+    d_max_m: 0.16              # SR-001 threshold [provisional, M-1, M-2]
     h_d_m: 0.02                # hysteresis margin
     correction_gain: 1.5       # how aggressively to correct toward centre
 
   # -----------------------------------------------------------
   # Rule C-02 — Heading error limit (SR-002, H-02)
   # -----------------------------------------------------------
+  # Rationale: SR-002 §Parameters derives θ_max from a bicycle-model
+  # recoverability calculation; the chosen value falls inside the
+  # recoverable envelope with factor ~2 margin.
   c02_heading_limit:
     enabled: true
-    theta_max_rad: 0.4363      # 25 deg
+    theta_max_rad: 0.4363      # 25 deg, SR-002
     h_theta_rad: 0.0349        # 2 deg hysteresis
     correction_gain: 1.0
 
   # -----------------------------------------------------------
   # Rule C-03 — Predictive lane departure / TTLC (SR-003, H-01/H-02)
   # -----------------------------------------------------------
+  # Rationale: SR-003 §Parameters decomposes t_min into 0.3 s cage-side
+  # margin (defensible by kinematics) + 0.7 s policy-side margin
+  # ([provisional, F3 post-prototype]).
   c03_ttlc:
     enabled: true
-    t_min_s: 1.0
+    t_min_s: 1.0               # SR-003; policy-side component provisional
     horizon_s: 3.0             # max projection horizon for TTLC computation
     urgency_gain_max: 2.0      # max steering bias when ttlc -> 0
 
   # -----------------------------------------------------------
   # Rule C-04 — Speed ceiling (SR-004, H-03)
   # -----------------------------------------------------------
+  # Rationale: SR-004 §Parameters. v_max_straight mirrors ODD-1.V_MAX;
+  # v_max_curve reflects the kinematic envelope at KAPPA_MAX (TBD-Q9 in
+  # ODD-Spec) under FRICTION (TBD-Q1). The interpolation coefficient
+  # k_kappa is set so the linear interpolation crosses v_max_curve at
+  # the working assumption for KAPPA_MAX on `odd3_curvy_loop`.
   c04_speed_ceiling:
     enabled: true
-    v_max_straight_mps: 0.5
-    v_max_curve_mps: 0.25
+    v_max_straight_mps: 0.5            # [provisional, M-4 + ODD TBD-Q1]
+    v_max_curve_mps: 0.25              # [provisional, M-4 + ODD TBD-Q9]
     curvature_threshold_inv_m: 0.05    # |kappa| above this is "curve"
-    k_kappa_mps_per_curvature: 0.3
+    k_kappa_mps_per_curvature: 0.3     # [provisional, tightens with KAPPA_MAX]
     curvature_estimation_window_s: 0.5  # window for kappa estimation
 
   # -----------------------------------------------------------
   # Rule C-05 — Emergency mode (SR-005, SR-007, SR-008; H-04, H-06, H-07)
   # -----------------------------------------------------------
+  # Rationale:
+  # - theta_warning < theta_max (SR-002): early-warning band ~5 deg.
+  # - d_warning   < d_max     (SR-001): early-warning band 0.04 m.
+  # - delta_t_max = 4 control cycles: STPA-informed persistence
+  #   requirement to ignore single-cycle glitches; instantaneous
+  #   triggers would produce spurious activations under benign noise.
+  # - a_min: the kinematic stopping time at v_max_straight = 0.5 m/s is
+  #   0.5 / a_min = 1.67 s, consistent with SR-008 t_stop_max = 1.7 s.
+  #   If M-3 demonstrates higher achievable deceleration, a_min may be
+  #   raised in a coordinated SR-005 / SR-008 revision (next bump).
+  # - require_explicit_reset: STPA-informed asymmetric exit to prevent
+  #   oscillation between modes near the trigger boundary.
   c05_emergency:
     enabled: true
 
     # Compound-state trigger (SR-005)
     theta_warning_rad: 0.3491   # 20 deg
     d_warning_m: 0.12
-    delta_t_max_s: 0.2          # how long the compound state must persist
+    delta_t_max_s: 0.2          # 4 cycles; STPA-informed persistence
 
     # Emergency response
-    a_min_mps2: 0.3             # minimum deceleration during emergency
-    freeze_steering: true        # steering stays at value at activation
+    a_min_mps2: 0.3             # [provisional, M-3]; consistent with SR-008
+    freeze_steering: true       # steering stays at value at activation
 
     # Reset policy
     require_explicit_reset: true   # must receive reset signal AND condition cleared
@@ -97,10 +137,14 @@ cage:
   # -----------------------------------------------------------
   # Rule C-06 — Actuator rate limiter (SR-006, H-05)
   # -----------------------------------------------------------
+  # Rationale: SR-006 §Parameters declares both deltas as conservative
+  # defaults. Final calibration requires (i) actuator envelope from M-5,
+  # and (ii) cross-check against 95th-percentile delta of the policy's
+  # natural action distribution after F3 prototype.
   c06_rate_limiter:
     enabled: true
-    delta_max_steering_per_cycle: 0.15      # normalised units
-    delta_max_throttle_per_cycle: 0.10      # normalised units
+    delta_max_steering_per_cycle: 0.15      # [provisional, M-5 + F3 prototype]
+    delta_max_throttle_per_cycle: 0.10      # [provisional, M-5 + F3 prototype]
 
   # -----------------------------------------------------------
   # Logging configuration

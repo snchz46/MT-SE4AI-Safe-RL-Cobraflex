@@ -224,6 +224,20 @@ Two further STPA-informed design findings sit outside the standard UCA grid and 
 
 ---
 
+## Machine-readable Hazard Table
+
+| Hazard ID | Description | Severity | Mitigation | related_adaptations | Status | Owner | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| H-01 | Unintended lane exit | S3/E3/C2 - High | SR-001, SR-003 | A1, A3 | Open | Samuel | TTLC predictive constraint |
+| H-02 | Divergent or oscillatory heading error | S2/E3/C2 - Medium-High | SR-002, SR-003 | A2, A3 | Open | Samuel | Heading stability hazard |
+| H-03 | Excessive speed for current conditions | S3/E2/C1 - Medium | SR-004 | A4 | Open | Samuel | Curvature-dependent speed ceiling |
+| H-04 | Compound unrecoverable state | S3/E1/C3 - High | SR-005 | A5 | Open | Samuel | Emergency substitution mode |
+| H-05 | Excessively abrupt actuator command | S1/E3/C1 - Medium | SR-006 | A6 | Open | Samuel | Actuator rate limiting |
+| H-06 | Operation under invalid or unobservable state | S3/E2/C2 - High | SR-007 | A7 | Open | Samuel | ROS2 state freshness and validity |
+| H-07 | Inability to perform a controlled stop | S3/E1/C1 - High | SR-005, SR-008 | A8 | Open | Samuel | Emergency stop behaviour |
+
+---
+
 ## STPA scope statement
 
 The STPA-light pass covers H-01, H-02 and H-04, where the unsafe-control-action perspective adds value beyond what HARA alone captures. For these three hazards, the pass applies the four canonical UCA categories — *action not provided when needed*, *action provided when not needed*, *action provided with inappropriate magnitude*, *action provided at the wrong time* — systematically to each principal control action (steering, throttle), with the exception of H-04 where the categories collapse into a single substitution-rather-than-modification mitigation (cf. §H-04 above).

@@ -143,7 +143,7 @@ def extract_hazards_from_files(input_pattern: Optional[str] = None) -> List[Dict
         List of normalized hazard dicts
     """
     if input_pattern is None:
-        input_pattern = 'manuscript/chapters/chapter_*.md'
+        input_pattern = 'docs/02_hazard_register.md'
 
     all_hazards = []
 
@@ -213,8 +213,8 @@ def main():
     )
     parser.add_argument(
         '--input',
-        default='manuscript/chapters/chapter_*.md',
-        help='Input markdown file pattern (default: manuscript/chapters/chapter_*.md)'
+        default='docs/02_hazard_register.md',
+        help='Input markdown file pattern (default: docs/02_hazard_register.md)'
     )
     parser.add_argument(
         '--output',

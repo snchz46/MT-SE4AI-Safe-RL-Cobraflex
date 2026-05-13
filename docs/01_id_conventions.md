@@ -1,7 +1,7 @@
 # Identifier Conventions
 
 **Status:** Living document — Phase 0 deliverable  
-**Last update:** 11.05.2026  
+**Last update:** 13.05.2026  
 **Approved at Gate:** G0 (pending)  
 
 ## Purpose

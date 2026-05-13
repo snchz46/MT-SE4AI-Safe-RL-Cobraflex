@@ -128,4 +128,14 @@ Update of Chapters 1,2 and 3
 **Author:** Samuel Sanchez
 
 ---
+---
+
+## [13.05.2026] — Gate 0 closed
+
+**Document(s) affected:** -  
+**Phase:** F1  
+**Gate context:** after G0  
+**Author:** Samuel Sanchez
+
+---
 <!-- Subsequent entries appended below -->

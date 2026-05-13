@@ -1,7 +1,7 @@
 # DECISIONS.md — Project decision log
 
 <!--
-Status: D9 (Phase 0 close).
+Status: D9 (Phase 0 close) + F1 audit additions (D-25).
 Last update: see Git commit date.
 -->
 
@@ -62,6 +62,7 @@ consistent with the chapters.
 | D-17 | QED deferred to Phase 4: conceptual inspiration with calibration pending | §3.6.6 | DEFERRED |
 | D-18 | Documentation in plain-text Markdown (no industrial MBSE) | §3.6.7 | CONFIRMED |
 | D-19 | Five meta-evaluation criteria for the framework | §3.7 | CONFIRMED |
+| D-25 | Non-cage mitigations (training constraint, cage architecture) are first-class implementation types alongside numbered cage rules | §4.6 (SR implementation taxonomy) | CONFIRMED |
 
 ---
 
@@ -823,6 +824,24 @@ distinct from evaluation of its application.
 grounded verdict on each. This DECISIONS.md serves as the measurement
 instrument for adoption cost (criterion 4): each added decision
 documents time invested in framework versus time invested in technique.
+
+---
+
+### D-25 — Non-cage mitigations are first-class implementation types
+
+| Field | Value |
+| --- | --- |
+| Section | §4.6 (SR implementation taxonomy) |
+| Status | CONFIRMED |
+| Date | F1 (13.05.2026) |
+
+**Decision.** A safety requirement may declare its implementation via one of three mechanisms: (a) a numbered cage rule `C-XX`; (b) a *training constraint* — typically a reward-shaping term tuned during policy training; or (c) a *cage architecture property* — a structural invariant of the cage pipeline (e.g., joint-envelope assertion, oscillation monitor) that is not itself a numbered rule. The machine-readable hazard and SR tables surface this distinction in the `implementation_type` column; `check_traceability.py` recognises all three as valid implementations.
+
+**Alternatives considered and rejected.** Forcing every SR to be implemented by a numbered cage rule, rejected because H-08 (reward exploitation) has its root cause in the training reward and not in any runtime command — mitigating it with a cage rule would be orthogonal to the cage's design philosophy of *correcting unsafe commands* rather than *injecting progress* or *replacing intent*. Treating the cage architecture property of H-09 (composition consistency) as a new C-07, rejected because it is not a per-cycle rule with observed variable and correction strategy but a structural assertion over the existing six rules' joint behaviour.
+
+**Rationale.** Hazards that arise from training pathologies (H-08) or from rule-composition effects (H-09) do not admit per-cycle reactive mitigation. Forcing them into the cage-rule mould either fabricates artificial rules with degraded semantics, or hides the mitigation in implicit assumptions. The three-way taxonomy makes the location of each mitigation explicit and auditable.
+
+**Consequences.** SR-009 declares `implementation_type = training`; SR-010 declares `implementation_type = arbiter`; SR-011 splits across `C-06 + training`. The cage specification (`docs/04_cage_specification.md`) gains a non-numbered §Joint-envelope assertion section. The Training Specification (Phase 3, not yet written) acquires reward-design requirements traceable from SR-009 and SR-011.
 
 ---
 

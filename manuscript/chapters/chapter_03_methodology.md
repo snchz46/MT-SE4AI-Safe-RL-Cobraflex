@@ -1188,14 +1188,9 @@ componente ISO 26262 del problema, y la columna de "modo de evidencia
 esperado" (test / análisis estadístico / runtime) cubre la componente
 SOTIF cuando aplica.
 
-> *Placeholder figura 8 — diagrama de la pirámide normativa: ISO
-> 26262 en la base como ciclo de vida, SOTIF como complemento para
-> condiciones no anticipadas, TR 5469 como paraguas IA, PAS 8800
-> como especialización automotriz, UL 4600 como safety case
-> envolvente, AMLAS como patrones argumentativos transversales.
-> Sobre esa pirámide, las cinco adaptaciones A1–A5 marcadas con su
-> ámbito de aplicación. Posición sugerida: cierre de §3.8.
-> Pendiente para Fase 6.*
+<img src="../figures/normative_pyramid.png" alt="Figura 9 — Diagrama de la pirámide normativa." width="500"/>
+
+*Figura 9 — diagrama de la pirámide normativa: ISO26262 en la base como ciclo de vida, SOTIF como complemento para condiciones no anticipadas, TR 5469 como paraguas IA, PAS 8800 como especialización automotriz, UL 4600 como safety case envolvente, AMLAS como patrones argumentativos transversales. Sobre esa pirámide, las cinco adaptaciones A1–A5 marcadas con su ámbito de aplicación. Posición sugerida: cierre de §3.8 Pendiente para Fase 6.*
 
 ---
 
@@ -1434,21 +1429,21 @@ REFERENCIAS USADAS EN ESTE CAPÍTULO (D9):
   - Paterson et al., 2025 (AMLAS)
 
 REFERENCIAS A FIGURAS (placeholders explícitos):
-  - Figura 1 (existente): figures/classical_v_model.svg — V-Model clásico
-  - Figura 2 (existente): figures/adopted_v_model.svg — V-Model adaptado
-  - Figura 3 (fuente Mermaid lista, render PNG pendiente Fase 6):
+  - Figura 3 (existente): figures/classical_v_model.svg — V-Model clásico
+  - Figura 4 (existente): figures/adopted_v_model.svg — V-Model adaptado
+  - Figura 5 (fuente Mermaid lista, render PNG pendiente Fase 6):
        figures/check_traceability_flow.mmd → figures/check_traceability_flow.png —
        diagrama de flujo del validador automatizado con las cinco
        direcciones de comprobación H↔SR↔C↔SC + SR↔M y los exit codes
        0/1/2. Render: `mmdc -i check_traceability_flow.mmd -o
        check_traceability_flow.png -b transparent -w 1600`.
-  - Figura 4 (fuente DOT + render PNG listos, fuente SVG/pulido
+  - Figura 6 (fuente DOT + render PNG listos, fuente SVG/pulido
        reservado para Fase 6): figures/project_phases.dot →
        figures/project_phases.png — matriz fases × niveles del
        V-Model adaptado (F0..F6 × L1..L1' + RM + A4). Render:
        `dot -Tpng project_phases.dot -o project_phases.png`.
-  - Figura 5 (pendiente): figures/rc_vehicle.svg —
+  - Figura 7 (pendiente): figures/rc_vehicle.svg —
        vehículo RC 1:14 instrumentado
-  - Figura 6 (pendiente): figures/normative_pyramid.svg —
+  - Figura 8 (pendiente): figures/normative_pyramid.svg —
        pirámide normativa con adaptaciones A1–A5 superpuestas
 -->

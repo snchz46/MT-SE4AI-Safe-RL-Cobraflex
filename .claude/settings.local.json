@@ -13,7 +13,8 @@
       "Bash(python tools/apply_calibration.py --measurement M-1)",
       "Bash(python tools/apply_calibration.py --measurement M-3)",
       "Bash(echo \"PYTHON_EXITCODE=$?\")",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(python manuscript/figures/normative_pyramid.py)"
     ]
   }
 }

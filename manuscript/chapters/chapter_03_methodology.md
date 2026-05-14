@@ -1311,57 +1311,6 @@ huérfanos.
 
 <!--
 APÉNDICE INTERNO — TRABAJO PENDIENTE EN ESTE CAPÍTULO
-D9 (cierre):
-  [x] Estructura de secciones 3.1–3.10
-  [x] Pegado de contenido v1.0 en 3.3, 3.4, 3.8 desde V-Model_Adaptado.docx
-  [x] Redacción completa de prosa en 3.1, 3.2, 3.5, 3.6, 3.7, 3.9, 3.10
-  [x] Ampliación de 3.8 con ISO/PAS 8800 y AMLAS (coherencia con Cap. 2)
-  [x] Citas inline a literatura del Capítulo 2 a lo largo del capítulo
-  [x] Placeholders explícitos para figuras 3, 4, 5, 6
-  [x] Subsección nueva 3.6.7 sobre documentación / control de versiones
-       (decisión plain-text vs. MBSE explicitada y trazada a Sprockhoff et al.)
-  [x] Anclaje fundacional de S1–S5 en Salay et al. (2017) en §3.3.1;
-       inclusión del hallazgo cuantitativo del 40% de técnicas no aplicables
-       en §3.3.2
-  [x] Anclaje técnico de A3 en Mohseni et al. (2019) como antecedente
-       de la "monitoring function" como categoría arquitectónica
-  [x] Defensa explícita de la decisión arquitectónica anti-end-to-end
-       en §3.5.1 alineada con Salay et al. (2017); registrada como D-01
-  [x] Cambio de simulador adoptado de CARLA a Gazebo en §3.2.2, §3.5.1,
-       §3.5.3, §3.6.1 (reescritura completa con cuatro razones), §3.6.2,
-       §3.6.3, §3.6.5, §3.6.6 (matiz QED), §3.9 (limitación con honestidad
-       sobre fidelidad visual) y §3.10. Coherencia cruzada con Cap. 1
-       (§1.2, §1.4 OE4, §1.5 A4, §1.7) y Cap. 2 (§2.7 reescrito;
-       §2.4 mantiene CARLA como estado del arte). Decisión registrada
-       como D-02 en `DECISIONS.md` con justificación: integración ROS2
-       nativa, reutilización del trabajo previo del autor, interfaz
-       gymnasium-Gazebo-ROS2, requisitos de cómputo más modestos.
-       
-Fase 1 (D15–D19):
-  [x] Cerrar IDs definitivos en tabla §3.5.2 (SR-001..SR-00k, C-01..C-0n)
-  [x] Producir figura 4 — matriz fases × niveles del V-Model
-       adaptado: fuente Graphviz en figures/project_phases.dot
-       (F0..F6 × L1..L1' + Runtime Monitoring + Traceability matrix
-       + Gates), render PNG en figures/project_phases.png.
-  [x] Confirmar que la lista de fases en §3.5.3 coincide con el plan
-       definitivo de fases del repositorio
-  [x] Producir figura 3 — diagrama de flujo de check_traceability.py:
-       fuente Mermaid en figures/check_traceability_flow.mmd con las
-       cinco direcciones de comprobación H↔SR↔C↔SC + SR↔M, las ocho
-       constraints numeradas (1)-(8) y los tres exit codes (0/1/2);
-       render PNG queda como tarea de pulido para Fase 6.
-  [x] Redactar §3.5.4 sobre instanciación de la rama izquierda
-       superior del V-Model en Fase 1 (HARA + SR), explicando qué
-       adaptaciones (A1, A4, A5) entran en juego y cuáles (A2, A3)
-       quedan latentes. Tarea secundaria de D15/D19.
-  [x] Redactar §3.8.7 sobre la relación entre el HARA simplificado
-       adoptado y la versión formal de ISO 26262 (cláusula 6 de la
-       Parte 3): escalas S/E/C reinterpretadas, sustitución del ASIL
-       por criticidad cualitativa, complemento con STPA-light.
-       Tarea secundaria de D15/D19.
-
-Fase 4–5 (operacionalización):
-  [ ] Producir figura 5 — fotografía/diagrama del vehículo RC 1:14
   [ ] Confirmar adopción definitiva de QED como métrica oficial
        (decisión diferida en §3.6.6)
 
@@ -1369,17 +1318,10 @@ Fase 6 (consolidación):
   [ ] Pulido de prosa: pasar §3.4 de tono "explicativo-técnico" a tono
        "tesis académica" (tercera persona, suavizar imperativos,
        conectores académicos)
-  [ ] Sustituir placeholders SVG por figuras finales
-       (figures/classical_v_model.svg, figures/adopted_v_model.svg,
-        figures/traceability_validator.svg, figures/project_phases.svg,
-        figures/rc_vehicle.svg, figures/normative_pyramid.svg)
-  [ ] Producir figura 6 — pirámide normativa con A1–A5 superpuestas
   [ ] Verificación de coherencia con Capítulos 4–10 (IDs, métricas,
        referencias cruzadas a fechas y números de capítulo)
   [ ] Verificar formato bibliográfico definitivo (IEEE numérico vs.
        APA autor-año) y aplicar a todas las citas inline
-  [ ] Decisión: ¿fundir V-Model_Adaptado.md aquí definitivamente o
-       mantenerlo como anexo metodológico independiente?
   [ ] Revisar §3.9 con los hallazgos reales del Capítulo 11
        (algunas limitaciones podrían haberse mitigado, otras
        agudizado)
@@ -1427,23 +1369,4 @@ REFERENCIAS USADAS EN ESTE CAPÍTULO (D9):
   - UL 4600 (vía Koopman, 2023)
   - Koopman, 2023
   - Paterson et al., 2025 (AMLAS)
-
-REFERENCIAS A FIGURAS (placeholders explícitos):
-  - Figura 3 (existente): figures/classical_v_model.svg — V-Model clásico
-  - Figura 4 (existente): figures/adopted_v_model.svg — V-Model adaptado
-  - Figura 5 (fuente Mermaid lista, render PNG pendiente Fase 6):
-       figures/check_traceability_flow.mmd → figures/check_traceability_flow.png —
-       diagrama de flujo del validador automatizado con las cinco
-       direcciones de comprobación H↔SR↔C↔SC + SR↔M y los exit codes
-       0/1/2. Render: `mmdc -i check_traceability_flow.mmd -o
-       check_traceability_flow.png -b transparent -w 1600`.
-  - Figura 6 (fuente DOT + render PNG listos, fuente SVG/pulido
-       reservado para Fase 6): figures/project_phases.dot →
-       figures/project_phases.png — matriz fases × niveles del
-       V-Model adaptado (F0..F6 × L1..L1' + RM + A4). Render:
-       `dot -Tpng project_phases.dot -o project_phases.png`.
-  - Figura 7 (pendiente): figures/rc_vehicle.svg —
-       vehículo RC 1:14 instrumentado
-  - Figura 8 (pendiente): figures/normative_pyramid.svg —
-       pirámide normativa con adaptaciones A1–A5 superpuestas
--->
+  

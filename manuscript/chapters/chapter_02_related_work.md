@@ -676,41 +676,6 @@ constituye el aporte académico central de la tesis.
 <!--
 APÉNDICE INTERNO — TRABAJO PENDIENTE EN ESTE CAPÍTULO
 
-D9 (primera redacción + verificación bibliográfica):
-  [x] Estructura de secciones 2.1–2.8
-  [x] Redacción borrador maduro de las ocho secciones
-  [x] Tabla de síntesis en §2.8 con siete ejes y veintiún trabajos comparados
-  [x] Verificación bibliográfica de todas las referencias (compass research report)
-  [x] Corrección factual en §2.3.3 (He et al.: la robustez "accidental" está
-       en la discretización, no en la red; ataques sobre la acción son los
-       devastadores, no los ataques sobre sensores)
-  [x] Incorporación de ISO/PAS 8800:2024 y BSI/CAM use case en §2.5
-  [x] Incorporación de AMLAS por nombre en §2.5
-  [x] Cita explícita a Sprockhoff et al. (2023) en §2.6
-  [x] Reposicionamiento honesto de Ullrich et al. en §2.6 y §2.8
-  [x] Acknowledgment de Wang et al. (2024) como precedente de A3 (V con fase
-       de operación continua)
-  [x] Especificación de algoritmos: RECPO (Zhao), SRPL (Keswani),
-       CARRL (Wei), QED (Gao)
-  [x] Hallazgo metodológico de Giamattei et al. correctamente expresado
-       (en replicación pura el RL NO supera al random; sí lo hace solo
-       con el agente extendido)
-  [x] Incorporación del three-stage realization principle de TR 5469 en §2.5
-       (relevante metodológicamente para Capítulo 3)
-  [x] Atribución correcta del NIST IR 8527 a Schlenoff, Kootbally et al.
-  [x] Nueva subsección §2.3.4 sobre Runtime Monitoring como categoría propia
-       (Mohseni et al. 2019, Vasudevan et al. 2021); reorganización de
-       §2.3 de tres a cuatro familias
-  [x] Subsección dedicada a Salay et al. (2017) y Vasudevan et al. (2021)
-       en §2.6 como antecedentes específicos de adaptación ISO 26262 + ML;
-       reposicionamiento honesto de la novedad de la tesis frente a estos
-       precedentes
-  [x] Tres filas nuevas en tabla de §2.8 (Salay 2017, Mohseni 2019,
-       Vasudevan 2021)
-  [x] Reformulación de "Segunda observación" en §2.8 reconociendo Salay
-       et al. como antecedente fundacional, alineamiento explícito con la
-       recomendación de evitar ML end-to-end
-
 Fase 1 (D15–D19):
   [ ] Confirmar inclusión de WOMD-Reasoning (Li et al. 2025) — actualmente no
        lo cito porque su uso central es percepción/LLM, distante del foco

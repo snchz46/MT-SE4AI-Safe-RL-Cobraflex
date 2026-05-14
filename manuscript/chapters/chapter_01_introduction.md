@@ -336,20 +336,6 @@ documentación, los scripts de validación automática y los datos de runtime.
 <!--
 APÉNDICE INTERNO — TRABAJO PENDIENTE EN ESTE CAPÍTULO
 
-D9 (segunda redacción):
-  [x] Estructura de secciones 1.1–1.7
-  [x] Redacción borrador maduro de 1.1 a 1.7
-  [x] Citas bibliográficas básicas añadidas en §1.1 y §1.2
-  [x] Incorporación de Salay et al. (2017) como antecedente fundacional
-       del análisis de impacto ML sobre ISO 26262 en §1.1
-  [x] Reconocimiento de Vasudevan et al. (2021) como precedente directo
-       de framework ISO 26262 + ML en §1.2
-
-Fase 1 (D15–D19):
-  [ ] Cerrar la cifra exacta de SRs en §1.4 cuando termine el HARA
-  [ ] Confirmar que los siete OE encajan con el plan de fases definitivo
-  [ ] Ajustar §1.3 si las hipótesis se reformulan tras Gate 0
-
 Fase 6 (consolidación):
   [ ] Pulido final de prosa, conectores, ritmo
   [ ] Verificar coherencia de referencias cruzadas a capítulos

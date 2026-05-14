@@ -1,0 +1,33 @@
+{
+  "_comment": "Stub for M-1 results. Replace 'YYYY-MM-DD' with the execution date and the null/0.0 placeholders with the measured values, then run `python tools/apply_calibration.py` to validate and propagate. See M1_lidar_static_noise.md for the schema and decision rule.",
+  "measurement_id": "M-1",
+  "executed_on": "YYYY-MM-DD",
+  "executed_by": "",
+  "platform": "sim",
+  "perception_pipeline_version": "",
+  "samples_per_position": 0,
+  "positions": [
+    {
+      "ground_truth_y_m": 0.0,
+      "mean_observed_y_m": null,
+      "std_dev_m": null,
+      "p95_abs_deviation_m": null,
+      "lag1_autocorr": null
+    },
+    {
+      "ground_truth_y_m": 0.10,
+      "mean_observed_y_m": null,
+      "std_dev_m": null,
+      "p95_abs_deviation_m": null,
+      "lag1_autocorr": null
+    },
+    {
+      "ground_truth_y_m": -0.10,
+      "mean_observed_y_m": null,
+      "std_dev_m": null,
+      "p95_abs_deviation_m": null,
+      "lag1_autocorr": null
+    }
+  ],
+  "decision": ""
+}

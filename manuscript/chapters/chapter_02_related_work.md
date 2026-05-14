@@ -49,9 +49,9 @@ estrategias mediante esquemas híbridos —preentrenamiento por imitación segui
 de afinado por refuerzo— y, más recientemente, integra modelos de mundo y
 representaciones de seguridad explícitas.
 
-<img src="../figures/Classical RL framework.png" alt="Ilustración 2 — The classical RL framework." width="400"/>
+<img src="../figures/Classical RL framework.png" alt="Figura 2 — The classical RL framework." width="400"/>
 
-*Ilustración 2 — The classical RL framework (Source: Sutton and Barto 1998 [13]). The agent selects an action At at state St, in response to which it receives a corresponding reward R T +1 . The objective of the agent is to choose actions that maximize its reward over a long sequence of transitions.*
+*Figura 2 — The classical RL framework (Source: Sutton and Barto 1998 [13]). The agent selects an action At at state St, in response to which it receives a corresponding reward R T +1 . The objective of the agent is to choose actions that maximize its reward over a long sequence of transitions.*
 
 Dentro del paradigma DRL, dos algoritmos dominan los trabajos recientes en
 control de vehículos autónomos: PPO (*Proximal Policy Optimization*) y SAC
@@ -147,9 +147,9 @@ agente— es una de las ideas más fértiles del campo, porque establece una ví
 sistemática para que la cage no solo contenga sino también *forme* el
 comportamiento de la *policy*.
 
-<img src="../figures/Idea of Safety Cage.png" alt="Ilustración 3 — Safety Cage applied to the classical RL framework." width="400"/>
+<img src="../figures/Idea of Safety Cage.png" alt="Figura 3 — Safety Cage applied to the classical RL framework." width="400"/>
 
-*Ilustración 3 — Safety Cage applied to the classical RL framework.*
+*Figura 3 — Safety Cage applied to the classical RL framework.*
 
 Una línea relacionada propone *predictive safety filters* basados en control
 predictivo por modelo (MPC). En lugar de evaluar acciones puntualmente, el

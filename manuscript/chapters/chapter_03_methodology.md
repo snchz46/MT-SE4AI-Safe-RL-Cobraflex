@@ -158,9 +158,9 @@ niveles jerárquicos, con correspondencia bidireccional entre especificación
 (rama izquierda descendente) y verificación/validación (rama derecha
 ascendente).
 
-<img src="../figures/adopted_classical_v_model.png" alt="Ilustración 4 — V-Model adoptado por ISO 26262 simplificado, instanciado sobre el caso lane-following." width="500"/>
+<img src="../figures/adopted_classical_v_model.png" alt="Figura 4 — V-Model adoptado por ISO 26262 simplificado, instanciado sobre el caso lane-following." width="500"/>
 
-*Ilustración 4 — V-Model adoptado por ISO 26262 simplificado, instanciado sobre el caso lane-following.*
+*Figura 4 — V-Model adoptado por ISO 26262 simplificado, instanciado sobre el caso lane-following.*
 
 ### 3.3.1 Supuestos implícitos del V-Model clásico
 
@@ -399,9 +399,7 @@ script se distribuyen sobre esas cinco aristas, donde la *constraint*
 cobertura indirecta vía la cadena SR—; y (d) agregación final con tres
 salidas posibles: *exit 0* (todas las checks pasan), *exit 1* (huérfanos
 o referencias inválidas) y *exit 2* (modo `--strict` con al menos un
-*warning*). La fuente canónica de la figura vive en
-`manuscript/figures/check_traceability_flow.mmd` (Mermaid); el render
-PNG definitivo se produce en la consolidación final (Fase 6 / PULIDO).
+*warning*).
 
 **Artefactos producidos.** `traceability_matrix.csv` (o base de datos
 equivalente); `check_traceability.py` (validador automatizado); Anexo F de
@@ -612,9 +610,7 @@ muestra cómo la cadena `H ↔ SR ↔ C ↔ SC ↔ M` se va completando fase
 por fase: esqueleto en F0, primera arista H↔SR en F1, incorporación
 de C en F2, completado con escenarios y métricas en F3, llenado de
 veredictos sim en F4, veredictos físicos en F5, y cierre formal en
-G6. La fuente canónica de la figura vive en
-`manuscript/figures/project_phases.dot` (Graphviz); el render PNG
-se produce con `dot -Tpng project_phases.dot -o project_phases.png`.
+G6.
 
 ### 3.5.4 Instanciación de la rama izquierda superior en Fase 1  [AMPLIADO FASE 1 — D15/D19]
 
@@ -865,9 +861,7 @@ documentan en el Capítulo 5 y en el Anexo correspondiente.
 
 <img src="../figures/CAD Design V2.png" alt="Figura 8 — Fotografía del vehículo RC 1:14 instrumentado con la cámara, IMU." width="300"/>
 
-> *Figura 8 — fotografía/diagrama del vehículo RC 1:14
-> instrumentado con la cámara, IMU, encoder y SBC, con etiquetas sobre
-> cada componente.*
+*Figura 8 — fotografía/diagrama del vehículo RC 1:14 instrumentado con la cámara, IMU, encoder y SBC, con etiquetas sobre cada componente.*
 
 ### 3.6.6 Instrumentación de medida
 

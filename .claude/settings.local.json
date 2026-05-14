@@ -5,7 +5,15 @@
       "Bash(python -m pytest cage/tests/ -q)",
       "Bash(command -v mmdc)",
       "Bash(dot -Tpng manuscript/figures/project_phases.dot -o manuscript/figures/project_phases.png)",
-      "Bash(dot -Tpng manuscript/figures/check_traceability_flow.dot -o manuscript/figures/check_traceability_flow.png)"
+      "Bash(dot -Tpng manuscript/figures/check_traceability_flow.dot -o manuscript/figures/check_traceability_flow.png)",
+      "Bash(python -c \"import yaml; print\\('PyYAML:', yaml.__version__\\)\")",
+      "Bash(python tools/apply_calibration.py)",
+      "Bash(echo \"---EXITCODE=$?\")",
+      "Bash(python -c ' *)",
+      "Bash(python tools/apply_calibration.py --measurement M-1)",
+      "Bash(python tools/apply_calibration.py --measurement M-3)",
+      "Bash(echo \"PYTHON_EXITCODE=$?\")",
+      "Read(//tmp/**)"
     ]
   }
 }

@@ -36,17 +36,62 @@ distributed across simulator and platform.
 
 | Measurement | Status     | Executed on | Result file                               |
 | ----------- | ---------- | ----------- | ----------------------------------------- |
-| M-1         | not yet    | —           | `M1_results.json` (to be produced)        |
-| M-2         | not yet    | —           | `M2_results.json` (to be produced)        |
-| M-3         | not yet    | —           | `M3_results.json` (to be produced)        |
-| M-4         | not yet    | —           | `M4_results.json` (to be produced)        |
-| M-5         | not yet    | —           | `M5_results.json` (to be produced)        |
+| M-1         | stub ready | —           | `M1_results.json` (scaffold, fill in)     |
+| M-2         | stub ready | —           | `M2_results.json` (scaffold, fill in)     |
+| M-3         | stub ready | —           | `M3_results.json` (scaffold, fill in)     |
+| M-4         | stub ready | —           | `M4_results.json` (scaffold, fill in)     |
+| M-5         | stub ready | —           | `M5_results.json` (scaffold, fill in)     |
 
 Each result file follows the schema declared at the bottom of its
-protocol document. When a measurement is executed, the corresponding
-status above is updated to `done`, the result file is committed, and a
-`docs/CHANGELOG.md` entry records the SR parameter changes (if any)
-together with the cage.yaml version bump to 0.3.0 once all five close.
+protocol document. The stub files already exist in this directory;
+when a measurement is executed, replace the `"YYYY-MM-DD"` sentinel
+and the `null` placeholders with the measured values, commit the file,
+and run `python tools/apply_calibration.py` to generate the
+propagation report. The script will validate the schema, apply the
+decision rule, and emit suggested updates for the SRS and
+`cage/cage.yaml`; with `--apply-yaml` it writes the `cage.yaml`
+edits in place (a `.bak` backup is left).
+
+## Workflow per measurement
+
+The standard cycle to close one measurement is:
+
+1. **Execute** the protocol declared in `M{1..5}_*.md`.
+2. **Fill in** the corresponding `M{N}_results.json` (already scaffolded
+   in this directory with the schema and sentinel placeholders).
+   Replace `"YYYY-MM-DD"` with the execution date and the `null`
+   placeholders with the measured values; fill the `decision` field
+   with one of the verbatim strings declared in the protocol's
+   "Decision rule" section.
+3. **Run** the ingestion tool to validate and compute target values:
+
+       python tools/apply_calibration.py --measurement M-N
+
+   This prints the decision, the target parameter values, the current
+   `cage.yaml` values, the SRS sections to update manually, and a
+   CHANGELOG snippet. The tool exits 0 when the measurement is ready,
+   1 if the schema is invalid, and 2 if the platform underperformed
+   (e.g. M-3 brake authority below 0.3 m/s² — a G1 blocker).
+
+4. **Apply** the suggested updates. The `cage.yaml` edits can be
+   automated with `--apply-yaml` (a `.bak` backup is left next to the
+   file); the SRS rationale edits remain manual because they involve
+   prose. After the edits, commit the result JSON + the propagated
+   artefact changes + a CHANGELOG entry in a single commit.
+
+5. **Verify** by re-running `python tools/check_traceability.py` and
+   `pytest cage/tests/` after every measurement closure.
+
+To process all five measurements in one pass once they are all filled
+in:
+
+    python tools/apply_calibration.py --apply-yaml
+
+After that pass succeeds, manually bump `cage/cage.yaml`
+`cage.version` from `"0.2.0"` to `"0.3.0"` and write the closing entry
+in `docs/CHANGELOG.md`. That commit closes the calibration campaign
+and is the hard precondition for G1 sign-off (see "Closure criterion"
+below).
 
 ## Output format conventions
 

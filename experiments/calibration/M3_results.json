@@ -1,0 +1,70 @@
+{
+  "_comment": "Stub for M-3 results. Replace 'YYYY-MM-DD' with the execution date and the null/0.0 placeholders with the measured values, then run `python tools/apply_calibration.py` to validate and propagate. See M3_max_deceleration.md for the schema and decision rule.",
+  "measurement_id": "M-3",
+  "executed_on": "YYYY-MM-DD",
+  "executed_by": "",
+  "platform": "physical",
+  "platform_battery_voltage_at_start_V": null,
+  "platform_battery_voltage_at_end_V": null,
+  "trials": [
+    {
+      "initial_speed_mps": 0.5,
+      "average_deceleration_mps2": null,
+      "max_deceleration_mps2": null,
+      "stopping_time_s": null,
+      "stopping_distance_m": null
+    },
+    {
+      "initial_speed_mps": 0.5,
+      "average_deceleration_mps2": null,
+      "max_deceleration_mps2": null,
+      "stopping_time_s": null,
+      "stopping_distance_m": null
+    },
+    {
+      "initial_speed_mps": 0.5,
+      "average_deceleration_mps2": null,
+      "max_deceleration_mps2": null,
+      "stopping_time_s": null,
+      "stopping_distance_m": null
+    },
+    {
+      "initial_speed_mps": 0.5,
+      "average_deceleration_mps2": null,
+      "max_deceleration_mps2": null,
+      "stopping_time_s": null,
+      "stopping_distance_m": null
+    },
+    {
+      "initial_speed_mps": 0.5,
+      "average_deceleration_mps2": null,
+      "max_deceleration_mps2": null,
+      "stopping_time_s": null,
+      "stopping_distance_m": null
+    },
+    {
+      "initial_speed_mps": 0.3,
+      "average_deceleration_mps2": null,
+      "max_deceleration_mps2": null,
+      "stopping_time_s": null,
+      "stopping_distance_m": null
+    },
+    {
+      "initial_speed_mps": 0.3,
+      "average_deceleration_mps2": null,
+      "max_deceleration_mps2": null,
+      "stopping_time_s": null,
+      "stopping_distance_m": null
+    },
+    {
+      "initial_speed_mps": 0.3,
+      "average_deceleration_mps2": null,
+      "max_deceleration_mps2": null,
+      "stopping_time_s": null,
+      "stopping_distance_m": null
+    }
+  ],
+  "a_max_brake_mps2": null,
+  "comment_on_speed_dependence": "",
+  "decision": ""
+}

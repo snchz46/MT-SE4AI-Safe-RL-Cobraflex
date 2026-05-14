@@ -1,0 +1,21 @@
+{
+  "_comment": "Stub for M-2 results. Replace 'YYYY-MM-DD' with the execution date and the null placeholders with the measured values, then run `python tools/apply_calibration.py` to validate and propagate. See M2_control_latency.md for the schema and decision rule.",
+  "measurement_id": "M-2",
+  "executed_on": "YYYY-MM-DD",
+  "executed_by": "",
+  "platform": "sim",
+  "n_cycles": 0,
+  "latency_obs_to_safe_action_ms": {
+    "median": null,
+    "p05": null,
+    "p95": null,
+    "p99": null,
+    "max": null
+  },
+  "latency_safe_action_to_actuator_ms": {
+    "median": null,
+    "p95": null,
+    "comment": "null if not measured (sim-only run)"
+  },
+  "decision": ""
+}

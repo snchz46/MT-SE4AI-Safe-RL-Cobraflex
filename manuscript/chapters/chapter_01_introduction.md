@@ -23,9 +23,9 @@ establecen requisitos cada vez más exigentes sobre cómo se diseña, verifica y
 valida cualquier función con consecuencias sobre la integridad física de los
 ocupantes y otros usuarios de la vía.
 
-<img src="../figures/sae-j3016-visual-chart_5.3.21.png" alt="Ilustración 1 — SAE’s six levels of driving automation." width="400"/>
+<img src="../figures/sae-j3016-visual-chart_5.3.21.png" alt="Figura 1 — SAE’s six levels of driving automation." width="400"/>
 
-*Ilustración 1 — SAE’s six levels of driving automation.*
+*Figura 1 — SAE’s six levels of driving automation.*
 
 Estas dos tendencias, individualmente sólidas, presentan una tensión estructural
 cuando confluyen. Los marcos de seguridad funcional clásicos —ISO 26262:2018 a

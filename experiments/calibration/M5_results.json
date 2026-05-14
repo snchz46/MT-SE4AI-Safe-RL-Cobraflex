@@ -1,0 +1,27 @@
+{
+  "_comment": "Stub for M-5 results. Replace 'YYYY-MM-DD' with the execution date and the null placeholders with the measured values, then run `python tools/apply_calibration.py` to validate and propagate. See M5_actuator_rate.md for the schema and decision rule.",
+  "measurement_id": "M-5",
+  "executed_on": "YYYY-MM-DD",
+  "executed_by": "",
+  "platform": "physical",
+  "battery_voltage_V": null,
+  "steering": {
+    "trials": [
+      {"time_to_settle_ms": null, "delta_actuator_max_per_cycle": null},
+      {"time_to_settle_ms": null, "delta_actuator_max_per_cycle": null},
+      {"time_to_settle_ms": null, "delta_actuator_max_per_cycle": null}
+    ],
+    "delta_actuator_max_steering_per_cycle": null,
+    "comment": ""
+  },
+  "throttle": {
+    "trials": [
+      {"time_to_reach_95pct_ms": null, "delta_actuator_max_per_cycle": null},
+      {"time_to_reach_95pct_ms": null, "delta_actuator_max_per_cycle": null},
+      {"time_to_reach_95pct_ms": null, "delta_actuator_max_per_cycle": null}
+    ],
+    "delta_actuator_max_throttle_per_cycle": null,
+    "comment": ""
+  },
+  "decision": ""
+}

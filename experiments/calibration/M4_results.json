@@ -1,0 +1,23 @@
+{
+  "_comment": "Stub for M-4 results. Replace 'YYYY-MM-DD' with the execution date and the null/0.0 placeholders with the measured values, then run `python tools/apply_calibration.py` to validate and propagate. See M4_speed_vs_curvature.md for the schema and decision rule.",
+  "measurement_id": "M-4",
+  "executed_on": "YYYY-MM-DD",
+  "executed_by": "",
+  "platform": "physical",
+  "track_section": "odd3_curvy_loop, tightest curve",
+  "kappa_test_inv_m": null,
+  "trials": [
+    {"commanded_speed_mps": 0.10, "lateral_rmse_m": null, "wheel_slip_observed": false, "completion": null},
+    {"commanded_speed_mps": 0.15, "lateral_rmse_m": null, "wheel_slip_observed": false, "completion": null},
+    {"commanded_speed_mps": 0.20, "lateral_rmse_m": null, "wheel_slip_observed": false, "completion": null},
+    {"commanded_speed_mps": 0.25, "lateral_rmse_m": null, "wheel_slip_observed": false, "completion": null},
+    {"commanded_speed_mps": 0.30, "lateral_rmse_m": null, "wheel_slip_observed": false, "completion": null},
+    {"commanded_speed_mps": 0.35, "lateral_rmse_m": null, "wheel_slip_observed": false, "completion": null}
+  ],
+  "v_max_curve_empirical_mps": null,
+  "intermediate_curvature_trials": [
+    {"kappa_inv_m": null, "v_max_empirical_mps": null}
+  ],
+  "fitted_k_kappa_mps_per_curvature": null,
+  "decision": ""
+}

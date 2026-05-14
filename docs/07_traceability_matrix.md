@@ -1,7 +1,7 @@
 # Traceability Matrix
 
 **Status:** Living document — Phase 0 baseline, refined through every phase, closed at G6  
-**Last update:** 11.05.2026  
+**Last update:** 14.05.2026  
 **Approved at Gate:** every Gate (incrementally)  
 
 ## Purpose
@@ -36,16 +36,21 @@ The full matrix is in `tools/traceability_matrix.csv`. The summary below shows t
 
 | Hazard | Safety Requirement | Cage Rule(s) | Scenarios | Verifying Metric(s) | Verdict |
 | ------ | ------------------ | ------------ | --------- | ------------------- | ------- |
-| H-01 | SR-001 | C-01, C-03 | SC-NOM-01, SC-NOM-02, SC-EDGE-02 | M-S1, M-S2 | TBD |
+| H-01 | SR-001 | C-01 | SC-NOM-01, SC-NOM-02, SC-EDGE-02 | M-S1 | TBD |
 | H-01, H-02 | SR-003 | C-03 | SC-NOM-02, SC-EDGE-01 | M-S4 | TBD |
 | H-02 | SR-002 | C-02 | SC-EDGE-01, SC-EDGE-04 | M-P4 | TBD |
+| H-02 | SR-011 | C-06 + training | SC-EDGE-01, SC-EDGE-04 | M-P7 | TBD |
 | H-03 | SR-004 | C-04 | SC-NOM-02, SC-EDGE-03 | M-P3 | TBD |
 | H-04, H-07 | SR-005 | C-05 | SC-EDGE-04 | M-S3 | TBD |
 | H-05 | SR-006 | C-06 | All scenarios | M-I5 | TBD |
 | H-06 | SR-007 | C-05 (state-validity triggers) | SC-PERT-02 | M-S3 | TBD |
 | H-07 | SR-008 | C-05 (external-stop trigger) | SC-NOM-03, SC-EDGE-04 | M-S3 | TBD |
+| H-08 | SR-009 | training | SC-NOM-01, SC-NOM-02, SC-NOM-03, SC-PERT-03 | M-P6, M-S2 (monitoring) | TBD |
+| H-09 | SR-010 | arbiter | SC-EDGE-04, SC-EDGE-05 | M-S2, M-I3 | TBD |
 
 "TBD" verdicts are filled in during Phase 4 (simulation results) and Phase 5 (physical results, where applicable).
+
+The `Cage Rule(s)` column accepts three implementation kinds (cf. D-25 in `docs/DECISIONS.md`): a numbered rule `C-XX`, a `training` constraint discharged at policy-training time (SR-009), or an `arbiter` property of the cage pipeline (SR-010). SR-011 is implemented jointly by `C-06` (runtime attenuation of high-frequency content) and a training-side heading-variance penalty.
 
 ## Verdict possibilities
 

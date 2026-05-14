@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python tools/check_traceability.py)",
+      "Bash(python -m pytest cage/tests/ -q)",
+      "Bash(command -v mmdc)",
+      "Bash(dot -Tpng manuscript/figures/project_phases.dot -o manuscript/figures/project_phases.png)",
+      "Bash(dot -Tpng manuscript/figures/check_traceability_flow.dot -o manuscript/figures/check_traceability_flow.png)"
+    ]
+  }
+}

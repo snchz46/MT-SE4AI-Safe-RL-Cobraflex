@@ -1,0 +1,135 @@
+// Figure 3 — Flow diagram of the tools/check_traceability.py validator.
+// Graphviz source (alternative to the Mermaid source check_traceability_flow.mmd).
+// Render to PNG:
+//   dot -Tpng check_traceability_flow.dot -o check_traceability_flow.png
+// Render to SVG:
+//   dot -Tsvg check_traceability_flow.dot -o check_traceability_flow.svg
+//
+// Five directions of traceability checking over the chain
+//   H <-> SR <-> C <-> SC  with the SR <-> M subgraph hanging from the SR hub.
+// The eight numbered constraints (1)-(8) of the script distribute over
+// these five edges; constraint (5) is the only one that emits a warning.
+
+digraph check_traceability {
+    rankdir=TB;
+    splines=true;
+    nodesep=0.6;
+    ranksep=0.7;
+    fontname="Helvetica";
+    node [fontname="Helvetica", fontsize=10];
+    edge [fontname="Helvetica", fontsize=9];
+
+    // ===============================================
+    // Layer 1 — Living documents consumed by the validator
+    // ===============================================
+    subgraph cluster_inputs {
+        label="Living documents under docs/";
+        style=rounded;
+        color="#888888";
+        fontcolor="#444444";
+        node [shape=note, style=filled, fillcolor="#fafafa", color="#888888"];
+        F1 [label="02_hazard_register.md"];
+        F2 [label="03_safety_requirements.md"];
+        F3 [label="04_cage_specification.md"];
+        F4 [label="05_scenario_library.md"];
+        F5 [label="06_metrics_catalogue.md"];
+    }
+
+    // ===============================================
+    // Layer 2 — Extraction of defined identifiers
+    // ===============================================
+    EX [
+        shape=box,
+        style="rounded,filled",
+        fillcolor="#eef5ff",
+        color="#3366aa",
+        label="Extract defined IDs via regex\nRX_H_DEF, RX_SR_DEF, RX_C_DEF,\nRX_SC_DEF, RX_M_DEF"
+    ];
+    F1 -> EX [color="#888888", arrowsize=0.6];
+    F2 -> EX [color="#888888", arrowsize=0.6];
+    F3 -> EX [color="#888888", arrowsize=0.6];
+    F4 -> EX [color="#888888", arrowsize=0.6];
+    F5 -> EX [color="#888888", arrowsize=0.6];
+
+    // ===============================================
+    // Layer 3 — Constraint chain (the five directions)
+    // ===============================================
+    subgraph cluster_chain {
+        label="Constraint chain — five directions of traceability";
+        style=rounded;
+        color="#444444";
+        fontcolor="#222222";
+        node [shape=circle, style=filled, fillcolor="white", color="#222222", penwidth=1.4, width=0.9];
+        H  [label="H-XX"];
+        SR [label="SR-XXX"];
+        C  [label="C-XX"];
+        SC [label="SC-*"];
+        M  [label="M-*"];
+
+        // Direction 1: H <-> SR
+        H  -> SR [label="(1) every H referenced by >=1 SR"];
+        SR -> H  [label="(2) every SR references >=1 H"];
+
+        // Direction 2: SR <-> C
+        SR -> C  [label="(3) every SR implemented\n(C-XX | training | arbiter)"];
+        C  -> SR [label="(4) every C implements >=1 SR"];
+
+        // Direction 3: C -> SC (warning-only)
+        C  -> SC [label="(5) every C exercised by >=1 SC\nWARNING-only", style=dashed, color="#b78103"];
+
+        // Direction 4: SC -> SR (back-edge)
+        SC -> SR [label="(6) every SC references >=1 SR"];
+
+        // Direction 5: SR <-> M
+        SR -> M  [label="(7) every SR has >=1 verifying metric"];
+        M  -> SR [label="(8) every M referenced is defined"];
+    }
+
+    EX -> H [color="#3366aa", style=bold];
+
+    // ===============================================
+    // Layer 4 — Result aggregation and exit codes
+    // ===============================================
+    AGG [
+        shape=diamond,
+        style=filled,
+        fillcolor="#f5f5f5",
+        color="#222222",
+        label="Aggregate\nerrors / warnings"
+    ];
+
+    H  -> AGG [style=invis];
+    SR -> AGG [style=invis];
+    C  -> AGG [style=invis];
+    SC -> AGG [style=invis];
+    M  -> AGG [style=invis];
+
+    PASS [
+        shape=oval,
+        style=filled,
+        fillcolor="#e7f6e7",
+        color="#2e7d32",
+        label="Exit 0\nAll checks PASSED"
+    ];
+    FAIL [
+        shape=oval,
+        style=filled,
+        fillcolor="#fdecea",
+        color="#c0392b",
+        label="Exit 1\norphan / undefined ID"
+    ];
+    STRICTFAIL [
+        shape=oval,
+        style=filled,
+        fillcolor="#fff7e0",
+        color="#b78103",
+        label="Exit 2\n--strict + warning"
+    ];
+
+    AGG -> PASS   [label="0 errors, 0 warnings"];
+    AGG -> FAIL   [label=">=1 error"];
+    AGG -> STRICTFAIL [label="--strict && >=1 warning", style=dashed, color="#b78103"];
+
+    // Connect the chain to AGG via the SR hub
+    SR -> AGG [color="#444444", penwidth=1.2];
+}

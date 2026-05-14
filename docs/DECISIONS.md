@@ -1,7 +1,7 @@
 # DECISIONS.md — Project decision log
 
 <!--
-Status: D9 (Phase 0 close) + F1 audit additions (D-25).
+Status: D9 (Phase 0 close) + F1 audit additions (D-25, D-26..D-31).
 Last update: see Git commit date.
 -->
 
@@ -63,6 +63,12 @@ consistent with the chapters.
 | D-18 | Documentation in plain-text Markdown (no industrial MBSE) | §3.6.7 | CONFIRMED |
 | D-19 | Five meta-evaluation criteria for the framework | §3.7 | CONFIRMED |
 | D-25 | Non-cage mitigations (training constraint, cage architecture) are first-class implementation types alongside numbered cage rules | §4.6 (SR implementation taxonomy) | CONFIRMED |
+| D-26 | Severity homothety convention: hazards rated under the analogue-real-vehicle interpretation, not at the 1:14 scale | §4.4.2 | CONFIRMED |
+| D-27 | Selective STPA-light pass applied to H-01, H-02, H-04 instead of full STPA | §4.5 | CONFIRMED |
+| D-28 | SR-CL-A requires a deterministic cage rule in the C-01..C-06 range | §4.7.1 | CONFIRMED |
+| D-29 | SR-CL-A requires ≥25 runs per scenario family for statistical discrimination | §4.7.1 | CONFIRMED |
+| D-30 | A negative verdict on any SR-CL-A invalidates the global verdict of the thesis on the system | §4.7.1 | CONFIRMED |
+| D-31 | Deliberate exclusion of non-functional AI-specific hazard families (adversarial attacks, distribution shift, explainability, dataset bias, low-magnitude brittleness) from the F1 Hazard Register | §4.9 | CONFIRMED |
 
 ---
 
@@ -842,6 +848,114 @@ documents time invested in framework versus time invested in technique.
 **Rationale.** Hazards that arise from training pathologies (H-08) or from rule-composition effects (H-09) do not admit per-cycle reactive mitigation. Forcing them into the cage-rule mould either fabricates artificial rules with degraded semantics, or hides the mitigation in implicit assumptions. The three-way taxonomy makes the location of each mitigation explicit and auditable.
 
 **Consequences.** SR-009 declares `implementation_type = training`; SR-010 declares `implementation_type = arbiter`; SR-011 splits across `C-06 + training`. The cage specification (`docs/04_cage_specification.md`) gains a non-numbered §Joint-envelope assertion section. The Training Specification (Phase 3, not yet written) acquires reward-design requirements traceable from SR-009 and SR-011.
+
+---
+
+### D-26 — Severity homothety convention (analogue real-vehicle interpretation)
+
+| Field | Value |
+| --- | --- |
+| Section | §4.4.2 |
+| Status | CONFIRMED |
+| Date | F1 (13.05.2026) |
+
+**Decision.** Severity ratings in the Hazard Register use the *analogue real-vehicle interpretation*: each hazard is rated as if the function under demonstration were deployed on a full-scale road vehicle carrying humans, not at the 1:14 scale at which the CobraFlex experiment runs. A hazard such as H-01 (lateral lane exit) is rated S=3 because lane departure on a real road can produce a fatal collision, even though the scaled platform itself cannot physically harm anyone.
+
+**Alternatives considered and rejected.** Rating each hazard at the actual scale of the experiment (1:14, harmless platform), rejected because it would produce a HARA dominated by S=1 hazards, eliminating the analytical pressure that justifies the cage's existence and breaking the conceptual mapping with ISO 26262 automotive practice — the rating would no longer be interoperable with the safety vocabulary used by evaluators.
+
+**Rationale.** The HARA is at the service of the methodology, not of the platform. The contribution of the thesis is the adapted V-Model applied to a lane-following case study whose safety properties stand in for the safety properties of a full-scale system. Honest rating under the analogue interpretation, with the convention documented as a limitation (§4.9), is preferable to rating that produces methodologically uninformative levels.
+
+**Consequences.** All S/E/C ratings in `docs/02_hazard_register.md` are written under this convention; the convention is documented in the §Rating scales section of that file and discussed as a limitation in §4.9 of the manuscript. Any future replication on a full-scale vehicle would reuse the same Hazard Register entries with the convention naturally satisfied.
+
+---
+
+### D-27 — Selective STPA-light pass instead of full STPA
+
+| Field | Value |
+| --- | --- |
+| Section | §4.5 |
+| Status | CONFIRMED |
+| Date | F1 (13.05.2026) |
+
+**Decision.** The thesis applies a *STPA-light* pass — the four canonical UCA categories (action not provided when needed; action provided when not needed; action provided with inappropriate magnitude; action provided at the wrong time) systematically over the two principal control actions (steering, throttle) — to a selected subset of hazards (H-01, H-02, H-04), rather than performing a complete STPA over the entire system control structure.
+
+**Alternatives considered and rejected.** Full STPA covering all hazards and the full hierarchical control model, rejected because the marginal informational return on hazards H-03, H-05, H-06, H-07 is low (their causal structure is sufficiently localised — speed ceiling, rate limiter, state-validity triggers, stop mechanism — that the UCA perspective adds no actionable insight). Omitting STPA entirely, rejected because the unsafe-control-action perspective adds value specifically for hazards driven by the policy's control actions (H-01, H-02) and for hazards where action mitigation collapses into substitution (H-04).
+
+**Rationale.** The added value of STPA over HARA is concentrated in hazards whose causal structure is *systemic* rather than *localised*. Investing analytical effort uniformly across all hazards would dilute the benefit and inflate the analysis cost without proportional improvement in coverage. Restricting to H-01, H-02, H-04 captures the principal STPA findings (UCA enumeration, trigger persistence in H-04, asymmetric reset in H-04) without committing to a full hierarchical control model that the thesis scope does not require.
+
+**Consequences.** §4.5 of the manuscript documents the scope decision explicitly; H-03, H-05, H-06, H-07 are listed as out-of-scope with rationale. H-08 (training-time pathology) and H-09 (composition hazard) are also excluded from STPA scope on structural grounds: H-08's causal mechanism is not a control-action defect, and H-09 is a composition-level hazard whose treatment lives at the cage-architecture level. The limitation is registered in §4.5.3 and reflected in the "STPA scope statement" of `docs/02_hazard_register.md`.
+
+---
+
+### D-28 — SR-CL-A requires a deterministic cage rule in the C-01..C-06 range
+
+| Field | Value |
+| --- | --- |
+| Section | §4.7.1 |
+| Status | CONFIRMED |
+| Date | F1 (13.05.2026) |
+
+**Decision.** Every Safety Requirement classified as SR-CL-A (highest criticality) must be implemented by at least one deterministic cage rule in the C-01..C-06 range of the Cage Specification. SR-CL-B may admit looser implementation strategies (monitoring with flag emission rather than command override); SR-CL-C accepts soft mitigations.
+
+**Alternatives considered and rejected.** Allowing SR-CL-A implementation by training constraints alone, rejected because training constraints are statistical and policy-dependent — they cannot guarantee per-cycle satisfaction. Allowing SR-CL-A implementation by runtime monitoring alone, rejected for the same reason: monitoring detects violations but does not prevent them. A deterministic cage rule is the only mechanism that can claim per-cycle enforcement.
+
+**Rationale.** Criticality is a statement about the consequence of violation, not about the difficulty of implementation. SR-CL-A by construction reflects hazards whose violation cannot be tolerated even in rare cases (S ≥ S3, or E ≥ E3 paired with C ≤ C2). A non-deterministic mitigation strategy is incompatible with that intolerance. The cage rules in C-01..C-06 are designed precisely as deterministic per-cycle enforcers and are the appropriate implementation mechanism for SR-CL-A.
+
+**Consequences.** SR-001..SR-008 (mostly SR-CL-A) map to C-01..C-06 deterministic rules. SR-009 (SR-CL-B, training) and SR-010 (arbiter property) are exempt from this requirement by their non-SR-CL-A classification, as documented in §4.7.1 and consistent with D-25's three-way implementation taxonomy.
+
+---
+
+### D-29 — SR-CL-A requires ≥25 runs per scenario family for statistical discrimination
+
+| Field | Value |
+| --- | --- |
+| Section | §4.7.1 |
+| Status | CONFIRMED |
+| Date | F1 (13.05.2026) |
+
+**Decision.** A Safety Requirement classified as SR-CL-A must be verified in at least one nominal scenario family and at least one adverse scenario family, with a minimum of twenty-five independent runs per family for the resulting verdict to be considered statistically discriminating. SR-CL-B accepts ten runs per family; SR-CL-C accepts informal evidence.
+
+**Alternatives considered and rejected.** Uniform sample sizes across all criticality levels (e.g., ten runs everywhere), rejected because the verdict on a SR-CL-A requirement carries higher consequences than on a SR-CL-B and warrants tighter statistical bands; conversely, demanding ≥25 runs for SR-CL-C would inflate the experimental campaign without proportional benefit. Setting the threshold by formal power analysis on each metric, rejected for F1 closure because the metrics' empirical distributions are not yet known; the ≥25 default is a conservative placeholder that can be tightened in Phase 4 if the data warrants.
+
+**Rationale.** Twenty-five runs is the conventional lower bound at which 95 % confidence intervals on a binomial outcome have width comparable to the effect sizes of interest in this domain (cf. Paniego et al., 2024 for related sample-size conventions in scaled-vehicle benchmarking). It is large enough to surface rare-failure modes that ten-run campaigns systematically miss, and small enough to keep the Phase 4 simulation budget tractable given the scenario library size.
+
+**Consequences.** The Phase 4 scenario campaign budget is determined by this convention: |SR-CL-A| × |nominal families| × 25 + |SR-CL-A| × |adverse families| × 25 + |SR-CL-B| × 10. The convention is referenced from the Phase 4 plan and from the verdict-aggregation logic of Chapter 10. Failure to reach the run count for any SR-CL-A blocks the global verdict.
+
+---
+
+### D-30 — A negative verdict on any SR-CL-A invalidates the global verdict
+
+| Field | Value |
+| --- | --- |
+| Section | §4.7.1 |
+| Status | CONFIRMED |
+| Date | F1 (13.05.2026) |
+
+**Decision.** A negative verdict on any single SR-CL-A in the Phase 4 / Phase 5 verification campaign invalidates the global verdict of the thesis on the system, regardless of how many other SRs are satisfied. The global verdict can only read "satisfied" if every SR-CL-A is satisfied; SR-CL-B and SR-CL-C verdicts contribute nuance but not vetoes.
+
+**Alternatives considered and rejected.** Verdict-by-majority across all SRs, rejected because it would allow a critical safety failure on a SR-CL-A to be diluted by success on lower-criticality SRs — exactly the failure mode that the criticality classification is designed to prevent. Verdict-by-weighted-average across all SRs, rejected for the same reason and additionally because the weighting choice would be arbitrary.
+
+**Rationale.** Criticality classification's only operational meaning is differential consequence: SR-CL-A failures matter categorically more than SR-CL-B or SR-CL-C failures, and the verdict logic must reflect that. A veto rule on SR-CL-A is the only logic that preserves the semantic intent of the classification. The thesis prefers honest local failure to inflated global success.
+
+**Consequences.** Chapter 10's verdict-aggregation logic implements the veto. If a SR-CL-A verdict is negative, the thesis reports the negative outcome explicitly in the Limitations chapter and discusses its consequences for the methodological claim, rather than claiming a partial success. This convention aligns with the "honest verdict" principle of A5 (D-11) and with the meta-evaluation criteria of D-19.
+
+---
+
+### D-31 — Deliberate exclusion of non-functional AI-specific hazard families
+
+| Field | Value |
+| --- | --- |
+| Section | §4.9 |
+| Status | CONFIRMED |
+| Date | F1 (13.05.2026) |
+
+**Decision.** The F1 Hazard Register deliberately excludes five families of AI-specific hazards that are out of scope for this thesis: adversarial attacks on the perception or policy networks; distribution shift in the policy's input space; insufficient explainability of policy decisions; biases in the training dataset; brittleness to low-magnitude perturbations on otherwise nominal inputs. These families are acknowledged as legitimate hazards in the recent AI safety literature (Wang et al., 2024; Wäschle et al., 2022) but are documented as scope exclusions rather than addressed by SRs.
+
+**Alternatives considered and rejected.** Attempting to cover the full AI-hazard taxonomy of Wang et al. (2024), rejected because each family requires distinct analytical machinery (adversarial robustness analysis, drift detection, interpretability tooling, dataset audit) whose effort is comparable to the entire current scope of the thesis. Silently omitting these families, rejected because the omission would surface at evaluation time as an unacknowledged limitation. The chosen middle ground — explicit registration as scope exclusions with literature citation — is honest about coverage without inflating effort.
+
+**Rationale.** The thesis contribution is the methodological framework, demonstrated on a bounded lane-following case. Generalisation to the full AI-hazard space is a research agenda in itself and is acknowledged in Chapter 12 as future work. The exclusion preserves analytical depth on the hazards that are in scope, which is preferable to shallow treatment of a larger set.
+
+**Consequences.** §4.9 of the manuscript declares the limitation and references this decision. Chapter 12 mentions the families as natural extension axes. The argument of relative completeness in §4.7.2 explicitly says "relative to the bounded scope" and not "absolute", with this decision as the principal qualifier.
 
 ---
 

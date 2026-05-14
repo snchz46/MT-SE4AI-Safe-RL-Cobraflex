@@ -1,0 +1,83 @@
+%% Figure 3 — Flow diagram of the `tools/check_traceability.py` validator.
+%% Canonical figure source. Render to PNG (Phase 6 / POLISH):
+%%   mmdc -i check_traceability_flow.mmd -o check_traceability_flow.png -b transparent -w 1600
+%% (mmdc = mermaid-cli, https://github.com/mermaid-js/mermaid-cli)
+%%
+%% Five directions of traceability checking over the chain
+%%   H <-> SR <-> C <-> SC  with the SR <-> M subgraph hanging from the SR hub.
+%% The eight numbered constraints (1)-(8) of the script distribute over these
+%% five edges; (5) is the only one that emits a warning instead of an error.
+
+flowchart TB
+
+    %% =========================================================
+    %% Layer 1 — Living documents consumed by the validator
+    %% =========================================================
+    subgraph IN ["Living documents under docs/"]
+        direction LR
+        F1["02_hazard_register.md"]
+        F2["03_safety_requirements.md"]
+        F3["04_cage_specification.md"]
+        F4["05_scenario_library.md"]
+        F5["06_metrics_catalogue.md"]
+    end
+
+    IN --> EX
+
+    %% =========================================================
+    %% Layer 2 — Extraction of defined identifiers
+    %% =========================================================
+    EX["Extract defined IDs via regex<br/>RX_H_DEF, RX_SR_DEF, RX_C_DEF,<br/>RX_SC_DEF, RX_M_DEF"]
+
+    EX --> G
+
+    %% =========================================================
+    %% Layer 3 — Constraint chain (the five directions)
+    %% =========================================================
+    subgraph G ["Constraint chain — five directions of traceability"]
+        H((H-XX))
+        SR((SR-XXX))
+        C((C-XX))
+        SC((SC-*))
+        M((M-*))
+
+        H  -- "(1) every H referenced by &ge;1 SR"             --> SR
+        SR -- "(2) every SR references &ge;1 H"                --> H
+
+        SR -- "(3) every SR implemented<br/>(C-XX &#124; training &#124; arbiter)" --> C
+        C  -- "(4) every C implements &ge;1 SR"                --> SR
+
+        C  -. "(5) every C exercised by &ge;1 SC<br/>WARNING only" .-> SC
+
+        SC -- "(6) every SC references &ge;1 SR"               --> SR
+
+        SR -- "(7) every SR has &ge;1 verifying metric"        --> M
+        M  -- "(8) every M referenced is defined"              --> SR
+    end
+
+    G --> AGG
+
+    %% =========================================================
+    %% Layer 4 — Result aggregation and exit codes
+    %% =========================================================
+    AGG{{"Aggregate errors / warnings"}}
+    AGG -->|"0 errors, 0 warnings"|         PASS([Exit 0 &mdash; All checks PASSED])
+    AGG -->|"&ge;1 error"|                  FAIL([Exit 1 &mdash; orphan / undefined ID])
+    AGG -.->|"--strict &and; &ge;1 warning"| STRICT([Exit 2 &mdash; strict-mode warning])
+
+    %% =========================================================
+    %% Styles (optional — can be tweaked at final render)
+    %% =========================================================
+    classDef doc        fill:#fafafa,stroke:#888,stroke-width:1px;
+    classDef extract    fill:#eef5ff,stroke:#3366aa,stroke-width:1px;
+    classDef node       fill:#fff,stroke:#222,stroke-width:1.4px;
+    classDef pass       fill:#e7f6e7,stroke:#2e7d32,stroke-width:1.4px;
+    classDef fail       fill:#fdecea,stroke:#c0392b,stroke-width:1.4px;
+    classDef warn       fill:#fff7e0,stroke:#b78103,stroke-width:1.4px;
+
+    class F1,F2,F3,F4,F5 doc;
+    class EX            extract;
+    class H,SR,C,SC,M   node;
+    class PASS          pass;
+    class FAIL          fail;
+    class STRICT        warn;

@@ -158,9 +158,9 @@ niveles jerárquicos, con correspondencia bidireccional entre especificación
 (rama izquierda descendente) y verificación/validación (rama derecha
 ascendente).
 
-<img src="../figures/adopted_classical_v_model.png" alt="Ilustración 2 — V-Model adoptado por ISO 26262 simplificado, instanciado sobre el caso lane-following." width="500"/>
+<img src="../figures/adopted_classical_v_model.png" alt="Ilustración 4 — V-Model adoptado por ISO 26262 simplificado, instanciado sobre el caso lane-following." width="500"/>
 
-*Ilustración 2 — V-Model adoptado por ISO 26262 simplificado, instanciado sobre el caso lane-following.*
+*Ilustración 4 — V-Model adoptado por ISO 26262 simplificado, instanciado sobre el caso lane-following.*
 
 ### 3.3.1 Supuestos implícitos del V-Model clásico
 
@@ -382,10 +382,26 @@ bidireccional es una restricción dura, no una buena práctica:
 si detecta huérfanos en cualquier dirección. La matriz de trazabilidad es
 un artefacto vivo, actualizado en cada fase del proyecto.
 
-> *Placeholder figura 3 — diagrama de flujo del validador
-> `check_traceability.py` mostrando las cinco direcciones de comprobación
-> H↔SR↔C↔SC↔M y las condiciones de fallo. Posición sugerida: tras la lista
-> de bullets sobre las cinco reglas. Pendiente para Fase 1.*
+<img src="../figures/check_traceability_flow.png" alt="Figura 5 — Diagrama de flujo del validador." width="500"/>
+
+**Figura 5 — Diagrama de flujo del validador `check_traceability.py`.**
+La figura representa el flujo del script en cuatro capas: (a) carga de
+los cinco documentos vivos bajo `docs/` (`02_hazard_register.md`,
+`03_safety_requirements.md`, `04_cage_specification.md`,
+`05_scenario_library.md`, `06_metrics_catalogue.md`); (b) extracción de
+identificadores definidos mediante expresiones regulares sobre las
+cabeceras Markdown (`RX_H_DEF`, `RX_SR_DEF`, `RX_C_DEF`, `RX_SC_DEF`,
+`RX_M_DEF`); (c) cadena de *constraints* sobre cinco direcciones de
+comprobación a lo largo del grafo `H ↔ SR ↔ C ↔ SC` con el subgrafo
+`SR ↔ M` colgando del *hub* SR —las ocho *constraints* numeradas del
+script se distribuyen sobre esas cinco aristas, donde la *constraint*
+(5) es la única que produce *warning* en lugar de *error* porque admite
+cobertura indirecta vía la cadena SR—; y (d) agregación final con tres
+salidas posibles: *exit 0* (todas las checks pasan), *exit 1* (huérfanos
+o referencias inválidas) y *exit 2* (modo `--strict` con al menos un
+*warning*). La fuente canónica de la figura vive en
+`manuscript/figures/check_traceability_flow.mmd` (Mermaid); el render
+PNG definitivo se produce en la consolidación final (Fase 6 / PULIDO).
 
 **Artefactos producidos.** `traceability_matrix.csv` (o base de datos
 equivalente); `check_traceability.py` (validador automatizado); Anexo F de
@@ -452,9 +468,9 @@ Capítulo 10.
 
 ---
 
-<img src="../figures/adapted_v_model.png" alt="Ilustración 4 — V-Model adaptado a IA. Los elementos en gris son heredados del V clásico; los elementos en color son nuevos o modificados por las adaptaciones A1–A5." width="500"/>
+<img src="../figures/adapted_v_model.png" alt="Ilustración 6 — V-Model adaptado a IA. Los elementos en gris son heredados del V clásico; los elementos en color son nuevos o modificados por las adaptaciones A1–A5." width="500"/>
 
-*Ilustración 4 — V-Model adaptado a IA. Los elementos en gris son heredados del V clásico; los elementos en color son nuevos o modificados por las adaptaciones A1–A5.*
+*Ilustración 6 — V-Model adaptado a IA. Los elementos en gris son heredados del V clásico; los elementos en color son nuevos o modificados por las adaptaciones A1–A5.*
 
 ---
 
@@ -570,10 +586,35 @@ el entrenamiento PPO en Gazebo y la Policy Behavioral Evaluation; la
 (rama derecha del V, niveles L2'–L1'); las fases finales consolidan
 evidencia, redactan capítulos y cierran la matriz de trazabilidad.
 
-> *Placeholder figura 5 — diagrama de fases del proyecto con entregables y
-> gates. Eje horizontal: tiempo (Fases 0–9). Eje vertical: niveles del
-> V-Model adaptado, mostrando qué artefactos de qué nivel se producen en
-> qué fase. Posición sugerida: aquí. Pendiente para Fase 1.*
+<img src="../figures/project_phases.png" alt="Figura 7 — Fases del proyecto vs niveles del V-Model adaptado." width="500"/>
+
+**Figura 7 — Fases del proyecto vs niveles del V-Model adaptado.**
+La figura presenta una matriz de doble entrada cuyo eje vertical
+enumera los niveles del V-Model adaptado —la rama izquierda
+descendente (L1 Stakeholder Requirements, L2 System Safety
+Requirements, L3 Architecture Design, L4a Cage Specification, L4b
+Training Specification, L5 Implementation), la rama derecha
+ascendente (L4a' Cage Unit Tests, L4b' Policy Behavioral Evaluation,
+L3' Integration Testing, L2' Scenario-Based Testing, L1' Operational
+Validation), la adaptación transversal A3 (Runtime Monitoring), y la
+adaptación A4 (matriz de trazabilidad) como banda inferior— y cuyo
+eje horizontal enumera las siete fases del proyecto F0–F6
+(Fundación, HARA + SR, Cage, Training, Sim eval, Físico, Cierre) con
+sus *gates* de revisión G0–G6 en la fila inferior. Cada celda
+indica el artefacto principal producido en esa intersección
+fase × nivel, con el código de color identificando la fase
+generadora; las celdas vacías marcan intersecciones sin artefacto
+asignado. La banda de Runtime Monitoring se extiende horizontalmente
+desde F2 hasta F6 porque es una adaptación transversal cuya
+operatividad arranca en cuanto el *cage node* existe (F2) y persiste
+hasta el cierre de la tesis. La banda de la matriz de trazabilidad
+muestra cómo la cadena `H ↔ SR ↔ C ↔ SC ↔ M` se va completando fase
+por fase: esqueleto en F0, primera arista H↔SR en F1, incorporación
+de C en F2, completado con escenarios y métricas en F3, llenado de
+veredictos sim en F4, veredictos físicos en F5, y cierre formal en
+G6. La fuente canónica de la figura vive en
+`manuscript/figures/project_phases.dot` (Graphviz); el render PNG
+se produce con `dot -Tpng project_phases.dot -o project_phases.png`.
 
 ### 3.5.4 Instanciación de la rama izquierda superior en Fase 1  [AMPLIADO FASE 1 — D15/D19]
 
@@ -822,9 +863,11 @@ sim-to-real—. Las especificaciones detalladas del coche (motor, ESC,
 controlador de bajo nivel, cámara, plataforma de cómputo embebido) se
 documentan en el Capítulo 5 y en el Anexo correspondiente.
 
-> *Placeholder figura 6 — fotografía/diagrama del vehículo RC 1:14
+<img src="../figures/CAD Design V2.png" alt="Figura 8 — Fotografía del vehículo RC 1:14 instrumentado con la cámara, IMU." width="300"/>
+
+> *Figura 8 — fotografía/diagrama del vehículo RC 1:14
 > instrumentado con la cámara, IMU, encoder y SBC, con etiquetas sobre
-> cada componente. Posición sugerida: aquí. Pendiente para Fase 5.*
+> cada componente.*
 
 ### 3.6.6 Instrumentación de medida
 
@@ -1151,7 +1194,7 @@ componente ISO 26262 del problema, y la columna de "modo de evidencia
 esperado" (test / análisis estadístico / runtime) cubre la componente
 SOTIF cuando aplica.
 
-> *Placeholder figura 7 — diagrama de la pirámide normativa: ISO
+> *Placeholder figura 8 — diagrama de la pirámide normativa: ISO
 > 26262 en la base como ciclo de vida, SOTIF como complemento para
 > condiciones no anticipadas, TR 5469 como paraguas IA, PAS 8800
 > como especialización automotriz, UL 4600 como safety case
@@ -1307,11 +1350,17 @@ D9 (cierre):
        
 Fase 1 (D15–D19):
   [x] Cerrar IDs definitivos en tabla §3.5.2 (SR-001..SR-00k, C-01..C-0n)
-  [ ] Producir figura 4 — diagrama de fases del proyecto
+  [x] Producir figura 4 — matriz fases × niveles del V-Model
+       adaptado: fuente Graphviz en figures/project_phases.dot
+       (F0..F6 × L1..L1' + Runtime Monitoring + Traceability matrix
+       + Gates), render PNG en figures/project_phases.png.
   [x] Confirmar que la lista de fases en §3.5.3 coincide con el plan
        definitivo de fases del repositorio
-  [ ] Producir figura 3 — diagrama de flujo de check_traceability.py
-       (cuando el script esté implementado)
+  [x] Producir figura 3 — diagrama de flujo de check_traceability.py:
+       fuente Mermaid en figures/check_traceability_flow.mmd con las
+       cinco direcciones de comprobación H↔SR↔C↔SC + SR↔M, las ocho
+       constraints numeradas (1)-(8) y los tres exit codes (0/1/2);
+       render PNG queda como tarea de pulido para Fase 6.
   [x] Redactar §3.5.4 sobre instanciación de la rama izquierda
        superior del V-Model en Fase 1 (HARA + SR), explicando qué
        adaptaciones (A1, A4, A5) entran en juego y cuáles (A2, A3)
@@ -1393,10 +1442,17 @@ REFERENCIAS USADAS EN ESTE CAPÍTULO (D9):
 REFERENCIAS A FIGURAS (placeholders explícitos):
   - Figura 1 (existente): figures/classical_v_model.svg — V-Model clásico
   - Figura 2 (existente): figures/adopted_v_model.svg — V-Model adaptado
-  - Figura 3 (pendiente): figures/traceability_validator.svg —
-       diagrama de flujo del validador automatizado
-  - Figura 4 (pendiente): figures/project_phases.svg —
-       fases vs. niveles del V-Model adaptado
+  - Figura 3 (fuente Mermaid lista, render PNG pendiente Fase 6):
+       figures/check_traceability_flow.mmd → figures/check_traceability_flow.png —
+       diagrama de flujo del validador automatizado con las cinco
+       direcciones de comprobación H↔SR↔C↔SC + SR↔M y los exit codes
+       0/1/2. Render: `mmdc -i check_traceability_flow.mmd -o
+       check_traceability_flow.png -b transparent -w 1600`.
+  - Figura 4 (fuente DOT + render PNG listos, fuente SVG/pulido
+       reservado para Fase 6): figures/project_phases.dot →
+       figures/project_phases.png — matriz fases × niveles del
+       V-Model adaptado (F0..F6 × L1..L1' + RM + A4). Render:
+       `dot -Tpng project_phases.dot -o project_phases.png`.
   - Figura 5 (pendiente): figures/rc_vehicle.svg —
        vehículo RC 1:14 instrumentado
   - Figura 6 (pendiente): figures/normative_pyramid.svg —

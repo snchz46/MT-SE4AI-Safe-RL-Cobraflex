@@ -86,7 +86,7 @@ Howard, 2004) sobre una interfaz gymnasium-Gazebo-ROS2 reutilizada de
 un trabajo previo del autor, y desplegado físicamente bajo la
 supervisión de una safety cage de reglas determinista (Kuutti et al.,
 2019b). La elección de simulador queda justificada en §3.6.1 del
-Capítulo 3 (decisión D-02 registrada en `DECISIONS.md`). El sistema percibe el
+Capítulo 3 (decisión D-12 registrada en `DECISIONS.md`). El sistema percibe el
 estado relativo del vehículo respecto al carril y emite acciones de
 control que mantienen al vehículo dentro del carril durante la operación
 nominal y dentro del corredor transitable durante la operación adversa.
@@ -336,7 +336,7 @@ una colisión a la velocidad máxima del 1:14 (0.5 m/s) no produce daño
 físico relevante en hardware, pero el rating S se asigna *como si* el
 vehículo fuera de tamaño real, porque el HARA está al servicio de la
 metodología y no del producto. Esta convención queda registrada como
-decisión D-03 y se discute en §4.9 como una de las limitaciones del
+decisión D-26 y se discute en §4.9 como una de las limitaciones del
 análisis.
 
 ### 4.4.3 Hazard Register
@@ -350,7 +350,7 @@ raíz están bien hipotetizadas?) y se actualiza la tabla. El cierre formal
 es D13 PM con la SRS que se deriva en D14.
 -->
 
-El Hazard Register consolida siete hazards de nivel sistema identificados
+El Hazard Register consolida nueve hazards de nivel sistema identificados
 mediante el procedimiento de §4.4.1. La numeración es estable: una vez
 asignado un identificador H-XX, no se reutiliza ni se renombra incluso si
 el hazard se descarta en revisiones posteriores. La tabla siguiente
@@ -367,6 +367,8 @@ como artefacto autónomo en `docs/02_hazard_register.md`.
 | H-05 | Comando de actuación excesivamente abrupto entre dos ciclos de control consecutivos. | S1 | E3 | C1 | Medium | 1, 2, 3, 4 | Inestabilidad mecánica menor; desgaste; ruido propagado a la estimación del estado. | Ausencia de regularización del action delta durante entrenamiento. |
 | H-06 | Operación sobre estado no observable o corrupto (latencia excesiva, datos obsoletos, ruido fuera de rango). | S3 | E2 (dominada por despliegue físico) | C2 | High | 2, 4 | Decisión basada en información inválida; pérdida de coherencia. | Mensaje ROS2 perdido, sensor en fallo, desincronización temporal. |
 | H-07 | Imposibilidad de realizar una parada controlada cuando las condiciones la requieren. | S3 | E1 | C1 | High | 1, 2, 3, 4 | Continuación de movimiento sin base de control; impacto al final. | Ausencia de mecanismo de stop; policy no entrenada para frenar. |
+| H-08 | Stall por explotación del reward: la policy converge a inacción o a una dirección adversa que acumula más reward que el lane-following nominal. | S2 | E3 | C2 | Medium-High | 1, 2, 3, 4 | Vehículo detenido o derivando sistemáticamente fuera de la trayectoria segura; episodio no progresa. | Especificación de reward desalineada durante entrenamiento; horizonte o factor de descuento que premia inacción. |
+| H-09 | Conflicto entre cage rules: dos o más reglas activas en el mismo ciclo producen un comando combinado fuera de la envolvente segura, o una oscilación entre correcciones contradictorias. | S3 (hereda del hazard más severo cuya envolvente se rompa) | E1 | C2 | Medium | 1, 2, 3, 4 | La cage deja de ser garantía y se vuelve fuente de mandos inseguros. | Reglas diseñadas en aislamiento sin arbitraje explícito; acoplamiento de estado entre C-04/C-06/C-03; emergencia activándose durante cascada. |
 
 La tabla anterior es la versión compacta del Hazard Register
 consolidado en `docs/02_hazard_register.md`. Las entradas siguen
@@ -379,16 +381,26 @@ baja de `S=2` a `S=1` para alinearse con la convención
 analogue-real-vehicle (la actuación abrupta es primariamente un
 hazard de confort y desgaste, no de lesión); H-06 consolida la
 exposición `E=1`–`E=2` en un único `E=2` dominado por el despliegue
-físico. El rationale extendido por hazard —incluyendo justificación
-escrita por nivel S/E/C, referencias cruzadas a los SRs que lo
-cubren, y los hallazgos STPA-light sistemáticos para H-01, H-02 y
-H-04— vive en el artefacto autónomo. Cualquier modificación al
-registro debe propagarse a esta tabla en el mismo commit para que
-`tools/check_traceability.py` mantenga consistencia.
+físico. La misma pasada de auditoría promueve a entradas formales
+dos hazards previamente listados como "Open hazards under
+consideration" en el registro F0: H-08, motivado por la observación
+empírica del autor de policies RL convergiendo a inacción cuando el
+reward sobre-penaliza el movimiento longitudinal, y H-09, hazard de
+composición sobre la interacción entre cage rules. Ambos amplían el
+alcance del análisis hacia el régimen training-time (H-08) y hacia
+el meta-nivel arquitectónico de la cage (H-09), y motivan tipos de
+implementación no-cage —training constraint y arbiter
+property— registrados como decisión D-25. El rationale extendido por
+hazard —incluyendo justificación escrita por nivel S/E/C,
+referencias cruzadas a los SRs que lo cubren, y los hallazgos
+STPA-light sistemáticos para H-01, H-02 y H-04— vive en el artefacto
+autónomo. Cualquier modificación al registro debe propagarse a esta
+tabla en el mismo commit para que `tools/check_traceability.py`
+mantenga consistencia.
 
 ### 4.4.4 Cobertura de los hazards respecto al espacio del problema
 
-Esta subsección argumenta que los siete hazards identificados constituyen
+Esta subsección argumenta que los nueve hazards identificados constituyen
 una *cobertura razonable* del espacio de hazards relevante para la función
 pretendida acotada en §4.2.1. La argumentación se construye en tres ejes
 que se aplican consecutivamente.
@@ -399,12 +411,20 @@ decisión de la acción de control, actuación de la acción sobre el
 vehículo, y monitorización runtime. Cada una está representada por al
 menos un hazard. La función de percepción es origen plausible de H-06
 (estado no observable o corrupto). La función de decisión es origen
-plausible de H-01, H-02, H-03 y H-04 —los cuatro hazards principales
-asociados al comportamiento de la policy—. La función de actuación es
-origen plausible de H-05 (comando abrupto) y de H-07 (parada controlada).
-La función de monitorización runtime es transversal: cada uno de los
-hazards anteriores tiene una rama de mitigación cuya última línea de
-defensa pasa por C-05 (modo emergencia) o por la cage en su conjunto.
+plausible de H-01, H-02, H-03, H-04 y H-08 —los cinco hazards principales
+asociados al comportamiento de la policy, con H-08 cubriendo
+específicamente la convergencia training-time a inacción o dirección
+adversa—. La función de actuación es origen plausible de H-05 (comando
+abrupto) y de H-07 (parada controlada). La función de monitorización
+runtime es transversal: cada uno de los hazards anteriores tiene una
+rama de mitigación cuya última línea de defensa pasa por C-05 (modo
+emergencia) o por la cage en su conjunto. A estos cuatro ejes se añade
+un eje meta-arquitectónico que recoge H-09 (conflicto entre cage rules):
+la cage misma, como subsistema con varias reglas activas en paralelo,
+puede producir hazards de composición que no son atribuibles a ninguna
+función individual sino a la interacción entre reglas, y por ello su
+mitigación vive a nivel de propiedad estructural del pipeline
+(`arbiter` en la taxonomía de D-25), no como cage rule numerada.
 No se identifica ninguna función del sistema cuya degradación carezca
 de hazard asociado.
 
@@ -413,26 +433,35 @@ sistema son: offset lateral, error de orientación, velocidad longitudinal,
 comando de steering, comando de throttle, timestamp de la observación, y
 flag de obstáculo (en ODD-2 y ODD-4). Offset lateral y orientación
 participan en H-01, H-02 y H-04. Velocidad longitudinal participa en
-H-03 y H-04. Comandos de steering y throttle participan en H-05. El
-timestamp y la integridad del vector de estado participan en H-06. El
-flag de obstáculo no participa en ningún hazard del registro porque su
-gestión queda fuera del alcance de la cage de seguridad de F1 y se
-difiere a F4 cuando se integre el módulo correspondiente. Esta
-exclusión es consciente y se registra en §4.9.
+H-03, H-04 y, por ausencia de progreso, en H-08. Comandos de steering y
+throttle participan en H-05 y son la superficie sobre la que se observa
+H-09 (la cage emite mandos contradictorios). El timestamp y la
+integridad del vector de estado participan en H-06. El flag de
+obstáculo no participa en ningún hazard del registro porque su gestión
+queda fuera del alcance de la cage de seguridad de F1 y se difiere a
+F4 cuando se integre el módulo correspondiente. Esta exclusión es
+consciente y se registra en §4.9.
 
 **Cobertura por axioma de literatura.** Los hazards recurrentes en
 revisiones recientes de RL para conducción autónoma (Wang et al., 2024;
-Wäschle et al., 2022; Paterson et al., 2025) se agrupan en cinco
+Wäschle et al., 2022; Paterson et al., 2025) se agrupan en seis
 familias: (i) salida de carril o pérdida de pose, representada por H-01,
 H-02 y H-04; (ii) violación de envelope cinemático por velocidad o
 aceleración, representada por H-03; (iii) inestabilidad de actuación o
 oscilación, representada por H-05; (iv) operación bajo estado degradado
 o corrupto, representada por H-06; (v) ausencia de mecanismo de parada
-segura, representada por H-07. Las familias no representadas —ataques
-adversariales, *distribution shift* explícito, *explainability* y
-*brittleness* frente a perturbaciones de baja magnitud— se excluyen del
-alcance de la tesis y se discuten como limitación en §4.9 (decisión
-D-08 en `DECISIONS.md`).
+segura, representada por H-07; (vi) patologías training-time de
+*reward hacking* y especificación desalineada (Skalse et al., 2022;
+Krakovna et al., 2020), representada por H-08. A estas seis familias
+documentadas en la literatura se añade H-09, hazard de composición
+sobre el propio mecanismo de seguridad, cuya formulación aquí es más
+específica a la arquitectura modular del trabajo (cage de reglas
+explícitas) que a familias generales reconocidas en la literatura RL.
+Las familias no representadas —ataques adversariales, *distribution
+shift* explícito, *explainability* y *brittleness* frente a
+perturbaciones de baja magnitud— se excluyen del alcance de la tesis
+y se discuten como limitación en §4.9 (decisión D-31 en
+`DECISIONS.md`).
 
 La completitud se argumenta en sentido *relativo al alcance de la
 tesis y a la literatura disponible*, no en sentido absoluto. La
@@ -479,6 +508,16 @@ H-06 y H-07 no se analizan con STPA por tener una estructura causal
 suficientemente localizada (techo de velocidad, rate limiter,
 validación de estado y mecanismo de stop respectivamente) como para
 que la perspectiva sistémica no produzca insight adicional accionable.
+Los hazards H-08 y H-09 también quedan fuera del alcance STPA por
+razones estructurales distintas: H-08 es una patología training-time
+cuya causa no es una *unsafe control action* sino una especificación
+de reward desalineada —la policy opera "correctamente" desde su
+propia perspectiva, lo que coloca el hazard fuera de la grilla
+canónica de cuatro UCAs—; H-09 es un hazard de composición sobre el
+mecanismo de seguridad mismo, cuyo tratamiento natural es a nivel
+arquitectónico (priority ordering, joint-envelope assertion) y no a
+nivel de UCA individual. Esta exclusión consciente se documenta en
+los apartados §H-08 y §H-09 del Hazard Register canónico.
 
 ### 4.5.2 Resultados de la STPA ligera sobre H-01, H-02, H-04
 
@@ -546,7 +585,7 @@ sistemática del modelo, mientras que la pasada ligera aplica la
 plantilla de cuatro UCAs por inspección dirigida. La consecuencia es
 que la pasada ligera puede pasar por alto UCAs derivados de
 interacciones no anticipadas en la inspección dirigida. La tesis asume
-este coste y lo registra como decisión D-04; una STPA completa quedaría
+este coste y lo registra como decisión D-27; una STPA completa quedaría
 como trabajo futuro en el Capítulo 12.
 
 ---
@@ -622,7 +661,7 @@ final de criticidad. El cierre formal es D16 PM antes de que arranque la
 construcción de la matriz en D17.
 -->
 
-La SRS consolida ocho Safety Requirements derivados del Hazard Register
+La SRS consolida once Safety Requirements derivados del Hazard Register
 y refinados por la pasada STPA ligera. La numeración es estable: una vez
 asignado SR-XXX, no se reutiliza ni se renombra. La tabla siguiente
 presenta la SRS en su forma compacta; la versión extendida con
@@ -645,6 +684,9 @@ todos los SRs de esta tabla mediante la columna de Verificación.
 | SR-006 | La variación de comando entre dos ciclos consecutivos se mantendrá por debajo de `δ_max` para steering y throttle. | `δ_max_steer = 0.15`; `δ_max_thr = 0.10` (por ciclo) | H-05 | C-06 | SR-CL-B | Todos los escenarios (rate limiter activo) |
 | SR-007 | La cage activará modo emergencia si la observación tiene antigüedad mayor a `staleness_max` o cualquier campo fuera de rango plausible. | `staleness_max = 200 ms`; `N_missing_max = 5 ciclos` | H-06 | parte de C-05 | SR-CL-A | SC-PERT-02 |
 | SR-008 | Bajo señal externa de stop o cierre controlado de episodio, el sistema desacelerará a 0 m/s en `t_stop_max` sin exceder `d_max` lateral. | `t_stop_max = 1.7 s`; `d_max = 0.16 m` | H-07 | parte de C-05 + nodo vehicle-control | SR-CL-A | SC-NOM-03, SC-EDGE-04 |
+| SR-009 | En toda ventana elegible de `t_window`, el vehículo acumulará al menos `Δs_min` de progreso longitudinal nominal; la métrica M-S2 bajo monitoring-mode no exhibirá elevación sostenida frente al baseline. | `Δs_min = 0.10 m`; `t_window = 2.0 s`; `Δt_settle = 1.0 s` | H-08 | training (D-25) | SR-CL-B | SC-NOM-01..03, SC-PERT-03 |
+| SR-010 | Cuando dos o más cage rules activen en el mismo ciclo, el comando final satisfará la envolvente segura de toda regla activada y el patrón inter-ciclo no exhibirá oscilación sostenida a más de `f_osc_max`. | `f_osc_max = 5 Hz`; joint-envelope assertion | H-09 | arbiter (D-25) | SR-CL-B | SC-EDGE-04, SC-EDGE-05 |
+| SR-011 | La desviación estándar del error de heading sobre ventanas elegibles de `t_psd` se mantendrá por debajo de `σ_θ_max`, cubriendo la rama in-band de H-02 que SR-002 no acota. | `σ_θ_max = 5°`; `t_psd = 1.0 s` | H-02 (rama oscilatoria) | C-06 + training | SR-CL-B | SC-EDGE-01, SC-EDGE-04 |
 
 Los valores presentes en la tabla son los fijados en
 `docs/03_safety_requirements.md` tras el cierre de D14–D15 y la
@@ -730,7 +772,34 @@ rango sean indicadores no ambiguos de fallo de sensor. **SR-008**
 fija `t_stop_max = 1.7 s`, consistente con `v_max_straight / a_min ≈ 1.67 s`
 de SR-005 más un margen de granularidad y latencia; la consolidación
 de la inconsistencia previa con SR-005 (1.5 s en el baseline F0) se
-registra en `docs/CHANGELOG.md`.
+registra en `docs/CHANGELOG.md`. **SR-009** acota inferiormente el
+progreso longitudinal: `Δs_min = 0.10 m` deriva del producto entre la
+velocidad operativa mínima útil (`v_min ≈ 0.05 m/s`) y una ventana
+deslizante de `t_window = 2.0 s`; el carve-out de `Δt_settle = 1.0 s`
+tras transiciones desde modo emergencia o stop controlado evita que
+SR-009 entre en conflicto con SR-005 o SR-008 durante la rampa de
+re-arranque (cf. §SR-009 del SRS para el orden de prioridad
+explícito). Su implementación es training (D-25): la cage no inyecta
+progreso, solo observa el stall mediante M-P6 y emite señal hacia el
+test harness. **SR-010** asegura la consistencia composicional de la
+cage: la *joint-envelope assertion* al final de cada ciclo
+verifica que el comando emitido satisface las precondiciones de toda
+regla activa en ese ciclo, y un monitor inter-ciclo acota la
+oscilación entre correcciones contradictorias por debajo de
+`f_osc_max = 5 Hz`. La implementación es una propiedad estructural
+del pipeline de la cage (`arbiter`, D-25), no una regla numerada
+adicional; el fallo de la asertión hace caer el sistema en C-05
+(modo emergencia) como mitigación de última línea. **SR-011** cierra
+la rama oscilatoria de H-02 que el umbral magnitud-puro de SR-002 no
+acota: `σ_θ_max = 5°` admite oscilaciones hasta amplitud ≈ 7° con
+suficiente margen frente a `θ_max = 25°` pero tensa lo suficiente
+como para detectar el modo within-bounds-but-oscillatory; la ventana
+`t_psd = 1.0 s` captura al menos un período de la oscilación
+significativa (≈ 1 Hz) sin diluirse en derivas de timescale mayor.
+La implementación es híbrida (`C-06 + training`): C-06 atenúa
+contenido de alta frecuencia en los comandos del policy, y un
+término de varianza de heading en el reward incentiva al policy a no
+oscilar en estado estacionario.
 
 ---
 
@@ -760,8 +829,8 @@ estadísticamente discriminantes; los SRs SR-CL-B aceptan un mínimo de
 diez runs. Tercera: los SRs SR-CL-A son obligatorios para emitir
 veredicto positivo en la tabla del Capítulo 10; un SR-CL-A con
 veredicto negativo invalida el veredicto global de la tesis sobre el
-sistema. Estas convenciones quedan registradas como decisiones D-05,
-D-06 y D-07.
+sistema. Estas convenciones quedan registradas como decisiones D-28,
+D-29 y D-30.
 
 ### 4.7.2 Completitud y cierre del análisis
 
@@ -775,10 +844,10 @@ literatura para componentes RL; lo que se argumenta es completitud
 relativa al Hazard Register cerrado en D13.
 
 El argumento se construye en tres pasos. **Primero**, sobre la
-biyección observada en la matriz de cobertura H↔SR de §4.8.2: los
-siete hazards H-01..H-07 están cubiertos por al menos uno de los
-ocho SRs SR-001..SR-008, y los ocho SRs cubren al menos uno de los
-siete hazards; no hay huérfanos en ninguno de los dos sentidos. La
+cobertura observada en la matriz H↔SR de §4.8.2: los nueve hazards
+H-01..H-09 están cubiertos por al menos uno de los once SRs
+SR-001..SR-011, y los once SRs cubren al menos uno de los nueve
+hazards; no hay huérfanos en ninguno de los dos sentidos. La
 verificación es automatizada por `tools/check_traceability.py` y se
 revisa en cada commit; la salida del validador en el cierre de F1
 queda anotada en `docs/CHANGELOG.md` como evidencia. **Segundo**,
@@ -788,13 +857,18 @@ cobertura parcial se acompaña en la SRS de un campo "References
 hazard" que declara explícitamente la condición que el SR cubre
 totalmente y la condición que cubre parcialmente, de modo que el
 adjetivo "parcial" no degrada en ambigüedad sino que se traduce en
-una descripción acotada del alcance del SR. **Tercero**, sobre la
+una descripción acotada del alcance del SR. La rama oscilatoria de
+H-02, que SR-002 no acota por su naturaleza magnitud-puro, queda
+cubierta totalmente por SR-011 (bounded-variance) en una pasada
+complementaria a la auditoría 13.05.2026. **Tercero**, sobre la
 estructura de la cadena `H → SR → C → SC → M`: cada hazard tiene
-un SR, cada SR tiene una cage rule (o parte de una), cada cage rule
-está ejercida por al menos un escenario, y cada SR tiene al menos
-una métrica verificadora. La consistencia interna de la cadena no
-solo es necesaria para el cierre del V-Model adaptado: es la
-condición de falsabilidad operativa de cada SR.
+un SR, cada SR tiene una vía de implementación —cage rule
+numerada, training constraint, o cage architecture property,
+conforme a la taxonomía de D-25—, cada cage rule está ejercida por
+al menos un escenario, y cada SR tiene al menos una métrica
+verificadora. La consistencia interna de la cadena no solo es
+necesaria para el cierre del V-Model adaptado: es la condición de
+falsabilidad operativa de cada SR.
 
 La SRS, en consecuencia, está cerrada en sentido relativo. El cierre
 en sentido absoluto se difiere a la operación posterior del sistema
@@ -837,33 +911,43 @@ y los veredictos del Capítulo 10.
 
 ### 4.8.2 Matriz de cobertura H ↔ SR
 
-`[COMPLETAR FASE 1 / D17]` La tabla siguiente presenta la matriz de
-cobertura entre Hazards y Safety Requirements en su forma binaria. Una
-celda con marca indica que el SR de la columna cubre, en todo o en
-parte, el hazard de la fila. Las marcas son consistentes con la columna
-"H cubiertos" de la SRS en §4.6.3.
+La tabla siguiente presenta la matriz de cobertura entre Hazards y
+Safety Requirements en su forma binaria. Una celda con marca indica
+que el SR de la columna cubre, en todo o en parte, el hazard de la
+fila. Las marcas son consistentes con la columna "H cubiertos" de la
+SRS en §4.6.3 y con la matriz canónica en `docs/07_traceability_matrix.md`.
 
-|        | SR-001 | SR-002 | SR-003 | SR-004 | SR-005 | SR-006 | SR-007 | SR-008 |
-|--------|--------|--------|--------|--------|--------|--------|--------|--------|
-| H-01   | ●      |        | ●      |        |        |        |        |        |
-| H-02   |        | ●      | (●)    |        |        |        |        |        |
-| H-03   |        |        |        | ●      |        |        |        |        |
-| H-04   |        |        |        |        | ●      |        |        |        |
-| H-05   |        |        |        |        |        | ●      |        |        |
-| H-06   |        |        |        |        |        |        | ●      |        |
-| H-07   |        |        |        |        | (●)    |        |        | ●      |
+|        | SR-001 | SR-002 | SR-003 | SR-004 | SR-005 | SR-006 | SR-007 | SR-008 | SR-009 | SR-010 | SR-011 |
+|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|
+| H-01   | ●      |        | ●      |        |        |        |        |        |        |        |        |
+| H-02   |        | ●      | (●)    |        |        |        |        |        |        |        | ●      |
+| H-03   |        |        |        | ●      |        |        |        |        |        |        |        |
+| H-04   |        |        |        |        | ●      |        |        |        |        |        |        |
+| H-05   |        |        |        |        |        | ●      |        |        |        |        |        |
+| H-06   |        |        |        |        |        |        | ●      |        |        |        |        |
+| H-07   |        |        |        |        | (●)    |        |        | ●      |        |        |        |
+| H-08   |        |        |        |        |        |        |        |        | ●      |        |        |
+| H-09   |        |        |        |        |        |        |        |        |        | ●      |        |
 
-`[COMPLETAR FASE 1 / D17]` La marca `(●)` indica cobertura parcial:
-SR-003 (TTLC predictivo) cubre H-02 de modo parcial en tanto el
-indicador de tiempo a salida de carril es sensible a derivas
-angulares pero no las cuantifica directamente; SR-005 (modo
-emergencia compuesto) cubre H-07 de modo parcial porque su trigger
-sobre estado compuesto puede iniciarse antes de que el operador
-emita el comando externo de parada que invoca SR-008 propiamente.
-Ambas coberturas parciales son consistentes con el campo "References
-hazard" del SRS canónico y con la sección "Mitigated by" del Hazard
-Register; el `tools/check_traceability.py` las admite siempre que
-sigan declaradas en `docs/07_traceability_matrix.md`.
+La marca `(●)` indica cobertura parcial: SR-003 (TTLC predictivo)
+cubre H-02 de modo parcial en tanto el indicador de tiempo a salida
+de carril es sensible a derivas angulares pero no las cuantifica
+directamente; SR-005 (modo emergencia compuesto) cubre H-07 de modo
+parcial porque su trigger sobre estado compuesto puede iniciarse
+antes de que el operador emita el comando externo de parada que
+invoca SR-008 propiamente. Las coberturas plenas añadidas en la
+auditoría 13.05.2026 cierran tres gaps que el registro F0 dejaba
+abiertos: SR-011 cubre la rama in-band de H-02 (oscilación dentro
+de los umbrales de magnitud de SR-002), SR-009 cubre H-08
+(progresión y modo monitoring de M-S2 contra la rama
+adversarial-direction), y SR-010 cubre H-09 (composition consistency
+del pipeline de cage). Las tres vías de implementación
+correspondientes (training-side para SR-009 y la fracción
+training-side de SR-011, arbiter para SR-010) están registradas como
+*implementation_type* en la SRS canónica y respaldadas por la
+decisión D-25. Todas las relaciones están declaradas en
+`docs/07_traceability_matrix.md` y son verificadas por
+`tools/check_traceability.py`.
 
 ### 4.8.3 Verificación automatizada por `check_traceability.py`
 
@@ -937,7 +1021,7 @@ deriva (distribution shift), explicabilidad insuficiente, sesgos en el
 dataset de entrenamiento, brittleness frente a perturbaciones de baja
 magnitud— que no aparecen en el Hazard Register de §4.4.3 porque caen
 fuera del alcance acotado de la tesis. La omisión es deliberada y se
-registra como decisión D-08, pero limita la generalización del análisis
+registra como decisión D-31, pero limita la generalización del análisis
 a sistemas RL de producción.
 
 La cuarta es la naturaleza ligera de la pasada STPA. La pasada
@@ -963,13 +1047,14 @@ adaptado para el caso de estudio lane-following. La función pretendida
 y los requisitos de sistema SyR-001 a SyR-005 quedaron fijados en §4.2.
 El dominio operacional, formalizado en cuatro estratos ODD-1 a ODD-4
 con un ODD físico ODD-PHYS-1 diferido a F5, quedó resumido en §4.3 con
-remisión al artefacto autónomo. El Hazard Register, con siete hazards
-H-01 a H-07 (salida lateral, desalineación angular, velocidad
+remisión al artefacto autónomo. El Hazard Register, con nueve hazards
+H-01 a H-09 (salida lateral, desalineación angular, velocidad
 excesiva, estado compuesto irrecuperable, actuación abrupta, estado
-no observable, imposibilidad de parada controlada) derivados mediante
-un procedimiento HARA simplificado y una pasada STPA ligera
-complementaria sobre H-01, H-02 y H-04, quedó consolidado en §4.4 y
-§4.5. La SRS, con ocho Safety Requirements SR-001 a SR-008
+no observable, imposibilidad de parada controlada, stall por
+explotación del reward, y conflicto de composición entre cage rules)
+derivados mediante un procedimiento HARA simplificado y una pasada
+STPA ligera complementaria sobre H-01, H-02 y H-04, quedó consolidado
+en §4.4 y §4.5. La SRS, con once Safety Requirements SR-001 a SR-011
 falsablemente redactados y asignados a niveles de criticidad SR-CL-A o
 SR-CL-B, quedó consolidada en §4.6 y §4.7. La matriz de trazabilidad
 bidireccional, en su versión H ↔ SR, quedó presentada en §4.8 con
@@ -983,9 +1068,15 @@ con la primera versión cerrada de la Cage Specification, donde cada
 una de las cage rules C-01 a C-06 referenciadas en la columna
 correspondiente de la SRS se desarrolla con su lógica completa, sus
 parámetros versionados y su trazabilidad explícita a los SRs que
-implementa. El Capítulo 5 no añade nuevos hazards ni nuevos SRs: opera
-estrictamente dentro del marco fijado en este capítulo y produce los
-mecanismos runtime que harán cumplir esa especificación.
+implementa. Tres SRs (SR-009 implementado por training, SR-010 por
+una propiedad estructural de la cage o *arbiter*, y SR-011 como
+combinación de C-06 y training) tienen vías de implementación
+no-cage según la taxonomía registrada en D-25; el Capítulo 5
+documenta explícitamente la frontera entre cage rules numeradas y
+estas vías complementarias. El Capítulo 5 no añade nuevos hazards ni
+nuevos SRs: opera estrictamente dentro del marco fijado en este
+capítulo y produce los mecanismos runtime que harán cumplir esa
+especificación.
 
 La trazabilidad bidireccional —que en este capítulo se materializa en
 H ↔ SR— se extenderá en el Capítulo 5 hacia SR ↔ C, en el Capítulo 6
@@ -1009,33 +1100,43 @@ D11 (cierre):
        que dependen de cierres posteriores
 
 D12-D13 (operacionalización del Hazard Register y STPA ligera):
-  [x] Auditoría de calidad de los siete hazards: rating S/E/C
+  [x] Auditoría de calidad de los nueve hazards (H-01..H-09): rating S/E/C
        reconciliado contra docs/02_hazard_register.md tras la
-       auditoría D11 que detectó el desfase de identificadores;
-       tabla §4.4.3 alineada al registro canónico.
+       auditoría D11 y la consolidación de 13.05.2026 que promovió
+       H-08 (stall por reward exploitation) y H-09 (cage rule
+       composition) desde "Open hazards under consideration" a
+       entradas formales; tabla §4.4.3 alineada al registro canónico.
   [x] Producir docs/02_hazard_register.md (versión D11 ampliada
        en D12-D13)
-  [ ] STPA ligera sobre H-01, H-02, H-04: tabla de UCAs y
-       refinamientos generados
-  [ ] Argumentación de cobertura del HARA en §4.4.4
+  [x] STPA ligera sobre H-01, H-02, H-04: pasada sistemática sobre
+       cuatro UCAs × dos acciones de control, documentada en el
+       artefacto canónico y resumida en §4.5.2; H-08 y H-09 quedan
+       fuera del alcance STPA por razones estructurales
+       documentadas (training-time / composition).
+  [x] Argumentación de cobertura del HARA en §4.4.4 (cuatro
+       funciones + eje meta-arquitectónico para H-09)
 
 D14-D16 (derivación y cierre de SRS):
   [ ] Cierre de TBDs residuales en parámetros del SRS
-       (dependientes de TBD-Q1 a TBD-Q12 del ODD-Spec)
-  [ ] Rationale completo por SR en docs/03_safety_requirements.md
-  [ ] Asignación final de criticidad SR-CL-A/B/C por SR
-  [ ] Argumentación de completitud relativa en §4.7.2
+       (dependientes de TBD-Q1 a TBD-Q12 del ODD-Spec y de las
+       mediciones M-1..M-5 de experiments/calibration/)
+  [x] Rationale completo por SR (SR-001..SR-011) en
+       docs/03_safety_requirements.md
+  [x] Asignación de criticidad SR-CL-A/B por SR (SR-009/010/011
+       como SR-CL-B; SR-001..SR-005, SR-007, SR-008 como SR-CL-A;
+       SR-006 como SR-CL-B)
+  [x] Argumentación de completitud relativa en §4.7.2
 
 D17 (matriz de trazabilidad):
-  [ ] Consolidación de docs/07_traceability_matrix.md y de los CSV
+  [x] Consolidación de docs/07_traceability_matrix.md y de los CSV
        compañeros generados por tools/sync_hazard_register.py
        (docs/data/hazard_register.csv) y tools/sync_safety_requirements.py
        (docs/data/safety_requirements.csv)
   [ ] Especificación funcional de tools/check_traceability.py
        (a desarrollar en §6.5.4)
-  [ ] Verificación de no-huérfanos en H ↔ SR; resolución de
-       cualquier huérfano detectado mediante ajuste del Hazard
-       Register o de la SRS, registrado como decisión D-XX
+  [x] Verificación de no-huérfanos en H ↔ SR sobre la cadena 9H/11SR;
+       check_traceability.py PASS con 0 warnings al cierre del
+       audit 13.05.2026.
 
 D18 (revisión de calidad):
   [ ] Revisión cruzada de §4.4 a §4.8 contra los criterios de
@@ -1080,7 +1181,7 @@ REFERENCIAS USADAS EN ESTE CAPÍTULO (D11):
 
   Algoritmos y simulador (referencias arrastradas del Cap. 3):
   - Schulman et al., 2017 (PPO)
-  - Koenig y Howard, 2004 (Gazebo — simulador adoptado, decisión D-02)
+  - Koenig y Howard, 2004 (Gazebo — simulador adoptado, decisión D-12)
   - Kuutti et al., 2019b (Safety cages)
 
   Hazards específicos AI / lane-following:
@@ -1104,20 +1205,27 @@ REFERENCIAS A FIGURAS (placeholders explícitos):
        matriz H ↔ SR como heatmap con marcas de cobertura
 
 DECISIONES REGISTRADAS EN ESTE CAPÍTULO:
-  (Las decisiones D-01 anti-end-to-end y D-02 simulador Gazebo
-  son propiedad del Capítulo 3 y se documentan en DECISIONS.md;
-  el Capítulo 4 inicia su numeración en D-03.)
-  - D-03: Convención de homotecia para severidad en plataforma 1:14
+  (Las decisiones D-01 (anti-end-to-end) y D-12 (simulador Gazebo)
+  son propiedad del Capítulo 3 y se documentan en DECISIONS.md.
+  El Capítulo 4 contribuye con D-25 (taxonomía de implementación
+  de SRs) y D-26..D-31 sobre convenciones del análisis. Al cierre
+  de F0 + F1 audit, las decisiones D-20..D-24 quedan reservadas como
+  marcadores provisionales para cierres pendientes en fases
+  posteriores; ver "Future and pending decisions" en DECISIONS.md.)
+  - D-25: Taxonomía de tres vías de implementación
+       (cage rule numerada / training constraint / cage architecture
+       property) — soporta SR-009, SR-010 y SR-011. §4.6
+  - D-26: Convención de homotecia para severidad en plataforma 1:14
        (rating como si el vehículo fuera de tamaño real). §4.4.2
-  - D-04: Adopción de STPA ligera selectiva en lugar de STPA
+  - D-27: Adopción de STPA ligera selectiva en lugar de STPA
        completa, aplicada a H-01, H-02, H-04 conforme al STPA
        scope statement del Hazard Register. §4.5
-  - D-05: SR-CL-A exige cage rule determinista en el rango
+  - D-28: SR-CL-A exige cage rule determinista en el rango
        C-01..C-06 de la Cage Specification. §4.7.1
-  - D-06: SR-CL-A exige verificación con ≥25 runs por familia
+  - D-29: SR-CL-A exige verificación con ≥25 runs por familia
        de escenarios. §4.7.1
-  - D-07: SR-CL-A negativo invalida veredicto global. §4.7.1
-  - D-08: Exclusión deliberada de hazards específicos AI no
+  - D-30: SR-CL-A negativo invalida veredicto global. §4.7.1
+  - D-31: Exclusión deliberada de hazards específicos AI no
        funcionales (adversariales, distribution shift,
        explicabilidad, sesgo, brittleness). §4.9
 -->

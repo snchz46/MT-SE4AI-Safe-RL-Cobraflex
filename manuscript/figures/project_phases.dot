@@ -1,0 +1,214 @@
+// Figure 4 — Project phases vs adapted V-Model levels.
+// Render to PNG:
+//   dot -Tpng project_phases.dot -o project_phases.png
+// Render to SVG:
+//   dot -Tsvg project_phases.dot -o project_phases.svg
+//
+// Horizontal axis: phases F0..F6 with their gates G0..G6 at close.
+// Vertical axis: adapted V-Model levels (left branch L1..L5,
+// right branch L4a'..L1', transversal Runtime Monitoring A3, and
+// the traceability-matrix adaptation A4 as a bottom band).
+// Each cell shows the main artefact produced at that
+// phase x level intersection.
+//
+// The colour scheme encodes structural meaning, not phase ordering:
+//   left-branch row headers in light blue, right-branch in light purple,
+//   transversal (A3) in light pink, and gates in solid blocks at the
+//   bottom. The matrix is self-explanatory and needs no separate legend.
+
+digraph project_phases {
+    rankdir=LR;
+    bgcolor="white";
+    fontname="Helvetica";
+    node [shape=plaintext, fontname="Helvetica", fontsize=10];
+
+    matrix [label=<
+<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6">
+
+    <!-- =========================================================
+         Header row: phase names + short description
+         ========================================================= -->
+    <TR>
+        <TD BGCOLOR="#222222" ALIGN="LEFT" WIDTH="160">
+            <FONT COLOR="white"><B>Level \ Phase</B></FONT>
+        </TD>
+        <TD BGCOLOR="#222222" WIDTH="110">
+            <FONT COLOR="white"><B>F0</B><BR/>Foundation</FONT>
+        </TD>
+        <TD BGCOLOR="#222222" WIDTH="110">
+            <FONT COLOR="white"><B>F1</B><BR/>HARA + SR</FONT>
+        </TD>
+        <TD BGCOLOR="#222222" WIDTH="110">
+            <FONT COLOR="white"><B>F2</B><BR/>Cage</FONT>
+        </TD>
+        <TD BGCOLOR="#222222" WIDTH="110">
+            <FONT COLOR="white"><B>F3</B><BR/>Training</FONT>
+        </TD>
+        <TD BGCOLOR="#222222" WIDTH="110">
+            <FONT COLOR="white"><B>F4</B><BR/>Sim eval</FONT>
+        </TD>
+        <TD BGCOLOR="#222222" WIDTH="110">
+            <FONT COLOR="white"><B>F5</B><BR/>Physical</FONT>
+        </TD>
+        <TD BGCOLOR="#222222" WIDTH="110">
+            <FONT COLOR="white"><B>F6</B><BR/>Closure</FONT>
+        </TD>
+    </TR>
+
+    <!-- =========================================================
+         Left-descending branch of the V (specification + design)
+         ========================================================= -->
+    <TR>
+        <TD BGCOLOR="#eaf3ff" ALIGN="LEFT"><B>L1</B> Stakeholder Req.</TD>
+        <TD></TD>
+        <TD BGCOLOR="#f7faff">ODD-Spec v1.0</TD>
+        <TD></TD>
+        <TD></TD>
+        <TD></TD>
+        <TD BGCOLOR="#f7faff">ODD-PHYS-1</TD>
+        <TD BGCOLOR="#f7faff">review</TD>
+    </TR>
+    <TR>
+        <TD BGCOLOR="#eaf3ff" ALIGN="LEFT"><B>L2</B> System Safety Req.</TD>
+        <TD></TD>
+        <TD BGCOLOR="#f7faff">HazReg + SRS<BR/>(9H / 11SR)</TD>
+        <TD BGCOLOR="#f7faff">SRS calibration<BR/>(M-1..M-5)</TD>
+        <TD></TD>
+        <TD></TD>
+        <TD></TD>
+        <TD BGCOLOR="#f7faff">review</TD>
+    </TR>
+    <TR>
+        <TD BGCOLOR="#eaf3ff" ALIGN="LEFT"><B>L3</B> Architecture Design</TD>
+        <TD></TD>
+        <TD BGCOLOR="#f7faff">skeleton</TD>
+        <TD BGCOLOR="#f7faff">ROS2 graph<BR/>(perc/policy/cage/log)</TD>
+        <TD></TD>
+        <TD></TD>
+        <TD></TD>
+        <TD BGCOLOR="#f7faff">review</TD>
+    </TR>
+    <TR>
+        <TD BGCOLOR="#eaf3ff" ALIGN="LEFT"><B>L4a</B> Cage Specification</TD>
+        <TD></TD>
+        <TD></TD>
+        <TD BGCOLOR="#f7faff">C-01..C-06<BR/>cage.yaml v0.3.0</TD>
+        <TD></TD>
+        <TD></TD>
+        <TD></TD>
+        <TD></TD>
+    </TR>
+    <TR>
+        <TD BGCOLOR="#eaf3ff" ALIGN="LEFT"><B>L4b</B> Training Specification</TD>
+        <TD></TD>
+        <TD></TD>
+        <TD></TD>
+        <TD BGCOLOR="#f7faff">reward + hyperparams<BR/>+ criteria</TD>
+        <TD></TD>
+        <TD></TD>
+        <TD></TD>
+    </TR>
+    <TR>
+        <TD BGCOLOR="#eaf3ff" ALIGN="LEFT"><B>L5</B> Implementation</TD>
+        <TD></TD>
+        <TD></TD>
+        <TD BGCOLOR="#f7faff">cage_node</TD>
+        <TD BGCOLOR="#f7faff">PPO policy<BR/>(training)</TD>
+        <TD BGCOLOR="#f7faff">trained policy</TD>
+        <TD></TD>
+        <TD></TD>
+    </TR>
+
+    <!-- =========================================================
+         Right-ascending branch of the V (verification + validation)
+         ========================================================= -->
+    <TR>
+        <TD BGCOLOR="#f4e9ff" ALIGN="LEFT"><B>L4a'</B> Cage Unit Tests</TD>
+        <TD></TD>
+        <TD></TD>
+        <TD BGCOLOR="#fbf6ff">test_cage_rules.py</TD>
+        <TD></TD>
+        <TD></TD>
+        <TD></TD>
+        <TD></TD>
+    </TR>
+    <TR>
+        <TD BGCOLOR="#f4e9ff" ALIGN="LEFT"><B>L4b'</B> Policy Behavioral Eval.</TD>
+        <TD></TD>
+        <TD></TD>
+        <TD></TD>
+        <TD></TD>
+        <TD BGCOLOR="#fbf6ff">scenario evaluation<BR/>+ M-P*/M-S*/M-I*</TD>
+        <TD></TD>
+        <TD></TD>
+    </TR>
+    <TR>
+        <TD BGCOLOR="#f4e9ff" ALIGN="LEFT"><B>L3'</B> Integration Testing</TD>
+        <TD></TD>
+        <TD></TD>
+        <TD BGCOLOR="#fbf6ff">pipeline tests</TD>
+        <TD BGCOLOR="#fbf6ff">end-to-end sim</TD>
+        <TD></TD>
+        <TD></TD>
+        <TD></TD>
+    </TR>
+    <TR>
+        <TD BGCOLOR="#f4e9ff" ALIGN="LEFT"><B>L2'</B> Scenario-Based Testing</TD>
+        <TD></TD>
+        <TD></TD>
+        <TD></TD>
+        <TD BGCOLOR="#fbf6ff">SC-NOM/EDGE/PERT</TD>
+        <TD BGCOLOR="#fbf6ff">runs in Gazebo</TD>
+        <TD></TD>
+        <TD></TD>
+    </TR>
+    <TR>
+        <TD BGCOLOR="#f4e9ff" ALIGN="LEFT"><B>L1'</B> Operational Validation</TD>
+        <TD></TD>
+        <TD></TD>
+        <TD></TD>
+        <TD></TD>
+        <TD BGCOLOR="#fbf6ff">sim verdicts</TD>
+        <TD BGCOLOR="#fbf6ff">phys verdicts<BR/>+ sim-to-real gap</TD>
+        <TD BGCOLOR="#fbf6ff">global verdict<BR/>+ defense</TD>
+    </TR>
+
+    <!-- =========================================================
+         Transversal: Runtime Monitoring (adaptation A3)
+         ========================================================= -->
+    <TR>
+        <TD BGCOLOR="#ffeef0" ALIGN="LEFT"><B>RM (A3)</B> Runtime Monitoring</TD>
+        <TD></TD>
+        <TD></TD>
+        <TD COLSPAN="5" BGCOLOR="#fff5f6" ALIGN="CENTER">
+            <I>Logger Node + intervention logs &mdash; transversal across F2-F6</I>
+        </TD>
+    </TR>
+
+    <!-- =========================================================
+         Bottom: traceability matrix progressive fill + gates
+         ========================================================= -->
+    <TR>
+        <TD BGCOLOR="#f0f0f0" ALIGN="LEFT"><B>Traceability matrix (A4)</B></TD>
+        <TD BGCOLOR="#fafafa" ALIGN="CENTER">skeleton</TD>
+        <TD BGCOLOR="#fafafa" ALIGN="CENTER">H&harr;SR</TD>
+        <TD BGCOLOR="#fafafa" ALIGN="CENTER">+ C</TD>
+        <TD BGCOLOR="#fafafa" ALIGN="CENTER">+ SC, M</TD>
+        <TD BGCOLOR="#fafafa" ALIGN="CENTER">sim verdicts</TD>
+        <TD BGCOLOR="#fafafa" ALIGN="CENTER">phys verdicts</TD>
+        <TD BGCOLOR="#fafafa" ALIGN="CENTER"><B>close at G6</B></TD>
+    </TR>
+    <TR>
+        <TD BGCOLOR="#222222" ALIGN="LEFT"><FONT COLOR="white"><B>Gate</B></FONT></TD>
+        <TD BGCOLOR="#bbbbbb" ALIGN="CENTER"><B>G0</B></TD>
+        <TD BGCOLOR="#bbbbbb" ALIGN="CENTER"><B>G1</B></TD>
+        <TD BGCOLOR="#bbbbbb" ALIGN="CENTER"><B>G2</B></TD>
+        <TD BGCOLOR="#bbbbbb" ALIGN="CENTER"><B>G3</B></TD>
+        <TD BGCOLOR="#bbbbbb" ALIGN="CENTER"><B>G4</B></TD>
+        <TD BGCOLOR="#bbbbbb" ALIGN="CENTER"><B>G5</B></TD>
+        <TD BGCOLOR="#bbbbbb" ALIGN="CENTER"><B>G6</B></TD>
+    </TR>
+
+</TABLE>
+    >];
+}

@@ -1,8 +1,8 @@
 # Pre-G1 Calibration Campaign
 
-**Status:** Protocols ready for execution — Phase 1 deliverable
-**Last update:** 13.05.2026
-**Purpose:** Close the parameter-defensibility gap identified in
+**Status:** Protocols ready for execution — Phase 1 deliverable  
+**Last update:** 13.05.2026  
+**Purpose:** Close the parameter-defensibility gap identified in  
 `docs/.phases/Fase 1/phase1_refinement_notes.md` §2 and §3 before
 Gate G1 review.
 

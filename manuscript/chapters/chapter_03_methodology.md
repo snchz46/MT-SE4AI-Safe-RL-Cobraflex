@@ -566,9 +566,9 @@ trazabilidad.
 
 ### 3.5.3 Estructura por fases del proyecto
 
-El proyecto se organiza en diez fases secuenciales (Fase 0 a Fase 9), cada
+El proyecto se organiza en siete fases secuenciales (Fase 0 a Fase 6), cada
 una con un conjunto definido de entregables (D-N) y un *gate* de revisión
-al cierre que decide si se procede a la siguiente fase. La estructura por
+(G0 a G6) al cierre que decide si se procede a la siguiente fase. La estructura por
 fases es ortogonal al V-Model: una fase produce artefactos pertenecientes a
 varios niveles del V simultáneamente, y un nivel del V puede ir
 construyéndose a lo largo de varias fases.

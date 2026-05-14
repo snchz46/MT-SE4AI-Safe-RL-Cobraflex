@@ -14,7 +14,11 @@
       "Bash(python tools/apply_calibration.py --measurement M-3)",
       "Bash(echo \"PYTHON_EXITCODE=$?\")",
       "Read(//tmp/**)",
-      "Bash(python manuscript/figures/normative_pyramid.py)"
+      "Bash(python manuscript/figures/normative_pyramid.py)",
+      "Bash(python tools/calibration_helpers/m1_from_csv.py --help)",
+      "Bash(python tools/calibration_helpers/m2_from_csv.py --help)",
+      "Bash(python -c \"import cage; print\\('cage import OK'\\)\")",
+      "Bash(python tools/calibration_helpers/m1_from_csv.py --input-dir /tmp/m1_test --executed-by \"smoke-test\")"
     ]
   }
 }

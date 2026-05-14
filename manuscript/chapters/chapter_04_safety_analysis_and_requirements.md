@@ -180,7 +180,13 @@ El presente capítulo resume las decisiones estructurales del ODD y
 remite al artefacto autónomo para los valores numéricos exhaustivos. La
 auditoría del estado de redacción del ODD en D11 quedó documentada en
 el cuaderno de trabajo de Fase 1 y motivó las TBD-Q1 a TBD-Q12 que
-restan por cerrar.
+restan por cerrar. El acotamiento explícito del dominio operacional
+materializa la adaptación A5 (§3.4.5) del V-Model adaptado, que
+reformula la validación operacional clásica (L1') como validación
+acotada: lo que está dentro del ODD se verifica empíricamente en F4 y
+F5; lo que está fuera se documenta como exclusión declarada (no como
+ausencia), y la caracterización del *gap* sim-to-real entre ODD-1 y
+ODD-PHYS-1 se difiere a F5.
 
 ### 4.3.2 Estructura de cuatro dominios operacionales
 
@@ -703,10 +709,19 @@ y `δ_max` en SR-006) están marcados como provisionales en el SRS y
 se cerrarán al ejecutar la campaña de mediciones pre-G1 documentada
 en `docs/.phases/Fase 1/phase1_refinement_notes.md` §3. La columna
 "Cage rule" referencia los identificadores de la Cage Specification
-del Capítulo 5 (`docs/04_cage_specification.md`). La columna
-"Verificación" lista los identificadores de escenarios definidos en
-la Scenario Library de F4 (`docs/05_scenario_library.md`), siguiendo
-el formato `SC-<CAT>-<NN>` declarado en `docs/01_id_conventions.md`.
+del Capítulo 5 (`docs/04_cage_specification.md`); el desdoblamiento
+en `C-XX`, `training` y `arbiter` (introducido en D-25) materializa
+la adaptación A1 (§3.4.1), que separa la *Cage Specification* clásica
+del *Training Specification* y de las propiedades de arquitectura de
+la cage que no son reglas numeradas. La columna "Verificación" lista
+los identificadores de escenarios definidos en la Scenario Library de
+F4 (`docs/05_scenario_library.md`), siguiendo el formato
+`SC-<CAT>-<NN>` declarado en `docs/01_id_conventions.md`; la
+verificación por escenarios estadísticamente acotados (≥25 runs en
+SR-CL-A, cf. D-29) instancia la rama L4b' de la adaptación A2
+(§3.4.2), que sustituye el Unit Testing clásico por una
+caracterización estadística del comportamiento de la policy
+complementaria a los Cage Unit Tests deterministas.
 
 ### 4.6.4 Rationale por Safety Requirement
 
@@ -830,7 +845,16 @@ diez runs. Tercera: los SRs SR-CL-A son obligatorios para emitir
 veredicto positivo en la tabla del Capítulo 10; un SR-CL-A con
 veredicto negativo invalida el veredicto global de la tesis sobre el
 sistema. Estas convenciones quedan registradas como decisiones D-28,
-D-29 y D-30.
+D-29 y D-30. La cobertura cuantitativa que estas tres convenciones
+inducen alimenta directamente el meta-criterio 2 de §3.7.1
+(*cobertura de SRs por evidencia experimental*, con criterio de éxito
+"100 % de SRs con veredicto al cierre"), y la disciplina de
+trazabilidad de §4.8 alimenta el meta-criterio 1 (*integridad de la
+trazabilidad*, cero huérfanos). El argumento de cobertura del HARA
+en §4.4.4 prepara la evaluación del meta-criterio 3 (*grado de
+anticipación de hazards*) en Capítulo 11: si los hazards observados
+durante operación están todos en el registro o son auditables como
+"emergentes documentados", el criterio se satisface.
 
 ### 4.7.2 Completitud y cierre del análisis
 
@@ -1086,6 +1110,27 @@ completo del V se materializa así de forma incremental, con
 verificación automatizada en cada cierre de fase mediante
 `tools/check_traceability.py`.
 
+El cierre formal del trabajo de este capítulo coincide con el cierre
+de la Fase 1 del proyecto y se ritualiza en el *gate* de revisión G1,
+cuyo material y criterios de paso están documentados en
+`docs/.phases/Fase 1/fase_1_detallada.md` §11. Antes de G1 deben
+quedar cerrados dos pre-requisitos cuantitativos: la campaña de
+mediciones M-1 a M-5 (`experiments/calibration/`), que confirma o
+revisa los parámetros marcados como `[provisional]` en la SRS y en
+`cage/cage.yaml`, y el cierre de los TBD-Q1 a TBD-Q12 del ODD-Spec
+contra la geometría real de los mapas y la material spec del
+simulador. Tras G1, la versión `0.3.0` de `cage/cage.yaml`
+consolida los parámetros revisados y la firma del director sobre el
+Hazard Register y la SRS habilita el arranque de la Fase 2, donde el
+Capítulo 5 produce la Cage Specification y los Cage Unit Tests
+deterministas que cierran la rama L4a' del V-Model adaptado. El
+Capítulo 5 asume, por tanto, que los artefactos vivos referenciados
+en este capítulo —`docs/02_hazard_register.md`,
+`docs/03_safety_requirements.md`, `docs/08_odd_specification.md` y
+`docs/07_traceability_matrix.md`— están en estado *post-G1*: con
+parámetros consolidados y `check_traceability.py` pasando sin
+huérfanos ni warnings.
+
 ---
 
 <!--
@@ -1139,19 +1184,33 @@ D17 (matriz de trazabilidad):
        audit 13.05.2026.
 
 D18 (revisión de calidad):
-  [ ] Revisión cruzada de §4.4 a §4.8 contra los criterios de
-       calidad declarados en §3.7 (criterios meta del marco)
-  [ ] Verificación de coherencia con el Capítulo 3 (los
-       enunciados sobre A1-A5 deben corresponderse con su
-       formulación en §3.4)
+  [x] Revisión cruzada de §4.4 a §4.8 contra los criterios de
+       calidad declarados en §3.7: integridad de la trazabilidad
+       (§4.8 instancia el meta-criterio 1), cobertura de SRs por
+       evidencia (§4.7.1 + D-30 prepara el meta-criterio 2),
+       anticipación de hazards (§4.4.4 prepara el meta-criterio 3).
+       Cita explícita añadida al final de §4.7.1. Los meta-
+       criterios 4 (coste de adopción) y 5 (productividad de la
+       matriz) son meta-evaluativos para Cap. 11 y no necesitan
+       reflejo en este capítulo.
+  [x] Verificación de coherencia con el Capítulo 3 (enunciados
+       sobre A1-A5 vs §3.4): A4 y A3 ya estaban citadas
+       explícitamente; A1, A2 y A5 ahora se citan en §4.6.3
+       (implementation_type / verificación por escenarios) y
+       §4.3.1 (ODD acotado + gap sim-to-real) respectivamente.
+       Sin contradicciones detectadas entre §4.5/§4.6 y §3.4.
 
 D19-D20 (consolidación de cap. 4):
-  [ ] Pulido de prosa y tránsito a tono académico definitivo
-  [ ] Cierre de §4.10 con la transición exacta al Capítulo 5
-  [ ] Inserción de figuras: Figura 4.1 (taxonomía PAS 1883
-       reducida), Figura 4.2 (procedimiento HARA), Figura 4.3
-       (procedimiento de derivación SR), Figura 4.4 (matriz de
-       trazabilidad H ↔ SR como heatmap)
+  [ ] [PULIDO FASE 6] Pulido de prosa y tránsito a tono académico
+       definitivo
+  [x] Cierre de §4.10 con la transición exacta al Capítulo 5:
+       párrafo final añadido conectando el cierre de F1 con G1, los
+       pre-requisitos M-1..M-5 + ODD TBDs, el bump cage.yaml a
+       0.3.0 y el estado *post-G1* asumido por Cap. 5.
+  [ ] [PULIDO FASE 6] Inserción de figuras: Figura 4.1 (taxonomía
+       PAS 1883 reducida), Figura 4.2 (procedimiento HARA),
+       Figura 4.3 (procedimiento de derivación SR), Figura 4.4
+       (matriz de trazabilidad H ↔ SR como heatmap)
 
 Fase 6 (consolidación final):
   [ ] [PULIDO FASE 6] Sustitución de placeholders SVG por figuras

@@ -70,6 +70,7 @@ consistent with the chapters.
 | D-30 | A negative verdict on any SR-CL-A invalidates the global verdict of the thesis on the system | §4.7.1 | CONFIRMED |
 | D-31 | Deliberate exclusion of non-functional AI-specific hazard families (adversarial attacks, distribution shift, explainability, dataset bias, low-magnitude brittleness) from the F1 Hazard Register | §4.9 | CONFIRMED |
 | D-32 | Integration of the ROS2 workspace under `src/` by fresh copy of `cobraflex` + `cobraflex_rl`; third-party drivers (`sllidar_ros2`, `zed-ros2-wrapper`) deferred | infrastructure | CONFIRMED |
+| D-33 | Phase 1 ODD-Spec closes 3 of 12 TBDs against the actual `src/` workspace (Q1, Q2, Q3); the remaining 9 are explicitly deferred per phase | §11 of `docs/08_odd_specification.md` | CONFIRMED |
 
 ---
 
@@ -977,6 +978,39 @@ The copy is a *fresh* copy (no `git subtree` / no preserved upstream git history
 **Rationale.** A thesis repository is a one-shot reproducibility artefact, not a living monorepo. Optimising for "supervisor clones once, builds once, runs" outweighs the value of preserving granular pre-thesis git history. Third-party drivers are deferred because they may or may not be needed depending on which physical-platform experiments end up in scope; pulling them in now would add ~150 MB of upstream code that the thesis does not modify.
 
 **Consequences.** The repository grows from ~52 KB to roughly 110 MB, dominated by `src/cobraflex/meshes/rplidar-a2m4-r1.stl` (87 MB visualisation mesh; the actual cobraflex work is < 25 MB). `pytest` discovery is constrained to `cage/tests` via a new `pytest.ini` at the root so that the ament_python tests under `src/cobraflex/test/` do not pollute the safety-side test suite (they require `ament_pep257`/`ament_flake8`/`ament_copyright` which are part of the ROS2 toolchain and not in the safety-side dev environment). `.gitignore` is extended with per-package ROS2 patterns (`src/*/build/`, `src/*/install/`, `src/*/log/`, and generated msg/srv bindings). The 87 MB mesh is acceptable for now but flagged as a candidate for Git LFS migration before publishing the repository externally; if the supervisor wants a leaner clone, the mesh can be replaced by a `scripts/download_meshes.sh` download stub.
+
+---
+
+### D-33 — Phase 1 closes 3 of 12 ODD-Spec TBDs; the remaining 9 are explicitly deferred per phase
+
+| Field | Value |
+| --- | --- |
+| Section | §11 of `docs/08_odd_specification.md` |
+| Status | CONFIRMED |
+| Date | F1 (14.05.2026) |
+
+**Decision.** The Phase 1 closure of `docs/08_odd_specification.md` resolves three of the twelve TBD-Q* placeholders against the actual configuration of the `src/cobraflex` and `src/cobraflex_rl` workspace; the remaining nine are explicitly deferred to later phases with a per-TBD rationale. The deferral is permitted by the closure criterion of `experiments/odd_inspection/README.md`, which accepts a mixture of resolved and explicitly-deferred TBDs at Gate G1 provided that each deferral is registered as a decision.
+
+| TBD | Resolution path | Phase |
+| --- | --------------- | ----- |
+| Q1 FRICTION | Resolved: 1.0 (Gazebo ODE default, `<friction><ode/></friction>` in all current worlds) | F1 |
+| Q2 A_LAT_MAX (ODD-1) | Resolved: 9.81 m/s² (derived: Q1 × g) | F1 |
+| Q3 CORRIDOR_EDGE | Resolved: 0.1225 m (= LANE_EDGE; `gazebo_lane_env.py` terminates at the geometric lane edge with no separate margin) | F1 |
+| Q4 odd2_nominal_adverse | **Deferred to F4**: no scenario profile YAML exists yet under `src/cobraflex_rl/config/`; the lighting/marking/perception-noise stressors will be specified together with the Scenario Library construction at F4 entry. | F4 |
+| Q5 odd2_adverse_with_latency | **Deferred to F4**: same rationale as Q4. The latency-injection magnitudes will be chosen against the M-2 baseline measured at F1/F2. | F4 |
+| Q6 odd2_adverse_with_obstacle | **Deferred to F4**: same rationale as Q4. Obstacle geometry and placement to be parameterised when the obstacle module is integrated. | F4 |
+| Q7 odd2_adverse_full | **Deferred to F4**: by construction this is the union of Q4 + Q5 + Q6; it closes when those close. | F4 |
+| Q8 ROAD_LENGTH (ODD-3) | **Deferred to F2 / F3**: the `odd3_curvy_loop` world is not yet implemented in `src/cobraflex/worlds/` (only `empty.world`, `obstacles.world`, `test_world.sdf` exist; the current centerline is a 3 m straight). | F2/F3 |
+| Q9 KAPPA_MAX (ODD-3) | **Deferred to F2 / F3**: depends on the same `odd3_curvy_loop` world being built; cross-validated against M-4 once both are available. | F2/F3 |
+| Q10 A_LAT_MAX (ODD-3) | **Deferred to F2 / F3**: derived from Q1, V_MAX_CURVE, and Q9; closes when Q9 closes. | F2/F3 |
+| Q11 STUCK_TIMEOUT | **Deferred to F2 / F3**: declared as `n/a` for ODD-1 and ODD-2 in the master parameter table; only relevant for ODD-3 and ODD-4, which are deferred. The current env wrapper does not implement an explicit stuck criterion (only `max_episode_steps × control_dt = 40 s` truncation), so when ODD-3 is built either the env wrapper acquires a stuck check or Q11 stays "n/a — subsumed by truncation". | F2/F3 |
+| Q12 ODD-4 stressors | **Deferred to F4**: same rationale as Q4-Q7. ODD-4 is the cross-product of ODD-3 geometry with ODD-2 stressors and closes when both close. | F4 |
+
+**Alternatives considered and rejected.** *Block G1 until all 12 TBDs are closed*, rejected because nine of the TBDs depend on artefacts that the project plan does not produce until F2-F4: the ODD-3 curvy world (F2 cage testing or F3 scenario library), and the ODD-2/ODD-4 stressor profiles (F4 scenario library). Demanding their closure at F1 would either force premature design choices on artefacts that should be informed by F2-F3 results, or invent placeholder values whose only justification would be "to close the row in the table". Either path degrades the engineering quality of the TBD closure. *Resolve the deferred TBDs with placeholder values "to be revised"*, rejected for the same reason. *Drop the deferred TBDs from the ODD-Spec entirely*, rejected because the master parameter table needs the cell references in ODD-2, ODD-3, ODD-4 columns even if the values are not yet known; replacing them with "?" would lose the explicit traceability of which downstream parameter expects which upstream value.
+
+**Rationale.** Each deferred TBD is closed at the phase where its source artefact is first produced. This aligns the ODD-Spec maturation with the V-Model adaptation: Q4-Q7, Q12 close at F4 entry alongside the Scenario Library (level L2'); Q8-Q11 close at F2/F3 entry alongside the curvy-world implementation. The ODD-Spec moves from version 0.1 (draft) to 0.2 (F1 close, three TBDs resolved) to 0.3 (F3 close, ODD-3 TBDs resolved) to 1.0 (F4 close, all TBDs resolved, signed off at G4). This per-phase progression is consistent with the "version increments per change" convention declared in the ODD-Spec cover block.
+
+**Consequences.** `experiments/odd_inspection/odd_tbds.yaml` is committed with Q1/Q2/Q3 populated and the remaining nine entries left with `value: null` plus the rationale strings in their `notes:` field referring back to this decision. `tools/close_odd_tbds.py --apply` patches the ODD-Spec to substitute the three resolved TBDs into the body and into §11; the remaining `TBD-Q4..Q12` literals stay in the document and re-running the script after later closures is idempotent. The ODD-Spec is bumped from v0.1 to v0.2 with the closure log entry referencing this decision. M-4 (which depends on the `odd3_curvy_loop` map) inherits the deferral: it cannot run at F1 and is re-scheduled together with ODD-3 closure.
 
 ---
 

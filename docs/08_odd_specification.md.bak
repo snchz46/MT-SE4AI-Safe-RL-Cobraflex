@@ -1,11 +1,11 @@
 # ODD Specification — SE4AI Lane Following Thesis
 
 **Document ID:** `ODD-SPEC`  
-**Version:** 0.2 (F1 partial closure, 14.05.2026)  
+**Version:** 0.1 (draft, D11 of Phase 1)  
 **Owner:** Samuel Sánchez  
 **Phase of birth:** F0 — Phase of maturity: F1 — Phase of revision: F5 (physical ODD)  
-**Status:** DRAFT — 3 of 12 TBDs resolved at F1 (Q1, Q2, Q3); remaining 9 explicitly deferred per phase (Q4–Q7, Q12 to F4; Q8–Q11 to F2/F3) — see decision D-33 in `docs/DECISIONS.md`.  
-**Last updated:** 2026-05-14  
+**Status:** DRAFT — contains TBD values that must be filled before Gate 1  
+**Last updated:** 2026-05-02  
 **Approving reviewer (Gate 1):** [supervisor name]  
 
 <!--
@@ -23,7 +23,6 @@ renumber sections — only append.
 | Version | Date       | Author | Summary                                                                                               |
 |---------|------------|--------|-------------------------------------------------------------------------------------------------------|
 | 0.1     | 2026-05-02 | SS     | Initial structural extraction from `draft_V3.docx` §6.1, with TBDs for unresolved quantitative items. |
-| 0.2     | 2026-05-14 | SS     | F1 partial closure of TBD-Q1 (FRICTION = 1.0), TBD-Q2 (A_LAT_MAX = 9.81 m/s²) and TBD-Q3 (CORRIDOR_EDGE = 0.1225 m), against the `src/cobraflex` + `src/cobraflex_rl` workspace. Remaining 9 TBDs deferred per decision D-33: Q4–Q7 and Q12 to F4 (scenario library), Q8–Q11 to F2/F3 (ODD-3 curvy world implementation). Simulator label "MuJoCo" replaced by "Gazebo" throughout. |
 
 ---
 
@@ -66,7 +65,7 @@ The intended function is lane following on a structured straight-road segment. T
 
 ### 4.2 Scenery
 
-The drivable area is a two-lane straight segment of uniform asphalt-like surface, with clearly visible lateral lane boundaries, a dashed central lane separator, flat geometry, and no junctions, special structures, or temporary road structures. Total road width is `0.50 m`, lane width per direction is `0.245 m`, and total road length is `10 m`. The road gradient is zero. The friction coefficient of the simulated surface is `1.0` (must be read from the Gazebo SDF `<surface><friction>` block of the road geom in `src/cobraflex/worlds/odd1_straight_road.world` — or in the world that `odd1_straight_road` resolves to in your launch configuration; for example, `empty.world` / `obstacles.world` / `test_world.sdf` currently shipped under `src/cobraflex/worlds/`).
+The drivable area is a two-lane straight segment of uniform asphalt-like surface, with clearly visible lateral lane boundaries, a dashed central lane separator, flat geometry, and no junctions, special structures, or temporary road structures. Total road width is `0.50 m`, lane width per direction is `0.245 m`, and total road length is `10 m`. The road gradient is zero. The friction coefficient of the simulated surface is `TBD-Q1` (must be read from the Gazebo SDF `<surface><friction>` block of the road geom in `src/cobraflex/worlds/odd1_straight_road.world` — or in the world that `odd1_straight_road` resolves to in your launch configuration; for example, `empty.world` / `obstacles.world` / `test_world.sdf` currently shipped under `src/cobraflex/worlds/`).
 
 ### 4.3 Environmental conditions
 
@@ -84,7 +83,7 @@ Every quantity here will eventually appear in an SR rationale (especially in
 SR-003 for TTLC, SR-004 for v_max, SR-006 for actuator smoothness). Be precise.
 -->
 
-The forward speed range under nominal operation is `[0, ODD-1.V_MAX]` with `ODD-1.V_MAX = 0.5 m/s` (consistent with SR-004 on straight sections). The local path curvature is `κ ≡ 0` everywhere within ODD-1 (straight road). The lateral acceleration that the policy is expected to command is bounded by `ODD-1.A_LAT_MAX = 9.81` (must be derived from the friction coefficient and the velocity envelope). The control cycle nominal period is `ODD-1.T_CTRL = 50 ms` (20 Hz). The end-to-end nominal control latency between observation and applied command is assumed to be no greater than `ODD-1.LATENCY_NOMINAL = 50 ms` (this number is also referenced by SR-001 in the rationale of `d_max`).
+The forward speed range under nominal operation is `[0, ODD-1.V_MAX]` with `ODD-1.V_MAX = 0.5 m/s` (consistent with SR-004 on straight sections). The local path curvature is `κ ≡ 0` everywhere within ODD-1 (straight road). The lateral acceleration that the policy is expected to command is bounded by `ODD-1.A_LAT_MAX = TBD-Q2` (must be derived from the friction coefficient and the velocity envelope). The control cycle nominal period is `ODD-1.T_CTRL = 50 ms` (20 Hz). The end-to-end nominal control latency between observation and applied command is assumed to be no greater than `ODD-1.LATENCY_NOMINAL = 50 ms` (this number is also referenced by SR-001 in the rationale of `d_max`).
 
 ### 4.6 Sensor and actuation interfaces
 
@@ -100,11 +99,11 @@ ODD-1 explicitly excludes any non-zero curvature, any deviation from uniform ill
 
 The system is considered to be exiting ODD-1 when the absolute lateral offset of the vehicle exceeds `0.1225 m` (the geometric edge of the lane, equal to lane width over two), when the forward speed exceeds `ODD-1.V_MAX`, when the simulator reports a contact event with the road edge, or when an episode termination condition fires. The policy is not designed to recover the system once it has exited ODD-1; recovery, if attempted at all, is the responsibility of the cage in emergency mode, governed by Cage Rule C-05 and Safety Requirements SR-005, SR-007, SR-008.
 
-The "drivable corridor" boundary used by the simulator's episode-termination logic is `0.1225`. This must be reconciled with the geometric lane edge above; if the two differ, the rationale for the difference must be documented here.
+The "drivable corridor" boundary used by the simulator's episode-termination logic is `TBD-Q3`. This must be reconciled with the geometric lane edge above; if the two differ, the rationale for the difference must be documented here.
 
 ### 4.9 Parameter summary for ODD-1
 
-See §9 master parameter table for the consolidated tabular form. The parameters declared in this section are: `ODD-1.LANE_WIDTH`, `ODD-1.ROAD_WIDTH`, `ODD-1.ROAD_LENGTH`, `ODD-1.GRADIENT`, `ODD-1.FRICTION` (1.0), `ODD-1.V_MAX`, `ODD-1.KAPPA_MAX`, `ODD-1.A_LAT_MAX` (9.81), `ODD-1.T_CTRL`, `ODD-1.LATENCY_NOMINAL`, `ODD-1.STALENESS_MAX`, `ODD-1.LANE_EDGE`, `ODD-1.CORRIDOR_EDGE` (0.1225).
+See §9 master parameter table for the consolidated tabular form. The parameters declared in this section are: `ODD-1.LANE_WIDTH`, `ODD-1.ROAD_WIDTH`, `ODD-1.ROAD_LENGTH`, `ODD-1.GRADIENT`, `ODD-1.FRICTION` (TBD-Q1), `ODD-1.V_MAX`, `ODD-1.KAPPA_MAX`, `ODD-1.A_LAT_MAX` (TBD-Q2), `ODD-1.T_CTRL`, `ODD-1.LATENCY_NOMINAL`, `ODD-1.STALENESS_MAX`, `ODD-1.LANE_EDGE`, `ODD-1.CORRIDOR_EDGE` (TBD-Q3).
 
 ---
 
@@ -248,17 +247,17 @@ changes, update it once here and propagate via the IDs.
 | `*.ROAD_WIDTH` | Total road width (m) | 0.50 | 0.50 | 0.50 | 0.50 | Gazebo world files |
 | `*.ROAD_LENGTH` | Total road length (m) | 10 | 10 | TBD-Q8 | TBD-Q8 | Gazebo world files |
 | `*.GRADIENT` | Road gradient | 0 | 0 | 0 | 0 | Map convention |
-| `*.FRICTION` | Surface friction coeff. | 1.0 | 1.0 | 1.0 | 1.0 | Gazebo SDF `<surface><friction>` of road geom |
+| `*.FRICTION` | Surface friction coeff. | TBD-Q1 | TBD-Q1 | TBD-Q1 | TBD-Q1 | Gazebo SDF `<surface><friction>` of road geom |
 | `*.V_MAX_STRAIGHT` | Max forward speed, straight (m/s) | 0.5 | 0.5 | 0.5 | 0.5 | SR-004; platform envelope |
 | `*.V_MAX_CURVE` | Max forward speed, curve (m/s) | n/a | n/a | 0.25 | 0.25 | SR-004; platform envelope |
 | `*.K_KAPPA` | Curvature speed-decay coeff. | n/a | n/a | 0.3 | 0.3 | SR-004 |
 | `*.KAPPA_MAX` | Max local curvature (1/m) | 0 | 0 | TBD-Q9 | TBD-Q9 | Gazebo world geometry (`<link>` primitives) |
-| `*.A_LAT_MAX` | Max commanded lateral accel. (m/s²) | 9.81 | 9.81 | TBD-Q10 | TBD-Q10 | Derived from FRICTION + V_MAX |
+| `*.A_LAT_MAX` | Max commanded lateral accel. (m/s²) | TBD-Q2 | TBD-Q2 | TBD-Q10 | TBD-Q10 | Derived from FRICTION + V_MAX |
 | `*.T_CTRL` | Control cycle period (ms) | 50 | 50 | 50 | 50 | Implementation |
 | `*.LATENCY_NOMINAL` | Nominal control latency (ms) | 50 | 50 | 50 | 50 | Implementation; SR-001 rationale |
 | `*.STALENESS_MAX` | Max admissible state staleness (ms) | 200 | 200 | 200 | 200 | SR-007 |
 | `*.LANE_EDGE` | Geometric lane edge (m, from centre) | 0.1225 | 0.1225 | 0.1225 | 0.1225 | LANE_WIDTH / 2 |
-| `*.CORRIDOR_EDGE` | Drivable-corridor edge (m, from centre) | 0.1225 | 0.1225 | 0.1225 | 0.1225 | Episode-termination logic |
+| `*.CORRIDOR_EDGE` | Drivable-corridor edge (m, from centre) | TBD-Q3 | TBD-Q3 | TBD-Q3 | TBD-Q3 | Episode-termination logic |
 | `*.STUCK_TIMEOUT` | Stuck criterion timeout (s) | n/a | n/a | TBD-Q11 | TBD-Q11 | Episode-termination logic |
 | `*.OBS_DIM` | Observation vector dimension | 5 | 8 | 5 | 8 | Implementation |
 | `*.ACT_DIM` | Action vector dimension | 1 | 1 | 2 | 2 | Implementation |
@@ -283,9 +282,9 @@ with an explicit value.
 
 | Tag | Question | Owner | Target close | Resolution |
 | --- | -------- | ----- | ------------ | ---------- |
-| TBD-Q1 | What friction coefficient is configured in the Gazebo SDF `<surface><friction>` block of the road geom in `src/cobraflex/worlds/odd1_straight_road.world` (or its current alias under `src/cobraflex/worlds/`)? Is the value identical across the ODD-1, ODD-3 and ODD-4 world files? | SS | D11 PM | 1.0 (src/cobraflex/worlds/{empty.world,obstacles.world,test_world.sdf} all use `<surface><friction><ode/></friction></surface>` (empty ODE block); Gazebo ODE defaults mu1=mu2=1.0 when no explicit value is set.) -- 2026-05-14 [Value inferred from Gazebo default rather than from an explicit <mu> tag. If a future world introduces an explicit <mu>, re-read and re-run close_odd_tbds.py.] |
-| TBD-Q2 | What is the maximum commanded lateral acceleration in ODD-1, derived from FRICTION and V_MAX? | SS | D11 PM | 9.81 (Derived: TBD-Q1 * g = 1.0 * 9.81 m/s^2. Upper bound from the no-skid Coulomb limit; the policy's actually-commanded a_lat in ODD-1 is far smaller because curvature is zero.) -- 2026-05-14 [Operational a_lat in ODD-1 is bounded by the steering geometry of the bicycle model, not by this Coulomb ceiling. The figure is the physical envelope, not a typical value.] |
-| TBD-Q3 | What is the numerical "drivable-corridor edge" used by the simulator's episode-termination logic? Why does it differ from LANE_EDGE? | SS | D11 PM | 0.1225 (src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py L93: `terminated = abs(track_state.ey) > (self.lane_width * 0.5)` with lane_width = 0.245 m from src/cobraflex_rl/config/centerline.yaml.) -- 2026-05-14 [CORRIDOR_EDGE == LANE_EDGE = LANE_WIDTH/2 = 0.1225 m. The env terminates the episode exactly at the geometric lane edge; no separate corridor margin is configured. The ODD-Spec note 'if the two differ, document the rationale' resolves to 'they do not differ'.] |
+| TBD-Q1 | What friction coefficient is configured in the Gazebo SDF `<surface><friction>` block of the road geom in `src/cobraflex/worlds/odd1_straight_road.world` (or its current alias under `src/cobraflex/worlds/`)? Is the value identical across the ODD-1, ODD-3 and ODD-4 world files? | SS | D11 PM | |
+| TBD-Q2 | What is the maximum commanded lateral acceleration in ODD-1, derived from FRICTION and V_MAX? | SS | D11 PM | |
+| TBD-Q3 | What is the numerical "drivable-corridor edge" used by the simulator's episode-termination logic? Why does it differ from LANE_EDGE? | SS | D11 PM | |
 | TBD-Q4 | What are the lighting-degradation parameters and observation-noise σ in `odd2_nominal_adverse`? | SS | D11 PM | |
 | TBD-Q5 | What are the latency, jitter, and actuation-imperfection parameters in `odd2_adverse_with_latency`? | SS | D11 PM | |
 | TBD-Q6 | What are the obstacle geometry, position distribution, and quantity in `odd2_adverse_with_obstacle`? | SS | D11 PM | |

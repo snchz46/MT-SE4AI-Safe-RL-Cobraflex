@@ -34,13 +34,15 @@ Absence of orphans on either side of this chain is verified mechanically before 
 ```text
 .
 ├── docs/           Living engineering documents (HARA, SRS, Cage Spec, ...)
-├── cage/           Safety cage implementation as ROS2 node + rules
+├── cage/           Safety cage implementation (pure-Python logic + ROS2 helpers)
 ├── policy/         RL training pipeline and policy ROS2 node
 ├── scenarios/      Scenario library (nominal, edge, perturbed)
-├── experiments/    Experimental data and analysis scripts
-├── tests/           Unit and integration tests
-├── tools/          Verification tooling (traceability check, etc.)
-└── manuscript/     Thesis manuscript and figures
+├── experiments/    Experimental data, calibration campaign, ODD inspection
+├── tests/          Unit and integration tests
+├── tools/          Verification tooling (traceability check, calibration ingest, ...)
+├── manuscript/     Thesis manuscript, figures and figure sources
+├── scripts/        Workspace setup / mesh download helpers
+└── src/            ROS2 colcon workspace (cobraflex + cobraflex_rl)
 ```
 
 Every top-level subdirectory contains its own `README.md` explaining its internal organisation and the conventions specific to it.
@@ -109,6 +111,67 @@ This script verifies that:
 - There are no orphan artefacts on either side.
 
 > ⚠️ This is a **hard gate**: if the script fails, the Gate review cannot proceed.
+
+---
+
+## ROS2 Workspace (`src/`)
+
+The `src/` directory is a canonical [colcon](https://colcon.readthedocs.io/) workspace containing the ROS2 packages that drive the simulator and the physical platform:
+
+| Package | Role |
+| ------- | ---- |
+| `src/cobraflex` | URDF/SDF of the 1:14 platform, Gazebo worlds (`empty.world`, `obstacles.world`, `test_world.sdf`), launch files, perception/control nodes, rviz layouts |
+| `src/cobraflex_rl` | RL training infrastructure, gymnasium-Gazebo-ROS2 environment wrapper, training launch files |
+
+The cage's pure-Python safety logic lives **outside** this workspace at top-level `cage/` so that the safety-side test suite (`pytest cage/tests/`) can run without a ROS2 toolchain. The two sides connect at runtime via the ROS2 helpers under `cage/ros2/` (M-1 / M-2 calibration loggers) which can be invoked from a ROS2 environment without modifying the workspace.
+
+### Prerequisites
+
+- Ubuntu 22.04 (recommended) or compatible Linux with ROS2 Humble
+- `ros-humble-desktop`, `ros-humble-gazebo-ros-pkgs`, `python3-colcon-common-extensions`
+- `rosdep` initialised: `sudo rosdep init && rosdep update`
+- Python 3.10+ (for the policy training side; install via `pip install -r requirements.txt`)
+
+### One-time setup
+
+```bash
+# Resolve ROS2 dependencies declared in package.xml
+cd <repo-root>
+rosdep install --from-paths src --ignore-src -r -y
+
+# Fetch large meshes excluded from git (87 MB lidar visual)
+./scripts/download_meshes.sh
+```
+
+### Build
+
+```bash
+source /opt/ros/humble/setup.bash
+colcon build --symlink-install
+source install/setup.bash
+```
+
+`--symlink-install` makes Python edits visible without rebuilding. Build artefacts (`build/`, `install/`, `log/`) are git-ignored.
+
+### Launch examples
+
+```bash
+# Bring up the cobraflex platform in a Gazebo world
+ros2 launch cobraflex bringup.launch.py
+
+# Run an RL training episode
+ros2 launch cobraflex_rl train.launch.py
+
+# Calibration logger for M-2 (control latency)
+ros2 run cage_calibration m2_latency_logger \
+    --ros-args -p output_csv:=/tmp/m2_latency.csv -p duration_s:=120
+```
+
+The `cage_calibration` package above is **not yet** part of `src/` — the M-1 / M-2 logger templates currently live as standalone scripts under `cage/ros2/`. They can be invoked via `python -m cage.ros2.m2_latency_logger` from a ROS2-sourced environment, or promoted to a proper colcon package when needed (see `cage/ros2/README.md`).
+
+### Third-party drivers
+
+`sllidar_ros2` (Slamtec) and `zed-ros2-wrapper` (Stereolabs) are intentionally **not** tracked in this repository (decision D-32). Install them externally if your physical setup needs them, either via `apt`/`rosdep` or by cloning into `src/` alongside the tracked packages (in which case they should be added to `.gitignore` or as git submodules).
 
 ---
 

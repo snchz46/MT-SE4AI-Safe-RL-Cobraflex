@@ -405,4 +405,81 @@ Third-party drivers **deferred** (not brought into this repo): `sllidar_ros2` (S
 - Reconcile Cap. 3 §3.6.1's reference to "Gazebo" with the actual simulator declared in `src/cobraflex/worlds/` (Gazebo .world / .sdf) and in the ODD-Spec (which currently says "MuJoCo material spec" — this label may need correction during the ODD-Spec TBD closure).
 
 ---
+
+## [14.05.2026] — Post-integration follow-ups: heavy mesh, MuJoCo→Gazebo, README build instructions
+
+**Document(s) affected:** `.gitignore`, `docs/08_odd_specification.md`, `experiments/odd_inspection/odd_tbds.yaml`, `experiments/odd_inspection/README.md`, `README.md`, new `scripts/download_meshes.sh`, new `src/cobraflex/meshes/README.md`.  
+**Phase:** F1.  
+**Gate context:** before G1.  
+**Author:** Samuel Sanchez.
+
+Three coordinated follow-ups closing the gaps identified at the end of the `src/` integration entry above.
+
+*Follow-up 1 — Heavy mesh `rplidar-a2m4-r1.stl` (87 MB) untracked.* The Slamtec RPLidar A2 visualisation mesh is the single biggest file in the repository at 87 MB out of the 110 MB total of `src/cobraflex/`. The file is upstream-distributed by Slamtec, does not change with the thesis work, and exceeds the 50 MB soft-limit that GitHub flags. Action taken:
+
+- `git rm --cached src/cobraflex/meshes/rplidar-a2m4-r1.stl` to stop tracking; the file remains on the working tree for the local build and continues to be referenced by the URDF.
+- `.gitignore` extended with `src/cobraflex/meshes/rplidar-a2m4-r1.stl`.
+- `scripts/download_meshes.sh` created as the canonical mechanism for fetching the mesh on a fresh clone. The current implementation is a stub that prints clear manual-acquisition instructions because the Slamtec CAD URLs are not publicly stable; when a stable mirror is decided (a thesis-controlled release artefact, an S3 bucket, etc.), the URL slot in the script is filled in and `curl` does the rest. The script is idempotent and skips files already present at expected size.
+- `src/cobraflex/meshes/README.md` documents which meshes are tracked (the three CobraFlex CAD parts at ~23 MB total + the 78 KB ZED Mini reference) and which are externally-obtained (the RPLidar mesh), with explicit instructions and rationale.
+
+The mesh is still in the repository's git history at commit 029ad28 ("F1: added ROS src folders for cobraflex and cobraflex_rl"). Removing it from history requires `git filter-repo` or equivalent and is a destructive operation deferred until publication, when the repository will be reviewed for size and external-distribution cleanliness in one pass.
+
+*Follow-up 2 — Simulator label "MuJoCo" → "Gazebo".* The Phase 0 ODD-Spec was drafted before the simulator choice was finalised and referred to "MuJoCo material specification" / "MuJoCo map files" / "MuJoCo map geometry" / "MuJoCo `<geom>`". The actual simulator now packaged in `src/cobraflex/worlds/` is Gazebo (`.world` / `.sdf` files with the SDFormat `<surface><friction>` block), consistent with decision D-12 (§3.6.1 of Chapter 3). The label "MuJoCo" is replaced throughout the ODD-Spec body (§4.1, §4.2, §9 master parameter table, §11 TBD-Q1 row), in the YAML template `experiments/odd_inspection/odd_tbds.yaml` (inline examples), and in the README of `experiments/odd_inspection/` (workflow + Sources-by-TBD-group table). The TBD parameter values themselves are unchanged — only the *source* annotations are corrected. `grep -rn "MuJoCo" docs/ experiments/odd_inspection/` returns zero matches post-edit.
+
+*Follow-up 3 — Repository README updated with ROS2 build instructions.* The top-level `README.md` previously had no mention of the `src/` workspace. Added: a row for `src/` and `scripts/` in the Repository Structure table; a new "ROS2 Workspace (`src/`)" section between "Identifier Conventions" and "Reproducibility" with:
+
+- Package roster (cobraflex, cobraflex_rl) with a brief role description per package.
+- Prerequisites (Ubuntu 22.04, ROS2 Humble, gazebo-ros-pkgs, colcon, rosdep).
+- One-time setup commands (`rosdep install --from-paths src --ignore-src -r -y` and `./scripts/download_meshes.sh`).
+- Build commands (`source /opt/ros/humble/setup.bash && colcon build --symlink-install && source install/setup.bash`).
+- Launch examples for bringup, training, and the M-2 calibration logger.
+- A note on the deferred third-party drivers (`sllidar_ros2`, `zed-ros2-wrapper`) referencing decision D-32.
+
+The intention is that an evaluator following the README from "Repository Structure" to "ROS2 Workspace" can clone, build, and run a launch file in one sequence, without re-reading the full Chapter 6 of the manuscript.
+
+*Verification.*
+
+- `python tools/check_traceability.py` → all checks PASS, 0 warnings.
+- `python -m pytest` (from root) → 13 passed; only `cage/tests/` discovered.
+- `python tools/apply_calibration.py` → exit 0, 5 × not_executed (unchanged).
+- `python tools/close_odd_tbds.py` → exit 2, "nothing to do" (unchanged, YAML still null).
+- `./scripts/download_meshes.sh` on a host that already has the file → `✓ rplidar-a2m4-r1.stl already present (91076984 bytes)`. The idempotent branch works.
+- `grep -rn "MuJoCo" docs/ experiments/odd_inspection/ src/cobraflex/meshes/README.md` → no matches.
+
+---
+
+## [14.05.2026] — ODD-Spec TBD closure (3 of 12 at F1; remaining 9 deferred per phase)
+
+**Document(s) affected:** `docs/08_odd_specification.md` (bumped 0.1 → 0.2), `experiments/odd_inspection/odd_tbds.yaml`, `docs/DECISIONS.md` (new D-33).  
+**Phase:** F1.  
+**Gate context:** before G1.  
+**Author:** Samuel Sanchez.
+
+Phase 1 partial closure of the ODD-Spec TBDs against the actual `src/cobraflex` and `src/cobraflex_rl` workspace integrated in the preceding commit. Three TBDs resolved by inspection of the simulator files; the remaining nine are explicitly deferred to later phases per decision D-33.
+
+*Resolved at F1.*
+
+- **TBD-Q1 FRICTION = 1.0**. All three world files under `src/cobraflex/worlds/` (`empty.world`, `obstacles.world`, `test_world.sdf`) use the empty Gazebo SDF block `<surface><friction><ode/></friction></surface>`. Gazebo ODE defaults `mu1 = mu2 = 1.0` when no explicit `<mu>`/`<mu2>` is specified, so the effective surface friction on the simulated road is 1.0. Documented as such in the YAML `source` field with a note flagging that the value comes from a Gazebo default rather than an explicit declaration.
+- **TBD-Q2 A_LAT_MAX (ODD-1) = 9.81 m/s²**. Derived: `μ · g = 1.0 × 9.81`. This is the Coulomb no-skid ceiling on the lateral acceleration the policy can command without losing traction; the actually-commanded a_lat in ODD-1 is much smaller because curvature is zero and the bicycle-model steering geometry dominates.
+- **TBD-Q3 CORRIDOR_EDGE = 0.1225 m**. From `src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py` line 93: `terminated = abs(track_state.ey) > (self.lane_width * 0.5)` with `lane_width = 0.245 m` from `src/cobraflex_rl/config/centerline.yaml`. Therefore `CORRIDOR_EDGE = LANE_WIDTH / 2 = 0.1225 m`, which equals `LANE_EDGE`; the ODD-Spec note "if the two differ, document the rationale" resolves to "they do not differ".
+
+*Deferred per phase.* Q4–Q7 and Q12 (ODD-2 / ODD-4 stressor profiles) deferred to F4 because the scenario YAMLs do not yet exist under `src/cobraflex_rl/config/` — they will be specified jointly with the Scenario Library construction. Q8–Q11 deferred to F2 / F3 because the `odd3_curvy_loop` Gazebo world is not yet implemented (only `empty.world`, `obstacles.world`, `test_world.sdf` exist, and the current `centerline.yaml` is a 3 m straight). The deferral is registered as decision D-33 in `docs/DECISIONS.md` with a per-TBD rationale and target phase.
+
+*Tooling executed.* `python tools/close_odd_tbds.py --apply` substituted `TBD-Q1 → 1.0`, `TBD-Q2 → 9.81`, `TBD-Q3 → 0.1225` in the body of the ODD-Spec (§4.2, §4.5, §4.8, §4.9 prose; §9 master parameter table; §11 resolution rows) and left a `.bak` of the pre-edit document next to the original. The remaining `TBD-Q4..Q12` literals stay in the document as designed; re-running the script after later closures is idempotent.
+
+*Versioning.* The ODD-Spec moves from v0.1 (Phase 0 draft) to v0.2 (F1 partial closure). The cover-block status changes from *"DRAFT — contains TBD values that must be filled before Gate 1"* to *"DRAFT — 3 of 12 TBDs resolved at F1 (Q1, Q2, Q3); remaining 9 explicitly deferred per phase (Q4–Q7, Q12 to F4; Q8–Q11 to F2/F3) — see decision D-33"*. The §0.1 change-log row for v0.2 records the substantive change.
+
+*Verification.*
+
+- `python tools/check_traceability.py` → all checks PASS, 0 warnings (no traceability artefacts touched; the ODD-Spec is not part of the traceability graph as a node, only as an upstream parameter source cited from the SRS).
+- `python -m pytest` → 13 passed.
+- `grep -n "TBD-Q[123]\b" docs/08_odd_specification.md` → only matches inside the §0.1 change log row and the §11 resolution rows; zero remaining TBD-Q1/Q2/Q3 literals in the body. Q4–Q12 still present with their original counts.
+- ODD-Spec v0.2 file size: 28.4 KB (up from 27.2 KB v0.1, due to the resolution-column text in §11).
+
+*Open items propagated.*
+
+- M-4 (speed-vs-curvature, `apply_calibration.py` decision rule for SR-004) inherits the Q8/Q9 deferral: it cannot run at F1 because `odd3_curvy_loop` is not yet built. M-4 re-scheduled together with ODD-3 closure at F2/F3 entry.
+- The Phase 1 closure criterion of `experiments/odd_inspection/README.md` is now satisfied: every TBD is either *resolved* (Q1, Q2, Q3) or *explicitly deferred via a registered decision* (Q4–Q12 via D-33).
+
+---
 <!-- Subsequent entries appended below -->

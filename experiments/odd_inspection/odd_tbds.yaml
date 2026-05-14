@@ -20,21 +20,21 @@ tbds:
 
   TBD-Q1:
     description: "Surface friction coefficient (mu_slide) of the simulated road."
-    value: null            # e.g. 1.0
-    source: ""             # e.g. "src/cobraflex/worlds/empty.world: <surface><friction><ode><mu>1.0</mu>"
-    notes: ""
+    value: 1.0
+    source: "src/cobraflex/worlds/{empty.world,obstacles.world,test_world.sdf} all use `<surface><friction><ode/></friction></surface>` (empty ODE block); Gazebo ODE defaults mu1=mu2=1.0 when no explicit value is set."
+    notes: "Value inferred from Gazebo default rather than from an explicit <mu> tag. If a future world introduces an explicit <mu>, re-read and re-run close_odd_tbds.py."
 
   TBD-Q2:
     description: "Max commanded lateral acceleration in ODD-1 (m/s^2), bounded by FRICTION * g."
-    value: null            # e.g. 9.81 (= TBD-Q1 * 9.81)
-    source: ""             # e.g. "Derived: TBD-Q1 * 9.81 m/s^2"
-    notes: ""
+    value: 9.81
+    source: "Derived: TBD-Q1 * g = 1.0 * 9.81 m/s^2. Upper bound from the no-skid Coulomb limit; the policy's actually-commanded a_lat in ODD-1 is far smaller because curvature is zero."
+    notes: "Operational a_lat in ODD-1 is bounded by the steering geometry of the bicycle model, not by this Coulomb ceiling. The figure is the physical envelope, not a typical value."
 
   TBD-Q3:
     description: "Drivable-corridor edge (m, from centre) used by episode-termination logic."
-    value: null            # e.g. 0.20 (5 cm beyond LANE_EDGE = 0.1225 m)
-    source: ""             # e.g. "env_wrapper.py: done = abs(obs.lateral_offset) > 0.20"
-    notes: "Justify why this differs from LANE_EDGE (0.1225 m) if it does."
+    value: 0.1225
+    source: "src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py L93: `terminated = abs(track_state.ey) > (self.lane_width * 0.5)` with lane_width = 0.245 m from src/cobraflex_rl/config/centerline.yaml."
+    notes: "CORRIDOR_EDGE == LANE_EDGE = LANE_WIDTH/2 = 0.1225 m. The env terminates the episode exactly at the geometric lane edge; no separate corridor margin is configured. The ODD-Spec note 'if the two differ, document the rationale' resolves to 'they do not differ'."
 
   TBD-Q4:
     description: "Stressor parameters of odd2_nominal_adverse (lighting variance, marking contrast, perception noise sigma)."

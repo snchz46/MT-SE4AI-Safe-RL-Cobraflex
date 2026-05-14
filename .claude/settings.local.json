@@ -24,7 +24,9 @@
       "Bash(python tools/close_odd_tbds.py > /tmp/odd_dryrun.out 2>&1; echo \"EXITCODE=$?\"; head -3 /tmp/odd_dryrun.out)",
       "Bash(git -C '/e/CAST/Cobra Flex Drivers & SW/src/__TRACKED_VAR__' remote -v)",
       "Bash(rsync -a --exclude=.vscode/ --exclude=.pytest_cache/ --exclude=__pycache__/ '--exclude=*.pyc' '--exclude=*.pyo' --exclude=build/ --exclude=install/ --exclude=log/ --exclude=.idea/ '--exclude=*.egg-info/' '/e/CAST/Cobra Flex Drivers & SW/src/cobraflex' '/e/CAST/Cobra Flex Drivers & SW/src/cobraflex_rl' src/)",
-      "Bash(python -m pytest --collect-only -q)"
+      "Bash(python -m pytest --collect-only -q)",
+      "Bash(python -m pytest)",
+      "Bash(python tools/close_odd_tbds.py --apply)"
     ]
   }
 }

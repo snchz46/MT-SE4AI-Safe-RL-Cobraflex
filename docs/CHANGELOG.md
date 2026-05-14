@@ -367,4 +367,42 @@ Downstream: no canonical artefacts (Hazard Register, SRS, cage.yaml, traceabilit
 `pytest cage/tests/` → 13 passed.
 
 ---
+
+## [14.05.2026] — ROS2 workspace integration under `src/` (cobraflex + cobraflex_rl)
+
+**Document(s) affected:** root structure (new `src/` directory), `.gitignore`, `pytest.ini` (new), `docs/DECISIONS.md`.  
+**Phase:** F1.  
+**Gate context:** before G1 (infrastructure prerequisite for closing ODD-Spec TBDs).  
+**Author:** Samuel Sanchez.
+
+Integrated the ROS2 packages of the author's prior simulator + physical-platform stack into this repository under the canonical colcon workspace layout. Tracked packages:
+
+- **`src/cobraflex`** — URDF/SDF of the CobraFlex 1:14 platform, Gazebo worlds (`empty.world`, `obstacles.world`, `test_world.sdf`), launch files, perception/control nodes, configs, rviz layouts, mesh visualisations.
+- **`src/cobraflex_rl`** — RL training infrastructure, gymnasium-Gazebo-ROS2 interface, launch files for training campaigns.
+
+Source: `E:\CAST\Cobra Flex Drivers & SW\src` at the working-tree snapshot of 14.05.2026. The fresh-copy integration mode is registered as decision D-32. Files filtered out during the copy: `.vscode/`, `.pytest_cache/`, `__pycache__/`, `build/`, `install/`, `log/`, `*.egg-info/`, `*.pyc`. Total: 65 files (51 in cobraflex, 14 in cobraflex_rl), 110 MB total of which 87 MB is the lidar visualisation mesh `rplidar-a2m4-r1.stl`.
+
+Third-party drivers **deferred** (not brought into this repo): `sllidar_ros2` (Slamtec, https://github.com/Slamtec/sllidar_ros2.git, HEAD 3430009) and `zed-ros2-wrapper` (Stereolabs, https://github.com/stereolabs/zed-ros2-wrapper.git, HEAD 0719912). The decision on whether to add these as git submodules or to install them via `rosdep` is left for a later session once the actual physical-platform experiments are scoped.
+
+*Tooling adjustments.*
+
+- `.gitignore` extended with per-package ROS2 build patterns (`src/*/build/`, `src/*/install/`, `src/*/log/`) and with the generated rosidl bindings glob (`src/*/msg/_*.py`, `src/*/srv/_*.py`, `src/*/action/_*.py`).
+- `pytest.ini` added at the repo root to constrain `pytest` auto-discovery to `cage/tests`. Without this, running `pytest` from the root would attempt to collect the ament_python tests under `src/cobraflex/test/` (`test_copyright.py`, `test_flake8.py`, `test_pep257.py`) and fail with `ModuleNotFoundError: No module named 'ament_pep257'` because the ament test infrastructure is not part of the safety-side dev environment. The ROS2 tests inside `src/` continue to run via `colcon test` from a ROS2 environment, as intended.
+
+*Verification.*
+
+- `python tools/check_traceability.py` → all checks PASS, 0 warnings (no traceability artefacts touched).
+- `python -m pytest` (from root, after `pytest.ini`) → 13 passed; only `cage/tests/` discovered.
+- `python -m pytest cage/tests/` → 13 passed (explicit invocation also works).
+- `python tools/apply_calibration.py` → exit 0, "not_executed" × 5 (unchanged).
+- No internal `.git`/`build`/`install`/`log`/`__pycache__`/`.pytest_cache` directories under `src/` after the copy (verified by `find`).
+
+*Open follow-ups.*
+
+- Decide whether `src/cobraflex/meshes/rplidar-a2m4-r1.stl` (87 MB) stays in git or moves to Git LFS / external download. Acceptable for now but worth revisiting before any externally-published version of the repo.
+- Decide submodule vs. rosdep for `sllidar_ros2` and `zed-ros2-wrapper` once physical-platform scope is fixed.
+- Update README with the `colcon build` workflow when the supervisor needs the buildable-from-clone path documented (deferred to F2 entry — Phase 2 starts working against the cage_node inside the ROS2 graph).
+- Reconcile Cap. 3 §3.6.1's reference to "Gazebo" with the actual simulator declared in `src/cobraflex/worlds/` (Gazebo .world / .sdf) and in the ODD-Spec (which currently says "MuJoCo material spec" — this label may need correction during the ODD-Spec TBD closure).
+
+---
 <!-- Subsequent entries appended below -->

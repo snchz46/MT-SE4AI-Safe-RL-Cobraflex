@@ -1,0 +1,17 @@
+total_timesteps: 50000
+learning_rate: 0.0003
+gamma: 0.99
+n_steps: 1024
+batch_size: 64
+device: cpu
+max_episode_steps: 400
+control_dt: 0.10
+fixed_speed: 0.20
+model_path: cobraflex_ppo_lane
+
+reward:
+  lateral_error: 2.5
+  heading_error: 0.75
+  steer_delta: 0.10
+  forward_progress: 1.0
+  termination: 25.0

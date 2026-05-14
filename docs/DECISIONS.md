@@ -69,6 +69,7 @@ consistent with the chapters.
 | D-29 | SR-CL-A requires ≥25 runs per scenario family for statistical discrimination | §4.7.1 | CONFIRMED |
 | D-30 | A negative verdict on any SR-CL-A invalidates the global verdict of the thesis on the system | §4.7.1 | CONFIRMED |
 | D-31 | Deliberate exclusion of non-functional AI-specific hazard families (adversarial attacks, distribution shift, explainability, dataset bias, low-magnitude brittleness) from the F1 Hazard Register | §4.9 | CONFIRMED |
+| D-32 | Integration of the ROS2 workspace under `src/` by fresh copy of `cobraflex` + `cobraflex_rl`; third-party drivers (`sllidar_ros2`, `zed-ros2-wrapper`) deferred | infrastructure | CONFIRMED |
 
 ---
 
@@ -956,6 +957,26 @@ documents time invested in framework versus time invested in technique.
 **Rationale.** The thesis contribution is the methodological framework, demonstrated on a bounded lane-following case. Generalisation to the full AI-hazard space is a research agenda in itself and is acknowledged in Chapter 12 as future work. The exclusion preserves analytical depth on the hazards that are in scope, which is preferable to shallow treatment of a larger set.
 
 **Consequences.** §4.9 of the manuscript declares the limitation and references this decision. Chapter 12 mentions the families as natural extension axes. The argument of relative completeness in §4.7.2 explicitly says "relative to the bounded scope" and not "absolute", with this decision as the principal qualifier.
+
+---
+
+### D-32 — ROS2 workspace integrated under `src/` by fresh copy
+
+| Field | Value |
+| --- | --- |
+| Section | infrastructure (not a manuscript section) |
+| Status | CONFIRMED |
+| Date | F1 (14.05.2026) |
+
+**Decision.** The ROS2 packages of the simulator and physical-platform stack —previously developed by the author in `E:\CAST\Cobra Flex Drivers & SW\src`— are integrated into this repository under a top-level `src/` directory following the canonical colcon workspace layout. Two of the author's own packages are tracked: `src/cobraflex` (URDF/SDF, launch files, perception nodes, configs) and `src/cobraflex_rl` (RL training infrastructure, gymnasium-Gazebo-ROS2 interface). Two third-party driver packages —`sllidar_ros2` (Slamtec) and `zed-ros2-wrapper` (Stereolabs)— are deliberately **not** brought into this repository; they are deferred for a later decision on whether to add them as git submodules pinned to specific upstream commits or to manage them via `rosdep`.
+
+The copy is a *fresh* copy (no `git subtree` / no preserved upstream git history); the prior repo remains the canonical history for pre-thesis development and is referenced by path in this decision and in the CHANGELOG entry of the integration commit.
+
+**Alternatives considered and rejected.** *Git submodule of the entire prior repo*, rejected because the prior repo mixes the author's own work with several third-party driver checkouts; vendoring those drivers as nested submodules would force the supervisor to run `git submodule update --init --recursive` and would risk silent breakage when upstream pushes incompatible changes. *Git subtree*, rejected for the same reason plus the operational friction of subtree pull/push for an evaluator who is not expected to be git-savvy. *Keep src/ outside the repo and document the path*, rejected because thesis reproducibility benefits from a single `git clone` producing a buildable workspace.
+
+**Rationale.** A thesis repository is a one-shot reproducibility artefact, not a living monorepo. Optimising for "supervisor clones once, builds once, runs" outweighs the value of preserving granular pre-thesis git history. Third-party drivers are deferred because they may or may not be needed depending on which physical-platform experiments end up in scope; pulling them in now would add ~150 MB of upstream code that the thesis does not modify.
+
+**Consequences.** The repository grows from ~52 KB to roughly 110 MB, dominated by `src/cobraflex/meshes/rplidar-a2m4-r1.stl` (87 MB visualisation mesh; the actual cobraflex work is < 25 MB). `pytest` discovery is constrained to `cage/tests` via a new `pytest.ini` at the root so that the ament_python tests under `src/cobraflex/test/` do not pollute the safety-side test suite (they require `ament_pep257`/`ament_flake8`/`ament_copyright` which are part of the ROS2 toolchain and not in the safety-side dev environment). `.gitignore` is extended with per-package ROS2 patterns (`src/*/build/`, `src/*/install/`, `src/*/log/`, and generated msg/srv bindings). The 87 MB mesh is acceptable for now but flagged as a candidate for Git LFS migration before publishing the repository externally; if the supervisor wants a leaner clone, the mesh can be replaced by a `scripts/download_meshes.sh` download stub.
 
 ---
 

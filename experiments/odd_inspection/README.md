@@ -8,7 +8,7 @@ deferral, with rationale) is a hard precondition for Gate G1.
 ## Files
 
 | File | Purpose |
-|------|---------|
+| ---- | ------- |
 | `odd_tbds.yaml` | Template you fill in with the resolved values, their source, and notes. |
 
 ## Companion tool

@@ -58,6 +58,11 @@ src/*/msg/_*.py
 src/*/srv/_*.py
 src/*/action/_*.py
 
+# Large visualisation meshes (>50 MB). Obtained externally via
+# `scripts/download_meshes.sh`; not tracked in git to keep the
+# clone size manageable. See src/cobraflex/meshes/README.md.
+src/cobraflex/meshes/rplidar-a2m4-r1.stl
+
 # Experimental data — large logs are not version-controlled,
 # only their summary CSVs and aggregated tables.
 experiments/sim/run_*/raw_logs/

@@ -21,10 +21,11 @@ file in place (a `.bak` backup is left next to the original).
 
 ## Workflow per TBD
 
-1. **Inspect** the source named in the description (a MuJoCo `.xml`,
-   the env wrapper Python file, a scenario YAML, or a derivation
-   formula). The descriptions in `odd_tbds.yaml` point to the
-   expected source for each TBD.
+1. **Inspect** the source named in the description (a Gazebo
+   `.world` / `.sdf` under `src/cobraflex/worlds/`, the env wrapper
+   Python file under `src/cobraflex_rl/`, a scenario YAML, or a
+   derivation formula). The descriptions in `odd_tbds.yaml` point to
+   the expected source for each TBD.
 2. **Fill in** the entry in `odd_tbds.yaml`:
    - `value`: the resolved numeric or string answer.
    - `source`: free-text reference (filename + line, derivation,
@@ -57,12 +58,12 @@ ones.
 ## Sources by TBD group
 
 | Group | TBDs | Where to look |
-|-------|------|---------------|
-| Material spec | Q1 | `friction=` attribute in the MuJoCo `<geom>` of `odd1_straight_road.xml` |
-| Map geometry | Q8, Q9 | `<geom>` / mesh definitions in `odd3_curvy_loop.xml`; cross-checked with M-4 |
+| ----- | ---- | ------------- |
+| Surface spec | Q1 | `<surface><friction>` block in the Gazebo SDF of the road geom under `src/cobraflex/worlds/` (e.g., `empty.world`, `obstacles.world`, `test_world.sdf`) |
+| Map geometry | Q8, Q9 | `<link>` / `<collision>` / `<visual>` primitives in `src/cobraflex/worlds/odd3_curvy_loop.world` (or the world that resolves to it); cross-checked with M-4 |
 | Derived | Q2, Q10 | Pure arithmetic on Q1, V_MAX, V_MAX_CURVE, Q9 |
-| Episode logic | Q3, Q11 | Termination thresholds in the gymnasium env wrapper (Python) |
-| Scenario profiles | Q4, Q5, Q6, Q7, Q12 | Scenario YAMLs under your sim repo, **or** design decisions documented now for implementation in F4 |
+| Episode logic | Q3, Q11 | Termination thresholds in the gymnasium env wrapper under `src/cobraflex_rl/` |
+| Scenario profiles | Q4, Q5, Q6, Q7, Q12 | Scenario YAMLs under `src/cobraflex_rl/config/` (if defined) **or** design decisions documented now for implementation in F4 |
 
 ## Closure criterion for Gate G1
 

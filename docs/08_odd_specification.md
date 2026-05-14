@@ -61,11 +61,11 @@ Numerical parameters declared in this document use a stable identifier of the fo
 
 ### 4.1 Intended function and subject-vehicle assumptions
 
-The intended function is lane following on a structured straight-road segment. The subject vehicle is the simulated CobraFlex-like platform of the MuJoCo environment, operating at low forward speed with a single steering degree of freedom controlled by the policy. ODD-1 is the reference point against which all other domains are differentially defined; it is intentionally the narrowest of the four to support interpretable PPO training, reproducible debugging, and unambiguous scenario derivation.
+The intended function is lane following on a structured straight-road segment. The subject vehicle is the simulated CobraFlex-like platform of the Gazebo environment (URDF + SDF, ROS2 Humble, packaged as `src/cobraflex`), operating at low forward speed with a single steering degree of freedom controlled by the policy. ODD-1 is the reference point against which all other domains are differentially defined; it is intentionally the narrowest of the four to support interpretable PPO training, reproducible debugging, and unambiguous scenario derivation.
 
 ### 4.2 Scenery
 
-The drivable area is a two-lane straight segment of uniform asphalt-like surface, with clearly visible lateral lane boundaries, a dashed central lane separator, flat geometry, and no junctions, special structures, or temporary road structures. Total road width is `0.50 m`, lane width per direction is `0.245 m`, and total road length is `10 m`. The road gradient is zero. The friction coefficient of the simulated surface is `TBD-Q1` (must be read from the MuJoCo material specification of `odd1_straight_road`).
+The drivable area is a two-lane straight segment of uniform asphalt-like surface, with clearly visible lateral lane boundaries, a dashed central lane separator, flat geometry, and no junctions, special structures, or temporary road structures. Total road width is `0.50 m`, lane width per direction is `0.245 m`, and total road length is `10 m`. The road gradient is zero. The friction coefficient of the simulated surface is `TBD-Q1` (must be read from the Gazebo SDF `<surface><friction>` block of the road geom in `src/cobraflex/worlds/odd1_straight_road.world` — or in the world that `odd1_straight_road` resolves to in your launch configuration; for example, `empty.world` / `obstacles.world` / `test_world.sdf` currently shipped under `src/cobraflex/worlds/`).
 
 ### 4.3 Environmental conditions
 
@@ -241,26 +241,26 @@ else in this document must appear here, with one row per parameter. When a value
 changes, update it once here and propagate via the IDs.
 -->
 
-| Parameter ID                 | Quantity                                  | ODD-1   | ODD-2   | ODD-3       | ODD-4       | Source                          |
-|------------------------------|-------------------------------------------|---------|---------|-------------|-------------|---------------------------------|
-| `*.LANE_WIDTH`               | Lane width (m)                            | 0.245   | 0.245   | 0.245       | 0.245       | MuJoCo map files                |
-| `*.ROAD_WIDTH`               | Total road width (m)                      | 0.50    | 0.50    | 0.50        | 0.50        | MuJoCo map files                |
-| `*.ROAD_LENGTH`              | Total road length (m)                     | 10      | 10      | TBD-Q8      | TBD-Q8      | MuJoCo map files                |
-| `*.GRADIENT`                 | Road gradient                             | 0       | 0       | 0           | 0           | Map convention                  |
-| `*.FRICTION`                 | Surface friction coeff.                   | TBD-Q1  | TBD-Q1  | TBD-Q1      | TBD-Q1      | MuJoCo material spec            |
-| `*.V_MAX_STRAIGHT`           | Max forward speed, straight (m/s)         | 0.5     | 0.5     | 0.5         | 0.5         | SR-004; platform envelope       |
-| `*.V_MAX_CURVE`              | Max forward speed, curve (m/s)            | n/a     | n/a     | 0.25        | 0.25        | SR-004; platform envelope       |
-| `*.K_KAPPA`                  | Curvature speed-decay coeff.              | n/a     | n/a     | 0.3         | 0.3         | SR-004                          |
-| `*.KAPPA_MAX`                | Max local curvature (1/m)                 | 0       | 0       | TBD-Q9      | TBD-Q9      | MuJoCo map geometry             |
-| `*.A_LAT_MAX`                | Max commanded lateral accel. (m/s²)       | TBD-Q2  | TBD-Q2  | TBD-Q10     | TBD-Q10     | Derived from FRICTION + V_MAX   |
-| `*.T_CTRL`                   | Control cycle period (ms)                 | 50      | 50      | 50          | 50          | Implementation                  |
-| `*.LATENCY_NOMINAL`          | Nominal control latency (ms)              | 50      | 50      | 50          | 50          | Implementation; SR-001 rationale|
-| `*.STALENESS_MAX`            | Max admissible state staleness (ms)       | 200     | 200     | 200         | 200         | SR-007                          |
-| `*.LANE_EDGE`                | Geometric lane edge (m, from centre)      | 0.1225  | 0.1225  | 0.1225      | 0.1225      | LANE_WIDTH / 2                  |
-| `*.CORRIDOR_EDGE`            | Drivable-corridor edge (m, from centre)   | TBD-Q3  | TBD-Q3  | TBD-Q3      | TBD-Q3      | Episode-termination logic       |
-| `*.STUCK_TIMEOUT`            | Stuck criterion timeout (s)               | n/a     | n/a     | TBD-Q11     | TBD-Q11     | Episode-termination logic       |
-| `*.OBS_DIM`                  | Observation vector dimension              | 5       | 8       | 5           | 8           | Implementation                  |
-| `*.ACT_DIM`                  | Action vector dimension                   | 1       | 1       | 2           | 2           | Implementation                  |
+| Parameter ID | Quantity | ODD-1 | ODD-2 | ODD-3 | ODD-4 | Source |
+| ------------ | -------- | ----- | ----- | ----- | ----- | ------ |
+| `*.LANE_WIDTH` | Lane width (m) | 0.245 | 0.245 | 0.245 | 0.245 | Gazebo world files (`src/cobraflex/worlds/*.world` / `*.sdf`) |
+| `*.ROAD_WIDTH` | Total road width (m) | 0.50 | 0.50 | 0.50 | 0.50 | Gazebo world files |
+| `*.ROAD_LENGTH` | Total road length (m) | 10 | 10 | TBD-Q8 | TBD-Q8 | Gazebo world files |
+| `*.GRADIENT` | Road gradient | 0 | 0 | 0 | 0 | Map convention |
+| `*.FRICTION` | Surface friction coeff. | TBD-Q1 | TBD-Q1 | TBD-Q1 | TBD-Q1 | Gazebo SDF `<surface><friction>` of road geom |
+| `*.V_MAX_STRAIGHT` | Max forward speed, straight (m/s) | 0.5 | 0.5 | 0.5 | 0.5 | SR-004; platform envelope |
+| `*.V_MAX_CURVE` | Max forward speed, curve (m/s) | n/a | n/a | 0.25 | 0.25 | SR-004; platform envelope |
+| `*.K_KAPPA` | Curvature speed-decay coeff. | n/a | n/a | 0.3 | 0.3 | SR-004 |
+| `*.KAPPA_MAX` | Max local curvature (1/m) | 0 | 0 | TBD-Q9 | TBD-Q9 | Gazebo world geometry (`<link>` primitives) |
+| `*.A_LAT_MAX` | Max commanded lateral accel. (m/s²) | TBD-Q2 | TBD-Q2 | TBD-Q10 | TBD-Q10 | Derived from FRICTION + V_MAX |
+| `*.T_CTRL` | Control cycle period (ms) | 50 | 50 | 50 | 50 | Implementation |
+| `*.LATENCY_NOMINAL` | Nominal control latency (ms) | 50 | 50 | 50 | 50 | Implementation; SR-001 rationale |
+| `*.STALENESS_MAX` | Max admissible state staleness (ms) | 200 | 200 | 200 | 200 | SR-007 |
+| `*.LANE_EDGE` | Geometric lane edge (m, from centre) | 0.1225 | 0.1225 | 0.1225 | 0.1225 | LANE_WIDTH / 2 |
+| `*.CORRIDOR_EDGE` | Drivable-corridor edge (m, from centre) | TBD-Q3 | TBD-Q3 | TBD-Q3 | TBD-Q3 | Episode-termination logic |
+| `*.STUCK_TIMEOUT` | Stuck criterion timeout (s) | n/a | n/a | TBD-Q11 | TBD-Q11 | Episode-termination logic |
+| `*.OBS_DIM` | Observation vector dimension | 5 | 8 | 5 | 8 | Implementation |
+| `*.ACT_DIM` | Action vector dimension | 1 | 1 | 2 | 2 | Implementation |
 
 ---
 
@@ -282,7 +282,7 @@ with an explicit value.
 
 | Tag | Question | Owner | Target close | Resolution |
 | --- | -------- | ----- | ------------ | ---------- |
-| TBD-Q1 | What friction coefficient is configured in the MuJoCo material of `odd1_straight_road`? Is it identical for ODD-3 and ODD-4 maps? | SS | D11 PM | |
+| TBD-Q1 | What friction coefficient is configured in the Gazebo SDF `<surface><friction>` block of the road geom in `src/cobraflex/worlds/odd1_straight_road.world` (or its current alias under `src/cobraflex/worlds/`)? Is the value identical across the ODD-1, ODD-3 and ODD-4 world files? | SS | D11 PM | |
 | TBD-Q2 | What is the maximum commanded lateral acceleration in ODD-1, derived from FRICTION and V_MAX? | SS | D11 PM | |
 | TBD-Q3 | What is the numerical "drivable-corridor edge" used by the simulator's episode-termination logic? Why does it differ from LANE_EDGE? | SS | D11 PM | |
 | TBD-Q4 | What are the lighting-degradation parameters and observation-noise σ in `odd2_nominal_adverse`? | SS | D11 PM | |

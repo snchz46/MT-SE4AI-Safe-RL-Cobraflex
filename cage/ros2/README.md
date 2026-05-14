@@ -13,7 +13,7 @@ without a ROS2 installation.
 
 ## Pipeline
 
-```
+```text
                 ┌──────────────────────────────────────────────────────┐
                 │                Simulator (ROS2 + Gazebo)             │
                 │   /state_obs  /safe_action  (provided by your repo)  │
@@ -80,7 +80,7 @@ The helper computes mean, std, p95 absolute deviation and lag-1
 autocorrelation per position and writes them into
 `experiments/calibration/M1_results.json`.
 
-### 4. Validate and propagate
+### 4. Validate and propagate M1
 
 ```bash
 python tools/apply_calibration.py --measurement M-1
@@ -124,7 +124,7 @@ second leg (`/safe_action → actuator response`) as a separate CSV,
 pass it with `--actuator-latency-csv` and the actuator block will be
 filled too.
 
-### 4. Validate and propagate
+### 4. Validate and propagate M2
 
 ```bash
 python tools/apply_calibration.py --measurement M-2
@@ -143,7 +143,7 @@ access in each `state_cb()` / `safe_action_cb()` matches your
 message schema:
 
 | File | Adaptation lines |
-|------|-------------------|
+| ---- | ---------------- |
 | `m1_lidar_noise_logger.py` | the `try / except ImportError` block at the top, and the `state_cb()` field extraction |
 | `m2_latency_logger.py` | the `try / except ImportError` block at the top, and the calls to `msg.header.stamp` inside `state_cb()` / `safe_action_cb()` |
 

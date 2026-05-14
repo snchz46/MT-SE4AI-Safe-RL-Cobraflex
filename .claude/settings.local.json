@@ -18,7 +18,10 @@
       "Bash(python tools/calibration_helpers/m1_from_csv.py --help)",
       "Bash(python tools/calibration_helpers/m2_from_csv.py --help)",
       "Bash(python -c \"import cage; print\\('cage import OK'\\)\")",
-      "Bash(python tools/calibration_helpers/m1_from_csv.py --input-dir /tmp/m1_test --executed-by \"smoke-test\")"
+      "Bash(python tools/calibration_helpers/m1_from_csv.py --input-dir /tmp/m1_test --executed-by \"smoke-test\")",
+      "Bash(python tools/close_odd_tbds.py)",
+      "Bash(echo \"EXITCODE=$?\")",
+      "Bash(python tools/close_odd_tbds.py > /tmp/odd_dryrun.out 2>&1; echo \"EXITCODE=$?\"; head -3 /tmp/odd_dryrun.out)"
     ]
   }
 }

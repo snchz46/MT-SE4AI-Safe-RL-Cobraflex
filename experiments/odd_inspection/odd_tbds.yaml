@@ -1,0 +1,91 @@
+# ODD-Spec TBD closure values.
+# ------------------------------------------------------------------
+# Fill in the `value` and `source` fields for each TBD that you can
+# resolve from your simulator workspace, then run:
+#
+#   python tools/close_odd_tbds.py            # dry-run (prints diff)
+#   python tools/close_odd_tbds.py --apply    # writes the patched ODD-Spec
+#
+# Conventions:
+#   value:   the resolved numeric value (or string for non-numeric
+#            answers). Use `null` if the TBD is not yet resolved; the
+#            script will skip it and leave the TBD-QN tag untouched
+#            in the document.
+#   source:  free-text reference to where the value came from
+#            (file path + line, derivation formula, design decision).
+#   notes:   optional caveats, cross-checks, follow-up actions.
+# ------------------------------------------------------------------
+
+tbds:
+
+  TBD-Q1:
+    description: "Surface friction coefficient (mu_slide) of the simulated road."
+    value: null            # e.g. 1.0
+    source: ""             # e.g. "odd1_straight_road.xml: friction='1.0 0.005 0.0001'"
+    notes: ""
+
+  TBD-Q2:
+    description: "Max commanded lateral acceleration in ODD-1 (m/s^2), bounded by FRICTION * g."
+    value: null            # e.g. 9.81 (= TBD-Q1 * 9.81)
+    source: ""             # e.g. "Derived: TBD-Q1 * 9.81 m/s^2"
+    notes: ""
+
+  TBD-Q3:
+    description: "Drivable-corridor edge (m, from centre) used by episode-termination logic."
+    value: null            # e.g. 0.20 (5 cm beyond LANE_EDGE = 0.1225 m)
+    source: ""             # e.g. "env_wrapper.py: done = abs(obs.lateral_offset) > 0.20"
+    notes: "Justify why this differs from LANE_EDGE (0.1225 m) if it does."
+
+  TBD-Q4:
+    description: "Stressor parameters of odd2_nominal_adverse (lighting variance, marking contrast, perception noise sigma)."
+    value: null            # e.g. "lighting_var=0.3, marking_contrast=0.4, sigma_lateral=0.02"
+    source: ""             # e.g. "scenarios/odd2_nominal_adverse.yaml" or "design decision F1"
+    notes: ""
+
+  TBD-Q5:
+    description: "Stressor parameters of odd2_adverse_with_latency (extra latency ms, jitter ms, actuation noise)."
+    value: null            # e.g. "extra_latency_ms=100, jitter_ms=30, act_noise=0.05"
+    source: ""
+    notes: ""
+
+  TBD-Q6:
+    description: "Stressor parameters of odd2_adverse_with_obstacle (obstacle geometry, position distribution, quantity)."
+    value: null            # e.g. "cylinder 0.05x0.10 m, uniform along corridor, qty=1"
+    source: ""
+    notes: ""
+
+  TBD-Q7:
+    description: "Stressor parameters of odd2_adverse_full (union of TBD-Q4 + Q5 + Q6)."
+    value: null            # e.g. "see TBD-Q4 + TBD-Q5 + TBD-Q6"
+    source: ""
+    notes: ""
+
+  TBD-Q8:
+    description: "Total loop length of odd3_curvy_loop (m)."
+    value: null            # e.g. 12.5
+    source: ""             # e.g. "odd3_curvy_loop.xml: sum of segment lengths"
+    notes: ""
+
+  TBD-Q9:
+    description: "Maximum local curvature of odd3_curvy_loop (KAPPA_MAX, 1/m)."
+    value: null            # e.g. 0.83 (R_min = 1.2 m)
+    source: ""             # e.g. "odd3_curvy_loop.xml: tightest arc R = 1.2 m"
+    notes: "Cross-checked against M-4 empirical v_max_curve."
+
+  TBD-Q10:
+    description: "Max commanded lateral acceleration in ODD-3 (m/s^2), bounded by V_MAX_CURVE^2 * KAPPA_MAX and FRICTION * g."
+    value: null            # e.g. 0.052 (= 0.25^2 * 0.83)
+    source: ""             # e.g. "Derived: min(V_MAX_CURVE^2 * TBD-Q9, TBD-Q1 * 9.81)"
+    notes: ""
+
+  TBD-Q11:
+    description: "Stuck-criterion timeout (s) used by episode-termination logic."
+    value: null            # e.g. 5.0
+    source: ""             # e.g. "env_wrapper.py: stuck if no progress for 5.0 s"
+    notes: ""
+
+  TBD-Q12:
+    description: "Do ODD-4 named profiles introduce any stressor beyond their ODD-2 counterparts?"
+    value: null            # e.g. "No additional stressors" or "Adds <list>"
+    source: ""
+    notes: ""

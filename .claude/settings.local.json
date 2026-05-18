@@ -26,7 +26,12 @@
       "Bash(rsync -a --exclude=.vscode/ --exclude=.pytest_cache/ --exclude=__pycache__/ '--exclude=*.pyc' '--exclude=*.pyo' --exclude=build/ --exclude=install/ --exclude=log/ --exclude=.idea/ '--exclude=*.egg-info/' '/e/CAST/Cobra Flex Drivers & SW/src/cobraflex' '/e/CAST/Cobra Flex Drivers & SW/src/cobraflex_rl' src/)",
       "Bash(python -m pytest --collect-only -q)",
       "Bash(python -m pytest)",
-      "Bash(python tools/close_odd_tbds.py --apply)"
+      "Bash(python tools/close_odd_tbds.py --apply)",
+      "Bash(python -m pytest cage/tests/)",
+      "Bash(.venv/Scripts/python.exe -m pytest cage/tests/test_cage_rules.py -v)",
+      "Bash(.venv/Scripts/python.exe --version)",
+      "Bash(.venv/Scripts/python.exe -m pytest)",
+      "Bash(.venv/Scripts/python.exe -m pytest -v)"
     ]
   }
 }

@@ -9,16 +9,9 @@ Specification: docs/04_cage_specification.md (section C-04).
 Parameters: cage/cage.yaml (key: cage.c04_speed_ceiling).
 """
 
-from dataclasses import dataclass, field
-from typing import Optional, Any
+from typing import Any
 
-
-@dataclass
-class CageDecision:
-    fire: bool
-    safe_action: Optional[tuple] = None
-    reason: str = ""
-    metadata: dict = field(default_factory=dict)
+from .base import CageDecision
 
 
 class SpeedCeilingRule:

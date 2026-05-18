@@ -12,16 +12,9 @@ Unit tests: cage/tests/test_c01_lane_boundary.py.
 Phase status: Phase 2 implementation pending. This file is a stub.
 """
 
-from dataclasses import dataclass, field
-from typing import Optional, Any
+from typing import Any
 
-
-@dataclass
-class CageDecision:
-    fire: bool
-    safe_action: Optional[tuple] = None
-    reason: str = ""
-    metadata: dict = field(default_factory=dict)
+from .base import CageDecision
 
 
 class LaneBoundaryRule:

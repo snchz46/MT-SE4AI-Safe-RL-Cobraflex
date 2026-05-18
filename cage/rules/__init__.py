@@ -7,8 +7,12 @@ Each rule is implemented as a separate module and exposes:
 
 The cage_node imports them in deterministic order and chains their evaluation
 according to the protocol defined in docs/04_cage_specification.md.
+
+Shared types (CageDecision, State, Action) live in `base.py` so that the six
+rule modules share a single contract.
 """
 
+from .base import Action, CageDecision, State
 from .c01_lane_boundary import LaneBoundaryRule
 from .c02_heading_limit import HeadingLimitRule
 from .c03_ttlc import TTLCRule
@@ -17,6 +21,9 @@ from .c05_emergency import EmergencyRule
 from .c06_rate_limiter import RateLimiterRule
 
 __all__ = [
+    "Action",
+    "CageDecision",
+    "State",
     "LaneBoundaryRule",
     "HeadingLimitRule",
     "TTLCRule",

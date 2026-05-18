@@ -12,16 +12,9 @@ This rule has the highest priority in the evaluation order: if it activates,
 all subsequent rules are short-circuited for the current cycle.
 """
 
-from dataclasses import dataclass, field
-from typing import Optional, Any
+from typing import Any, Optional
 
-
-@dataclass
-class CageDecision:
-    fire: bool
-    safe_action: Optional[tuple] = None
-    reason: str = ""
-    metadata: dict = field(default_factory=dict)
+from .base import CageDecision
 
 
 class EmergencyRule:

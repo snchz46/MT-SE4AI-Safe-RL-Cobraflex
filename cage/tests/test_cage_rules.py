@@ -21,6 +21,7 @@ from cage.rules import (
     SpeedCeilingRule,
     EmergencyRule,
     RateLimiterRule,
+    State,
 )
 
 CAGE_YAML = Path(__file__).resolve().parent.parent / "cage.yaml"
@@ -66,7 +67,7 @@ def test_rule_instantiation(cage_config, rule_class, params_key):
 )
 def test_rule_evaluate_returns_decision(cage_config, rule_class, params_key):
     rule = rule_class(cage_config[params_key])
-    state = {"lateral_offset": 0.0, "heading_error": 0.0, "speed": 0.3}
+    state = State(speed=0.3)
     raw_action = (0.0, 0.5)
     result = rule.evaluate(state=state, raw_action=raw_action, prev_action=None)
     assert hasattr(result, "fire")

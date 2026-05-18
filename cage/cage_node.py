@@ -16,38 +16,48 @@ Publishes:
 
 Configuration: cage/cage.yaml (loaded at launch).
 
-Phase status: Phase 2 implementation pending. This is a structural stub.
+Phase status: F2 first-cut. The ROS2 wiring is not yet implemented in this
+file (it will live under `cage/ros2/`); for now `SafetyCageNode` is the pure
+Python composition of the six rules, callable from tests and from the future
+ROS2 wrapper alike.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Optional
+
 import yaml
 
 from cage.rules import (
-    LaneBoundaryRule,
-    HeadingLimitRule,
-    TTLCRule,
-    SpeedCeilingRule,
+    Action,
     EmergencyRule,
+    HeadingLimitRule,
+    LaneBoundaryRule,
     RateLimiterRule,
+    SpeedCeilingRule,
+    TTLCRule,
 )
 
 
 class SafetyCageNode:
     """
-    The cage node combines six rules in a deterministic evaluation order:
+    Compose the six rules in the deterministic evaluation order documented
+    in the Phase 2 plan (`docs/.phases/Fase 2/fase_2_detallada.md` §2.1):
 
-        1. C-05 (emergency) first; if activated, short-circuit the rest.
-        2. C-01 + C-02 in parallel on steering.
-        3. C-03 may further bias steering; worst-case envelope with C-01/C-02.
-        4. C-04 on throttle.
-        5. C-06 (rate limiter) last, on the final command.
+        C-06 → C-04 → C-02 → C-03 → C-01 → C-05
+
+    Rationale (plan §5.6): C-06 first sanitises the raw policy action into
+    a physically realisable command so the downstream rules operate on a
+    feasible baseline. C-05 last because, when emergency mode fires, it
+    overrides every upstream correction with the controlled-stop action.
 
     Operating modes:
         enforcement: corrections are applied to /safe_action.
         monitoring:  corrections are computed and logged but not applied;
-                     /safe_action == /raw_action.
+                     /safe_action == /raw_action. `_prev_action` tracks the
+                     raw stream in this mode so C-06's rate computation
+                     reflects what was actually emitted.
     """
 
     def __init__(self, config_path: str | Path, mode: str = "enforcement"):
@@ -59,7 +69,6 @@ class SafetyCageNode:
         self.cfg = cfg
         self.version = cfg.get("version", "unknown")
 
-        # Instantiate the six rules
         self.c01 = LaneBoundaryRule(cfg["c01_lane_boundary"])
         self.c02 = HeadingLimitRule(cfg["c02_heading_limit"])
         self.c03 = TTLCRule(cfg["c03_ttlc"])
@@ -67,28 +76,77 @@ class SafetyCageNode:
         self.c05 = EmergencyRule(cfg["c05_emergency"])
         self.c06 = RateLimiterRule(cfg["c06_rate_limiter"])
 
-        self._prev_action = None  # for rate limiter
+        self._chain = (
+            ("C-06", self.c06),
+            ("C-04", self.c04),
+            ("C-02", self.c02),
+            ("C-03", self.c03),
+            ("C-01", self.c01),
+            ("C-05", self.c05),
+        )
 
-    def step(self, state, raw_action, ctx=None) -> dict:
+        self._prev_action: Optional[Action] = None
+
+    @property
+    def prev_action(self) -> Optional[Action]:
+        return self._prev_action
+
+    def step(self, state, raw_action: Action, ctx: Optional[dict] = None) -> dict:
         """
-        Execute one control cycle.
+        Run one control cycle through the rule chain.
 
-        Returns a dict with:
-            safe_action: (steering, throttle) tuple to publish.
-            interventions: list of CageDecision objects from rules that fired.
-            emergency: bool, whether emergency mode active.
+        Returns:
+            safe_action: (steering, throttle) tuple actually emitted.
+            interventions: list of dicts {rule, reason, metadata} for each
+                rule that fired this cycle, in evaluation order.
+            emergency: True if C-05 was active this cycle.
+            raw_action: echoed for the logger.
             mode: "enforcement" or "monitoring".
+            cage_version: from cage.yaml.
         """
-        # PHASE 2 IMPLEMENTATION PENDING.
-        # This stub passes through raw_action without modification.
+        ctx = ctx or {}
+        interventions = []
+        current_action = raw_action
+        emergency_active = False
+
+        for rule_id, rule in self._chain:
+            decision = rule.evaluate(
+                state=state,
+                raw_action=current_action,
+                prev_action=self._prev_action,
+                ctx=ctx,
+            )
+            if decision.fire:
+                interventions.append({
+                    "rule": rule_id,
+                    "reason": decision.reason,
+                    "metadata": decision.metadata,
+                })
+                if decision.safe_action is not None:
+                    current_action = decision.safe_action
+                if rule_id == "C-05":
+                    emergency_active = True
+
+        if self.mode == "monitoring":
+            final_action = raw_action
+        else:
+            final_action = current_action
+
+        self._prev_action = final_action
+
         return {
-            "safe_action": raw_action,
-            "interventions": [],
-            "emergency": False,
+            "safe_action": final_action,
+            "raw_action": raw_action,
+            "interventions": interventions,
+            "emergency": emergency_active,
             "mode": self.mode,
             "cage_version": self.version,
         }
 
     def reset_emergency(self) -> None:
-        """Clear the emergency mode flag (only if conditions cleared)."""
+        """Request clearance of emergency mode.
+
+        The clearance only takes effect on the next `step()` if the
+        underlying trigger condition has also cleared (see C-05 contract).
+        """
         self.c05.reset()

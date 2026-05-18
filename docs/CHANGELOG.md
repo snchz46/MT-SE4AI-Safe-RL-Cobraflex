@@ -31,6 +31,57 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [18.05.2026] — Cage 0.3.0: parameters required by executable rules (Phase 2)
+
+**Document(s) affected:** `cage/cage.yaml`.
+**Phase:** F2.
+**Gate context:** before G2.
+**Author:** Samuel.
+
+### Change
+
+Bumped `cage.version` from `0.2.0` to `0.3.0`. Added three parameters needed
+by the first executable cut of the rule logic (no existing parameter values
+were modified):
+
+- `c03_ttlc.d_max_m: 0.16` — TTLC projection needs the lane half-width;
+  duplicated here with the explicit comment that it must mirror
+  `c01_lane_boundary.d_max_m` (coupling documented in-place).
+- `c03_ttlc.v_min_estimate_mps: 0.05` — kinematic floor below which
+  `compute_ttlc` returns infinity (avoids division by near-zero lateral
+  velocity at standstill).
+- `c04_speed_ceiling.k_throttle_per_mps: 5.0` — proportional gain that
+  maps speed excess over `v_max(κ)` to throttle reduction in the
+  correction formula `throttle_safe = max(0, throttle_raw − k·excess)`.
+
+### Rationale
+
+The three parameters are required by the rule implementations under
+`cage/rules/c03_ttlc.py` and `cage/rules/c04_speed_ceiling.py` checked
+in alongside this bump. Their default values follow the Phase 2 plan
+(`docs/.phases/Fase 2/fase_2_detallada.md` §5.3 and §5.4); both
+`d_max_m` and `k_throttle_per_mps` are inherited as-is, and
+`v_min_estimate_mps` reuses the value documented under the same plan
+section. All three remain candidates for revision once the calibration
+campaign (M-1..M-5) closes and the policy-side margins of SR-003 are
+exercised.
+
+### Impact
+
+- Rule constructors `TTLCRule.__init__` and `SpeedCeilingRule.__init__`
+  now read these keys; older YAMLs without them will fail to instantiate.
+- No change to traceability matrix — no SR or hazard added.
+- No re-run of validation campaigns required (no value of any existing
+  parameter changed).
+
+### Verification
+
+- `pytest cage/tests/` — all rule unit tests pass.
+- `tools/check_traceability.py` — unchanged (no SR or cage rule added or
+  modified at the registry level).
+
+---
+
 ## [30.04.2026] — Initial baseline (Phase 0)
 
 **Document(s) affected:** all `docs/*.md` files.  

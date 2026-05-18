@@ -13,20 +13,26 @@
 # =============================================================
 
 cage:
-  version: "0.2.0"   # bump on any parameter change; semantic versioning
+  version: "0.3.0"   # bump on any parameter change; semantic versioning
   description: |
-    F1 consolidation of parameter rationale (13.05.2026). Numerical values
-    unchanged from 0.1.0 except where flagged below; the bump reflects (a)
-    consolidated SR rationale now traceable per-parameter via the comments
-    in this file, and (b) the SR-005 ↔ SR-008 consistency reconciliation
-    documented in `docs/CHANGELOG.md` (t_stop_max raised from 1.5 s to
-    1.7 s at the SRS level; t_stop_max is a system-level requirement and
-    is not encoded in this file, but a_min_mps2 below is the cage-side
-    parameter that participates in the same consistency relation).
-    Parameters flagged "[provisional, M-X]" remain at conservative defaults
-    pending the corresponding measurement of the pre-G1 campaign
+    F2 first-cut implementation parameters (18.05.2026). 0.3.0 adds the
+    parameters required by the executable rule logic that 0.2.0 did not
+    yet expose:
+      - c03_ttlc: `d_max_m` (must mirror c01.d_max_m; coupling documented
+        below) and `v_min_estimate_mps` (kinematic floor to avoid
+        division-by-near-zero in TTLC projection).
+      - c04_speed_ceiling: `k_throttle_per_mps` (proportional gain that
+        maps speed excess to throttle reduction).
+    The previous (0.2.0) rationale also applies: parameters flagged
+    "[provisional, M-X]" remain at conservative defaults pending the
+    corresponding measurement of the pre-G1 campaign
     (`experiments/calibration/`); when those measurements close, the
-    affected parameters will be revised in a 0.3.0 bump.
+    affected parameters will be revised in a 0.4.0 bump. The SR-005 ↔
+    SR-008 consistency reconciliation noted in `docs/CHANGELOG.md`
+    (t_stop_max raised from 1.5 s to 1.7 s at the SRS level) is unchanged
+    here; t_stop_max is a system-level requirement, not encoded in this
+    file, but `a_min_mps2` below is the cage-side parameter that
+    participates in the same consistency relation.
 
   # -----------------------------------------------------------
   # Operating mode
@@ -87,6 +93,8 @@ cage:
     t_min_s: 1.0               # SR-003; policy-side component provisional
     horizon_s: 3.0             # max projection horizon for TTLC computation
     urgency_gain_max: 2.0      # max steering bias when ttlc -> 0
+    d_max_m: 0.16              # must mirror c01_lane_boundary.d_max_m
+    v_min_estimate_mps: 0.05   # speeds below this -> TTLC = inf (avoid div-by-zero)
 
   # -----------------------------------------------------------
   # Rule C-04 — Speed ceiling (SR-004, H-03)
@@ -103,6 +111,7 @@ cage:
     curvature_threshold_inv_m: 0.05    # |kappa| above this is "curve"
     k_kappa_mps_per_curvature: 0.3     # [provisional, tightens with KAPPA_MAX]
     curvature_estimation_window_s: 0.5  # window for kappa estimation
+    k_throttle_per_mps: 5.0            # proportional throttle reduction per m/s excess
 
   # -----------------------------------------------------------
   # Rule C-05 — Emergency mode (SR-005, SR-007, SR-008; H-04, H-06, H-07)

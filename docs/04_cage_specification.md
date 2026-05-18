@@ -1,8 +1,9 @@
 # Cage Specification
 
 **Status:** Living document — Phase 2 deliverable  
-**Last update:** 11.05.2026  
+**Last update:** 18.05.2026  
 **Approved at Gate:** G2 (pending)  
+**Cage YAML version:** 0.3.0 (`cage/cage.yaml`).  
 
 ## Purpose
 
@@ -226,15 +227,24 @@ if abs(delta_steering) > delta_max_steering:
 
 ## Evaluation order
 
-The rules are evaluated in a fixed deterministic order at every control cycle:
+The rules are evaluated in a fixed deterministic order at every control cycle, in **ascending criticality** as defined in the Phase 2 plan (`docs/.phases/Fase 2/fase_2_detallada.md` §2.1):
 
-1. **C-05 first.** If emergency mode activates, all subsequent rules are short-circuited for this cycle.
-2. **C-01 and C-02 in parallel.** They operate on the same command component (steering) but with different criteria; their corrections combine additively.
-3. **C-03.** May further bias the steering correction. If both C-01 and C-03 fire, the larger-magnitude correction wins (worst-case envelope).
-4. **C-04.** Operates on throttle only. Independent.
-5. **C-06 last.** Applied to the result of all upstream rules to ensure the final command satisfies the smoothness bound regardless.
+**C-06 → C-04 → C-02 → C-03 → C-01 → C-05**
 
-This order is encoded in `cage/cage_node.py` and exercised by dedicated unit tests in `cage/tests/test_evaluation_order.py`.
+Rationale for each position:
+
+1. **C-06 first.** Sanitises the raw policy command into a physically realisable action (bounded delta against the previous emitted action). Subsequent rules then operate on a feasible baseline, so their corrections do not need to reason about implausible large jumps. The plan documents this position explicitly in §5.6 of the detailed plan.
+2. **C-04.** Throttle ceiling depending on curvature. Independent channel from the steering rules; placed early to make the speed-bounded action visible to the downstream steering rules in their internal reasoning.
+3. **C-02.** Reactive bound on heading error. Modifies steering.
+4. **C-03.** Predictive bound (TTLC). May further override steering if the kinematic projection indicates an imminent boundary crossing.
+5. **C-01.** Reactive hard bound on lateral offset. The last reactive guard before emergency mode takes over; together with C-03 it implements defence in depth on H-01.
+6. **C-05 last.** Emergency mode. When triggered, its substituted action (frozen steering + brake) overrides every upstream correction. Placing it last guarantees the override semantics regardless of what upstream rules have done.
+
+Each rule consumes the previous rule's `safe_action` as its `raw_action` input; the rule returns either `safe_action=None` (pass-through) or a new tuple. The order, the chain composition, and the override semantics of C-05 are exercised by the integration tests in `cage/tests/test_cage_node.py`.
+
+### Known approximation (F2)
+
+The plan's "C-06 first" position guarantees that the action *entering* the chain is rate-bounded. Downstream rules (C-01..C-04) can in principle introduce a step that violates the rate bound on the *emitted* action. This is accepted as an F2 approximation; a second, terminal C-06 pass (or per-rule rate-budgeting) is a candidate refinement once Phase 4 logs quantify whether the violation occurs in practice and at what magnitude. The joint-envelope assertion described under SR-010 (Trigger 7 of C-05) is the long-term mitigation.
 
 ## Joint-envelope assertion and conflict resolution
 

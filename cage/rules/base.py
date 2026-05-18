@@ -28,11 +28,13 @@ class CageDecision:
 
 @dataclass
 class State:
-    lateral_offset: float       # m, positive to the left of centreline
-    heading_error: float        # rad, positive for leftward error
-    speed: float                # m/s, longitudinal
-    curvature_ahead: float      # 1/m, estimated ahead
-    distance_left: float        # m, distance to left boundary
-    distance_right: float       # m, distance to right boundary
-    state_valid: bool           # false if any field is unreliable
-    timestamp: float            # sim time in seconds (mirrors Header.stamp)
+    # Defaults keep test fixtures and partial-state construction ergonomic;
+    # production code instantiates with all fields populated by Perception.
+    lateral_offset: float = 0.0     # m, positive to the left of centreline
+    heading_error: float = 0.0      # rad, positive for leftward error
+    speed: float = 0.0              # m/s, longitudinal
+    curvature_ahead: float = 0.0    # 1/m, estimated ahead
+    distance_left: float = 0.0      # m, distance to left boundary
+    distance_right: float = 0.0     # m, distance to right boundary
+    state_valid: bool = True        # false if any field is unreliable
+    timestamp: float = 0.0          # sim time in seconds (mirrors Header.stamp)

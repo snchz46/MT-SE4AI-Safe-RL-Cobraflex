@@ -120,4 +120,4 @@ def test_reset_emergency_clears_when_trigger_also_cleared(node):
 
 def test_cage_version_propagates_to_result(node):
     result = node.step(State(), raw_action=(0.0, 0.0))
-    assert result["cage_version"] == "0.4.0"
+    assert result["cage_version"] == "0.5.0"

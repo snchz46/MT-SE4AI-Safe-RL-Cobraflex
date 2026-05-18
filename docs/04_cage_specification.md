@@ -3,7 +3,7 @@
 **Status:** Living document — Phase 2 deliverable  
 **Last update:** 18.05.2026  
 **Approved at Gate:** G2 (pending)  
-**Cage YAML version:** 0.3.0 (`cage/cage.yaml`).  
+**Cage YAML version:** 0.5.0 (`cage/cage.yaml`).  
 
 ## Purpose
 
@@ -177,7 +177,7 @@ if v > v_ceiling:
 6. External stop: `/external_stop` signal received.
 7. Joint-envelope assertion failure (see §Joint-envelope assertion below).
 
-**Implementation status (cage YAML 0.4.0).** Triggers 1–6 are implemented in [cage/rules/c05_emergency.py](../cage/rules/c05_emergency.py); Triggers 1–4 and 6 are exercised by [test_c05_emergency.py](../cage/tests/test_c05_emergency.py) and Triggers 2 and 5 by [test_c05_triggers_extended.py](../cage/tests/test_c05_triggers_extended.py). Trigger 5 (missing state) is fed by the cage_node-level counter in [cage/cage_node.py](../cage/cage_node.py) (`_cycles_since_last_state`), verified by [test_cage_node_missing_state.py](../cage/tests/test_cage_node_missing_state.py). Trigger 7 (joint-envelope assertion) is **deferred**: it requires a per-rule `safe_envelope_predicate_holds(state, action) -> bool` method that does not yet exist on the rule contract. The sibling inter-cycle oscillation check described in the SR-010 section below is also deferred for the same reason (no per-rule signed-correction predicate yet).
+**Implementation status (cage YAML 0.5.0).** Triggers 1–6 are implemented in [cage/rules/c05_emergency.py](../cage/rules/c05_emergency.py); Triggers 1–4 and 6 are exercised by [test_c05_emergency.py](../cage/tests/test_c05_emergency.py) and Triggers 2 and 5 by [test_c05_triggers_extended.py](../cage/tests/test_c05_triggers_extended.py). Trigger 5 (missing state) is fed by the cage_node-level counter in [cage/cage_node.py](../cage/cage_node.py) (`_cycles_since_last_state`), verified by [test_cage_node_missing_state.py](../cage/tests/test_cage_node_missing_state.py). The inter-cycle oscillation check (SR-010 Part 2) is also implemented in `cage_node` (per-rule signed-correction history, sliding-window alternation rate, persistence timer) and surfaces as an additional `oscillation_detected` trigger of C-05; coverage in [test_oscillation.py](../cage/tests/test_oscillation.py). Trigger 7 (joint-envelope assertion, SR-010 Part 1) is **deferred**: it requires a per-rule `safe_envelope_predicate_holds(state, action) -> bool` method that does not yet exist on the rule contract.
 
 **On activation:**
 
@@ -231,7 +231,7 @@ if abs(delta_steering) > delta_max_steering:
 
 The rules are evaluated in a fixed deterministic order at every control cycle, in **ascending criticality** as defined in the Phase 2 plan (`docs/.phases/Fase 2/fase_2_detallada.md` §2.1):
 
-**C-06 → C-04 → C-02 → C-03 → C-01 → C-05**
+**C-06 → C-04 → C-02 → C-03 → C-01 → C-05**  
 
 Rationale for each position:
 
@@ -305,7 +305,7 @@ The mode is set at launch and recorded in `metadata.json` of every run.
 Each rule has a dedicated test file under `cage/tests/`. Current status (cage YAML 0.4.0, 90 tests passing):
 
 | File | Coverage |
-|---|---|
+| ---- | -------- |
 | [test_c01_lane_boundary.py](../cage/tests/test_c01_lane_boundary.py) | Hysteresis, bounds, sign of correction, saturation, disable |
 | [test_c02_heading_limit.py](../cage/tests/test_c02_heading_limit.py) | Same pattern on heading_error |
 | [test_c03_ttlc.py](../cage/tests/test_c03_ttlc.py) | `compute_ttlc`, urgency ramp, predictive activation |

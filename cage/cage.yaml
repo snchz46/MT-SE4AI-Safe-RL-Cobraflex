@@ -13,28 +13,30 @@
 # =============================================================
 
 cage:
-  version: "0.4.0"   # bump on any parameter change; semantic versioning
+  version: "0.5.0"   # bump on any parameter change; semantic versioning
   description: |
-    F2 second cut (18.05.2026). 0.4.0 adds the parameters needed to
-    complete the C-05 trigger set documented in §C-05 of the cage spec:
-      - c05_emergency.v_warning_mps: speed threshold above which the
-        compound trigger uses the shorter persistence (Trigger 2 of the
-        spec; SR-005 Trigger B).
-      - c05_emergency.delta_t_max_fast_s: shorter persistence applied
-        when the high-energy variant of the compound trigger fires.
-    These complete Triggers 1 (low-energy compound), 2 (high-energy
-    compound), 3 (stale), 4 (invalid), 5 (missing-state) and 6 (external
-    stop) of C-05. Trigger 7 (joint-envelope assertion of SR-010)
-    remains deferred to a future increment because it requires a per-
-    rule safe-envelope predicate API that does not yet exist.
+    F2 third cut (18.05.2026). 0.5.0 adds the inter-cycle oscillation
+    detection parameters from SR-010 Part 2:
+      - cage.oscillation.f_osc_max_hz: alternation-rate threshold above
+        which the cage logs the event for offline review.
+      - cage.oscillation.t_osc_window_s: sliding-window length over
+        which the alternation rate is computed.
+      - cage.oscillation.t_osc_persist_s: sustained-violation duration
+        above which the oscillation triggers C-05 emergency mode (via
+        the new `oscillation_detected` trigger of C-05).
+    SR-010 Part 1 (end-of-cycle joint-envelope assertion / C-05 Trigger
+    7) remains deferred because it requires a per-rule
+    `safe_envelope_predicate_holds(state, action)` API that does not
+    yet exist on the rule contract.
 
-    Carried from 0.3.0: parameters required by the executable rule logic
-    of C-03 and C-04 (`d_max_m`, `v_min_estimate_mps`,
-    `k_throttle_per_mps`). The (0.2.0) rationale also still applies:
-    parameters flagged "[provisional, M-X]" remain at conservative
-    defaults pending the calibration campaign
+    Carried from 0.4.0: complete C-05 trigger set 1–6 +
+    `oscillation_detected`. Carried from 0.3.0: parameters required by
+    the executable rule logic of C-03 and C-04 (`d_max_m`,
+    `v_min_estimate_mps`, `k_throttle_per_mps`). The (0.2.0) rationale
+    also still applies: parameters flagged "[provisional, M-X]" remain
+    at conservative defaults pending the calibration campaign
     (`experiments/calibration/`); measurement-driven revisions will land
-    in a 0.5.0 bump. The SR-005 ↔ SR-008 consistency reconciliation
+    in a 0.6.0 bump. The SR-005 ↔ SR-008 consistency reconciliation
     noted in `docs/CHANGELOG.md` (t_stop_max raised from 1.5 s to 1.7 s
     at the SRS level) is unchanged; `a_min_mps2` below is the cage-side
     parameter that participates in the same consistency relation.
@@ -51,6 +53,22 @@ cage:
   control:
     cycle_period_ms: 50         # 20 Hz control loop
     staleness_max_ms: 200       # SR-007: max age of state observation
+
+  # -----------------------------------------------------------
+  # Inter-cycle oscillation detection (SR-010 Part 2)
+  # -----------------------------------------------------------
+  # The cage_node tracks the sign of each steering-affecting rule's
+  # correction (C-01, C-02, C-03) across cycles. When the alternation
+  # rate of a rule exceeds f_osc_max_hz in a t_osc_window_s sliding
+  # window, the cycle is logged for offline review. When the violation
+  # persists for more than t_osc_persist_s, the cage_node sets
+  # ctx["oscillation_detected"] = True and C-05 fires its
+  # "oscillation_detected" trigger to enter emergency mode. Defaults
+  # mirror SR-010 §"Inter-cycle oscillation check".
+  oscillation:
+    f_osc_max_hz: 5.0          # alternation-rate threshold
+    t_osc_window_s: 1.0        # sliding-window length
+    t_osc_persist_s: 3.0       # sustained-violation duration → emergency
 
   # -----------------------------------------------------------
   # State validity ranges (SR-007)

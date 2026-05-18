@@ -84,6 +84,10 @@ class SafetyCageNode:
         self.cfg = cfg
         self.version = cfg.get("version", "unknown")
         self.n_missing_max_cycles = cfg.get("n_missing_max_cycles", 5)
+        osc_cfg = cfg.get("oscillation", {})
+        self.f_osc_max = osc_cfg.get("f_osc_max_hz", float("inf"))
+        self.t_osc_window = osc_cfg.get("t_osc_window_s", 1.0)
+        self.t_osc_persist = osc_cfg.get("t_osc_persist_s", 3.0)
 
         self.c01 = LaneBoundaryRule(cfg["c01_lane_boundary"])
         self.c02 = HeadingLimitRule(cfg["c02_heading_limit"])
@@ -104,6 +108,13 @@ class SafetyCageNode:
         self._prev_action: Optional[Action] = None
         self._last_state = None
         self._cycles_since_last_state = 0
+        # Per-rule signed-correction history for SR-010 Part 2.
+        # Each list contains (timestamp, sign) tuples, pruned to the
+        # last t_osc_persist seconds.
+        self._osc_history: dict = {"C-01": [], "C-02": [], "C-03": []}
+        # Per-rule timestamp of the first cycle in the current violation
+        # window (rate > f_osc_max). None when no violation is open.
+        self._osc_violation_start: dict = {"C-01": None, "C-02": None, "C-03": None}
 
     @property
     def prev_action(self) -> Optional[Action]:
@@ -133,6 +144,7 @@ class SafetyCageNode:
                 have run without a fresh state observation.
         """
         ctx = dict(ctx or {})
+        current_t = ctx.get("current_time")
 
         if state is None:
             self._cycles_since_last_state += 1
@@ -147,6 +159,8 @@ class SafetyCageNode:
             "missing_state",
             self._cycles_since_last_state > self.n_missing_max_cycles,
         )
+        osc_persist, osc_rates = self._check_oscillation_persistence(current_t)
+        ctx.setdefault("oscillation_detected", osc_persist)
 
         interventions = []
         current_action = raw_action
@@ -177,6 +191,9 @@ class SafetyCageNode:
 
         self._prev_action = final_action
 
+        if current_t is not None:
+            self._update_oscillation_history(current_t, interventions)
+
         return {
             "safe_action": final_action,
             "raw_action": raw_action,
@@ -184,8 +201,56 @@ class SafetyCageNode:
             "emergency": emergency_active,
             "mode": self.mode,
             "cage_version": self.version,
+            "current_time": current_t,
             "cycles_since_last_state": self._cycles_since_last_state,
+            "oscillation_rates_hz": osc_rates,
+            "oscillation_persistent": osc_persist,
         }
+
+    def _update_oscillation_history(self, current_t: float, interventions: list) -> None:
+        for iv in interventions:
+            rule_id = iv["rule"]
+            if rule_id not in self._osc_history:
+                continue
+            correction = iv["metadata"].get("correction_raw")
+            if correction is None or abs(correction) < 1e-9:
+                continue
+            sign = 1 if correction > 0 else -1
+            history = self._osc_history[rule_id]
+            history.append((current_t, sign))
+            cutoff = current_t - self.t_osc_persist
+            while history and history[0][0] < cutoff:
+                history.pop(0)
+
+    def _check_oscillation_persistence(self, current_t):
+        """
+        Returns (persistent, rates_hz) where:
+            persistent: True if any tracked rule's alternation rate has
+                exceeded f_osc_max continuously for more than
+                t_osc_persist seconds.
+            rates_hz: dict mapping rule_id → current alternation rate
+                computed over the last t_osc_window.
+        """
+        rates: dict = {}
+        if current_t is None:
+            return False, rates
+        any_persistent = False
+        for rule_id, history in self._osc_history.items():
+            recent = [(t, s) for t, s in history if t >= current_t - self.t_osc_window]
+            alternations = sum(
+                1 for i in range(1, len(recent))
+                if recent[i][1] != recent[i - 1][1]
+            )
+            rate = alternations / self.t_osc_window
+            rates[rule_id] = rate
+            if rate > self.f_osc_max:
+                if self._osc_violation_start[rule_id] is None:
+                    self._osc_violation_start[rule_id] = current_t
+                elif (current_t - self._osc_violation_start[rule_id]) > self.t_osc_persist:
+                    any_persistent = True
+            else:
+                self._osc_violation_start[rule_id] = None
+        return any_persistent, rates
 
     def _no_state_ever_result(self, raw_action: Action) -> dict:
         self._prev_action = _NEUTRAL_SAFE_STOP
@@ -200,7 +265,10 @@ class SafetyCageNode:
             "emergency": True,
             "mode": self.mode,
             "cage_version": self.version,
+            "current_time": None,
             "cycles_since_last_state": self._cycles_since_last_state,
+            "oscillation_rates_hz": {},
+            "oscillation_persistent": False,
         }
 
     def reset_emergency(self) -> None:

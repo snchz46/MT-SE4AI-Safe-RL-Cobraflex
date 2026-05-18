@@ -12,7 +12,7 @@ Evaluation position: last in the sequential chain
 (C-06 → C-04 → C-02 → C-03 → C-01 → C-05). When C-05 fires it overrides
 every upstream correction with the controlled-stop action.
 
-Triggers implemented (cage YAML 0.4.0):
+Triggers implemented (cage YAML 0.5.0):
     1. Compound state low-energy:
          |theta| > theta_warning AND |d| > d_warning sustained for
          delta_t_max_s.
@@ -26,11 +26,15 @@ Triggers implemented (cage YAML 0.4.0):
        when no /state_obs message has arrived for n_missing_max_cycles
        consecutive control cycles).
     6. External stop: ctx["external_stop"] is truthy.
+    Oscillation. Persistent inter-cycle oscillation: ctx[
+       "oscillation_detected"] is True (cage_node sets this when a
+       steering-affecting rule's alternation rate exceeds f_osc_max_hz
+       for longer than t_osc_persist_s, per SR-010 Part 2).
 
 Not yet implemented (deferred to a later increment):
-    7. Joint-envelope assertion failure (SR-010) — requires a per-rule
-       `safe_envelope_predicate_holds(state, action)` API that does not
-       yet exist on the rule contract.
+    7. Joint-envelope assertion failure (SR-010 Part 1) — requires a
+       per-rule `safe_envelope_predicate_holds(state, action)` API that
+       does not yet exist on the rule contract.
 
 Exit: only via explicit reset (`reset()` method or `ctx["reset"]=True`)
 combined with the trigger condition having cleared. This implements the
@@ -71,10 +75,13 @@ class EmergencyRule:
         current_t = ctx.get("current_time")
         external_stop = bool(ctx.get("external_stop", False))
         missing_state = bool(ctx.get("missing_state", False))
+        oscillation = bool(ctx.get("oscillation_detected", False))
         if ctx.get("reset", False):
             self._reset_requested = True
 
-        triggers = self._evaluate_triggers(state, current_t, external_stop, missing_state)
+        triggers = self._evaluate_triggers(
+            state, current_t, external_stop, missing_state, oscillation
+        )
         meta["triggers"] = triggers
 
         if self._active:
@@ -115,11 +122,14 @@ class EmergencyRule:
         if triggers["external"]:
             self._activate(raw_action)
             return self._emergency_action(meta, "triggered-external-stop")
+        if triggers["oscillation"]:
+            self._activate(raw_action)
+            return self._emergency_action(meta, "triggered-oscillation")
 
         meta["active"] = False
         return CageDecision(fire=False, reason="no-trigger", metadata=meta)
 
-    def _evaluate_triggers(self, state, current_t, external_stop, missing_state) -> dict:
+    def _evaluate_triggers(self, state, current_t, external_stop, missing_state, oscillation) -> dict:
         abs_theta = abs(state.heading_error)
         abs_d = abs(state.lateral_offset)
         abs_v = abs(state.speed)
@@ -137,12 +147,14 @@ class EmergencyRule:
             "stale": stale,
             "missing": missing_state,
             "external": external_stop,
+            "oscillation": oscillation,
             "any": (
                 compound
                 or invalid
                 or stale
                 or missing_state
                 or external_stop
+                or oscillation
             ),
         }
 

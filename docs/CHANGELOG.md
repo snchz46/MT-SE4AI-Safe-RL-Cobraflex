@@ -31,6 +31,63 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [18.05.2026] — Cage 0.5.0: SR-010 Part 2 — inter-cycle oscillation detection (Phase 2)
+
+**Document(s) affected:** `cage/cage.yaml`.
+**Phase:** F2.
+**Gate context:** before G2.
+**Author:** Samuel.
+
+### Change
+
+Bumped `cage.version` from `0.4.0` to `0.5.0`. Added a new top-level
+`cage.oscillation` subsection with three parameters:
+
+- `f_osc_max_hz: 5.0` — alternation-rate threshold (per-rule, on the sign
+  of the steering correction) above which the cage logs the cycle.
+- `t_osc_window_s: 1.0` — sliding window over which the alternation
+  rate is computed.
+- `t_osc_persist_s: 3.0` — sustained-violation duration above which the
+  oscillation triggers C-05 emergency mode via a new
+  `oscillation_detected` trigger.
+
+### Rationale
+
+Implements SR-010 Part 2 (Inter-cycle oscillation check) as documented
+in §"Joint-envelope assertion and conflict resolution" of the cage
+specification. Detects pathological policy-cage feedback where the cage
+fires alternately left/right on the same rule across consecutive
+cycles, which the safety analysis treats as evidence of a degenerate
+loop requiring human intervention. SR-010 Part 1 (end-of-cycle
+joint-envelope assertion / C-05 Trigger 7) remains deferred because the
+per-rule `safe_envelope_predicate_holds(state, action)` API it requires
+does not yet exist on the rule contract.
+
+### Impact
+
+- `SafetyCageNode` now maintains a per-rule signed-correction history
+  (`_osc_history`) and a per-rule violation start timestamp
+  (`_osc_violation_start`). The new `step()` result also exposes
+  `oscillation_rates_hz` (per-rule current rates) and
+  `oscillation_persistent` (the boolean fed to C-05) for the logger.
+- `EmergencyRule._evaluate_triggers` reads `ctx["oscillation_detected"]`
+  and contributes it to the `any` aggregate; new explicit branch in
+  `evaluate()` emits the `triggered-oscillation` reason when fired.
+- Defaults on `SafetyCageNode.__init__` make the feature inert
+  (`f_osc_max=inf`) when the YAML lacks the `oscillation` subsection,
+  preserving backward compatibility with 0.4.0 YAMLs.
+
+### Verification
+
+- `pytest cage/tests/` — full suite passes including the new
+  `test_oscillation.py` cases (no fire below threshold, log without
+  emergency at fast rates, emergency once persistence exceeds
+  `t_osc_persist_s`).
+- `tools/check_traceability.py` — unchanged (SR-010 is in the registry;
+  no new SR added).
+
+---
+
 ## [18.05.2026] — Cage 0.4.0: complete C-05 trigger set (Phase 2)
 
 **Document(s) affected:** `cage/cage.yaml`.
@@ -87,8 +144,6 @@ exist.
 **Gate context:** before G2.
 **Author:** Samuel.
 
-### Change
-
 Bumped `cage.version` from `0.2.0` to `0.3.0`. Added three parameters needed
 by the first executable cut of the rule logic (no existing parameter values
 were modified):
@@ -103,8 +158,6 @@ were modified):
   maps speed excess over `v_max(κ)` to throttle reduction in the
   correction formula `throttle_safe = max(0, throttle_raw − k·excess)`.
 
-### Rationale
-
 The three parameters are required by the rule implementations under
 `cage/rules/c03_ttlc.py` and `cage/rules/c04_speed_ceiling.py` checked
 in alongside this bump. Their default values follow the Phase 2 plan
@@ -115,15 +168,11 @@ section. All three remain candidates for revision once the calibration
 campaign (M-1..M-5) closes and the policy-side margins of SR-003 are
 exercised.
 
-### Impact
-
 - Rule constructors `TTLCRule.__init__` and `SpeedCeilingRule.__init__`
   now read these keys; older YAMLs without them will fail to instantiate.
 - No change to traceability matrix — no SR or hazard added.
 - No re-run of validation campaigns required (no value of any existing
   parameter changed).
-
-### Verification
 
 - `pytest cage/tests/` — all rule unit tests pass.
 - `tools/check_traceability.py` — unchanged (no SR or cage rule added or

@@ -1,0 +1,30 @@
+# =============================================================
+# Baseline PD controller — parameter file
+# -------------------------------------------------------------
+# Per Phase 2 plan §10.2 and §10.3 (D31–D32). Values are initial
+# guesses from the plan; the empirical tuning campaign described in
+# `docs/.phases/Fase 2/phase2_implementation_notes.md` §3.5 may
+# revise them. The PD is infrastructure ("good enough to validate the
+# pipeline"), not a contribution; final acceptance is the 80 %
+# completion-rate threshold of Decision 6 of the supervisor briefing.
+# =============================================================
+
+baseline_pd:
+  version: "0.1.0"
+
+  # Steering loop — lateral position
+  kp_y: 12.0           # gain on lateral_offset
+  kd_y: 3.0            # gain on lateral_rate (finite difference)
+
+  # Steering loop — heading
+  kp_h: 1.5            # gain on heading_error
+  kd_h: 0.4            # gain on heading_rate (finite difference)
+
+  # Throttle
+  throttle_nominal: 0.5       # nominal cruise throttle on straight
+  alpha_curve_slowdown: 0.6   # reduces throttle proportionally to |curvature|
+
+  # Saturation
+  steering_limit: 1.0  # normalised actuator range
+  throttle_min: 0.0    # lowest throttle command (no negative throttle from PD)
+  throttle_max: 1.0

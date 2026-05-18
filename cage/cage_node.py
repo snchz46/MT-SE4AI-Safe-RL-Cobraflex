@@ -16,7 +16,7 @@ Publishes:
 
 Configuration: cage/cage.yaml (loaded at launch).
 
-Phase status: F2 first-cut. The ROS2 wiring is not yet implemented in this
+Phase status: F2 second cut. The ROS2 wiring is not yet implemented in this
 file (it will live under `cage/ros2/`); for now `SafetyCageNode` is the pure
 Python composition of the six rules, callable from tests and from the future
 ROS2 wrapper alike.
@@ -39,6 +39,8 @@ from cage.rules import (
     TTLCRule,
 )
 
+_NEUTRAL_SAFE_STOP: Action = (0.0, -0.5)
+
 
 class SafetyCageNode:
     """
@@ -58,6 +60,19 @@ class SafetyCageNode:
                      /safe_action == /raw_action. `_prev_action` tracks the
                      raw stream in this mode so C-06's rate computation
                      reflects what was actually emitted.
+
+    Missing-state handling (C-05 Trigger 5):
+        `step()` accepts `state=None` to signal that no `/state_obs`
+        message arrived this cycle. The node falls back to the last
+        observed state and increments `_cycles_since_last_state`. When
+        the counter exceeds `n_missing_max_cycles` (top-level cage YAML
+        key), `ctx["missing_state"]` is set to True for the chain and C-05
+        fires its missing-state trigger.
+
+        If `step()` is called with `state=None` before any state has ever
+        been received, the chain is short-circuited and a neutral
+        safe-stop action is emitted with a synthetic CAGE-NODE
+        intervention recorded for the logger.
     """
 
     def __init__(self, config_path: str | Path, mode: str = "enforcement"):
@@ -68,6 +83,7 @@ class SafetyCageNode:
         self.mode = mode
         self.cfg = cfg
         self.version = cfg.get("version", "unknown")
+        self.n_missing_max_cycles = cfg.get("n_missing_max_cycles", 5)
 
         self.c01 = LaneBoundaryRule(cfg["c01_lane_boundary"])
         self.c02 = HeadingLimitRule(cfg["c02_heading_limit"])
@@ -86,14 +102,24 @@ class SafetyCageNode:
         )
 
         self._prev_action: Optional[Action] = None
+        self._last_state = None
+        self._cycles_since_last_state = 0
 
     @property
     def prev_action(self) -> Optional[Action]:
         return self._prev_action
 
+    @property
+    def cycles_since_last_state(self) -> int:
+        return self._cycles_since_last_state
+
     def step(self, state, raw_action: Action, ctx: Optional[dict] = None) -> dict:
         """
         Run one control cycle through the rule chain.
+
+        Pass `state=None` to indicate that no /state_obs arrived this
+        cycle; the cage will fall back to the last observed state and
+        increment its missing-state counter.
 
         Returns:
             safe_action: (steering, throttle) tuple actually emitted.
@@ -103,8 +129,25 @@ class SafetyCageNode:
             raw_action: echoed for the logger.
             mode: "enforcement" or "monitoring".
             cage_version: from cage.yaml.
+            cycles_since_last_state: how many consecutive step() calls
+                have run without a fresh state observation.
         """
-        ctx = ctx or {}
+        ctx = dict(ctx or {})
+
+        if state is None:
+            self._cycles_since_last_state += 1
+            if self._last_state is None:
+                return self._no_state_ever_result(raw_action)
+            state = self._last_state
+        else:
+            self._last_state = state
+            self._cycles_since_last_state = 0
+
+        ctx.setdefault(
+            "missing_state",
+            self._cycles_since_last_state > self.n_missing_max_cycles,
+        )
+
         interventions = []
         current_action = raw_action
         emergency_active = False
@@ -141,6 +184,23 @@ class SafetyCageNode:
             "emergency": emergency_active,
             "mode": self.mode,
             "cage_version": self.version,
+            "cycles_since_last_state": self._cycles_since_last_state,
+        }
+
+    def _no_state_ever_result(self, raw_action: Action) -> dict:
+        self._prev_action = _NEUTRAL_SAFE_STOP
+        return {
+            "safe_action": _NEUTRAL_SAFE_STOP,
+            "raw_action": raw_action,
+            "interventions": [{
+                "rule": "CAGE-NODE",
+                "reason": "no-state-ever-received",
+                "metadata": {"cycles": self._cycles_since_last_state},
+            }],
+            "emergency": True,
+            "mode": self.mode,
+            "cage_version": self.version,
+            "cycles_since_last_state": self._cycles_since_last_state,
         }
 
     def reset_emergency(self) -> None:

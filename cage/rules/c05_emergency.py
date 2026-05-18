@@ -12,19 +12,27 @@ Evaluation position: last in the sequential chain
 (C-06 → C-04 → C-02 → C-03 → C-01 → C-05). When C-05 fires it overrides
 every upstream correction with the controlled-stop action.
 
-Triggers implemented in this F2 first cut:
-    1. Compound state (|theta| > theta_warning AND |d| > d_warning,
-       sustained for delta_t_max)
-    3. Invalid state field (state.state_valid is False)
-    4. Stale state (current_time - state.timestamp > staleness_max,
-       only when current_time is provided via ctx)
-    5. External stop (ctx["external_stop"] is truthy)
+Triggers implemented (cage YAML 0.4.0):
+    1. Compound state low-energy:
+         |theta| > theta_warning AND |d| > d_warning sustained for
+         delta_t_max_s.
+    2. Compound state high-energy:
+         same condition AND |v| > v_warning sustained for the shorter
+         delta_t_max_fast_s.
+    3. Stale state: current_time - state.timestamp > staleness_max
+       (only when current_time is provided via ctx).
+    4. Invalid state field: state.state_valid is False.
+    5. Missing state: ctx["missing_state"] is True (cage_node sets this
+       when no /state_obs message has arrived for n_missing_max_cycles
+       consecutive control cycles).
+    6. External stop: ctx["external_stop"] is truthy.
 
-Not yet implemented (deferred): missing-state counter (Trigger 5 in spec,
-needs cage_node-level counter), high-energy compound trigger, joint-
-envelope assertion (SR-010 wiring).
+Not yet implemented (deferred to a later increment):
+    7. Joint-envelope assertion failure (SR-010) — requires a per-rule
+       `safe_envelope_predicate_holds(state, action)` API that does not
+       yet exist on the rule contract.
 
-Exit: only via explicit reset (`reset()` method or ctx["reset"]=True)
+Exit: only via explicit reset (`reset()` method or `ctx["reset"]=True`)
 combined with the trigger condition having cleared. This implements the
 asymmetric exit policy with `require_explicit_reset=True` in cage.yaml.
 """
@@ -42,6 +50,8 @@ class EmergencyRule:
         self.theta_warning = params["theta_warning_rad"]
         self.d_warning = params["d_warning_m"]
         self.delta_t_max = params["delta_t_max_s"]
+        self.v_warning = params.get("v_warning_mps", float("inf"))
+        self.delta_t_max_fast = params.get("delta_t_max_fast_s", self.delta_t_max)
         self.a_min = params["a_min_mps2"]
         self.freeze_steering = params["freeze_steering"]
         self.require_explicit_reset = params["require_explicit_reset"]
@@ -60,10 +70,11 @@ class EmergencyRule:
         ctx = ctx or {}
         current_t = ctx.get("current_time")
         external_stop = bool(ctx.get("external_stop", False))
+        missing_state = bool(ctx.get("missing_state", False))
         if ctx.get("reset", False):
             self._reset_requested = True
 
-        triggers = self._evaluate_triggers(state, current_t, external_stop)
+        triggers = self._evaluate_triggers(state, current_t, external_stop, missing_state)
         meta["triggers"] = triggers
 
         if self._active:
@@ -79,14 +90,16 @@ class EmergencyRule:
             return self._emergency_action(meta, "active-persists")
 
         if triggers["compound"]:
+            persistence = self.delta_t_max_fast if triggers["high_energy"] else self.delta_t_max
+            kind = "high" if triggers["high_energy"] else "low"
             if current_t is None:
                 self._activate(raw_action)
-                return self._emergency_action(meta, "triggered-compound-no-time")
+                return self._emergency_action(meta, f"triggered-compound-{kind}-no-time")
             if self._compound_state_start_t is None:
                 self._compound_state_start_t = current_t
-            elif (current_t - self._compound_state_start_t) >= self.delta_t_max:
+            elif (current_t - self._compound_state_start_t) >= persistence:
                 self._activate(raw_action)
-                return self._emergency_action(meta, "triggered-compound")
+                return self._emergency_action(meta, f"triggered-compound-{kind}")
         else:
             self._compound_state_start_t = None
 
@@ -96,6 +109,9 @@ class EmergencyRule:
         if triggers["stale"]:
             self._activate(raw_action)
             return self._emergency_action(meta, "triggered-stale-state")
+        if triggers["missing"]:
+            self._activate(raw_action)
+            return self._emergency_action(meta, "triggered-missing-state")
         if triggers["external"]:
             self._activate(raw_action)
             return self._emergency_action(meta, "triggered-external-stop")
@@ -103,10 +119,12 @@ class EmergencyRule:
         meta["active"] = False
         return CageDecision(fire=False, reason="no-trigger", metadata=meta)
 
-    def _evaluate_triggers(self, state, current_t, external_stop) -> dict:
+    def _evaluate_triggers(self, state, current_t, external_stop, missing_state) -> dict:
         abs_theta = abs(state.heading_error)
         abs_d = abs(state.lateral_offset)
+        abs_v = abs(state.speed)
         compound = abs_theta > self.theta_warning and abs_d > self.d_warning
+        high_energy = compound and abs_v > self.v_warning
         invalid = not state.state_valid
         if current_t is not None and state.timestamp > 0:
             stale = (current_t - state.timestamp) > self.staleness_max
@@ -114,10 +132,18 @@ class EmergencyRule:
             stale = False
         return {
             "compound": compound,
+            "high_energy": high_energy,
             "invalid": invalid,
             "stale": stale,
+            "missing": missing_state,
             "external": external_stop,
-            "any": compound or invalid or stale or external_stop,
+            "any": (
+                compound
+                or invalid
+                or stale
+                or missing_state
+                or external_stop
+            ),
         }
 
     def _activate(self, raw_action) -> None:

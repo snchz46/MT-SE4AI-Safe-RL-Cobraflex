@@ -31,6 +31,55 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [18.05.2026] — Cage 0.4.0: complete C-05 trigger set (Phase 2)
+
+**Document(s) affected:** `cage/cage.yaml`.
+**Phase:** F2.
+**Gate context:** before G2.
+**Author:** Samuel.
+
+### Change
+
+Bumped `cage.version` from `0.3.0` to `0.4.0`. Added two parameters under
+`c05_emergency`:
+
+- `v_warning_mps: 0.4` — speed threshold above which the compound trigger
+  uses the high-energy persistence (SR-005 Trigger B). 80 % of
+  `v_max_straight_mps`.
+- `delta_t_max_fast_s: 0.1` — shorter persistence applied when the
+  high-energy variant fires.
+
+### Rationale
+
+Both parameters complete the C-05 trigger set per the cage specification
+(`docs/04_cage_specification.md` §C-05): Trigger 2 (high-energy compound)
+joins the already-implemented Triggers 1 (low-energy compound), 3
+(stale), 4 (invalid), 5 (missing-state via the cage_node counter) and 6
+(external stop). Trigger 7 (joint-envelope assertion of SR-010) remains
+deferred because the per-rule predicate API it requires does not yet
+exist.
+
+### Impact
+
+- `EmergencyRule.__init__` now reads `v_warning_mps` and
+  `delta_t_max_fast_s`. Both have constructor defaults (`inf` and the
+  low-energy persistence respectively) so older YAMLs continue to load,
+  but the high-energy trigger is effectively disabled in that case.
+- `SafetyCageNode.step()` now accepts `state=None` to flag a missing
+  observation; consecutive `None` calls feed the missing-state trigger
+  (5) once they exceed `cage.n_missing_max_cycles`.
+- No re-run of validation campaigns required (no existing parameter
+  value changed).
+
+### Verification
+
+- `pytest cage/tests/` — all rule and integration tests pass, including
+  new tests for the high-energy trigger and the missing-state counter.
+- `tools/check_traceability.py` — unchanged (no SR or cage rule added or
+  modified at the registry level).
+
+---
+
 ## [18.05.2026] — Cage 0.3.0: parameters required by executable rules (Phase 2)
 
 **Document(s) affected:** `cage/cage.yaml`.

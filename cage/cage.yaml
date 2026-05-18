@@ -13,26 +13,31 @@
 # =============================================================
 
 cage:
-  version: "0.3.0"   # bump on any parameter change; semantic versioning
+  version: "0.4.0"   # bump on any parameter change; semantic versioning
   description: |
-    F2 first-cut implementation parameters (18.05.2026). 0.3.0 adds the
-    parameters required by the executable rule logic that 0.2.0 did not
-    yet expose:
-      - c03_ttlc: `d_max_m` (must mirror c01.d_max_m; coupling documented
-        below) and `v_min_estimate_mps` (kinematic floor to avoid
-        division-by-near-zero in TTLC projection).
-      - c04_speed_ceiling: `k_throttle_per_mps` (proportional gain that
-        maps speed excess to throttle reduction).
-    The previous (0.2.0) rationale also applies: parameters flagged
-    "[provisional, M-X]" remain at conservative defaults pending the
-    corresponding measurement of the pre-G1 campaign
-    (`experiments/calibration/`); when those measurements close, the
-    affected parameters will be revised in a 0.4.0 bump. The SR-005 ↔
-    SR-008 consistency reconciliation noted in `docs/CHANGELOG.md`
-    (t_stop_max raised from 1.5 s to 1.7 s at the SRS level) is unchanged
-    here; t_stop_max is a system-level requirement, not encoded in this
-    file, but `a_min_mps2` below is the cage-side parameter that
-    participates in the same consistency relation.
+    F2 second cut (18.05.2026). 0.4.0 adds the parameters needed to
+    complete the C-05 trigger set documented in §C-05 of the cage spec:
+      - c05_emergency.v_warning_mps: speed threshold above which the
+        compound trigger uses the shorter persistence (Trigger 2 of the
+        spec; SR-005 Trigger B).
+      - c05_emergency.delta_t_max_fast_s: shorter persistence applied
+        when the high-energy variant of the compound trigger fires.
+    These complete Triggers 1 (low-energy compound), 2 (high-energy
+    compound), 3 (stale), 4 (invalid), 5 (missing-state) and 6 (external
+    stop) of C-05. Trigger 7 (joint-envelope assertion of SR-010)
+    remains deferred to a future increment because it requires a per-
+    rule safe-envelope predicate API that does not yet exist.
+
+    Carried from 0.3.0: parameters required by the executable rule logic
+    of C-03 and C-04 (`d_max_m`, `v_min_estimate_mps`,
+    `k_throttle_per_mps`). The (0.2.0) rationale also still applies:
+    parameters flagged "[provisional, M-X]" remain at conservative
+    defaults pending the calibration campaign
+    (`experiments/calibration/`); measurement-driven revisions will land
+    in a 0.5.0 bump. The SR-005 ↔ SR-008 consistency reconciliation
+    noted in `docs/CHANGELOG.md` (t_stop_max raised from 1.5 s to 1.7 s
+    at the SRS level) is unchanged; `a_min_mps2` below is the cage-side
+    parameter that participates in the same consistency relation.
 
   # -----------------------------------------------------------
   # Operating mode
@@ -131,10 +136,17 @@ cage:
   c05_emergency:
     enabled: true
 
-    # Compound-state trigger (SR-005)
+    # Compound-state trigger — low-energy variant (SR-005 Trigger A)
     theta_warning_rad: 0.3491   # 20 deg
     d_warning_m: 0.12
     delta_t_max_s: 0.2          # 4 cycles; STPA-informed persistence
+
+    # Compound-state trigger — high-energy variant (SR-005 Trigger B)
+    # When |v| > v_warning_mps the same compound condition triggers after
+    # the shorter delta_t_max_fast_s because the kinematic margin at
+    # elevated speed leaves less time to absorb the excursion.
+    v_warning_mps: 0.4          # 80% of v_max_straight (0.5 mps)
+    delta_t_max_fast_s: 0.1     # 2 cycles; shorter persistence at high energy
 
     # Emergency response
     a_min_mps2: 0.3             # [provisional, M-3]; consistent with SR-008

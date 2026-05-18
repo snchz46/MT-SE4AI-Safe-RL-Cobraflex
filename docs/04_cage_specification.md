@@ -177,6 +177,8 @@ if v > v_ceiling:
 6. External stop: `/external_stop` signal received.
 7. Joint-envelope assertion failure (see §Joint-envelope assertion below).
 
+**Implementation status (cage YAML 0.4.0).** Triggers 1–6 are implemented in [cage/rules/c05_emergency.py](../cage/rules/c05_emergency.py); Triggers 1–4 and 6 are exercised by [test_c05_emergency.py](../cage/tests/test_c05_emergency.py) and Triggers 2 and 5 by [test_c05_triggers_extended.py](../cage/tests/test_c05_triggers_extended.py). Trigger 5 (missing state) is fed by the cage_node-level counter in [cage/cage_node.py](../cage/cage_node.py) (`_cycles_since_last_state`), verified by [test_cage_node_missing_state.py](../cage/tests/test_cage_node_missing_state.py). Trigger 7 (joint-envelope assertion) is **deferred**: it requires a per-rule `safe_envelope_predicate_holds(state, action) -> bool` method that does not yet exist on the rule contract. The sibling inter-cycle oscillation check described in the SR-010 section below is also deferred for the same reason (no per-rule signed-correction predicate yet).
+
 **On activation:**
 
 - Replace throttle command with a deceleration target producing at least `a_min`.
@@ -300,18 +302,24 @@ The mode is set at launch and recorded in `metadata.json` of every run.
 
 ## Unit tests
 
-Each rule has a dedicated test file under `cage/tests/`:
+Each rule has a dedicated test file under `cage/tests/`. Current status (cage YAML 0.4.0, 90 tests passing):
 
-- `test_c01_lane_boundary.py`
-- `test_c02_heading_limit.py`
-- `test_c03_ttlc.py`
-- `test_c04_speed_ceiling.py`
-- `test_c05_emergency.py`
-- `test_c06_rate_limiter.py`
+| File | Coverage |
+|---|---|
+| [test_c01_lane_boundary.py](../cage/tests/test_c01_lane_boundary.py) | Hysteresis, bounds, sign of correction, saturation, disable |
+| [test_c02_heading_limit.py](../cage/tests/test_c02_heading_limit.py) | Same pattern on heading_error |
+| [test_c03_ttlc.py](../cage/tests/test_c03_ttlc.py) | `compute_ttlc`, urgency ramp, predictive activation |
+| [test_c04_speed_ceiling.py](../cage/tests/test_c04_speed_ceiling.py) | `v_max(κ)`, throttle reduction, curvature behaviour |
+| [test_c05_emergency.py](../cage/tests/test_c05_emergency.py) | Triggers 1, 3, 4, 6; persistence; reset semantics; freeze steering |
+| [test_c05_triggers_extended.py](../cage/tests/test_c05_triggers_extended.py) | Trigger 2 (high-energy); Trigger 5 (missing-state via ctx) |
+| [test_c06_rate_limiter.py](../cage/tests/test_c06_rate_limiter.py) | Per-component clipping, boundary, disable |
+| [test_cage_node.py](../cage/tests/test_cage_node.py) | Chain composition, modes, prev_action tracking, emergency override |
+| [test_cage_node_missing_state.py](../cage/tests/test_cage_node_missing_state.py) | Missing-state counter, no-state-ever safe-stop |
+| [test_cage_rules.py](../cage/tests/test_cage_rules.py) | YAML load + per-rule smoke tests |
 
-Each test file covers: the trigger condition, the correction logic, the hysteresis behaviour where applicable, the boundary cases. The full suite is run before any commit to `main` and before any Gate review.
+The integration tests in `test_cage_node.py` exercise rule interaction (composition and override semantics); a dedicated `test_evaluation_order.py` covering rule-pair conflicts at the level of detail required for SR-010 will land alongside the joint-envelope assertion (Trigger 7 of C-05) when that work is taken up.
 
-In addition, `test_evaluation_order.py` covers the interaction between rules.
+The full suite is run before any commit to `main` and before any Gate review.
 
 ## Change log
 

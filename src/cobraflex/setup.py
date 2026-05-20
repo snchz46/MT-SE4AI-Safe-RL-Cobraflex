@@ -32,6 +32,22 @@ setup(
         (os.path.join("share", package_name, "config"), glob("config/*")),
         (os.path.join("share", package_name, "worlds"), glob("worlds/*")),
         (os.path.join("share", package_name, "meshes"), glob("meshes/*")),
+        (
+            os.path.join("share", package_name, "materials", "road_assets", "road_textures"),
+            glob("materials/road_assets/road_textures/*.png"),
+        ),
+        (
+            os.path.join("share", package_name, "materials", "road_assets", "road_curves"),
+            glob("materials/road_assets/road_curves/*.png"),
+        ),
+        (
+            os.path.join("share", package_name, "materials", "road_assets", "road_variants"),
+            glob("materials/road_assets/road_variants/*.png"),
+        ),
+        (
+            os.path.join("share", package_name, "materials", "road_assets", "road_variants_lot2"),
+            glob("materials/road_assets/road_variants_lot2/*.png"),
+        ),
     ],
     install_requires=[
         "setuptools",

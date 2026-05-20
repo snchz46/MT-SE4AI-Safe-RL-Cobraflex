@@ -1,0 +1,13 @@
+{
+  "smoke_script": "experiments/sim/oval_pd_cage_smoke.py",
+  "centerline": "B:\\SE4AI\\thesis_repo\\src\\cobraflex_rl\\config\\oval_centerline.yaml",
+  "cage_yaml": "B:\\SE4AI\\thesis_repo\\cage\\cage.yaml",
+  "baseline_yaml": "B:\\SE4AI\\thesis_repo\\policy\\baseline_pd.yaml",
+  "mode": "enforcement",
+  "speed_mps": 0.2,
+  "laps_target": 1,
+  "initial_offset_m": 0.18,
+  "run_id": "smoke_perturbed",
+  "created_utc": "2026-05-20T13:21:40.561852+00:00",
+  "cycles_logged": 811
+}

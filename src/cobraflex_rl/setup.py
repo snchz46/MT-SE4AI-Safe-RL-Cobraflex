@@ -33,6 +33,10 @@ setup(
             "train_ppo = cobraflex_rl.train_ppo:main",
             "eval_policy = cobraflex_rl.eval_policy:main",
             "gazebo_lane_env = cobraflex_rl.gazebo_lane_env:main",
+            "lane_perception_node = cobraflex_rl.lane_perception_node:main",
+            "vehicle_control_node = cobraflex_rl.vehicle_control_node:main",
+            "pd_baseline_node = cobraflex_rl.pd_baseline_node:main",
+            "cage_logger_node = cobraflex_rl.cage_logger_node:main",
         ],
     },
 )

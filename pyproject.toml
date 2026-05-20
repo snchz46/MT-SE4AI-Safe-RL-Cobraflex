@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "se4ai-thesis"
+version = "0.1.0"
+description = "SE4AI thesis safety cage + policy package (importable from ROS2 nodes via pip install -e .)"
+requires-python = ">=3.10"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Samuel Sanchez" }]
+
+dependencies = [
+  "numpy>=1.24",
+  "pyyaml>=6.0",
+]
+
+[tool.setuptools]
+packages = ["cage", "cage.rules", "policy"]
+
+[tool.setuptools.package-data]
+cage = ["*.yaml"]

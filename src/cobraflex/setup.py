@@ -30,7 +30,8 @@ setup(
         (os.path.join("share", package_name, "urdf"), glob("urdf/*")),
         (os.path.join("share", package_name, "rviz"), glob("rviz/*")),
         (os.path.join("share", package_name, "config"), glob("config/*")),
-        (os.path.join("share", package_name, "worlds"), glob("worlds/*")),
+        (os.path.join("share", package_name, "worlds"), glob("worlds/*.world") + glob("worlds/*.sdf")),
+        (os.path.join("share", package_name, "worlds", "materials"), glob("worlds/materials/*")),
         (os.path.join("share", package_name, "meshes"), glob("meshes/*")),
         (
             os.path.join("share", package_name, "materials", "road_assets", "road_textures"),
@@ -64,6 +65,7 @@ setup(
             "cobraflex_ros_driver = cobraflex.cobraflex_ros_driver:main",
             "lidar_avoidance_node = cobraflex.lidar_avoidance_node:main",
             "lane_keeper_node = cobraflex.lane_keeper_node:main",
+            "lane_keeper_gazebo_node = cobraflex.lane_keeper_gazebo_node:main",
         ],
     },
 )

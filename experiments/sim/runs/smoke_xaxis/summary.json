@@ -1,0 +1,14 @@
+{
+  "run_id": "smoke_xaxis",
+  "completed_laps": 3.0,
+  "target_laps": 3,
+  "completed": true,
+  "max_abs_ey_m": 0.07452089378159837,
+  "emergency_steps": 0,
+  "interventions_per_rule": {
+    "C-06": 109
+  },
+  "total_steps": 1677,
+  "cycle_dt_s": 0.05,
+  "mode": "enforcement"
+}

@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import math
+import os
 from pathlib import Path
 from typing import Iterable, List, Tuple
 
@@ -221,8 +222,14 @@ def _rotate(v: Tuple[float, float], theta: float) -> Tuple[float, float]:
 
 
 def walk_sequence(tiles: Iterable[dict]) -> List[dict]:
-    """Walk the tile chain, attaching world pose and centerline samples."""
-    world_x, world_y, world_th = 0.0, 0.0, math.pi / 2.0
+    """Walk the tile chain, attaching world pose and centerline samples.
+
+    Initial world heading is +X (yaw=0) so that the polyline matches the
+    DiffDrive /odom convention (robot spawns at odom (0,0,yaw=0) facing
+    +X). Tile-local +Y (the road direction) is rotated to world +X by
+    -pi/2 yaw on each tile placement.
+    """
+    world_x, world_y, world_th = 0.0, 0.0, 0.0
     placements: List[dict] = []
 
     for tile in tiles:
@@ -285,7 +292,25 @@ def _sample_centreline(
     raise ValueError(f"Unknown centreline type: {cl['type']}")
 
 
-def emit_world_sdf(world_name: str, placements: List[dict], texture_base: Path) -> str:
+def _texture_uri(world_dir: Path, texture_base: Path, texture_relpath: str) -> str:
+    """Path relative to the world file, with POSIX separators.
+
+    Gazebo resolves <albedo_map> against the world file's directory, so a
+    relative path keeps the .world portable across hosts and across the
+    source-tree vs colcon-install layouts (both preserve the same
+    cobraflex/worlds <-> cobraflex/materials sibling relationship).
+    """
+    abs_tex = (texture_base / texture_relpath).resolve()
+    rel = os.path.relpath(abs_tex, start=world_dir.resolve())
+    return rel.replace(os.sep, "/")
+
+
+def emit_world_sdf(
+    world_name: str,
+    placements: List[dict],
+    texture_base: Path,
+    world_dir: Path,
+) -> str:
     parts = [
         "<?xml version=\"1.0\" ?>\n",
         "<sdf version='1.8'>\n",
@@ -302,7 +327,7 @@ def emit_world_sdf(world_name: str, placements: List[dict], texture_base: Path) 
         tile = pl["tile"]
         bx, by = pl["bbox_center"]
         yaw = pl["yaw"]
-        tex = (texture_base / tile["texture_uri"]).as_posix()
+        tex = _texture_uri(world_dir, texture_base, tile["texture_uri"])
         size_x = tile["bbox_w"]
         size_y = tile["bbox_h"]
 
@@ -405,8 +430,9 @@ def main() -> None:
     placements = walk_sequence(tiles)
 
     texture_base = args.texture_base.resolve()
-    world_sdf = emit_world_sdf(args.world_name, placements, texture_base)
     args.world_out.parent.mkdir(parents=True, exist_ok=True)
+    world_dir = args.world_out.resolve().parent
+    world_sdf = emit_world_sdf(args.world_name, placements, texture_base, world_dir)
     args.world_out.write_text(world_sdf, encoding="utf-8")
 
     centerline_yaml = emit_centerline_yaml(

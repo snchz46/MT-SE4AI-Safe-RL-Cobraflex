@@ -33,6 +33,12 @@ from typing import Iterable, List, Tuple
 
 import yaml
 
+try:
+    from PIL import Image, ImageDraw
+    _PIL_AVAILABLE = True
+except ImportError:
+    _PIL_AVAILABLE = False
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 ROAD_WIDTH_M = 0.52
@@ -116,12 +122,85 @@ SUN_LIGHT_BLOCK = """\
 """
 
 STRAIGHT_THEME_TEXTURES = {
-    "clean": "road_assets/road_textures/road_two_lane_same_direction_0p52m_x_10m.png",
+    # `clean` is regenerated at the exact requested length by
+    # _ensure_clean_straight_png so the dashed centreline pace stays at
+    # the design 10 cm dash + 10 cm gap (no UV compression). The variant
+    # themes still use the 10 m source PNGs and will appear compressed
+    # on short tiles; regenerate them with road_variants/make_*.py if
+    # visual fidelity matters for an experiment.
+    "clean": None,  # filled in at runtime
     "worn": "road_assets/road_variants/two_same_02_patched.png",
     "tee": "road_assets/road_variants/two_same_03_tee_junction.png",
     "wet": "road_assets/road_variants/two_opp_02_wet.png",
     "dirt": "road_assets/road_variants/single_03_dirt_road.png",
 }
+
+
+# Geometry constants for the procedural straight texture (mirror
+# materials/road_assets/road_textures/make_road_textures.py).
+_TEX_PX_PER_M = 500
+_TEX_ASPHALT = (0, 0, 0)
+_TEX_LINE_WHITE = (255, 255, 255)
+_TEX_LINE_WIDTH_M = 0.01
+_TEX_DASH_MARK_M = 0.10
+_TEX_DASH_GAP_M = 0.10
+_TEX_LANE_USEFUL_M = 0.245
+_TEX_TWO_LANE_WIDTH_M = 2 * _TEX_LANE_USEFUL_M + 3 * _TEX_LINE_WIDTH_M  # 0.52
+
+
+def _ensure_clean_straight_png(length_m: float, base_dir: Path) -> Path:
+    """Generate (or reuse) the two-lane clean straight texture at exact length.
+
+    Returns the absolute path. The texture lives next to the other
+    road_textures so it gets installed by setup.py automatically.
+    """
+    out_dir = base_dir / "road_assets" / "road_textures"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    length_label = f"{length_m:.2f}".replace(".", "p").rstrip("0").rstrip("p") or "0"
+    name = f"road_two_lane_same_direction_0p52m_x_{length_label}m.png"
+    path = out_dir / name
+    if path.exists():
+        return path
+
+    if not _PIL_AVAILABLE:
+        raise RuntimeError(
+            "Pillow is required to generate the straight texture at custom "
+            "length. Install with `pip install pillow`."
+        )
+
+    def m_to_px(m: float) -> int:
+        return int(round(m * _TEX_PX_PER_M))
+
+    width_px = m_to_px(_TEX_TWO_LANE_WIDTH_M)
+    length_px = m_to_px(length_m)
+    img = Image.new("RGB", (width_px, length_px), _TEX_ASPHALT)
+    draw = ImageDraw.Draw(img)
+
+    # Continuous edge lines (left and right)
+    line_w_px = m_to_px(_TEX_LINE_WIDTH_M)
+    draw.rectangle([(0, 0), (line_w_px - 1, length_px - 1)], fill=_TEX_LINE_WHITE)
+    draw.rectangle(
+        [(width_px - line_w_px, 0), (width_px - 1, length_px - 1)],
+        fill=_TEX_LINE_WHITE,
+    )
+
+    # Dashed centreline
+    cx = width_px // 2
+    half_l = line_w_px // 2
+    half_r = line_w_px - half_l
+    dash_px = m_to_px(_TEX_DASH_MARK_M)
+    gap_px = m_to_px(_TEX_DASH_GAP_M)
+    period_px = dash_px + gap_px
+    y = 0
+    while y < length_px:
+        y_end = min(y + dash_px, length_px)
+        draw.rectangle(
+            [(cx - half_l, y), (cx + half_r - 1, y_end - 1)], fill=_TEX_LINE_WHITE
+        )
+        y += period_px
+
+    img.save(path, "PNG", optimize=True)
+    return path
 
 
 def _wrap_pi(theta: float) -> float:
@@ -153,51 +232,93 @@ def _curve_bbox(radius_m: float, angle_deg: float) -> Tuple[float, float, float,
     )
 
 
-def _straight_tile(length_m: float, theme: str) -> dict:
+def _straight_tile(length_m: float, theme: str, texture_uri: str) -> dict:
     return {
         "kind": "straight",
         "bbox_w": ROAD_WIDTH_M,
         "bbox_h": length_m,
+        # Straight PNG: road runs along the image's V axis (image height),
+        # so in tile-local frame the entry sits at the bottom-mid and the
+        # heading there is +Y (math). The bbox is centred on the road
+        # midpoint, so the bbox-relative entry offset is (0, -L/2).
         "entry_in_bbox": (0.0, -length_m / 2.0),
-        "exit_local": (0.0, length_m, 0.0),
-        "texture_uri": STRAIGHT_THEME_TEXTURES.get(theme, STRAIGHT_THEME_TEXTURES["clean"]),
+        "entry_heading_local": math.pi / 2.0,
+        "exit_displacement_local": (0.0, length_m, 0.0),
+        "texture_uri": texture_uri,
         "centreline": {"type": "line", "length": length_m},
     }
 
 
 def _curve_tile(radius_m: float, angle_deg: float, mirror_right: bool = False) -> dict:
+    """Curve tile metadata derived from materials/.../make_road_curves.py.
+
+    The script draws the arc with `theta_start = -pi/2`, i.e. the
+    centreline ENTRY of the arc is at LOCAL (-R, -R) with TANGENT +X,
+    NOT at LOCAL (0, 0) with tangent +Y as the README narrative
+    misleadingly suggests. The composer uses the script's drawing
+    convention as the source of truth so that the asphalt in the PNG
+    lines up with the polyline ground-truth used by the cage.
+    """
     xmin, ymin, xmax, ymax = _curve_bbox(radius_m, angle_deg)
     bbox_w = xmax - xmin
     bbox_h = ymax - ymin
     bbox_cx_local = (xmin + xmax) / 2.0
     bbox_cy_local = (ymin + ymax) / 2.0
-    entry_in_bbox = (0.0 - bbox_cx_local, 0.0 - bbox_cy_local)
 
     angle_rad = math.radians(angle_deg)
-    dx_local = -radius_m * (1.0 - math.cos(angle_rad))
-    dy_local = radius_m * math.sin(angle_rad)
-    dtheta_local = angle_rad
+    theta_start = -math.pi / 2.0
+    theta_end = theta_start + angle_rad
+
+    cx_local = -radius_m
+    cy_local = 0.0
+    entry_local = (
+        cx_local + radius_m * math.cos(theta_start),
+        cy_local + radius_m * math.sin(theta_start),
+    )
+    exit_local = (
+        cx_local + radius_m * math.cos(theta_end),
+        cy_local + radius_m * math.sin(theta_end),
+    )
+    # Tangent of an arc parametrised by theta is (-sin theta, cos theta)
+    # for left-turn (CCW). Heading = atan2(tangent_y, tangent_x).
+    entry_heading_local = math.atan2(math.cos(theta_start), -math.sin(theta_start))
+    exit_heading_local = math.atan2(math.cos(theta_end), -math.sin(theta_end))
+
+    entry_in_bbox = (
+        entry_local[0] - bbox_cx_local,
+        entry_local[1] - bbox_cy_local,
+    )
+    exit_displacement_local = (
+        exit_local[0] - entry_local[0],
+        exit_local[1] - entry_local[1],
+        _wrap_pi(exit_heading_local - entry_heading_local),
+    )
 
     if mirror_right:
-        entry_in_bbox = (-entry_in_bbox[0], entry_in_bbox[1])
-        dx_local = -dx_local
-        dtheta_local = -dtheta_local
+        # Mirror across local X axis to flip a left curve into a right one.
+        entry_in_bbox = (entry_in_bbox[0], -entry_in_bbox[1])
+        entry_heading_local = -entry_heading_local
+        exit_displacement_local = (
+            exit_displacement_local[0],
+            -exit_displacement_local[1],
+            -exit_displacement_local[2],
+        )
 
     r_int = int(round(radius_m * 100))
     a_int = int(round(angle_deg))
     texture = (
         f"road_assets/road_curves/curve_R{r_int:03d}cm_A{a_int:03d}deg.png"
     )
-    yaw_extra = math.pi if mirror_right else 0.0
 
     return {
         "kind": "curve",
         "bbox_w": bbox_w,
         "bbox_h": bbox_h,
         "entry_in_bbox": entry_in_bbox,
-        "exit_local": (dx_local, dy_local, dtheta_local),
+        "entry_heading_local": entry_heading_local,
+        "exit_displacement_local": exit_displacement_local,
         "texture_uri": texture,
-        "extra_yaw": yaw_extra,
+        "extra_yaw": 0.0,
         "centreline": {
             "type": "arc",
             "radius": radius_m,
@@ -207,11 +328,13 @@ def _curve_tile(radius_m: float, angle_deg: float, mirror_right: bool = False) -
     }
 
 
-def oval_preset(radius_m: float, straight_length_m: float, theme: str) -> List[dict]:
+def oval_preset(
+    radius_m: float, straight_length_m: float, theme: str, straight_texture_uri: str
+) -> List[dict]:
     return [
-        _straight_tile(straight_length_m, theme),
+        _straight_tile(straight_length_m, theme, straight_texture_uri),
         _curve_tile(radius_m, 180.0, mirror_right=False),
-        _straight_tile(straight_length_m, theme),
+        _straight_tile(straight_length_m, theme, straight_texture_uri),
         _curve_tile(radius_m, 180.0, mirror_right=False),
     ]
 
@@ -224,20 +347,28 @@ def _rotate(v: Tuple[float, float], theta: float) -> Tuple[float, float]:
 def walk_sequence(tiles: Iterable[dict]) -> List[dict]:
     """Walk the tile chain, attaching world pose and centerline samples.
 
-    Initial world heading is +X (yaw=0) so that the polyline matches the
-    DiffDrive /odom convention (robot spawns at odom (0,0,yaw=0) facing
-    +X). Tile-local +Y (the road direction) is rotated to world +X by
-    -pi/2 yaw on each tile placement.
+    The tile yaw is `world_th - entry_heading_local`, so the tile's
+    local frame is rotated to make its local entry heading coincide
+    with the current world heading. Straight tiles have
+    entry_heading_local = +pi/2 (road runs +Y in local); curve tiles
+    have entry_heading_local = 0 (the PNG arc enters with tangent +X
+    in local, per make_road_curves.py).
+
+    Initial world heading is +X (yaw=0) so the polyline matches the
+    DiffDrive /odom convention (robot spawns at odom (0,0,yaw=0)
+    facing +X).
     """
     world_x, world_y, world_th = 0.0, 0.0, 0.0
     placements: List[dict] = []
 
     for tile in tiles:
+        psi_local = tile["entry_heading_local"]
+        yaw = _wrap_pi(world_th - psi_local + tile.get("extra_yaw", 0.0))
+
         ex, ey = tile["entry_in_bbox"]
-        rot_e = _rotate((ex, ey), world_th - math.pi / 2.0)
+        rot_e = _rotate((ex, ey), yaw)
         bbox_cx = world_x - rot_e[0]
         bbox_cy = world_y - rot_e[1]
-        yaw = _wrap_pi(world_th - math.pi / 2.0 + tile.get("extra_yaw", 0.0))
 
         polyline = _sample_centreline(tile, world_x, world_y, world_th)
 
@@ -249,8 +380,8 @@ def walk_sequence(tiles: Iterable[dict]) -> List[dict]:
             "polyline": polyline,
         })
 
-        dx_l, dy_l, dth_l = tile["exit_local"]
-        rot_d = _rotate((dx_l, dy_l), world_th - math.pi / 2.0)
+        dx_l, dy_l, dth_l = tile["exit_displacement_local"]
+        rot_d = _rotate((dx_l, dy_l), yaw)
         world_x += rot_d[0]
         world_y += rot_d[1]
         world_th = _wrap_pi(world_th + dth_l)
@@ -426,10 +557,16 @@ def main() -> None:
     radius_map = {"oval_R080": 0.80, "oval_R050": 0.50, "oval_R120": 1.20}
     radius_m = radius_map[args.preset]
 
-    tiles = oval_preset(radius_m, args.straight_length, args.theme)
+    texture_base = args.texture_base.resolve()
+    if args.theme == "clean":
+        clean_path = _ensure_clean_straight_png(args.straight_length, texture_base)
+        straight_uri = str(clean_path.relative_to(texture_base)).replace(os.sep, "/")
+    else:
+        straight_uri = STRAIGHT_THEME_TEXTURES[args.theme]
+
+    tiles = oval_preset(radius_m, args.straight_length, args.theme, straight_uri)
     placements = walk_sequence(tiles)
 
-    texture_base = args.texture_base.resolve()
     args.world_out.parent.mkdir(parents=True, exist_ok=True)
     world_dir = args.world_out.resolve().parent
     world_sdf = emit_world_sdf(args.world_name, placements, texture_base, world_dir)

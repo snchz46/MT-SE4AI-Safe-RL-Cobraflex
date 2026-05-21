@@ -457,10 +457,20 @@ def emit_world_sdf(
     for i, pl in enumerate(placements):
         tile = pl["tile"]
         bx, by = pl["bbox_center"]
-        yaw = pl["yaw"]
+        # Gazebo Sim's UV convention for box top face: image v-axis (PNG
+        # height) aligns with local +X, not local +Y as the textbook
+        # convention suggests. To make the SDF render the texture with
+        # the orientation our math expects, we apply two coupled
+        # transformations: swap the box's size dimensions (so the PNG's
+        # tall axis ends up on what the SDF calls local +X) and rotate
+        # the link yaw by +pi/2 (so that, after the size swap, the
+        # texture's "up" direction lands where our math placed it in
+        # the world). The bbox centre is unchanged because the two
+        # transformations are compensating.
+        yaw = _wrap_pi(pl["yaw"] + math.pi / 2.0)
         tex = _texture_uri(world_dir, texture_base, tile["texture_uri"])
-        size_x = tile["bbox_w"]
-        size_y = tile["bbox_h"]
+        size_x = tile["bbox_h"]
+        size_y = tile["bbox_w"]
 
         parts.append(f"""\
     <model name='tile_{i:02d}_{tile['kind']}'>

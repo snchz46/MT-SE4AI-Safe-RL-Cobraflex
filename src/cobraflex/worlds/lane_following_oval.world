@@ -59,7 +59,7 @@
     </model>
     <model name='tile_00_straight'>
       <static>true</static>
-      <pose>0.7500 0.0000 0.0010  0 0 0</pose>
+      <pose>0.7500 0.0000 0.0010  0 0 0.000000</pose>
       <link name='link'>
         <visual name='visual'>
           <geometry>
@@ -103,7 +103,7 @@
     </model>
     <model name='tile_02_straight'>
       <static>true</static>
-      <pose>0.7500 1.6000 0.0010  0 0 0</pose>
+      <pose>0.7500 1.6000 0.0010  0 0 3.141593</pose>
       <link name='link'>
         <visual name='visual'>
           <geometry>
@@ -125,7 +125,7 @@
     </model>
     <model name='tile_03_curve'>
       <static>true</static>
-      <pose>-0.5300 0.8000 0.0010  0 0 4.712389</pose>
+      <pose>-0.5300 0.8000 0.0010  0 0 -1.570796</pose>
       <link name='link'>
         <visual name='visual'>
           <geometry>

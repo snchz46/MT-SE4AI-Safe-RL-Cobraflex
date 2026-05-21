@@ -28,6 +28,26 @@ class RateLimiterRule:
         self.delta_max_steering = params["delta_max_steering_per_cycle"]
         self.delta_max_throttle = params["delta_max_throttle_per_cycle"]
 
+    def safe_envelope_predicate_holds(
+        self, state: Any, action: tuple, prev_action=None
+    ) -> bool:
+        """SR-010 Part 1: end-of-cycle assertion that the committed
+        action does not exceed the per-cycle rate envelope relative to
+        the action emitted in the previous cycle. The check skips the
+        first cycle (``prev_action is None``) by returning True, matching
+        the per-cycle semantics of ``evaluate``."""
+        if not self.enabled:
+            return True
+        if prev_action is None:
+            return True
+        d_steer = action[0] - prev_action[0]
+        d_throttle = action[1] - prev_action[1]
+        if abs(d_steer) > self.delta_max_steering + 1e-9:
+            return False
+        if abs(d_throttle) > self.delta_max_throttle + 1e-9:
+            return False
+        return True
+
     def evaluate(self, state: Any, raw_action: tuple, prev_action=None, ctx=None) -> CageDecision:
         """
         Clip the change in steering and throttle commands between consecutive cycles.

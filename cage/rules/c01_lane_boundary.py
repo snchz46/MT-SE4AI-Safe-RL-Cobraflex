@@ -44,6 +44,19 @@ class LaneBoundaryRule:
         self._active = False
         self._below_threshold_cycles = 0
 
+    def safe_envelope_predicate_holds(
+        self, state: Any, action: tuple, prev_action=None
+    ) -> bool:
+        """SR-010 Part 1: after the chain runs, the cage asserts that the
+        cycle ended with the system inside C-01's invariant. For the lane-
+        boundary rule, that means the absolute lateral offset did not
+        exceed the SR-001 hard limit ``d_max``. If this predicate fails,
+        the cage's reactive correction came too late and C-05 Trigger 7
+        fires a controlled stop."""
+        if not self.enabled:
+            return True
+        return abs(state.lateral_offset) <= self.d_max
+
     def evaluate(self, state: Any, raw_action: tuple, prev_action=None, ctx=None) -> CageDecision:
         meta = {"rule": "C-01"}
         if not self.enabled:

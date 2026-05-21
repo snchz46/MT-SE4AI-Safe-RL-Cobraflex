@@ -62,27 +62,27 @@ tbds:
 
   TBD-Q8:
     description: "Total loop length of odd3_curvy_loop (m)."
-    value: null            # e.g. 12.5
-    source: ""             # e.g. "src/cobraflex/worlds/odd3_curvy_loop.world: sum of segment lengths"
-    notes: ""
+    value: 8.0232
+    source: "scripts/compose_lane_circuit.py preset oval_R080: perimeter = 2 * 1.5 m straights + 2 * pi * 0.80 m arcs; emitted into src/cobraflex_rl/config/oval_centerline.yaml under centerline.perimeter_m."
+    notes: "Single source of truth is the composer; switching --straight-length or --preset re-derives this value automatically."
 
   TBD-Q9:
     description: "Maximum local curvature of odd3_curvy_loop (KAPPA_MAX, 1/m)."
-    value: null            # e.g. 0.83 (R_min = 1.2 m)
-    source: ""             # e.g. "src/cobraflex/worlds/odd3_curvy_loop.world: tightest arc R = 1.2 m"
-    notes: "Cross-checked against M-4 empirical v_max_curve."
+    value: 1.25
+    source: "R_min = 0.80 m on the curve_R080cm_A180deg.png tiles of oval_R080. KAPPA_MAX = 1 / R_min = 1.25 m^-1."
+    notes: "Cross-check against M-4 still pending. Other composer presets give: oval_R050 -> 2.00, oval_R120 -> 0.833."
 
   TBD-Q10:
     description: "Max commanded lateral acceleration in ODD-3 (m/s^2), bounded by V_MAX_CURVE^2 * KAPPA_MAX and FRICTION * g."
-    value: null            # e.g. 0.052 (= 0.25^2 * 0.83)
-    source: ""             # e.g. "Derived: min(V_MAX_CURVE^2 * TBD-Q9, TBD-Q1 * 9.81)"
-    notes: ""
+    value: null            # deferred to M-4 calibration
+    source: "Upper-bound operational: V_MAX_CURVE^2 * KAPPA_MAX = 0.25^2 * 1.25 = 0.078 m/s^2. Coulomb ceiling: FRICTION * g = 9.81 m/s^2."
+    notes: "Final value closes when M-4 measures the achievable acceleration envelope on the physical platform."
 
   TBD-Q11:
     description: "Stuck-criterion timeout (s) used by episode-termination logic."
-    value: null            # e.g. 5.0
-    source: ""             # e.g. "env_wrapper.py: stuck if no progress for 5.0 s"
-    notes: ""
+    value: "n/a"
+    source: "No dedicated stuck monitor configured; gazebo_lane_env.py truncates at max_episode_steps * control_dt = 400 * 0.10 s = 40 s."
+    notes: "If a separate stuck check is added in Phase 4+, reopen this entry with its specific timeout value."
 
   TBD-Q12:
     description: "Do ODD-4 named profiles introduce any stressor beyond their ODD-2 counterparts?"

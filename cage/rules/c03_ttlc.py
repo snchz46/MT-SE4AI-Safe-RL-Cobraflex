@@ -51,6 +51,17 @@ class TTLCRule:
             return float("inf")
         return ttlc
 
+    def safe_envelope_predicate_holds(
+        self, state: Any, action: tuple, prev_action=None
+    ) -> bool:
+        """SR-010 Part 1: end-of-cycle assertion that the projected
+        time-to-lane-crossing remains at least ``t_min`` seconds. A
+        failure means the predictive guard did not buy enough margin
+        and triggers C-05 Trigger 7."""
+        if not self.enabled:
+            return True
+        return self.compute_ttlc(state) >= self.t_min
+
     def evaluate(self, state: Any, raw_action: tuple, prev_action=None, ctx=None) -> CageDecision:
         meta = {"rule": "C-03"}
         if not self.enabled:

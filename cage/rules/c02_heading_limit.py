@@ -31,6 +31,17 @@ class HeadingLimitRule:
         self._active = False
         self._below_threshold_cycles = 0
 
+    def safe_envelope_predicate_holds(
+        self, state: Any, action: tuple, prev_action=None
+    ) -> bool:
+        """SR-010 Part 1: end-of-cycle assertion that the heading magnitude
+        did not exceed SR-002's hard limit ``theta_max``. Failure of this
+        predicate is evidence that C-02's reactive correction did not
+        arrive in time, and triggers C-05 Trigger 7."""
+        if not self.enabled:
+            return True
+        return abs(state.heading_error) <= self.theta_max
+
     def evaluate(self, state: Any, raw_action: tuple, prev_action=None, ctx=None) -> CageDecision:
         meta = {"rule": "C-02"}
         if not self.enabled:

@@ -42,6 +42,21 @@ from cage.rules import (
 _NEUTRAL_SAFE_STOP: Action = (0.0, -0.5)
 
 
+_ACCEPTED_SR_SPEC_VERSIONS = frozenset({"1.0"})
+
+
+class IncompatibleCageConfigError(RuntimeError):
+    """Raised when a cage.yaml does not declare a compatible_sr_spec_version
+    inside the set this cage_node knows how to honour.
+
+    Every cage.yaml is paired with a specific revision of the Safety
+    Requirements Specification; loading a YAML authored against a
+    different SRS version risks silently enforcing thresholds the SRS
+    no longer endorses. The check is deliberately strict: missing field
+    or unknown version both raise.
+    """
+
+
 class SafetyCageNode:
     """
     Compose the six rules in the deterministic evaluation order documented
@@ -80,9 +95,12 @@ class SafetyCageNode:
         with self.config_path.open() as f:
             cfg = yaml.safe_load(f)["cage"]
 
+        self._check_compatible_sr_spec_version(cfg)
+
         self.mode = mode
         self.cfg = cfg
         self.version = cfg.get("version", "unknown")
+        self.compatible_sr_spec_version = cfg["compatible_sr_spec_version"]
         self.n_missing_max_cycles = cfg.get("n_missing_max_cycles", 5)
         osc_cfg = cfg.get("oscillation", {})
         self.f_osc_max = osc_cfg.get("f_osc_max_hz", float("inf"))
@@ -184,6 +202,41 @@ class SafetyCageNode:
                 if rule_id == "C-05":
                     emergency_active = True
 
+        # SR-010 Part 1 — Joint-envelope assertion (C-05 Trigger 7).
+        # After the chain has produced its corrective `current_action`,
+        # assert that each rule still considers the pair (state, action)
+        # inside its invariant. A failure means the chain's reactive +
+        # predictive corrections did not arrive in time and the system
+        # left its joint safe envelope; fire Trigger 7 and override the
+        # action with a controlled stop. The check sees the previous
+        # cycle's emitted action via `self._prev_action`, which is still
+        # last cycle's `final_action` at this point.
+        predicate_results = {
+            rule_id: rule.safe_envelope_predicate_holds(
+                state, current_action, self._prev_action
+            )
+            for rule_id, rule in self._chain
+        }
+        failing_predicates = [rid for rid, ok in predicate_results.items() if not ok]
+        joint_envelope_violated = bool(failing_predicates)
+        if joint_envelope_violated:
+            interventions.append({
+                "rule": "C-05",
+                "reason": "triggered-joint-envelope",
+                "metadata": {
+                    "trigger": 7,
+                    "failing_rules": failing_predicates,
+                    "predicates": dict(predicate_results),
+                },
+            })
+            emergency_active = True
+            # Force a neutral safe-stop. In monitoring mode the final
+            # action is restored to raw below, so the override only
+            # affects enforcement; the intervention is still logged in
+            # both modes so the monitoring run can quantify how often
+            # the joint envelope would have been violated.
+            current_action = _NEUTRAL_SAFE_STOP
+
         if self.mode == "monitoring":
             final_action = raw_action
         else:
@@ -205,6 +258,8 @@ class SafetyCageNode:
             "cycles_since_last_state": self._cycles_since_last_state,
             "oscillation_rates_hz": osc_rates,
             "oscillation_persistent": osc_persist,
+            "joint_envelope_predicates": predicate_results,
+            "joint_envelope_violated": joint_envelope_violated,
         }
 
     def _update_oscillation_history(self, current_t: float, interventions: list) -> None:
@@ -278,3 +333,24 @@ class SafetyCageNode:
         underlying trigger condition has also cleared (see C-05 contract).
         """
         self.c05.reset()
+
+    @staticmethod
+    def _check_compatible_sr_spec_version(cfg: dict) -> None:
+        declared = cfg.get("compatible_sr_spec_version")
+        if declared is None:
+            raise IncompatibleCageConfigError(
+                "cage.yaml is missing the 'compatible_sr_spec_version' "
+                "field. Every cage.yaml must declare which SRS revision it "
+                "was authored against. Accepted values: "
+                f"{sorted(_ACCEPTED_SR_SPEC_VERSIONS)}."
+            )
+        if declared not in _ACCEPTED_SR_SPEC_VERSIONS:
+            raise IncompatibleCageConfigError(
+                f"cage.yaml declares compatible_sr_spec_version="
+                f"{declared!r}, which is not in the accepted set "
+                f"{sorted(_ACCEPTED_SR_SPEC_VERSIONS)}. Either bump the "
+                f"cage_node's _ACCEPTED_SR_SPEC_VERSIONS to include the "
+                f"new revision (and verify every threshold still maps to "
+                f"the right SR) or revert the YAML to a known good "
+                f"compatible_sr_spec_version."
+            )

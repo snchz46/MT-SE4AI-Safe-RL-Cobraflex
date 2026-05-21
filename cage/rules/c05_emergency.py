@@ -66,6 +66,15 @@ class EmergencyRule:
         self._steering_at_activation: Optional[float] = None
         self._reset_requested = False
 
+    def safe_envelope_predicate_holds(
+        self, state: Any, action: tuple, prev_action=None
+    ) -> bool:
+        """SR-010 Part 1: C-05 is the responder for Trigger 7, not a
+        constraint with its own joint-envelope invariant. The predicate
+        therefore always holds — the trigger machinery is what fires the
+        emergency when other predicates fail."""
+        return True
+
     def evaluate(self, state: Any, raw_action: tuple, prev_action=None, ctx=None) -> CageDecision:
         meta = {"rule": "C-05"}
         if not self.enabled:

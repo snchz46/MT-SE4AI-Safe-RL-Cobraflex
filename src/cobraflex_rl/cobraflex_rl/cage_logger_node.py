@@ -62,8 +62,8 @@ class CageLoggerNode(Node):
         )
 
         out_path = Path(output_dir) / run_id
-        self._logger: Optional[CageLogger] = CageLogger(out_path, run_id=run_id)
-        self.get_logger().info(f"Writing cage CSV to {self._logger.cage_status_path}")
+        self._cage_logger: Optional[CageLogger] = CageLogger(out_path, run_id=run_id)
+        self.get_logger().info(f"Writing cage CSV to {self._cage_logger.cage_status_path}")
 
         reliable_qos = QoSPresetProfiles.SYSTEM_DEFAULT.value
         self.create_subscription(
@@ -74,7 +74,7 @@ class CageLoggerNode(Node):
         )
 
     def _on_status(self, msg: CageStatus) -> None:
-        if self._logger is None:
+        if self._cage_logger is None:
             return
 
         stamp_s = float(msg.header.stamp.sec) + float(msg.header.stamp.nanosec) * 1e-9
@@ -90,15 +90,15 @@ class CageLoggerNode(Node):
             "oscillation_persistent": bool(msg.osc_persistent),
             "oscillation_rates_hz": dict(zip(msg.osc_rule_ids, msg.oscillation_rates_hz)),
         }
-        self._logger.add_cycle(result)
+        self._cage_logger.add_cycle(result)
 
     def destroy_node(self) -> bool:
-        if self._logger is not None:
-            self._logger.close()
+        if self._cage_logger is not None:
+            self._cage_logger.close()
             self.get_logger().info(
-                f"Closed cage_logger after {self._logger.cycle_count} cycles."
+                f"Closed cage_logger after {self._cage_logger.cycle_count} cycles."
             )
-            self._logger = None
+            self._cage_logger = None
         return super().destroy_node()
 
 

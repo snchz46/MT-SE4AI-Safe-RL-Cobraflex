@@ -10,11 +10,14 @@
 # =============================================================
 
 baseline_pd:
-  version: "0.1.0"
+  version: "0.2.0"
 
   # Steering loop — lateral position
-  kp_y: 12.0           # gain on lateral_offset
-  kd_y: 3.0            # gain on lateral_rate (finite difference)
+  kp_y: 5.0            # gain on lateral_offset (was 12.0; reduced so steering
+                       # does not saturate at ey~8 cm, which caused bang-bang
+                       # oscillation on curve entry of the oval R=0.8 m).
+  kd_y: 1.0            # gain on lateral_rate (was 3.0; reduced to limit
+                       # amplification of finite-difference noise).
 
   # Steering loop — heading
   kp_h: 1.5            # gain on heading_error

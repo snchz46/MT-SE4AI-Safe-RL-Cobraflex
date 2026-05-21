@@ -27,7 +27,7 @@ class VehicleControlNode(Node):
         super().__init__("vehicle_control")
 
         self.declare_parameter("fixed_speed_mps", 0.2)
-        self.declare_parameter("steering_to_yaw_rate_gain", 0.4)
+        self.declare_parameter("steering_to_yaw_rate_gain", 0.8)
         self.declare_parameter("safe_action_topic", "/safe_action")
         self.declare_parameter("emergency_topic", "/emergency")
         self.declare_parameter("cmd_vel_topic", "/cmd_vel")
@@ -38,14 +38,16 @@ class VehicleControlNode(Node):
         )
         # The DiffDrive plugin interprets /cmd_vel.angular.z as a yaw rate
         # in rad/s. The cage / PD operate on a normalised steering in
-        # [-1, 1]; this gain maps one to the other. Default 0.4 matches
-        # the effective yaw rate of the bicycle model in
-        # experiments/sim/oval_pd_cage_smoke.py at v=0.2 m/s.
+        # [-1, 1]; this gain maps one to the other. Default 0.8 gives a
+        # min turn radius of v/omega = 0.2/0.8 = 0.25 m at v=0.2 m/s,
+        # leaving comfortable headroom over the oval's R=0.8 m curves;
+        # the previous 0.4 left only ~0.5 m and caused the PD to
+        # saturate against C-05 on the curve.
         self._yaw_gain = float(
             self.get_parameter("steering_to_yaw_rate_gain")
             .get_parameter_value()
             .double_value
-            or 0.4
+            or 0.8
         )
         self._emergency = False
         self._last_safe: Optional[Twist] = None
@@ -68,7 +70,7 @@ class VehicleControlNode(Node):
         self._pub = self.create_publisher(
             Twist,
             self.get_parameter("cmd_vel_topic").value,
-            sensor_qos,
+            reliable_qos,
         )
 
         self.get_logger().info(

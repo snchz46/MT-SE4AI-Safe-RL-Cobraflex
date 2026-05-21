@@ -1,0 +1,1 @@
+timestamp,mode,cage_version,raw_steering,raw_throttle,safe_steering,safe_throttle,emergency,rules_fired,cycles_since_last_state,oscillation_persistent,osc_rate_c01,osc_rate_c02,osc_rate_c03

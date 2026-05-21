@@ -68,7 +68,7 @@ class VehicleControlNode(Node):
         self._pub = self.create_publisher(
             Twist,
             self.get_parameter("cmd_vel_topic").value,
-            sensor_qos,
+            reliable_qos,
         )
 
         self.get_logger().info(

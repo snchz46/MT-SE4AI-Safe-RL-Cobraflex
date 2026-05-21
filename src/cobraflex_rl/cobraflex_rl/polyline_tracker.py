@@ -7,6 +7,15 @@ from typing import Tuple
 import numpy as np
 
 
+# Window radius (segments) used to smooth track_heading. With a discretised
+# centerline polyline (~0.1 m / segment on the F2 oval) the per-segment
+# heading is piecewise-constant and steps by ~7 deg on the R=0.8 m curve.
+# Averaging over the 2*radius+1 neighbouring segments yields a heading
+# that varies continuously with arc length, which is what a path-tracking
+# PD needs for its heading-error finite difference to be meaningful.
+_HEADING_SMOOTHING_RADIUS = 2
+
+
 def wrap_angle(angle: float) -> float:
     return math.atan2(math.sin(angle), math.cos(angle))
 
@@ -73,7 +82,7 @@ class PolylineTracker:
 
         segment_vector = self.segment_vectors[best_index]
         segment_length = self.segment_lengths[best_index]
-        track_heading = float(self.segment_headings[best_index])
+        track_heading = self._smoothed_heading(best_index)
         cross_z = segment_vector[0] * best_error[1] - segment_vector[1] * best_error[0]
         ey = float(cross_z / segment_length)
         epsi = wrap_angle(yaw - track_heading)
@@ -88,3 +97,12 @@ class PolylineTracker:
             track_heading=track_heading,
             closest_point=(float(best_projection[0]), float(best_projection[1])),
         )
+
+    def _smoothed_heading(self, segment_index: int) -> float:
+        n = len(self.segment_headings)
+        lo = max(0, segment_index - _HEADING_SMOOTHING_RADIUS)
+        hi = min(n, segment_index + _HEADING_SMOOTHING_RADIUS + 1)
+        headings = self.segment_headings[lo:hi]
+        cs = float(np.cos(headings).sum())
+        sn = float(np.sin(headings).sum())
+        return math.atan2(sn, cs)

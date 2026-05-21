@@ -10,7 +10,7 @@
 # =============================================================
 
 baseline_pd:
-  version: "0.2.0"
+  version: "0.3.0"
 
   # Steering loop — lateral position
   kp_y: 5.0            # gain on lateral_offset (was 12.0; reduced so steering
@@ -21,7 +21,13 @@ baseline_pd:
 
   # Steering loop — heading
   kp_h: 1.5            # gain on heading_error
-  kd_h: 0.4            # gain on heading_rate (finite difference)
+  kd_h: 0.0            # was 0.4; zeroed because track_heading is piecewise-
+                       # constant along the discretised centerline polyline
+                       # (~7 deg jumps per ~0.5 s of travel on R=0.8 m
+                       # curves), so finite-differencing produces spurious
+                       # 2-3 rad/s peaks that saturate the steering at
+                       # every segment transition and drove the robot into
+                       # C-05 emergency.
 
   # Throttle
   throttle_nominal: 0.5       # nominal cruise throttle on straight

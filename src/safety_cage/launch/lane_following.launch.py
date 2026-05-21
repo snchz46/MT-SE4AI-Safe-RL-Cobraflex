@@ -74,7 +74,7 @@ def generate_launch_description() -> LaunchDescription:
 
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(cobraflex_share, "launch", "gazebo.launch.py")
+            os.path.join(cobraflex_share, "launch", "gazebo_mesh.launch.py")
         ),
         launch_arguments={
             "world": LaunchConfiguration("world"),

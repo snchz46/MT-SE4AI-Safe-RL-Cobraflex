@@ -6,10 +6,17 @@ during Phase 2 (Milestone M1 demo) and reappears in Phase 8 as the
 comparison baseline against the trained RL policy. It is deliberately
 simple: PD on lateral_offset, PD on heading_error, curve-aware throttle.
 
-Per Phase 2 plan §10.2:
-    steering = -kp_y · y  - kd_y · ẏ
+Per Phase 2 plan §10.2 plus a curvature feedforward added in v0.4.0:
+    steering = kappa_ff · κ_ahead
+               -kp_y · y  - kd_y · ẏ
                -kp_h · ψ  - kd_h · ψ̇
     throttle = throttle_nominal · max(0, 1 - alpha · |κ_ahead|)
+
+The feedforward eliminates the steady-state lateral offset that a
+proportional-only outer loop otherwise needs to hold a curve, which
+in turn removes the high-gain operating point where any small
+perturbation (segment-boundary jitter, wheel slip) saturates the
+steering and triggers a C-05 latch.
 
 Lateral and heading rates are finite-differenced from the previous
 state observation. `reset()` clears the history, e.g. on lap reset.
@@ -35,6 +42,7 @@ class BaselinePD:
         self.kd_y = params["kd_y"]
         self.kp_h = params["kp_h"]
         self.kd_h = params["kd_h"]
+        self.kappa_ff = params.get("kappa_to_steering_gain", 0.0)
         self.throttle_nominal = params["throttle_nominal"]
         self.alpha = params["alpha_curve_slowdown"]
         self.steering_limit = params.get("steering_limit", 1.0)
@@ -73,7 +81,8 @@ class BaselinePD:
                 psi_dot = (psi - self._prev_psi) / dt
 
         steering = (
-            -self.kp_y * y
+            self.kappa_ff * kappa
+            - self.kp_y * y
             - self.kd_y * y_dot
             - self.kp_h * psi
             - self.kd_h * psi_dot
@@ -87,3 +96,4 @@ class BaselinePD:
         steering_safe = max(-self.steering_limit, min(self.steering_limit, steering))
         throttle_safe = max(self.throttle_min, min(self.throttle_max, throttle))
         return (steering_safe, throttle_safe)
+

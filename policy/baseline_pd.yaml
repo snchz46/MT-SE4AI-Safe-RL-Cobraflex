@@ -10,7 +10,7 @@
 # =============================================================
 
 baseline_pd:
-  version: "0.3.0"
+  version: "0.4.0"
 
   # Steering loop — lateral position
   kp_y: 5.0            # gain on lateral_offset (was 12.0; reduced so steering
@@ -28,6 +28,15 @@ baseline_pd:
                        # 2-3 rad/s peaks that saturate the steering at
                        # every segment transition and drove the robot into
                        # C-05 emergency.
+
+  # Curvature feedforward (introduced in v0.4.0). Eliminates the steady-
+  # state lateral offset that a proportional-only outer loop otherwise
+  # needs to hold a curve. The gain equals v_nominal / yaw_to_steering_gain,
+  # where v_nominal = 0.2 m/s (the fixed_speed of vehicle_control_node)
+  # and yaw_to_steering_gain = 0.8 (the default of vehicle_control_node).
+  # If those values change, this gain must change too (or set it to 0
+  # to disable the feedforward, falling back to v0.3.0 behaviour).
+  kappa_to_steering_gain: 0.25
 
   # Throttle
   throttle_nominal: 0.5       # nominal cruise throttle on straight

@@ -171,6 +171,13 @@ Full loop: `ros2 launch cobraflex lane_keeper_gazebo.launch.py`. The ROS2 nodes 
 - **Cage backwards compatibility:** when bumping `cage.yaml`'s
   `cage.version`, defaults in `SafetyCageNode.__init__` must keep new
   features inert for older YAMLs (precedent set at 0.4.0→0.5.0).
+  When bumping `compatible_sr_spec_version`, also update
+  `_ACCEPTED_SR_SPEC_VERSIONS` in `cage/cage_node.py:45` — omitting
+  this raises `IncompatibleCageConfigError` at load time.
+- **`[provisional, M-X]` parameters:** tags in `cage.yaml` mark
+  thresholds awaiting calibration results. Resolution workflow: update
+  `cage.yaml` → bump version → run pytest → re-run affected scenarios
+  → record in `docs/CHANGELOG.md`.
 - **Commit prefix matches phase.** `F2:` for current work, never bare
   messages. Conventional-Commit body style (`feat:`, `fix:`, `chore:`,
   `refactor:`).

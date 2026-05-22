@@ -33,6 +33,10 @@ CAGE_STATUS_COLUMNS = [
     "osc_rate_c01",
     "osc_rate_c02",
     "osc_rate_c03",
+    "ey",
+    "epsi",
+    "speed",
+    "kappa_ahead",
 ]
 
 
@@ -75,6 +79,7 @@ class CageLogger:
         rates = result.get("oscillation_rates_hz") or {}
         raw_s, raw_t = result["raw_action"]
         safe_s, safe_t = result["safe_action"]
+        state = result.get("state") or {}
         row = {
             "timestamp": _format_timestamp(result.get("current_time")),
             "mode": result.get("mode", ""),
@@ -90,6 +95,10 @@ class CageLogger:
             "osc_rate_c01": rates.get("C-01", 0.0),
             "osc_rate_c02": rates.get("C-02", 0.0),
             "osc_rate_c03": rates.get("C-03", 0.0),
+            "ey": state.get("ey", ""),
+            "epsi": state.get("epsi", ""),
+            "speed": state.get("speed", ""),
+            "kappa_ahead": state.get("kappa_ahead", ""),
         }
         self._writer.writerow(row)
         self._cycle_count += 1

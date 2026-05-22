@@ -40,6 +40,7 @@ _bootstrap_cage_import()
 import rclpy  # noqa: E402
 from rclpy.node import Node  # noqa: E402
 from rclpy.qos import QoSPresetProfiles  # noqa: E402
+from std_msgs.msg import Float64MultiArray  # noqa: E402
 
 from cage.logger import CageLogger  # noqa: E402
 from cobraflex_safety_msgs.msg import CageStatus  # noqa: E402
@@ -52,6 +53,7 @@ class CageLoggerNode(Node):
         self.declare_parameter("output_dir", "")
         self.declare_parameter("run_id", "")
         self.declare_parameter("cage_status_topic", "/cage_status")
+        self.declare_parameter("state_obs_topic", "/state_obs")
 
         output_dir = (
             self.get_parameter("output_dir").get_parameter_value().string_value
@@ -65,13 +67,32 @@ class CageLoggerNode(Node):
         self._cage_logger: Optional[CageLogger] = CageLogger(out_path, run_id=run_id)
         self.get_logger().info(f"Writing cage CSV to {self._cage_logger.cage_status_path}")
 
+        self._last_state: dict = {}
+
         reliable_qos = QoSPresetProfiles.SYSTEM_DEFAULT.value
+        sensor_qos = QoSPresetProfiles.SENSOR_DATA.value
         self.create_subscription(
             CageStatus,
             self.get_parameter("cage_status_topic").value,
             self._on_status,
             reliable_qos,
         )
+        self.create_subscription(
+            Float64MultiArray,
+            self.get_parameter("state_obs_topic").value,
+            self._on_state_obs,
+            sensor_qos,
+        )
+
+    def _on_state_obs(self, msg: Float64MultiArray) -> None:
+        if len(msg.data) < 7:
+            return
+        self._last_state = {
+            "ey": float(msg.data[0]),
+            "epsi": float(msg.data[1]),
+            "speed": float(msg.data[2]),
+            "kappa_ahead": float(msg.data[3]),
+        }
 
     def _on_status(self, msg: CageStatus) -> None:
         if self._cage_logger is None:
@@ -89,6 +110,7 @@ class CageLoggerNode(Node):
             "cycles_since_last_state": int(msg.cycles_since_last_state),
             "oscillation_persistent": bool(msg.osc_persistent),
             "oscillation_rates_hz": dict(zip(msg.osc_rule_ids, msg.oscillation_rates_hz)),
+            "state": dict(self._last_state),
         }
         self._cage_logger.add_cycle(result)
 

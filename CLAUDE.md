@@ -1,7 +1,8 @@
-# CLAUDE.md — Working context for this repo
+# CLAUDE.md
 
-> Base context for any Claude session on this thesis repo. Keep lean
-> (<200 lines). Move detail into linked docs rather than inflating this file.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+> Keep lean (<200 lines). Move detail into linked docs rather than inflating this file.
 > Last reviewed: 2026-05-22.
 
 ## What this repo is
@@ -90,6 +91,8 @@ Python-side (cage + policy, no ROS2 needed):
 pip install -e .                                  # editable install (pyproject.toml)
 pip install -r requirements.txt
 pytest                                            # only cage/tests + policy/tests (see pytest.ini)
+pytest cage/tests/test_cage_node.py              # run a single test file
+pytest cage/tests/test_pipeline.py::test_pd_cage_logger_pipeline  # single test
 python tools/check_traceability.py                # hard gate before any review
 ```
 
@@ -107,6 +110,22 @@ ros2 launch cobraflex_rl train.launch.py
 
 `pytest` from the root is configured to **skip** `src/` (those packages
 use `ament_python` + `colcon test`, not bare pytest).
+
+## F2 pipeline architecture
+
+`SafetyCageNode` ([cage/cage_node.py](cage/cage_node.py)) is pure-Python (no ROS2). It chains six rules in fixed order: **C-06 → C-04 → C-02 → C-03 → C-01 → C-05**. Core call: `node.step(state, raw_action) → dict` (keys: `safe_action`, `interventions`, `emergency`). `State` and `Action` types are in [cage/rules/base.py](cage/rules/base.py).
+
+The F2 ROS2 demo wires five nodes over these topics:
+
+```
+/odom → lane_perception_node → /state_obs
+/state_obs → pd_baseline_node → /raw_action
+/raw_action + /state_obs → cage_ros_node → /safe_action + /cage_status
+/safe_action → vehicle_control_node → /cmd_vel
+/cage_status → cage_logger_node → CSV
+```
+
+Full loop: `ros2 launch cobraflex lane_keeper_gazebo.launch.py`. The ROS2 nodes import `cage` via a path-walk bootstrap — run `pip install -e .` once before `colcon build` to make the import reliable.
 
 ## Environment & host constraints
 

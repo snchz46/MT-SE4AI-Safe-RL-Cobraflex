@@ -15,7 +15,7 @@ Gazebo and, eventually, on the physical platform.
 
 The defining commitment is **traceability**:
 
-```
+```text
 Hazard → Safety Requirement → Cage Rule → Scenario → Metric → Logged Evidence → Verdict
 ```
 
@@ -48,7 +48,7 @@ script reports orphans on either side.
 | `scenarios/` | YAML scenario library: `nominal/`, `edge/`, `perturbed/` (schema `_schema.yaml`) |
 | `experiments/` | Calibration data, ODD inspection, sim+physical run outputs |
 | `tools/` | Traceability + sync scripts (manuscript Markdown → CSV) |
-| `tests/` | Top-level integration/unit harness (Python-side, no ROS2 needed) |
+| `tests/` | Placeholder dirs (`integration/`, `unit/`) — currently empty, not in pytest testpaths |
 | `manuscript/` | Thesis chapters + figures — authoritative source for hazard/SR tables |
 | `scripts/` | Workspace bootstrap (`download_meshes.sh`, oval centerline generator, lane-circuit composer) |
 
@@ -96,12 +96,12 @@ pytest cage/tests/test_pipeline.py::test_pd_cage_logger_pipeline  # single test
 python tools/check_traceability.py                # hard gate before any review
 ```
 
-ROS2-side (Ubuntu 22.04 + Humble; **not the Windows dev box**):
+ROS2-side (Ubuntu 24.04 + Jazzy; installed at `/opt/ros/jazzy`):
 
 ```bash
 rosdep install --from-paths src --ignore-src -r -y
 ./scripts/download_meshes.sh                      # 87 MB lidar visual, gitignored
-source /opt/ros/humble/setup.bash
+source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install
 source install/setup.bash
 ros2 launch cobraflex bringup.launch.py
@@ -129,11 +129,7 @@ Full loop: `ros2 launch cobraflex lane_keeper_gazebo.launch.py`. The ROS2 nodes 
 
 ## Environment & host constraints
 
-- Primary dev machine is **Windows 11 + PowerShell**. The ROS2 side
-  cannot run here — only Python-side tests, document edits, and Gazebo
-  via WSL/Linux box are valid.
-- Use PowerShell syntax in Bash tool calls on this host (`$null`, not
-  `/dev/null`; backtick continuation; `$env:VAR`).
+- Dev machine: **Ubuntu 24.04 LTS** with ROS2 Jazzy at `/opt/ros/jazzy`.
 - `.venv/` is the local Python env. `pyproject.toml` exposes `cage`,
   `cage.rules`, `policy` for `pip install -e .`.
 - Third-party drivers (`sllidar_ros2`, `zed-ros2-wrapper`) are

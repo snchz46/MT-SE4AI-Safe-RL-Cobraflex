@@ -83,7 +83,6 @@ class LaneKeeperGazeboNode(Node):
     def __init__(self):
         super().__init__("lane_keeper_gazebo_node")
 
-        self.declare_parameter("use_sim_time", True)
         self.declare_parameter("image_topic", "camera/image_raw")
         self.declare_parameter("proc_width", 480)
         self.declare_parameter("proc_height", 360)

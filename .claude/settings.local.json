@@ -29,7 +29,27 @@
       "Bash(.venv/Scripts/python.exe -m pytest -v)",
       "Bash(.venv/Scripts/python.exe -c \"import rclpy; print\\(rclpy.__version__\\)\")",
       "Bash(.venv/Scripts/python.exe -c \"import sys; sys.path.insert\\(0, 'src/cobraflex'\\); from cobraflex import __file__ as f; print\\('cobraflex pkg:', f\\)\")",
-      "Bash(git -C \"B:\\\\SE4AI\\\\thesis_repo\" log --oneline -30)"
+      "Bash(git -C \"B:\\\\SE4AI\\\\thesis_repo\" log --oneline -30)",
+      "Bash(python3 -c \"from PIL import ImageGrab; print\\('PIL ok'\\)\")",
+      "Bash(python3 -c \"import PIL; print\\(PIL.__version__\\)\")",
+      "Bash(xwd -root -silent -display :0 -out /tmp/test.xwd)",
+      "Read(//tmp/**)",
+      "Bash(python3 *)",
+      "Bash(pkill -f \"gz sim\")",
+      "Bash(pkill -f \"gz-sim\")",
+      "Bash(pkill -f \"rviz2\")",
+      "Bash(pkill -f \"ekf_node\")",
+      "Bash(pkill -f \"parameter_bridge\")",
+      "Bash(awk '{print $2}')",
+      "Bash(xargs -r kill)",
+      "Bash(python -m pytest policy/tests/test_baseline_pd.py -q)",
+      "Bash(pkill -f \"lane_following.launch.py\")",
+      "Bash(pkill -f \"gzserver\")",
+      "Bash(pkill -9 -f \"ros2\")",
+      "Bash(pkill -9 -f \"gz \")",
+      "Bash(kill -9 14581 14582 14584 14586 14587)",
+      "Bash(pkill -9 -f \"safety_cage\\\\|lane_following\\\\|gz sim\\\\|gazebo\\\\|cobraflex\\\\|ekf_node\\\\|robot_state_pub\\\\|parameter_bridge\\\\|rviz2\")",
+      "Bash(xargs kill -9)"
     ]
   }
 }

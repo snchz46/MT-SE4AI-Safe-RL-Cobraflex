@@ -31,6 +31,102 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [22.05.2026] — PD Baseline 0.6.0: zero kd_y and kp_h — polyline signals unreliable at curves (Phase 2)
+
+**Document(s) affected:** `policy/baseline_pd.yaml`.
+**Phase:** F2.
+**Gate context:** before G2.
+**Author:** Samuel.
+
+### Change
+
+`kd_y` 0.5 → 0.0; `kp_h` 1.0 → 0.0; `version` bumped from `0.5.0` to `0.6.0`.
+
+### Rationale
+
+Two consecutive sim runs (`ros_run_20260522T175259Z`, `ros_run_20260522T180231Z`)
+showed emergency stop at the first oval curve (t ≈ 13.75 s, κ ≈ 1.08 rad/m),
+car never completing a lap — F2 FAIL.
+
+Root cause: the polyline tracker (±6 segment local search) jumps segments at
+curve entries, producing step discontinuities in both `ey` and `epsi` within
+a single 50 ms cycle.
+
+- `kd_y`: `ey` jumps ±0.15 m → `y_dot ≈ ±3 m/s` → `kd_y × y_dot ≈ 1.5`,
+  saturating steering alone. Fix: `kd_y → 0.0`.
+- `kp_h`: even with `kd_y = 0`, `epsi` steps ±0.25–0.36 rad at curve entries.
+  Combined with feedforward (0.49) and kp_y term (0.28), total reaches 1.13 →
+  saturation → C-06 + C-03 + C-05 chain. Fix: `kp_h → 0.0`.
+
+Both fixes follow the same reasoning as `kd_h → 0.0` in v0.5.0: piecewise-
+constant polyline signals are not reliable inputs for PD terms. The effective
+controller is now `steering = kappa_ff·κ − kp_y·ey`, which stays below 1.0
+for all physically reachable (ey, κ) on the F2 oval.
+
+Also: `_LOCAL_SEARCH_RADIUS` in `polyline_tracker.py` reduced 6 → 2. The
+local search radius controls how many adjacent segments are considered per
+cycle. With radius=6, the tracker could jump up to 6 segments (0.66 m) in
+one cycle — the F2 oval's 0.11 m/segment spacing combined with near-equidistant
+geometry at curve entry allows this. Those multi-segment jumps produce the
+ey/epsi discontinuities described above. Radius=2 (0.22 m, 22× headroom over
+the 0.01 m/cycle at 0.2 m/s) enforces continuity while tolerating a 20× speed
+increase before the constraint binds.
+
+### Impact
+
+`policy/baseline_pd.yaml` and `src/cobraflex_rl/cobraflex_rl/polyline_tracker.py`.
+No cage rules, SRs, or hazards affected. Re-run oval scenario to verify lap
+completion.
+
+### Verification
+
+`python3 tools/check_traceability.py` — no ID references changed.
+
+---
+
+## [22.05.2026] — PD Baseline 0.7.0: restore kp_h=0.3 — heading correction safe with bounded search radius (Phase 2)
+
+**Document(s) affected:** `policy/baseline_pd.yaml`.
+**Phase:** F2.
+**Gate context:** before G2.
+**Author:** Samuel.
+
+### Change
+
+`kp_h` 0.0 → 0.3; `version` bumped from `0.6.0` to `0.7.0`.
+
+### Rationale
+
+Third sim run (`ros_run_20260522T180853Z`) showed that with `kp_h=0.0` the car's
+heading drifts at curves (epsi reaches 0.25–0.35 rad), which alone triggers C-05
+`theta_warning` (threshold 0.349 rad = 20°). Without proportional heading
+correction the curvature feedforward + kp_y lateral correction cannot damp the
+heading drift fast enough on the R=0.9225 m curve.
+
+After reducing `_LOCAL_SEARCH_RADIUS` from 6 to 2 (v0.6.0 / polyline_tracker.py),
+the maximum epsi jump from a 2-segment advance is ~0.094 rad. At `kp_h=0.3`:
+
+```
+kp_h × Δepsi_max = 0.3 × 0.094 = 0.028   (negligible for saturation)
+worst-case total  = kappa_ff(0.487) + kp_y×ey_max(0.366) + kp_h×epsi_max(0.028)
+                  = 0.881 < 1.0  ✓
+```
+
+The heading term is now safe to restore at a smaller gain, and necessary to
+prevent the C-05 theta_warning chain.
+
+### Impact
+
+`policy/baseline_pd.yaml` only. No cage rules, SRs, or hazards affected.
+`policy/tests/test_baseline_pd.py` updated: `test_heading_has_no_effect_with_kp_h_zero`
+renamed to `test_heading_error_produces_corrective_steering` to reflect kp_h=0.3.
+
+### Verification
+
+`python3 tools/check_traceability.py` — no ID references changed.
+
+---
+
 ## [18.05.2026] — Cage 0.5.0: SR-010 Part 2 — inter-cycle oscillation detection (Phase 2)
 
 **Document(s) affected:** `cage/cage.yaml`.

@@ -129,7 +129,7 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "world",
                 default_value=PathJoinSubstitution(
-                    [FindPackageShare("cobraflex"), "worlds", "road_carpet.world"]
+                    [FindPackageShare("cobraflex"), "worlds", "lane_following_oval.world"]
                 ),
                 description="World file to load in Gazebo.",
             ),

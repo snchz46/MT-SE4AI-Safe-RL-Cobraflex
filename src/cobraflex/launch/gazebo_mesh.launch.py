@@ -153,7 +153,7 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "spawn_y",
-                default_value="0.0",
+                default_value="-0.1225",
                 description="Robot spawn Y position in Gazebo.",
             ),
             DeclareLaunchArgument(

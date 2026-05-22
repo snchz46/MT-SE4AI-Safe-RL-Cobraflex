@@ -32,8 +32,11 @@ def generate_launch_description() -> LaunchDescription:
     default_world = os.path.join(
         cobraflex_share, "worlds", "lane_following_oval.world"
     )
+    # Right-lane centerline: matches the spawn at y = -0.1225 (centred in
+    # the right lane of the two-lane oval). Pass centerline_yaml:= to
+    # override, e.g. to track the road centerline (oval_centerline.yaml).
     default_centerline = os.path.join(
-        cobraflex_rl_share, "config", "oval_centerline.yaml"
+        cobraflex_rl_share, "config", "oval_right_lane_centerline.yaml"
     )
 
     world_arg = DeclareLaunchArgument(

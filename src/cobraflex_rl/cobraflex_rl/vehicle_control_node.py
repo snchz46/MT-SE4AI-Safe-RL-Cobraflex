@@ -85,8 +85,17 @@ class VehicleControlNode(Node):
     def _on_safe(self, msg: Twist) -> None:
         self._last_safe = msg
         cmd = Twist()
-        cmd.angular.z = float(msg.angular.z) * self._yaw_gain
-        cmd.linear.x = 0.0 if self._emergency else self._fixed_speed
+        if self._emergency:
+            # Controlled stop: zero both axes so the robot does not pivot
+            # in place while linear.x is being braked. The cage may still
+            # publish a frozen non-zero safe_action.angular.z (cf.
+            # cage.yaml c05_emergency.freeze_steering), but actuating it
+            # against linear.x=0 produces pure yaw, not a stop.
+            cmd.linear.x = 0.0
+            cmd.angular.z = 0.0
+        else:
+            cmd.angular.z = float(msg.angular.z) * self._yaw_gain
+            cmd.linear.x = self._fixed_speed
         self._pub.publish(cmd)
 
 

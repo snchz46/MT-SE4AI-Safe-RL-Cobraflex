@@ -10,33 +10,36 @@
 # =============================================================
 
 baseline_pd:
-  version: "0.4.0"
+  version: "0.5.0"
 
   # Steering loop — lateral position
-  kp_y: 5.0            # gain on lateral_offset (was 12.0; reduced so steering
-                       # does not saturate at ey~8 cm, which caused bang-bang
-                       # oscillation on curve entry of the oval R=0.8 m).
-  kd_y: 1.0            # gain on lateral_rate (was 3.0; reduced to limit
-                       # amplification of finite-difference noise).
+  kp_y: 3.0            # was 5.0; reduced now that the curvature feedforward
+                       # carries most of the trim, so the PD only has to
+                       # null small residual offsets. Lower gain widens the
+                       # closed-loop margin against C-06 rate-limit lag.
+  kd_y: 0.5            # was 1.0; halved for the same reason and to limit
+                       # amplification of finite-difference noise.
 
   # Steering loop — heading
-  kp_h: 1.5            # gain on heading_error
-  kd_h: 0.0            # was 0.4; zeroed because track_heading is piecewise-
-                       # constant along the discretised centerline polyline
-                       # (~7 deg jumps per ~0.5 s of travel on R=0.8 m
-                       # curves), so finite-differencing produces spurious
-                       # 2-3 rad/s peaks that saturate the steering at
-                       # every segment transition and drove the robot into
-                       # C-05 emergency.
+  kp_h: 1.0            # was 1.5; lowered alongside kp_y for a softer
+                       # closed loop.
+  kd_h: 0.0            # zeroed because track_heading is piecewise-constant
+                       # along the discretised polyline (~7 deg jumps per
+                       # ~0.5 s of travel on the curve), so finite-
+                       # differencing produces spurious 2-3 rad/s peaks
+                       # that saturate the steering.
 
-  # Curvature feedforward (introduced in v0.4.0). Eliminates the steady-
-  # state lateral offset that a proportional-only outer loop otherwise
-  # needs to hold a curve. The gain equals v_nominal / yaw_to_steering_gain,
-  # where v_nominal = 0.2 m/s (the fixed_speed of vehicle_control_node)
-  # and yaw_to_steering_gain = 0.8 (the default of vehicle_control_node).
-  # If those values change, this gain must change too (or set it to 0
-  # to disable the feedforward, falling back to v0.3.0 behaviour).
-  kappa_to_steering_gain: 0.25
+  # Curvature feedforward. Was kinematically derived as v/yaw_gain=0.25
+  # in v0.4.0 assuming the diff-drive plugin honours the commanded yaw
+  # rate. Empirically the cobraflex is a 4-wheel skid-steer (see
+  # src/cobraflex/urdf/robot.gazebo: four wheel joints paired as 'left'
+  # and 'right'), so the actual yaw rate achieved is only ~60% of the
+  # commanded one — the wheels skid laterally against ground friction
+  # at every cycle. Bumping the feedforward to 0.45 brings the
+  # steady-state lateral offset back to ~0 on the R=0.9225 m right-lane
+  # curve. Re-derive empirically if you change yaw_to_steering_gain,
+  # wheel separation, surface friction, or robot mass.
+  kappa_to_steering_gain: 0.45
 
   # Throttle
   throttle_nominal: 0.5       # nominal cruise throttle on straight

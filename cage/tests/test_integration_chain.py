@@ -120,18 +120,36 @@ def test_c01_or_c03_fires_on_lateral_excursion():
     )
 
 
-def test_trigger_7_fires_on_compound_violation():
+def test_trigger_7_fires_when_predicate_first_fails():
+    """C-05 Trigger 7 fires the cycle in which any state-only predicate
+    first reports a violation. With the scripted sequence, cycle 2 has
+    TTLC dropping below t_min (lateral_offset=0.145 + heading=0.1 + v=0.4),
+    which makes the C-03 predicate fail and routes a Trigger-7 emergency
+    through C-05's state machine."""
     results = _run(SafetyCageNode(CAGE_YAML, mode="enforcement"))
-    # Cycle 3: lateral_offset > d_max AND speed > v_max_straight.
-    cycle = results[3]
+    cycle = results[2]
     assert cycle["joint_envelope_violated"] is True
     assert cycle["emergency"] is True
-    assert cycle["safe_action"] == _NEUTRAL_SAFE_STOP
+    assert cycle["safe_action"][1] == -0.5
     trigger_7s = [iv for iv in cycle["interventions"]
-                  if iv.get("metadata", {}).get("trigger") == 7]
+                  if iv.get("rule") == "C-05"
+                  and iv.get("metadata", {}).get("trigger") == 7]
     assert len(trigger_7s) == 1
-    failing = trigger_7s[0]["metadata"]["failing_rules"]
-    assert {"C-01", "C-04"}.issubset(set(failing))
+    assert "C-03" in trigger_7s[0]["metadata"]["failing_rules"]
+
+
+def test_c05_stays_active_after_trigger_7_until_reset():
+    """Once Trigger 7 latches C-05, subsequent cycles must stay in
+    emergency-active even if the underlying predicate transiently
+    recovers. The judder we observed in Gazebo on the first run was the
+    direct symptom of this latch being absent."""
+    results = _run(SafetyCageNode(CAGE_YAML, mode="enforcement"))
+    # Cycle 2 fires Trigger 7. Cycle 3 has an even worse state (compound
+    # violation) and cycle 4 has nominal state + a reset signal. C-05
+    # must stay active in cycles 2 and 3, and only clear in 4.
+    assert results[2]["emergency"] is True
+    assert results[3]["emergency"] is True
+    assert results[4]["emergency"] is False
 
 
 def test_cold_start_safe_stop_when_no_state():

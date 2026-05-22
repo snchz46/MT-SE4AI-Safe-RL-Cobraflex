@@ -180,6 +180,24 @@ class SafetyCageNode:
         osc_persist, osc_rates = self._check_oscillation_persistence(current_t)
         ctx.setdefault("oscillation_detected", osc_persist)
 
+        # SR-010 Part 1 — joint-envelope assertion evaluated BEFORE the
+        # chain on state-only predicates. The flag is injected into ctx
+        # so that C-05 fires Trigger 7 via its standard state machine
+        # (with latching + require_explicit_reset). Without this, a
+        # transient |d| > d_max condition would fire and clear one cycle
+        # later, producing the rapid emergency-toggle that vehicle_control
+        # turns into a stop-go judder.
+        state_only_predicates = {
+            "C-01": self.c01.safe_envelope_predicate_holds(state, raw_action, self._prev_action),
+            "C-02": self.c02.safe_envelope_predicate_holds(state, raw_action, self._prev_action),
+            "C-03": self.c03.safe_envelope_predicate_holds(state, raw_action, self._prev_action),
+            "C-04": self.c04.safe_envelope_predicate_holds(state, raw_action, self._prev_action),
+        }
+        state_only_failing = [rid for rid, ok in state_only_predicates.items() if not ok]
+        joint_envelope_violated = bool(state_only_failing)
+        ctx.setdefault("joint_envelope_violated", joint_envelope_violated)
+        ctx.setdefault("joint_envelope_failing_rules", state_only_failing)
+
         interventions = []
         current_action = raw_action
         emergency_active = False
@@ -202,40 +220,17 @@ class SafetyCageNode:
                 if rule_id == "C-05":
                     emergency_active = True
 
-        # SR-010 Part 1 — Joint-envelope assertion (C-05 Trigger 7).
-        # After the chain has produced its corrective `current_action`,
-        # assert that each rule still considers the pair (state, action)
-        # inside its invariant. A failure means the chain's reactive +
-        # predictive corrections did not arrive in time and the system
-        # left its joint safe envelope; fire Trigger 7 and override the
-        # action with a controlled stop. The check sees the previous
-        # cycle's emitted action via `self._prev_action`, which is still
-        # last cycle's `final_action` at this point.
-        predicate_results = {
-            rule_id: rule.safe_envelope_predicate_holds(
-                state, current_action, self._prev_action
-            )
-            for rule_id, rule in self._chain
-        }
-        failing_predicates = [rid for rid, ok in predicate_results.items() if not ok]
-        joint_envelope_violated = bool(failing_predicates)
-        if joint_envelope_violated:
-            interventions.append({
-                "rule": "C-05",
-                "reason": "triggered-joint-envelope",
-                "metadata": {
-                    "trigger": 7,
-                    "failing_rules": failing_predicates,
-                    "predicates": dict(predicate_results),
-                },
-            })
-            emergency_active = True
-            # Force a neutral safe-stop. In monitoring mode the final
-            # action is restored to raw below, so the override only
-            # affects enforcement; the intervention is still logged in
-            # both modes so the monitoring run can quantify how often
-            # the joint envelope would have been violated.
-            current_action = _NEUTRAL_SAFE_STOP
+        # Post-chain diagnostic: re-evaluate predicates on the action
+        # actually emitted so the C-06 (action-delta) predicate can be
+        # logged. This is observational only — Trigger 7 already
+        # latched via C-05's state machine during the chain above.
+        predicate_results = dict(state_only_predicates)
+        predicate_results["C-05"] = self.c05.safe_envelope_predicate_holds(
+            state, current_action, self._prev_action
+        )
+        predicate_results["C-06"] = self.c06.safe_envelope_predicate_holds(
+            state, current_action, self._prev_action
+        )
 
         if self.mode == "monitoring":
             final_action = raw_action
@@ -260,6 +255,7 @@ class SafetyCageNode:
             "oscillation_persistent": osc_persist,
             "joint_envelope_predicates": predicate_results,
             "joint_envelope_violated": joint_envelope_violated,
+            "joint_envelope_failing_rules": list(state_only_failing),
         }
 
     def _update_oscillation_history(self, current_t: float, interventions: list) -> None:

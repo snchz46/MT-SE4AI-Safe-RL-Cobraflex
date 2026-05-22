@@ -1,0 +1,14 @@
+{
+  "run_id": "smoke_post_latch_fix",
+  "completed_laps": 3.0,
+  "target_laps": 3,
+  "completed": true,
+  "max_abs_ey_m": 0.13287957576646559,
+  "emergency_steps": 0,
+  "interventions_per_rule": {
+    "C-06": 98
+  },
+  "total_steps": 1737,
+  "cycle_dt_s": 0.05,
+  "mode": "enforcement"
+}

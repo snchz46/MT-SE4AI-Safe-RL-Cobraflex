@@ -85,11 +85,12 @@ class EmergencyRule:
         external_stop = bool(ctx.get("external_stop", False))
         missing_state = bool(ctx.get("missing_state", False))
         oscillation = bool(ctx.get("oscillation_detected", False))
+        joint_envelope = bool(ctx.get("joint_envelope_violated", False))
         if ctx.get("reset", False):
             self._reset_requested = True
 
         triggers = self._evaluate_triggers(
-            state, current_t, external_stop, missing_state, oscillation
+            state, current_t, external_stop, missing_state, oscillation, joint_envelope
         )
         meta["triggers"] = triggers
 
@@ -134,11 +135,18 @@ class EmergencyRule:
         if triggers["oscillation"]:
             self._activate(raw_action)
             return self._emergency_action(meta, "triggered-oscillation")
+        if triggers["joint_envelope"]:
+            self._activate(raw_action)
+            meta["trigger"] = 7
+            meta["failing_rules"] = list(ctx.get("joint_envelope_failing_rules", []))
+            return self._emergency_action(meta, "triggered-joint-envelope")
 
         meta["active"] = False
         return CageDecision(fire=False, reason="no-trigger", metadata=meta)
 
-    def _evaluate_triggers(self, state, current_t, external_stop, missing_state, oscillation) -> dict:
+    def _evaluate_triggers(
+        self, state, current_t, external_stop, missing_state, oscillation, joint_envelope
+    ) -> dict:
         abs_theta = abs(state.heading_error)
         abs_d = abs(state.lateral_offset)
         abs_v = abs(state.speed)
@@ -157,6 +165,7 @@ class EmergencyRule:
             "missing": missing_state,
             "external": external_stop,
             "oscillation": oscillation,
+            "joint_envelope": joint_envelope,
             "any": (
                 compound
                 or invalid
@@ -164,6 +173,7 @@ class EmergencyRule:
                 or missing_state
                 or external_stop
                 or oscillation
+                or joint_envelope
             ),
         }
 

@@ -166,7 +166,8 @@ def test_nominal_state_does_not_fire_trigger_7():
     assert all(result["joint_envelope_predicates"].values())
     # No emergency from Trigger 7 in nominal driving.
     trigger_7s = [iv for iv in result["interventions"]
-                  if iv.get("metadata", {}).get("trigger") == 7]
+                  if iv.get("rule") == "C-05"
+                  and iv.get("metadata", {}).get("trigger") == 7]
     assert trigger_7s == []
 
 
@@ -177,13 +178,16 @@ def test_lateral_offset_beyond_d_max_fires_trigger_7():
     assert result["joint_envelope_violated"] is True
     assert "C-01" in result["joint_envelope_predicates"]
     assert result["joint_envelope_predicates"]["C-01"] is False
+    # Trigger 7 routes through C-05's state machine; the C-05 intervention
+    # carries trigger=7 in its metadata and lists the failing rules.
     trigger_7s = [iv for iv in result["interventions"]
-                  if iv.get("metadata", {}).get("trigger") == 7]
+                  if iv.get("rule") == "C-05"
+                  and iv.get("metadata", {}).get("trigger") == 7]
     assert len(trigger_7s) == 1
     assert "C-01" in trigger_7s[0]["metadata"]["failing_rules"]
-    # Safe action is forced to neutral safe stop.
-    assert result["safe_action"] == _NEUTRAL_SAFE_STOP
     assert result["emergency"] is True
+    # Safe action is the C-05 emergency action (freeze steering + brake).
+    assert result["safe_action"][1] == -0.5
 
 
 def test_excess_speed_fires_trigger_7():
@@ -206,7 +210,8 @@ def test_monitoring_mode_logs_violation_but_does_not_override():
     assert result["safe_action"] == raw
     # But the intervention is still logged.
     trigger_7s = [iv for iv in result["interventions"]
-                  if iv.get("metadata", {}).get("trigger") == 7]
+                  if iv.get("rule") == "C-05"
+                  and iv.get("metadata", {}).get("trigger") == 7]
     assert len(trigger_7s) == 1
 
 
@@ -221,6 +226,29 @@ def test_multiple_failing_predicates_listed_in_metadata():
     result = node.step(state, raw_action=(0.0, 0.5), ctx={"current_time": 0.0})
     failing = next(
         iv["metadata"]["failing_rules"] for iv in result["interventions"]
-        if iv.get("metadata", {}).get("trigger") == 7
+        if iv.get("rule") == "C-05"
+        and iv.get("metadata", {}).get("trigger") == 7
     )
     assert {"C-01", "C-02", "C-04"}.issubset(set(failing))
+
+
+def test_trigger_7_latches_across_cycles():
+    """Once Trigger 7 fires, C-05 must stay active across subsequent cycles
+    even if the joint envelope predicate transiently recovers, until an
+    explicit /cage_reset is delivered. This prevents the emergency-toggle
+    judder we observed in the first Gazebo run."""
+    node = SafetyCageNode(CAGE_YAML, mode="enforcement")
+    # Cycle 1: state out of envelope -> Trigger 7 fires, C-05 latches active.
+    out_state = _nominal_state(lateral_offset=0.25, speed=0.2, timestamp=0.0)
+    r1 = node.step(out_state, raw_action=(0.0, 0.5), ctx={"current_time": 0.0})
+    assert r1["emergency"] is True
+    # Cycle 2: state recovered (|d| < d_max) but C-05 must remain active
+    # because require_explicit_reset is True in cage.yaml.
+    in_state = _nominal_state(lateral_offset=0.05, speed=0.2, timestamp=0.05)
+    r2 = node.step(in_state, raw_action=(0.0, 0.5), ctx={"current_time": 0.05})
+    assert r2["emergency"] is True, (
+        "C-05 should latch via require_explicit_reset, not clear on recovery"
+    )
+    # Cycle 3: send reset AND state still inside -> C-05 clears.
+    r3 = node.step(in_state, raw_action=(0.0, 0.5), ctx={"current_time": 0.10, "reset": True})
+    assert r3["emergency"] is False

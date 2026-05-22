@@ -34,10 +34,16 @@ def pd(pd_params):
     return BaselinePD(pd_params)
 
 
-def test_loads_from_yaml():
+def test_loads_from_yaml(pd_params):
+    """The YAML loader reads kp_y / throttle_nominal as declared by the
+    file. Values themselves are tuned empirically against Gazebo (see
+    the comments in policy/baseline_pd.yaml); we only assert the wiring."""
     pd = BaselinePD.from_yaml(PD_YAML)
-    assert pd.kp_y == 12.0
-    assert pd.throttle_nominal == 0.5
+    assert pd.kp_y == pd_params["kp_y"]
+    assert pd.kd_y == pd_params["kd_y"]
+    assert pd.kp_h == pd_params["kp_h"]
+    assert pd.kd_h == pd_params["kd_h"]
+    assert pd.throttle_nominal == pd_params["throttle_nominal"]
 
 
 def test_centred_straight_at_rest_no_steering(pd, pd_params):

@@ -28,7 +28,8 @@
       "Bash(.venv/Scripts/python.exe -m pytest)",
       "Bash(.venv/Scripts/python.exe -m pytest -v)",
       "Bash(.venv/Scripts/python.exe -c \"import rclpy; print\\(rclpy.__version__\\)\")",
-      "Bash(.venv/Scripts/python.exe -c \"import sys; sys.path.insert\\(0, 'src/cobraflex'\\); from cobraflex import __file__ as f; print\\('cobraflex pkg:', f\\)\")"
+      "Bash(.venv/Scripts/python.exe -c \"import sys; sys.path.insert\\(0, 'src/cobraflex'\\); from cobraflex import __file__ as f; print\\('cobraflex pkg:', f\\)\")",
+      "Bash(git -C \"B:\\\\SE4AI\\\\thesis_repo\" log --oneline -30)"
     ]
   }
 }

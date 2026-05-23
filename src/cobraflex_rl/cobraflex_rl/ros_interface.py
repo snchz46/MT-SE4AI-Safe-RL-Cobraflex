@@ -15,7 +15,7 @@ from rclpy.node import Node
 class RosGazeboInterface(Node):
     def __init__(
         self,
-        world_name: str = "road_carpet_world",
+        world_name: str = "lane_following_oval",
         model_name: str = "cobraflex_robot",
         spawn_z: float = 0.2,
         service_timeout_ms: int = 1000,

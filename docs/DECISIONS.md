@@ -1014,6 +1014,62 @@ The copy is a *fresh* copy (no `git subtree` / no preserved upstream git history
 
 ---
 
+---
+
+### D-34 — Cage active in enforcement mode during PPO training
+
+**Context.** The PPO training loop (`GazeboLaneEnv.step`) needs to decide
+whether to route actions through the safety cage or bypass it entirely.
+Two strategies are viable:
+
+- **Strategy A — Cage offline:** training env publishes directly to
+  `/cmd_vel`; cage is only active at evaluation time. Simpler to implement
+  (no extra ROS2 synchronisation in the training loop), but the policy
+  learns a distribution of states that excludes cage interventions, which
+  may cause the policy to be over-confident near cage activation boundaries
+  during deployment.
+- **Strategy B — Cage in the loop:** training env publishes raw actions to
+  `/raw_action`, subscribes to `/safe_action`, and passes the *caged* action
+  to the vehicle. The policy learns under the actual deployed envelope.
+  Reward is computed on the post-cage action (or optionally on both), which
+  makes the reward design more complex but aligns training with deployment.
+
+**Decision.** **Strategy B** — cage in enforcement mode during training —
+is the F3 default, consistent with `policy/README.md` ("The cage is active
+during training in enforcement mode by default") and with the traceability
+chain SR-009 → Training Specification requirement that the policy is
+evaluated under the same constraints as deployed.
+
+The intervention of the cage during training is treated as part of the
+environment dynamics, not as a penalty signal. The reward function sees the
+*safe* action actually applied, not the raw action the policy requested; the
+delta between raw and safe action is an optional auxiliary signal for
+diagnostic logging only.
+
+**Implementation consequence.** `GazeboLaneEnv.step` must be updated to:
+1. Publish raw action to `/raw_action` (instead of `/cmd_vel`).
+2. Wait for `/safe_action` response from `cage_ros_node`.
+3. Forward the safe action to `vehicle_control_node` (or let it flow through
+   the existing `/safe_action → vehicle_control_node` arc).
+4. Compute reward using the safe action and the resulting state.
+
+The `RosGazeboInterface` synchronisation model must be extended accordingly.
+This is F3 task TS-01 (Training Specification §Training loop wiring).
+
+**Consequences.** `train_ppo.py` and `GazeboLaneEnv` require the wiring
+update before the first training run. The cage and `vehicle_control_node`
+must be co-launched with the training loop (already drafted in
+`train_lane.launch.py`).
+
+**Rationale.** Deployment of a policy trained offline from the cage would
+require post-hoc analysis of distribution shift at cage boundaries, adding
+complexity at evaluation time. Training under the cage is the simpler and
+more conservative choice: what the policy learns is what gets deployed.
+
+**Status.** CONFIRMED, implementation pending (F3 task TS-01).
+
+---
+
 ## Future and pending decisions
 
 The following decisions are explicitly deferred to later phases and will

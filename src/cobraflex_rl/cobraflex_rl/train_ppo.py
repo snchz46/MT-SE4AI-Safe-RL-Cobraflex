@@ -51,7 +51,7 @@ def main(args: Optional[Sequence[str]] = None) -> None:
     rclpy.init(args=args)
 
     share_dir = resolve_share_directory()
-    centerline_path = Path(cli_args.centerline_config or share_dir / "config" / "centerline.yaml")
+    centerline_path = Path(cli_args.centerline_config or share_dir / "config" / "oval_right_lane_centerline.yaml")
     train_cfg_path = Path(cli_args.train_config or share_dir / "config" / "train_ppo.yaml")
 
     centerline_cfg = load_yaml(centerline_path)

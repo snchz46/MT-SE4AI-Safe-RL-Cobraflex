@@ -31,6 +31,59 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [23.05.2026] — F3 kickoff: Training Specification, training pipeline fixes, D-34
+
+**Document(s) affected:** `manuscript/chapters/chapter_07_training_specification.md`,
+`docs/DECISIONS.md` (D-34), `src/cobraflex_rl/cobraflex_rl/ros_interface.py`,
+`src/cobraflex_rl/cobraflex_rl/train_ppo.py`,
+`src/cobraflex_rl/cobraflex_rl/eval_policy.py`,
+`src/cobraflex_rl/launch/train_lane.launch.py`,
+`CLAUDE.md`.
+**Phase:** F3.
+**Gate context:** G2 passed; F3 entry.
+**Author:** Samuel.
+
+### Change
+
+Gate G2 passed on the strength of `ros_run_20260523T153003Z` (9.91 laps,
+0 emergencies, 144 tests, traceability PASS). F3 starts.
+
+**Training Specification (Chapter 7 §7.2, artefact A1):** complete
+8-component spec written before first training run, covering observation
+space, action space, reward function (weights v1.0), termination/truncation
+criteria, cage-in-training mode (D-34), PPO hyperparameters (v1.0),
+seed/reproducibility policy, and checkpoint registry.
+
+**D-34 (cage active during training):** documented in DECISIONS.md.
+Strategy B chosen: training env routes through `/raw_action → cage →
+/safe_action`. Implementation is F3 task TS-01.
+
+**Training pipeline bug fixes:**
+- `ros_interface.py`: world_name default `"road_carpet_world"` →
+  `"lane_following_oval"` (wrong world would have caused service failures).
+- `train_ppo.py`, `eval_policy.py`: centerline default `"centerline.yaml"`
+  (3-point straight) → `"oval_right_lane_centerline.yaml"`.
+- `train_lane.launch.py`: replaced stub (wrong `gazebo.launch.py` +
+  `obstacles.world`) with correct `gazebo_mesh.launch.py` + oval world
+  + `headless` arg for faster training.
+
+### Rationale
+
+The training pipeline had accumulated stub code from F1 that pointed to
+wrong worlds and wrong centerlines. These would have caused silent failures
+(training on a 3-point straight, or failing to find the Gazebo service)
+on the first F3 training attempt. Fixing before training is cheaper than
+debugging after.
+
+### Verification
+
+- AST OK on all modified Python files.
+- `pytest cage/tests policy/tests` → 144 passed (no new tests; fixes are
+  config/default changes that only activate at ROS2 runtime).
+- `python3 tools/check_traceability.py --strict` → all checks PASS.
+
+---
+
 ## [23.05.2026] — lane_perception_node: speed spike rejection filter
 
 **Document(s) affected:** `src/cobraflex_rl/cobraflex_rl/lane_perception_node.py`.

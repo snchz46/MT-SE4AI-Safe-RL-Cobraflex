@@ -24,16 +24,15 @@ script reports orphans on either side.
 
 ## Phase status (snapshot)
 
-- **Current phase:** F2 complete — Cage v0.5.1, oval simulation, PD
-  baseline v0.8.0. **Pre-Gate G2 / ready for F3.**
-- **Definitive pre-F3 run:** `ros_run_20260523T153003Z` — 9.91 laps,
-  845 s, 0 emergencies, 8 interventions (C-02/C-06 only).
-- **Recent hardening (2026-05-23):** angle-wrap guard in PD `psi_dot`,
-  epsi EMA across ±π seam, speed spike rejection filter
-  (`speed_spike_factor=5.0`), polling unpause in launch, watchdogs in
-  cage_logger and vehicle_control nodes.
+- **Current phase:** F3 — PPO training. Gate G2 passed 2026-05-23.
+- **F2 evidence:** `ros_run_20260523T153003Z` — 9.91 laps, 845 s,
+  0 emergencies, cage v0.5.1, PD v0.8.0.
+- **F3 entry state:** Training Specification written (Chapter 7 §7.2),
+  training pipeline stubs present (`train_ppo.py`, `GazeboLaneEnv`,
+  `rewards.py`). Open task **TS-01**: wire `GazeboLaneEnv` through
+  `/raw_action → cage → /safe_action` (D-34).
 - **Authoritative status sources:** [docs/CHANGELOG.md](docs/CHANGELOG.md)
-  and `git log --oneline` (commits prefixed `F2:` are current-phase work).
+  and `git log --oneline` (commits prefixed `F3:` are current-phase work).
 
 ## Repo map
 

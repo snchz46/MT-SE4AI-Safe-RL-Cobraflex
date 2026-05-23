@@ -23,7 +23,7 @@ _HEADING_SMOOTHING_RADIUS = 2
 # slams a step into ey/epsi and saturates the PD. Constraining the search
 # to the immediate neighbourhood of the previous index enforces continuity
 # at the cost of an explicit reset when the robot is teleported.
-_LOCAL_SEARCH_RADIUS = 6
+_LOCAL_SEARCH_RADIUS = 2
 
 
 def wrap_angle(angle: float) -> float:
@@ -68,6 +68,10 @@ class PolylineTracker:
             np.allclose(self.points[0], self.points[-1], atol=1e-6)
         )
         self._prev_best_index: Optional[int] = None
+
+    @property
+    def closed(self) -> bool:
+        return self._closed
 
     def reset_tracking(self) -> None:
         """Drop the cached best_index so the next track() call does a
@@ -139,6 +143,32 @@ class PolylineTracker:
             track_heading=track_heading,
             closest_point=(float(best_projection[0]), float(best_projection[1])),
         )
+
+    def curvature_ahead(self, segment_index: int, lookahead_segments: int = 5) -> float:
+        n = len(self.segment_headings)
+        if n < 2 or lookahead_segments <= 0:
+            return 0.0
+
+        start = int(segment_index)
+        if self._closed:
+            start %= n
+            steps = min(int(lookahead_segments), n - 1)
+            end = (start + steps) % n
+            arc = float(
+                sum(self.segment_lengths[(start + k) % n] for k in range(steps))
+            )
+        else:
+            start = max(0, min(n - 1, start))
+            end = min(n - 1, start + int(lookahead_segments))
+            arc = float(self.cumulative_lengths[end] - self.cumulative_lengths[start])
+
+        if arc <= 1e-6 or end == start:
+            return 0.0
+
+        dpsi = wrap_angle(
+            float(self.segment_headings[end]) - float(self.segment_headings[start])
+        )
+        return dpsi / arc
 
     def _smoothed_heading(self, segment_index: int) -> float:
         n = len(self.segment_headings)

@@ -10,19 +10,37 @@
 # =============================================================
 
 baseline_pd:
-  version: "0.5.0"
+  version: "0.7.0"
 
   # Steering loop — lateral position
   kp_y: 3.0            # was 5.0; reduced now that the curvature feedforward
                        # carries most of the trim, so the PD only has to
                        # null small residual offsets. Lower gain widens the
                        # closed-loop margin against C-06 rate-limit lag.
-  kd_y: 0.5            # was 1.0; halved for the same reason and to limit
-                       # amplification of finite-difference noise.
+  kd_y: 0.0            # was 0.5 (was 1.0 before that); zeroed for the same
+                       # reason kd_h was zeroed in v0.5.0: the centerline
+                       # projection jumps between polyline segments at curve
+                       # entries, creating ey discontinuities of ~0.15 m in a
+                       # single 50 ms step (y_dot ≈ 3 m/s), which pushes
+                       # kd_y * y_dot ≈ 1.5 — alone enough to saturate
+                       # steering. This derivative spike then ping-pongs the
+                       # raw action ±1.0 every cycle, which C-03/C-05 catch
+                       # correctly as an emergency. Finite-differencing of a
+                       # discontinuous signal is not a reliable derivative
+                       # estimate; the proportional + feedforward terms are
+                       # sufficient for the F2 validation goal.
 
   # Steering loop — heading
-  kp_h: 1.0            # was 1.5; lowered alongside kp_y for a softer
-                       # closed loop.
+  kp_h: 0.3            # was 1.0 → 0.0 (v0.6.0) → 0.3 (v0.7.0). Restored
+                       # after _LOCAL_SEARCH_RADIUS was reduced 6→2 in
+                       # polyline_tracker.py: the max epsi jump from a
+                       # 2-segment advance is ~0.094 rad, so kp_h×Δepsi ≈
+                       # 0.028 — negligible for saturation. Without any kp_h
+                       # the heading drifts at curves (epsi reaches 0.25-0.35
+                       # rad), triggering C-05 theta_warning (0.349 rad). A
+                       # small kp_h damps this without re-introducing
+                       # saturation: worst-case total = 0.487 + 0.366 + 0.028
+                       # = 0.881 < 1.0.
   kd_h: 0.0            # zeroed because track_heading is piecewise-constant
                        # along the discretised polyline (~7 deg jumps per
                        # ~0.5 s of travel on the curve), so finite-

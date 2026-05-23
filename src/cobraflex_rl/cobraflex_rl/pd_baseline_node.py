@@ -10,11 +10,9 @@ Publications
                  angular.z = steering, linear.x = throttle (PD output).
 
 The throttle component of /raw_action is computed by the PD per
-policy/baseline_pd.yaml (curve-aware nominal) but it is not actuated as
-a physical throttle in the F2 demo; vehicle_control_node feeds a fixed
-linear.x to /cmd_vel. The throttle column is still emitted on
-/raw_action so the cage can exercise C-04/C-06 on a populated value and
-so the F3 wrapper sees a 2D action consistent with the cage contract.
+policy/baseline_pd.yaml (curve-aware nominal). vehicle_control_node can
+use the cage's safe throttle to scale the straight cruise speed, so this
+field is part of both safety evaluation and physical actuation.
 """
 
 from __future__ import annotations

@@ -65,10 +65,17 @@ def test_negative_offset_produces_positive_steering(pd):
     assert steering > 0.0
 
 
-def test_positive_heading_produces_negative_steering(pd):
+def test_heading_error_produces_corrective_steering(pd, pd_params):
+    # kp_h = 0.3 since v0.7.0: restored after _LOCAL_SEARCH_RADIUS was
+    # reduced 6→2, bounding max epsi jump to ~0.094 rad and making the
+    # heading term safe. Positive heading_error → car pointing left of
+    # track → negative (right) steering correction.
     state = State(heading_error=0.2)
     steering, _ = pd.step(state, current_t=0.0)
-    assert steering < 0.0
+    if pd_params["kp_h"] > 0.0:
+        assert steering < 0.0
+    else:
+        assert steering == pytest.approx(0.0)
 
 
 def test_curvature_reduces_throttle(pd, pd_params):
@@ -87,16 +94,17 @@ def test_extreme_curvature_floors_throttle(pd):
 
 
 def test_finite_difference_rate_contributes(pd, pd_params):
-    # Small magnitudes to stay clear of actuator saturation.
-    # First step at t=0 → no rate accumulated
+    # kd_y = 0.0 (zeroed in v0.6.0 — same reason kd_h was zeroed: the
+    # centerline-projection discontinuity at curve entries produces
+    # y_dot ≈ ±3 m/s, making the D-term unreliable). With kd_y = 0 the
+    # steering is purely proportional + feedforward, so both steps with
+    # the same lateral_offset must produce identical steering.
     pd.step(State(lateral_offset=0.0), current_t=0.0)
-    # Second step at t=0.05 with offset jump → positive lateral_rate → extra negative steering
     s1, _ = pd.step(State(lateral_offset=0.01), current_t=0.05)
-    # Compare against a fresh PD given the same offset but no rate
     pd2 = BaselinePD(pd_params)
     s2, _ = pd2.step(State(lateral_offset=0.01), current_t=0.0)
-    assert s1 < s2  # the rate term should add more corrective steering
-    assert s1 > -1.0  # sanity: not just saturated
+    assert s1 == pytest.approx(s2)  # D-term is zero; outputs must match
+    assert s1 > -1.0  # sanity: not saturated
 
 
 def test_reset_clears_history(pd):

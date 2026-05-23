@@ -48,10 +48,6 @@ def _yaw_from_quat(x: float, y: float, z: float, w: float) -> float:
     return math.atan2(siny_cosp, cosy_cosp)
 
 
-def _wrap_pi(angle: float) -> float:
-    return math.atan2(math.sin(angle), math.cos(angle))
-
-
 class LanePerceptionNode(Node):
     def __init__(self) -> None:
         super().__init__("lane_perception")
@@ -122,9 +118,13 @@ class LanePerceptionNode(Node):
     def _tick(self) -> None:
         msg = Float64MultiArray()
         if not self._got_odom_once or self._odom_msg is None:
-            msg.data = [0.0, 0.0, 0.0, 0.0, self._road_width / 2, self._road_width / 2, 0.0]
-            self._pub.publish(msg)
+            # Publishing state_valid=0.0 before odom arrives activates C-05
+            # Trigger 4 (invalid state), which latches permanently with
+            # require_explicit_reset=True. Suppress the publish entirely so
+            # the cage_ros_node calls cage.step(None) and takes the safe
+            # _no_state_ever_result path (emergency but C-05 not latched).
             return
+        # Note: plausibility gate below also suppresses on the publish path.
 
         pose = self._odom_msg.pose.pose
         x = float(pose.position.x)
@@ -139,8 +139,21 @@ class LanePerceptionNode(Node):
         lin = self._odom_msg.twist.twist.linear
         speed = math.sqrt(float(lin.x) ** 2 + float(lin.y) ** 2)
 
-        if not (math.isfinite(x) and math.isfinite(y) and math.isfinite(yaw) and math.isfinite(speed)):
-            msg.data = [0.0, 0.0, 0.0, 0.0, self._road_width / 2, self._road_width / 2, 0.0]
+        if not (
+            math.isfinite(x)
+            and math.isfinite(y)
+            and math.isfinite(yaw)
+            and math.isfinite(speed)
+        ):
+            msg.data = [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                self._road_width / 2,
+                self._road_width / 2,
+                0.0,
+            ]
             self._pub.publish(msg)
             return
 
@@ -156,17 +169,7 @@ class LanePerceptionNode(Node):
         self._pub.publish(msg)
 
     def _curvature_ahead(self, segment_index: int) -> float:
-        headings = self._tracker.segment_headings
-        cum = self._tracker.cumulative_lengths
-        n = len(headings)
-        if n < 2:
-            return 0.0
-        i_end = min(n - 1, segment_index + self._lookahead)
-        arc = float(cum[i_end] - cum[segment_index])
-        if arc <= 1e-6:
-            return 0.0
-        dpsi = _wrap_pi(float(headings[i_end]) - float(headings[segment_index]))
-        return dpsi / arc
+        return self._tracker.curvature_ahead(segment_index, self._lookahead)
 
 
 def main(args=None) -> None:

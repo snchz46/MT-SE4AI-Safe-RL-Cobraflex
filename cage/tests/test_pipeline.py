@@ -90,6 +90,32 @@ def test_pd_cage_logger_pipeline(tmp_path):
     assert meta["scenario"] == "drift_oval"
 
 
+def test_pipeline_handles_missing_state_until_first_obs(tmp_path):
+    """Mirrors the ROS path where /raw_action fires before /state_obs ever
+    arrives. The cage must produce a neutral safe-stop with a CAGE-NODE
+    synthetic intervention and the logger must persist it without raising.
+    """
+    cage = SafetyCageNode(CAGE_YAML, mode="enforcement")
+    log_dir = tmp_path / "missing_state_run"
+
+    with CageLogger(log_dir, run_id="missing") as log:
+        # 3 cycles with no state observation yet
+        for i in range(3):
+            result = cage.step(state=None, raw_action=(0.5, 0.5),
+                               ctx={"current_time": i * 0.05})
+            log.add_cycle(result)
+            assert result["safe_action"] == (0.0, -0.5)  # neutral safe-stop
+        # Now the first state arrives — pipeline must recover
+        state = State(speed=0.2, lateral_offset=0.0, state_valid=True)
+        result = cage.step(state=state, raw_action=(0.1, 0.4),
+                           ctx={"current_time": 0.20})
+        log.add_cycle(result)
+        assert result["safe_action"] != (0.0, -0.5)
+
+    rows = list(csv.DictReader((log_dir / "cage_status.csv").open()))
+    assert len(rows) == 4
+
+
 def test_pipeline_monitoring_mode_does_not_modify_action(tmp_path):
     """In monitoring mode, the action sent to the kinematic step is the
     raw PD action; the cage logs interventions but does not alter the

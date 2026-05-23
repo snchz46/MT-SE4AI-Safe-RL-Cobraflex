@@ -38,6 +38,7 @@ def _bootstrap_cage_import() -> None:
 _bootstrap_cage_import()
 
 import rclpy  # noqa: E402
+from rclpy.clock import Clock  # noqa: E402
 from rclpy.node import Node  # noqa: E402
 from rclpy.qos import QoSPresetProfiles  # noqa: E402
 from std_msgs.msg import Float64MultiArray  # noqa: E402
@@ -54,6 +55,11 @@ class CageLoggerNode(Node):
         self.declare_parameter("run_id", "")
         self.declare_parameter("cage_status_topic", "/cage_status")
         self.declare_parameter("state_obs_topic", "/state_obs")
+        # Stamp the cage operating mode into every CSV row. CageStatus.msg
+        # does not carry mode (it's a node-level property, not per-cycle),
+        # so the logger reads it from a launch parameter aligned with
+        # safety_cage's `mode` parameter.
+        self.declare_parameter("cage_mode", "enforcement")
 
         output_dir = (
             self.get_parameter("output_dir").get_parameter_value().string_value
@@ -63,9 +69,18 @@ class CageLoggerNode(Node):
             "ros_run_" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         )
 
-        out_path = Path(output_dir) / run_id
-        self._cage_logger: Optional[CageLogger] = CageLogger(out_path, run_id=run_id)
-        self.get_logger().info(f"Writing cage CSV to {self._cage_logger.cage_status_path}")
+        out_path = (Path(output_dir).expanduser().resolve() / run_id)
+        self._cage_mode = (
+            self.get_parameter("cage_mode").get_parameter_value().string_value
+            or "enforcement"
+        )
+        self._cage_logger: Optional[CageLogger] = CageLogger(
+            out_path, run_id=run_id, metadata={"mode": self._cage_mode}
+        )
+        self.get_logger().info(
+            f"Writing cage CSV to {self._cage_logger.cage_status_path} "
+            f"(mode={self._cage_mode})."
+        )
 
         self._last_state: dict = {}
 
@@ -84,6 +99,14 @@ class CageLoggerNode(Node):
             sensor_qos,
         )
 
+        # Watchdog: surface silent upstream failures. The pipeline is
+        # callback-chained (lane_perception → pd → cage → logger); a stuck
+        # upstream node leaves the CSV with only its header and no error
+        # anywhere. Tick every 5 s on the wall clock (NOT sim time, so it
+        # also fires while Gazebo is paused or has died).
+        self._cycle_count_at_last_tick = 0
+        self.create_timer(5.0, self._on_watchdog_tick, clock=Clock())
+
     def _on_state_obs(self, msg: Float64MultiArray) -> None:
         if len(msg.data) < 7:
             return
@@ -101,7 +124,7 @@ class CageLoggerNode(Node):
         stamp_s = float(msg.header.stamp.sec) + float(msg.header.stamp.nanosec) * 1e-9
         result = {
             "current_time": stamp_s,
-            "mode": "",
+            "mode": self._cage_mode,
             "cage_version": msg.yaml_version,
             "raw_action": (float(msg.action_raw.angular.z), float(msg.action_raw.linear.x)),
             "safe_action": (float(msg.action_safe.angular.z), float(msg.action_safe.linear.x)),
@@ -113,6 +136,30 @@ class CageLoggerNode(Node):
             "state": dict(self._last_state),
         }
         self._cage_logger.add_cycle(result)
+
+    def _on_watchdog_tick(self) -> None:
+        if self._cage_logger is None:
+            return
+        count = self._cage_logger.cycle_count
+        delta = count - self._cycle_count_at_last_tick
+        self._cycle_count_at_last_tick = count
+        if count == 0:
+            self.get_logger().warning(
+                "No /cage_status messages received yet — upstream pipeline "
+                "(lane_perception → pd_baseline → safety_cage) is likely "
+                "stuck. CSV at %s has only its header."
+                % str(self._cage_logger.cage_status_path)
+            )
+        elif delta == 0:
+            self.get_logger().warning(
+                "No new /cage_status in the last 5 s (cycle_count stuck at "
+                "%d). Upstream may have crashed mid-run." % count
+            )
+        else:
+            self.get_logger().info(
+                "cage_logger alive: %d cycles total (+%d in last 5 s)."
+                % (count, delta)
+            )
 
     def destroy_node(self) -> bool:
         if self._cage_logger is not None:

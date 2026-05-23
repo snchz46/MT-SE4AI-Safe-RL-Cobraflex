@@ -81,6 +81,13 @@ class LanePerceptionNode(Node):
         self._ema_alpha = float(self.get_parameter("ema_alpha").value)
         self._ey_smooth: Optional[float] = None
         self._epsi_smooth: Optional[float] = None
+        # Warp detection: if /odom jumps by more than this distance between
+        # consecutive frames, treat it as a teleport (Gazebo respawn, RL
+        # episode reset) and drop the tracker's neighbourhood cache + EMA
+        # state so they don't lock on a stale segment.
+        self.declare_parameter("warp_threshold_m", 0.5)
+        self._warp_threshold = float(self.get_parameter("warp_threshold_m").value)
+        self._last_xy: Optional[tuple] = None
 
         sensor_qos = QoSPresetProfiles.SENSOR_DATA.value
         self._odom_msg: Optional[Odometry] = None
@@ -167,6 +174,19 @@ class LanePerceptionNode(Node):
             ]
             self._pub.publish(msg)
             return
+
+        if self._last_xy is not None:
+            dx = x - self._last_xy[0]
+            dy = y - self._last_xy[1]
+            if (dx * dx + dy * dy) ** 0.5 > self._warp_threshold:
+                self.get_logger().warning(
+                    "Odom warp detected (>%.2f m jump); resetting polyline "
+                    "tracker and EMA." % self._warp_threshold
+                )
+                self._tracker.reset_tracking()
+                self._ey_smooth = None
+                self._epsi_smooth = None
+        self._last_xy = (x, y)
 
         track_state = self._tracker.track(x, y, yaw)
         kappa_ahead = self._curvature_ahead(track_state.segment_index)

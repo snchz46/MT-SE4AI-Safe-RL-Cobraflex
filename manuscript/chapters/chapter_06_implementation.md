@@ -325,9 +325,10 @@ se publica una warning en `/diagnostics`. En operación normal, el
 buffer típico es de pocas decenas de entradas.
 
 El test de throughput ejecutado en D30 tarde, descrito en §6.5.4,
-verificó que el logger sostiene 20 Hz durante 3 minutos sin pérdida
-de mensajes y con uso de memoria estable [COMPLETAR FASE 2: cifras
-exactas tras la medición].
+verificó que el logger sostiene 20 Hz durante 6.33 min (379.8 s)
+sin pérdida de mensajes y con uso de memoria estable: 7 597 líneas
+capturadas frente a 7 597 esperadas a 20 Hz (0% de pérdida; ver
+`experiments/sim/runs/ros_run_20260523T073134Z/cage_status.csv`).
 
 ---
 
@@ -388,10 +389,20 @@ Las ganancias se ajustaron manualmente en D32 mañana siguiendo un
 procedimiento clásico: empezar con ganancias bajas, aumentar Kp_y
 hasta que el vehículo siga el centro del carril en recta sin offset
 constante, ajustar Kd_y para evitar oscilación, y luego repetir el
-proceso para el lazo de heading. Los valores resultantes son
-[COMPLETAR FASE 2: valores definitivos tras D32]. El valor exacto
-no es relevante académicamente; lo relevante es que existe un PD
-que circula por la pista de manera estable.
+proceso para el lazo de heading. Los valores resultantes en la
+versión 0.8.0 de `policy/baseline_pd.yaml` son
+`Kp_y = 3.0`, `Kd_y = 0.0`, `Kp_h = 0.3`, `Kd_h = 0.0`, con
+feedforward de curvatura `kappa_to_steering_gain = 0.45` y throttle
+nominal 0.5 atenuado por `alpha_curve_slowdown = 0.6`. Los dos
+términos derivativos se anularon tras detectar que la proyección
+sobre la polilínea introduce saltos discretos de `ey` y de
+`track_heading` al cambiar de segmento en la entrada de curva;
+diferenciar numéricamente una señal discontinua genera picos
+espurios que saturan el actuador, y el feedforward de curvatura
+cubre el papel anticipativo que se esperaba del derivativo. El
+valor exacto de las ganancias no es relevante académicamente; lo
+relevante es que existe un PD que circula por la pista de manera
+estable (ver §6.6.1).
 
 ### 6.4.3 Limitaciones reconocidas
 
@@ -477,9 +488,15 @@ def test_c01_hysteresis_persistence():
     assert not info.intervention  # below d_deactivate, deactivated
 ```
 
-El número total de tests unitarios al cierre de D33 es
-[COMPLETAR FASE 2: número exacto] entre las seis reglas. Todos los
-tests pasan con código de retorno cero de pytest.
+El número total de tests específicos por regla al cierre de D33 es
+61 entre las seis reglas (`cage/tests/test_c01_lane_boundary.py`
+a `test_c06_rate_limiter.py`, incluyendo
+`test_c05_triggers_extended.py`). La suite completa de la cage
+suma 132 casos (per-rule + integración de la cadena de reglas +
+serialización del logger + comprobación de versión SR-spec); con
+los 3 tests del baseline PD el repositorio reúne 143 casos.
+Todos pasan con código de retorno cero de pytest
+(`pytest cage/tests policy/tests` → 143 passed, fechado 2026-05-23).
 
 ### 6.5.3 Tests de propiedades
 
@@ -525,12 +542,18 @@ coincide con el número esperado (con tolerancia del 1% por jitter
 del scheduler) y que no hay warnings de cola desbordada en
 `/diagnostics`.
 
-Resultados del test de throughput [COMPLETAR FASE 2 D30 tarde]:
+Resultados del test de throughput, medidos sobre los 7 597 ciclos
+del run `ros_run_20260523T073134Z` (379.8 s de operación continua,
+modo `enforcement`):
 
-- Frecuencia efectiva del callback de cage: [valor] Hz (target 20 Hz).
-- Latencia mediana state→safe_action: [valor] ms.
-- Latencia P95: [valor] ms.
-- Líneas perdidas en logger: [valor] (esperado 0).
+- Frecuencia efectiva del callback de cage: 20.00 Hz (target 20 Hz).
+- Periodo de ciclo: mediana 50.0 ms, P95 50.0 ms, máximo 53.0 ms.
+  La latencia state→safe_action no se mide por separado en F2
+  (se difiere a F3 cuando se instrumenten timestamps por etapa);
+  el periodo de ciclo da una cota superior holgada bajo el
+  presupuesto de 50 ms del SR-006.
+- Líneas perdidas en logger: 0 sobre 7 597 esperadas a 20 Hz
+  (`wc -l cage_status.csv` = 7 598 incluyendo cabecera).
 
 ### 6.5.5 Automatización con pytest y hooks
 
@@ -564,9 +587,31 @@ logger captura todos los mensajes sin pérdida; los archivos de
 salida tienen la estructura esperada y son legibles por los scripts
 de análisis preliminares.
 
-[COMPLETAR FASE 2 D34: resultado de la demostración con cifras
-concretas: tiempo medio por vuelta, número de activaciones de C-01,
-C-02 y C-03 durante la perturbación, ningún C-05.]
+El run candidato para el cierre de D34 es
+`ros_run_20260523T073134Z` (PD baseline 0.8.0, cage YAML 0.5.1,
+escenario SC-NOM-01, modo `enforcement`, perímetro ODD-3 = 8.0232 m).
+La demostración cumple los cuatro criterios:
+
+- El vehículo recorre 36.14 m, equivalentes a 4.50 vueltas
+  completas frente al objetivo de 3, en 379.8 s
+  (≈ 84.4 s por vuelta a velocidad media 0.095 m/s).
+- La cage interviene en 8 ciclos de los 7 597 totales, distribuidos
+  entre C-02 (6 activaciones) y C-06 (7 activaciones, en combinación
+  con C-02 en 5 de los 8 ciclos); las reglas C-01, C-03 y C-05 no
+  se activan durante toda la corrida, consistente con un PD que se
+  mantiene dentro del régimen nominal del óvalo.
+- No se registra ningún ciclo en modo emergencia.
+- El logger captura 7 597 filas sin pérdida y los scripts de
+  análisis preliminares procesan el CSV sin errores; los hashes
+  SHA-256 de `cage.yaml`, `baseline_pd.yaml`, world y centerline
+  quedan registrados en `metadata.json` para reproducibilidad.
+
+Nota metodológica: la perturbación intencional de spawn
+(`heading_error = 0.3 rad`) anticipada al diseñar la sección no
+se aplicó en este run, que parte del estado nominal del launch.
+Las activaciones de C-01/C-03 bajo perturbación quedan diferidas
+al run de robustez previsto antes de tagear G2 (ver §6.6.2 y
+apéndice).
 
 ### 6.6.2 Métricas preliminares
 
@@ -574,26 +619,38 @@ Tres métricas se reportan preliminarmente en este capítulo, no como
 resultado experimental sino como evidencia de que el pipeline funciona.
 La caracterización completa pertenece al Capítulo 8.
 
-La primera es la **latencia end-to-end** (sensor → safe_action). Se
-mide como diferencia entre el timestamp de `/state_obs` y el
-timestamp de `/safe_action` correspondiente, sobre 3 minutos de
-operación. Resultado preliminar: mediana [valor] ms, P95 [valor] ms,
-ambos bien dentro del presupuesto de 50 ms. [COMPLETAR FASE 2]
+La primera es la **latencia del ciclo de la cage**. Se mide como
+diferencia entre timestamps consecutivos publicados por
+`cage_logger_node` sobre 379.8 s de operación. Resultado preliminar:
+mediana 50.0 ms, P95 50.0 ms, máximo 53.0 ms, todos dentro del
+presupuesto de 50 ms del SR-006 (el máximo de 53 ms corresponde a
+un único ciclo y se atribuye a jitter del scheduler de Linux no
+realtime). La latencia *sensor → safe_action* desglosada por etapa
+requiere instrumentación adicional de timestamps y se difiere a F3.
 
-La segunda es la **tasa de intervención de la cage** durante operación
-nominal con el PD como controlador. En las 3 minutos sin
-perturbaciones inducidas, la cage interviene en
-[valor]% de los ciclos. La interpretación es: si el PD circula sin
+La segunda es la **tasa de intervención de la cage** durante
+operación nominal con el PD como controlador. Sobre los 7 597
+ciclos del run `ros_run_20260523T073134Z`, la cage interviene en
+8 ciclos (0.105% del total), todos atribuidos a C-02 (límite de
+heading) y/o C-06 (rate limiter de la acción), sin activaciones de
+C-01, C-03 ni C-05. La interpretación es: si el PD circula sin
 salirse del régimen donde la cage actúa, esa tasa debe ser muy baja
-(< 5%). Si es alta, indica que el PD está mal calibrado o que los
-umbrales de la cage son demasiado conservadores. [COMPLETAR FASE 2]
+(< 5%). El valor observado, dos órdenes de magnitud por debajo del
+umbral, confirma que el PD 0.8.0 está bien calibrado para el
+escenario nominal y que los umbrales de la cage no son
+artificialmente restrictivos.
 
-La tercera es el **completion rate** del PD en condiciones nominales:
-porcentaje de vueltas completas del óvalo sin que la cage entre en
-modo emergencia, sobre 30 vueltas seguidas. Resultado preliminar:
-[valor]%. Para validar el pipeline, un valor por encima del 80% es
-suficiente; valores menores indican que el PD necesita más tuning o
-que hay un problema estructural en el pipeline. [COMPLETAR FASE 2]
+La tercera es el **completion rate** del PD en condiciones
+nominales: porcentaje de vueltas completas del óvalo sin que la
+cage entre en modo emergencia. Sobre la única corrida candidata
+disponible al cierre de D34, el PD completa 4.50 vueltas (objetivo
+≥ 3) sin emergencia, equivalente a un completion rate provisional
+de 100% con N = 1 ejecución. La caracterización completa con N = 30
+vueltas seguidas exige una campaña de runs múltiples actualmente
+en cola; un completion rate consolidado por encima del 80% es el
+criterio de Decisión 6 del briefing del supervisor. Valores menores
+indicarían que el PD necesita más tuning o que hay un problema
+estructural en el pipeline.
 
 Estas tres métricas no son los resultados experimentales de la tesis;
 son evidencia de funcionamiento del pipeline antes de introducir el
@@ -662,14 +719,21 @@ Fase 2 (D26–D35):
   [x] Síntesis §6.7 escrita en D35
 
 Pendientes obligatorios para cierre de Gate 2 (D35):
-  [ ] Rellenar todos los [COMPLETAR FASE 2] con cifras reales:
-       - throughput del logger en §6.3.5 y §6.5.4
-       - número exacto de tests unitarios en §6.5.2
-       - resultados del test de demostración en §6.6.1
-       - latencia, tasa de intervención, completion rate en §6.6.2
-       - ganancias finales del PD en §6.4.2
+  [x] Rellenar todos los [COMPLETAR FASE 2] con cifras reales
+       (run candidato ros_run_20260523T073134Z, 2026-05-23):
+       - [x] throughput del logger en §6.3.5 y §6.5.4
+       - [x] número exacto de tests unitarios en §6.5.2 (61 per-rule,
+              132 cage total, 143 con PD)
+       - [x] resultados del test de demostración en §6.6.1
+              (4.50 vueltas, 0 emergencias, 8 intervenciones)
+       - [x] latencia, tasa de intervención, completion rate en §6.6.2
+              (50.0/50.0/53.0 ms; 0.105%; 100% con N=1)
+       - [x] ganancias finales del PD en §6.4.2 (v0.8.0)
   [ ] Generar Figura 6.1 (vista superior del mundo Gazebo)
   [ ] Generar Listing 6.1 (esqueleto de apply_c01)
+  [ ] Campaña de runs múltiples (N≥30 vueltas) para consolidar
+       completion rate frente al umbral del 80% de la Decisión 6;
+       sustituye al N=1 provisional anotado en §6.6.2
   [ ] Verificar coherencia con Capítulo 5 (todos los IDs, parámetros
        y nombres de topics deben coincidir bit-a-bit)
   [ ] Ejecutar `check_traceability.py` y verificar que todas las

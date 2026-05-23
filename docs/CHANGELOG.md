@@ -31,6 +31,49 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [23.05.2026] — Chapter 6 §6.3.5/§6.4.2/§6.5.2/§6.5.4/§6.6: resolved [COMPLETAR FASE 2] placeholders with run candidate data
+
+**Document(s) affected:** `manuscript/chapters/chapter_06_implementation.md`.
+**Phase:** F2.
+**Gate context:** before G2.
+**Author:** Samuel.
+
+### Change
+
+Replaced the numerical `[COMPLETAR FASE 2]` placeholders in §6.3.5
+(logger throughput), §6.4.2 (PD gains v0.8.0), §6.5.2 (test counts:
+61 per-rule, 132 cage suite, 143 with PD), §6.5.4 (cycle latency
+50.0/50.0/53.0 ms, 0 dropped log lines), §6.6.1 (4.50 laps over
+target 3, 0 emergency cycles, 8 cage interventions distributed
+across C-02 and C-06), and §6.6.2 (intervention rate 0.105%,
+completion rate provisional 100% with N=1). Updated the chapter's
+internal appendix to mark these placeholders as done and to add a
+new pending item for the N≥30 multi-run completion-rate campaign.
+
+### Rationale
+
+The run `ros_run_20260523T073134Z` (PD 0.8.0, cage 0.5.1, SC-NOM-01,
+enforcement) is the Gate-2 candidate evidence; backfilling the
+chapter with its measured values is required before tagging G2.
+Honest scoping: the multi-run completion-rate campaign (N=30) is
+explicitly flagged as outstanding rather than fabricated, and the
+spawn perturbation described in §6.6.1 is noted as not applied in
+this run.
+
+### Impact
+
+Chapter 6 numerical placeholders are now closed; outstanding items
+for G2 are Figura 6.1, Listing 6.1, multi-run completion campaign,
+cross-chapter consistency check with Chapter 5, and pre-existing
+`colcon test` lint failures in `cobraflex`.
+
+### Verification
+
+- `python3 tools/check_traceability.py --strict` -> all checks PASS, 0 warnings.
+- Manual grep confirms no remaining numerical `[COMPLETAR FASE 2]`
+  markers; only the convention preamble (line 8), the Figura 6.1
+  placeholder (line 107), and the Fase-6 polish line (line 757) remain.
+
 ## [23.05.2026] — Gate 2 candidate evidence: ROS oval run completes >3 laps without emergency
 
 **Document(s) affected:** `experiments/sim/runs/ros_run_20260523T073134Z/metadata.json`, `experiments/sim/runs/ros_run_20260523T073134Z/summary.json`, `docs/04_cage_specification.md`, `experiments/sim/oval_pd_cage_smoke.py`, `tools/check_scenario_yaml.py`, `tools/README.md`, `scenarios/README.md`.

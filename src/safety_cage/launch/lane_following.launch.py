@@ -170,6 +170,7 @@ def generate_launch_description() -> LaunchDescription:
         parameters=[{
             "output_dir": LaunchConfiguration("output_dir"),
             "run_id": LaunchConfiguration("run_id"),
+            "cage_mode": LaunchConfiguration("cage_mode"),
             "use_sim_time": True,
         }],
     )

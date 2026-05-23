@@ -17,6 +17,7 @@ from typing import Optional
 
 import rclpy
 from geometry_msgs.msg import Twist
+from rclpy.clock import Clock
 from rclpy.node import Node
 from rclpy.qos import QoSPresetProfiles
 from std_msgs.msg import Bool
@@ -34,6 +35,12 @@ class VehicleControlNode(Node):
         self.declare_parameter("safe_action_topic", "/safe_action")
         self.declare_parameter("emergency_topic", "/emergency")
         self.declare_parameter("cmd_vel_topic", "/cmd_vel")
+        # Stale-command watchdog. If /safe_action stops arriving (cage
+        # crash, perception stuck), the Gazebo DiffDrive plugin would hold
+        # the last cmd_vel and the robot would keep moving unsupervised.
+        # The watchdog publishes a zero Twist if no /safe_action has been
+        # received in the last `safe_action_timeout_s` seconds.
+        self.declare_parameter("safe_action_timeout_s", 0.5)
 
         self._fixed_speed = float(
             self.get_parameter("fixed_speed_mps").get_parameter_value().double_value
@@ -78,6 +85,18 @@ class VehicleControlNode(Node):
         )
         self._emergency = False
         self._last_safe: Optional[Twist] = None
+        # Wall-clock timestamp of the last /safe_action received. Wall time
+        # (not sim time) so the watchdog also fires if Gazebo dies, pauses,
+        # or the EKF clock has not started yet.
+        self._wall_clock = Clock()
+        self._last_safe_wall_t: Optional[float] = None
+        self._safe_action_timeout = float(
+            self.get_parameter("safe_action_timeout_s")
+            .get_parameter_value()
+            .double_value
+            or 0.5
+        )
+        self._watchdog_warned = False
 
         sensor_qos = QoSPresetProfiles.SENSOR_DATA.value
         reliable_qos = QoSPresetProfiles.SYSTEM_DEFAULT.value
@@ -100,6 +119,11 @@ class VehicleControlNode(Node):
             reliable_qos,
         )
 
+        # Watchdog tick: 10 Hz on wall clock, twice the default 0.5 s
+        # timeout. Fires regardless of sim time so a paused/dead Gazebo
+        # cannot mask the loss of /safe_action.
+        self.create_timer(0.1, self._on_watchdog_tick, clock=Clock())
+
         self.get_logger().info(
             f"Relaying {self.get_parameter('safe_action_topic').value} -> "
             f"{self.get_parameter('cmd_vel_topic').value} "
@@ -110,8 +134,33 @@ class VehicleControlNode(Node):
     def _on_emergency(self, msg: Bool) -> None:
         self._emergency = bool(msg.data)
 
+    def _wall_now_s(self) -> float:
+        return float(self._wall_clock.now().nanoseconds) * 1e-9
+
+    def _on_watchdog_tick(self) -> None:
+        if self._last_safe_wall_t is None:
+            # No /safe_action ever — no actuator command yet. Nothing to
+            # override; cage_logger watchdog already surfaces this case.
+            return
+        elapsed = self._wall_now_s() - self._last_safe_wall_t
+        if elapsed > self._safe_action_timeout:
+            stop = Twist()
+            stop.linear.x = 0.0
+            stop.angular.z = 0.0
+            self._pub.publish(stop)
+            if not self._watchdog_warned:
+                self.get_logger().error(
+                    "No /safe_action in %.2f s (> %.2f s timeout); commanding "
+                    "stop on /cmd_vel until the upstream pipeline recovers."
+                    % (elapsed, self._safe_action_timeout)
+                )
+                self._watchdog_warned = True
+        else:
+            self._watchdog_warned = False
+
     def _on_safe(self, msg: Twist) -> None:
         self._last_safe = msg
+        self._last_safe_wall_t = self._wall_now_s()
         cmd = Twist()
         if self._emergency:
             # Controlled stop: zero both axes so the robot does not pivot

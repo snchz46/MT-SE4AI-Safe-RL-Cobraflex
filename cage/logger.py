@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import csv
 import json
+import warnings
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -68,7 +69,19 @@ class CageLogger:
         self.cage_status_path = self.output_dir / "cage_status.csv"
         self.metadata_path = self.output_dir / "metadata.json"
 
-        self._file = self.cage_status_path.open("w", newline="")
+        if self.cage_status_path.exists():
+            warnings.warn(
+                f"CageLogger overwriting existing CSV at {self.cage_status_path}. "
+                "Pass a unique run_id to avoid losing a previous run.",
+                stacklevel=2,
+            )
+
+        # Line-buffered so each completed row is flushed to disk immediately.
+        # Without this, the OS holds ~8 KB of rows in user-space buffer and
+        # an abrupt termination of the ROS2 launch hierarchy (double Ctrl-C,
+        # Gazebo crash dragging down siblings via SIGTERM) drops the tail of
+        # the CSV — observed as truncated runs missing metadata.json.
+        self._file = self.cage_status_path.open("w", newline="", buffering=1)
         self._writer = csv.DictWriter(self._file, fieldnames=CAGE_STATUS_COLUMNS)
         self._writer.writeheader()
         self._cycle_count = 0

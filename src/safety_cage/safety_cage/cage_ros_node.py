@@ -121,7 +121,6 @@ class CageRosNode(Node):
 
         self._latest_state: Optional[State] = None
         self._external_stop = False
-        self._reset_requested = False
 
         self.create_subscription(
             Float64MultiArray,
@@ -217,8 +216,10 @@ class CageRosNode(Node):
             self.get_logger().warning("External stop signal received.")
 
     def _on_reset(self, _msg: Empty) -> None:
+        # Direct call already flips C-05's _reset_requested for the next
+        # step(); no need to also pass ctx["reset"]=True (would just set the
+        # same flag a second time inside the rule).
         self.cage.reset_emergency()
-        self._reset_requested = True
         self.get_logger().info("/cage_reset received -> cage.reset_emergency() called.")
 
     def _on_raw_action(self, msg: Twist) -> None:
@@ -230,9 +231,7 @@ class CageRosNode(Node):
         ctx = {
             "current_time": sim_time_s,
             "external_stop": self._external_stop,
-            "reset": self._reset_requested,
         }
-        self._reset_requested = False
 
         result = self.cage.step(self._latest_state, raw_action, ctx=ctx)
         self._publish(result, header_stamp_s=sim_time_s)

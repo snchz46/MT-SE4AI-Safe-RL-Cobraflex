@@ -285,11 +285,55 @@ incoherentes. Si la sincronización falla durante más de 5 ciclos
 consecutivos, el nodo entra en modo emergencia por la rama de "estado
 inválido" de C-05.
 
-> *Listing 6.1 — Esqueleto de la función `apply_c01` ilustrando la
-> estructura común de las reglas: histéresis con estado interno,
-> corrección proporcional, reporte de intervention. Posición sugerida:
-> aquí. Pendiente de extraer del código final para Fase 6.*
-> [PULIDO FASE 6]
+**Listing 6.1.** Esqueleto de `LaneBoundaryRule.evaluate` (C-01)
+ilustrando la estructura común de las reglas: histéresis con estado
+interno, corrección proporcional al exceso sobre el umbral de
+desactivación, y reporte de la intervención vía `CageDecision`. Código
+extraído de `cage/rules/c01_lane_boundary.py`.
+
+```python
+class LaneBoundaryRule:
+    def __init__(self, params):
+        self.d_max = params["d_max_m"]
+        self.h_d = params["h_d_m"]
+        self.gain = params["correction_gain"]
+        self.d_activate = self.d_max - self.h_d
+        self.d_deactivate = self.d_max - 2.0 * self.h_d
+        self._active = False
+        self._below_threshold_cycles = 0
+
+    def evaluate(self, state, raw_action, prev_action=None, ctx=None):
+        d = state.lateral_offset
+        abs_d = abs(d)
+
+        # Hysteresis: activate on rising edge, deactivate after N stable cycles.
+        if abs_d > self.d_activate:
+            self._active = True
+            self._below_threshold_cycles = 0
+        elif abs_d < self.d_deactivate:
+            self._below_threshold_cycles += 1
+            if self._below_threshold_cycles >= _CYCLES_TO_DEACTIVATE:
+                self._active = False
+        else:
+            self._below_threshold_cycles = 0
+
+        if not self._active:
+            return CageDecision(fire=False, reason="within-bounds", ...)
+
+        # Proportional correction toward centreline, sign opposite to d.
+        steering_raw, throttle_raw = raw_action
+        excess = max(0.0, abs_d - self.d_deactivate)
+        correction = -math.copysign(self.gain * excess, d)
+        steering_safe = max(-1.0, min(1.0, correction))
+
+        return CageDecision(
+            fire=True,
+            safe_action=(steering_safe, throttle_raw),  # throttle untouched
+            reason="lane-boundary-correction",
+            metadata={"rule": "C-01", "lateral_offset": d,
+                      "correction_raw": correction},
+        )
+```
 
 ### 6.3.5 Logger node (D30)
 
@@ -498,49 +542,56 @@ los 3 tests del baseline PD el repositorio reúne 143 casos.
 Todos pasan con código de retorno cero de pytest
 (`pytest cage/tests policy/tests` → 143 passed, fechado 2026-05-23).
 
-### 6.5.3 Tests de propiedades
+### 6.5.3 Tests de propiedades transversales
 
-Tres propiedades generales se verifican mediante tests sobre vectores
-aleatoriamente generados (con la librería `hypothesis`).
+Tres propiedades generales del cage se verifican por construcción
+mediante tests cerrados sobre vectores representativos (no aleatorios:
+el uso de `hypothesis` se difiere a F3 cuando la cobertura per-rule
+esté estable). Los tres son tests pytest ordinarios dentro de
+`cage/tests/`.
 
 **Idempotencia**: si la cage ve un estado plenamente compliante con
 todas las constraints, la acción de salida es idéntica a la de
-entrada. El test genera 100 estados aleatorios donde todas las
-variables están dentro de las cotas de los SRs y verifica que para
-cada uno la cage no modifica la acción.
+entrada. Cubierto por `test_cage_node.py::test_no_intervention_on_clean_state`.
 
 **Determinismo**: dada la misma combinación de estado, acción raw,
 parámetros y estado interno, la cage produce exactamente la misma
-salida. El test genera 100 combinaciones aleatorias, las evalúa dos
-veces, y verifica igualdad bit-a-bit del resultado.
+salida. Implícitamente verificado por la ausencia de fuentes de
+aleatoriedad en `cage/rules/` (sin RNG, sin tiempo wall) y por la
+re-ejecución determinista del pipeline en `test_pipeline.py`.
 
 **Saturación**: las acciones de salida nunca exceden los límites
-físicos del vehículo, independientemente de la entrada. El test
-genera acciones raw deliberadamente fuera de rango (por ejemplo,
-steering = 5.0) y verifica que la salida está siempre en [-1, 1].
+físicos del vehículo. Cubierto end-to-end por C-06 (rate limiter)
+y C-04 (speed ceiling), con tests en
+`test_c06_rate_limiter.py` y `test_c04_speed_ceiling.py`.
 
-Estos tres tests son más cortos en código pero más amplios en
-cobertura que los tests unitarios. Son los que dan confianza real en
-la robustez de la implementación.
+Estas tres propiedades dan confianza estructural en la implementación;
+la generación aleatoria con `hypothesis` está prevista para F3 como
+refuerzo de los casos borde, no como cobertura primaria.
 
 ### 6.5.4 Tests de integración
 
-Un test de integración levanta los cinco nodos en un test fixture
-(`pytest-launch_testing`) sin Gazebo, alimenta `/state_obs` y
-`/raw_action` desde un publisher mock con secuencias predefinidas, y
-verifica que `/safe_action` y `/cage_status` se publican con la
-estructura correcta y los valores esperados. Tres secuencias se
-ejecutan: una de operación nominal (10 segundos sin intervención),
-una con perturbación lateral inducida (offset creciente que activa
-C-01), y una con estado inválido inducido (mensajes con timestamp
-viejo, que activan C-05).
+El test de integración primario en F2 vive en
+`cage/tests/test_pipeline.py::test_pd_cage_logger_pipeline` y
+encadena `BaselinePD → SafetyCageNode → CageLogger` en pura Python
+durante 200 ciclos (10 s a 20 Hz) sobre un stub cinemático del
+vehículo. Verifica que: (i) el PD produce acciones plausibles, (ii)
+el cage interviene cuando la deriva lateral supera `d_max`, (iii) el
+logger persiste todos los ciclos sin pérdida, y (iv) el CSV
+resultante es bien formado. Una variante (`test_pipeline_handles_missing_state_until_first_obs`)
+cubre el camino en que `/raw_action` precede al primer `/state_obs`:
+el cage emite el safe-stop neutro `(0.0, -0.5)` durante los ciclos
+sin estado y se recupera al primer obs real.
 
-El test de throughput del logger se incluye también en este nivel:
-durante 3 minutos, los nodos publican a 20 Hz y el logger captura.
-Al final, el test verifica que el número de líneas en cada CSV
-coincide con el número esperado (con tolerancia del 1% por jitter
-del scheduler) y que no hay warnings de cola desbordada en
-`/diagnostics`.
+La integración a nivel ROS2 (cinco nodos contra mocks de tópicos
+sin Gazebo, vía `pytest-launch_testing`) se difiere a F3 cuando la
+suite del pipeline ROS sea estable bajo cambios de la policy RL;
+la cobertura actual sobre la lógica pura de cage y PD agota las
+fuentes de error que no dependen del transporte ROS2.
+
+El test de throughput se mide directamente sobre el run candidato
+G2 `ros_run_20260523T073134Z` en vez de un test sintético: durante
+379.8 s el logger captura 7 597 mensajes a 20 Hz sin pérdida.
 
 Resultados del test de throughput, medidos sobre los 7 597 ciclos
 del run `ros_run_20260523T073134Z` (379.8 s de operación continua,
@@ -555,18 +606,23 @@ modo `enforcement`):
 - Líneas perdidas en logger: 0 sobre 7 597 esperadas a 20 Hz
   (`wc -l cage_status.csv` = 7 598 incluyendo cabecera).
 
-### 6.5.5 Automatización con pytest y hooks
+### 6.5.5 Ejecución y automatización
 
-Los tests se ejecutan con `pytest`. Una configuración pre-commit
-(`.pre-commit-config.yaml`) ejecuta los tests unitarios y de
-propiedades antes de cada commit en una rama; los tests de
-integración, más lentos, se ejecutan en un workflow de GitHub Actions
-en cada push.
+La suite se ejecuta con `pytest cage/tests policy/tests` desde la
+raíz del repositorio; `pytest.ini` restringe la auto-detección a
+estos dos directorios para que los paquetes ROS2 bajo `src/` se
+testeen vía `colcon test` (su toolchain `ament_python` con
+`ament_pep257`/`ament_flake8`). La traceability matrix
+(`tools/check_traceability.py --strict`) se ejecuta como gate
+manual antes de cada commit que toque hazards, SRs o reglas; su
+integración en un hook `pre-commit` se difiere a F3, junto con un
+workflow de GitHub Actions que ejecute el ciclo completo de
+pytest + traceability + `check_scenario_yaml.py` en cada push.
 
-Esta automatización es lo que convierte a los tests en una propiedad
-del repositorio y no solo en un artefacto puntual. Si en una fase
-posterior alguien (incluido el autor) intenta comitear un cambio que
-rompe la suite, el commit es bloqueado.
+En F2 la garantía de que la suite no regresiona descansa en la
+disciplina del autor de ejecutar `pytest` antes de cada commit
+relevante; F3 sustituirá esta disciplina por automatización del
+repositorio.
 
 ---
 
@@ -730,7 +786,8 @@ Pendientes obligatorios para cierre de Gate 2 (D35):
               (50.0/50.0/53.0 ms; 0.105%; 100% con N=1)
        - [x] ganancias finales del PD en §6.4.2 (v0.8.0)
   [ ] Generar Figura 6.1 (vista superior del mundo Gazebo)
-  [ ] Generar Listing 6.1 (esqueleto de apply_c01)
+  [x] Generar Listing 6.1 (esqueleto de apply_c01) — extraído de
+       cage/rules/c01_lane_boundary.py
   [ ] Campaña de runs múltiples (N≥30 vueltas) para consolidar
        completion rate frente al umbral del 80% de la Decisión 6;
        sustituye al N=1 provisional anotado en §6.6.2

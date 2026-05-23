@@ -74,14 +74,23 @@ def generate_launch_description() -> LaunchDescription:
         default_value="0.2",
         description="Straight cruise speed before safe throttle scaling.",
     )
+    world_name_arg = DeclareLaunchArgument(
+        "world_name",
+        default_value="lane_following_oval",
+        description=(
+            "SDF <world name> attribute. Must match the world file's "
+            "<world name='...'> tag, NOT the filename (gz service paths "
+            "are built from the SDF name). Override when swapping worlds."
+        ),
+    )
 
     # Start Gazebo paused so the sim clock is frozen at t≈0 while all
     # ROS2 nodes (EKF, lane_perception, cage) initialise. The unpause
-    # action fires after 4 real-world seconds, by which time the EKF has
-    # a clock signal and the pipeline is wired. This prevents the sim
-    # from racing ahead (>1000× RTF headless) before the EKF publishes
-    # its first odom, which caused the car to drift from spawn and report
-    # ey=0.13 m, epsi=0.42 rad at pipeline start → C-05 immediate latch.
+    # is gated on the gz service actually becoming responsive (poll loop
+    # below) instead of a fixed grace period, so a slow Gazebo load does
+    # not leave the sim paused forever — the previous 4 s hardcoded
+    # TimerAction failed silently if Gazebo took longer, producing runs
+    # with no /state_obs and a header-only cage_status.csv.
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(cobraflex_share, "launch", "gazebo_mesh.launch.py")
@@ -94,18 +103,34 @@ def generate_launch_description() -> LaunchDescription:
         }.items(),
     )
 
+    # Polling unpause: wait 2 s for nodes to wire, then retry the gz
+    # service every 0.5 s for up to 30 s. The service appears once
+    # Gazebo finishes loading the SDF; querying it sooner returns
+    # "Service call failed" without retrying. Loop emits a clear
+    # FAILED message on timeout so the operator can diagnose.
+    unpause_cmd = (
+        "for i in $(seq 1 60); do "
+        "  if gz service -s /world/$WORLD_NAME/control "
+        "       --reqtype gz.msgs.WorldControl "
+        "       --reptype gz.msgs.Boolean "
+        "       --timeout 1000 "
+        '       --req "pause: false" 2>/dev/null | grep -q "data: true"; then '
+        '    echo "[unpause] Gazebo unpaused after $i attempt(s)."; '
+        "    exit 0; "
+        "  fi; "
+        "  sleep 0.5; "
+        "done; "
+        '  echo "[unpause] FAILED: gz service /world/$WORLD_NAME/control '
+        'never responded in 30 s. Check the SDF <world name> matches '
+        "WORLD_NAME and that Gazebo started.\"; "
+        "exit 1"
+    )
     unpause = TimerAction(
-        period=4.0,
+        period=2.0,
         actions=[
             ExecuteProcess(
-                cmd=[
-                    "gz", "service",
-                    "-s", "/world/lane_following_oval/control",
-                    "--reqtype", "gz.msgs.WorldControl",
-                    "--reptype", "gz.msgs.Boolean",
-                    "--timeout", "5000",
-                    "--req", "pause: false",
-                ],
+                cmd=["bash", "-c", unpause_cmd],
+                additional_env={"WORLD_NAME": LaunchConfiguration("world_name")},
                 output="screen",
             )
         ],
@@ -183,6 +208,7 @@ def generate_launch_description() -> LaunchDescription:
         output_dir_arg,
         run_id_arg,
         fixed_speed_arg,
+        world_name_arg,
         gazebo,
         unpause,
         perception,

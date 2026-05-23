@@ -28,12 +28,19 @@ Python logic so the controller can be unit-tested without ROS2.
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 from typing import Optional
 
 import yaml
 
 from cage.rules import Action, State
+
+
+def _wrap_angle(angle: float) -> float:
+    """Wrap to (-pi, pi]. Used to compute the shortest-arc heading delta
+    when finite-differencing psi across the ±pi seam."""
+    return math.atan2(math.sin(angle), math.cos(angle))
 
 
 class BaselinePD:
@@ -78,7 +85,13 @@ class BaselinePD:
                 psi_dot = 0.0
             else:
                 y_dot = (y - self._prev_y) / dt
-                psi_dot = (psi - self._prev_psi) / dt
+                # Shortest-arc heading delta. A raw subtraction across the
+                # ±pi seam (e.g. prev = +3.10, now = -3.10) yields ~6.2 rad
+                # instead of the true ~0.08 rad delta, which at dt=0.05 s
+                # becomes a 120 rad/s spurious derivative that saturates
+                # steering and triggers C-05. Latent while kd_h == 0; this
+                # guard makes reactivating kd_h safe.
+                psi_dot = _wrap_angle(psi - self._prev_psi) / dt
 
         # Throttle and feedforward share the same speed-reduction factor so
         # the curvature feedforward stays consistent when vehicle_control_node

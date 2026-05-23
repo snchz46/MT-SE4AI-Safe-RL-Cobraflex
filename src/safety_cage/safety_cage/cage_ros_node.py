@@ -107,7 +107,6 @@ class CageRosNode(Node):
         self.declare_parameter("emergency_topic", "/emergency")
         self.declare_parameter("external_stop_topic", "/external_stop")
         self.declare_parameter("reset_topic", "/cage_reset")
-        self.declare_parameter("require_state_for_first_cycle", True)
 
         cage_yaml = self._resolve_cage_yaml()
         mode = self.get_parameter("mode").get_parameter_value().string_value or "enforcement"

@@ -88,6 +88,15 @@ class LanePerceptionNode(Node):
         self.declare_parameter("warp_threshold_m", 0.5)
         self._warp_threshold = float(self.get_parameter("warp_threshold_m").value)
         self._last_xy: Optional[tuple] = None
+        # Gazebo physics spikes: a single odom sample that is >factor× the
+        # smoothed speed is physically implausible (real vehicle can't change
+        # speed that fast at 20 Hz) and would trip C-03/C-04/C-05. The spike
+        # is held at the previous smooth value and a WARNING is emitted.
+        # factor=5 → flags anything above ~0.35 m/s when cruising at 0.07 m/s,
+        # while allowing genuine acceleration transients.
+        self.declare_parameter("speed_spike_factor", 5.0)
+        self._speed_spike_factor = float(self.get_parameter("speed_spike_factor").value)
+        self._speed_smooth: Optional[float] = None
 
         sensor_qos = QoSPresetProfiles.SENSOR_DATA.value
         self._odom_msg: Optional[Odometry] = None
@@ -155,13 +164,13 @@ class LanePerceptionNode(Node):
         )
 
         lin = self._odom_msg.twist.twist.linear
-        speed = math.sqrt(float(lin.x) ** 2 + float(lin.y) ** 2)
+        speed_raw = math.sqrt(float(lin.x) ** 2 + float(lin.y) ** 2)
 
         if not (
             math.isfinite(x)
             and math.isfinite(y)
             and math.isfinite(yaw)
-            and math.isfinite(speed)
+            and math.isfinite(speed_raw)
         ):
             msg.data = [
                 0.0,
@@ -186,6 +195,7 @@ class LanePerceptionNode(Node):
                 self._tracker.reset_tracking()
                 self._ey_smooth = None
                 self._epsi_smooth = None
+                self._speed_smooth = None
         self._last_xy = (x, y)
 
         track_state = self._tracker.track(x, y, yaw)
@@ -194,18 +204,43 @@ class LanePerceptionNode(Node):
         ey_raw = float(track_state.ey)
         epsi_raw = float(track_state.epsi)
 
+        # Spike rejection for speed: clamp before EMA so one bad odom sample
+        # cannot propagate into the cage state. Minimum reference of 0.01 m/s
+        # avoids a divide-by-zero / always-spike condition at standstill.
+        if self._speed_smooth is not None:
+            threshold = self._speed_spike_factor * max(self._speed_smooth, 0.01)
+            if speed_raw > threshold:
+                self.get_logger().warning(
+                    "Speed spike rejected: %.3f m/s (smooth=%.3f m/s)" % (
+                        speed_raw, self._speed_smooth
+                    )
+                )
+                speed_raw = self._speed_smooth
+
         # EMA smoothing: initialise to raw value on first observation so
         # there is no ramp-up transient at startup.
         if self._ey_smooth is None:
             self._ey_smooth = ey_raw
             self._epsi_smooth = epsi_raw
+            self._speed_smooth = speed_raw
         else:
             a = self._ema_alpha
             self._ey_smooth = a * ey_raw + (1.0 - a) * self._ey_smooth
-            self._epsi_smooth = a * epsi_raw + (1.0 - a) * self._epsi_smooth
+            # epsi lives in (-pi, pi]; a naive EMA across the seam averages
+            # +3.10 with -3.10 to ~0 instead of staying near pi. Apply EMA
+            # to the wrapped *delta* and re-wrap the result so the smoothed
+            # estimate tracks the shortest-arc trajectory.
+            delta = math.atan2(
+                math.sin(epsi_raw - self._epsi_smooth),
+                math.cos(epsi_raw - self._epsi_smooth),
+            )
+            updated = self._epsi_smooth + a * delta
+            self._epsi_smooth = math.atan2(math.sin(updated), math.cos(updated))
+            self._speed_smooth = a * speed_raw + (1.0 - a) * self._speed_smooth
 
         ey = self._ey_smooth
         epsi = self._epsi_smooth
+        speed = self._speed_smooth
         d_left = max(0.0, (self._road_width / 2) - ey)
         d_right = max(0.0, (self._road_width / 2) + ey)
 

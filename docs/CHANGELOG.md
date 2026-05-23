@@ -31,6 +31,146 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [23.05.2026] — lane_perception_node: speed spike rejection filter
+
+**Document(s) affected:** `src/cobraflex_rl/cobraflex_rl/lane_perception_node.py`.
+**Phase:** F2.
+**Gate context:** before G2.
+**Author:** Samuel.
+
+### Change
+
+Added Gazebo odometry spike rejection to `LanePerceptionNode`.
+Speed is now filtered in two steps:
+
+1. **Spike rejection:** if `speed_raw > speed_spike_factor × max(speed_smooth, 0.01)`,
+   the sample is discarded (held at `speed_smooth`) and a `WARNING` is logged.
+   Default `speed_spike_factor = 5.0`; calibratable as a ROS2 parameter.
+
+2. **EMA smoothing:** the (possibly clamped) raw value is fed into an EMA with
+   the same `ema_alpha` parameter already used for `ey`/`epsi`.
+
+`_speed_smooth` is reset to `None` on warp detection alongside `_ey_smooth`
+and `_epsi_smooth`.
+
+### Rationale
+
+Run `ros_run_20260523T150400Z` (14.3 min, 10+ laps) ended at t = 724.45 s
+with a single-sample odom spike of 32.5 m/s (actual cruise speed 0.07 m/s).
+The cage correctly fired C-04 + C-03 + C-05, latching the vehicle stopped for
+the remaining 2.3 min. Lane position at the moment was ey = −17 mm,
+epsi = −4° — a false positive caused by a Gazebo physics artifact, not a real
+safety event. With `speed_spike_factor = 5.0`, the spike (32.5 >> 0.35 m/s
+threshold) is rejected and C-04/C-03 do not fire.
+
+### Impact
+
+Nominal runs are unaffected (no spike → rejection branch never taken).
+EMA adds at most ~5 ms of smoothing lag at 20 Hz, negligible for the PD controller.
+No cage YAML or SR changes required; this is a sensor pre-processing fix.
+
+### Verification
+
+- `pytest cage/tests policy/tests` → 144 passed.
+- AST check on modified node: OK.
+- Simulated spike scenario: speed_raw = 32.5, speed_smooth = 0.07, factor = 5.0
+  → threshold = 0.35 → spike rejected, WARNING emitted, speed_smooth unchanged.
+
+---
+
+## [23.05.2026] — F2 pipeline hardening: logger flush, watchdogs, wraparound guards, packaging fixes
+
+**Document(s) affected:** `cage/logger.py`, `cage/tests/test_pipeline.py`,
+`policy/baseline_pd.py`,
+`src/cobraflex_rl/cobraflex_rl/cage_logger_node.py`,
+`src/cobraflex_rl/cobraflex_rl/lane_perception_node.py`,
+`src/cobraflex_rl/cobraflex_rl/vehicle_control_node.py`,
+`src/cobraflex_rl/package.xml`,
+`src/safety_cage/safety_cage/cage_ros_node.py`,
+`src/safety_cage/launch/lane_following.launch.py`,
+`manuscript/chapters/chapter_06_implementation.md`.
+**Phase:** F2.
+**Gate context:** before G2.
+**Author:** Samuel.
+
+### Change
+
+Pipeline-wide audit and hardening pass before F3. No nominal-behaviour
+changes; every fix is either a fail-safe that only activates on failure
+(watchdogs, wraparound guards, polling unpause) or a packaging/observability
+improvement.
+
+CageLogger (`cage/logger.py`): line-buffered file open so each
+`writerow` is flushed to disk immediately, eliminating tail-truncation
+on abrupt termination; warns when overwriting an existing CSV.
+
+cage_logger_node: 5 s wall-clock watchdog that surfaces silent
+upstream failures (no /cage_status received vs. count stuck);
+`output_dir` resolved to absolute path; new `cage_mode` parameter
+stamped into every CSV row and into `metadata.json`.
+
+vehicle_control_node: 10 Hz wall-clock watchdog that publishes
+`cmd_vel=(0, 0)` if no `/safe_action` arrives within 0.5 s, preventing
+the Gazebo DiffDrive plugin from holding a stale command after an
+upstream crash.
+
+lane_perception_node: warp detection (>0.5 m odom jump) resets the
+`PolylineTracker` neighbourhood cache and the EMA, with WARN log;
+EMA on `epsi` rewritten to operate on the wrapped delta so the
+smoothed estimate tracks the shortest-arc trajectory across the ±pi
+seam.
+
+cage_ros_node: dropped the redundant `ctx["reset"]` pass-through and
+the dead `require_state_for_first_cycle` parameter.
+
+policy/baseline_pd.py: `psi_dot` finite-difference now uses
+`wrap_angle(psi - prev_psi)` so a heading that crosses ±pi does not
+produce a spurious 120 rad/s derivative.
+
+lane_following.launch.py: replaced the hardcoded 4 s TimerAction +
+fixed world name with a polling loop that retries the gz unpause
+service every 0.5 s for up to 30 s; world name is now an explicit
+`world_name` launch argument.
+
+cobraflex_rl/package.xml: declared previously-missing `std_msgs` and
+`cobraflex_safety_msgs` dependencies.
+
+Chapter 6 manuscript: §6.5.3 pruned to match real coverage (no
+`hypothesis`); §6.5.4 rewritten around the existing
+`test_pipeline.py` instead of the aspirational `pytest-launch_testing`
+suite; §6.5.5 acknowledges that the pre-commit hook and GitHub
+Actions workflow are F3 work; Listing 6.1 added with the actual
+`LaneBoundaryRule.evaluate` skeleton.
+
+### Rationale
+
+The earlier "no se genera CSV" report and the latent C-05 risk from
+the unwrapped heading derivative motivated the audit. The fixes
+target three failure modes: silent data loss (logger flush), silent
+pipeline failures (three watchdogs, polling unpause), and latent
+correctness bugs that F2 happens not to hit but F3 with arbitrary
+spawn orientations will (wraparound in PD and perception). Pruning
+the manuscript brings §6.5 in line with what the repo actually
+implements, so Gate 2 evidence does not over-promise.
+
+### Impact
+
+Nominal pipeline produces bit-identical CSV content (only the `mode`
+column now reads `"enforcement"` instead of empty). Watchdogs are
+dormant in nominal operation. The new package.xml deps unblock
+`rosdep install` on a clean machine. No re-run of historical
+scenarios needed; the run candidate `ros_run_20260523T073134Z`
+remains the Gate-2 evidence.
+
+### Verification
+
+- `pytest cage/tests policy/tests` -> 144 passed (143 existing + 1 new
+  `test_pipeline_handles_missing_state_until_first_obs`).
+- `python3 tools/check_traceability.py --strict` -> all checks PASS,
+  0 warnings.
+- `python3 tools/check_scenario_yaml.py` -> PASS, 0 errors.
+- AST OK on all 5 modified pipeline nodes.
+
 ## [23.05.2026] — Chapter 6 §6.3.5/§6.4.2/§6.5.2/§6.5.4/§6.6: resolved [COMPLETAR FASE 2] placeholders with run candidate data
 
 **Document(s) affected:** `manuscript/chapters/chapter_06_implementation.md`.

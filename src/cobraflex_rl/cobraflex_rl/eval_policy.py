@@ -73,11 +73,13 @@ def main(args: Optional[Sequence[str]] = None) -> None:
 
         centerline_points = np.asarray(centerline_cfg["centerline"]["points"], dtype=float)
         lane_width = float(centerline_cfg["lane_width"])
+        road_width = float(centerline_cfg.get("road_width", lane_width))
 
         env = GazeboLaneEnv(
             ros_interface=interface,
             centerline=centerline_points,
             lane_width=lane_width,
+            road_width=road_width,
             cfg=train_cfg,
         )
 

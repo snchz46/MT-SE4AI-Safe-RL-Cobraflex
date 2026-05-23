@@ -16,10 +16,12 @@ def generate_launch_description():
         default_value=os.path.join(cobraflex_share, "worlds", "lane_following_oval.world"),
         description="Path to the Gazebo .world file for RL training.",
     )
-    headless_arg = DeclareLaunchArgument(
-        "headless",
-        default_value="true",
-        description="Run Gazebo without GUI (faster training).",
+    # gui:=false disables the Gazebo client window for headless training.
+    # gazebo_mesh.launch.py exposes "gui" (not "headless").
+    gui_arg = DeclareLaunchArgument(
+        "gui",
+        default_value="false",
+        description="Launch Gazebo GUI (set true for debugging).",
     )
 
     gazebo = IncludeLaunchDescription(
@@ -28,7 +30,7 @@ def generate_launch_description():
         ),
         launch_arguments={
             "world": LaunchConfiguration("world"),
-            "headless": LaunchConfiguration("headless"),
+            "gui": LaunchConfiguration("gui"),
         }.items(),
     )
 
@@ -40,7 +42,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         world_arg,
-        headless_arg,
+        gui_arg,
         gazebo,
         train_node,
     ])

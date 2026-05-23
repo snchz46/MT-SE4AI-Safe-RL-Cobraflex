@@ -17,7 +17,7 @@ class RosGazeboInterface(Node):
         self,
         world_name: str = "lane_following_oval",
         model_name: str = "cobraflex_robot",
-        spawn_z: float = 0.2,
+        spawn_z: float = 0.05,
         service_timeout_ms: int = 1000,
     ) -> None:
         super().__init__("cobraflex_rl_interface")
@@ -89,28 +89,13 @@ class RosGazeboInterface(Node):
         self.send_action(0.0, 0.0)
 
     def set_vehicle_pose(self, x: float, y: float, yaw: float) -> None:
-        entity_id = self._model_entity_id or self._lookup_model_entity_id()
+        # Resolve entity ID once and cache it for the rest of the training run
+        # to avoid a 2 s subprocess timeout on every episode reset.
+        if self._model_entity_id is None:
+            self._model_entity_id = self._lookup_model_entity_id()
+        entity_id = self._model_entity_id or 0
+
         half_yaw = 0.5 * float(yaw)
-        request = (
-            f'name: "{self.model_name}" '
-            f"id: {entity_id or 0} "
-            f"position {{ x: {float(x):.9f} y: {float(y):.9f} z: {self.spawn_z:.9f} }} "
-            f"orientation {{ z: {math.sin(half_yaw):.9f} w: {math.cos(half_yaw):.9f} }}"
-        )
-        if self._call_gz_service(
-            service=f"/world/{self.world_name}/set_pose",
-            request_type="gz.msgs.Pose",
-            response_type="gz.msgs.Boolean",
-            request=request,
-        ):
-            self._odom_msg = None
-            return
-
-        self._model_entity_id = None
-        entity_id = self._lookup_model_entity_id()
-        if entity_id is None:
-            return
-
         request = (
             f'name: "{self.model_name}" '
             f"id: {entity_id} "

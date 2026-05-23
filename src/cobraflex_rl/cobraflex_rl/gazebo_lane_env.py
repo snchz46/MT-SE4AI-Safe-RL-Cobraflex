@@ -21,11 +21,16 @@ class GazeboLaneEnv(gym.Env):
         centerline: np.ndarray,
         lane_width: float,
         cfg: Mapping[str, Any],
+        road_width: Optional[float] = None,
     ) -> None:
         super().__init__()
         self.ros_interface = ros_interface
         self.tracker = PolylineTracker(centerline)
         self.lane_width = float(lane_width)
+        # Termination at road boundary (not lane boundary) so random-policy
+        # episodes don't terminate in 1–2 steps; the cage handles lane
+        # violations within the road. Falls back to lane_width if unset.
+        self.road_width = float(road_width) if road_width is not None else float(lane_width)
         self.cfg = dict(cfg)
         self.fixed_speed = float(self.cfg.get("fixed_speed", 0.2))
         self.control_dt = float(self.cfg.get("control_dt", 0.1))
@@ -90,7 +95,7 @@ class GazeboLaneEnv(gym.Env):
         self.last_track_state = track_state
         self.step_count += 1
 
-        terminated = abs(track_state.ey) > (self.lane_width * 0.5)
+        terminated = abs(track_state.ey) > (self.road_width * 0.5)
         truncated = self.step_count >= self.max_episode_steps
         reward = compute_reward(
             track_state=track_state,

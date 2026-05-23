@@ -10,7 +10,7 @@
 # =============================================================
 
 baseline_pd:
-  version: "0.7.0"
+  version: "0.8.0"
 
   # Steering loop — lateral position
   kp_y: 3.0            # was 5.0; reduced now that the curvature feedforward
@@ -58,6 +58,12 @@ baseline_pd:
   # curve. Re-derive empirically if you change yaw_to_steering_gain,
   # wheel separation, surface friction, or robot mass.
   kappa_to_steering_gain: 0.45
+  # v0.8.0: in baseline_pd.py, the feedforward is now
+  #   kappa_ff * kappa * max(0, 1 - alpha * |kappa|)
+  # sharing the same speed-reduction factor as the throttle. Without this
+  # scaling, use_safe_throttle=True reduces curve speed to 0.07 m/s while
+  # the feedforward stays calibrated for 0.2 m/s, causing 3× oversteer at
+  # curve entries (ey builds to 0.130 m, epsi to 0.355 rad → C-05 latches).
 
   # Throttle
   throttle_nominal: 0.5       # nominal cruise throttle on straight

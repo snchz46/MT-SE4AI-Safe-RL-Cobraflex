@@ -13,7 +13,7 @@
 # =============================================================
 
 cage:
-  version: "0.5.0"   # bump on any parameter change; semantic versioning
+  version: "0.5.1"   # bump on any parameter change; semantic versioning
 
   # Version of docs/03_safety_requirements.md against which this YAML's
   # parameter set was authored. SafetyCageNode.__init__ refuses to load
@@ -23,6 +23,14 @@ cage:
   # the bump in docs/CHANGELOG.md.
   compatible_sr_spec_version: "1.0"
   description: |
+    0.5.1 (2026-05-23): fix oscillation window upper-bound bug. The
+    _check_oscillation_persistence window had no upper bound on t, so
+    stale entries from a previous sim run (t_prev > current_t when
+    sim time resets to zero on relaunch) were included in the 1-second
+    window, creating spurious 16+ Hz rates that triggered C-05 via
+    oscillation_detected at t≈3.0 sim-seconds on every fresh launch.
+    cage_node.py now filters with current_t - t_osc_window <= t <= current_t.
+
     F2 third cut (18.05.2026). 0.5.0 adds the inter-cycle oscillation
     detection parameters from SR-010 Part 2:
       - cage.oscillation.f_osc_max_hz: alternation-rate threshold above

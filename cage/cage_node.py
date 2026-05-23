@@ -287,7 +287,11 @@ class SafetyCageNode:
             return False, rates
         any_persistent = False
         for rule_id, history in self._osc_history.items():
-            recent = [(t, s) for t, s in history if t >= current_t - self.t_osc_window]
+            # Upper bound (t <= current_t) rejects stale entries from a
+            # previous sim run whose timestamps are larger than the new
+            # sim's current_t when sim time resets to zero on relaunch.
+            recent = [(t, s) for t, s in history
+                      if current_t - self.t_osc_window <= t <= current_t]
             alternations = sum(
                 1 for i in range(1, len(recent))
                 if recent[i][1] != recent[i - 1][1]

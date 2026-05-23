@@ -5,9 +5,9 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription
-from launch.conditions import IfCondition
+from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
 
@@ -20,6 +20,7 @@ def generate_launch_description():
     rviz = LaunchConfiguration("rviz")
     gui = LaunchConfiguration("gui")
     use_sim_time = LaunchConfiguration("use_sim_time")
+    start_paused = LaunchConfiguration("start_paused")
     spawn_x = LaunchConfiguration("spawn_x")
     spawn_y = LaunchConfiguration("spawn_y")
     spawn_z = LaunchConfiguration("spawn_z")
@@ -40,7 +41,9 @@ def generate_launch_description():
         }.items(),
     )
 
-    gazebo_server = IncludeLaunchDescription(
+    # start_paused=false → -r flag (run immediately)
+    # start_paused=true  → no -r flag (paused; caller unpauses when ready)
+    gazebo_server_running = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(
                 get_package_share_directory("ros_gz_sim"),
@@ -52,6 +55,22 @@ def generate_launch_description():
             "gz_args": ["-r -s -v1 ", world],
             "on_exit_shutdown": "true",
         }.items(),
+        condition=UnlessCondition(start_paused),
+    )
+
+    gazebo_server_paused = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("ros_gz_sim"),
+                "launch",
+                "gz_sim.launch.py",
+            )
+        ),
+        launch_arguments={
+            "gz_args": ["-s -v1 ", world],
+            "on_exit_shutdown": "true",
+        }.items(),
+        condition=IfCondition(start_paused),
     )
 
     gazebo_client = GroupAction(
@@ -157,8 +176,16 @@ def generate_launch_description():
                 description="Robot spawn Y position in Gazebo.",
             ),
             DeclareLaunchArgument(
+                "start_paused",
+                default_value="false",
+                description="Start Gazebo paused; caller is responsible for unpausing.",
+            ),
+            DeclareLaunchArgument(
                 "spawn_z",
-                default_value="0.2",
+                # wheel_radius=0.03725 m; a small clearance keeps the robot
+                # just above the ground at spawn so the physics settle without
+                # a large bounce that displaces the robot.
+                default_value="0.05",
                 description="Robot spawn Z position in Gazebo.",
             ),
             DeclareLaunchArgument(
@@ -167,7 +194,8 @@ def generate_launch_description():
                 description="Robot spawn yaw in radians.",
             ),
             rsp,
-            gazebo_server,
+            gazebo_server_running,
+            gazebo_server_paused,
             gazebo_client,
             ros_gz_bridge,
             spawn_robot,

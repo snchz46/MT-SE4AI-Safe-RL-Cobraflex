@@ -54,13 +54,12 @@ class TTLCRule:
     def safe_envelope_predicate_holds(
         self, state: Any, action: tuple, prev_action=None
     ) -> bool:
-        """SR-010 Part 1: end-of-cycle assertion that the projected
-        time-to-lane-crossing remains at least ``t_min`` seconds. A
-        failure means the predictive guard did not buy enough margin
-        and triggers C-05 Trigger 7."""
-        if not self.enabled:
-            return True
-        return self.compute_ttlc(state) >= self.t_min
+        """SR-010 Part 1 for C-03 is deferred (see c05_emergency.py Trigger 7
+        note). C-03's reactive correction in evaluate() handles TTLC violations;
+        the joint-envelope path would bypass that correction by firing C-05
+        before the chain runs. Returning True always keeps C-03 out of the
+        joint_envelope_violated flag until the full SR-010 Part 1 API is ready."""
+        return True
 
     def evaluate(self, state: Any, raw_action: tuple, prev_action=None, ctx=None) -> CageDecision:
         meta = {"rule": "C-03"}

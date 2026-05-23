@@ -19,7 +19,7 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription, TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -72,9 +72,16 @@ def generate_launch_description() -> LaunchDescription:
     fixed_speed_arg = DeclareLaunchArgument(
         "fixed_speed_mps",
         default_value="0.2",
-        description="Constant /cmd_vel.linear.x for the F2 1D-steering demo.",
+        description="Straight cruise speed before safe throttle scaling.",
     )
 
+    # Start Gazebo paused so the sim clock is frozen at t≈0 while all
+    # ROS2 nodes (EKF, lane_perception, cage) initialise. The unpause
+    # action fires after 4 real-world seconds, by which time the EKF has
+    # a clock signal and the pipeline is wired. This prevents the sim
+    # from racing ahead (>1000× RTF headless) before the EKF publishes
+    # its first odom, which caused the car to drift from spawn and report
+    # ey=0.13 m, epsi=0.42 rad at pipeline start → C-05 immediate latch.
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(cobraflex_share, "launch", "gazebo_mesh.launch.py")
@@ -83,7 +90,25 @@ def generate_launch_description() -> LaunchDescription:
             "world": LaunchConfiguration("world"),
             "rviz": "false",
             "use_sim_time": "true",
+            "start_paused": "true",
         }.items(),
+    )
+
+    unpause = TimerAction(
+        period=4.0,
+        actions=[
+            ExecuteProcess(
+                cmd=[
+                    "gz", "service",
+                    "-s", "/world/lane_following_oval/control",
+                    "--reqtype", "gz.msgs.WorldControl",
+                    "--reptype", "gz.msgs.Boolean",
+                    "--timeout", "5000",
+                    "--req", "pause: false",
+                ],
+                output="screen",
+            )
+        ],
     )
 
     perception = Node(
@@ -93,6 +118,12 @@ def generate_launch_description() -> LaunchDescription:
         output="screen",
         parameters=[{
             "centerline_yaml": LaunchConfiguration("centerline_yaml"),
+            # Use the EKF-fused estimate instead of raw Gazebo encoder odom.
+            # Raw skid-steer odom oscillates ~20 cm between consecutive 50 ms
+            # ticks at the curve (~0.07 m/s), producing alternating ey ≈ -0.14
+            # and +0.06, which drives C-05 Trigger 7. The EKF fuses IMU +
+            # velocities and is substantially smoother.
+            "odom_topic": "/odometry/filtered",
             "use_sim_time": True,
         }],
     )
@@ -124,6 +155,9 @@ def generate_launch_description() -> LaunchDescription:
         output="screen",
         parameters=[{
             "fixed_speed_mps": LaunchConfiguration("fixed_speed_mps"),
+            "use_safe_throttle": True,
+            "throttle_nominal": 0.5,
+            "min_speed_scale": 0.35,
             "use_sim_time": True,
         }],
     )
@@ -149,6 +183,7 @@ def generate_launch_description() -> LaunchDescription:
         run_id_arg,
         fixed_speed_arg,
         gazebo,
+        unpause,
         perception,
         pd,
         cage,

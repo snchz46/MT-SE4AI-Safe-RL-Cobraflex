@@ -80,14 +80,21 @@ class BaselinePD:
                 y_dot = (y - self._prev_y) / dt
                 psi_dot = (psi - self._prev_psi) / dt
 
+        # Throttle and feedforward share the same speed-reduction factor so
+        # the curvature feedforward stays consistent when vehicle_control_node
+        # scales the cruise speed by the safe throttle (use_safe_throttle=True).
+        # Without this, kappa_ff (calibrated at v_nominal=0.2 m/s) is ~3×
+        # too large at the curve entry speed (0.07 m/s), causing oversteer
+        # that builds up ey/epsi until C-05 latches.
+        ff_scale = max(0.0, 1.0 - self.alpha * abs(kappa))
         steering = (
-            self.kappa_ff * kappa
+            self.kappa_ff * kappa * ff_scale
             - self.kp_y * y
             - self.kd_y * y_dot
             - self.kp_h * psi
             - self.kd_h * psi_dot
         )
-        throttle = self.throttle_nominal * max(0.0, 1.0 - self.alpha * abs(kappa))
+        throttle = self.throttle_nominal * ff_scale
 
         self._prev_y = y
         self._prev_psi = psi

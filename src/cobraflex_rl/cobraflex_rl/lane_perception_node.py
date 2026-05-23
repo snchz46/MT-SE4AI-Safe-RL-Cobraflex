@@ -57,6 +57,14 @@ class LanePerceptionNode(Node):
         self.declare_parameter("lookahead_segments", 5)
         self.declare_parameter("odom_topic", "/odom")
         self.declare_parameter("state_obs_topic", "/state_obs")
+        # EMA smoothing for ey/epsi. Raw skid-steer encoder odom oscillates
+        # ~20 cm between consecutive 50 ms ticks at the curve section, causing
+        # ey to alternate between -0.14 and +0.06 and triggering C-05 Trigger
+        # 7. The EKF-filtered odom (/odometry/filtered) is already smooth, so
+        # a light alpha=0.7 is sufficient to suppress residual quantisation
+        # noise while keeping PD response fast. For the raw Gazebo odom case,
+        # a lower alpha (0.3–0.5) is needed.
+        self.declare_parameter("ema_alpha", 0.7)
 
         centerline_path = self._resolve_centerline_path()
         with Path(centerline_path).open("r", encoding="utf-8") as handle:
@@ -70,6 +78,9 @@ class LanePerceptionNode(Node):
             self.get_parameter("lookahead_segments").get_parameter_value().integer_value
             or 5
         )
+        self._ema_alpha = float(self.get_parameter("ema_alpha").value)
+        self._ey_smooth: Optional[float] = None
+        self._epsi_smooth: Optional[float] = None
 
         sensor_qos = QoSPresetProfiles.SENSOR_DATA.value
         self._odom_msg: Optional[Odometry] = None
@@ -160,8 +171,21 @@ class LanePerceptionNode(Node):
         track_state = self._tracker.track(x, y, yaw)
         kappa_ahead = self._curvature_ahead(track_state.segment_index)
 
-        ey = float(track_state.ey)
-        epsi = float(track_state.epsi)
+        ey_raw = float(track_state.ey)
+        epsi_raw = float(track_state.epsi)
+
+        # EMA smoothing: initialise to raw value on first observation so
+        # there is no ramp-up transient at startup.
+        if self._ey_smooth is None:
+            self._ey_smooth = ey_raw
+            self._epsi_smooth = epsi_raw
+        else:
+            a = self._ema_alpha
+            self._ey_smooth = a * ey_raw + (1.0 - a) * self._ey_smooth
+            self._epsi_smooth = a * epsi_raw + (1.0 - a) * self._epsi_smooth
+
+        ey = self._ey_smooth
+        epsi = self._epsi_smooth
         d_left = max(0.0, (self._road_width / 2) - ey)
         d_right = max(0.0, (self._road_width / 2) + ey)
 

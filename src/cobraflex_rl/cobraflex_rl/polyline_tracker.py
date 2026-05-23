@@ -25,6 +25,16 @@ _HEADING_SMOOTHING_RADIUS = 2
 # at the cost of an explicit reset when the robot is teleported.
 _LOCAL_SEARCH_RADIUS = 2
 
+# Hysteresis margin (m²) for segment selection. A candidate segment that
+# differs from the previous best must beat it by this margin to be accepted.
+# Prevents the tracker from oscillating between equidistant adjacent segments
+# at polyline joints (especially on tight curves where consecutive segments
+# project the car to the same endpoint with different ey signs). At 1e-5 m²
+# the linear equivalent is ~3.2 mm — large enough to absorb floating-point
+# ties at joints, small enough that genuine advancement along the path is
+# never suppressed.
+_HYSTERESIS_M2 = 1e-5
+
 
 def wrap_angle(angle: float) -> float:
     return math.atan2(math.sin(angle), math.cos(angle))
@@ -116,6 +126,12 @@ class PolylineTracker:
             projection = start + projection_fraction * vector
             error = position - projection
             distance_sq = float(np.dot(error, error))
+
+            # Apply hysteresis: a segment other than the previous best must
+            # beat it by _HYSTERESIS_M2 to win. This prevents oscillation
+            # between equidistant adjacent segments at polyline joints.
+            if self._prev_best_index is not None and index != self._prev_best_index:
+                distance_sq += _HYSTERESIS_M2
 
             if distance_sq < best_distance_sq:
                 best_distance_sq = distance_sq

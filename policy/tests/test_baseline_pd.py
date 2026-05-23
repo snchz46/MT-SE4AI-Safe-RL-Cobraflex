@@ -87,6 +87,19 @@ def test_curvature_reduces_throttle(pd, pd_params):
     assert throttle == pytest.approx(expected)
 
 
+def test_curvature_feedforward_scales_with_throttle_factor(pd, pd_params):
+    # v0.8.0: feedforward = kappa_ff * kappa * ff_scale where
+    # ff_scale = max(0, 1 - alpha * |kappa|). This keeps the curvature
+    # feedforward proportional to the vehicle speed when use_safe_throttle
+    # is active (vehicle_control_node scales cruise speed by safe throttle).
+    kappa = 0.5
+    ff_scale = max(0.0, 1.0 - pd_params["alpha_curve_slowdown"] * kappa)
+    expected_ff = pd_params["kappa_to_steering_gain"] * kappa * ff_scale
+    state = State(curvature_ahead=kappa)  # ey=0, epsi=0
+    steering, _ = pd.step(state, current_t=0.0)
+    assert steering == pytest.approx(expected_ff)
+
+
 def test_extreme_curvature_floors_throttle(pd):
     state = State(curvature_ahead=10.0)
     _, throttle = pd.step(state, current_t=0.0)

@@ -121,13 +121,16 @@ def test_c01_or_c03_fires_on_lateral_excursion():
 
 
 def test_trigger_7_fires_when_predicate_first_fails():
-    """C-05 Trigger 7 fires the cycle in which any state-only predicate
-    first reports a violation. With the scripted sequence, cycle 2 has
-    TTLC dropping below t_min (lateral_offset=0.145 + heading=0.1 + v=0.4),
-    which makes the C-03 predicate fail and routes a Trigger-7 emergency
-    through C-05's state machine."""
+    """C-05 Trigger 7 fires when a state-only predicate reports a hard violation.
+    C-03's predicate is deferred (always True); Trigger 7 fires at cycle 3
+    where lateral_offset=0.25 > d_max=0.16 (C-01 predicate fails) and
+    heading_error=0.6 > theta_max=0.4363 (C-02 predicate fails)."""
     results = _run(SafetyCageNode(CAGE_YAML, mode="enforcement"))
-    cycle = results[2]
+    # Cycle 2: C-03 predicate deferred → joint_envelope OK, no emergency from Trigger 7.
+    assert results[2]["joint_envelope_violated"] is False
+    assert results[2]["emergency"] is False
+    # Cycle 3: C-01 and C-02 predicates fail (ey=0.25>d_max, epsi=0.6>theta_max).
+    cycle = results[3]
     assert cycle["joint_envelope_violated"] is True
     assert cycle["emergency"] is True
     assert cycle["safe_action"][1] == -0.5
@@ -135,7 +138,8 @@ def test_trigger_7_fires_when_predicate_first_fails():
                   if iv.get("rule") == "C-05"
                   and iv.get("metadata", {}).get("trigger") == 7]
     assert len(trigger_7s) == 1
-    assert "C-03" in trigger_7s[0]["metadata"]["failing_rules"]
+    failing = trigger_7s[0]["metadata"]["failing_rules"]
+    assert "C-01" in failing or "C-02" in failing
 
 
 def test_c05_stays_active_after_trigger_7_until_reset():
@@ -144,11 +148,11 @@ def test_c05_stays_active_after_trigger_7_until_reset():
     recovers. The judder we observed in Gazebo on the first run was the
     direct symptom of this latch being absent."""
     results = _run(SafetyCageNode(CAGE_YAML, mode="enforcement"))
-    # Cycle 2 fires Trigger 7. Cycle 3 has an even worse state (compound
-    # violation) and cycle 4 has nominal state + a reset signal. C-05
-    # must stay active in cycles 2 and 3, and only clear in 4.
-    assert results[2]["emergency"] is True
+    # Cycle 2: C-03 predicate deferred; no hard violation; no emergency.
+    assert results[2]["emergency"] is False
+    # Cycle 3: Trigger 7 fires (C-01/C-02 predicates fail at ey=0.25, epsi=0.6).
     assert results[3]["emergency"] is True
+    # Cycle 4: nominal state + explicit reset → emergency clears.
     assert results[4]["emergency"] is False
 
 

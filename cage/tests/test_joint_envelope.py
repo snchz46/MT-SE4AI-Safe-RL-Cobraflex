@@ -77,15 +77,17 @@ def test_c02_predicate_fails_beyond_theta_max():
     assert not rule.safe_envelope_predicate_holds(_nominal_state(heading_error=0.50), (0, 0))
 
 
-def test_c03_predicate_uses_ttlc():
+def test_c03_predicate_deferred():
+    """SR-010 Part 1 for C-03 is deferred: the predicate always returns True so
+    C-03 never contributes to joint_envelope_violated. C-03's reactive
+    correction in evaluate() still handles TTLC violations in-chain."""
     rule = TTLCRule({
         "enabled": True, "t_min_s": 1.0, "horizon_s": 3.0,
         "urgency_gain_max": 2.0, "d_max_m": 0.16, "v_min_estimate_mps": 0.05,
     })
-    # No lateral motion -> infinite TTLC -> predicate holds.
+    # Always returns True regardless of TTLC.
     assert rule.safe_envelope_predicate_holds(_nominal_state(speed=0.4, heading_error=0.0), (0, 0))
-    # Heading error of 0.5 rad at 0.4 m/s makes TTLC very small.
-    assert not rule.safe_envelope_predicate_holds(
+    assert rule.safe_envelope_predicate_holds(
         _nominal_state(lateral_offset=0.10, heading_error=0.5, speed=0.4), (0, 0)
     )
 

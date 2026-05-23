@@ -3,7 +3,7 @@
 **Status:** Living document — Phase 2 deliverable  
 **Last update:** 18.05.2026  
 **Approved at Gate:** G2 (pending)  
-**Cage YAML version:** 0.5.0 (`cage/cage.yaml`).  
+**Cage YAML version:** 0.5.1 (`cage/cage.yaml`).
 
 ## Purpose
 
@@ -177,7 +177,7 @@ if v > v_ceiling:
 6. External stop: `/external_stop` signal received.
 7. Joint-envelope assertion failure (see §Joint-envelope assertion below).
 
-**Implementation status (cage YAML 0.5.0).** Triggers 1–6 are implemented in [cage/rules/c05_emergency.py](../cage/rules/c05_emergency.py); Triggers 1–4 and 6 are exercised by [test_c05_emergency.py](../cage/tests/test_c05_emergency.py) and Triggers 2 and 5 by [test_c05_triggers_extended.py](../cage/tests/test_c05_triggers_extended.py). Trigger 5 (missing state) is fed by the cage_node-level counter in [cage/cage_node.py](../cage/cage_node.py) (`_cycles_since_last_state`), verified by [test_cage_node_missing_state.py](../cage/tests/test_cage_node_missing_state.py). The inter-cycle oscillation check (SR-010 Part 2) is also implemented in `cage_node` (per-rule signed-correction history, sliding-window alternation rate, persistence timer) and surfaces as an additional `oscillation_detected` trigger of C-05; coverage in [test_oscillation.py](../cage/tests/test_oscillation.py). Trigger 7 (joint-envelope assertion, SR-010 Part 1) is **deferred**: it requires a per-rule `safe_envelope_predicate_holds(state, action) -> bool` method that does not yet exist on the rule contract.
+**Implementation status (cage YAML 0.5.1).** Triggers 1–6 are implemented in [cage/rules/c05_emergency.py](../cage/rules/c05_emergency.py); Triggers 1–4 and 6 are exercised by [test_c05_emergency.py](../cage/tests/test_c05_emergency.py) and Triggers 2 and 5 by [test_c05_triggers_extended.py](../cage/tests/test_c05_triggers_extended.py). Trigger 5 (missing state) is fed by the cage_node-level counter in [cage/cage_node.py](../cage/cage_node.py) (`_cycles_since_last_state`), verified by [test_cage_node_missing_state.py](../cage/tests/test_cage_node_missing_state.py). The inter-cycle oscillation check (SR-010 Part 2) is also implemented in `cage_node` (per-rule signed-correction history, sliding-window alternation rate, persistence timer) and surfaces as an additional `oscillation_detected` trigger of C-05; coverage in [test_oscillation.py](../cage/tests/test_oscillation.py). Version 0.5.1 fixes the oscillation-window reset bug observed when simulation time restarted between ROS launches. Trigger 7 (joint-envelope assertion, SR-010 Part 1) is **deferred**: it requires a per-rule `safe_envelope_predicate_holds(state, action) -> bool` method that does not yet exist on the rule contract.
 
 **On activation:**
 

@@ -1,0 +1,32 @@
+{
+  "run_id": "ros_run_20260523T073134Z",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement",
+  "platform": "sim",
+  "controller": "baseline_pd",
+  "controller_version": "0.8.0",
+  "cage_version": "0.5.1",
+  "timestamp_iso": "2026-05-23T07:31:34Z",
+  "git_commit": "69cd9fbd131c0427f94df2025b28c622a4999005",
+  "world": "src/cobraflex/worlds/lane_following_oval.world",
+  "centerline": "src/cobraflex_rl/config/oval_right_lane_centerline.yaml",
+  "cage_yaml": "cage/cage.yaml",
+  "baseline_yaml": "policy/baseline_pd.yaml",
+  "cage_yaml_sha256": "7a08ea91d2ff70c1db1e49fd4742ab099b47647395aca4509289e226fa3f5346",
+  "baseline_yaml_sha256": "bf0c34f95efdf412893d3916b06202ecd0f75ad38ab8e2bd36f545231758bb51",
+  "world_sha256": "48fa4c00bda17844b2c53360546fa584a01566874ca5cf4cba787e4c7591fae4",
+  "centerline_sha256": "54f5d47cdf4d8c6a107e0e107f107fbc9d56310ac16ad731c65281875f160e33",
+  "cage_status_csv_sha256": "c55f625159970e4e4be873f491403efbb6f35359c6b94a2b49ec42d429370e12",
+  "fixed_speed_mps": 0.2,
+  "use_safe_throttle": true,
+  "throttle_nominal": 0.5,
+  "min_speed_scale": 0.35,
+  "target_laps": 3,
+  "status": "completed",
+  "closure_segment": {
+    "index": 0,
+    "first_data_line": 2,
+    "last_data_line": 7598
+  },
+  "notes": "Gate-2 summary metrics use the full monotonic timestamp segment in cage_status.csv."
+}

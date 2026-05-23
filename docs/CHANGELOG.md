@@ -31,6 +31,52 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [23.05.2026] — Gate 2 candidate evidence: ROS oval run completes >3 laps without emergency
+
+**Document(s) affected:** `experiments/sim/runs/ros_run_20260523T073134Z/metadata.json`, `experiments/sim/runs/ros_run_20260523T073134Z/summary.json`, `docs/04_cage_specification.md`, `experiments/sim/oval_pd_cage_smoke.py`, `tools/check_scenario_yaml.py`, `tools/README.md`, `scenarios/README.md`.
+**Phase:** F2.
+**Gate context:** before G2.
+**Author:** Samuel.
+
+### Change
+
+Added reproducibility metadata and a summary file for the ROS2/Gazebo run
+`ros_run_20260523T073134Z`. The run is the first Gate-2 candidate evidence
+for the full F2 pipeline: baseline PD 0.8.0, cage YAML 0.5.1, right-lane
+oval centerline, cage in enforcement mode.
+
+The committed `summary.json` declares the evidence segment explicitly: the
+full monotonic timestamp segment, lines 2–7598 of `cage_status.csv`.
+
+### Rationale
+
+The closure segment runs for 379.799 s, covers an estimated 4.504501 laps
+against the ODD-3 perimeter of 8.0232 m, and records zero emergency-mode
+cycles. Cage activity is limited to 8 intervention cycles, all C-02/C-06
+bounded corrections, with no C-01, C-03 or C-05 activation in nominal
+lane-following.
+
+### Impact
+
+This provides the empirical evidence needed for the F2 end-to-end demo
+criterion. The pure-Python `oval_pd_cage_smoke.py` docstring is updated to
+classify it as a kinematic chain sanity check rather than the Gate-2 closure
+demo, because it does not model the current ROS2/Gazebo stack. The evidence
+is not yet a full Gate-2 closure by itself: Chapter 5/6 placeholders and the
+inherited `colcon test` lint failures in `src/cobraflex` remain to be addressed
+or explicitly scoped before tagging G2. The scenario YAML validator promised
+by `scenarios/README.md` is added in Phase-2 scope: default mode accepts
+explicit stubs with warnings, while `--strict` turns those warnings into
+failures for later gates.
+
+### Verification
+
+- `pytest cage/tests policy/tests` -> 143 passed.
+- `python3 tools/check_traceability.py --strict` -> all checks PASS, 0 warnings.
+- `python3 tools/check_scenario_yaml.py` -> PASS, 0 errors, warnings for deferred stubs/missing later-phase YAMLs.
+- `colcon build --packages-select cobraflex_safety_msgs safety_cage cobraflex_rl cobraflex --symlink-install` -> 4 packages finished.
+- `colcon test --packages-select cobraflex_safety_msgs safety_cage cobraflex_rl cobraflex` -> package tests execute, but `cobraflex` fails pre-existing lint/pep257 checks.
+
 ## [22.05.2026] — PD Baseline 0.6.0: zero kd_y and kp_h — polyline signals unreliable at curves (Phase 2)
 
 **Document(s) affected:** `policy/baseline_pd.yaml`.

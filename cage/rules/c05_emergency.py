@@ -12,7 +12,7 @@ Evaluation position: last in the sequential chain
 (C-06 → C-04 → C-02 → C-03 → C-01 → C-05). When C-05 fires it overrides
 every upstream correction with the controlled-stop action.
 
-Triggers implemented (cage YAML 0.5.0):
+Triggers implemented (cage YAML 0.5.1):
     1. Compound state low-energy:
          |theta| > theta_warning AND |d| > d_warning sustained for
          delta_t_max_s.

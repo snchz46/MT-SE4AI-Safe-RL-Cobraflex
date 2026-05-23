@@ -1,0 +1,73 @@
+{
+  "run_id": "ros_run_20260523T073134Z",
+  "source_csv": "cage_status.csv",
+  "closure_segment": {
+    "index": 0,
+    "first_data_line": 2,
+    "last_data_line": 7598
+  },
+  "completed": true,
+  "completion_basis": "integrated_speed_over_odd3_perimeter",
+  "completed_laps_estimated": 4.504501,
+  "target_laps": 3,
+  "distance_m_integrated_speed": 36.140514,
+  "odd3_perimeter_m": 8.0232,
+  "duration_s": 379.799,
+  "total_steps": 7597,
+  "mean_dt_s": 0.049999868352,
+  "max_dt_s": 0.053,
+  "emergency_steps": 0,
+  "intervention_cycles": 8,
+  "interventions_per_rule": {
+    "C-02": 6,
+    "C-06": 7
+  },
+  "rules_fired_combinations": {
+    "C-02": 1,
+    "C-06;C-02": 5,
+    "C-06": 2
+  },
+  "signals": {
+    "raw_steering": {
+      "min": -0.385410467829,
+      "max": 0.337299447453,
+      "mean": 0.121561981107
+    },
+    "safe_steering": {
+      "min": -0.401670095101,
+      "max": 0.337299447453,
+      "mean": 0.121117311351
+    },
+    "raw_throttle": {
+      "min": 0.173421784568,
+      "max": 0.5,
+      "mean": 0.238057921607
+    },
+    "safe_throttle": {
+      "min": 0.173421784568,
+      "max": 0.5,
+      "mean": 0.238057921607
+    },
+    "ey": {
+      "min": -0.092545876032,
+      "max": 0.122398135334,
+      "mean": 0.008381629172
+    },
+    "epsi": {
+      "min": -0.327580241779,
+      "max": 0.401670095101,
+      "mean": 0.000974048494
+    },
+    "speed": {
+      "min": 0.0,
+      "max": 0.200835212866,
+      "mean": 0.095157218163
+    },
+    "kappa_ahead": {
+      "min": 0.0,
+      "max": 1.088594051439,
+      "mean": 0.873114919396
+    }
+  },
+  "note": "The CSV contains one monotonic timestamp segment; this summary uses the full file."
+}

@@ -1,5 +1,5 @@
 """
-Pure-Python end-to-end smoke test on the oval centerline.
+Pure-Python kinematic smoke test on the oval centerline.
 
 Closes the §4.2 gap of `docs/.phases/Fase 2/phase2_implementation_notes.md`
 (combined-rule test across the chain) by running BaselinePD → cage chain
@@ -14,10 +14,12 @@ Output (under experiments/sim/runs/<run_id>/):
     trajectory.csv      x, y, yaw, s, ey, epsi per cycle (for plotting)
     summary.json        completion-rate, intervention counts, max excursion
 
-Acceptance criterion for F2 closure (§13(6) of fase_2_detallada.md):
-    3 consecutive laps without emergency-mode entry and with cage
-    activations consistent with the design (no spurious C-01/C-02/C-03
-    in nominal lane-following; C-06 OK during curve transitions).
+F2 status:
+    This script is a pure-Python chain sanity check, not the Gate-2 closure
+    demo. The ROS2/Gazebo pipeline now uses EKF-filtered odometry, right-lane
+    tracking, safe-throttle scaling, and skid-steer Gazebo dynamics that this
+    simplified bicycle model does not reproduce. Gate-2 evidence is therefore
+    taken from ROS2/Gazebo runs under experiments/sim/runs/ros_run_*/.
 """
 
 from __future__ import annotations

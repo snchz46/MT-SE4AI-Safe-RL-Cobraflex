@@ -18,10 +18,10 @@ The narrative description and the rationale for each scenario are in `docs/05_sc
 Before any Gate review, run:
 
 ```bash
-python tools/check_scenario_yaml.py    # to be implemented in Phase 2
+python tools/check_scenario_yaml.py
 ```
 
-This validates that every scenario YAML conforms to the schema and that every scenario referenced in `docs/05_scenario_library.md` has a matching YAML file (and vice versa).
+In default Phase-2 mode this validates the fully specified executable scenarios and reports deferred stubs as warnings. Use `--strict` when the later scenario-library gate requires every documented scenario to have a full YAML counterpart.
 
 ## Phase status
 

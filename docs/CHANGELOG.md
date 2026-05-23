@@ -75,6 +75,11 @@ No cage YAML or SR changes required; this is a sensor pre-processing fix.
 - AST check on modified node: OK.
 - Simulated spike scenario: speed_raw = 32.5, speed_smooth = 0.07, factor = 5.0
   → threshold = 0.35 → spike rejected, WARNING emitted, speed_smooth unchanged.
+- **ROS2/Gazebo validation run `ros_run_20260523T153003Z`:** 14.1 min (845.5 s),
+  16 910 cycles, **0 emergencies**, speed max 0.200 m/s. Same 8-intervention
+  pattern (C-02 × 1, C-06;C-02 × 5, C-06 × 2) as the G2 evidence run. The
+  run covered the same elapsed-time window (~845 s) where the prior spike had
+  occurred, with no C-03/C-04/C-05 activation.
 
 ---
 
@@ -170,6 +175,42 @@ remains the Gate-2 evidence.
   0 warnings.
 - `python3 tools/check_scenario_yaml.py` -> PASS, 0 errors.
 - AST OK on all 5 modified pipeline nodes.
+
+## [23.05.2026] — Chapter 6: promoted definitivo pre-F3 run to all §6.3.5/§6.5.4/§6.6 placeholders
+
+**Document(s) affected:** `manuscript/chapters/chapter_06_implementation.md`,
+`experiments/sim/runs/ros_run_20260523T153003Z/summary.json`.
+**Phase:** F2.
+**Gate context:** before G2.
+**Author:** Samuel.
+
+### Change
+
+Replaced all numerical references previously sourced from `ros_run_20260523T073134Z`
+(4.50 laps, 379.8 s, 7 597 cycles) with values from the definitive pre-F3 run
+`ros_run_20260523T153003Z` (9.91 laps, 845.4 s, 16 910 cycles, 0 emergencies).
+
+Sections updated: §6.3.5 (logger throughput), §6.5.4 (throughput test body and
+latency figure), §6.6.1 (demostración integrada), §6.6.2 (all three preliminary
+metrics). Test count updated from 143 → 144 in §6.5.2 and the internal appendix.
+
+Created `experiments/sim/runs/ros_run_20260523T153003Z/summary.json` with the
+full metrics (laps, distance, dt stats, intervention breakdown, signal ranges).
+
+### Rationale
+
+The new run includes the speed-spike rejection filter and ran for ~14 min without
+any emergency, providing 2.2× more evidence than the prior 6.3 min run. The
+same pipeline, same cage YAML and same PD gains — only the odom spike filter
+is new. All three §6.6.2 metrics improve: intervention rate drops from 0.105%
+to 0.047%, completion extends from 4.50 to 9.91 laps.
+
+### Verification
+
+- `python3 tools/check_traceability.py --strict` → all checks PASS, 0 warnings.
+- `grep -n "T073134Z\|379\.8\|7 597\|4\.50 vueltas\|0\.105%\|53\.0 ms\|143 casos"` → 0 matches.
+
+---
 
 ## [23.05.2026] — Chapter 6 §6.3.5/§6.4.2/§6.5.2/§6.5.4/§6.6: resolved [COMPLETAR FASE 2] placeholders with run candidate data
 

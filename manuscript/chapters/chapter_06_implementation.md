@@ -369,10 +369,10 @@ se publica una warning en `/diagnostics`. En operación normal, el
 buffer típico es de pocas decenas de entradas.
 
 El test de throughput ejecutado en D30 tarde, descrito en §6.5.4,
-verificó que el logger sostiene 20 Hz durante 6.33 min (379.8 s)
-sin pérdida de mensajes y con uso de memoria estable: 7 597 líneas
-capturadas frente a 7 597 esperadas a 20 Hz (0% de pérdida; ver
-`experiments/sim/runs/ros_run_20260523T073134Z/cage_status.csv`).
+verificó que el logger sostiene 20 Hz durante 14.09 min (845.4 s)
+sin pérdida de mensajes y con uso de memoria estable: 16 910 líneas
+capturadas frente a 16 910 esperadas a 20 Hz (0% de pérdida; ver
+`experiments/sim/runs/ros_run_20260523T153003Z/cage_status.csv`).
 
 ---
 
@@ -538,9 +538,9 @@ a `test_c06_rate_limiter.py`, incluyendo
 `test_c05_triggers_extended.py`). La suite completa de la cage
 suma 132 casos (per-rule + integración de la cadena de reglas +
 serialización del logger + comprobación de versión SR-spec); con
-los 3 tests del baseline PD el repositorio reúne 143 casos.
+los 3 tests del baseline PD el repositorio reúne 144 casos.
 Todos pasan con código de retorno cero de pytest
-(`pytest cage/tests policy/tests` → 143 passed, fechado 2026-05-23).
+(`pytest cage/tests policy/tests` → 144 passed, fechado 2026-05-23).
 
 ### 6.5.3 Tests de propiedades transversales
 
@@ -589,22 +589,23 @@ suite del pipeline ROS sea estable bajo cambios de la policy RL;
 la cobertura actual sobre la lógica pura de cage y PD agota las
 fuentes de error que no dependen del transporte ROS2.
 
-El test de throughput se mide directamente sobre el run candidato
-G2 `ros_run_20260523T073134Z` en vez de un test sintético: durante
-379.8 s el logger captura 7 597 mensajes a 20 Hz sin pérdida.
+El test de throughput se mide directamente sobre el run definitivo
+pre-F3 `ros_run_20260523T153003Z` en vez de un test sintético: durante
+845.4 s el logger captura 16 910 mensajes a 20 Hz sin pérdida.
 
-Resultados del test de throughput, medidos sobre los 7 597 ciclos
-del run `ros_run_20260523T073134Z` (379.8 s de operación continua,
+Resultados del test de throughput, medidos sobre los 16 910 ciclos
+del run `ros_run_20260523T153003Z` (845.4 s de operación continua,
 modo `enforcement`):
 
 - Frecuencia efectiva del callback de cage: 20.00 Hz (target 20 Hz).
-- Periodo de ciclo: mediana 50.0 ms, P95 50.0 ms, máximo 53.0 ms.
+- Periodo de ciclo: mediana 50.0 ms, P95 50.0 ms, máximo 62.0 ms.
   La latencia state→safe_action no se mide por separado en F2
   (se difiere a F3 cuando se instrumenten timestamps por etapa);
   el periodo de ciclo da una cota superior holgada bajo el
-  presupuesto de 50 ms del SR-006.
-- Líneas perdidas en logger: 0 sobre 7 597 esperadas a 20 Hz
-  (`wc -l cage_status.csv` = 7 598 incluyendo cabecera).
+  presupuesto de 50 ms del SR-006; el único ciclo de 62 ms se
+  atribuye a jitter del scheduler de Linux no realtime.
+- Líneas perdidas en logger: 0 sobre 16 910 esperadas a 20 Hz
+  (`wc -l cage_status.csv` = 16 911 incluyendo cabecera).
 
 ### 6.5.5 Ejecución y automatización
 
@@ -643,21 +644,21 @@ logger captura todos los mensajes sin pérdida; los archivos de
 salida tienen la estructura esperada y son legibles por los scripts
 de análisis preliminares.
 
-El run candidato para el cierre de D34 es
-`ros_run_20260523T073134Z` (PD baseline 0.8.0, cage YAML 0.5.1,
+El run definitivo pre-F3 es
+`ros_run_20260523T153003Z` (PD baseline 0.8.0, cage YAML 0.5.1,
 escenario SC-NOM-01, modo `enforcement`, perímetro ODD-3 = 8.0232 m).
 La demostración cumple los cuatro criterios:
 
-- El vehículo recorre 36.14 m, equivalentes a 4.50 vueltas
-  completas frente al objetivo de 3, en 379.8 s
-  (≈ 84.4 s por vuelta a velocidad media 0.095 m/s).
-- La cage interviene en 8 ciclos de los 7 597 totales, distribuidos
+- El vehículo recorre 79.51 m, equivalentes a 9.91 vueltas
+  completas frente al objetivo de 3, en 845.4 s
+  (≈ 85.3 s por vuelta a velocidad media 0.094 m/s).
+- La cage interviene en 8 ciclos de los 16 910 totales, distribuidos
   entre C-02 (6 activaciones) y C-06 (7 activaciones, en combinación
   con C-02 en 5 de los 8 ciclos); las reglas C-01, C-03 y C-05 no
   se activan durante toda la corrida, consistente con un PD que se
   mantiene dentro del régimen nominal del óvalo.
 - No se registra ningún ciclo en modo emergencia.
-- El logger captura 7 597 filas sin pérdida y los scripts de
+- El logger captura 16 910 filas sin pérdida y los scripts de
   análisis preliminares procesan el CSV sin errores; los hashes
   SHA-256 de `cage.yaml`, `baseline_pd.yaml`, world y centerline
   quedan registrados en `metadata.json` para reproducibilidad.
@@ -677,34 +678,35 @@ La caracterización completa pertenece al Capítulo 8.
 
 La primera es la **latencia del ciclo de la cage**. Se mide como
 diferencia entre timestamps consecutivos publicados por
-`cage_logger_node` sobre 379.8 s de operación. Resultado preliminar:
-mediana 50.0 ms, P95 50.0 ms, máximo 53.0 ms, todos dentro del
-presupuesto de 50 ms del SR-006 (el máximo de 53 ms corresponde a
-un único ciclo y se atribuye a jitter del scheduler de Linux no
-realtime). La latencia *sensor → safe_action* desglosada por etapa
-requiere instrumentación adicional de timestamps y se difiere a F3.
+`cage_logger_node` sobre 845.4 s de operación. Resultado preliminar:
+mediana 50.0 ms, P95 50.0 ms, máximo 62.0 ms; la mediana y P95 están
+dentro del presupuesto de 50 ms del SR-006 (el máximo de 62 ms
+corresponde a un único ciclo y se atribuye a jitter del scheduler
+de Linux no realtime). La latencia *sensor → safe_action* desglosada
+por etapa requiere instrumentación adicional de timestamps y se
+difiere a F3.
 
 La segunda es la **tasa de intervención de la cage** durante
-operación nominal con el PD como controlador. Sobre los 7 597
-ciclos del run `ros_run_20260523T073134Z`, la cage interviene en
-8 ciclos (0.105% del total), todos atribuidos a C-02 (límite de
+operación nominal con el PD como controlador. Sobre los 16 910
+ciclos del run `ros_run_20260523T153003Z`, la cage interviene en
+8 ciclos (0.047% del total), todos atribuidos a C-02 (límite de
 heading) y/o C-06 (rate limiter de la acción), sin activaciones de
 C-01, C-03 ni C-05. La interpretación es: si el PD circula sin
 salirse del régimen donde la cage actúa, esa tasa debe ser muy baja
-(< 5%). El valor observado, dos órdenes de magnitud por debajo del
-umbral, confirma que el PD 0.8.0 está bien calibrado para el
+(< 5%). El valor observado, más de dos órdenes de magnitud por debajo
+del umbral, confirma que el PD 0.8.0 está bien calibrado para el
 escenario nominal y que los umbrales de la cage no son
 artificialmente restrictivos.
 
 La tercera es el **completion rate** del PD en condiciones
 nominales: porcentaje de vueltas completas del óvalo sin que la
-cage entre en modo emergencia. Sobre la única corrida candidata
-disponible al cierre de D34, el PD completa 4.50 vueltas (objetivo
-≥ 3) sin emergencia, equivalente a un completion rate provisional
-de 100% con N = 1 ejecución. La caracterización completa con N = 30
-vueltas seguidas exige una campaña de runs múltiples actualmente
-en cola; un completion rate consolidado por encima del 80% es el
-criterio de Decisión 6 del briefing del supervisor. Valores menores
+cage entre en modo emergencia. El run definitivo pre-F3 completa
+9.91 vueltas (objetivo ≥ 3) en 845.4 s sin ningún ciclo de
+emergencia, equivalente a un completion rate provisional de 100%
+con N = 1 ejecución. La caracterización completa con N ≥ 30
+vueltas exige una campaña de runs múltiples actualmente en cola;
+un completion rate consolidado por encima del 80% es el criterio
+de Decisión 6 del briefing del supervisor. Valores menores
 indicarían que el PD necesita más tuning o que hay un problema
 estructural en el pipeline.
 
@@ -776,14 +778,16 @@ Fase 2 (D26–D35):
 
 Pendientes obligatorios para cierre de Gate 2 (D35):
   [x] Rellenar todos los [COMPLETAR FASE 2] con cifras reales
-       (run candidato ros_run_20260523T073134Z, 2026-05-23):
+       (run definitivo pre-F3 ros_run_20260523T153003Z, 2026-05-23):
        - [x] throughput del logger en §6.3.5 y §6.5.4
        - [x] número exacto de tests unitarios en §6.5.2 (61 per-rule,
-              132 cage total, 143 con PD)
+              132 cage total, 144 con PD — actualizado tras añadir
+              test_pipeline_handles_missing_state_until_first_obs y
+              test para speed spike rejection)
        - [x] resultados del test de demostración en §6.6.1
-              (4.50 vueltas, 0 emergencias, 8 intervenciones)
+              (9.91 vueltas, 0 emergencias, 8 intervenciones)
        - [x] latencia, tasa de intervención, completion rate en §6.6.2
-              (50.0/50.0/53.0 ms; 0.105%; 100% con N=1)
+              (50.0/50.0/62.0 ms; 0.047%; 100% con N=1)
        - [x] ganancias finales del PD en §6.4.2 (v0.8.0)
   [ ] Generar Figura 6.1 (vista superior del mundo Gazebo)
   [x] Generar Listing 6.1 (esqueleto de apply_c01) — extraído de

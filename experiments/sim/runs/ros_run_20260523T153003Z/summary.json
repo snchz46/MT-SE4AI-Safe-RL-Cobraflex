@@ -1,0 +1,38 @@
+{
+  "run_id": "ros_run_20260523T153003Z",
+  "source_csv": "cage_status.csv",
+  "completed": true,
+  "completion_basis": "integrated_speed_over_odd3_perimeter",
+  "completed_laps_estimated": 9.910424,
+  "distance_m_integrated_speed": 79.513316,
+  "odd3_perimeter_m": 8.0232,
+  "duration_s": 845.45,
+  "total_steps": 16910,
+  "mean_dt_s": 0.05,
+  "median_dt_s": 0.05,
+  "p95_dt_s": 0.05,
+  "max_dt_s": 0.062,
+  "emergency_steps": 0,
+  "intervention_cycles": 8,
+  "interventions_per_rule": {
+    "C-02": 6,
+    "C-06": 7
+  },
+  "rules_fired_combinations": {
+    "C-02": 1,
+    "C-06;C-02": 5,
+    "C-06": 2
+  },
+  "signals": {
+    "speed": {
+      "min": 0.0,
+      "max": 0.20084,
+      "mean": 0.094055
+    },
+    "ey": {
+      "min": -0.093031,
+      "max": 0.122398,
+      "mean": 0.00866
+    }
+  }
+}

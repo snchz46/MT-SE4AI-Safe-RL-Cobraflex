@@ -1,0 +1,123 @@
+# Curated metadata for the Launch Manager (loaded by tools/launch_gui/meta.py).
+#
+# Keys are "<package>/<launch_name_without_extension>". Anything not listed
+# here falls back to autodiscovered docstrings/comments + AST-parsed args.
+#
+# If this file is missing or pyyaml isn't installed, the in-code
+# DEFAULT_LAUNCH_META takes over (same contents as below).
+#
+# Arg `kind` is one of: bool | enum | number | string.
+# Args declared here override AST autodiscovery for that launch.
+
+launches:
+  safety_cage/lane_following:
+    starred: true
+    phase: F2
+    tags: [F2, Sim]
+    description: "F2 end-to-end demo: Gazebo + perception + PD + cage + logger"
+    args:
+      - {key: use_sim_time, default: "true", kind: bool, help: "Use /clock from simulator"}
+      - {key: world, default: lane_following_oval, kind: enum,
+         options: [lane_following_oval, lane_following_eight, empty_world],
+         help: "World file (sdf name)"}
+      - {key: log_csv, default: "true", kind: bool, help: "Write cage_log.csv for the run"}
+      - {key: rviz, default: "true", kind: bool}
+    presets:
+      - {name: demo,          args: {use_sim_time: "true", world: lane_following_oval,  log_csv: "true",  rviz: "true"}}
+      - {name: friday talk,   args: {use_sim_time: "true", world: lane_following_eight, log_csv: "false", rviz: "true"}}
+      - {name: headless eval, args: {use_sim_time: "true", world: lane_following_oval,  log_csv: "true",  rviz: "false"}}
+
+  cobraflex_rl/train_lane:
+    starred: true
+    phase: F3
+    tags: [F3, Sim]
+    description: "PPO training, headless Gazebo (D-34, TS-01 open)"
+    args:
+      - {key: use_sim_time, default: "true", kind: bool}
+      - {key: gui, default: "false", kind: bool, help: "Launch Gazebo GUI (false = headless)"}
+      - {key: world, default: lane_following_oval, kind: enum,
+         options: [lane_following_oval, lane_following_eight]}
+      - {key: n_envs, default: "8", kind: number, help: "Parallel envs"}
+      - {key: total_steps, default: "1000000", kind: number, help: "Train budget"}
+    presets:
+      - {name: quick smoke,   args: {gui: "false", n_envs: "2", total_steps: "20000"}}
+      - {name: full run,      args: {gui: "false", n_envs: "8", total_steps: "1000000"}}
+      - {name: debug visual,  args: {gui: "true",  n_envs: "1", total_steps: "5000"}}
+
+  cobraflex/gazebo:
+    tags: [Sim]
+    description: "Gazebo simulation with obstacles.world (basic URDF)"
+    args:
+      - {key: use_sim_time, default: "true", kind: bool}
+      - {key: rviz, default: "true", kind: bool}
+      - {key: world, default: obstacles.world, kind: string}
+
+  cobraflex/gazebo_mesh:
+    tags: [Sim]
+    description: "Gazebo with lane_following_oval.world + mesh URDF"
+    args:
+      - {key: use_sim_time, default: "true", kind: bool}
+      - {key: gui, default: "true", kind: bool}
+      - {key: rviz, default: "false", kind: bool}
+      - {key: start_paused, default: "false", kind: bool}
+      - {key: world, default: lane_following_oval, kind: enum,
+         options: [lane_following_oval, lane_following_eight]}
+
+  cobraflex/lane_keeper_gazebo:
+    tags: [Sim]
+    description: "Lane keeper standalone (no cage) in Gazebo"
+    args:
+      - {key: use_sim_time, default: "true", kind: bool}
+      - {key: use_rviz, default: "true", kind: bool}
+      - {key: launch_sim, default: "true", kind: bool}
+      - {key: show_debug_windows, default: "false", kind: bool}
+
+  cobraflex/mapping:
+    tags: [Sim]
+    description: "SLAM mapping in simulation with RViz"
+    args:
+      - {key: use_sim_time, default: "true", kind: bool}
+      - {key: rviz, default: "true", kind: bool}
+
+  cobraflex/navigation:
+    tags: [Sim]
+    description: "Nav2 + RViz in simulation"
+    args:
+      - {key: use_sim_time, default: "true", kind: bool}
+      - {key: rviz, default: "true", kind: bool}
+
+  cobraflex/description:
+    tags: [Utils]
+    description: "Robot description (URDF) + joint_state_publisher_gui + RViz"
+
+  cobraflex/rsp:
+    tags: [Utils]
+    description: "robot_state_publisher only"
+
+  cobraflex/cobraflex_bringup:
+    tags: [Hardware]
+    description: "Physical robot: description + serial driver"
+
+  cobraflex/cobraflex_driver:
+    tags: [Hardware]
+    description: "Serial driver for the CobraFlex JSON protocol (/dev/ttyACM1)"
+
+  cobraflex/cobraflex_description:
+    tags: [Hardware]
+    description: "Hardware URDF + RSP + JSP + optional RViz"
+
+  cobraflex/cobraflex_sensors:
+    tags: [Hardware]
+    description: "SLLIDAR A2M8 + ZED Mini camera drivers"
+
+  cobraflex/cobraflex_automatic:
+    tags: [Hardware]
+    description: "Sensors + lidar-based obstacle avoidance"
+
+  cobraflex/cobraflex_lane_keeper:
+    tags: [Hardware]
+    description: "Lane keeper on the physical robot"
+
+  cobraflex/cobraflex_mapping:
+    tags: [Hardware]
+    description: "SLAM mapping on the physical robot"

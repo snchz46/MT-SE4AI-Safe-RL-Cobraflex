@@ -1,4 +1,4 @@
-"""Backwards-compat shim: runs launch_gui.py in --mock mode."""
+"""Backwards-compat shim: runs the launch_gui package in --mock mode."""
 
 import sys
 from pathlib import Path

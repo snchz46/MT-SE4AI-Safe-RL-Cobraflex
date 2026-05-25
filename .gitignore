@@ -92,3 +92,5 @@ htmlcov/
 # Misc
 docs/.phases*
 docs/.temp_templates/
+tools/assets*
+tools/launch_gui*

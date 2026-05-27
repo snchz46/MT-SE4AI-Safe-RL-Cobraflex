@@ -40,6 +40,7 @@ from .model import Launch, LogEntry, build_command
 # Optional WebEngine — degrade gracefully on Essentials-only installs.
 try:
     from PySide6.QtCore import QUrl
+    from PySide6.QtWebEngineCore import QWebEngineSettings
     from PySide6.QtWebEngineWidgets import QWebEngineView
     _WEBENGINE_AVAILABLE = True
 except ImportError:
@@ -915,6 +916,10 @@ class WebEnginePage(QWidget):
             self._show_missing(f"Asset not found:\n{self._html_path}")
             return
         view = QWebEngineView()
+        # Allow file:// pages to load React/Babel/roslib from CDN.
+        view.settings().setAttribute(
+            QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True
+        )
         view.setUrl(QUrl.fromLocalFile(str(self._html_path)))
         self._layout.addWidget(view)
 

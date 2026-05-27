@@ -60,6 +60,11 @@ class Launch:
     presets: List[dict] = field(default_factory=list)
     _process: Optional[QProcess] = field(default=None, repr=False)
     _stopping: bool = field(default=False, repr=False)
+    _setsid_applied: bool = field(default=False, repr=False)
+    # PIDs of descendants that escaped the process group (e.g. gz sim).
+    # Populated at stop() so _force_kill_if_alive can reach them even after
+    # the ros2 launch parent process has already exited.
+    _stray_pids: List[int] = field(default_factory=list, repr=False)
 
 
 def args_to_overrides(args: List[dict]) -> List[str]:

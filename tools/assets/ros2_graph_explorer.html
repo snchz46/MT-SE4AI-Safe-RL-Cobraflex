@@ -2,1092 +2,633 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>COBRAFLEX · ROS2 Graph Explorer</title>
+<title>ROS2 Graph</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/roslib@1.3.0/build/roslib.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg: oklch(0.07 0.015 240);
-    --bg2: oklch(0.10 0.015 240);
-    --bg3: oklch(0.13 0.015 240);
-    --border: oklch(0.22 0.03 220);
-    --cyan: oklch(0.78 0.14 195);
-    --cyan-dim: oklch(0.45 0.10 195);
-    --cyan-glow: oklch(0.78 0.14 195 / 0.2);
-    --amber: oklch(0.78 0.14 65);
-    --amber-dim: oklch(0.45 0.10 65);
-    --amber-glow: oklch(0.78 0.14 65 / 0.2);
-    --red: oklch(0.65 0.18 25);
-    --green: oklch(0.72 0.15 155);
-    --text: oklch(0.88 0.02 220);
-    --text-dim: oklch(0.50 0.02 220);
-    --font-ui: 'Space Grotesk', sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
+  html, body { width:100%; height:100%; overflow:hidden; background:#0d1117; }
+  body { font-family: "Inter", "Segoe UI", sans-serif; font-size: 13px; color: #e6edf3; }
+  #root { width:100vw; height:100vh; display:flex; flex-direction:column; }
+
+  ::-webkit-scrollbar { width:6px; }
+  ::-webkit-scrollbar-track { background:#0d1117; }
+  ::-webkit-scrollbar-thumb { background:#21262d; border-radius:3px; }
+  ::-webkit-scrollbar-thumb:hover { background:#30363d; }
+
+  input { outline:none; font-family:inherit; }
+
+  /* Toolbar */
+  .toolbar {
+    background:#0d1117; border-bottom:1px solid #161b22;
+    display:flex; align-items:center; gap:10px;
+    padding:0 16px; height:38px; flex-shrink:0;
+    font-size:11px;
   }
-  html, body { width: 100%; height: 100%; background: var(--bg); overflow: hidden; }
-  body { font-family: var(--font-ui); color: var(--text); }
-  #root { width: 100vw; height: 100vh; display: flex; flex-direction: column; }
-  ::-webkit-scrollbar { width: 3px; }
-  ::-webkit-scrollbar-track { background: var(--bg2); }
-  ::-webkit-scrollbar-thumb { background: var(--border); }
-  input { outline: none; }
-  input::placeholder { color: var(--text-dim); }
-  @keyframes pulse-dot { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
-  @keyframes flow { from{stroke-dashoffset:20;} to{stroke-dashoffset:0;} }
+  .toolbar-sep { width:1px; height:16px; background:#21262d; }
+
+  /* Panels */
+  .panel {
+    background:#161b22; border:1px solid #21262d;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .panel-header {
+    padding:6px 10px; border-bottom:1px solid #21262d;
+    display:flex; align-items:center; gap:6px; flex-shrink:0;
+    background:#0d1117; font-size:10px; font-weight:600;
+    color:#8b949e; letter-spacing:0.06em; text-transform:uppercase;
+  }
+  .panel-header-dot {
+    width:6px; height:6px; border-radius:50%;
+  }
+  .panel-body { flex:1; overflow:hidden; min-height:0; }
+
+  /* Sidebar list items */
+  .list-item {
+    padding:5px 10px; cursor:pointer; border-left:2px solid transparent;
+    transition:background 0.1s;
+  }
+  .list-item:hover { background:rgba(255,255,255,0.04); }
+  .list-item.active { border-left-color:#2dd4bf; background:rgba(45,212,191,0.06); }
+  .list-item.active-topic { border-left-color:#d97706; background:rgba(217,119,6,0.06); }
+
+  /* Search input */
+  .search-wrap {
+    display:flex; align-items:center; gap:6px;
+    background:#0d1117; border:1px solid #21262d;
+    padding:3px 8px; border-radius:4px; margin:6px 8px;
+  }
+  .search-wrap:focus-within { border-color:#2dd4bf; }
+  .search-wrap input {
+    background:none; border:none; color:#e6edf3;
+    font-size:11px; font-family:"JetBrains Mono",monospace; flex:1; min-width:0;
+  }
+
+  /* Tabs inside sidebar */
+  .stab-bar { display:flex; border-bottom:1px solid #21262d; flex-shrink:0; }
+  .stab {
+    flex:1; padding:5px 0; background:none; border:none; cursor:pointer;
+    font-size:10px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase;
+    color:#6e7681; border-bottom:2px solid transparent;
+  }
+  .stab.active-nodes  { color:#2dd4bf; border-bottom-color:#2dd4bf; }
+  .stab.active-topics { color:#d97706; border-bottom-color:#d97706; }
+
+  /* Filter chips */
+  .chip {
+    background:transparent; border:1px solid #21262d; border-radius:12px;
+    color:#6e7681; padding:2px 10px; font-size:10px; font-weight:500;
+    cursor:pointer; font-family:inherit;
+  }
+  .chip:hover { border-color:#30363d; color:#c9d1d9; }
+  .chip.on { background:#0a2421; color:#2dd4bf; border-color:#1c4a44; }
+
+  /* Status pill */
+  .status-pill { display:flex; align-items:center; gap:5px; }
+  .status-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+
+  /* Inspector rows */
+  .insp-section { padding:8px 12px; border-top:1px solid #21262d; }
+  .insp-section:first-child { border-top:none; }
+  .insp-label { font-size:10px; font-weight:600; color:#6e7681; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px; }
+  .insp-value { font-size:11px; font-family:"JetBrains Mono",monospace; color:#e6edf3; word-break:break-all; line-height:1.5; }
+  .insp-type  { font-size:10px; font-family:"JetBrains Mono",monospace; color:#8b949e; margin-top:2px; }
+  .insp-row   {
+    padding:3px 8px; margin-bottom:2px; border-radius:3px;
+    font-size:10px; font-family:"JetBrains Mono",monospace; word-break:break-all; line-height:1.5;
+    border-left:2px solid;
+  }
+
+  /* Overlay */
+  .overlay {
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:10px; pointer-events:none;
+  }
+  .overlay-icon { font-size:28px; }
+  .overlay-title { font-size:12px; font-weight:500; color:#8b949e; }
+  .overlay-sub   { font-size:10px; font-family:"JetBrains Mono",monospace; color:#484f58; margin-top:2px; }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+  @keyframes spin  { to{transform:rotate(360deg)} }
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useRef, useCallback, useMemo } = React;
+const { useState, useEffect, useRef, useCallback } = React;
 
-// ── Real Cobraflex ROS2 Graph ────────────────────────────────────────
-// Extracted from: cobraflex_ros_driver.py, cobraflex_odom.py,
-//                 lidar_avoidance_pid_node.py, gz_bridge.yaml
-const DEMO_NODES = [
-  // ── Real robot nodes ──
-  { id: 'n_driver',    label: '/cobraflex_ros_driver',   type: 'rosnode', desc: 'Serial bridge to Waveshare Cobra Flex MCU via JSON protocol. Publishes battery, wheel feedback. Subscribes to /cmd_vel at 50Hz.' },
-  { id: 'n_odom',      label: '/cobraflex_odom',          type: 'rosnode', desc: 'Differential kinematics node. Computes velocity from wheel encoders (T=1001) and publishes IMU from T=1002 serial frames.' },
-  { id: 'n_avoidance', label: '/cobraflex_avoidance',     type: 'rosnode', desc: 'LiDAR obstacle avoidance with PID centering. FSM: FORWARD → TURN_LEFT / TURN_RIGHT. safe_distance=0.55m, forward_speed=0.45m/s.' },
-  { id: 'n_rsp',       label: '/robot_state_publisher',   type: 'rosnode', desc: 'Publishes /tf from URDF/Xacro Cobra Flex model. Transform tree: map→odom→base_footprint→base_link→body_link→sensors.' },
-  { id: 'n_slam',      label: '/slam_toolbox',            type: 'rosnode', desc: 'Async SLAM Toolbox. Processes /scan at 10Hz, /odom at 50Hz. Graph-based 2D occupancy map with loop closure.' },
-  { id: 'n_ekf',       label: '/ekf_filter_node',         type: 'rosnode', desc: 'robot_localization EKF. Fuses /cobraflex/vel_raw + /imu/data. Publishes /odom with covariance.' },
-  { id: 'n_planner',   label: '/nav2_planner',            type: 'rosnode', desc: 'NavFn global planner (Dijkstra). Subscribes to /map, /goal_pose, /odom. Publishes /plan.' },
-  { id: 'n_controller',label: '/nav2_controller',         type: 'rosnode', desc: 'DWB local controller (Dynamic Window Approach). Reads /plan, /odom, /scan. Outputs /cmd_vel.' },
-  { id: 'n_gz_bridge', label: '/ros_gz_bridge',           type: 'rosnode', desc: 'Gazebo Harmonic ↔ ROS2 bridge (gz_bridge.yaml). Bridges: /scan, /odom, /imu, /cmd_vel, /camera/image_raw, /joint_states.' },
-  { id: 'n_rviz',      label: '/rviz2',                   type: 'rosnode', desc: 'RViz2 visualization. Displays costmaps, planned paths, AMCL particles, LiDAR scan, TF tree.' },
-  { id: 'n_teleop',    label: '/teleop_keyboard',         type: 'rosnode', desc: 'teleop_twist_keyboard. Manual control during SLAM mapping.' },
+const API_URL = 'http://127.0.0.1:9091/api/ros2/graph';
+const POLL_MS = 3000;
 
-  // ── Real topics (from driver + gz_bridge + nav stack) ──
-  { id: 't_cmd',       label: '/cmd_vel',                 type: 'rostopic', msgType: 'geometry_msgs/Twist',                  hz: 20,  desc: 'Velocity commands. linear.x ∈ [-0.53, 0.53] m/s, angular.z ∈ [-6.0, 6.0] rad/s. JSON: {"T":13,"X":vx,"Z":wz} → MCU.' },
-  { id: 't_scan',      label: '/scan',                    type: 'rostopic', msgType: 'sensor_msgs/LaserScan',                hz: 10,  desc: 'RPLidar A2. 360° / 360 samples. range: 0.12–8.0m. angle_min=-π, angle_max=π, angle_increment=0.0175 rad.' },
-  { id: 't_odom',      label: '/odom',                    type: 'rostopic', msgType: 'nav_msgs/Odometry',                    hz: 50,  desc: 'Differential drive odometry from Gazebo DiffDrive plugin or EKF. Frame: odom→base_footprint.' },
-  { id: 't_imu',       label: '/imu/data',                type: 'rostopic', msgType: 'sensor_msgs/Imu',                      hz: 50,  desc: 'IMU from chassis serial T=1002 frame. Fields: gx/gy/gz (rad/s), ax/ay/az (m/s²). frame_id: imu_link.' },
-  { id: 't_velraw',    label: '/cobraflex/vel_raw',        type: 'rostopic', msgType: 'geometry_msgs/TwistWithCovarianceStamped', hz: 50, desc: 'Wheel encoder velocity. cov[0]=0.01 (linear), cov[35]=0.1 (angular, skid uncertainty). Input to EKF.' },
-  { id: 't_battery',   label: '/cobraflex/battery',        type: 'rostopic', msgType: 'std_msgs/Float32',                    hz: 1,   desc: 'Battery voltage from MCU feedback T=1001, field "v". Published by cobraflex_ros_driver and cobraflex_odom.' },
-  { id: 't_feedback',  label: '/cobraflex/feedback',       type: 'rostopic', msgType: 'std_msgs/String',                     hz: 50,  desc: 'Raw JSON debug stream from MCU. T=1001: motors+battery. T=1002: IMU. Parsed by driver node.' },
-  { id: 't_wheels',    label: '/cobraflex/wheel_speeds',   type: 'rostopic', msgType: 'geometry_msgs/Twist',                  hz: 50,  desc: 'Wheel encoder feedback. linear.x=left_wheel_v, linear.y=right_wheel_v (m/s). From serial T=1001 odl/odr fields.' },
-  { id: 't_map',       label: '/map',                      type: 'rostopic', msgType: 'nav_msgs/OccupancyGrid',               hz: 0.5, desc: 'SLAM Toolbox 2D occupancy grid. Async mode, 10Hz scan input, 50Hz odom input. Pose-graph with loop closure.' },
-  { id: 't_tf',        label: '/tf',                       type: 'rostopic', msgType: 'tf2_msgs/TFMessage',                   hz: 50,  desc: 'Transform tree. map→odom (AMCL), odom→base_footprint (DiffDrive), base_link→sensors (RSP from URDF).' },
-  { id: 't_goal',      label: '/goal_pose',                type: 'rostopic', msgType: 'geometry_msgs/PoseStamped',            hz: 0.1, desc: 'Navigation goal. Published by RViz2 "2D Goal Pose" tool. frame_id: map.' },
-  { id: 't_plan',      label: '/plan',                     type: 'rostopic', msgType: 'nav_msgs/Path',                        hz: 1,   desc: 'Global path from NavFn (Dijkstra). frame_id: map.' },
-  { id: 't_camera',    label: '/camera/image_raw',         type: 'rostopic', msgType: 'sensor_msgs/Image',                   hz: 30,  desc: 'ZED Mini stereo camera. 2K resolution, 100fps max, 0.15–15m depth range. Bridged from Gazebo.' },
-  { id: 't_caminfo',   label: '/camera/camera_info',       type: 'rostopic', msgType: 'sensor_msgs/CameraInfo',              hz: 30,  desc: 'ZED Mini camera intrinsics. Bridged via gz_bridge.' },
-  { id: 't_joints',    label: '/joint_states',             type: 'rostopic', msgType: 'sensor_msgs/JointState',              hz: 50,  desc: 'Wheel joint states from Gazebo JointState plugin. Bridged to ROS2.' },
-  { id: 't_costmap',   label: '/local_costmap/costmap',    type: 'rostopic', msgType: 'nav_msgs/OccupancyGrid',              hz: 2,   desc: 'DWB local costmap with obstacle + inflation layers. Used by nav2_controller.' },
-];
+// Hex colors for canvas (CSS variables don't work in canvas fillStyle)
+const C = {
+  bg:       '#0d1117',
+  bg2:      '#161b22',
+  border:   '#21262d',
+  border2:  '#30363d',
+  cyan:     '#2dd4bf',
+  cyanA:    (a) => `rgba(45,212,191,${a})`,
+  amber:    '#d97706',
+  amberA:   (a) => `rgba(217,119,6,${a})`,
+  text:     '#e6edf3',
+  textDim:  '#8b949e',
+  textDim2: '#484f58',
+};
 
-const DEMO_EDGES = [
-  // cobraflex_ros_driver
-  { s: 'n_driver',    t: 't_battery',  k: 'pub' },
-  { s: 'n_driver',    t: 't_feedback', k: 'pub' },
-  { s: 'n_driver',    t: 't_wheels',   k: 'pub' },
-  { s: 't_cmd',       t: 'n_driver',   k: 'sub' },
-
-  // cobraflex_odom
-  { s: 'n_odom',      t: 't_velraw',   k: 'pub' },
-  { s: 'n_odom',      t: 't_imu',      k: 'pub' },
-  { s: 'n_odom',      t: 't_battery',  k: 'pub' },
-  { s: 't_cmd',       t: 'n_odom',     k: 'sub' },
-
-  // avoidance node
-  { s: 't_scan',      t: 'n_avoidance',k: 'sub' },
-  { s: 'n_avoidance', t: 't_cmd',      k: 'pub' },
-
-  // robot_state_publisher
-  { s: 'n_rsp',       t: 't_tf',       k: 'pub' },
-  { s: 't_joints',    t: 'n_rsp',      k: 'sub' },
-
-  // EKF
-  { s: 't_velraw',    t: 'n_ekf',      k: 'sub' },
-  { s: 't_imu',       t: 'n_ekf',      k: 'sub' },
-  { s: 'n_ekf',       t: 't_odom',     k: 'pub' },
-
-  // SLAM Toolbox
-  { s: 't_scan',      t: 'n_slam',     k: 'sub' },
-  { s: 't_odom',      t: 'n_slam',     k: 'sub' },
-  { s: 'n_slam',      t: 't_map',      k: 'pub' },
-  { s: 'n_slam',      t: 't_tf',       k: 'pub' },
-
-  // Nav2 planner
-  { s: 't_map',       t: 'n_planner',  k: 'sub' },
-  { s: 't_goal',      t: 'n_planner',  k: 'sub' },
-  { s: 't_odom',      t: 'n_planner',  k: 'sub' },
-  { s: 'n_planner',   t: 't_plan',     k: 'pub' },
-
-  // Nav2 controller
-  { s: 't_plan',      t: 'n_controller', k: 'sub' },
-  { s: 't_odom',      t: 'n_controller', k: 'sub' },
-  { s: 't_scan',      t: 'n_controller', k: 'sub' },
-  { s: 'n_controller',t: 't_cmd',        k: 'pub' },
-  { s: 'n_controller',t: 't_costmap',    k: 'pub' },
-
-  // Gazebo bridge
-  { s: 'n_gz_bridge', t: 't_scan',     k: 'pub' },
-  { s: 'n_gz_bridge', t: 't_odom',     k: 'pub' },
-  { s: 'n_gz_bridge', t: 't_imu',      k: 'pub' },
-  { s: 'n_gz_bridge', t: 't_camera',   k: 'pub' },
-  { s: 'n_gz_bridge', t: 't_caminfo',  k: 'pub' },
-  { s: 'n_gz_bridge', t: 't_joints',   k: 'pub' },
-  { s: 't_cmd',       t: 'n_gz_bridge',k: 'sub' },
-
-  // teleop
-  { s: 'n_teleop',    t: 't_cmd',      k: 'pub' },
-
-  // RViz2
-  { s: 'n_rviz',      t: 't_goal',     k: 'pub' },
-  { s: 't_scan',      t: 'n_rviz',     k: 'sub' },
-  { s: 't_map',       t: 'n_rviz',     k: 'sub' },
-  { s: 't_odom',      t: 'n_rviz',     k: 'sub' },
-  { s: 't_plan',      t: 'n_rviz',     k: 'sub' },
-  { s: 't_costmap',   t: 'n_rviz',     k: 'sub' },
-  { s: 't_tf',        t: 'n_rviz',     k: 'sub' },
-  { s: 't_camera',    t: 'n_rviz',     k: 'sub' },
-];
-
-// ── Corner Decorations ──────────────────────────────────────────────
-function Corners({ size = 8, color = 'var(--cyan)', t = 1.5 }) {
-  const s = { position: 'absolute', width: size, height: size, borderColor: color, borderStyle: 'solid', borderWidth: 0 };
-  return <>
-    <span style={{ ...s, top: 0, left: 0, borderTopWidth: t, borderLeftWidth: t }} />
-    <span style={{ ...s, top: 0, right: 0, borderTopWidth: t, borderRightWidth: t }} />
-    <span style={{ ...s, bottom: 0, left: 0, borderBottomWidth: t, borderLeftWidth: t }} />
-    <span style={{ ...s, bottom: 0, right: 0, borderBottomWidth: t, borderRightWidth: t }} />
-  </>;
-}
-
-function Panel({ title, children, style, accent = 'cyan', extra }) {
-  const ac = accent === 'amber' ? 'var(--amber)' : 'var(--cyan)';
-  return (
-    <div style={{ position: 'relative', background: 'var(--bg2)', border: '1px solid var(--border)',
-      display: 'flex', flexDirection: 'column', overflow: 'hidden', ...style }}>
-      <Corners color={ac} />
-      {title && <div style={{ padding: '5px 10px', borderBottom: '1px solid var(--border)',
-        display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0, background: 'oklch(0 0 0 / 0.2)' }}>
-        <span style={{ width: 5, height: 5, background: ac, clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)' }} />
-        <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: ac, letterSpacing: '0.12em', textTransform: 'uppercase' }}>{title}</span>
-        {extra && <span style={{ marginLeft: 'auto' }}>{extra}</span>}
-      </div>}
-      <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>{children}</div>
-    </div>
-  );
-}
-
-// ── Force Simulation ────────────────────────────────────────────────
+// ── Force simulation ──────────────────────────────────────────────────────────
 function initPositions(nodes) {
   return nodes.map((n, i) => {
     const angle = (i / nodes.length) * Math.PI * 2;
-    const r = n.type === 'rosnode' ? 220 : 130;
-    return { ...n, x: Math.cos(angle) * r, y: Math.sin(angle) * r, vx: 0, vy: 0, pinned: false };
+    const r = n.type === 'rosnode' ? 220 : 120;
+    return { ...n, x: Math.cos(angle) * r, y: Math.sin(angle) * r, vx:0, vy:0, pinned:false };
   });
 }
 
-function tickForce(nodes, edges, alpha = 0.3) {
-  const k_rep = 3500, k_spring = 0.04, rest = 140, damping = 0.78;
-  // Repulsion
-  for (let i = 0; i < nodes.length; i++) {
-    for (let j = i + 1; j < nodes.length; j++) {
-      const dx = nodes[i].x - nodes[j].x, dy = nodes[i].y - nodes[j].y;
-      const d2 = Math.max(dx * dx + dy * dy, 100);
-      const f = k_rep / d2;
-      const fx = (dx / Math.sqrt(d2)) * f, fy = (dy / Math.sqrt(d2)) * f;
-      if (!nodes[i].pinned) { nodes[i].vx += fx * alpha; nodes[i].vy += fy * alpha; }
-      if (!nodes[j].pinned) { nodes[j].vx -= fx * alpha; nodes[j].vy -= fy * alpha; }
+function tickForce(nodes, edges, alpha) {
+  const k_rep=5000, k_spring=0.04, rest=150, damping=0.78;
+  for (let i=0; i<nodes.length; i++) {
+    for (let j=i+1; j<nodes.length; j++) {
+      const dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y;
+      const d2=Math.max(dx*dx+dy*dy,100), inv=1/Math.sqrt(d2);
+      const f=(k_rep/d2)*alpha;
+      if (!nodes[i].pinned){nodes[i].vx+=dx*inv*f; nodes[i].vy+=dy*inv*f;}
+      if (!nodes[j].pinned){nodes[j].vx-=dx*inv*f; nodes[j].vy-=dy*inv*f;}
     }
   }
-  // Springs
-  const idx = Object.fromEntries(nodes.map(n => [n.id, n]));
+  const idx=Object.fromEntries(nodes.map(n=>[n.id,n]));
   for (const e of edges) {
-    const a = idx[e.s], b = idx[e.t];
-    if (!a || !b) continue;
-    const dx = b.x - a.x, dy = b.y - a.y;
-    const d = Math.sqrt(dx * dx + dy * dy) || 1;
-    const f = k_spring * (d - rest);
-    const fx = (dx / d) * f, fy = (dy / d) * f;
-    if (!a.pinned) { a.vx += fx * alpha; a.vy += fy * alpha; }
-    if (!b.pinned) { b.vx -= fx * alpha; b.vy -= fy * alpha; }
+    const a=idx[e.s], b=idx[e.t];
+    if (!a||!b) continue;
+    const dx=b.x-a.x, dy=b.y-a.y, d=Math.sqrt(dx*dx+dy*dy)||1;
+    const f=k_spring*(d-rest)*alpha;
+    const fx=(dx/d)*f, fy=(dy/d)*f;
+    if (!a.pinned){a.vx+=fx; a.vy+=fy;}
+    if (!b.pinned){b.vx-=fx; b.vy-=fy;}
   }
-  // Center gravity + damping + integrate
   for (const n of nodes) {
     if (n.pinned) continue;
-    n.vx += -n.x * 0.003 * alpha;
-    n.vy += -n.y * 0.003 * alpha;
-    n.vx *= damping; n.vy *= damping;
-    n.x += n.vx; n.y += n.vy;
+    n.vx+=(-n.x*0.003)*alpha; n.vy+=(-n.y*0.003)*alpha;
+    n.vx*=damping; n.vy*=damping;
+    n.x+=n.vx; n.y+=n.vy;
   }
 }
 
-// ── Graph Canvas ─────────────────────────────────────────────────────
-function GraphCanvas({ graphNodes, graphEdges, selected, onSelect, activeTopics }) {
+// ── Graph canvas ──────────────────────────────────────────────────────────────
+function GraphCanvas({ graphNodes, graphEdges, selected, onSelect, filterMode }) {
   const canvasRef = useRef(null);
-  const stateRef = useRef({ nodes: [], pan: { x: 0, y: 0 }, scale: 1, drag: null, hover: null, frame: null, animAlpha: 1 });
-  const selectedRef = useRef(selected);
-  useEffect(() => { selectedRef.current = selected; }, [selected]);
-  const activeRef = useRef(activeTopics);
-  useEffect(() => { activeRef.current = activeTopics; }, [activeTopics]);
+  const st = useRef({ nodes:[], pan:{x:0,y:0}, scale:1, drag:null, hover:null, frame:null });
+  const selRef = useRef(selected);
+  useEffect(()=>{ selRef.current=selected; }, [selected]);
 
-  // Init nodes on data change
-  useEffect(() => {
-    stateRef.current.nodes = initPositions(graphNodes);
-  }, [graphNodes.map(n => n.id).join(',')]);
+  const nodeKey = graphNodes.map(n=>n.id).join(',');
+  useEffect(()=>{ st.current.nodes=initPositions(graphNodes); }, [nodeKey]);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const st = stateRef.current;
-    let tickCount = 0;
+  function isHidden(n) {
+    if (!n) return false;
+    if (filterMode==='nodes'  && n.type==='rostopic') return true;
+    if (filterMode==='topics' && n.type==='rosnode')  return true;
+    return false;
+  }
 
-    function hexPath(ctx, cx, cy, r) {
+  useEffect(()=>{
+    const canvas=canvasRef.current; if (!canvas) return;
+    const s=st.current;
+    let tick=0;
+
+    function hexPath(ctx,cx,cy,r){
       ctx.beginPath();
-      for (let i = 0; i < 6; i++) {
-        const a = (Math.PI / 3) * i - Math.PI / 6;
-        i === 0 ? ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a))
-                : ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
-      }
+      for(let i=0;i<6;i++){const a=(Math.PI/3)*i-Math.PI/6; i===0?ctx.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a)):ctx.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));}
       ctx.closePath();
     }
-
-    function drawArrow(ctx, x1, y1, x2, y2, color, dashed) {
-      const dx = x2 - x1, dy = y2 - y1;
-      const len = Math.sqrt(dx * dx + dy * dy) || 1;
-      const ux = dx / len, uy = dy / len;
-      const size = 6;
-      const ax = x2 - ux * size, ay = y2 - uy * size;
-      const px = -uy * size * 0.5, py = ux * size * 0.5;
-      ctx.beginPath();
-      ctx.moveTo(ax + px, ay + py);
-      ctx.lineTo(x2, y2);
-      ctx.lineTo(ax - px, ay - py);
-      ctx.closePath();
-      ctx.fillStyle = color; ctx.fill();
+    function arrow(ctx,x2,y2,ux,uy,color){
+      const sz=6,ax=x2-ux*sz,ay=y2-uy*sz,px=-uy*sz*.45,py=ux*sz*.45;
+      ctx.beginPath(); ctx.moveTo(ax+px,ay+py); ctx.lineTo(x2,y2); ctx.lineTo(ax-px,ay-py);
+      ctx.closePath(); ctx.fillStyle=color; ctx.fill();
+    }
+    function neighbors(selId){
+      if(!selId) return null;
+      const ids=new Set([selId]);
+      for(const e of graphEdges){if(e.s===selId)ids.add(e.t);if(e.t===selId)ids.add(e.s);}
+      return ids;
     }
 
-    function render() {
-      const W = canvas.offsetWidth, H = canvas.offsetHeight;
-      if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, W, H);
+    function render(){
+      const W=canvas.offsetWidth, H=canvas.offsetHeight;
+      if(canvas.width!==W||canvas.height!==H){canvas.width=W;canvas.height=H;}
+      const ctx=canvas.getContext('2d');
+      ctx.clearRect(0,0,W,H);
 
       // Dot grid background
       ctx.save();
-      const dotSpacing = 28 * st.scale;
-      const offX = ((st.pan.x % dotSpacing) + dotSpacing) % dotSpacing;
-      const offY = ((st.pan.y % dotSpacing) + dotSpacing) % dotSpacing;
-      ctx.fillStyle = 'oklch(0.22 0.03 220 / 0.4)';
-      for (let x = offX - dotSpacing; x < W + dotSpacing; x += dotSpacing)
-        for (let y = offY - dotSpacing; y < H + dotSpacing; y += dotSpacing) {
-          ctx.beginPath(); ctx.arc(x, y, 1, 0, Math.PI * 2); ctx.fill();
-        }
+      const ds=32*s.scale;
+      const ox=((s.pan.x%ds)+ds)%ds, oy=((s.pan.y%ds)+ds)%ds;
+      ctx.fillStyle='rgba(33,38,45,0.6)';
+      for(let x=ox-ds;x<W+ds;x+=ds) for(let y=oy-ds;y<H+ds;y+=ds){
+        ctx.beginPath();ctx.arc(x,y,1,0,Math.PI*2);ctx.fill();
+      }
       ctx.restore();
 
-      const { pan, scale } = st;
       ctx.save();
-      ctx.translate(pan.x + W / 2, pan.y + H / 2);
-      ctx.scale(scale, scale);
+      ctx.translate(s.pan.x+W/2, s.pan.y+H/2);
+      ctx.scale(s.scale,s.scale);
 
-      const nodeMap = Object.fromEntries(st.nodes.map(n => [n.id, n]));
-      const t = Date.now() / 1000;
+      const nmap=Object.fromEntries(s.nodes.map(n=>[n.id,n]));
+      const sel=selRef.current;
+      const conn=neighbors(sel);
+      const t=Date.now()/1000;
 
-      // Draw edges
-      for (const e of graphEdges) {
-        const a = nodeMap[e.s], b = nodeMap[e.t];
-        if (!a || !b) continue;
-        const isSelected = selectedRef.current && (e.s === selectedRef.current || e.t === selectedRef.current);
-        const color = e.k === 'pub' ? 'var(--cyan)' : 'var(--amber)';
-        const colorDim = e.k === 'pub' ? 'oklch(0.45 0.10 195 / 0.4)' : 'oklch(0.45 0.10 65 / 0.4)';
-        const colorBright = e.k === 'pub' ? 'oklch(0.78 0.14 195 / 0.85)' : 'oklch(0.78 0.14 65 / 0.85)';
-        const alpha = isSelected ? 1 : 0.35;
-        const dx = b.x - a.x, dy = b.y - a.y;
-        const len = Math.sqrt(dx * dx + dy * dy) || 1;
-        const ux = dx / len, uy = dy / len;
-        // Shorten to node boundary
-        const startR = a.type === 'rosnode' ? 20 : 12;
-        const endR = b.type === 'rosnode' ? 20 : 12;
-        const x1 = a.x + ux * startR, y1 = a.y + uy * startR;
-        const x2 = b.x - ux * (endR + 7), y2 = b.y - uy * (endR + 7);
-        const lg = ctx.createLinearGradient(x1, y1, x2, y2);
-        lg.addColorStop(0, e.k === 'pub' ? `oklch(0.78 0.14 195 / ${alpha})` : `oklch(0.78 0.14 65 / ${alpha * 0.4})`);
-        lg.addColorStop(1, e.k === 'pub' ? `oklch(0.78 0.14 195 / ${alpha * 0.4})` : `oklch(0.78 0.14 65 / ${alpha})`);
-        ctx.beginPath();
-        ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
-        if (isSelected) {
-          ctx.setLineDash([5, 4]);
-          ctx.lineDashOffset = -(t * 14) % 9;
-        } else {
-          ctx.setLineDash([]);
-        }
-        ctx.strokeStyle = lg;
-        ctx.lineWidth = isSelected ? 1.5 : 0.8;
-        ctx.stroke();
-        ctx.setLineDash([]);
-        // Arrow
-        ctx.save();
-        ctx.globalAlpha = isSelected ? 0.9 : 0.4;
-        drawArrow(ctx, x1, y1, b.x - ux * endR, b.y - uy * endR,
-          e.k === 'pub' ? 'oklch(0.78 0.14 195)' : 'oklch(0.78 0.14 65)');
+      // Edges
+      for(const e of graphEdges){
+        const a=nmap[e.s], b=nmap[e.t];
+        if(!a||!b||isHidden(a)||isHidden(b)) continue;
+        const hi=conn&&conn.has(e.s)&&conn.has(e.t);
+        const alp=conn?(hi?.9:.05):.45;
+        const isPub=e.k==='pub';
+        const dx=b.x-a.x, dy=b.y-a.y, len=Math.sqrt(dx*dx+dy*dy)||1;
+        const ux=dx/len, uy=dy/len;
+        const sr=a.type==='rosnode'?22:12, er=b.type==='rosnode'?22:12;
+        const x1=a.x+ux*sr, y1=a.y+uy*sr;
+        const x2=b.x-ux*(er+7), y2=b.y-uy*(er+7);
+
+        ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
+        if(hi){ctx.setLineDash([5,4]); ctx.lineDashOffset=-(t*14)%9;}
+        else   ctx.setLineDash([]);
+        ctx.strokeStyle=isPub?C.cyanA(alp):C.amberA(alp);
+        ctx.lineWidth=hi?1.5:.8; ctx.stroke(); ctx.setLineDash([]);
+
+        ctx.save(); ctx.globalAlpha=conn?(hi?.9:.05):.4;
+        arrow(ctx,b.x-ux*er,b.y-uy*er,ux,uy,isPub?C.cyan:C.amber);
         ctx.restore();
       }
 
-      // Draw nodes
-      for (const n of st.nodes) {
-        const isHover = st.hover === n.id;
-        const isSel = selectedRef.current === n.id;
-        const isActive = activeRef.current.has(n.id);
-        const isNode = n.type === 'rosnode';
-        ctx.save();
-        if (isSel) {
-          ctx.shadowColor = isNode ? 'oklch(0.78 0.14 195)' : 'oklch(0.78 0.14 65)';
-          ctx.shadowBlur = 20;
-        }
-        // Glow ring for selected
-        if (isSel) {
+      // Nodes
+      for(const n of s.nodes){
+        if(isHidden(n)) continue;
+        const isHov=s.hover===n.id, isSel=sel===n.id;
+        const dim=conn&&!conn.has(n.id);
+        const isNode=n.type==='rosnode';
+
+        ctx.save(); ctx.globalAlpha=dim?.12:1;
+
+        // Glow ring on selected
+        if(isSel){
+          ctx.shadowColor=isNode?C.cyan:C.amber; ctx.shadowBlur=16;
           ctx.beginPath();
-          if (isNode) hexPath(ctx, n.x, n.y, 28);
-          else ctx.arc(n.x, n.y, 20, 0, Math.PI * 2);
-          ctx.strokeStyle = isNode ? 'oklch(0.78 0.14 195 / 0.3)' : 'oklch(0.78 0.14 65 / 0.3)';
-          ctx.lineWidth = 8; ctx.stroke();
+          if(isNode) hexPath(ctx,n.x,n.y,30); else ctx.arc(n.x,n.y,20,0,Math.PI*2);
+          ctx.strokeStyle=isNode?C.cyanA(.25):C.amberA(.25);
+          ctx.lineWidth=8; ctx.stroke(); ctx.shadowBlur=0;
         }
+
         // Body
         ctx.beginPath();
-        if (isNode) hexPath(ctx, n.x, n.y, 22);
-        else ctx.arc(n.x, n.y, 14, 0, Math.PI * 2);
-        ctx.fillStyle = isNode
-          ? (isSel ? 'oklch(0.14 0.04 220)' : 'oklch(0.11 0.03 220)')
-          : (isSel ? 'oklch(0.14 0.04 50)' : 'oklch(0.11 0.03 50)');
+        if(isNode) hexPath(ctx,n.x,n.y,22); else ctx.arc(n.x,n.y,12,0,Math.PI*2);
+        ctx.fillStyle=isSel?(isNode?'#0a2421':'#2a1f0a'):C.bg2;
         ctx.fill();
-        ctx.strokeStyle = isNode
-          ? (isSel || isHover ? 'oklch(0.78 0.14 195)' : 'oklch(0.35 0.08 195)')
-          : (isSel || isHover ? 'oklch(0.78 0.14 65)' : 'oklch(0.35 0.08 65)');
-        ctx.lineWidth = isSel ? 1.5 : 0.8;
-        ctx.stroke();
-        // Activity dot
-        if (isActive) {
-          ctx.beginPath(); ctx.arc(n.x + (isNode ? 16 : 10), n.y - (isNode ? 16 : 10), 3, 0, Math.PI * 2);
-          ctx.fillStyle = 'var(--green)'; ctx.fill();
-        }
+        ctx.strokeStyle=isNode
+          ?(isSel||isHov?C.cyan:'#30363d')
+          :(isSel||isHov?C.amber:'#30363d');
+        ctx.lineWidth=isSel?1.5:.8; ctx.stroke();
         ctx.restore();
-        // Label
-        ctx.save();
-        ctx.font = `${isSel ? '500 ' : ''}${isNode ? 9 : 8}px JetBrains Mono, monospace`;
-        ctx.textAlign = 'center';
-        const labelY = isNode ? n.y + 36 : n.y + 26;
-        // Background for label
-        const label = n.label.replace(/^\//, '');
-        const tw = ctx.measureText(label).width;
-        ctx.fillStyle = 'oklch(0.07 0.015 240 / 0.8)';
-        ctx.fillRect(n.x - tw / 2 - 3, labelY - 9, tw + 6, 13);
-        ctx.fillStyle = isSel
-          ? (isNode ? 'var(--cyan)' : 'var(--amber)')
-          : (isHover ? 'var(--text)' : 'var(--text-dim)');
-        ctx.fillText(label, n.x, labelY);
+
+        // Label — use text shadow for legibility (no opaque rectangle)
+        ctx.save(); ctx.globalAlpha=dim?.12:1;
+        ctx.font=`${isSel?'500 ':''} ${isNode?9:8}px "JetBrains Mono",monospace`;
+        ctx.textAlign='center';
+        const ly=isNode?n.y+37:n.y+24;
+        const lbl=n.label.replace(/^\//,'');
+        ctx.shadowColor=C.bg; ctx.shadowBlur=5; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
+        // draw shadow pass twice for more opacity
+        ctx.fillStyle=C.bg;
+        ctx.fillText(lbl,n.x,ly); ctx.fillText(lbl,n.x,ly);
+        ctx.shadowBlur=0;
+        ctx.fillStyle=isSel?(isNode?C.cyan:C.amber):(isHov?C.text:C.textDim);
+        ctx.fillText(lbl,n.x,ly);
         ctx.restore();
       }
-      ctx.restore();
 
-      tickCount++;
-      if (tickCount < 300) tickForce(st.nodes, graphEdges, tickCount < 50 ? 0.5 : 0.2);
-      st.frame = requestAnimationFrame(render);
+      ctx.restore();
+      tick++;
+      if(tick<320) tickForce(s.nodes,graphEdges,tick<70?.5:.18);
+      s.frame=requestAnimationFrame(render);
     }
 
     render();
-    return () => cancelAnimationFrame(st.frame);
-  }, [graphEdges]);
+    return()=>cancelAnimationFrame(s.frame);
+  }, [graphEdges, filterMode]);
 
-  // Mouse events
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const st = stateRef.current;
+  // Mouse interaction
+  useEffect(()=>{
+    const canvas=canvasRef.current; if(!canvas) return;
+    const s=st.current;
 
-    function screenToGraph(mx, my) {
-      const W = canvas.offsetWidth, H = canvas.offsetHeight;
-      return { x: (mx - W / 2 - st.pan.x) / st.scale, y: (my - H / 2 - st.pan.y) / st.scale };
-    }
-    function hitTest(mx, my) {
-      const g = screenToGraph(mx, my);
-      let best = null, bestD = 28;
-      for (const n of st.nodes) {
-        const d = Math.sqrt((n.x - g.x) ** 2 + (n.y - g.y) ** 2);
-        const r = n.type === 'rosnode' ? 26 : 18;
-        if (d < r && d < bestD) { bestD = d; best = n; }
-      }
+    function toG(mx,my){const W=canvas.offsetWidth,H=canvas.offsetHeight; return{x:(mx-W/2-s.pan.x)/s.scale,y:(my-H/2-s.pan.y)/s.scale};}
+    function hit(mx,my){
+      const g=toG(mx,my); let best=null,bd=30;
+      for(const n of s.nodes){const d=Math.hypot(n.x-g.x,n.y-g.y),r=n.type==='rosnode'?26:17; if(d<r&&d<bd){bd=d;best=n;}}
       return best;
     }
-    let panStart = null, wasDragging = false;
+    let pan0=null,drag=false;
+    function dn(e){const h=hit(e.offsetX,e.offsetY);if(h){s.drag={n:h};h.pinned=true;drag=false;}else{pan0={x:e.offsetX,y:e.offsetY,px:s.pan.x,py:s.pan.y};drag=false;}}
+    function mv(e){
+      if(s.drag){const g=toG(e.offsetX,e.offsetY);s.drag.n.x=g.x;s.drag.n.y=g.y;s.drag.n.vx=0;s.drag.n.vy=0;drag=true;}
+      else if(pan0){s.pan.x=pan0.px+(e.offsetX-pan0.x);s.pan.y=pan0.py+(e.offsetY-pan0.y);drag=true;}
+      else{const h=hit(e.offsetX,e.offsetY);s.hover=h?h.id:null;canvas.style.cursor=h?'pointer':'grab';}
+    }
+    function up(e){
+      if(s.drag){s.drag.n.pinned=false;if(!drag)onSelect(s.drag.n);s.drag=null;}
+      else if(pan0){if(!drag)onSelect(null);pan0=null;}
+      drag=false;
+    }
+    function wh(e){e.preventDefault();s.scale=Math.max(.2,Math.min(6,s.scale*(e.deltaY<0?1.1:.91)));}
+    function dbl(e){if(!hit(e.offsetX,e.offsetY)){s.pan={x:0,y:0};s.scale=1;}}
 
-    function onDown(e) {
-      const mx = e.offsetX, my = e.offsetY;
-      const hit = hitTest(mx, my);
-      if (hit) {
-        st.drag = { node: hit, startX: mx, startY: my };
-        hit.pinned = true;
-        wasDragging = false;
-      } else {
-        panStart = { x: mx, y: my, px: st.pan.x, py: st.pan.y };
-        wasDragging = false;
-      }
-    }
-    function onMove(e) {
-      const mx = e.offsetX, my = e.offsetY;
-      if (st.drag) {
-        const g = screenToGraph(mx, my);
-        st.drag.node.x = g.x; st.drag.node.y = g.y;
-        st.drag.node.vx = 0; st.drag.node.vy = 0;
-        wasDragging = true;
-      } else if (panStart) {
-        st.pan.x = panStart.px + (mx - panStart.x);
-        st.pan.y = panStart.py + (my - panStart.y);
-        wasDragging = true;
-      } else {
-        const hit = hitTest(mx, my);
-        st.hover = hit ? hit.id : null;
-        canvas.style.cursor = hit ? 'pointer' : 'grab';
-        if (onHover) {
-          const rect = canvas.getBoundingClientRect();
-          onHover(hit || null, e.clientX, e.clientY);
-        }
-      }
-    }
-    function onUp(e) {
-      if (st.drag) {
-        st.drag.node.pinned = false;
-        if (!wasDragging) onSelect(st.drag.node);
-        st.drag = null;
-      } else if (panStart) {
-        if (!wasDragging) onSelect(null);
-        panStart = null;
-      }
-      wasDragging = false;
-    }
-    function onWheel(e) {
-      e.preventDefault();
-      const factor = e.deltaY < 0 ? 1.1 : 0.91;
-      st.scale = Math.max(0.3, Math.min(4, st.scale * factor));
-    }
-
-    canvas.addEventListener('mousedown', onDown);
-    canvas.addEventListener('mousemove', onMove);
-    canvas.addEventListener('mouseup', onUp);
-    canvas.addEventListener('wheel', onWheel, { passive: false });
-    canvas.style.cursor = 'grab';
-    return () => {
-      canvas.removeEventListener('mousedown', onDown);
-      canvas.removeEventListener('mousemove', onMove);
-      canvas.removeEventListener('mouseup', onUp);
-      canvas.removeEventListener('wheel', onWheel);
+    canvas.addEventListener('mousedown',dn);
+    canvas.addEventListener('mousemove',mv);
+    canvas.addEventListener('mouseup',up);
+    canvas.addEventListener('wheel',wh,{passive:false});
+    canvas.addEventListener('dblclick',dbl);
+    canvas.style.cursor='grab';
+    return()=>{
+      canvas.removeEventListener('mousedown',dn);
+      canvas.removeEventListener('mousemove',mv);
+      canvas.removeEventListener('mouseup',up);
+      canvas.removeEventListener('wheel',wh);
+      canvas.removeEventListener('dblclick',dbl);
     };
-  }, [onSelect]);
+  },[onSelect]);
 
-  return <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />;
+  return <canvas ref={canvasRef} style={{width:'100%',height:'100%',display:'block'}}/>;
 }
 
-// ── Topic List Sidebar ────────────────────────────────────────────────
-function TopicList({ nodes, edges, selected, onSelect, activeTopics }) {
-  const topics = nodes.filter(n => n.type === 'rostopic');
-  const rosNodes = nodes.filter(n => n.type === 'rosnode');
-  const [tab, setTab] = useState('topics');
-  const items = tab === 'topics' ? topics : rosNodes;
-
-  return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-        {['topics', 'nodes'].map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{
-            flex: 1, padding: '6px 0', background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase',
-            color: tab === t ? (t === 'topics' ? 'var(--amber)' : 'var(--cyan)') : 'var(--text-dim)',
-            borderBottom: tab === t ? `2px solid ${t === 'topics' ? 'var(--amber)' : 'var(--cyan)'}` : '2px solid transparent',
-          }}>{t} <span style={{ opacity: 0.6 }}>({t === 'topics' ? topics.length : rosNodes.length})</span></button>
-        ))}
+// ── Overlay (empty / offline state) ──────────────────────────────────────────
+function Overlay({status, error}){
+  if(status==='live') return null;
+  const cfg={
+    warming:{spin:true,  color:'#8b949e', title:'Connecting to ROS2…',  sub:'starting graph server'},
+    empty:  {spin:false, color:'#d97706', title:'No nodes detected',     sub:'start a ros2 launch to see the graph'},
+    offline:{spin:false, color:'#f85149', title:'ROS2 not available',    sub: error||'source /opt/ros/jazzy/setup.bash'},
+  }[status]||{spin:false,color:'#8b949e',title:'…',sub:''};
+  return(
+    <div className="overlay">
+      <div style={{fontSize:26,color:cfg.color,animation:cfg.spin?'spin 1.5s linear infinite':'none',lineHeight:1}}>
+        {status==='offline'?'✕':status==='empty'?'○':'◌'}
       </div>
-      {/* List */}
-      <div style={{ flex: 1, overflow: 'auto', padding: '4px 0' }}>
-        {items.map(n => {
-          const isSel = selected === n.id;
-          const isActive = activeTopics.has(n.id);
-          const pubs = edges.filter(e => e.s === n.id || (e.k === 'pub' && e.t === n.id)).length;
-          const subs = edges.filter(e => e.t === n.id || (e.k === 'sub' && e.s === n.id)).length;
-          return (
-            <div key={n.id} onClick={() => onSelect(isSel ? null : n)} style={{
-              padding: '5px 10px', cursor: 'pointer', position: 'relative',
-              borderLeft: `2px solid ${isSel ? (tab === 'topics' ? 'var(--amber)' : 'var(--cyan)') : 'transparent'}`,
-              background: isSel ? 'oklch(0 0 0 / 0.2)' : 'transparent',
-              transition: 'background 0.1s',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                {isActive && <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--green)', flexShrink: 0 }} />}
-                <span style={{
-                  fontSize: 9, fontFamily: 'var(--font-mono)', wordBreak: 'break-all',
-                  color: isSel ? (tab === 'topics' ? 'var(--amber)' : 'var(--cyan)') : 'var(--text)',
-                  lineHeight: 1.4
-                }}>{n.label}</span>
-              </div>
-              {n.msgType && <div style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'var(--text-dim)', marginTop: 2 }}>{n.msgType}</div>}
-              {n.hz && <div style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'var(--amber-dim)', marginTop: 1 }}>{n.hz} Hz</div>}
-            </div>
-          );
-        })}
+      <div style={{textAlign:'center'}}>
+        <div className="overlay-title" style={{color:cfg.color}}>{cfg.title}</div>
+        <div className="overlay-sub">{cfg.sub}</div>
       </div>
     </div>
   );
 }
 
-// ── Inspector Panel ───────────────────────────────────────────────────
-function Inspector({ node, edges, allNodes, lastMsg, live }) {
-  if (!node) return (
-    <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-      <svg width={32} height={32} viewBox="0 0 32 32">
-        <polygon points="16,3 29,10 29,22 16,29 3,22 3,10" fill="none" stroke="var(--border)" strokeWidth="1.5" />
-        <circle cx="16" cy="16" r="5" fill="none" stroke="var(--border)" strokeWidth="1.5" />
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+function Sidebar({nodes, edges, selected, onSelect, search, onSearch}){
+  const [tab,setTab]=useState('nodes');
+  const rn=nodes.filter(n=>n.type==='rosnode');
+  const tp=nodes.filter(n=>n.type==='rostopic');
+  const items=(tab==='nodes'?rn:tp).filter(n=>!search||n.label.toLowerCase().includes(search.toLowerCase()));
+  const isNode=tab==='nodes';
+
+  return(
+    <div style={{height:'100%',display:'flex',flexDirection:'column'}}>
+      <div className="search-wrap">
+        <span style={{color:'#6e7681',fontSize:11}}>⌕</span>
+        <input value={search} onChange={e=>onSearch(e.target.value)} placeholder="filter…"/>
+        {search&&<span onClick={()=>onSearch('')} style={{cursor:'pointer',color:'#6e7681',fontSize:11}}>×</span>}
+      </div>
+
+      <div className="stab-bar">
+        {[['nodes',rn.length],['topics',tp.length]].map(([t,cnt])=>(
+          <button key={t} className={`stab ${tab===t?'active-'+t:''}`} onClick={()=>setTab(t)}>
+            {t} <span style={{opacity:.5}}>({cnt})</span>
+          </button>
+        ))}
+      </div>
+
+      <div style={{flex:1,overflow:'auto'}}>
+        {items.map(n=>{
+          const isSel=selected===n.id;
+          const pubs=isNode?edges.filter(e=>e.s===n.id&&e.k==='pub').length:edges.filter(e=>e.t===n.id&&e.k==='pub').length;
+          const subs=isNode?edges.filter(e=>e.t===n.id&&e.k==='sub').length:edges.filter(e=>e.s===n.id&&e.k==='sub').length;
+          const cls=`list-item${isSel?(isNode?' active':' active-topic'):''}`;
+          return(
+            <div key={n.id} className={cls} onClick={()=>onSelect(isSel?null:n)}>
+              <div style={{fontSize:10,fontFamily:'"JetBrains Mono",monospace',wordBreak:'break-all',
+                color:isSel?(isNode?'#2dd4bf':'#d97706'):'#c9d1d9',lineHeight:1.4}}>
+                {n.label.replace(/^\//,'')}
+              </div>
+              {n.msgType&&<div style={{fontSize:9,fontFamily:'"JetBrains Mono",monospace',color:'#6e7681',marginTop:1}}>{n.msgType}</div>}
+              <div style={{display:'flex',gap:8,marginTop:2}}>
+                {pubs>0&&<span style={{fontSize:8,fontFamily:'"JetBrains Mono",monospace',color:'#1a6b63'}}>↑ {pubs} pub</span>}
+                {subs>0&&<span style={{fontSize:8,fontFamily:'"JetBrains Mono",monospace',color:'#6b4c1a'}}>↓ {subs} sub</span>}
+              </div>
+            </div>
+          );
+        })}
+        {items.length===0&&(
+          <div style={{padding:20,fontSize:11,color:'#484f58',textAlign:'center'}}>
+            {nodes.length===0?'waiting for ROS2…':'no match'}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Inspector ─────────────────────────────────────────────────────────────────
+function Inspector({node,edges,allNodes}){
+  if(!node) return(
+    <div style={{height:'100%',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:8}}>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#30363d" strokeWidth="1.5">
+        <polygon points="12,2 22,7 22,17 12,22 2,17 2,7"/>
+        <circle cx="12" cy="12" r="3.5"/>
       </svg>
-      <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--text-dim)', textAlign: 'center', letterSpacing: '0.08em' }}>
-        SELECT A NODE<br/>OR TOPIC
+      <span style={{fontSize:10,color:'#484f58',fontFamily:'"JetBrains Mono",monospace',textAlign:'center',lineHeight:1.8}}>
+        CLICK A NODE<br/>OR TOPIC
       </span>
     </div>
   );
 
-  const nodeMap = Object.fromEntries(allNodes.map(n => [n.id, n]));
-  const isTopic = node.type === 'rostopic';
+  const nmap=Object.fromEntries(allNodes.map(n=>[n.id,n]));
+  const isTopic=node.type==='rostopic';
+  const pubs=isTopic
+    ?edges.filter(e=>e.t===node.id&&e.k==='pub').map(e=>nmap[e.s]).filter(Boolean)
+    :edges.filter(e=>e.s===node.id&&e.k==='pub').map(e=>nmap[e.t]).filter(Boolean);
+  const subs=isTopic
+    ?edges.filter(e=>e.s===node.id&&e.k==='sub').map(e=>nmap[e.t]).filter(Boolean)
+    :edges.filter(e=>e.t===node.id&&e.k==='sub').map(e=>nmap[e.s]).filter(Boolean);
 
-  let pubs = [], subs = [];
-  if (isTopic) {
-    pubs = edges.filter(e => e.t === node.id && e.k === 'pub').map(e => nodeMap[e.s]).filter(Boolean);
-    subs = edges.filter(e => e.s === node.id && e.k === 'sub').map(e => nodeMap[e.t]).filter(Boolean);
-  } else {
-    pubs = edges.filter(e => e.s === node.id && e.k === 'pub').map(e => nodeMap[e.t]).filter(Boolean);
-    subs = edges.filter(e => e.t === node.id && e.k === 'sub').map(e => nodeMap[e.s]).filter(Boolean);
-  }
-
-  const ac = isTopic ? 'var(--amber)' : 'var(--cyan)';
-
-  return (
-    <div style={{ padding: '10px 12px', overflow: 'auto', height: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div>
-        <div style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
-          {isTopic ? 'Topic' : 'Node'}
-        </div>
-        <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: ac, wordBreak: 'break-all', lineHeight: 1.4 }}>{node.label}</div>
-        {node.msgType && <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--text-dim)', marginTop: 3 }}>{node.msgType}</div>}
-        {node.hz && <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--amber)', marginTop: 2 }}>~{node.hz} Hz</div>}
+  return(
+    <div style={{overflow:'auto',height:'100%'}}>
+      <div className="insp-section">
+        <div className="insp-label">{isTopic?'Topic':'Node'}</div>
+        <div className="insp-value" style={{color:isTopic?'#d97706':'#2dd4bf'}}>{node.label}</div>
+        {node.msgType&&<div className="insp-type">{node.msgType}</div>}
+        {node.hz&&<div style={{fontSize:10,fontFamily:'"JetBrains Mono",monospace',color:'#d97706',marginTop:2}}>~{node.hz} Hz</div>}
       </div>
 
-      {pubs.length > 0 && (
-        <div>
-          <div style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 5 }}>
-            {isTopic ? 'Publishers' : 'Publishes To'}
-          </div>
-          {pubs.map(n => (
-            <div key={n.id} style={{ padding: '3px 7px', marginBottom: 2, borderLeft: '1.5px solid var(--cyan-dim)',
-              fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--cyan)', wordBreak: 'break-all' }}>{n.label}</div>
+      {pubs.length>0&&(
+        <div className="insp-section">
+          <div className="insp-label">{isTopic?'Publishers':'Publishes to'}</div>
+          {pubs.map(n=>(
+            <div key={n.id} className="insp-row" style={{color:'#2dd4bf',borderLeftColor:'#1a4a44'}}>{n.label}</div>
           ))}
         </div>
       )}
-      {subs.length > 0 && (
-        <div>
-          <div style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 5 }}>
-            {isTopic ? 'Subscribers' : 'Subscribes To'}
-          </div>
-          {subs.map(n => (
-            <div key={n.id} style={{ padding: '3px 7px', marginBottom: 2, borderLeft: '1.5px solid var(--amber-dim)',
-              fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--amber)', wordBreak: 'break-all' }}>{n.label}</div>
+      {subs.length>0&&(
+        <div className="insp-section">
+          <div className="insp-label">{isTopic?'Subscribers':'Subscribes to'}</div>
+          {subs.map(n=>(
+            <div key={n.id} className="insp-row" style={{color:'#d97706',borderLeftColor:'#4a3318'}}>{n.label}</div>
           ))}
         </div>
       )}
-
-      {lastMsg && (
-        <div style={{ marginTop: 'auto' }}>
-          <div style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 5 }}>
-            Last Message {live && <span style={{ color: 'var(--green)' }}>● LIVE</span>}
-          </div>
-          <pre style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'var(--text-dim)', whiteSpace: 'pre-wrap', wordBreak: 'break-all', lineHeight: 1.6, maxHeight: 180, overflow: 'auto', background: 'var(--bg3)', padding: 7 }}>
-            {JSON.stringify(lastMsg, null, 2)}
-          </pre>
-        </div>
-      )}
     </div>
   );
 }
 
-// ── Drive Train ───────────────────────────────────────────────────────
-function DriveTrainWidget({ cmdVel }) {
-  const { lx = 0, az = 0 } = cmdVel;
-  // Real Cobraflex params: wheel_base=0.154m, wheel_radius=0.03725m, max_v=0.53m/s
-  const WHEELBASE = 0.154;
-  const WHEEL_R = 0.03725;
-  const flRpm = ((lx - az * WHEELBASE / 2) / (2 * Math.PI * WHEEL_R)) * 60;
-  const frRpm = ((lx + az * WHEELBASE / 2) / (2 * Math.PI * WHEEL_R)) * 60;
-  const rlRpm = flRpm, rrRpm = frRpm;
-  const angleRef = useRef({ fl: 0, fr: 0, rl: 0, rr: 0 });
-  const a = angleRef.current;
-  a.fl = (a.fl + flRpm * 0.02) % 360;
-  a.fr = (a.fr + frRpm * 0.02) % 360;
-  a.rl = (a.rl + rlRpm * 0.02) % 360;
-  a.rr = (a.rr + rrRpm * 0.02) % 360;
+// ── App ───────────────────────────────────────────────────────────────────────
+function App(){
+  const [data,    setData]    = useState({nodes:[],edges:[]});
+  const [status,  setStatus]  = useState('warming');
+  const [error,   setError]   = useState('');
+  const [meta,    setMeta]    = useState({});
+  const [sel,     setSel]     = useState(null);
+  const [search,  setSearch]  = useState('');
+  const [filter,  setFilter]  = useState('all');
+  const [ts,      setTs]      = useState(null);
 
-  function Wheel({ angle, rpm, label, x, y }) {
-    const rad = (angle - 90) * Math.PI / 180;
-    const c = Math.abs(rpm) > 80 ? 'var(--amber)' : 'var(--cyan)';
-    return (
-      <g transform={`translate(${x},${y})`}>
-        <rect x={-9} y={-20} width={18} height={40} rx={3} fill="var(--bg3)" stroke={c} strokeWidth={0.8} />
-        <line x1={0} y1={0} x2={Math.cos(rad) * 12} y2={Math.sin(rad) * 12} stroke={c} strokeWidth={1.5} />
-        <circle cx={0} cy={0} r={5} fill="none" stroke={c} strokeWidth={0.8} />
-        <text x={0} y={30} textAnchor="middle" fill="var(--text-dim)" fontFamily="JetBrains Mono, monospace" fontSize={7}>{Math.abs(rpm).toFixed(0)}</text>
-        <text x={0} y={-26} textAnchor="middle" fill="var(--text-dim)" fontFamily="JetBrains Mono, monospace" fontSize={7}>{label}</text>
-      </g>
-    );
-  }
-
-  return (
-    <div style={{ height: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '0 12px' }}>
-      <svg viewBox="0 0 200 100" style={{ height: 85, flexShrink: 0 }}>
-        <rect x={55} y={25} width={90} height={50} rx={3} fill="var(--bg3)" stroke="var(--border)" strokeWidth={0.8} />
-        <text x={100} y={53} textAnchor="middle" fill="var(--text-dim)" fontFamily="Space Grotesk, sans-serif" fontSize={7} fontWeight={600}>COBRAFLEX</text>
-        <path d="M 92 38 L 100 30 L 108 38" fill="none" stroke="var(--cyan)" strokeWidth={1.2} />
-        <Wheel angle={a.fl} rpm={flRpm} label="FL" x={48} y={38} />
-        <Wheel angle={a.fr} rpm={frRpm} label="FR" x={152} y={38} />
-        <Wheel angle={a.rl} rpm={rlRpm} label="RL" x={48} y={70} />
-        <Wheel angle={a.rr} rpm={rrRpm} label="RR" x={152} y={70} />
-      </svg>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
-        {[
-          { label: 'linear.x', value: lx.toFixed(3), unit: 'm/s', color: 'var(--cyan)' },
-          { label: 'angular.z', value: az.toFixed(3), unit: 'rad/s', color: 'var(--amber)' },
-        ].map(({ label, value, unit, color }) => (
-          <div key={label} style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
-            <span style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'var(--text-dim)', textTransform: 'uppercase', minWidth: 65 }}>{label}</span>
-            <span style={{ fontSize: 14, fontFamily: 'var(--font-mono)', color }}>{value}</span>
-            <span style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'var(--text-dim)' }}>{unit}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── Topic Log ─────────────────────────────────────────────────────────
-function TopicLog({ nodes }) {
-  const [entries, setEntries] = useState([]);
-  const topicNodes = nodes.filter(n => n.type === 'rostopic');
-  useEffect(() => {
-    if (!topicNodes.length) return;
-    const id = setInterval(() => {
-      const n = topicNodes[Math.floor(Math.random() * topicNodes.length)];
-      const ts = new Date().toISOString().substr(11, 12);
-      setEntries(p => [{ id: Math.random(), ts, label: n.label, type: n.msgType || '', hz: n.hz || '?' }, ...p].slice(0, 50));
-    }, 250);
-    return () => clearInterval(id);
-  }, [topicNodes.length]);
-
-  return (
-    <div style={{ height: '100%', overflow: 'hidden', padding: '2px 0' }}>
-      {entries.map(e => (
-        <div key={e.id} style={{ display: 'flex', gap: 6, padding: '1px 10px', fontSize: 9, fontFamily: 'var(--font-mono)', lineHeight: 1.9, animation: 'fadeIn 0.15s ease' }}>
-          <span style={{ color: 'var(--text-dim)', flexShrink: 0 }}>{e.ts}</span>
-          <span style={{ color: 'var(--amber)', flexShrink: 0, minWidth: 150 }}>{e.label}</span>
-          <span style={{ color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{e.type}</span>
-          <span style={{ color: 'var(--cyan)', flexShrink: 0 }}>{e.hz}Hz</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ── Edu Tooltip ───────────────────────────────────────────────────────
-const EDU_NOTES = {
-  rosnode: 'Un nodo ROS2 es un proceso que realiza cómputo. Cada nodo tiene un propósito único y se comunica mediante topics, servicios o acciones.',
-  rostopic: 'Un topic es un canal de comunicación asíncrono. Los nodos publican mensajes sin saber quién los recibe (pub/sub desacoplado).',
-  '/cobraflex_ros_driver': 'Punto de entrada al hardware físico. Traduce mensajes ROS2 a comandos JSON por puerto serie. Sin este nodo, el robot no se mueve.',
-  '/cobraflex_avoidance': 'Implementa una máquina de estados (FSM) con 3 estados: FORWARD, TURN_LEFT, TURN_RIGHT. Usa /scan para detectar obstáculos a 0.55m.',
-  '/slam_toolbox': 'Crea un mapa 2D del entorno en tiempo real usando LiDAR. Guarda la posición del robot en el mapa (localización). Fundamental para navegación autónoma.',
-  '/ekf_filter_node': 'Fusiona /cobraflex/vel_raw (encoders) e /imu/data usando un filtro de Kalman extendido. El resultado es una odometría más precisa y robusta.',
-  '/nav2_controller': 'Implementa DWB (Dynamic Window Approach): genera candidatos de velocidad, evalúa cuáles evitan obstáculos y optimiza hacia el goal.',
-  '/nav2_planner': 'Planificador global Dijkstra (NavFn). Calcula la ruta óptima en el mapa de costmap. Solo re-planifica cuando el path se bloquea.',
-  '/ros_gz_bridge': 'Puente entre el simulador Gazebo Harmonic y ROS2. Traduce mensajes gz.msgs ↔ ROS2. Solo activo en simulación.',
-  '/cmd_vel': 'El topic más importante del robot móvil. Define la velocidad lineal (m/s) y angular (rad/s). Lo leen el driver y Gazebo; lo escriben Nav2, teleop y el nodo de evasión.',
-  '/scan': 'Datos crudos del RPLidar A2: 360 distancias en un array. angle_min=-π, angle_max=π, 10Hz, range_max=8m. Input principal para SLAM y evasión.',
-  '/odom': 'Pose y velocidad estimadas del robot en el frame odom. Acumula error con el tiempo (deriva). El EKF y AMCL lo corrigen con sensores adicionales.',
-  '/tf': 'Árbol de transformadas espaciales. Permite a cualquier nodo saber dónde está un sensor relativo al robot o al mapa sin hacer cálculos manuales.',
-  '/map': 'Rejilla de ocupación 2D (OccupancyGrid). Cada celda tiene valor 0 (libre), 100 (ocupado) o -1 (desconocido). Resolución típica: 0.05 m/celda.',
-  '/cobraflex/battery': 'Voltaje de la batería en tiempo real (campo "v" del JSON T=1001 del MCU). Útil para monitoreo y gestión de energía en misiones largas.',
-};
-
-function EduTooltip({ node, x, y, allNodes, edges, visible }) {
-  if (!visible || !node) return null;
-  const isTopic = node.type === 'rostopic';
-  const ac = isTopic ? 'var(--amber)' : 'var(--cyan)';
-  const pubs = isTopic
-    ? edges.filter(e => e.t === node.id && e.k === 'pub').length
-    : edges.filter(e => e.s === node.id && e.k === 'pub').length;
-  const subs = isTopic
-    ? edges.filter(e => e.s === node.id && e.k === 'sub').length
-    : edges.filter(e => e.t === node.id && e.k === 'sub').length;
-  const note = EDU_NOTES[node.label] || EDU_NOTES[node.type] || '';
-  const W = 260, H = window.innerHeight;
-  const left = x + 16 + W > window.innerWidth ? x - W - 8 : x + 16;
-  const top = Math.min(y, H - 200);
-  return (
-    <div style={{ position:'fixed', left, top, width:W, zIndex:2000, background:'var(--bg2)',
-      border:`1px solid ${ac}`, boxShadow:`0 0 20px oklch(0 0 0/0.6)`, pointerEvents:'none' }}>
-      <Corners color={ac} size={6} t={1}/>
-      <div style={{ padding:'6px 10px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:6 }}>
-        <span style={{ fontSize:8, fontFamily:'var(--font-mono)', color:ac, textTransform:'uppercase', letterSpacing:'0.1em' }}>
-          {isTopic ? 'TOPIC' : 'NODE'}
-        </span>
-        {node.hz && <span style={{ marginLeft:'auto', fontSize:8, fontFamily:'var(--font-mono)', color:'var(--amber)' }}>{node.hz}Hz</span>}
-      </div>
-      <div style={{ padding:'8px 10px', display:'flex', flexDirection:'column', gap:6 }}>
-        <div style={{ fontSize:10, fontFamily:'var(--font-mono)', color:ac, wordBreak:'break-all', lineHeight:1.4 }}>{node.label}</div>
-        {node.msgType && <div style={{ fontSize:8, fontFamily:'var(--font-mono)', color:'var(--text-dim)' }}>{node.msgType}</div>}
-        <div style={{ display:'flex', gap:10, marginTop:2 }}>
-          <span style={{ fontSize:8, fontFamily:'var(--font-mono)', color:'var(--cyan)' }}>↑ pub: {pubs}</span>
-          <span style={{ fontSize:8, fontFamily:'var(--font-mono)', color:'var(--amber)' }}>↓ sub: {subs}</span>
-        </div>
-        {note && <div style={{ fontSize:8, fontFamily:'var(--font-mono)', color:'var(--text)', lineHeight:1.65, borderTop:'1px solid var(--border)', paddingTop:6, marginTop:2 }}>{note}</div>}
-      </div>
-    </div>
-  );
-}
-
-// ── TF Tree View ───────────────────────────────────────────────────────
-const TF_TREE = [
-  { id:'map',      label:'map',           frame:'World/Map',  color:'var(--green)',  x:300, y:30,  pub:'SLAM Toolbox / AMCL', dynamic:true },
-  { id:'odom',     label:'odom',          frame:'Odometry',   color:'var(--cyan)',   x:300, y:110, pub:'EKF filter node',     dynamic:true },
-  { id:'basefp',   label:'base_footprint',frame:'Base (2D)',  color:'var(--cyan)',   x:300, y:190, pub:'robot_state_publisher',dynamic:false },
-  { id:'baselink', label:'base_link',     frame:'Body',       color:'var(--text)',   x:300, y:270, pub:'robot_state_publisher',dynamic:false },
-  { id:'bodylink', label:'body_link',     frame:'Chassis',    color:'var(--text)',   x:300, y:350, pub:'robot_state_publisher',dynamic:false },
-  { id:'laser',    label:'laser_frame',   frame:'RPLidar A2', color:'var(--amber)',  x:100, y:440, pub:'static_tf',            dynamic:false },
-  { id:'imu',      label:'imu_link',      frame:'IMU',        color:'var(--amber)',  x:300, y:440, pub:'static_tf',            dynamic:false },
-  { id:'cam',      label:'camera_link',   frame:'ZED Mini',   color:'var(--amber)',  x:500, y:440, pub:'static_tf',            dynamic:false },
-  { id:'caml',     label:'left_camera_frame', frame:'Cam L',  color:'var(--amber)',  x:420, y:530, pub:'static_tf',            dynamic:false },
-  { id:'camr',     label:'right_camera_frame',frame:'Cam R',  color:'var(--amber)',  x:580, y:530, pub:'static_tf',            dynamic:false },
-];
-const TF_EDGES = [
-  ['map','odom'],['odom','basefp'],['basefp','baselink'],['baselink','bodylink'],
-  ['bodylink','laser'],['bodylink','imu'],['bodylink','cam'],['cam','caml'],['cam','camr'],
-];
-
-function TFTreeView() {
-  const t = Date.now() / 1000;
-  const W = 640, H = 590;
-  return (
-    <div style={{ width:'100%', height:'100%', overflow:'auto', background:'var(--bg)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <svg viewBox={`0 0 ${W} ${H}`} style={{ width:'100%', maxWidth:W, height:'auto' }}>
-        {/* Background dots */}
-        {Array.from({length:20},(_,i)=>Array.from({length:16},(_,j)=>(
-          <circle key={`${i}-${j}`} cx={i*34} cy={j*38} r={1} fill="oklch(0.20 0.02 220/0.4)"/>
-        )))}
-        {/* Edges */}
-        {TF_EDGES.map(([a,b],i)=>{
-          const na=TF_TREE.find(n=>n.id===a), nb=TF_TREE.find(n=>n.id===b);
-          if(!na||!nb) return null;
-          const mx=(na.x+nb.x)/2, my=(na.y+nb.y)/2;
-          return (
-            <g key={i}>
-              <line x1={na.x} y1={na.y+18} x2={nb.x} y2={nb.y-18} stroke="var(--border)" strokeWidth={1.5}/>
-              {/* Flowing dot */}
-              <circle r={3} fill={na.dynamic?'var(--cyan)':'var(--text-dim)'} opacity={0.7}>
-                <animateMotion dur={`${1.5+i*0.3}s`} repeatCount="indefinite" path={`M ${na.x} ${na.y+18} L ${nb.x} ${nb.y-18}`}/>
-              </circle>
-              {/* Publisher label */}
-              <text x={mx+4} y={my} fill="var(--text-dim)" fontFamily="JetBrains Mono,monospace" fontSize={7} transform={na.x===nb.x?`rotate(-90,${mx},${my})`:undefined}>{nb.pub}</text>
-            </g>
-          );
-        })}
-        {/* Nodes */}
-        {TF_TREE.map(n=>(
-          <g key={n.id} transform={`translate(${n.x},${n.y})`}>
-            <rect x={-58} y={-18} width={116} height={36} rx={3} fill="var(--bg2)" stroke={n.color} strokeWidth={n.dynamic?1.5:0.8}/>
-            {n.dynamic && <rect x={-58} y={-18} width={116} height={36} rx={3} fill={n.color} opacity={0.04}/>}
-            <text y={-4} textAnchor="middle" fill={n.color} fontFamily="JetBrains Mono,monospace" fontSize={9} fontWeight={500}>{n.label}</text>
-            <text y={10} textAnchor="middle" fill="var(--text-dim)" fontFamily="JetBrains Mono,monospace" fontSize={7}>{n.frame}</text>
-            {n.dynamic && <circle cx={52} cy={-12} r={3} fill="var(--green)" opacity={0.8}/>}
-          </g>
-        ))}
-        {/* Legend */}
-        <g transform="translate(8,560)">
-          {[['var(--green)','● Dynamic (published at runtime)'],['var(--text-dim)','○ Static (from URDF/Xacro)']].map(([c,l],i)=>(
-            <text key={i} x={i*220} fill={c} fontFamily="JetBrains Mono,monospace" fontSize={8}>{l}</text>
-          ))}
-        </g>
-      </svg>
-    </div>
-  );
-}
-
-// ── Main App ──────────────────────────────────────────────────────────
-function App() {
-  const [wsUrl, setWsUrl] = useState('ws://localhost:9090');
-  const [connStatus, setConnStatus] = useState('demo'); // demo | connecting | connected | error
-  const [graphData, setGraphData] = useState({ nodes: DEMO_NODES, edges: DEMO_EDGES });
-  const [selected, setSelected] = useState(null);
-  const [cmdVel, setCmdVel] = useState({ lx: 0, az: 0 });
-  const [lastMsg, setLastMsg] = useState(null);
-  const [activeTopics, setActiveTopics] = useState(new Set());
-  const [eduMode, setEduMode] = useState(false);
-  const [hoverInfo, setHoverInfo] = useState(null); // {node, x, y}
-  const [viewMode, setViewMode] = useState('graph'); // 'graph' | 'tf'
-  const rosRef = useRef(null);
-  const subscriptions = useRef({});
-
-  // Simulate cmd_vel in demo mode
-  useEffect(() => {
-    if (connStatus !== 'demo') return;
-    let t = 0;
-    const id = setInterval(() => {
-      t += 0.05;
-      // Real Cobraflex: max_linear=0.53 m/s, max_angular=6.0 rad/s
-      setCmdVel({ lx: Math.max(0, Math.sin(t) * 0.53), az: Math.sin(t * 0.7) * 1.8 });
-    }, 100);
-    return () => clearInterval(id);
-  }, [connStatus]);
-
-  // Simulate active topics in demo mode
-  useEffect(() => {
-    if (connStatus !== 'demo') return;
-    const id = setInterval(() => {
-      const topics = DEMO_NODES.filter(n => n.type === 'rostopic').map(n => n.id);
-      const active = new Set(topics.filter(() => Math.random() > 0.3));
-      setActiveTopics(active);
-    }, 600);
-    return () => clearInterval(id);
-  }, [connStatus]);
-
-  function handleConnect() {
-    if (rosRef.current) { rosRef.current.close(); rosRef.current = null; }
-    setConnStatus('connecting');
-    try {
-      const ros = new ROSLIB.Ros({ url: wsUrl });
-      rosRef.current = ros;
-      ros.on('connection', () => {
-        setConnStatus('connected');
-        fetchGraph(ros);
-      });
-      ros.on('error', () => setConnStatus('error'));
-      ros.on('close', () => { if (connStatus !== 'demo') setConnStatus('error'); });
-    } catch (e) { setConnStatus('error'); }
-  }
-
-  function handleDisconnect() {
-    if (rosRef.current) { rosRef.current.close(); rosRef.current = null; }
-    setConnStatus('demo');
-    setGraphData({ nodes: DEMO_NODES, edges: DEMO_EDGES });
-  }
-
-  function fetchGraph(ros) {
-    ros.getTopics(({ topics, types }) => {
-      const topicNodes = topics.map((t, i) => ({
-        id: 'topic_' + t.replace(/\//g, '_'), label: t, type: 'rostopic', msgType: types[i], hz: null
-      }));
-      ros.getNodes(nodeList => {
-        const rosNodeEntities = nodeList.map(n => ({ id: 'node_' + n.replace(/\//g, '_'), label: n, type: 'rosnode' }));
-        const allNodes = [...rosNodeEntities, ...topicNodes];
-        const edges = [];
-        let pending = nodeList.length;
-        nodeList.forEach(nodeName => {
-          const svc = new ROSLIB.Service({ ros, name: '/rosapi/node_details', serviceType: 'rosapi/NodeDetails' });
-          svc.callService(new ROSLIB.ServiceRequest({ node: nodeName }), result => {
-            const nid = 'node_' + nodeName.replace(/\//g, '_');
-            (result.publishing || []).forEach(t => edges.push({ s: nid, t: 'topic_' + t.replace(/\//g, '_'), k: 'pub' }));
-            (result.subscribing || []).forEach(t => edges.push({ s: 'topic_' + t.replace(/\//g, '_'), t: nid, k: 'sub' }));
-            if (--pending === 0) setGraphData({ nodes: allNodes, edges });
-          }, () => { if (--pending === 0) setGraphData({ nodes: allNodes, edges }); });
-        });
-        if (!nodeList.length) setGraphData({ nodes: allNodes, edges });
-      });
-    });
-
-    // Subscribe to /cmd_vel
-    const cmdSub = new ROSLIB.Topic({ ros, name: '/cmd_vel', messageType: 'geometry_msgs/Twist' });
-    cmdSub.subscribe(msg => setCmdVel({ lx: msg.linear?.x || 0, az: msg.angular?.z || 0 }));
-    subscriptions.current.cmdVel = cmdSub;
-  }
-
-  // Subscribe to selected topic
-  useEffect(() => {
-    const node = graphData.nodes.find(n => n.id === selected);
-    if (!node || node.type !== 'rostopic' || !rosRef.current || connStatus !== 'connected') {
-      if (selected) {
-        // Demo: show fake last message for selected topic
-        const n = graphData.nodes.find(x => x.id === selected);
-        if (n?.type === 'rostopic') setLastMsg(generateDemoMsg(n.msgType));
-        else setLastMsg(null);
+  async function poll(){
+    try{
+      const r=await fetch(API_URL,{cache:'no-store'});
+      if(!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d=await r.json();
+      if(d.meta) setMeta(d.meta);
+      if(d.ok){
+        setData({nodes:d.nodes,edges:d.edges});
+        setStatus(d.nodes.length>0?'live':'empty');
+        setError('');
+        if(d.nodes.length>0) setTs(new Date());
+      }else{
+        setError(d.error||'');
+        setStatus(d.error?.includes('warming')?'warming':'offline');
       }
-      return;
-    }
-    if (subscriptions.current.inspector) subscriptions.current.inspector.unsubscribe();
-    const sub = new ROSLIB.Topic({ ros: rosRef.current, name: node.label, messageType: node.msgType });
-    sub.subscribe(msg => setLastMsg(msg));
-    subscriptions.current.inspector = sub;
-    return () => sub.unsubscribe();
-  }, [selected, connStatus]);
-
-  function generateDemoMsg(type) {
-    if (!type) return null;
-    if (type.includes('TwistWithCovariance')) return { header: { frame_id: 'base_link' }, twist: { twist: { linear: { x: +(Math.random()*0.53).toFixed(3) }, angular: { z: +((Math.random()-0.5)*1.8).toFixed(3) } }, covariance: [0.01,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0.1] } };
-    if (type.includes('Twist')) return { linear: { x: +(Math.random()*0.53).toFixed(3), y: 0, z: 0 }, angular: { x: 0, y: 0, z: +((Math.random()-0.5)*3.0).toFixed(3) } };
-    if (type.includes('Odometry')) return { pose: { pose: { position: { x: +(Math.random()*5).toFixed(3), y: +(Math.random()*5).toFixed(3), z: 0 } } }, twist: { twist: { linear: { x: +(Math.random()*2).toFixed(3) } } } };
-    if (type.includes('LaserScan')) return { angle_min: -3.14159, angle_max: 3.14159, angle_increment: 0.01745, range_min: 0.12, range_max: 8.0, ranges: Array.from({ length: 6 }, () => +(Math.random() * 7.5 + 0.12).toFixed(2)).concat(['… (360 total)']), scan_time: 0.1 };
-    if (type.includes('Float32')) return { data: +(11.1 + Math.random()*0.5).toFixed(2) };
-    if (type.includes('String')) return { data: JSON.stringify({ T: 1001, v: +(11.1+Math.random()*0.5).toFixed(2), odl: +(Math.random()*0.53).toFixed(4), odr: +(Math.random()*0.53).toFixed(4) }) };
-    if (type.includes('Imu')) return { header: { frame_id: 'imu_link' }, angular_velocity: { x: +((Math.random()-0.5)*0.05).toFixed(4), y: +((Math.random()-0.5)*0.05).toFixed(4), z: +((Math.random()-0.5)*1.8).toFixed(4) }, linear_acceleration: { x: +((Math.random()-0.5)*0.3).toFixed(4), y: +((Math.random()-0.5)*0.3).toFixed(4), z: +(9.81 + (Math.random()-0.5)*0.1).toFixed(4) } };
-    return { header: { stamp: { sec: Math.floor(Date.now() / 1000), nanosec: 0 }, frame_id: 'base_link' } };
+    }catch{setStatus('offline');setError('Cannot reach local API server');}
   }
 
-  const selectedNode = graphData.nodes.find(n => n.id === selected) || null;
-  const statusColor = { demo: 'var(--amber)', connecting: 'var(--amber)', connected: 'var(--green)', error: 'var(--red)' }[connStatus];
-  const statusLabel = { demo: 'DEMO MODE', connecting: 'CONNECTING…', connected: 'CONNECTED', error: 'CONNECTION ERROR' }[connStatus];
+  useEffect(()=>{poll();const id=setInterval(poll,POLL_MS);return()=>clearInterval(id);},[]);
 
-  return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
-      <style>{`
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-      `}</style>
+  const selNode  = data.nodes.find(n=>n.id===sel)||null;
+  const nCount   = data.nodes.filter(n=>n.type==='rosnode').length;
+  const tCount   = data.nodes.filter(n=>n.type==='rostopic').length;
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 14px', height: 44, background: 'var(--bg2)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <svg width="20" height="20" viewBox="0 0 22 22">
-            <polygon points="11,2 20,7 20,15 11,20 2,15 2,7" fill="none" stroke="var(--cyan)" strokeWidth="1.5" />
-            <circle cx="11" cy="11" r="3.5" fill="var(--cyan)" />
-          </svg>
-          <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.2em', color: 'var(--text)' }}>COBRAFLEX</span>
-          <span style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'var(--text-dim)' }}>ROS2 GRAPH EXPLORER</span>
+  const statusDot  = {warming:'#d97706',live:'#3fb950',empty:'#d97706',offline:'#f85149'}[status];
+  const statusText = {warming:'Connecting…',live:'Live',empty:'No nodes',offline:'Offline'}[status];
+
+  return(
+    <div style={{width:'100%',height:'100%',display:'flex',flexDirection:'column',background:'#0d1117'}}>
+
+      {/* Toolbar */}
+      <div className="toolbar">
+        {/* Status */}
+        <div className="status-pill">
+          <div className="status-dot" style={{background:statusDot,animation:status==='warming'?'blink .9s infinite':'none'}}/>
+          <span style={{color:statusDot,fontWeight:600}}>{statusText}</span>
         </div>
-        <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 2px' }} />
-        {/* Connection bar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
-          <input
-            value={wsUrl} onChange={e => setWsUrl(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleConnect()}
-            style={{
-              background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)',
-              padding: '4px 10px', fontSize: 10, fontFamily: 'var(--font-mono)', width: 200,
-            }}
-            placeholder="ws://localhost:9090"
-          />
-          <button onClick={connStatus === 'connected' ? handleDisconnect : handleConnect} style={{
-            background: connStatus === 'connected' ? 'oklch(0.65 0.18 25 / 0.15)' : 'var(--cyan-glow)',
-            border: `1px solid ${connStatus === 'connected' ? 'var(--red)' : 'var(--cyan-dim)'}`,
-            color: connStatus === 'connected' ? 'var(--red)' : 'var(--cyan)',
-            padding: '4px 12px', cursor: 'pointer', fontSize: 9, fontFamily: 'var(--font-mono)',
-            letterSpacing: '0.1em', textTransform: 'uppercase',
-          }}>{connStatus === 'connected' ? 'Disconnect' : 'Connect'}</button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor, animation: connStatus === 'connecting' ? 'blink 0.8s infinite' : 'none' }} />
-            <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: statusColor, letterSpacing: '0.08em' }}>{statusLabel}</span>
+
+        {status==='live'&&<>
+          <div className="toolbar-sep"/>
+          <span style={{color:'#8b949e'}}>
+            <span style={{color:'#2dd4bf',fontWeight:600}}>{nCount}</span> nodes ·{' '}
+            <span style={{color:'#d97706',fontWeight:600}}>{tCount}</span> topics
+          </span>
+          {ts&&<span style={{color:'#484f58',fontFamily:'"JetBrains Mono",monospace',fontSize:10}}>
+            updated {ts.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+          </span>}
+        </>}
+        {meta.ros_distro&&<>
+          <div className="toolbar-sep"/>
+          <span style={{color:'#484f58',fontFamily:'"JetBrains Mono",monospace',fontSize:10}}>
+            {meta.ros_distro} · domain {meta.ros_domain_id||'0'}
+          </span>
+        </>}
+
+        <button onClick={poll} style={{
+          background:'none',border:'1px solid #21262d',borderRadius:4,color:'#8b949e',
+          padding:'1px 8px',cursor:'pointer',fontSize:10,fontFamily:'inherit',
+        }}>↻</button>
+
+        {/* Right side: filter + legend */}
+        <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:8}}>
+          {/* Legend */}
+          <svg width="18" height="7"><line x1="0" y1="3.5" x2="12" y2="3.5" stroke="#2dd4bf" strokeWidth="1.5"/><polygon points="12,1 18,3.5 12,6" fill="#2dd4bf"/></svg>
+          <span style={{color:'#484f58',fontSize:10}}>pub</span>
+          <svg width="18" height="7"><line x1="0" y1="3.5" x2="12" y2="3.5" stroke="#d97706" strokeWidth="1.5"/><polygon points="12,1 18,3.5 12,6" fill="#d97706"/></svg>
+          <span style={{color:'#484f58',fontSize:10}}>sub</span>
+
+          <div className="toolbar-sep"/>
+          {[['all','All'],['nodes','Nodes'],['topics','Topics']].map(([m,l])=>(
+            <button key={m} className={`chip${filter===m?' on':''}`} onClick={()=>setFilter(m)}>{l}</button>
+          ))}
+          <div className="toolbar-sep"/>
+          <span style={{color:'#484f58',fontSize:10,fontFamily:'"JetBrains Mono",monospace'}}>scroll=zoom · dbl=reset</span>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{flex:1,display:'grid',gridTemplateColumns:'190px 1fr 210px',gap:4,padding:4,minHeight:0}}>
+
+        {/* Sidebar */}
+        <div className="panel">
+          <div className="panel-header">
+            <div className="panel-header-dot" style={{background:'#2dd4bf'}}/>
+            Nodes &amp; Topics
+          </div>
+          <div className="panel-body">
+            <Sidebar nodes={data.nodes} edges={data.edges}
+              selected={sel} onSelect={n=>setSel(n?n.id:null)}
+              search={search} onSearch={setSearch}/>
           </div>
         </div>
-        {/* Legend + View toggles */}
-        <div style={{ display: 'flex', gap: 10, marginLeft: 'auto', alignItems: 'center' }}>
-          {viewMode === 'graph' && [['Publishes', 'var(--cyan)'], ['Subscribes', 'var(--amber)']].map(([l, c]) => (
-            <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <svg width={22} height={8}><line x1={0} y1={4} x2={16} y2={4} stroke={c} strokeWidth={1.5}/><polygon points="16,1 22,4 16,7" fill={c}/></svg>
-              <span style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: 'var(--text-dim)', textTransform: 'uppercase' }}>{l}</span>
-            </div>
-          ))}
-          <div style={{ width:1, height:16, background:'var(--border)' }}/>
-          {/* View mode toggle */}
-          {[['graph','⬡ GRAPH'],['tf','⬡ TF TREE']].map(([mode, label]) => (
-            <button key={mode} onClick={() => setViewMode(mode)} style={{
-              background: viewMode===mode ? 'var(--cyan-glow)' : 'none',
-              border: `1px solid ${viewMode===mode ? 'var(--cyan-dim)' : 'var(--border)'}`,
-              color: viewMode===mode ? 'var(--cyan)' : 'var(--text-dim)',
-              padding: '3px 10px', cursor:'pointer', fontSize:8, fontFamily:'var(--font-mono)', letterSpacing:'0.08em'
-            }}>{label}</button>
-          ))}
-          <div style={{ width:1, height:16, background:'var(--border)' }}/>
-          {/* Edu Mode toggle */}
-          <button onClick={() => setEduMode(e => !e)} style={{
-            background: eduMode ? 'oklch(0.72 0.15 155 / 0.15)' : 'none',
-            border: `1px solid ${eduMode ? 'oklch(0.72 0.15 155)' : 'var(--border)'}`,
-            color: eduMode ? 'oklch(0.72 0.15 155)' : 'var(--text-dim)',
-            padding: '3px 10px', cursor:'pointer', fontSize:8, fontFamily:'var(--font-mono)', letterSpacing:'0.08em'
-          }}>🎓 EDU MODE {eduMode ? 'ON' : 'OFF'}</button>
+
+        {/* Graph */}
+        <div className="panel" style={{position:'relative'}}>
+          <div className="panel-header">
+            <div className="panel-header-dot" style={{background:'#3fb950'}}/>
+            Compute Graph
+            <span style={{marginLeft:'auto',color:'#484f58',fontSize:10,fontWeight:400}}>
+              {selNode?selNode.label:'click to inspect'}
+            </span>
+          </div>
+          <div className="panel-body" style={{position:'relative'}}>
+            <GraphCanvas
+              graphNodes={data.nodes} graphEdges={data.edges}
+              selected={sel} onSelect={n=>setSel(n?n.id:null)}
+              filterMode={filter}/>
+            <Overlay status={status} error={error}/>
+          </div>
         </div>
-      </div>
 
-      {/* Main layout */}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '220px 1fr 200px', gridTemplateRows: '1fr 110px', gap: 5, padding: 5, minHeight: 0 }}>
-
-        {/* Topic list - col 1, spans 2 rows */}
-        <Panel title="Topics & Nodes" accent="amber" style={{ gridColumn: 1, gridRow: '1 / 3' }}>
-          <TopicList nodes={graphData.nodes} edges={graphData.edges} selected={selected}
-            onSelect={n => setSelected(n ? n.id : null)} activeTopics={activeTopics} />
-        </Panel>
-
-        {/* Main view: graph or TF tree */}
-        <Panel
-          title={viewMode === 'graph' ? 'Compute Graph' : 'TF Transform Tree'}
-          label={viewMode === 'graph'
-            ? `${graphData.nodes.filter(n=>n.type==='rosnode').length} nodes · ${graphData.nodes.filter(n=>n.type==='rostopic').length} topics`
-            : 'map → odom → base_link → sensors'}
-          style={{ gridColumn: 2, gridRow: 1, position: 'relative' }}
-        >
-          {viewMode === 'graph'
-            ? <div style={{ width:'100%', height:'100%', position:'relative' }}
-                onMouseMove={eduMode ? e => {
-                  // find hovered node via canvas hit-test proxy
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  setHoverInfo({ x: e.clientX, y: e.clientY });
-                } : undefined}
-                onMouseLeave={() => setHoverInfo(null)}
-              >
-                <GraphCanvas
-                  graphNodes={graphData.nodes} graphEdges={graphData.edges}
-                  selected={selected}
-                  onSelect={n => { setSelected(n ? n.id : null); }}
-                  onHover={eduMode ? (n, x, y) => {
-                    if (n) setHoverInfo({ node: n, x, y });
-                    else setHoverInfo(null);
-                  } : null}
-                  activeTopics={activeTopics}
-                />
-                {eduMode && <div style={{ position:'absolute', bottom:8, left:8, fontSize:8, fontFamily:'var(--font-mono)', color:'oklch(0.72 0.15 155)', background:'oklch(0.72 0.15 155/0.1)', border:'1px solid oklch(0.72 0.15 155/0.3)', padding:'3px 8px' }}>🎓 EDU MODE — Pasa el ratón sobre cualquier nodo o topic</div>}
-              </div>
-            : <TFTreeView />
-          }
-        </Panel>
-
-        {/* Inspector - col 3, spans 2 rows */}
-        <Panel title="Inspector" accent={selectedNode?.type === 'rostopic' ? 'amber' : 'cyan'} style={{ gridColumn: 3, gridRow: '1 / 3' }}>
-          <Inspector node={selectedNode} edges={graphData.edges} allNodes={graphData.nodes}
-            lastMsg={lastMsg} live={connStatus === 'connected'} />
-        </Panel>
-
-        {/* Drive train + topic log - col 2, row 2 */}
-        <div style={{ gridColumn: 2, gridRow: 2, display: 'grid', gridTemplateColumns: '260px 1fr', gap: 5, minHeight: 0 }}>
-          <Panel title="/cmd_vel — Drive Train" accent="amber">
-            <DriveTrainWidget cmdVel={cmdVel} />
-          </Panel>
-          <Panel title="Topic Monitor" label="live">
-            <TopicLog nodes={graphData.nodes} />
-          </Panel>
+        {/* Inspector */}
+        <div className="panel">
+          <div className="panel-header">
+            <div className="panel-header-dot" style={{background:selNode?.type==='rostopic'?'#d97706':'#2dd4bf'}}/>
+            Inspector
+          </div>
+          <div className="panel-body">
+            <Inspector node={selNode} edges={data.edges} allNodes={data.nodes}/>
+          </div>
         </div>
-      </div>
 
-      {/* Edu tooltip */}
-      {eduMode && hoverInfo?.node && (
-        <EduTooltip
-          node={hoverInfo.node}
-          x={hoverInfo.x} y={hoverInfo.y}
-          allNodes={graphData.nodes} edges={graphData.edges}
-          visible={true}
-        />
-      )}
+      </div>
     </div>
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 </body>
 </html>

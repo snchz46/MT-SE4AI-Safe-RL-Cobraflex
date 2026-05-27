@@ -24,6 +24,44 @@ from .meta import LAUNCH_META
 from .model import Launch, LogEntry, args_to_overrides, instantiate_args
 
 
+def _collect_descendants(pid: int) -> list[int]:
+    """Return all descendant PIDs of *pid* by reading /proc (Linux-only, no subprocess).
+
+    Builds a parent→children map in one /proc scan, then BFS from pid.
+    Gazebo (gz sim) calls setsid() internally so it escapes killpg; this
+    function finds it regardless of process-group membership.
+    """
+    children_of: dict[int, list[int]] = {}
+    try:
+        for entry in os.scandir('/proc'):
+            if not entry.name.isdigit():
+                continue
+            try:
+                with open(f'{entry.path}/stat') as fh:
+                    stat = fh.read()
+                # Format: "pid (comm) state ppid pgrp …"
+                # comm can contain spaces/parens → find the LAST ')'
+                end = stat.rfind(')')
+                if end < 0:
+                    continue
+                parts = stat[end + 2:].split()   # "state ppid pgrp …"
+                cpid  = int(entry.name)
+                ppid  = int(parts[1])
+                children_of.setdefault(ppid, []).append(cpid)
+            except (OSError, ValueError, IndexError):
+                pass
+    except OSError:
+        return []
+    # BFS from pid
+    out: list[int] = []
+    queue = list(children_of.get(pid, []))
+    while queue:
+        p = queue.pop(0)
+        out.append(p)
+        queue.extend(children_of.get(p, []))
+    return out
+
+
 LOG_TEMPLATES = [
     ("INFO", "cage_ros_node", "rule C-01 lane_boundary OK"),
     ("INFO", "cage_ros_node", "rule C-04 heading_window OK"),
@@ -196,16 +234,19 @@ class RosBackend(Backend):
         launch.exit_code = None
         launch.last_error = None
         launch._stopping = False
+        launch._setsid_applied = False
+        launch._stray_pids = []
 
         proc = QProcess()
         proc.setProgram("ros2")
         proc.setArguments(["launch", launch.pkg, launch.file_path.name,
                            *args_to_overrides(launch.args)])
         proc.setProcessChannelMode(QProcess.MergedChannels)
-        # Crucial on Linux: own process group so killpg(SIGINT) reaps the whole
-        # ros2 launch + Gazebo + nodes tree on stop.
+        # Own process group so killpg(SIGINT) reaps the whole ros2 launch tree.
+        # setChildProcessModifier may not be available in all PySide6 builds.
         if hasattr(proc, "setChildProcessModifier") and hasattr(os, "setsid"):
             proc.setChildProcessModifier(os.setsid)
+            launch._setsid_applied = True
 
         proc.readyReadStandardOutput.connect(lambda l=launch, p=proc: self._on_output(l, p))
         proc.finished.connect(lambda code, status, l=launch: self._on_finished(l, code))
@@ -234,17 +275,39 @@ class RosBackend(Backend):
             return
         launch._stopping = True
         pid = launch.pid
-        if pid and hasattr(os, "killpg") and hasattr(os, "getpgid"):
+
+        # Snapshot ALL descendants NOW (before any signals) so we can reach
+        # processes (e.g. gz sim) that escape the process group via setsid().
+        launch._stray_pids = _collect_descendants(pid) if pid else []
+
+        if pid:
             try:
-                os.killpg(os.getpgid(pid), signal.SIGINT)
-                e = LogEntry.parse(f"[INFO] [launch_gui]: SIGINT -> pgid({pid})")
+                if launch._setsid_applied and hasattr(os, "killpg") and hasattr(os, "getpgid"):
+                    os.killpg(os.getpgid(pid), signal.SIGINT)
+                    e = LogEntry.parse(f"[INFO] [launch_gui]: SIGINT -> pgid({pid})")
+                else:
+                    os.kill(pid, signal.SIGINT)
+                    e = LogEntry.parse(f"[INFO] [launch_gui]: SIGINT -> pid({pid})")
                 launch.logs.append(e); self.on_log_line(launch, e)
             except OSError as err:
-                e = LogEntry.parse(f"[WARN] [launch_gui]: killpg failed ({err}); terminating QProcess")
+                e = LogEntry.parse(f"[WARN] [launch_gui]: kill failed ({err}); terminating QProcess")
                 launch.logs.append(e); self.on_log_line(launch, e)
                 proc.terminate()
+
+            # SIGINT all descendants that may have escaped the group (gz sim, etc.)
+            killed = 0
+            for dpid in launch._stray_pids:
+                try:
+                    os.kill(dpid, signal.SIGINT)
+                    killed += 1
+                except OSError:
+                    pass
+            if killed:
+                e = LogEntry.parse(f"[INFO] [launch_gui]: SIGINT -> {killed} stray descendant(s)")
+                launch.logs.append(e); self.on_log_line(launch, e)
         else:
             proc.terminate()
+
         QTimer.singleShot(FORCE_KILL_TIMEOUT_MS, lambda l=launch: self._force_kill_if_alive(l))
 
     def shutdown(self) -> None:
@@ -259,14 +322,32 @@ class RosBackend(Backend):
                     proc.waitForFinished(1000)
 
     def _force_kill_if_alive(self, launch: Launch) -> None:
+        # Always SIGTERM stray descendants first — they survive even if the
+        # ros2 launch parent has already exited (e.g. gz sim after ros2 shutdown).
+        stray_killed = 0
+        for dpid in launch._stray_pids:
+            try:
+                os.kill(dpid, signal.SIGTERM)
+                stray_killed += 1
+            except OSError:
+                pass
+        if stray_killed:
+            e = LogEntry.parse(f"[WARN] [launch_gui]: SIGTERM -> {stray_killed} stray descendant(s)")
+            launch.logs.append(e); self.on_log_line(launch, e)
+        launch._stray_pids = []
+
         proc = launch._process
         if proc is None or proc.state() == QProcess.NotRunning:
             return
         pid = launch.pid
-        if pid and hasattr(os, "killpg") and hasattr(os, "getpgid"):
+        if pid:
             try:
-                os.killpg(os.getpgid(pid), signal.SIGTERM)
-                e = LogEntry.parse(f"[WARN] [launch_gui]: SIGTERM -> pgid({pid})")
+                if launch._setsid_applied and hasattr(os, "killpg") and hasattr(os, "getpgid"):
+                    os.killpg(os.getpgid(pid), signal.SIGTERM)
+                    e = LogEntry.parse(f"[WARN] [launch_gui]: SIGTERM -> pgid({pid})")
+                else:
+                    os.kill(pid, signal.SIGTERM)
+                    e = LogEntry.parse(f"[WARN] [launch_gui]: SIGTERM -> pid({pid})")
                 launch.logs.append(e); self.on_log_line(launch, e)
             except OSError:
                 pass

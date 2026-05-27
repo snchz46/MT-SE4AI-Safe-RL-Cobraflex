@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 )
 
 from .backend import Backend, detect_backend
+from . import ros2_graph_server
 from .constants import (
     DEFAULT_ACTIVE_CHIPS,
     DEFAULT_WINDOW_HEIGHT,
@@ -534,6 +535,8 @@ def main() -> None:
 
     backend = detect_backend(args.mock, args.workspace or _workspace_root())
     backend.setup()
+
+    ros2_graph_server.start()
 
     app = QApplication(sys.argv)
     app.setStyleSheet(_load_qss())

@@ -1136,77 +1136,9 @@ huérfanos ni warnings.
 <!--
 APÉNDICE INTERNO — TRABAJO PENDIENTE EN ESTE CAPÍTULO
 
-D11 (cierre):
-  [x] Estructura de secciones 4.1–4.10
-  [x] Redacción [BORRADOR D11] de 4.1, 4.2, 4.3, 4.4.1, 4.4.2, 4.6.1, 4.6.2, 4.7.1, 4.8.1, 4.9, 4.10
-  [x] Esqueletos tabulares de 4.4.3 (Hazard Register) y 4.6.3 (SRS) con
-       contenido provisional del primer pase del draft V3
-  [x] Marcadores [COMPLETAR FASE 1 / Dxx] en todas las subsecciones
-       que dependen de cierres posteriores
-
-D12-D13 (operacionalización del Hazard Register y STPA ligera):
-  [x] Auditoría de calidad de los nueve hazards (H-01..H-09): rating S/E/C
-       reconciliado contra docs/02_hazard_register.md tras la
-       auditoría D11 y la consolidación de 13.05.2026 que promovió
-       H-08 (stall por reward exploitation) y H-09 (cage rule
-       composition) desde "Open hazards under consideration" a
-       entradas formales; tabla §4.4.3 alineada al registro canónico.
-  [x] Producir docs/02_hazard_register.md (versión D11 ampliada
-       en D12-D13)
-  [x] STPA ligera sobre H-01, H-02, H-04: pasada sistemática sobre
-       cuatro UCAs × dos acciones de control, documentada en el
-       artefacto canónico y resumida en §4.5.2; H-08 y H-09 quedan
-       fuera del alcance STPA por razones estructurales
-       documentadas (training-time / composition).
-  [x] Argumentación de cobertura del HARA en §4.4.4 (cuatro
-       funciones + eje meta-arquitectónico para H-09)
-
-D14-D16 (derivación y cierre de SRS):
-  [ ] Cierre de TBDs residuales en parámetros del SRS
-       (dependientes de TBD-Q1 a TBD-Q12 del ODD-Spec y de las
-       mediciones M-1..M-5 de experiments/calibration/)
-  [x] Rationale completo por SR (SR-001..SR-011) en
-       docs/03_safety_requirements.md
-  [x] Asignación de criticidad SR-CL-A/B por SR (SR-009/010/011
-       como SR-CL-B; SR-001..SR-005, SR-007, SR-008 como SR-CL-A;
-       SR-006 como SR-CL-B)
-  [x] Argumentación de completitud relativa en §4.7.2
-
-D17 (matriz de trazabilidad):
-  [x] Consolidación de docs/07_traceability_matrix.md y de los CSV
-       compañeros generados por tools/sync_hazard_register.py
-       (docs/data/hazard_register.csv) y tools/sync_safety_requirements.py
-       (docs/data/safety_requirements.csv)
-  [ ] Especificación funcional de tools/check_traceability.py
-       (a desarrollar en §6.5.4)
-  [x] Verificación de no-huérfanos en H ↔ SR sobre la cadena 9H/11SR;
-       check_traceability.py PASS con 0 warnings al cierre del
-       audit 13.05.2026.
-
-D18 (revisión de calidad):
-  [x] Revisión cruzada de §4.4 a §4.8 contra los criterios de
-       calidad declarados en §3.7: integridad de la trazabilidad
-       (§4.8 instancia el meta-criterio 1), cobertura de SRs por
-       evidencia (§4.7.1 + D-30 prepara el meta-criterio 2),
-       anticipación de hazards (§4.4.4 prepara el meta-criterio 3).
-       Cita explícita añadida al final de §4.7.1. Los meta-
-       criterios 4 (coste de adopción) y 5 (productividad de la
-       matriz) son meta-evaluativos para Cap. 11 y no necesitan
-       reflejo en este capítulo.
-  [x] Verificación de coherencia con el Capítulo 3 (enunciados
-       sobre A1-A5 vs §3.4): A4 y A3 ya estaban citadas
-       explícitamente; A1, A2 y A5 ahora se citan en §4.6.3
-       (implementation_type / verificación por escenarios) y
-       §4.3.1 (ODD acotado + gap sim-to-real) respectivamente.
-       Sin contradicciones detectadas entre §4.5/§4.6 y §3.4.
-
 D19-D20 (consolidación de cap. 4):
   [ ] [PULIDO FASE 6] Pulido de prosa y tránsito a tono académico
        definitivo
-  [x] Cierre de §4.10 con la transición exacta al Capítulo 5:
-       párrafo final añadido conectando el cierre de F1 con G1, los
-       pre-requisitos M-1..M-5 + ODD TBDs, el bump cage.yaml a
-       0.3.0 y el estado *post-G1* asumido por Cap. 5.
   [ ] [PULIDO FASE 6] Inserción de figuras: Figura 4.1 (taxonomía
        PAS 1883 reducida), Figura 4.2 (procedimiento HARA),
        Figura 4.3 (procedimiento de derivación SR), Figura 4.4

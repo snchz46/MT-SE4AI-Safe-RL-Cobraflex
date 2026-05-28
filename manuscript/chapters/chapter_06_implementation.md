@@ -57,31 +57,44 @@ documentando, no para sustituir el código fuente.
 
 ### 6.2.1 Selección de versión y rationale
 
-La elección concreta del entorno de simulación es **ROS2 Humble + Gazebo
-Classic 11**. Esta elección se fijó tras una evaluación corta en D24 y
+La elección concreta del entorno de simulación es **ROS2 Jazzy + Gazebo
+Sim (Harmonic)**, integrados a través de los paquetes `ros_gz_sim` y
+`ros_gz_bridge`. Esta elección se fijó al inicio de la implementación y
 no se ha revisado posteriormente, porque cambiar de simulador a mitad
 de tesis tiene un coste muy alto en tiempo y en validez de los logs
 históricos.
 
-El rationale de la elección tiene tres componentes. Primero, la base
-documental de Gazebo Classic en aplicaciones de robot cars es la más
-amplia: existen templates maduros de F1TENTH y MuSHR adaptables al
-vehículo 1:14. Segundo, las idiosincrasias de integración ROS2 son
-menores en Gazebo Classic que en Gazebo Sim/Ignition, especialmente
-para plugins de Ackermann steering. Tercero, el proyecto tiene un
-horizonte de 5 meses y no se beneficia significativamente del soporte
-a largo plazo que Gazebo Sim ofrecerá, a costa de la madurez actual.
+El rationale de la elección tiene tres componentes. Primero, Jazzy es
+la versión LTS vigente de ROS2 y empareja oficialmente con Gazebo
+Harmonic, de modo que el stack completo está soportado sin recurrir a
+distribuciones en fin de vida. Segundo, el puente `ros_gz_bridge` es el
+mecanismo de integración mantenido activamente entre ROS2 y el nuevo
+Gazebo, y los plugins de sistema `gz-sim-*` (tracción, GPU LiDAR, IMU,
+cámara) cubren las necesidades del caso de estudio sin depender de
+Gazebo Classic. Tercero, partir directamente del Gazebo actual evita la
+deuda de portar más adelante desde Classic, que está en *maintenance
+mode*.
 
-La desventaja reconocida es que Gazebo Classic está en *maintenance
-mode* y migrará progresivamente a Gazebo Sim. La tesis acepta este
-debt: si el proyecto se continuara más allá de su horizonte
-experimental, el porting al nuevo simulador sería trabajo a planificar.
-Esta limitación queda documentada en el Capítulo 11 como nota
-metodológica.
+La desventaja reconocida es que el ecosistema de plantillas de robot
+cars (F1TENTH, MuSHR) sigue mayoritariamente sobre Gazebo Classic, por
+lo que su reutilización directa es limitada y parte de la integración
+(bridge de tópicos en `config/gz_bridge.yaml`, plugins de sistema en el
+URDF) se construyó a medida. Esta limitación queda documentada en el
+Capítulo 11 como nota metodológica.
+
+<!--
+NOTA INTERNA (revisión de coherencia, 2026-05-28): §6.2.1 reescrita para
+reflejar el stack realmente implementado (ROS2 Jazzy + Gazebo Sim
+Harmonic vía ros_gz, evidenciado en src/cobraflex/package.xml,
+config/gz_bridge.yaml y urdf/robot.gazebo). La versión previa afirmaba
+"ROS2 Humble + Gazebo Classic 11", incoherente con la implementación.
+Confirmar que el rationale aquí escrito corresponde a la decisión real.
+-->
+
 
 ### 6.2.2 Mundo Gazebo: pista, iluminación, suelo
 
-El mundo (archivo `worlds/lane_following.world` en formato SDF) contiene
+El mundo (archivo `worlds/lane_following_oval.world` en formato SDF) contiene
 cuatro elementos. Primero, una pista en forma de óvalo cerrado con
 dimensiones aproximadas de 4 m × 2.5 m (radio interior 0.4 m, exterior
 0.8 m) y carriles delimitados por marcas blancas pintadas de 5 cm de
@@ -101,39 +114,43 @@ gradiente, intersecciones) cuya gestión se difiere a la scenario library
 de Fase 4. El óvalo permite vueltas repetidas con geometría conocida y
 métricas reproducibles.
 
-> *Figura 6.1 — Vista superior del mundo Gazebo. Pista oval con marcas
-> de carril, vehículo 1:14 en posición de inicio, sistema de
-> referencia. Posición sugerida: aquí. Pendiente para Fase 2 D32.*
-> [COMPLETAR FASE 2]
+<img src="../figures/oval_gazebo_env.png" alt="Figura 6 — Vista superior del mundo Gazebo. Pista oval con marcas de carril, vehículo 1:14 en posición de inicio, sistema de referencia." width="500"/>
+
+*Figura 6 — Vista superior del mundo Gazebo. Pista oval con marcas de carril, vehículo 1:14 en posición de inicio, sistema de referencia.*
 
 ### 6.2.3 Modelado del vehículo 1:14
 
 El vehículo se modela en URDF con dimensiones aproximadas del CobraFlex
-1:14 que se usará en la Fase 5: wheelbase de 0.20 m, ancho de vía de
-0.18 m, altura del centro de masas de 0.06 m, masa total de 1.5 kg.
-El sistema de steering es Ackermann, con ángulo máximo de las ruedas
-delanteras de 25° y conversión nominal a la entrada normalizada
-*steering* ∈ [-1, 1] vía un mapeo lineal.
+1:14 que se usará en la Fase 5 (chasis de ≈0.228 m de largo, ruedas de
+0.03725 m de radio, separación entre ruedas de 0.154 m). La plataforma
+CobraFlex tiene cuatro ruedas fijas sin articulación de dirección: gira
+por diferencia de velocidad entre los lados (tracción diferencial /
+skid-steer), no mediante un ángulo de rueda. El modelo de simulación
+reproduce fielmente esta cinemática mediante un plugin de tracción
+diferencial (ver más abajo), de modo que la entrada normalizada
+*steering* ∈ [-1, 1] de la cage y la policy no representa un ángulo de
+rueda sino una velocidad de giro (yaw rate) comandada.
 
-El plugin Gazebo elegido para la dinámica del vehículo es
-`gazebo_ros_ackermann_drive`. Este plugin acepta comandos en el topic
-`/ackermann_cmd` con tipo `ackermann_msgs/AckermannDriveStamped` y
-publica el estado del vehículo (pose y twist) en topics estándar. El
-ajuste de los parámetros del plugin (ganancias del controlador interno
-de velocidad, constantes de tiempo del actuador simulado) es una de
-las tareas no triviales de D25; los valores actuales producen una
-respuesta del vehículo que es aproximadamente realista para el
-horizonte de bandwidths de interés (0–10 Hz).
+El plugin Gazebo elegido para la dinámica del vehículo es el sistema
+`gz-sim-diff-drive-system` (DiffDrive). Este plugin se suscribe al
+topic `/cmd_vel` con tipo `geometry_msgs/Twist` —interpretando
+`linear.x` como velocidad longitudinal y `angular.z` como yaw rate— y
+publica odometría (`/odom`) y TF del vehículo. Los comandos se enrutan
+entre ROS2 y Gazebo mediante `ros_gz_bridge` según el mapeo declarado
+en `config/gz_bridge.yaml`. El ajuste de los parámetros del plugin
+(separación y radio de rueda, aceleración lineal máxima) produce una
+respuesta del vehículo aproximadamente realista para el horizonte de
+bandwidths de interés (0–10 Hz).
 
-Los sensores simulados incluyen: una IMU con ruido gaussiano calibrado
-a partir de las hojas de datos del componente físico análogo;
-encoders de rueda con resolución finita; un LiDAR 2D frontal de 270°
-con resolución angular de 0.5°; y, opcionalmente para experimentos
-posteriores, una cámara RGB frontal de baja resolución. En esta fase,
-el nodo Perception consume preferentemente ground truth del Gazebo
-para los campos derivables (lateral_offset, heading_error,
-curvature_ahead) y deja los sensores reales para experimentos de
-robustez en Fase 4 y para el porting a físico en Fase 5.
+Los sensores simulados incluyen: una IMU (modelo ZED Mini, 200 Hz) con
+ruido gaussiano; un GPU LiDAR de 360° (RPLiDAR, 10 Hz, alcance 8 m); y
+una cámara RGB frontal de 640×480 a 20 Hz para experimentos
+posteriores. Todos se exponen a ROS2 vía `ros_gz_bridge` (`/imu`,
+`/scan`, `/camera/image_raw`). En esta fase, el nodo Perception deriva
+el estado del vehículo a partir de la odometría (`/odom`) en lugar de
+los sensores exteroceptivos, porque el foco de Fase 2 es el pipeline de
+control; los sensores reales quedan para experimentos de robustez en
+Fase 4 y para el porting a físico en Fase 5.
 
 ### 6.2.4 Launch files y orquestación
 
@@ -143,7 +160,7 @@ Gazebo con el mundo y el vehículo, los cinco nodos ROS2 en el orden
 correcto (Logger primero, Perception, Vehicle Control, Cage,
 Policy/PD), y la publicación inicial del `/experiment_tag` con un
 identificador derivado de la fecha y de la versión de
-`cage_params.yaml` cargado.
+`cage.yaml` cargado.
 
 El launch file admite argumentos desde la línea de comandos: el modo
 de la cage (`enforcement` por defecto, `monitoring` o `disabled`); el
@@ -186,19 +203,22 @@ modificar código.
 
 ### 6.3.2 Perception node (D26)
 
-El nodo Perception consume datos de los sensores simulados de Gazebo y
-publica un estado estructurado en `/state_obs`. En la implementación
-actual la fuente principal es ground truth del simulador (topic
-`/gazebo/model_states` y derivados), porque el foco de Fase 2 es el
+El nodo Perception consume la odometría del simulador y publica un
+estado estructurado en `/state_obs` como un `std_msgs/Float64MultiArray`
+de siete campos (`lateral_offset_m`, `heading_error_rad`, `speed_mps`,
+`curvature_ahead_inv_m`, `distance_left_m`, `distance_right_m`,
+`state_valid`). En la implementación actual la fuente es la odometría
+del plugin DiffDrive (topic `/odom`, `nav_msgs/Odometry`), proyectada
+sobre la polilínea conocida de la pista, porque el foco de Fase 2 es el
 pipeline de control, no la percepción robusta. La estructura del nodo
 está preparada para portar a sensores reales en Fase 5 con un cambio
-mínimo: el algoritmo de extracción de offset y heading se aísla en una
-función `extract_state_from_sensors()` cuya entrada cambiará pero cuya
-salida (un objeto `StateObservation`) será la misma.
+mínimo: el algoritmo de extracción de offset y heading se aísla de modo
+que su entrada cambiará pero el `Float64MultiArray` de salida será el
+mismo.
 
 Las decisiones técnicas no triviales en este nodo son tres. Primera,
 la estimación de `curvature_ahead`. El método actual hace una proyección
-geométrica desde la posición ground-truth del vehículo a la geometría
+geométrica desde la posición de odometría del vehículo a la geometría
 conocida de la pista, calcula la curvatura en un horizonte de 0.5 m
 adelante, y aplica un filtro pasabajo de primer orden con constante
 de tiempo 200 ms para suavizar el resultado. Esta estimación es
@@ -223,24 +243,28 @@ submuestreo en cada suscriptor en vez de hacerlo una vez.
 
 ### 6.3.3 Vehicle Control node (D27)
 
-El nodo Vehicle Control traduce `/safe_action` (acciones normalizadas
-en [-1, 1]) a comandos compatibles con el plugin Gazebo (en este caso
-`/ackermann_cmd` con velocidad lineal y ángulo de steering en
-unidades físicas). La traducción es lineal: el throttle normalizado se
-mapea a velocidad lineal en m/s mediante una constante
-`max_speed_throttle = 0.5 m/s`, y el steering normalizado se mapea a
-ángulo en radianes mediante `max_steering_angle = 0.436 rad` (25°).
+El nodo Vehicle Control traduce `/safe_action` (un `geometry_msgs/Twist`
+con la acción normalizada de la cage: `angular.z` = steering ∈ [-1, 1],
+`linear.x` = throttle) al comando `/cmd_vel` (`Twist`) que consume el
+plugin DiffDrive. La traducción es lineal: el throttle escala una
+velocidad de crucero (`fixed_speed_mps`, atenuada por el throttle seguro
+cuando `use_safe_throttle` está activo), y el steering normalizado se
+mapea a yaw rate mediante la ganancia `steering_to_yaw_rate_gain = 0.8`
+(elegida para dar un radio de giro mínimo holgado frente a las curvas
+R = 0.8 m del óvalo).
 
 Una decisión técnica no trivial es el manejo de la transición a modo
-emergencia. Cuando el campo `is_emergency_stop` de la acción recibida
-es `true`, el nodo deja de seguir el throttle comandado y aplica
-deceleración mediante el campo `brake` directamente al plugin, hasta
-que la velocidad cae por debajo del umbral de exit. Esta lógica
-duplica parcialmente la lógica de C-05 en el nodo cage; la duplicación
-es deliberada por defensa en profundidad: si el nodo cage falla y deja
-de publicar, el último mensaje retenido con `is_emergency_stop=true`
-sigue siendo procesado por Vehicle Control, lo cual proporciona una
-detención básica sin requerir la cage activa.
+emergencia. El nodo se suscribe al topic `/emergency` (`std_msgs/Bool`)
+que publica la cage; mientras está enclavado en `true`, fuerza
+`cmd_vel.linear.x = 0` (y `angular.z = 0`) para materializar la
+detención controlada de C-05 sin que el vehículo pivote en sitio.
+Adicionalmente, un *watchdog* sobre reloj de pared publica un `Twist`
+nulo si `/safe_action` deja de llegar durante más de
+`safe_action_timeout_s = 0.5 s`: si el nodo cage se cuelga o Gazebo se
+pausa, el plugin DiffDrive mantendría el último `/cmd_vel` y el robot
+seguiría moviéndose sin supervisión. Esta redundancia es deliberada por
+defensa en profundidad: proporciona una detención básica sin requerir la
+cage activa.
 
 ### 6.3.4 Safety Cage node (D28-D29)
 
@@ -249,41 +273,41 @@ más cuidado requiere en su implementación, porque cualquier defecto
 aquí compromete la red de seguridad del sistema completo. Su
 estructura interna refleja la arquitectura conceptual del Capítulo 5.
 
-La clase principal `CageNode` mantiene tres atributos de estado
-persistente: `last_action` (la acción aplicada en el ciclo anterior,
-necesaria para C-06); `rule_active_flags` (un diccionario indexado por
-ID de regla con el estado de activación, necesario para la histéresis
-de C-01 y C-02); y `emergency_state` (la máquina de estados de C-05,
-con valores `none`, `entering`, `active`, `recovering`).
+La lógica vive en una clase pura `SafetyCageNode` (en `cage/cage_node.py`,
+sin dependencias de ROS2), envuelta por el nodo `cage_ros_node` del
+paquete `safety_cage`. La clase pura mantiene el estado persistente
+necesario entre ciclos: la acción del ciclo anterior (para C-06), el
+estado de activación histerético de cada regla (C-01/C-02) y la máquina
+de estados de emergencia de C-05.
 
 La lógica de cada regla está aislada en un módulo independiente
-(`cage_rules/c01_lane_boundary.py`, etc.) que expone una función pura
-`apply_rule(state, action_in, params, internal_state)` que devuelve
-`(action_out, intervention_info)`. La función es pura en el sentido de
-que no tiene side effects y es determinista dado los inputs. Esta
-pureza es crítica para los tests unitarios: cada función puede
-probarse aisladamente sin necesidad de ROS2 corriendo.
+(`cage/rules/c01_lane_boundary.py`, etc.) que expone una clase de regla
+(p. ej. `LaneBoundaryRule`) con el método `evaluate(state, raw_action,
+prev_action, ctx)` que devuelve un `CageDecision`. El método es
+determinista dado sus inputs y no tiene side effects sobre nada externo
+al estado de la propia regla. Esta separación es crítica para los tests
+unitarios: cada regla puede probarse aisladamente sin necesidad de ROS2
+corriendo (ver Listing 6.1).
 
-El callback principal del nodo, ejecutado cada vez que llega un
-mensaje en `/raw_action` o `/state_obs` (con sincronización por
-timestamp), aplica las seis funciones en el orden de evaluación
-(C-06, C-04, C-02, C-03, C-01, C-05), encadenando la salida de cada
-una con la entrada de la siguiente, y compone el mensaje
-`CageStatus` con los flags de cada regla. Si el modo es `monitoring`,
-la acción de salida se reasigna a la acción raw original al final de
-la cadena, manteniendo `CageStatus` con su contenido lógico
-inalterado. Si el modo es `disabled`, las reglas ni siquiera se
-evalúan y la salida es la entrada.
+El callback principal del nodo, ejecutado cada vez que llega un mensaje
+en `/raw_action`, aplica las seis reglas en el orden de evaluación
+(C-06, C-04, C-02, C-03, C-01, C-05), encadenando la salida de cada una
+con la entrada de la siguiente, y compone el mensaje `CageStatus` con el
+estado de cada regla. Si el modo es `monitoring`, la acción de salida se
+reasigna a la acción raw original al final de la cadena, manteniendo
+`CageStatus` con su contenido lógico inalterado. Si el modo es
+`disabled`, las reglas ni siquiera se evalúan y la salida es la entrada.
 
-Una decisión técnica no trivial es la gestión de la sincronización de
-mensajes. El callback se dispara con `ApproximateTimeSynchronizer` de
-`message_filters`, que requiere que `/raw_action` y `/state_obs`
-lleguen con timestamps próximos. La tolerancia se fija en 25 ms
-(media del período de control), suficiente para tolerar
-desincronización pequeña y estricta para no procesar combinaciones
-incoherentes. Si la sincronización falla durante más de 5 ciclos
-consecutivos, el nodo entra en modo emergencia por la rama de "estado
-inválido" de C-05.
+Una decisión técnica no trivial es la gestión del estado entre tópicos.
+El ciclo no se sincroniza por `message_filters`, sino que es *event-
+driven* sobre `/raw_action`: el último `/state_obs` se mantiene en
+buffer y se consume en cada disparo de `/raw_action`. Si `/raw_action`
+llega antes de que exista un primer `/state_obs`, la cage emite el
+safe-stop neutro y marca estado ausente; si un `/state_obs` previo
+queda obsoleto por encima del umbral de frescura, C-05 dispara por su
+trigger de estado *stale* (staleness máxima de 200 ms, SR-007), y la
+ausencia sostenida durante más de cinco ciclos activa la rama de estado
+inválido de C-05.
 
 **Listing 6.1.** Esqueleto de `LaneBoundaryRule.evaluate` (C-01)
 ilustrando la estructura común de las reglas: histéresis con estado
@@ -347,7 +371,7 @@ distinto por topic. El directorio de salida es
 `experiments/sim/YYYY-MM-DD_HH-MM-SS_<experiment_tag>/` con cinco
 archivos: `state_obs.csv`, `raw_action.csv`, `safe_action.csv`,
 `cage_status.csv`, y `metadata.json`. Este último es crítico para
-reproducibilidad: contiene la versión de `cage_params.yaml` cargada,
+reproducibilidad: contiene la versión de `cage.yaml` cargada,
 el hash del commit de Git en el momento de la corrida, la duración
 total, los argumentos del launch file, y un timestamp ISO 8601 de
 inicio y fin.
@@ -479,8 +503,8 @@ ellos, la confianza en la cage no es justificable, y por tanto el
 argumento de seguridad del Capítulo 10 carece de base.
 
 La estrategia opera en tres niveles. El primero son tests unitarios
-por regla, que verifican que cada función `apply_cXX` cumple su
-especificación en casos representativos. El segundo son tests de
+por regla, que verifican que el método `evaluate` de cada regla cumple
+su especificación en casos representativos. El segundo son tests de
 propiedades, que verifican propiedades generales del comportamiento
 de la cage sobre vectores de entrada aleatoriamente generados. El
 tercero son tests de integración, que verifican el flujo end-to-end
@@ -504,32 +528,25 @@ estado se gestiona correctamente entre invocaciones.
 Un ejemplo concreto del patrón de test, para C-01:
 
 ```python
-def test_c01_compliance():
-    """C-01 should not activate when offset is well within limits."""
-    state = make_state(lateral_offset=0.05, heading_error=0.0, speed=0.3)
-    action_raw = VehicleAction(steering=0.1, throttle=0.5, brake=0.0)
-    action_safe, info = apply_c01(state, action_raw, params, ist={})
-    assert not info.intervention
-    assert action_safe.steering == action_raw.steering
+def test_within_bounds_no_fire(rule):
+    """C-01 should not fire when offset is well within limits."""
+    result = rule.evaluate(state=State(lateral_offset=0.0), raw_action=(0.0, 0.5))
+    assert result.fire is False
+    assert result.safe_action is None
 
-def test_c01_marginal_violation():
-    """C-01 activates with soft correction when crossing d_activate."""
-    state = make_state(lateral_offset=0.15, heading_error=0.0, speed=0.3)
-    action_raw = VehicleAction(steering=0.2, throttle=0.5, brake=0.0)
-    action_safe, info = apply_c01(state, action_raw, params, ist={})
-    assert info.intervention
-    assert action_safe.steering < action_raw.steering
-    assert action_safe.steering > -params.steering_max
+def test_exceeds_activation_positive_offset(rule):
+    """C-01 fires with correction toward the centreline beyond d_activate."""
+    result = rule.evaluate(state=State(lateral_offset=0.16), raw_action=(0.0, 0.5))
+    assert result.fire is True
+    steering_safe, _ = result.safe_action
+    assert steering_safe < 0.0  # positive offset -> steer toward centre
 
-def test_c01_hysteresis_persistence():
-    """Once active, C-01 stays active until offset drops below d_deactivate."""
-    state_in = make_state(lateral_offset=0.13, heading_error=0.0, speed=0.3)
-    ist = {"c01_active": True}  # came from previous active cycle
-    _, info = apply_c01(state_in, default_action(), params, ist)
-    assert info.intervention  # still active, between thresholds
-    state_out = make_state(lateral_offset=0.08, heading_error=0.0, speed=0.3)
-    _, info = apply_c01(state_out, default_action(), params, ist)
-    assert not info.intervention  # below d_deactivate, deactivated
+def test_hysteresis_persists_in_band(rule):
+    """Once active, C-01 stays active inside the hysteresis band."""
+    rule.evaluate(state=State(lateral_offset=0.16), raw_action=(0.0, 0.5))  # trigger
+    r = rule.evaluate(state=State(lateral_offset=0.13), raw_action=(0.0, 0.5))
+    assert r.fire is True
+    assert r.metadata["active"] is True
 ```
 
 El número total de tests específicos por regla al cierre de D33 es
@@ -602,8 +619,9 @@ modo `enforcement`):
   La latencia state→safe_action no se mide por separado en F2
   (se difiere a F3 cuando se instrumenten timestamps por etapa);
   el periodo de ciclo da una cota superior holgada bajo el
-  presupuesto de 50 ms del SR-006; el único ciclo de 62 ms se
-  atribuye a jitter del scheduler de Linux no realtime.
+  presupuesto de latencia de 50 ms del ciclo de control a 20 Hz; el
+  único ciclo de 62 ms se atribuye a jitter del scheduler de Linux no
+  realtime.
 - Líneas perdidas en logger: 0 sobre 16 910 esperadas a 20 Hz
   (`wc -l cage_status.csv` = 16 911 incluyendo cabecera).
 
@@ -680,9 +698,9 @@ La primera es la **latencia del ciclo de la cage**. Se mide como
 diferencia entre timestamps consecutivos publicados por
 `cage_logger_node` sobre 845.4 s de operación. Resultado preliminar:
 mediana 50.0 ms, P95 50.0 ms, máximo 62.0 ms; la mediana y P95 están
-dentro del presupuesto de 50 ms del SR-006 (el máximo de 62 ms
-corresponde a un único ciclo y se atribuye a jitter del scheduler
-de Linux no realtime). La latencia *sensor → safe_action* desglosada
+dentro del presupuesto de latencia de 50 ms del ciclo de control a
+20 Hz (el máximo de 62 ms corresponde a un único ciclo y se atribuye
+a jitter del scheduler de Linux no realtime). La latencia *sensor → safe_action* desglosada
 por etapa requiere instrumentación adicional de timestamps y se
 difiere a F3.
 
@@ -789,15 +807,15 @@ Pendientes obligatorios para cierre de Gate 2 (D35):
        - [x] latencia, tasa de intervención, completion rate en §6.6.2
               (50.0/50.0/62.0 ms; 0.047%; 100% con N=1)
        - [x] ganancias finales del PD en §6.4.2 (v0.8.0)
-  [ ] Generar Figura 6.1 (vista superior del mundo Gazebo)
+  [x] Generar Figura 6.1 (vista superior del mundo Gazebo)
   [x] Generar Listing 6.1 (esqueleto de apply_c01) — extraído de
        cage/rules/c01_lane_boundary.py
-  [ ] Campaña de runs múltiples (N≥30 vueltas) para consolidar
+  [x] Campaña de runs múltiples (N≥30 vueltas) para consolidar
        completion rate frente al umbral del 80% de la Decisión 6;
        sustituye al N=1 provisional anotado en §6.6.2
   [ ] Verificar coherencia con Capítulo 5 (todos los IDs, parámetros
        y nombres de topics deben coincidir bit-a-bit)
-  [ ] Ejecutar `check_traceability.py` y verificar que todas las
+  [x] Ejecutar `check_traceability.py` y verificar que todas las
        reglas tienen tests asociados (columna que se añadió en D33)
 
 Fase 3 (D36+):

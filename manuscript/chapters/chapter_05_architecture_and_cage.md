@@ -52,7 +52,7 @@ debe resolver y documenta cómo se resuelven en este caso. La sección 5.4
 describe el procedimiento sistemático de derivación desde Safety
 Requirements al conjunto de reglas C-01 a C-06. La sección 5.5 desarrolla
 cada regla en detalle. La sección 5.6 documenta la parametrización
-mediante el archivo `cage_params.yaml` y la política de versionado. La
+mediante el archivo `cage.yaml` y la política de versionado. La
 sección 5.7 desarrolla la arquitectura ROS2: nodos, interfaces y modos de
 operación. La sección 5.8 articula la trazabilidad bidireccional entre
 hazards, SRs, reglas y escenarios, y describe cómo el script
@@ -254,7 +254,7 @@ heading constante durante el horizonte de proyección. Esta simplicidad es
 una decisión consciente. Un modelo más sofisticado tendría más fidelidad
 pero también más superficie para errores que la cage no podría detectar;
 un modelo más sencillo tiene más errores residuales pero acotables, lo
-cual hace la calibración del umbral `t_warning` más segura.
+cual hace la calibración del umbral `t_min` más segura.
 
 ### 5.3.4 Hysteresis y prevención de chattering
 
@@ -268,9 +268,9 @@ Cada regla tiene dos umbrales, `_activate` y `_deactivate`, con
 `_activate < d_max` (donde `d_max` es el límite del SR correspondiente).
 Esto significa que la cage activa antes de violar el SR, lo cual deja
 margen para corregir, y desactiva más tarde para evitar oscilación.
-Numéricamente, en C-01 los umbrales son 0.14 m y 0.10 m frente a un
-`d_max` SR-001 de 0.16 m; la banda de histéresis es 0.04 m y el margen
-hasta el SR es 0.02 m.
+Numéricamente, en C-01 los umbrales son 0.14 m y 0.12 m frente a un
+`d_max` SR-001 de 0.16 m; la banda de histéresis es 0.02 m y el margen
+de activación hasta el SR es 0.02 m.
 
 La interacción entre histéresis y log es importante: el logger registra
 el flanco de activación y el flanco de desactivación separadamente, no
@@ -302,33 +302,42 @@ emergencia, el sistema permanece allí hasta que se cumplan condiciones
 de salida. Tres preguntas hay que decidir: cuándo entra, qué hace
 mientras está en emergencia, y cómo sale.
 
-La elección adoptada para la entrada es la disjunción de tres
-condiciones. Primero, fallo compuesto: offset y heading exceden umbrales
-de aviso simultáneamente durante más de un tiempo umbral, lo cual indica
-que el sistema está fuera del régimen donde las reglas individuales
-pueden corregir. Segundo, estado inválido: el mensaje `/state_obs` es
-demasiado viejo (más de 200 ms), está fuera de rangos físicamente
-plausibles, o ha estado ausente durante más de cinco ciclos consecutivos;
-esto materializa el hazard H-06 (operación con estado corrupto). Tercero,
-señal externa de emergencia publicada en `/cage_reset` con valor de
-disparo, opcional para testing.
+La elección adoptada para la entrada es la disyunción de varias
+condiciones, agrupables en tres familias. Primero, fallo compuesto:
+offset y heading exceden simultáneamente sus umbrales de aviso durante
+más de un tiempo de persistencia, lo cual indica que el sistema está
+fuera del régimen donde las reglas individuales pueden corregir; existe
+una variante de baja energía y una de alta energía (cuando además la
+velocidad supera un umbral), esta última con persistencia más corta
+porque a mayor energía el margen cinemático para absorber la excursión
+es menor. Segundo, estado inválido o no disponible: el mensaje
+`/state_obs` es demasiado viejo (staleness por encima del umbral), está
+fuera de rangos físicamente plausibles, o ha estado ausente durante más
+de cinco ciclos consecutivos; esto materializa el hazard H-06
+(operación con estado corrupto). Tercero, señales externas o de
+composición: una parada externa publicada en `/external_stop`
+(`std_msgs/Bool`, opcional para testing) o la detección de oscilación
+inter-ciclo sostenida entre reglas que afectan al steering (SR-010
+Parte 2).
 
 La elección adoptada para el comportamiento durante la emergencia es
 deceleración controlada con steering congelado en el valor del instante
 de transición. Forzar steering a cero podría producir un giro abrupto si
 el vehículo estaba en curva; congelarlo evita esa transición y
-proporciona una desaceleración predecible. El throttle se pone a cero y,
-si el vehículo soporta freno activo, se aplica freno con magnitud
-moderada (no máxima, para evitar bloqueo de ruedas en simulación).
+proporciona una desaceleración predecible. El throttle pasa a un valor
+de frenado controlado, con deceleración objetivo `a_min` (provisional, a
+la espera de la calibración M-3 que fijará el mapeo `a_min` → comando de
+throttle).
 
-La elección adoptada para la salida es asimétrica entre simulación y
-físico. En simulación, salida automática cuando la causa deja de
-cumplirse durante un tiempo de recuperación y la velocidad ha caído por
-debajo de un umbral. En despliegue físico, salida solo por reset manual.
-La razón es práctica: la simulación corre experimentos largos sin
-supervisión, mientras que en físico una emergencia indica una condición
-que debe inspeccionarse antes de continuar. La asimetría se documenta
-explícitamente en el YAML mediante el flag `auto_recovery`.
+La elección adoptada para la salida es asimétrica respecto a la entrada:
+la entrada es automática en cuanto se detecta un trigger, pero la salida
+exige un reset explícito (`require_explicit_reset = true`) **además** de
+que la causa haya desaparecido. No hay recuperación automática. La razón
+es doble: el reset explícito evita la oscilación entre modos cerca de la
+frontera del trigger (decisión informada por STPA), y una emergencia es
+una condición que debe inspeccionarse antes de continuar. El reset se
+solicita por el método `reset()` del nodo (cableado al topic
+`/cage_reset`) o por `ctx["reset"]`.
 
 ### 5.3.7 Validez del estado y cadena de confianza
 
@@ -373,13 +382,17 @@ predictiva sobre la misma cantidad. Si el SR habla en términos de
 respuesta a fallo ("ante condición Y, transitar a estado seguro"), una
 regla de tipo emergencia.
 
-Aplicar este procedimiento a la SRS de SR-001 a SR-008 (Capítulo 4)
-produjo un mapeo inicial con ocho candidatas. Tras consolidación
-—fusionando candidatas que verifican constraints similares y separando
-las que necesitan mecanismos distintos (reactivo vs predictivo sobre la
-misma variable)— el conjunto se cerró en seis reglas: C-01 a C-06.
-Menos reglas dejarían algún SR sin implementación clara; más reglas
-fragmentarían sin ganancia operativa.
+Aplicar este procedimiento a la SRS de SR-001 a SR-011 (Capítulo 4)
+produjo un mapeo inicial de candidatas. Tras consolidación —fusionando
+candidatas que verifican constraints similares y separando las que
+necesitan mecanismos distintos (reactivo vs predictivo sobre la misma
+variable)— el conjunto de reglas runtime se cerró en seis: C-01 a C-06.
+Tres Safety Requirements no se implementan como regla de cage sino por
+otras vías declaradas en la SRS (decisión D-25): SR-009 (liveness) y la
+fracción correspondiente de SR-011 se resuelven en el diseño del entorno
+de entrenamiento, y SR-010 (consistencia de composición) en el *arbiter*
+del propio nodo cage. Menos reglas dejarían algún SR sin implementación
+clara; más reglas fragmentarían sin ganancia operativa.
 
 ### 5.4.2 Conjunto consolidado y trazabilidad SR → C
 
@@ -388,10 +401,32 @@ tiene al menos una regla principal que lo implementa; algunas tienen
 una regla secundaria que lo refuerza por defensa en profundidad. Cada
 regla implementa al menos un SR; ninguna regla es huérfana de SR.
 
-> *Tabla 5.1 — Mapeo Safety Requirement → regla de cage. Columnas: ID
-> SR, descripción breve, regla(s) principal(es), regla(s) secundaria(s).
-> Posición sugerida: aquí. Ocho filas (SR-001 a SR-008). Pendiente para
-> Fase 2 D22 con datos definitivos del Capítulo 4.* [COMPLETAR FASE 2]
+**Tabla 5.1 — Mapeo Safety Requirement → regla de cage.** Datos
+derivados de la SRS canónica del Capítulo 4 (§4.6.3) y de
+`docs/03_safety_requirements.md`. La regla principal implementa el SR;
+la columna "secundaria / vía" recoge refuerzos por defensa en
+profundidad o, para los SR no implementados como regla, la vía
+alternativa (`training` o `arbiter`, decisión D-25).
+
+| SR | Descripción breve | Regla principal | Secundaria / vía |
+| --- | --- | --- | --- |
+| SR-001 | Offset lateral `\|d\| < d_max` | C-01 | C-03 (predictiva, H-01) |
+| SR-002 | Error de heading `\|θ\| < θ_max` | C-02 | — |
+| SR-003 | TTLC predictivo `> t_min` | C-03 | — |
+| SR-004 | Velocidad `≤ v_max(κ)` | C-04 | — |
+| SR-005 | Modo emergencia ante estado compuesto | C-05 | — |
+| SR-006 | Suavidad de actuador (rate limit) | C-06 | — |
+| SR-007 | Validez y frescura del estado | C-05 (rama validez) | — |
+| SR-008 | Parada controlada bajo demanda | C-05 (rama parada) | nodo vehicle-control |
+| SR-009 | Progreso mínimo (liveness) | training (D-25) | monitoring M-S2 |
+| SR-010 | Consistencia de composición de reglas | arbiter (D-25) | C-05 (trigger oscilación) |
+| SR-011 | Heading sin oscilación sostenida | C-06 | training |
+
+Las seis reglas C-01 a C-06 implementan, cada una, al menos un SR
+(ninguna es huérfana). Los tres SR implementados fuera de la cage
+(SR-009, SR-010, SR-011 en su fracción training) se marcan con su
+*implementation_type* en la SRS para que el validador de trazabilidad
+(§5.8) los reconozca como cubiertos por un mecanismo no-cage.
 
 La trazabilidad inversa C → SR se documenta en cada regla en la sección
 5.5. La trazabilidad C → H (hazards) se obtiene por composición a través
@@ -432,19 +467,21 @@ activación es una variable interna del nodo cage que persiste entre
 ciclos.
 
 La estrategia correctiva es proporcional sobre el steering. La magnitud
-es `k_correct · (|lateral_offset| - d_deactivate) · sign(-lateral_offset)`,
+es `correction_gain · (|lateral_offset| - d_deactivate) · sign(-lateral_offset)`,
 es decir, proporcional al exceso respecto al umbral de desactivación y
 en la dirección que devuelve el vehículo al centro del carril. La
 corrección se aplica por sobreescritura del steering raw, no por suma,
 para evitar que la policy y la cage compitan en el espacio del steering;
 el throttle queda inalterado por C-01.
 
-Los parámetros cuantitativos son `d_activate = 0.14 m`, `d_deactivate =
-0.10 m`, `k_correct = 8.0`, `steering_max = ±1.0` (saturación
-independiente). El valor de `k_correct` es un valor inicial que se
-ajustará empíricamente durante D32–D33; los valores de los umbrales
-están derivados del SR-001 (`d_max = 0.16 m`) con un margen de seguridad
-y una banda de histéresis razonables.
+Los parámetros cuantitativos en `cage.yaml` son `d_max_m = 0.16 m`
+(umbral SR-001), `h_d_m = 0.02 m` (margen de histéresis) y
+`correction_gain = 1.5`, con `steering_max = ±1.0` (saturación
+independiente). De ellos se derivan los umbrales de la histéresis:
+`d_activate = d_max − h_d = 0.14 m` y `d_deactivate = d_max − 2·h_d =
+0.12 m`. El valor de `correction_gain` es un valor inicial que se
+ajustará empíricamente durante D32–D33; los umbrales están derivados del
+SR-001 (`d_max = 0.16 m`) con una banda de histéresis de 0.02 m.
 
 Una consideración especial: si C-05 está activa (modo emergencia), C-01
 no actúa, porque C-05 ya domina la salida del controlador. Si el estado
@@ -459,12 +496,15 @@ Implementa el SR-002 y mitiga el hazard H-02. La variable observada es
 
 La lógica es análoga a C-01: histéresis con `theta_activate` y
 `theta_deactivate`. La estrategia correctiva es proporcional al heading
-error en sentido opuesto: `k_heading · heading_error`, saturada a
+error en sentido opuesto: `correction_gain · heading_error`, saturada a
 `steering_max`. El throttle no se modifica.
 
-Los parámetros son `theta_activate = 0.35 rad` (≈20°), `theta_deactivate
-= 0.17 rad` (≈10°), `k_heading = 2.0`. El umbral de activación está
-calibrado por debajo del SR-002 (25°) para preservar margen.
+Los parámetros en `cage.yaml` son `theta_max_rad = 0.4363 rad` (25°,
+umbral SR-002), `h_theta_rad = 0.0349 rad` (≈2° de histéresis) y
+`correction_gain = 1.0`. De ellos se derivan `theta_activate = theta_max
+− h_theta ≈ 0.40 rad` (≈23°) y `theta_deactivate = theta_max − 2·h_theta
+≈ 0.37 rad` (≈21°); ambos quedan por debajo del límite SR-002 de 25°
+para preservar margen.
 
 C-01 y C-02 pueden activarse simultáneamente. En el orden de evaluación
 elegido (C-06, C-04, C-02, C-03, C-01, C-05), C-02 se aplica antes que
@@ -482,31 +522,38 @@ una predicción de TTLC basada en el estado actual.
 
 El modelo cinemático es deliberadamente simple. Dado el estado
 (*y*, *ψ*, *v*) donde *y* es el offset lateral, *ψ* es el heading error
-y *v* es la velocidad longitudinal, la velocidad lateral aproximada es
-*v · sin(ψ) ≈ v · ψ* para ángulos pequeños. El TTLC se calcula como
+y *v* es la velocidad longitudinal, la velocidad lateral es
+*v_lat = v · sin(ψ)*. El TTLC es el tiempo que tardaría la proyección a
+heading constante de *y* en alcanzar la cota dura `d_max`:
 
 ```math
-TTLC = (d_boundary - |y|) / |v · sin(ψ)|    si sign(y) ≠ sign(sin(ψ))
-     = +∞                                    en otro caso
+TTLC = (d_max - y) / v_lat     si v_lat > 0
+     = (-d_max - y) / v_lat    si v_lat < 0
+     = +∞                       si |v| < v_min_estimate, |v_lat| ≈ 0,
+                                  o el crossing cae fuera de [0, horizon]
 ```
 
-donde `d_boundary = lane_width / 2`. La condición sobre los signos
-captura la intuición de que solo hay crossing inminente si la velocidad
-lateral apunta hacia el borde más cercano.
+donde `d_max` es el mismo límite que usa C-01 (las dos reglas comparten
+el valor por construcción). El TTLC se considera infinito si la
+velocidad lateral apunta alejándose del borde (no hay crossing en el
+horizonte) o si la velocidad es demasiado baja para una estimación
+fiable.
 
-La lógica es progresiva. Cuando TTLC baja por debajo de `t_warning`, la
-regla se activa con una corrección de heading hacia el centro
-(equivalente a un heading objetivo de cero). Cuando TTLC baja por
-debajo de `t_critical`, la corrección se hace más agresiva, llegando a
-saturar el steering en la dirección correctiva. La progresión continua
-evita el chattering propio de un umbral binario.
+La lógica es progresiva con un único umbral. Cuando TTLC baja por
+debajo de `t_min`, la regla se activa con una corrección hacia el centro
+cuya magnitud (la *urgencia*) escala de forma continua como
+`urgency = urgency_gain_max · (1 − TTLC / t_min)`: vale cero justo en el
+umbral y crece hasta `urgency_gain_max` cuando TTLC → 0, saturando el
+steering en la dirección correctiva. Esta progresión continua —en lugar
+de un segundo umbral binario— evita el chattering.
 
-Los parámetros son `t_warning = 1.0 s`, `t_critical = 0.5 s`,
-`v_min_estimate = 0.05 m/s` (por debajo se considera TTLC infinito para
-evitar división por cero en estado casi-parado). El valor de `t_warning`
-es deliberadamente conservador (alto) para compensar la simplicidad del
-modelo cinemático; un análisis sobre los logs del PD en D32 podrá
-indicar si el valor debe ajustarse.
+Los parámetros son `t_min_s = 1.0 s`, `horizon_s = 3.0 s` (horizonte
+máximo de proyección), `urgency_gain_max = 2.0`, `d_max_m = 0.16 m`
+(espejo de C-01) y `v_min_estimate_mps = 0.05 m/s` (por debajo se
+considera TTLC infinito para evitar división por cero en estado
+casi-parado). El valor de `t_min` es deliberadamente conservador (alto)
+para compensar la simplicidad del modelo cinemático; un análisis sobre
+los logs del PD podrá indicar si el valor debe ajustarse.
 
 C-03 es la única regla predictiva del conjunto. Su valor se manifiesta
 en el log: cada vez que C-03 se activa sin que C-01 llegue a activarse
@@ -547,32 +594,47 @@ filtrada y no aplica filtros propios sobre la entrada.
 
 ### 5.5.5 C-05 — Emergency Mode
 
-Implementa el SR-005 y, parcialmente, SR-007. Mitiga los hazards H-04,
-H-06 y, parcialmente, H-07. Las variables observadas son todas las
-relevantes (offset, heading, speed, validez del estado).
+Implementa el SR-005 (primariamente) y, parcialmente, SR-007 y SR-008.
+Mitiga los hazards H-04, H-06 y H-07. Las variables observadas son todas
+las relevantes (offset, heading, speed, validez y frescura del estado),
+más señales de contexto (parada externa, detección de oscilación).
 
-La lógica de entrada es la disjunción de tres condiciones, ya descritas
-en §5.3.6. Los parámetros relevantes son `d_warning = 0.12 m`,
-`theta_warning = 0.35 rad`, `delta_t_max = 0.2 s` (tiempo mínimo de
-fallo compuesto antes de transitar), `staleness_max = 0.2 s` (timestamp
-máximo aceptable), `n_missing_max = 5` ciclos (≈ 250 ms a 20 Hz),
-`b_emergency = 0.5` (magnitud de freno).
+La lógica de entrada es la disyunción del conjunto de triggers descrito
+en §5.3.6. En la versión actual de la cage (YAML 0.5.1) están activos
+seis: (1) fallo compuesto de baja energía, (2) fallo compuesto de alta
+energía, (3) estado obsoleto (*stale*), (4) campo de estado inválido,
+(5) estado ausente, y (6) parada externa; a estos se añade (7) la
+oscilación inter-ciclo sostenida (SR-010 Parte 2). Un octavo trigger
+—la aserción de envolvente conjunta de fin de ciclo (SR-010 Parte 1)—
+queda diferido a la espera de la API `safe_envelope_predicate_holds` en
+el contrato de regla.
+
+Los parámetros relevantes son `theta_warning_rad = 0.3491 rad` (20°),
+`d_warning_m = 0.12 m`, `delta_t_max_s = 0.2 s` (persistencia del fallo
+compuesto, ≈ 4 ciclos a 20 Hz); para la variante de alta energía,
+`v_warning_mps = 0.4 m/s` (80% de `v_max_straight`) con persistencia más
+corta `delta_t_max_fast_s = 0.1 s` (≈ 2 ciclos); para la validez del
+estado, `staleness_max = 0.2 s` (SR-007) y `n_missing_max = 5` ciclos
+(SR-007); y para la respuesta, `a_min_mps2 = 0.3` (deceleración objetivo,
+provisional a la espera de M-3 y consistente con el `t_stop_max` de
+SR-008) con `freeze_steering = true`.
 
 El comportamiento durante la emergencia se describió en §5.3.6:
-deceleración controlada con steering congelado.
+deceleración controlada (comando de frenado derivado de `a_min`) con
+steering congelado en el valor del instante de transición.
 
-La salida del modo emergencia depende del entorno: en simulación,
-automática cuando la causa deja de cumplirse durante `t_recovery = 1.0 s`
-y la velocidad cae por debajo de `v_emergency_exit = 0.05 m/s`; en
-físico, manual mediante reset publicado en `/cage_reset`. El flag
-`auto_recovery` en el YAML controla este comportamiento.
+La salida del modo emergencia exige reset explícito
+(`require_explicit_reset = true`) **además** de que todos los triggers
+hayan dejado de cumplirse; no hay recuperación automática. El reset se
+solicita por el método `reset()` del nodo (cableado a `/cage_reset`) o
+por `ctx["reset"]`.
 
 Una consideración especial es el logging de transiciones. Las entradas
 y salidas del modo emergencia son eventos críticos para análisis
-posterior y se registran con timestamps precisos en `/cage_status` con
-flags específicos. Una entrada en emergencia que no corresponde a una
-salida nominal (ej. entrada por estado inválido y salida por timeout)
-es señal de alarma para el experimentador.
+posterior; el motivo concreto de cada activación (qué trigger disparó)
+se registra en `/cage_status`. Una entrada en emergencia por una causa
+distinta de la esperada (ej. estado inválido en lugar de fallo
+compuesto) es señal de alarma para el experimentador.
 
 ### 5.5.6 C-06 — Actuator Rate Limit
 
@@ -609,7 +671,7 @@ log.
 
 ## 5.6 Parametrización y versionado  [BORRADOR D23]
 
-### 5.6.1 Estructura del archivo `cage_params.yaml`
+### 5.6.1 Estructura del archivo `cage.yaml`
 
 Todos los parámetros numéricos de las reglas viven en un único archivo
 YAML versionado, separado del código. Esta separación es una decisión
@@ -618,17 +680,64 @@ que no requiera recompilación, y la cage debe ser fácil de configurar
 por entornos distintos (sim, físico) sin tocar código.
 
 La estructura del archivo se organiza por regla, con una sección de
-metadatos al inicio que registra la versión del archivo, la versión de
-la Cage Specification con la que es compatible, y la versión de la SRS
-referenciada. Cada regla tiene su propia subsección con sus parámetros,
-cada uno con un comentario que indica unidades y, cuando aplica, el SR
-del que se deriva. Una sección global al final fija el modo de operación
-(`enforcement` / `monitoring` / `disabled`), el orden de evaluación, y
-la frecuencia de control.
+metadatos al inicio que registra la versión del archivo (`cage.version`)
+y la versión de la SRS con la que es compatible
+(`compatible_sr_spec_version`), seguida del modo de operación por
+defecto (`default_mode`) y la configuración del bucle de control
+(período de ciclo, staleness máxima). Cada regla tiene su propia
+subsección con sus parámetros, cada uno con un comentario que indica
+unidades y, cuando aplica, el SR del que se deriva o la métrica de
+calibración pendiente (`[provisional, M-X]`). Dos secciones globales al
+final fijan la configuración de logging y el mapeo de topics ROS2. El
+orden de evaluación de las reglas no vive en el YAML sino que está
+fijado en el código del nodo (§5.3.1), porque es una invariante de
+diseño, no un parámetro ajustable.
 
-> *Listing 5.1 — Esqueleto del archivo `cage_params.yaml` v1.0 mostrando
-> la estructura por regla y la sección global. Posición sugerida: aquí.
-> Pendiente de pulido tipográfico para Fase 6.* [PULIDO FASE 6]
+**Listing 5.1 — Esqueleto de `cage.yaml` (v0.5.1)** mostrando la sección
+de metadatos, el bucle de control, una regla en detalle (C-01), las
+restantes abreviadas, la detección de oscilación (SR-010 Parte 2) y las
+secciones globales de logging y topics.
+
+```yaml
+cage:
+  version: "0.5.1"                    # semver; bump on any parameter change
+  compatible_sr_spec_version: "1.0"   # SRS revision this YAML targets
+
+  default_mode: "enforcement"         # enforcement | monitoring | disabled
+
+  control:
+    cycle_period_ms: 50               # 20 Hz control loop
+    staleness_max_ms: 200             # SR-007: max age of state observation
+
+  # --- per-rule subsections (C-01 shown in full) ---
+  c01_lane_boundary:                  # SR-001, H-01
+    enabled: true
+    d_max_m: 0.16                     # SR-001 threshold [provisional, M-1, M-2]
+    h_d_m: 0.02                       # hysteresis margin
+    correction_gain: 1.5              # aggressiveness toward centreline
+  c02_heading_limit:   { ... }        # SR-002, H-02
+  c03_ttlc:            { ... }        # SR-003, H-01/H-02
+  c04_speed_ceiling:   { ... }        # SR-004, H-03
+  c05_emergency:       { ... }        # SR-005/007/008, H-04/H-06/H-07
+  c06_rate_limiter:    { ... }        # SR-006, H-05
+
+  oscillation:                        # SR-010 Part 2 (inter-cycle)
+    f_osc_max_hz: 5.0
+    t_osc_window_s: 1.0
+    t_osc_persist_s: 3.0
+
+  logging:
+    cage_status_topic: "/cage_status"
+    log_every_cycle: true
+  topics:
+    raw_action_in: "/raw_action"
+    state_obs_in: "/state_obs"
+    safe_action_out: "/safe_action"
+    cage_status_out: "/cage_status"
+    emergency_signal_out: "/emergency"
+    external_stop_in: "/external_stop"
+    reset_in: "/cage_reset"
+```
 
 La elección de YAML frente a JSON o TOML responde a tres consideraciones:
 los comentarios son nativos en YAML y son críticos para documentar el
@@ -637,12 +746,12 @@ ROS2 tiene soporte nativo de YAML para configuración de nodos.
 
 ### 5.6.2 Política de versionado
 
-El archivo `cage_params.yaml` se versiona junto al código en Git, pero
+El archivo `cage.yaml` se versiona junto al código en Git, pero
 con una disciplina más estricta. Cada modificación debe seguir un
 protocolo de cuatro pasos. Primero, la modificación se hace en una rama
 dedicada, no directamente en `main`. Segundo, la modificación se
 documenta en `docs/CHANGELOG.md` con fecha, valor antiguo, valor nuevo y
-rationale. Tercero, el campo `metadata.version` del YAML se incrementa
+rationale. Tercero, el campo `cage.version` del YAML se incrementa
 siguiendo semver simple: cambio de parámetro = patch bump (1.0.0 →
 1.0.1); cambio estructural = minor (1.0.0 → 1.1.0); cambio que rompe
 compatibilidad con la Cage Specification = major (1.0.0 → 2.0.0).
@@ -670,7 +779,7 @@ causal enforcement-vs-monitoring.
 La implementación del modo monitoring es simple: al final de la cadena
 de reglas, si `mode == "monitoring"`, la acción de salida se reasigna
 al raw, sobreescribiendo cualquier corrección. El flag
-`intervention_flag` en `/cage_status` mantiene su valor (es decir,
+`intervention_active` en `/cage_status` mantiene su valor (es decir,
 sigue indicando "hubo intervención lógica") porque ese es el dato que
 los análisis de Fase 4 consumirán; lo que cambia es que esa intervención
 no se materializa en el actuador.
@@ -699,61 +808,101 @@ Tercero, la auditabilidad, que permite que cada decisión tomada por el
 sistema esté atribuida a un nodo concreto y registrada en el log.
 
 Los cinco nodos principales son los siguientes. El nodo **Perception**
-(perception_node) consume los datos crudos de los sensores (LiDAR,
-cámara, IMU, encoders) y publica un estado estructurado del vehículo en
+(`lane_perception_node`) consume la odometría del vehículo (y, en fases
+posteriores, LiDAR/cámara/IMU) y publica un estado estructurado en
 `/state_obs` con campos como lateral_offset, heading_error, speed,
 curvature_ahead, distance_left/right, y un flag de validez. El nodo
-**Policy/Controller** (en Fase 2 es el baseline PD; en Fase 3 será la
-policy RL entrenada) consume `/state_obs` y publica una acción raw en
-`/raw_action`. El nodo **Safety Cage** (cage_node) consume `/state_obs`
-y `/raw_action`, evalúa las seis reglas, y publica la acción filtrada
-en `/safe_action` y el estado de las reglas en `/cage_status`. El nodo
-**Vehicle Control** (vehicle_control_node) traduce `/safe_action` a
-comandos compatibles con el plugin Gazebo o con el firmware del coche
-físico, publicando en `/cmd_vel` o `/ackermann_cmd`. El nodo **Logger**
-(logger_node) se suscribe a todos los topics relevantes y escribe a
-disco en formato CSV con un metadata.json por corrida.
+**Policy/Controller** (en Fase 2 es el baseline PD, `pd_baseline_node`;
+en Fase 3 será la policy RL entrenada) consume `/state_obs` y publica
+una acción raw en `/raw_action`. El nodo **Safety Cage**
+(`cage_ros_node`) consume `/state_obs` y `/raw_action`, evalúa las seis
+reglas, y publica la acción filtrada en `/safe_action`, el estado de las
+reglas en `/cage_status` y un latch de emergencia en `/emergency`. El
+nodo **Vehicle Control** (`vehicle_control_node`) traduce `/safe_action`
+a comandos compatibles con el plugin Gazebo o con el firmware del coche
+físico, publicando en `/cmd_vel` (`geometry_msgs/Twist`). El nodo
+**Logger** (`cage_logger_node`) se suscribe a todos los topics
+relevantes y escribe a disco en formato CSV con un metadata.json por
+corrida.
 
-Los nodos auxiliares incluyen un `/cage_reset` para reset manual del
-modo emergencia y un `/experiment_tag` (tipo string) que se publica al
-inicio de cada corrida para marcar los logs.
+Los nodos auxiliares incluyen `/cage_reset` (`std_msgs/Empty`) para
+reset manual del modo emergencia, `/external_stop` (`std_msgs/Bool`)
+para una señal de parada externa, y `/experiment_tag` (tipo string) que
+se publica al inicio de cada corrida para marcar los logs.
 
-> *Figura 5.1 — Diagrama de bloques de la arquitectura ROS2. Cinco
-> nodos principales con sus topics de entrada y salida; flujo de datos
-> de izquierda a derecha; el nodo cage en posición central destacada.
-> Posición sugerida: aquí. Pendiente para Fase 2 D23.*
-> [COMPLETAR FASE 2]
+**Figura 5.1 — Arquitectura ROS2 del pipeline lane-following.** Cinco
+nodos principales (líneas continuas = camino de control; líneas
+discontinuas = señales auxiliares de parada/reset). El nodo cage ocupa
+la posición central y aplica las seis reglas en el orden de evaluación
+indicado antes de emitir `/safe_action`.
+
+```mermaid
+flowchart LR
+    GZ["Gazebo Sim<br/>(DiffDrive plugin)"]
+    PER["lane_perception_node"]
+    POL["pd_baseline_node<br/>(F2: PD · F3: RL)"]
+    CAGE["cage_ros_node<br/>C-06→C-04→C-02→C-03→C-01→C-05"]
+    VC["vehicle_control_node"]
+    LOG["cage_logger_node"]
+    CSV[("CSV + metadata.json")]
+
+    GZ -- "/odom" --> PER
+    PER -- "/state_obs" --> POL
+    PER -- "/state_obs" --> CAGE
+    POL -- "/raw_action" --> CAGE
+    CAGE -- "/safe_action" --> VC
+    CAGE -- "/emergency" --> VC
+    CAGE -- "/cage_status" --> LOG
+    VC -- "/cmd_vel" --> GZ
+    EXT["/external_stop"] -. "Bool" .-> CAGE
+    RST["/cage_reset"] -. "Empty" .-> CAGE
+    LOG --> CSV
+```
 
 ### 5.7.2 Tipos de mensaje y QoS
 
-Los topics `/state_obs`, `/raw_action`, `/safe_action` y `/cage_status`
-usan tipos de mensaje custom definidos en un paquete de interfaces
-dedicado (`thesis_interfaces`). La definición de cada tipo es estable:
-una vez fijada, no se modifica salvo en mayor de versión, porque
-cualquier cambio rompe la compatibilidad de los logs históricos.
+La arquitectura adopta una **estrategia de tópicos híbrida** (decisión
+de Fase 2): los topics de estado y de acción usan tipos de mensaje
+estándar de ROS2, interoperables con el pipeline `/cmd_vel` existente,
+y solo el topic de diagnóstico `/cage_status` usa un tipo custom. El
+único mensaje propio (`CageStatus`) vive en el paquete de interfaces
+`cobraflex_safety_msgs`; su definición es estable, porque cualquier
+cambio rompería la compatibilidad de los logs históricos.
 
-El tipo `StateObservation` incluye un header estándar con timestamp y
-frame_id; los siete campos descriptivos del estado del vehículo
-(lateral_offset, heading_error, speed, curvature_ahead, distance_left,
-distance_right); el flag state_valid; y una cadena state_status para
-diagnóstico. El tipo `VehicleAction` incluye header, los tres campos de
-control normalizados a [-1, 1] (steering, throttle, brake), un flag
-is_emergency_stop, y un campo source con los valores `"raw"`, `"cage"`
-o `"emergency"` para distinguir la procedencia. El tipo `CageStatus`
-incluye header, un array fijo de seis booleanos rule_active[6] que
-indican qué reglas están activas, un flag intervention_flag global, una
-cadena emergency_state con valores `"none"`, `"entering"`, `"active"` o
-`"recovering"`, y un array intervention_magnitude[6] con la magnitud
-de cada corrección.
+El estado del vehículo (`/state_obs`) viaja como un
+`std_msgs/Float64MultiArray` con ordenación fija de siete campos
+(`lateral_offset_m`, `heading_error_rad`, `speed_mps`,
+`curvature_ahead_inv_m`, `distance_left_m`, `distance_right_m`,
+`state_valid` codificado como 1.0/0.0). Las acciones (`/raw_action` y
+`/safe_action`) viajan como `geometry_msgs/Twist`, interpretando
+`angular.z` como steering ∈ [-1, 1] y `linear.x` como throttle; cuando
+la rama de freno está activa, el freno se codifica sobre `linear.x` con
+signo negativo. El tipo custom `CageStatus` incluye header; los flags
+`intervention_active` y `emergency_mode`; la lista `rules_triggered`
+(p. ej. `["C-01", "C-06"]`) en orden de evaluación; las acciones
+`action_raw` y `action_safe` como `Twist`; la cadena `yaml_version` con
+la versión de `cage.yaml` en runtime; los arrays paralelos
+`osc_rule_ids` / `oscillation_rates_hz` y el flag `osc_persistent` del
+monitor de oscilación (SR-010 Parte 2); y `cycles_since_last_state`.
 
-Los QoS de cada topic se fijan según su semántica. Los topics de control
-(`/state_obs`, `/raw_action`, `/safe_action`, `/cmd_vel`) usan QoS
-`reliable` con `keep_last(1)`: las pérdidas son inaceptables y solo el
-mensaje más reciente importa. Los topics de status (`/cage_status`,
-`/experiment_tag`) usan QoS `reliable` con `keep_last(10)`. El topic
-`/cage_reset` usa QoS `reliable` con `transient_local` para que un
-reset publicado antes de que el nodo cage esté escuchando se reciba
-cuando se conecte.
+Los QoS de cada topic se fijan según su semántica. Los topics de estado
+y acción (`/state_obs`, `/raw_action`, `/safe_action`) usan perfiles de
+tipo *sensor data* (best-effort, `keep_last`), porque solo importa el
+sample más reciente y la latencia prima sobre la entrega garantizada. El
+camino de comando y emergencia (`/cmd_vel`, `/emergency`) usa el perfil
+*system default* (reliable). El topic `/cage_status` se publica de forma
+fiable para que el logger capture cada ciclo.
+
+<!--
+NOTA INTERNA (revisión de coherencia, 2026-05-28): §5.7.2 reescrita para
+reflejar la estrategia de tópicos híbrida realmente implementada
+(state_obs = Float64MultiArray; raw/safe_action = Twist; único custom =
+cobraflex_safety_msgs/CageStatus). La versión previa describía tipos
+custom StateObservation/VehicleAction en un paquete "thesis_interfaces"
+que no existe. Campos de CageStatus tomados de
+src/cobraflex_safety_msgs/msg/CageStatus.msg. Confirmar perfiles QoS
+exactos contra los nodos antes del cierre de Fase 6.
+-->
 
 ### 5.7.3 Frecuencias y temporización
 
@@ -774,9 +923,12 @@ algún nodo upstream se ralentiza, a costa de no garantizar la
 frecuencia exacta.
 
 El presupuesto de latencia end-to-end (sensor → state_obs → cage →
-safe_action → vehicle command) es 50 ms. La medida concreta de esa
-latencia se documentará en el Capítulo 6 cuando los nodos estén
-implementados [COMPLETAR FASE 2].
+safe_action → vehicle command) es 50 ms. La caracterización del Capítulo
+6 (§6.6.2) confirma, sobre el run definitivo pre-F3, un período de ciclo
+de la cage con mediana y P95 de 50.0 ms (máximo 62 ms, un único ciclo
+atribuido a jitter del scheduler de Linux no realtime); el desglose de
+la latencia por etapa requiere instrumentación adicional de timestamps
+y se difiere a F3.
 
 ---
 
@@ -804,29 +956,38 @@ de esa iteración es la matriz cerrada que se documenta en el Anexo F.
 
 ### 5.8.2 Verificación automática
 
-El script `check_traceability.py` implementa cinco comprobaciones
-direccionales. Primera, todo SR de la SRS debe tener al menos una
-regla de cage que lo implemente o un argumento explícito de exención
-(documentado en el campo "implementation" del SR). Segunda, toda regla
-de cage debe referenciar al menos un SR. Tercera, todo hazard del
-HARA debe tener al menos un SR que lo mitigue. Cuarta, todo escenario
-de la scenario library (Capítulo 8) debe ejercitar al menos un SR.
-Quinta, toda métrica del catálogo debe aportar evidencia a al menos un
-SR.
+El script `check_traceability.py` implementa ocho comprobaciones
+direccionales sobre los artefactos vivos (hazards, SRs, reglas de cage,
+escenarios y métricas). (1) Todo hazard del HARA debe estar referenciado
+por al menos un SR. (2) Todo SR debe referenciar al menos un hazard.
+(3) Todo SR debe estar implementado por al menos una regla de cage o,
+en su defecto, por un mecanismo alternativo declarado explícitamente
+(`training`, escenario o `arbiter`). (4) Toda regla de cage debe
+implementar al menos un SR. (5) Toda regla de cage debe ser ejercitada
+por al menos un escenario. (6) Todo escenario debe referenciar al menos
+un SR. (7) Todo SR debe tener al menos una métrica que lo verifique.
+(8) Toda métrica referenciada por un SR debe estar definida en el
+catálogo. Las comprobaciones (1)–(4) y (6)–(8) son restricciones duras
+cuyo incumplimiento produce código de salida 1; la (5) emite solo una
+advertencia, porque la cobertura de una regla puede ser indirecta vía
+la cadena SR, y únicamente aborta en modo `--strict` (código 2).
 
-El script se ejecuta en cada commit como pre-commit hook y diariamente
-como CI job. Falla con código de error no-cero si encuentra huérfanos,
-lo cual bloquea el merge a `main`. Esta automatización es lo que
-diferencia A4 de las prácticas de trazabilidad de AMLAS o GSN
-(Paterson et al., 2025): allí la trazabilidad es una práctica
-documental revisable; aquí es una propiedad verificable por
-herramienta.
+En F2 el script se ejecuta como gate manual antes de cada commit que
+toque hazards, SRs o reglas; su integración como pre-commit hook y como
+job de CI se difiere a F3 (cf. §6.5.5). Al fallar con código no-cero
+bloquea la promoción a `main`. Esta automatización es lo que diferencia
+A4 de las prácticas de trazabilidad de AMLAS o GSN (Paterson et al.,
+2025): allí la trazabilidad es una práctica documental revisable; aquí
+es una propiedad verificable por herramienta.
 
-> *Figura 5.2 — Diagrama de flujo del validador `check_traceability.py`
-> mostrando las cinco direcciones de comprobación y las condiciones de
-> fallo. Conexión con la figura 3 del Capítulo 3 (que ya documentaba
-> el principio metodológico). Posición sugerida: aquí. Pendiente para
-> Fase 2 D23 con la implementación cerrada.* [COMPLETAR FASE 2]
+El flujo de control del validador —carga de los cinco documentos vivos,
+extracción de identificadores por expresiones regulares, cadena de
+comprobaciones sobre el grafo `H ↔ SR ↔ C ↔ SC` con el subgrafo
+`SR ↔ M`, y agregación con los tres códigos de salida (0/1/2)— es el
+mismo que documenta la **Figura 5 del Capítulo 3** y no se reproduce
+aquí para no duplicar el diseño. Lo específico de este capítulo es qué aporta cada regla a ese
+grafo: cada `C-XX` añade una fila a la matriz y participa como nodo C en
+las comprobaciones (3) SR → C y (4) C → SR.
 
 ---
 
@@ -874,19 +1035,16 @@ L5 más L4a' más L3') estará operativo y se habrá pasado el Gate 2.
 APÉNDICE INTERNO — TRABAJO PENDIENTE EN ESTE CAPÍTULO
 
 Fase 2 (D21–D35):
-  [x] Estructura de secciones 5.1–5.9 fijada en D21
-  [x] Borrador completo de §5.2 (filosofía) en D22
-  [x] Borrador completo de §5.3 (retos) en D22
-  [x] Borrador inicial de §5.4 (derivación) en D21
-  [x] Borrador detallado de §5.5 (reglas) en D22
-  [x] Borrador de §5.6 (parametrización) en D23
-  [x] Borrador de §5.7 (arquitectura ROS2) en D23
-  [x] Borrador de §5.8 (trazabilidad) en D23
-  [ ] Tabla 5.1 (mapeo SR→C) con datos definitivos del Capítulo 4
-  [ ] Figura 5.1 (diagrama ROS2) producida con mermaid o draw.io
-  [ ] Figura 5.2 (flujo del check_traceability) producida
-  [ ] Listing 5.1 (YAML completo) extraído del archivo final v1.0
-  [ ] Síntesis §5.9 escrita al cierre de D35
+  [x] Tabla 5.1 (mapeo SR→C) con datos definitivos del Capítulo 4
+       (SR-001..SR-011; incluye vías training/arbiter de D-25)
+  [x] Figura 5.1 (diagrama ROS2) producida con mermaid (camino de
+       control + señales auxiliares; topología real /odom..cmd_vel)
+  [x] Figura 5.2 (flujo del check_traceability): NO se duplica —
+       §5.8.2 referencia la Figura 5 del Capítulo 3, que es la versión
+       canónica del mismo diagrama (mermaid embebido desde
+       manuscript/figures/check_traceability_flow.mmd). Un único diseño.
+  [x] Listing 5.1 (esqueleto de cage.yaml v0.5.1) extraído del archivo
+  [x] Síntesis §5.9 escrita al cierre de D35
 
 Fase 4–5 (operacionalización):
   [ ] Confirmar valores definitivos de parámetros C-01..C-06 tras

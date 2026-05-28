@@ -382,7 +382,53 @@ bidireccional es una restricción dura, no una buena práctica:
 si detecta huérfanos en cualquier dirección. La matriz de trazabilidad es
 un artefacto vivo, actualizado en cada fase del proyecto.
 
-<img src="../figures/check_traceability_flow.png" alt="Figura 5 — Diagrama de flujo del validador." width="500"/>
+```mermaid
+%% Fuente canónica: manuscript/figures/check_traceability_flow.mmd
+flowchart TB
+    subgraph IN ["Living documents under docs/"]
+        direction LR
+        F1["02_hazard_register.md"]
+        F2["03_safety_requirements.md"]
+        F3["04_cage_specification.md"]
+        F4["05_scenario_library.md"]
+        F5["06_metrics_catalogue.md"]
+    end
+    IN --> EX
+    EX["Extract defined IDs via regex<br/>RX_H_DEF, RX_SR_DEF, RX_C_DEF,<br/>RX_SC_DEF, RX_M_DEF"]
+    EX --> G
+    subgraph G ["Constraint chain — five directions of traceability"]
+        H((H-XX))
+        SR((SR-XXX))
+        C((C-XX))
+        SC((SC-*))
+        M((M-*))
+        H  -- "(1) every H referenced by &ge;1 SR"             --> SR
+        SR -- "(2) every SR references &ge;1 H"                --> H
+        SR -- "(3) every SR implemented<br/>(C-XX &#124; training &#124; arbiter)" --> C
+        C  -- "(4) every C implements &ge;1 SR"                --> SR
+        C  -. "(5) every C exercised by &ge;1 SC<br/>WARNING only" .-> SC
+        SC -- "(6) every SC references &ge;1 SR"               --> SR
+        SR -- "(7) every SR has &ge;1 verifying metric"        --> M
+        M  -- "(8) every M referenced is defined"              --> SR
+    end
+    G --> AGG
+    AGG{{"Aggregate errors / warnings"}}
+    AGG -- "0 errors, 0 warnings" --> PASS(["Exit 0 &mdash; All checks PASSED"])
+    AGG -- "&ge;1 error" --> FAIL(["Exit 1 &mdash; orphan / undefined ID"])
+    AGG -. "--strict &and; &ge;1 warning" .-> STRICT(["Exit 2 &mdash; strict-mode warning"])
+    classDef doc        fill:#fafafa,stroke:#888,stroke-width:1px;
+    classDef extract    fill:#eef5ff,stroke:#3366aa,stroke-width:1px;
+    classDef node       fill:#fff,stroke:#222,stroke-width:1.4px;
+    classDef pass       fill:#e7f6e7,stroke:#2e7d32,stroke-width:1.4px;
+    classDef fail       fill:#fdecea,stroke:#c0392b,stroke-width:1.4px;
+    classDef warn       fill:#fff7e0,stroke:#b78103,stroke-width:1.4px;
+    class F1,F2,F3,F4,F5 doc;
+    class EX extract;
+    class H,SR,C,SC,M node;
+    class PASS pass;
+    class FAIL fail;
+    class STRICT warn;
+```
 
 **Figura 5 — Diagrama de flujo del validador `check_traceability.py`.**
 La figura representa el flujo del script en cuatro capas: (a) carga de

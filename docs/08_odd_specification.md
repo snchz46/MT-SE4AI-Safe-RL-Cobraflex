@@ -20,11 +20,11 @@ renumber sections — only append.
 
 ## 0.1 Change log
 
-| Version | Date       | Author | Summary                                                                                               |
-|---------|------------|--------|-------------------------------------------------------------------------------------------------------|
-| 0.1     | 2026-05-02 | SS     | Initial structural extraction from `draft_V3.docx` §6.1, with TBDs for unresolved quantitative items. |
-| 0.2     | 2026-05-14 | SS     | F1 partial closure of TBD-Q1 (FRICTION = 1.0), TBD-Q2 (A_LAT_MAX = 9.81 m/s²) and TBD-Q3 (CORRIDOR_EDGE = 0.1225 m), against the `src/cobraflex` + `src/cobraflex_rl` workspace. Remaining 9 TBDs deferred per decision D-33: Q4–Q7 and Q12 to F4 (scenario library), Q8–Q11 to F2/F3 (ODD-3 curvy world implementation). Simulator label "MuJoCo" replaced by "Gazebo" throughout. |
-| 0.3     | 2026-05-21 | SS     | F2 closure of TBD-Q8 (ROAD_LENGTH = 8.0232 m, perimeter of the oval_R080 preset), TBD-Q9 (KAPPA_MAX = 1.25 m⁻¹ = 1 / R_min with R_min = 0.80 m on the two U-turns) and TBD-Q11 (STUCK_TIMEOUT = n/a — subsumed by `max_episode_steps × control_dt = 40 s` truncation in `gazebo_lane_env.py`; no separate stuck check is configured). Geometry source of truth: `scripts/compose_lane_circuit.py` preset `oval_R080`, which emits both `src/cobraflex/worlds/lane_following_oval.world` and `src/cobraflex_rl/config/oval_centerline.yaml`. TBD-Q10 (A_LAT_MAX ODD-3) remains deferred to the M-4 calibration measurement, which depends on the physical platform. |
+| Version | Date | Author | Summary |
+| ------- | ---- | ------ | ------- |
+| 0.1 | 2026-05-02 | SS | Initial structural extraction from `draft_V3.docx` §6.1, with TBDs for unresolved quantitative items. |
+| 0.2 | 2026-05-14 | SS | F1 partial closure of TBD-Q1 (FRICTION = 1.0), TBD-Q2 (A_LAT_MAX = 9.81 m/s²) and TBD-Q3 (CORRIDOR_EDGE = 0.1225 m), against the `src/cobraflex` + `src/cobraflex_rl` workspace. Remaining 9 TBDs deferred per decision D-33: Q4–Q7 and Q12 to F4 (scenario library), Q8–Q11 to F2/F3 (ODD-3 curvy world implementation). Simulator label "MuJoCo" replaced by "Gazebo" throughout. |
+| 0.3 | 2026-05-21 | SS | F2 closure of TBD-Q8 (ROAD_LENGTH = 8.0232 m, perimeter of the oval_R080 preset), TBD-Q9 (KAPPA_MAX = 1.25 m⁻¹ = 1 / R_min with R_min = 0.80 m on the two U-turns) and TBD-Q11 (STUCK_TIMEOUT = n/a — subsumed by `max_episode_steps × control_dt = 40 s` truncation in `gazebo_lane_env.py`; no separate stuck check is configured). Geometry source of truth: `scripts/compose_lane_circuit.py` preset `oval_R080`, which emits both `src/cobraflex/worlds/lane_following_oval.world` and `src/cobraflex_rl/config/oval_centerline.yaml`. TBD-Q10 (A_LAT_MAX ODD-3) remains deferred to the M-4 calibration measurement, which depends on the physical platform. |
 
 ---
 

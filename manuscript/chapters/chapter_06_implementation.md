@@ -91,7 +91,6 @@ config/gz_bridge.yaml y urdf/robot.gazebo). La versión previa afirmaba
 Confirmar que el rationale aquí escrito corresponde a la decisión real.
 -->
 
-
 ### 6.2.2 Mundo Gazebo: pista, iluminación, suelo
 
 El mundo (archivo `worlds/lane_following_oval.world` en formato SDF) contiene

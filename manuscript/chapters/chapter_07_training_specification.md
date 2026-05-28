@@ -53,7 +53,7 @@ registra en `docs/CHANGELOG.md` con su rationale.
 
 El vector de observación es un array de cuatro flotantes:
 
-```
+```text
 obs = [ey, epsi, speed, prev_steer]
 ```
 
@@ -87,7 +87,7 @@ escenarios perturbados de Fase 4, la Training Specification se revisa.
 
 La función de recompensa en un ciclo de control es:
 
-```
+```text
 r = w_fwd · speed
   - w_ey  · |ey|
   - w_eps · |epsi|
@@ -99,7 +99,7 @@ donde `[terminated]` es 1 si el episodio termina por violación de carril.
 Los pesos nominales (versión 1.0, sujetos a ajuste experimental) son:
 
 | Parámetro | Valor | Rationale |
-|---|---|---|
+| --- | --- | --- |
 | `w_fwd` (forward_progress) | 1.0 | Incentiva avance |
 | `w_ey` (lateral_error) | 2.5 | Penalización principal: offset lateral |
 | `w_eps` (heading_error) | 0.75 | Penalización secundaria: heading |
@@ -156,7 +156,7 @@ recomendados de Stable-Baselines3 para entornos de control continuo,
 con ajuste del horizonte `n_steps` al periodo del episodio:
 
 | Parámetro | Valor | Fuente |
-|---|---|---|
+| --- | --- | --- |
 | `total_timesteps` | 50 000 | `[provisional, M-P7]` |
 | `learning_rate` | 3×10⁻⁴ | SB3 default |
 | `gamma` | 0.99 | SB3 default |
@@ -259,7 +259,7 @@ perturbados de Fase 4. Los rangos son `[provisional, M-P5]`.
 > [COMPLETAR FASE 3] — Tabla comparativa RL vs PD:
 >
 > | Métrica | PD (pre-F3) | PPO (F3) |
-> |---|---|---|
+> | --- | --- | --- |
 > | Vueltas completadas | 9.91 | [COMPLETAR] |
 > | Emergencias cage | 0 | [COMPLETAR] |
 > | Intervenciones cage (%) | 0.047% | [COMPLETAR] |

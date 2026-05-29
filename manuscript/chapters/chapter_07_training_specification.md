@@ -133,10 +133,21 @@ no converge en 50 000 timesteps.
 ### 7.2.5 Cage durante el entrenamiento
 
 La cage opera en modo `enforcement` durante todo el entrenamiento
-(D-34). El bucle de entrenamiento publica acciones raw en `/raw_action`,
-recibe acciones seguras de `/safe_action`, y pasa éstas últimas al
-vehículo. La recompensa se calcula sobre la acción segura y el estado
+(D-34). En cada ciclo de control, `GazeboLaneEnv` construye el estado de
+la cage a partir del tracker, forma la acción raw `(steering_policy,
+throttle_nominal)`, e invoca **en proceso** la misma clase
+`SafetyCageNode` —con el mismo `cage/cage.yaml`— que el nodo de
+despliegue `cage_ros_node` envuelve por tópicos. La acción segura
+resultante se mapea a `/cmd_vel` replicando `vehicle_control_node`
+(throttle→velocidad, `angular.z = steering·yaw_gain`, emergencia→parada
+controlada). La recompensa se calcula sobre la acción segura y el estado
 resultante, no sobre la acción raw.
+
+La invocación en proceso —en lugar del intercambio asíncrono
+`/raw_action`→`/safe_action` por tópicos— se elige por determinismo (bajo
+la semilla fija de §7.2.7) y porque produce un comportamiento de cage
+idéntico al de despliegue: misma clase y misma configuración (ver D-34).
+El cableado puro y libre de ROS reside en `cobraflex_rl/cage_bridge.py`.
 
 Esta elección alinea entrenamiento con despliegue: la policy aprende
 bajo la misma restricción que encontrará en evaluación y en físico. Las
@@ -145,9 +156,9 @@ perspectiva del agente; no se penalizan explícitamente en la recompensa
 (la penalización está implícita en el peor estado que la cage corregida
 no puede evitar completamente).
 
-La implementación concreta de este cableado es la tarea TS-01 de F3;
-hasta que esté completada, las runs de entrenamiento preliminares usan
-el bucle sin cage para depuración del pipeline de entrenamiento.
+Este cableado es la tarea TS-01 de F3, ya implementada. La cage puede
+desactivarse (`cage.enabled: false` en `train_ppo.yaml`) para reproducir
+el bucle sin cage usado en la depuración preliminar del pipeline.
 
 ### 7.2.6 Hiperparámetros PPO
 
@@ -312,8 +323,8 @@ Fase 3 (D36+):
   [ ] Completar §7.5 con evaluación del RL sobre SC-NOM-01
   [ ] Añadir Figura 7.1: curva de convergencia ep_rew_mean vs timesteps
   [ ] Añadir Figura 7.2: comparación trayectorias RL vs PD en el óvalo
-  [ ] Tarea TS-01: cablear GazeboLaneEnv con /raw_action → /safe_action
-       (D-34 enforcement mode durante training)
+  [x] Tarea TS-01: cablear GazeboLaneEnv → cage in-process (misma
+       SafetyCageNode/cage.yaml que cage_ros_node; D-34 enforcement)
   [ ] Añadir perturbación aleatoria de spawn en GazeboLaneEnv.reset()
   [ ] Registrar training runs en experiments/sim/training/
   [ ] Decidir si aumentar total_timesteps si no converge en 50k

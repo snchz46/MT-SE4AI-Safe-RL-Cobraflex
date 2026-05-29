@@ -29,7 +29,14 @@
             <odom_frame>odom</odom_frame>
             <robot_base_frame>base_footprint</robot_base_frame>
             <odom_publish_frequency>50</odom_publish_frequency>
-            <odom_topic>/odom</odom_topic>
+            <!-- Ground-truth pose on a dedicated topic so it does NOT collide
+                 with the DiffDrive plugin's dead-reckoning /odom. Both plugins
+                 previously published /odom, so subscribers saw interleaved
+                 truth + drift samples; after a set_pose teleport the dead-
+                 reckoning half does not jump, which corrupted RL pose on every
+                 episode reset. RL training reads /odom_truth; the F2 stack
+                 keeps the encoder /odom. -->
+            <odom_topic>/odom_truth</odom_topic>
             <tf_topic>/tf</tf_topic>
             <dimensions>2</dimensions>
         </plugin>

@@ -69,12 +69,20 @@ class GazeboLaneEnv(gym.Env):
             float(start_point[1]),
             start_heading,
         )
+        self.tracker.reset_tracking()
         self.ros_interface.send_action(0.0, 0.0)
 
         if not self.ros_interface.wait_for_initial_data(timeout_sec=10.0):
             raise RuntimeError("Timed out waiting for initial /odom data.")
 
         self.ros_interface.step_ros(0.1)
+        # DiffDrive odom accumulates across teleports — correct the drift so
+        # get_pose() returns world coordinates for the rest of this episode.
+        self.ros_interface.calibrate_pose_offset(
+            float(start_point[0]),
+            float(start_point[1]),
+            start_heading,
+        )
         track_state = self._compute_track_state()
         speed = self.ros_interface.get_speed()
         self.last_track_state = track_state

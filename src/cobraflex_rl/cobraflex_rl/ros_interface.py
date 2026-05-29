@@ -18,7 +18,8 @@ class RosGazeboInterface(Node):
         world_name: str = "lane_following_oval",
         model_name: str = "cobraflex_robot",
         spawn_z: float = 0.05,
-        service_timeout_ms: int = 1000,
+        service_timeout_ms: int = 2000,
+        odom_topic: str = "/odom_truth",
     ) -> None:
         super().__init__("cobraflex_rl_interface")
         self._odom_msg: Optional[Odometry] = None
@@ -26,12 +27,22 @@ class RosGazeboInterface(Node):
         self.model_name = model_name
         self.spawn_z = float(spawn_z)
         self.service_timeout_ms = int(service_timeout_ms)
-        self._warned_gz_service_failure = False
+        self.odom_topic = str(odom_topic)
         self._model_entity_id: Optional[int] = None
+        # We subscribe to the OdometryPublisher ground-truth pose (/odom_truth),
+        # NOT the DiffDrive encoder /odom. Both plugins used to publish /odom, so
+        # the RL subscriber saw interleaved truth + dead-reckoning samples; after
+        # a set_pose teleport the dead-reckoning half does not jump, which
+        # corrupted the tracked pose on every episode reset. Ground truth
+        # reflects teleports immediately, so the per-episode offset below only
+        # removes a constant odom->world frame translation.
+        self._odom_dx: float = 0.0
+        self._odom_dy: float = 0.0
+        self._odom_dyaw: float = 0.0
 
         self._odom_sub = self.create_subscription(
             Odometry,
-            "/odom",
+            self.odom_topic,
             self._odom_callback,
             10,
         )
@@ -64,19 +75,39 @@ class RosGazeboInterface(Node):
             remaining = max(0.0, end_time - time.monotonic())
             rclpy.spin_once(self, timeout_sec=min(0.05, remaining))
 
-    def get_pose(self) -> Tuple[float, float, float]:
+    def _get_raw_pose(self) -> Tuple[float, float, float]:
         if self._odom_msg is None:
             raise RuntimeError("No odometry data received yet.")
-
         pose = self._odom_msg.pose.pose
         orientation = pose.orientation
         yaw = self.quaternion_to_yaw(
-            orientation.x,
-            orientation.y,
-            orientation.z,
-            orientation.w,
+            orientation.x, orientation.y, orientation.z, orientation.w
         )
         return float(pose.position.x), float(pose.position.y), float(yaw)
+
+    def get_pose(self) -> Tuple[float, float, float]:
+        raw_x, raw_y, raw_yaw = self._get_raw_pose()
+        corrected_yaw = math.atan2(
+            math.sin(raw_yaw + self._odom_dyaw),
+            math.cos(raw_yaw + self._odom_dyaw),
+        )
+        return raw_x + self._odom_dx, raw_y + self._odom_dy, corrected_yaw
+
+    def calibrate_pose_offset(self, true_x: float, true_y: float, true_yaw: float) -> None:
+        """Compute the additive offset that maps current raw odom → known world pose.
+
+        Call once after wait_for_initial_data + step_ros following each teleport.
+        With the ground-truth /odom_truth source this offset is just the constant
+        odom->world frame translation (the OdometryPublisher already reflects the
+        set_pose teleport), so get_pose() returns world coordinates thereafter.
+        """
+        raw_x, raw_y, raw_yaw = self._get_raw_pose()
+        self._odom_dx = float(true_x) - raw_x
+        self._odom_dy = float(true_y) - raw_y
+        self._odom_dyaw = math.atan2(
+            math.sin(float(true_yaw) - raw_yaw),
+            math.cos(float(true_yaw) - raw_yaw),
+        )
 
     def get_speed(self) -> float:
         if self._odom_msg is None:
@@ -90,7 +121,7 @@ class RosGazeboInterface(Node):
 
     def set_vehicle_pose(self, x: float, y: float, yaw: float) -> None:
         # Resolve entity ID once and cache it for the rest of the training run
-        # to avoid a 2 s subprocess timeout on every episode reset.
+        # to avoid a subprocess timeout on every episode reset.
         if self._model_entity_id is None:
             self._model_entity_id = self._lookup_model_entity_id()
         entity_id = self._model_entity_id or 0
@@ -102,13 +133,20 @@ class RosGazeboInterface(Node):
             f"position {{ x: {float(x):.9f} y: {float(y):.9f} z: {self.spawn_z:.9f} }} "
             f"orientation {{ z: {math.sin(half_yaw):.9f} w: {math.cos(half_yaw):.9f} }}"
         )
-        if self._call_gz_service(
-            service=f"/world/{self.world_name}/set_pose",
-            request_type="gz.msgs.Pose",
-            response_type="gz.msgs.Boolean",
-            request=request,
-        ):
-            self._odom_msg = None
+        # Clear cached odom before attempting teleport so wait_for_initial_data
+        # always blocks until fresh post-teleport data arrives, regardless of
+        # whether the service call succeeds or fails.
+        self._odom_msg = None
+        for attempt in range(2):
+            if self._call_gz_service(
+                service=f"/world/{self.world_name}/set_pose",
+                request_type="gz.msgs.Pose",
+                response_type="gz.msgs.Boolean",
+                request=request,
+            ):
+                return
+            if attempt == 0:
+                time.sleep(0.5)
 
     def _call_gz_service(
         self,
@@ -151,12 +189,8 @@ class RosGazeboInterface(Node):
         return False
 
     def _warn_gz_service_failure(self, service: str, reason: str) -> None:
-        if self._warned_gz_service_failure:
-            return
-        self._warned_gz_service_failure = True
         self.get_logger().warning(
-            f"Gazebo service call failed for {service}; continuing with current simulation state. "
-            f"Reason: {reason}"
+            f"Gazebo service call failed for {service}: {reason}"
         )
 
     def _lookup_model_entity_id(self) -> Optional[int]:

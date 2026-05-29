@@ -12,6 +12,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.env_checker import check_env
 import yaml
 
+from .callbacks import ProgressBarCallback
 from .gazebo_lane_env import GazeboLaneEnv
 from .ros_interface import RosGazeboInterface
 
@@ -94,7 +95,11 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             verbose=1,
         )
 
-        model.learn(total_timesteps=int(train_cfg.get("total_timesteps", 50000)))
+        total_timesteps = int(train_cfg.get("total_timesteps", 50000))
+        model.learn(
+            total_timesteps=total_timesteps,
+            callback=ProgressBarCallback(total_timesteps=total_timesteps),
+        )
         model.save(str(model_path))
         print(f"Saved PPO model to {resolve_save_path(model_path)}")
     finally:

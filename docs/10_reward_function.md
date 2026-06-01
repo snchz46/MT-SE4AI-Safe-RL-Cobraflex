@@ -24,19 +24,32 @@ In one control cycle, the reward is a linear sum of four terms minus a
 termination penalty:
 
 ```text
-r = w_fwd · speed
+r = w_fwd · max(progress, 0)
   − w_ey  · |ey|
   − w_eps · |epsi|
   − w_ds  · |Δsteer|
-  − w_term · [terminated]
+  − w_term · [terminated_off_road]
 ```
 
-where `Δsteer = applied_steer − previous_applied_steer` and `[terminated]` is 1
-if the episode ends by leaving the road. The exact implementation is in
+where `progress` is the **normalised centerline advance** this cycle (≈1.0 at
+cruise; the env unwraps the closed-loop arc-length reset and divides by the
+nominal per-step advance), `Δsteer = applied_steer − previous_applied_steer`, and
+`[terminated_off_road]` is 1 only if the episode ends by leaving the **road**
+(not by a C-05 emergency — see §7.2.4 / ED-8). The exact implementation is in
 `cobraflex_rl/rewards.py::compute_reward`.
 
-`speed` enters as `max(speed, 0)` (see §6). `ey`, `epsi` and `steer` are taken
-from the **safe** (post-cage) action and the resulting state (D-34, §5).
+`progress` enters as `max(progress, 0)` (see §6). `ey`, `epsi` and `steer` are
+taken from the **safe** (post-cage) action and the resulting state (D-34, §5).
+
+> **Revision (F3 first run, v1.1).** The forward term was originally
+> `w_fwd · speed`. Because speed is fixed (cage-controlled cruise), that term was
+> a near-constant ≈0.2 that did not discriminate the policy's behaviour, so the
+> return barely depended on the actions (`explained_variance ≈ 0`, flat
+> learning). Rewarding **progress along the centerline** instead makes the return
+> reward surviving and advancing (completing curves/laps) and keeps each on-track
+> step net-positive, so ending early via the penalty-free C-05 emergency is never
+> preferable to continuing. Weights are unchanged (v1.0); only the forward
+> driver changed. See `docs/09_environment_design.md` ED-9.
 
 ---
 
@@ -44,11 +57,11 @@ from the **safe** (post-cage) action and the resulting state (D-34, §5).
 
 | Term | Sign | What it incentivises / penalises | Magnitude unit |
 | --- | --- | --- | --- |
-| `w_fwd · speed` | + | Moving forward; avoids the degenerate policy that stays still to dodge penalties | m/s |
+| `w_fwd · progress` | + | Advancing along the centerline (surviving + completing laps); avoids the degenerate policy that stalls to dodge penalties | normalised (≈1.0/step at cruise) |
 | `w_ey · [ey]` | − | Lateral deviation from the lane centre (primary objective) | m |
 | `w_eps · [epsi]` | − | Heading error w.r.t. the lane tangent | rad |
 | `w_ds · [Δsteer]` | − | Abrupt steering changes (actuation smoothness) | [-1,1] |
-| `w_term · [done]` | − | Leaving the road (failure event) | — |
+| `w_term · [done]` | − | Leaving the **road** (off-road failure only; C-05 emergency is penalty-free) | — |
 
 Each term is **interpretable and isolable**, which eases the Chapter 8 ablation
 analysis and the unit tests (§7).
@@ -59,14 +72,17 @@ analysis and the unit tests (§7).
 
 | Parameter | Value | Rationale |
 | --- | --- | --- |
-| `w_fwd` (forward_progress) | 1.0 | Scale reference; at cruise (0.2 m/s) it contributes +0.2/cycle |
-| `w_ey` (lateral_error) | 2.5 | **Primary penalty.** Dominates heading: a 0.1 m offset costs 0.25, more than the per-cycle progress → the agent prioritises centring |
+| `w_fwd` (forward_progress) | 1.0 | Scale reference; with the v1.1 progress driver it contributes ≈+1.0/cycle at cruise (was +0.2 under the old `speed` driver) |
+| `w_ey` (lateral_error) | 2.5 | **Primary penalty.** A 0.1 m offset costs 0.25 → the agent prioritises centring; still small vs the +1.0 progress, so an on-track step stays net-positive |
 | `w_eps` (heading_error) | 0.75 | Secondary penalty; heading is a means to control `ey`, not an end |
 | `w_ds` (steer_delta) | 0.10 | Small; smooths without choking the ability to correct |
-| `w_term` (termination) | 25.0 | **Deliberately high**: equals ~125 cycles of cruise progress. Makes staying on the road dominate over optimising speed |
+| `w_term` (termination) | 25.0 | **Deliberately high**: applied only on off-road failure (not C-05). Makes staying on the road dominate over optimising speed |
 
 **Priority hierarchy encoded in the weights:**
-`staying on road (25) ≫ lateral centring (2.5) > heading (0.75) > smoothness (0.10) > progress (1.0 · speed)`.
+`staying on road (25) ≫ progress (1.0 · progress) ≳ lateral centring (2.5·|ey|) > heading (0.75) > smoothness (0.10)`.
+Under v1.1 the forward term (≈1.0/step) is comparable to the per-step penalties,
+so every on-track step is net-positive — the agent is pulled toward *continuing*,
+not toward triggering the penalty-free emergency to cut losses.
 
 The weights are marked `[provisional, M-P1..M-P4]`: the Chapter 8 sensitivity
 analysis will confirm they do not produce degeneration before they are frozen.
@@ -125,10 +141,10 @@ requires Gazebo; it is evidenced on the Ubuntu+Jazzy host.)*
 **D39 (unit tests on synthetic states).** `policy/tests/test_rewards.py`
 (10 tests, runnable without ROS) pins the arithmetic of each term:
 
-- centred + cruise → `r = w_fwd · speed`;
+- centred + cruise → `r = w_fwd · progress`;
 - `|ey|`, `|epsi|`, `|Δsteer|` penalised with the correct weight and sign;
 - termination penalty = exactly `w_term`;
-- `speed < 0` → no forward reward (clamp);
+- `progress < 0` → no forward reward (clamp);
 - linear composition of terms;
 - `w_ey` dominates `w_eps` at equal error;
 - the `reward` block in `train_ppo.yaml` is complete with positive weights.

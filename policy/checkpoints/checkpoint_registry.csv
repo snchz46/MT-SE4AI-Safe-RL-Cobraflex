@@ -1,3 +1,4 @@
 checkpoint_id,seed,training_steps,scenario_evaluated,timestamp,git_commit,cage_yaml_hash,notes
 # Phase 3 will populate this registry as training runs complete.
 # Each row records one checkpoint with full reproducibility metadata.
+cobraflex_ppo_lane,42,50000,,2026-06-01T16:42:45.115793+00:00,1603392b8db788e25c16a7155de57f1657ff0d42,7a08ea91d2ff70c1db1e49fd4742ab099b47647395aca4509289e226fa3f5346,run_id=ppo_train_20260601T150552Z

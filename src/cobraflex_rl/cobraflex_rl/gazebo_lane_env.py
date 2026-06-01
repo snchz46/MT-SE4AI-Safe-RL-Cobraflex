@@ -44,15 +44,27 @@ class GazeboLaneEnv(gym.Env):
         self.prev_steer = 0.0
         self.step_count = 0
         self.last_track_state: Optional[TrackState] = None
+        # Total centerline arc length, for the closed-loop progress wrap (§7.2.3).
+        self._track_length = float(self.tracker.cumulative_lengths[-1])
+        self.prev_s = 0.0
+
+        # Signed-curvature preview added to the observation so the policy can
+        # anticipate the upcoming curve instead of only reacting to ey/epsi (the
+        # cage already consumes curvature internally; the policy did not). Two
+        # look-ahead horizons (near + far, in centerline segments).
+        obs_cfg = dict(self.cfg.get("observation", {}))
+        self.curv_lookahead_near = int(obs_cfg.get("curvature_lookahead_near", 3))
+        self.curv_lookahead_far = int(obs_cfg.get("curvature_lookahead_far", 8))
 
         self.action_space = spaces.Box(
             low=np.array([-1.0], dtype=np.float32),
             high=np.array([1.0], dtype=np.float32),
             dtype=np.float32,
         )
+        # [ey, epsi, speed, prev_steer, kappa_near, kappa_far]
         self.observation_space = spaces.Box(
-            low=np.array([-np.inf, -math.pi, 0.0, -1.0], dtype=np.float32),
-            high=np.array([np.inf, math.pi, np.inf, 1.0], dtype=np.float32),
+            low=np.array([-np.inf, -math.pi, 0.0, -1.0, -np.inf, -np.inf], dtype=np.float32),
+            high=np.array([np.inf, math.pi, np.inf, 1.0, np.inf, np.inf], dtype=np.float32),
             dtype=np.float32,
         )
 
@@ -127,10 +139,22 @@ class GazeboLaneEnv(gym.Env):
         track_state = self._compute_track_state()
         speed = self.ros_interface.get_speed()
         self.last_track_state = track_state
+        self.prev_s = float(track_state.s)
 
-        observation = self._make_observation(track_state, speed, self.prev_steer)
+        kappa_near, kappa_far = self._curvature_preview(track_state.segment_index)
+        observation = self._make_observation(
+            track_state, speed, self.prev_steer, kappa_near, kappa_far
+        )
         info = self._make_info(track_state, speed)
         return observation, info
+
+    def _curvature_preview(self, segment_index: int):
+        """Signed curvature (rad/m, + = left) at a near and a far look-ahead, for
+        the observation. Mirrors the cage's curvature source so policy and cage
+        see a consistent road preview."""
+        near = self.tracker.curvature_ahead(segment_index, self.curv_lookahead_near)
+        far = self.tracker.curvature_ahead(segment_index, self.curv_lookahead_far)
+        return float(near), float(far)
 
     def _calibrate_spawn_settled(
         self,
@@ -205,6 +229,16 @@ class GazeboLaneEnv(gym.Env):
         self.last_track_state = track_state
         self.step_count += 1
 
+        # Normalised progress along the centerline this cycle (§7.2.3): the
+        # arc-length advance ds, unwrapped across the closed-loop s reset and
+        # scaled by the nominal per-step advance so ~1.0 == one cruise step.
+        ds = track_state.s - self.prev_s
+        if ds < -0.5 * self._track_length:
+            ds += self._track_length
+        self.prev_s = float(track_state.s)
+        ds_nominal = max(self.fixed_speed * self.control_dt, 1e-6)
+        progress = float(np.clip(ds / ds_nominal, -2.0, 2.0))
+
         # End the episode the instant the cage latches a C-05 emergency stop:
         # the rollout has already failed (the policy drove into a state the cage
         # could only answer with an emergency), so the remaining frozen steps
@@ -224,7 +258,7 @@ class GazeboLaneEnv(gym.Env):
         # which predates the cage in the loop, incurs the penalty.
         reward = compute_reward(
             track_state=track_state,
-            speed=speed,
+            progress=progress,
             steer=applied_steer,
             prev_steer=prev_steer,
             done=off_road,
@@ -232,7 +266,10 @@ class GazeboLaneEnv(gym.Env):
         )
 
         self.prev_steer = applied_steer
-        observation = self._make_observation(track_state, speed, self.prev_steer)
+        kappa_near, kappa_far = self._curvature_preview(track_state.segment_index)
+        observation = self._make_observation(
+            track_state, speed, self.prev_steer, kappa_near, kappa_far
+        )
         info = self._make_info(track_state, speed)
         info.update(cage_info)
         if terminated:
@@ -320,6 +357,8 @@ class GazeboLaneEnv(gym.Env):
         track_state: TrackState,
         speed: float,
         previous_steer: float,
+        kappa_near: float,
+        kappa_far: float,
     ) -> np.ndarray:
         return np.array(
             [
@@ -327,6 +366,8 @@ class GazeboLaneEnv(gym.Env):
                 track_state.epsi,
                 speed,
                 previous_steer,
+                kappa_near,
+                kappa_far,
             ],
             dtype=np.float32,
         )

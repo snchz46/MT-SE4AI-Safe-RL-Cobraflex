@@ -51,26 +51,42 @@ registra en `docs/CHANGELOG.md` con su rationale.
 
 ### 7.2.1 Espacio de observación
 
-El vector de observación es un array de cuatro flotantes:
+El vector de observación es un array de seis flotantes:
 
 ```text
-obs = [ey, epsi, speed, prev_steer]
+obs = [ey, epsi, speed, prev_steer, kappa_near, kappa_far]
 ```
 
 donde `ey` es el offset lateral respecto a la línea central del carril
 (positivo a la izquierda), `epsi` es el error de heading respecto a la
 tangente de la línea central (positivo en sentido antihorario), `speed`
-es la velocidad escalar del vehículo en m/s, y `prev_steer` es el
-steering aplicado en el ciclo anterior (normalizado en [-1, 1]).
+es la velocidad escalar del vehículo en m/s, `prev_steer` es el
+steering aplicado en el ciclo anterior (normalizado en [-1, 1]), y
+`kappa_near`/`kappa_far` son la **curvatura con signo** de la línea
+central (rad/m, positiva a la izquierda) a dos horizontes de preview
+(3 y 8 segmentos por defecto).
 
-Los límites del espacio son [-∞, +∞] para `ey` y `speed`, [-π, π] para
-`epsi`, y [-1, 1] para `prev_steer`. En la práctica, el rango operativo
-es estrecho: ey ∈ [-0.12, 0.12] m, epsi ∈ [-0.4, 0.4] rad (ver §6.6.2).
+Los límites del espacio son [-∞, +∞] para `ey`, `speed`, `kappa_near` y
+`kappa_far`, [-π, π] para `epsi`, y [-1, 1] para `prev_steer`. En la
+práctica, el rango operativo es estrecho: ey ∈ [-0.12, 0.12] m,
+epsi ∈ [-0.4, 0.4] rad (ver §6.6.2), |kappa| ≤ 1.25 rad/m (R=0.8 m).
 
 La inclusión de `prev_steer` es una forma ligera de memoria de primer
 orden que ayuda al agente a regularizar su comportamiento de steering sin
 requerir una arquitectura recurrente. El `speed` es información necesaria
 para la calibración de la corrección de heading en curva.
+
+**Preview de curvatura (revisión F3, primer run).** El vector original
+de cuatro componentes era puramente reactivo: el agente solo veía
+`ey/epsi` actuales y no la curva que se aproxima. En el primer run de
+entrenamiento esto bloqueó el aprendizaje — en la curva de R=0.8 m, sin
+anticipación, el agente derivaba hasta que la cage tomaba el control
+(C-01/C-03) y disparaba C-05, con señal de crédito casi nula
+(`explained_variance ≈ 0`). La cage **ya** consumía `curvature_ahead`
+internamente; exponerla también a la política (`kappa_near`, `kappa_far`)
+le permite anticipar la curva. Con el preview, el agente pasó a completar
+vueltas y terminar por truncación. Decisión (ED-7) en
+`docs/09_environment_design.md`.
 
 ### 7.2.2 Espacio de acción
 
@@ -88,45 +104,72 @@ escenarios perturbados de Fase 4, la Training Specification se revisa.
 La función de recompensa en un ciclo de control es:
 
 ```text
-r = w_fwd · speed
+r = w_fwd · max(progress, 0)
   - w_ey  · |ey|
   - w_eps · |epsi|
   - w_ds  · |Δsteering|
-  - w_term · [terminated]
+  - w_term · [terminated_off_road]
 ```
 
-donde `[terminated]` es 1 si el episodio termina por violación de carril.
-Los pesos nominales (versión 1.0, sujetos a ajuste experimental) son:
+donde `progress` es el avance **normalizado** a lo largo de la línea
+central en ese ciclo (≈1.0 a velocidad de crucero; el entorno gestiona el
+wrap del arco en el circuito cerrado), y `[terminated_off_road]` es 1 solo
+si el episodio termina por salida de **vía** (no por emergencia C-05; ver
+§7.2.4). Los pesos nominales (versión 1.0, sujetos a ajuste experimental)
+son:
 
 | Parámetro | Valor | Rationale |
 | --- | --- | --- |
-| `w_fwd` (forward_progress) | 1.0 | Incentiva avance |
+| `w_fwd` (forward_progress) | 1.0 | Premia progreso real (≈1.0/paso a crucero) |
 | `w_ey` (lateral_error) | 2.5 | Penalización principal: offset lateral |
 | `w_eps` (heading_error) | 0.75 | Penalización secundaria: heading |
 | `w_ds` (steer_delta) | 0.10 | Suavidad de actuación |
-| `w_term` (termination) | 25.0 | Desincentiva salida de carril |
+| `w_term` (termination) | 25.0 | Desincentiva salida de vía |
 
-El diseño de recompensa es deliberadamente simple. La práctica en
-lane-following con RL muestra que recompensas más complejas (múltiples
-términos de curvatura, penalización por oscilación de heading) raramente
-mejoran el comportamiento base y complican el análisis de ablación. La
-penalización de terminación alta (25.0) prioriza la permanencia en carril
-sobre la optimización de velocidad.
+**Progreso, no velocidad (revisión F3, primer run).** El término forward
+originalmente era `w_fwd · speed`. Como la velocidad es fija (crucero
+cage-controlado), ese término era una constante ≈0.2 que no discriminaba
+la conducta de la política: el retorno apenas dependía de las acciones, lo
+que dejaba `explained_variance ≈ 0` y el aprendizaje plano. Sustituirlo
+por el **progreso normalizado a lo largo del centerline** hace que el
+retorno premie sobrevivir y avanzar más (completar curvas/vueltas) — la
+señal que el agente sí puede optimizar. Además mantiene cada paso en pista
+**netamente positivo**, de modo que terminar pronto (vía la emergencia
+C-05 sin penalización, §7.2.4) nunca renta más que continuar.
+
+El diseño de recompensa es deliberadamente simple. La penalización de
+terminación alta (25.0) prioriza la permanencia en **vía** sobre la
+optimización de velocidad; nótese que **solo** la salida de vía la aplica
+— la emergencia C-05 termina sin penalización (la intervención de la cage
+es dinámica, no castigo; D-34, §7.2.4/§7.2.5).
 
 Los pesos son `[provisional, M-P1..M-P4]` — se marcan provisionalmente
 hasta que el análisis de sensibilidad del Capítulo 8 confirme que no hay
-degeneración (policy que maximiza `forward_progress` sin atender `ey`).
+degeneración. Detalle y banco de preguntas en `docs/10_reward_function.md`.
 
 ### 7.2.4 Criterios de terminación y truncación
 
-**Terminación** (episodio falla): `|ey| > road_width / 2`. El agente sale
-de la **vía**. Se termina en el borde de vía y no en el de carril
-(`lane_width/2`) por una razón deliberada de entrenamiento: una policy
-inicial aleatoria saldría del carril en 1–2 pasos y nunca acumularía
-experiencia útil. La cage corrige las violaciones de **carril** dentro de
-la vía (C-01/C-03); terminar en el borde de **vía** marca el caso "la cage
-no pudo evitarlo". Implementación en `GazeboLaneEnv.step`; rationale en
-`docs/09_environment_design.md` (ED-4).
+**Terminación** (episodio falla): el episodio termina (`terminated=True`)
+en cualquiera de dos condiciones:
+
+1. **Salida de vía**: `|ey| > road_width / 2`. Se termina en el borde de
+   vía y no en el de carril (`lane_width/2`) por una razón deliberada de
+   entrenamiento: una policy inicial aleatoria saldría del carril en 1–2
+   pasos y nunca acumularía experiencia útil. La cage corrige las
+   violaciones de **carril** dentro de la vía (C-01/C-03); terminar en el
+   borde de **vía** marca el caso "la cage no pudo evitarlo". **Esta** es
+   la única condición que aplica la penalización `w_term` (§7.2.3).
+2. **Emergencia C-05** (revisión F3): si la cage enclava un paro de
+   emergencia, el rollout ya falló (el coche queda congelado) y los pasos
+   restantes no aportan señal — terminar de inmediato evita malgastar el
+   horizonte. Se trata como fallo terminal (el value bootstrapea desde 0)
+   pero **sin penalización** (`done=off_road` en la recompensa): castigar
+   la acción de la cage contradiría su tratamiento como dinámica del
+   entorno (D-34). `info["termination_reason"] ∈ {off_road, cage_emergency,
+   truncated}`.
+
+Implementación en `GazeboLaneEnv.step`; rationale en
+`docs/09_environment_design.md` (ED-4 / ED-8) y D-34 (addendum F3).
 
 **Truncación** (episodio completo): `step_count ≥ max_episode_steps`.
 Con `max_episode_steps = 400` y `control_dt = 0.10 s`, el episodio dura

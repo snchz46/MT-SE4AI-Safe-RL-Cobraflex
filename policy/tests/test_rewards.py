@@ -5,10 +5,12 @@ Unit tests for cobraflex_rl.rewards.compute_reward — the PPO reward function
 
 The reward in one control cycle is
 
-    r = w_fwd·speed − w_ey·|ey| − w_eps·|epsi| − w_ds·|Δsteer| − w_term·[done]
+    r = w_fwd·max(progress, 0) − w_ey·|ey| − w_eps·|epsi| − w_ds·|Δsteer| − w_term·[done]
 
-Each test isolates one term on a synthetic TrackState so the contribution is
-attributable; the final tests check term composition and the YAML reward block.
+where ``progress`` is the normalised centerline advance this cycle (≈1.0 at
+nominal cruise), not instantaneous speed (§7.2.3, D-34 F3 refinements). Each test
+isolates one term on a synthetic TrackState so the contribution is attributable;
+the final tests check term composition and the YAML reward block.
 """
 
 import sys
@@ -39,7 +41,7 @@ WEIGHTS = {
     "termination": 25.0,
 }
 CFG = {"reward": WEIGHTS}
-CRUISE = 0.2  # fixed_speed during training
+NOMINAL = 1.0  # normalised progress for one nominal cruise step
 
 
 def _ts(ey=0.0, epsi=0.0):
@@ -55,10 +57,10 @@ def _ts(ey=0.0, epsi=0.0):
     )
 
 
-def _reward(track_state=None, speed=CRUISE, steer=0.0, prev_steer=0.0, done=False):
+def _reward(track_state=None, progress=NOMINAL, steer=0.0, prev_steer=0.0, done=False):
     return compute_reward(
         track_state=track_state if track_state is not None else _ts(),
-        speed=speed,
+        progress=progress,
         steer=steer,
         prev_steer=prev_steer,
         done=done,
@@ -67,13 +69,13 @@ def _reward(track_state=None, speed=CRUISE, steer=0.0, prev_steer=0.0, done=Fals
 
 
 def test_centred_straight_cruise_is_forward_progress_only():
-    # ey=epsi=0, no steering change, not done -> r = w_fwd * speed
-    assert _reward() == pytest.approx(1.0 * CRUISE)
+    # ey=epsi=0, no steering change, not done -> r = w_fwd * progress
+    assert _reward() == pytest.approx(1.0 * NOMINAL)
 
 
 def test_lateral_error_is_penalised():
     r = _reward(track_state=_ts(ey=0.1))
-    assert r == pytest.approx(CRUISE - 2.5 * 0.1)
+    assert r == pytest.approx(NOMINAL - 2.5 * 0.1)
     assert r < _reward()  # strictly worse than centred
 
 
@@ -84,32 +86,32 @@ def test_lateral_penalty_is_symmetric():
 
 
 def test_heading_error_is_penalised():
-    assert _reward(track_state=_ts(epsi=0.2)) == pytest.approx(CRUISE - 0.75 * 0.2)
+    assert _reward(track_state=_ts(epsi=0.2)) == pytest.approx(NOMINAL - 0.75 * 0.2)
 
 
 def test_steer_delta_penalises_change_not_magnitude():
     # only the change in steering is penalised
-    assert _reward(steer=0.5, prev_steer=0.0) == pytest.approx(CRUISE - 0.10 * 0.5)
+    assert _reward(steer=0.5, prev_steer=0.0) == pytest.approx(NOMINAL - 0.10 * 0.5)
     # holding the same steering costs nothing
-    assert _reward(steer=0.5, prev_steer=0.5) == pytest.approx(CRUISE)
+    assert _reward(steer=0.5, prev_steer=0.5) == pytest.approx(NOMINAL)
 
 
 def test_termination_applies_fixed_penalty():
-    assert _reward(done=True) == pytest.approx(CRUISE - 25.0)
+    assert _reward(done=True) == pytest.approx(NOMINAL - 25.0)
     # the penalty is exactly w_term, independent of the rest of the state
     assert _reward() - _reward(done=True) == pytest.approx(25.0)
 
 
-def test_negative_speed_does_not_reward_reverse():
-    # forward_progress uses max(speed, 0): reversing yields no forward reward
-    assert _reward(speed=-0.5) == pytest.approx(0.0)
+def test_negative_progress_does_not_reward_reverse():
+    # forward_progress uses max(progress, 0): going backwards yields no forward reward
+    assert _reward(progress=-0.5) == pytest.approx(0.0)
 
 
 def test_combined_terms_sum_linearly():
     r = _reward(
-        track_state=_ts(ey=0.1, epsi=0.2), speed=0.2, steer=0.5, prev_steer=0.0
+        track_state=_ts(ey=0.1, epsi=0.2), progress=1.0, steer=0.5, prev_steer=0.0
     )
-    expected = 1.0 * 0.2 - 2.5 * 0.1 - 0.75 * 0.2 - 0.10 * 0.5
+    expected = 1.0 * 1.0 - 2.5 * 0.1 - 0.75 * 0.2 - 0.10 * 0.5
     assert r == pytest.approx(expected)
 
 

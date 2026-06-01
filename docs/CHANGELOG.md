@@ -31,6 +31,64 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [01.06.2026] — F3 learning fix: curvature preview in observation + progress reward
+
+**Document(s) affected:**
+`src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py`,
+`src/cobraflex_rl/cobraflex_rl/rewards.py`,
+`src/cobraflex_rl/config/train_ppo.yaml`,
+`policy/tests/test_rewards.py`,
+`manuscript/chapters/chapter_07_training_specification.md` (§7.2.1, §7.2.3, §7.2.4),
+`docs/09_environment_design.md` (obs, Q2, ED-7/8/9),
+`docs/10_reward_function.md` (formula v1.1).
+**Phase:** F3.
+**Gate context:** after G2; first training run did not learn (`ep_rew_mean` flat,
+`explained_variance ≈ 0`, `std` pinned at 1.0) — root-caused to MDP design, not
+the cage.
+**Author:** Samuel.
+
+### Change
+
+- **Observation: curvature preview (4 → 6 dims).** `obs` becomes
+  `[ey, epsi, speed, prev_steer, kappa_near, kappa_far]`, where the two new
+  components are the signed centerline curvature (rad/m, + = left) at a near and
+  a far look-ahead (`observation.curvature_lookahead_{near,far}`, default 3/8
+  segments). The cage already consumed `curvature_ahead` internally; the policy
+  did not, so it could not anticipate the R=0.8 m bend.
+- **Reward: progress instead of speed (v1.1).** The forward term changes from
+  `w_fwd·speed` (cage-fixed, near-constant ≈0.2) to `w_fwd·max(progress, 0)`,
+  where `progress` is the normalised centerline advance per cycle (≈1.0 at
+  cruise; the env unwraps the closed-loop `s` reset). Weights unchanged (v1.0).
+  `compute_reward`'s `speed` parameter renamed to `progress`.
+
+### Rationale
+
+With speed fixed by the cage, the old forward term did not depend on the policy,
+and the reactive 4-dim observation gave the policy no way to anticipate the
+curve — together these flattened the return's dependence on the actions
+(`explained_variance ≈ 0`). Curvature preview gives the policy the information to
+act; progress reward makes the return discriminate behaviour (survive + advance)
+and keeps every on-track step net-positive, which also closes the perverse
+incentive that the penalty-free C-05 termination ([01.06] bring-up entry) would
+otherwise create. Empirically the policy then learned: `ep_rew_mean` 29→57,
+`ep_len_mean` 46→78, `explained_variance` 0→0.29, `std` starting to fall, with
+episodes completing laps and ending by truncation (18% of training).
+
+### Impact
+
+- Old policy checkpoints (4-dim obs) are **incompatible**; retrain fresh.
+- No hazard / SR / cage-rule IDs touched; the cage and `cage/cage.yaml` are
+  unchanged. Observation/reward are env-side (Training Spec §7.2), not cage.
+- Spec drift closed across Training Spec §7.2.1/§7.2.3/§7.2.4, `docs/09` (ED-7/8/9),
+  `docs/10` (v1.1).
+
+### Verification
+
+`pytest` → **174 passed** (incl. updated `test_rewards.py`).
+`python tools/check_traceability.py` → **All checks PASSED. 0 warning(s).**
+
+---
+
 ## [01.06.2026] — F3 training-loop bring-up: C-05 episode termination + spawn-settle + sim-time pacing
 
 **Document(s) affected:** `src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py`,

@@ -42,9 +42,9 @@ task. That fixes the minimal observation and action spaces.
 ## 2. Observation space
 
 ```text
-obs = [ey, epsi, speed, prev_steer]            (Box, float32, dim 4)
-low  = [-inf, -π, 0.0, -1.0]
-high = [+inf, +π, +inf, 1.0]
+obs = [ey, epsi, speed, prev_steer, kappa_near, kappa_far]   (Box, float32, dim 6)
+low  = [-inf, -π, 0.0, -1.0, -inf, -inf]
+high = [+inf, +π, +inf, 1.0, +inf, +inf]
 ```
 
 | Component | Meaning | Why it is here |
@@ -53,11 +53,16 @@ high = [+inf, +π, +inf, 1.0]
 | `epsi` | heading error vs the lane tangent (+ counter-clockwise) | Anticipates lateral drift; stabilises control |
 | `speed` | scalar speed (m/s) | Needed to calibrate the heading correction on curves |
 | `prev_steer` | steering **applied** (post-cage) last cycle, [−1,1] | First-order memory → regularises steering without a recurrent net |
+| `kappa_near` | signed centerline curvature, near look-ahead (3 segments) | Curve preview — lets the policy *anticipate* the bend (ED-7) |
+| `kappa_far` | signed centerline curvature, far look-ahead (8 segments) | Longer-horizon preview for bend entry/exit (ED-7) |
 
 `speed` is bounded to ≥ 0 in code (`low=0.0`); §7.2.1 describes it as
 `[-∞,+∞]` for simplicity. The effective operating range is narrow
-(ey ∈ [−0.12,0.12], epsi ∈ [−0.4,0.4]); the infinite bounds only avoid
-truncating outlier observations during exploration.
+(ey ∈ [−0.12,0.12], epsi ∈ [−0.4,0.4], |kappa| ≤ 1.25 rad/m for R=0.8 m);
+the infinite bounds only avoid truncating outlier observations during
+exploration. The two curvature components were added in the F3 first-run
+revision (ED-7) after the original 4-dim, purely-reactive observation
+blocked learning on the bend.
 
 **Ground-truth state, not raw perception.** In simulation, `ey/epsi/speed` come
 from the ground-truth pose (`/odom_truth`) projected by `PolylineTracker` onto
@@ -159,12 +164,15 @@ in `cobraflex_rl/cage_bridge.py`.
 
 | # | Decision | Rejected alternative | Why |
 | --- | --- | --- | --- |
-| ED-1 | Abstract 4-dim obs (ey, epsi, speed, prev_steer) | Image / LiDAR point cloud as obs | The sim uses ground-truth perception (F2); abstract obs keeps RL↔PD comparable and isolates from sensor noise (an F4 stressor) |
+| ED-1 | Abstract 6-dim obs (ey, epsi, speed, prev_steer, kappa_near, kappa_far) | Image / LiDAR point cloud as obs | The sim uses ground-truth perception (F2); abstract obs keeps RL↔PD comparable and isolates from sensor noise (an F4 stressor). Curvature added in F3 — see ED-7 |
 | ED-2 | Action = steering only, fixed speed | 2D action (steering + throttle) | PD stable at fixed speed; lower dimensionality speeds up learning (§7.2.2) |
 | ED-3 | Cage **in-process** during training | Cage over topics `/raw_action`→`/safe_action` | Determinism (fixed seed), no asynchrony, identical cage behaviour; see **D-34** |
-| ED-4 | Termination at `road_width/2` | Termination at `lane_width/2` (§7.2.4 text) | The random policy would die in 1–2 steps; the cage handles the lane within the road |
+| ED-4 | Termination at `road_width/2`; plus C-05 emergency (ED-8) | Termination at `lane_width/2` (§7.2.4 text) | The random policy would die in 1–2 steps; the cage handles the lane within the road |
 | ED-5 | Pose from `/odom_truth` (ground truth) | Encoder `/odom` (DiffDrive dead-reckoning) | The encoder does not reflect the reset teleport → corrupted the pose every episode |
 | ED-6 | Fresh cage per episode | Single cage for the whole run | Each RL episode is an independent rollout; avoids carrying a latched C-05 |
+| ED-7 | Signed-curvature preview in obs (`kappa_near`, `kappa_far`) | Reactive 4-dim obs (ey, epsi, speed, prev_steer) | F3 first run: without preview the policy could not anticipate the R=0.8 m bend, drifted, the cage took over and emergency-stopped → `explained_variance ≈ 0`, flat learning. The cage already used `curvature_ahead`; exposing it to the policy unblocked learning (laps completed) |
+| ED-8 | Episode ends on a C-05 emergency, **penalty-free** | Run the frozen post-emergency car to the horizon; or end with the `w_term` penalty | A latched C-05 freezes the car → remaining steps carry no signal and burn wall-clock. Ending early avoids that; making it penalty-free keeps the cage's action as dynamics, not punishment (D-34). Only off-road incurs `w_term` |
+| ED-9 | Forward reward = normalised **progress** (Δs along centerline) | `w_fwd · speed` (instantaneous, cage-fixed ≈ const) | F3 first run: constant speed made the forward term non-discriminating → the return barely depended on the policy (`explained_variance ≈ 0`). Progress rewards surviving + advancing and keeps each on-track step net-positive, closing the penalty-free-emergency perverse incentive. See `docs/10_reward_function.md` |
 
 ---
 
@@ -189,12 +197,17 @@ PD already demonstrated stability at 0.2 m/s. Adding throttle would double the
 action dimension with no evidence of benefit. It is a revisable decision for F4
 (perturbed scenarios), documented in §7.2.2.
 
-**Q2. Why only 4 observations? Isn't that too few?**
-They are the variables sufficient for the task: lateral error, heading error,
-speed (for the curve correction) and the previous steering (smoothing). It is
-the same abstract state the cage and the PD use, which makes the RL↔PD
-comparison clean. More dimensions (curvature, history) were judged unnecessary
-for the nominal case.
+**Q2. Why 6 observations — and why was curvature added?**
+The first four (lateral error, heading error, speed, previous steering) are the
+abstract control state the cage and the PD also use, which keeps the RL↔PD
+comparison clean. Curvature (`kappa_near`, `kappa_far`) was **added in the F3
+first run** (ED-7): the original 4-dim observation was purely reactive, so the
+policy could not anticipate the R=0.8 m bend — it drifted until the cage took
+over and emergency-stopped, leaving `explained_variance ≈ 0` and no learning.
+The cage already consumed `curvature_ahead` internally; exposing the same signed
+preview to the policy unblocked learning (the agent began completing laps). It
+remains an *abstract* preview (two scalars from the known centerline), not raw
+perception, so the F2 ground-truth assumption (Q3) is unchanged.
 
 **Q3. Isn't training on ground-truth state cheating w.r.t. sim-to-real?**
 In F3 ground truth is used, exactly like the F2 PD, to isolate the control

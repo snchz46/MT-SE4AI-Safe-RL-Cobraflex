@@ -22,8 +22,17 @@ reward:
   lateral_error: 2.5
   heading_error: 0.75
   steer_delta: 0.10
+  # forward_progress now weights NORMALISED centerline progress (≈1.0 per cruise
+  # step), not instantaneous speed — so the return rewards surviving + advancing
+  # and every on-track step stays net-positive (§7.2.3; D-34 F3 refinements).
   forward_progress: 1.0
   termination: 25.0
+
+# Observation: signed-curvature preview (rad/m) at two centerline look-aheads
+# (segments) so the policy can anticipate curves, not just react to ey/epsi.
+observation:
+  curvature_lookahead_near: 3
+  curvature_lookahead_far: 8
 
 # Safety cage in the training loop (D-34, TS-01). The cage is invoked
 # in-process from GazeboLaneEnv using the same SafetyCageNode + cage/cage.yaml

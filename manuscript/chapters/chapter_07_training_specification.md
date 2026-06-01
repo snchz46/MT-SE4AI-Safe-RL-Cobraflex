@@ -277,62 +277,127 @@ perturbados de Fase 4. Los rangos son `[provisional, M-P5]`.
 
 ---
 
-## 7.4 Resultados del primer entrenamiento  [COMPLETAR FASE 3]
+## 7.4 Resultados del primer entrenamiento
 
-> *Esta sección se completa tras el primer ciclo de entrenamiento PPO
-> completo (50 000 timesteps, seed 42). Los campos pendientes son:
-> curva de recompensa media por episodio, curva de longitud media de
-> episodio, explained_variance al final del entrenamiento, número real
-> de timesteps hasta convergencia (criterio: ep_rew_mean estable en
-> ventana de 10 iteraciones), y run-id del experimento de entrenamiento.*
+Primer ciclo de entrenamiento PPO: run `ppo_train_20260601T150552Z`
+(seed 42, 50 000 timesteps, ~95 min a tiempo real, fps≈8). Datos crudos:
+`experiments/sim/training/ppo_train_20260601T150552Z/learning_curve.csv`
+(49 iteraciones de 1 024 pasos).
 
 ### 7.4.1 Curva de convergencia
 
-> [COMPLETAR FASE 3] — Figura con ep_rew_mean vs timesteps.
-> Incluir la curva suavizada (ventana 5) y los datos raw.
-> Referencia: `experiments/sim/training/<run_id>/learning_curve.csv`.
+`ep_rew_mean` crece de forma **monótona** de 29.3 (1 024 pasos) a 427.9
+(50 176 pasos); `ep_len_mean` de 45.9 a 427.3 pasos (de un horizonte de
+500 ≈ 1.14 vueltas, es decir ~0.97 vueltas medias por episodio al final).
+La Figura 7.1 muestra ambas curvas (raw + suavizado ventana 5). El
+crecimiento es sostenido y **sin plateau**: la recompensa seguía subiendo
+al agotar el presupuesto de 50 000 timesteps.
 
 ### 7.4.2 Estabilidad y explained_variance
 
-> [COMPLETAR FASE 3] — Reportar explained_variance al final del
-> entrenamiento. Valores < 0.5 indican función de valor mal ajustada
-> y motivarían incrementar n_steps o total_timesteps.
+`explained_variance` fue baja y ruidosa durante la fase de mejora rápida
+(≈0.01–0.34 entre 6k y 37k timesteps): el crítico persigue un retorno
+creciente, con la función de valor por detrás de una policy que mejora
+rápido. Subió a 0.55–0.73 en las últimas iteraciones, **superando el
+umbral de 0.5** de esta sección al final del entrenamiento (final: 0.73);
+en paralelo `value_loss` cayó de ~56 a ~0.2.
+
+El criterio de convergencia de §7.4 (`ep_rew_mean` estable en ventana de
+10 iteraciones) **no se cumple**: la recompensa fue monótonamente
+creciente hasta el final, de modo que el número de timesteps hasta
+convergencia **excede el presupuesto de 50 000**. La policy resultante es
+competente (§7.5) pero **no saturada**; una corrida más larga seguiría
+mejorando. Es una limitación documentada de este primer ciclo
+[provisional, M-P6]: se ejecutó un único presupuesto fijo de 50k por
+restricción de tiempo de cómputo (tiempo real, fps≈8), no porque la curva
+hubiera estabilizado.
 
 ### 7.4.3 Observaciones sobre la convergencia
 
-> [COMPLETAR FASE 3] — Descripción cualitativa del comportamiento
-> de la policy al inicio, a la mitad, y al final del entrenamiento.
-> ¿Cuándo deja de salirse del carril con regularidad? ¿Muestra
-> comportamiento oscilatorio residual?
+- **Inicio (≈2%):** la policy emergencia/sale en ~46 pasos de media;
+  episodios cortos dominados por C-05 (ver `docs/CHANGELOG.md`, entrada de
+  bring-up F3).
+- **Mitad (≈30–60%):** `ep_len_mean` sube a 140–320 pasos — la policy
+  completa fracciones crecientes de vuelta; `std` empieza a bajar de 1.0.
+- **Final (≈90–100%):** `ep_len_mean` ≈ 427 ≈ una vuelta completa; deja de
+  salirse con regularidad (las emergencias caen a ~0, confirmado en la
+  evaluación §7.5: 0 emergencias en 500 pasos). `std` baja a 0.74 — la
+  policy se compromete con acciones concretas.
+- **Oscilación residual:** sí, pero solo en la *actuación cruda* — el
+  steering raw conserva un patrón bang-bang (§7.5.2) que el rate-limiter
+  C-06 absorbe. A nivel de **trayectoria** no hay oscilación apreciable
+  (ey máx 30 mm sobre 11.5 vueltas en evaluación, §7.5).
 
 ---
 
-## 7.5 Evaluación de la policy sobre SC-NOM-01  [COMPLETAR FASE 3]
+## 7.5 Evaluación de la policy sobre SC-NOM-01
 
-> *Esta sección se completa tras la primera run de evaluación de la
-> policy entrenada en el escenario nominal. Comparación directa con
-> la run del PD baseline (§6.6.1).*
+Policy evaluada: checkpoint `cobraflex_ppo_lane` (run de entrenamiento
+`ppo_train_20260601T150552Z`, seed 42, 50 000 timesteps). Run de
+evaluación `rl_eval_20260601T172201Z`: un episodio determinista (spawn
+sin perturbación, §7.3), horizonte extendido a 4 400 pasos = 440 s
+(≈ 11.5 vueltas continuas) para que el recuento de vueltas sea comparable
+con el PD. Comparación directa con la run del PD baseline
+`ros_run_20260523T153003Z` (§6.6.1).
 
 ### 7.5.1 Completion rate y métricas de tracking
 
-> [COMPLETAR FASE 3] — Tabla comparativa RL vs PD:
->
-> | Métrica | PD (pre-F3) | PPO (F3) |
-> | --- | --- | --- |
-> | Vueltas completadas | 9.91 | [COMPLETAR] |
-> | Emergencias cage | 0 | [COMPLETAR] |
-> | Intervenciones cage (%) | 0.047% | [COMPLETAR] |
-> | ey medio (m) | 0.023 | [COMPLETAR] |
-> | epsi medio (rad) | 0.076 | [COMPLETAR] |
->
-> Referencia: `experiments/sim/runs/<run_id_rl>/cage_status.csv`.
+| Métrica | PD (pre-F3) | PPO (F3) |
+| --- | --- | --- |
+| Vueltas completadas | 9.91 (845 s) | 11.53 (440 s) † |
+| Emergencias cage (C-05) | 0 | **0** |
+| Intervenciones cage (% de pasos) | 0.047% | 85.9% (todo C-06) |
+| ey medio \|ey\| (m) | 0.023 | **0.0092** |
+| epsi medio \|epsi\| (rad) | 0.076 | **0.034** |
+
+† Las duraciones difieren (PPO 440 s, PD 845 s), así que el recuento bruto
+de vueltas **no es 1:1**. Lo robusto y comparable: **ambos completaron su
+corrida sin un solo fallo** (0 emergencias), y la PPO **sostuvo > 11
+vueltas continuas** sin que el cage tuviera que activar la parada de
+emergencia. Las métricas por-paso (tasa de intervención, error de
+tracking) son independientes de la duración y son el resultado
+discriminante. Referencia:
+`experiments/sim/runs/rl_eval_20260601T172201Z/cage_status.csv`.
+
+**Lectura.** La PPO **iguala** al PD en seguridad (0 emergencias en 11.5
+vueltas) y lo **supera en precisión de tracking**: el error lateral medio
+cae de 23 mm a 9.2 mm (máximo 30 mm, dentro del medio-carril de 122 mm y
+muy por debajo del `d_max = 160 mm` del cage) y el error de heading medio
+de 4.4° a 2.0°.
 
 ### 7.5.2 Comportamiento cualitativo
 
-> [COMPLETAR FASE 3] — ¿El RL mejora el tracking lateral respecto al
-> PD? ¿Activa la cage con menos frecuencia? ¿Muestra oscilación de
-> steering? Describir brevemente 2–3 observaciones cualitativas del
-> comportamiento.
+Tres observaciones del log por-paso (`cage_status.csv`):
+
+1. **Tracking más fino que el PD.** La PPO centra el vehículo con ~2.5× menos
+   error lateral (9.2 mm vs 23 mm) y ~2× menos error de heading, sostenido a lo
+   largo de las 11.5 vueltas. Visualmente (Figura 7.2) la trayectoria RL se ciñe
+   a la línea central con menos desviación en curva que el PD.
+2. **Actuación cruda bang-bang = control de tasa.** El steering *crudo* es muy
+   oscilatorio: cambia de signo en el **46.9%** de los pasos, satura a ±1 en el
+   **24.0%**, con magnitud media \|raw\| = 0.47 y \|Δraw\| medio = 0.48 (> 3× el
+   límite `delta_max = 0.15` de C-06). Lejos de ser un artefacto, es la
+   estrategia **racional** bajo un rate-limiter: como C-06 acota el *cambio* de
+   steering por ciclo, el actuador efectivo es la *tasa* de giro, no la posición;
+   saturar el comando hacia un lado hace que el steering real rampe a su máxima
+   tasa (0.15/ciclo) en esa dirección. La policy aprendió a usar el comando de
+   posición como **comando de tasa** (satura, flipa para invertir — control tipo
+   PWM). Lo *permite* que la recompensa penalice el `Δsteer` débilmente
+   (`w_ds = 0.10`) y se compute sobre la acción **post-cage** (D-34): el
+   resultado suavizado es idéntico se sature o no, así que la policy no "paga"
+   por la oscilación cruda.
+3. **El cage hace trabajo real para la RL (a diferencia del PD).** El
+   rate-limiter **C-06** interviene en el **85.9%** de los pasos; en el **86%**
+   el steering real se mueve **exactamente al límite de 0.15/ciclo** (la policy
+   conduce el rate-limiter a su tope de forma continua). El steering real resulta
+   suave y moderado (\|safe\| medio 0.28, máx 0.82) pese al comando nervioso
+   (\|raw\| 0.47) — frente al **0.047%** de intervención del PD, que produce
+   steering suave de forma nativa. Ninguna otra regla (C-01..C-05) se activa: la
+   policy se mantiene holgadamente dentro del carril, y lo único que el cage
+   necesita aportar es **suavizado de actuación**. Esto valida cuantitativamente
+   el cage como salvaguarda activa sobre una policy aprendida, y sugiere un
+   refinamiento futuro (penalizar más el `Δsteer` crudo, o un término sobre la
+   acción raw) para acercar la suavidad nativa de la RL a la del PD.
 
 ---
 

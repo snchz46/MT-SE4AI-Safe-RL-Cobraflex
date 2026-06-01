@@ -31,6 +31,54 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [01.06.2026] — F3 §7.5 evidence: first PPO evaluation on SC-NOM-01 (RL vs PD)
+
+**Document(s) affected:**
+`manuscript/chapters/chapter_07_training_specification.md` (§7.5.1, §7.5.2),
+`src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py` (pose in `info`),
+`src/cobraflex_rl/cobraflex_rl/eval_policy.py` (x/y/yaw columns),
+`src/cobraflex_rl/launch/eval_lane.launch.py` (new).
+**Phase:** F3.
+**Gate context:** after G2; first §7.5 evaluation of the trained PPO policy.
+**Author:** Samuel.
+
+### Change
+
+- **Evaluation run `rl_eval_20260601T172201Z`** (policy
+  `ppo_train_20260601T150552Z`, seed 42, SC-NOM-01, 1 deterministic episode of
+  4 400 steps ≈ 11.5 continuous laps). §7.5.1/§7.5.2 of the Training Spec filled
+  with the measured results. (Short check run `rl_eval_20260601T170402Z`, 500
+  steps, preceded it.)
+- **Eval logging:** `GazeboLaneEnv` now exposes world pose `x, y, yaw` in `info`;
+  `eval_policy` writes them as columns in `cage_status.csv` (enables the §7.5
+  trajectory overlay, Figure 7.2). New `eval_lane.launch.py` (gazebo gui + eval)
+  and `eval_policy --max-steps` to extend the horizon for the lap-count run.
+
+### Rationale
+
+§7.5 requires an empirical comparison of the trained policy against the PD
+baseline (`ros_run_20260523T153003Z`) on the nominal scenario.
+
+### Impact
+
+- **Result:** PPO matches the PD on safety (**0 C-05 emergencies over 11.5 laps**)
+  and **beats it on tracking** (mean |ey| 23 mm → 9.2 mm; mean |epsi| 4.4° →
+  2.0°). Cage intervention rate 0.047% (PD) → 85.9% (PPO) — **entirely C-06**
+  (rate limiter): the PPO's raw steering is bang-bang (sign-flips 46.9% of steps,
+  saturates ±1 on 24.0%), which the cage smooths. No C-01..C-05 fire — the policy
+  stays well inside the lane. This validates the cage as an active safeguard over
+  a learned policy and motivates a future raw-Δsteer penalty.
+- Lap count 11.53 (440 s) vs PD 9.91 (845 s): durations differ, so the raw count
+  is not 1:1; the comparable claim is both ran fault-free and the PPO sustained
+  >11 continuous laps without an emergency.
+- No hazard / SR / cage-rule / cage.yaml changes.
+
+### Verification
+
+`pytest` → **174 passed**. `python tools/check_traceability.py` → **PASSED, 0 warnings**.
+
+---
+
 ## [01.06.2026] — F3 learning fix: curvature preview in observation + progress reward
 
 **Document(s) affected:**

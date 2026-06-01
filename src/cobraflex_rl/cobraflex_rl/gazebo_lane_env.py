@@ -44,6 +44,7 @@ class GazeboLaneEnv(gym.Env):
         self.prev_steer = 0.0
         self.step_count = 0
         self.last_track_state: Optional[TrackState] = None
+        self._last_pose = (0.0, 0.0, 0.0)  # world (x, y, yaw), refreshed each cycle
         # Total centerline arc length, for the closed-loop progress wrap (§7.2.3).
         self._track_length = float(self.tracker.cumulative_lengths[-1])
         self.prev_s = 0.0
@@ -350,6 +351,9 @@ class GazeboLaneEnv(gym.Env):
 
     def _compute_track_state(self) -> TrackState:
         x, y, yaw = self.ros_interface.get_pose()
+        # Cache the world pose so _make_info can expose it (x, y for the §7.5
+        # trajectory plots; the cage/Frenet state is in ey/epsi/s).
+        self._last_pose = (float(x), float(y), float(yaw))
         return self.tracker.track(x, y, yaw)
 
     @staticmethod
@@ -372,11 +376,15 @@ class GazeboLaneEnv(gym.Env):
             dtype=np.float32,
         )
 
-    @staticmethod
-    def _make_info(track_state: TrackState, speed: float) -> Dict[str, float]:
+    def _make_info(self, track_state: TrackState, speed: float) -> Dict[str, float]:
+        x, y, yaw = self._last_pose
         return {
             "ey": float(track_state.ey),
             "epsi": float(track_state.epsi),
             "s": float(track_state.s),
             "speed": float(speed),
+            # World pose (for the §7.5 trajectory overlay RL vs PD on the oval).
+            "x": float(x),
+            "y": float(y),
+            "yaw": float(yaw),
         }

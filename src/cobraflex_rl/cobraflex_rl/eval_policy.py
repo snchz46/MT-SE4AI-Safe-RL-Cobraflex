@@ -63,6 +63,12 @@ def parse_args(args: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument("--train-config", type=str, default=None)
     parser.add_argument("--model-path", type=str, default=None)
     parser.add_argument("--episodes", type=int, default=1)
+    parser.add_argument(
+        "--max-steps", type=int, default=None,
+        help="Override max_episode_steps for the eval (e.g. 4400 ≈ 10 continuous "
+             "laps for the §7.5.1 lap-count comparison vs the PD). Default: the "
+             "value in train_ppo.yaml.",
+    )
     parser.add_argument("--run-id", type=str, default=None)
     parser.add_argument("--output-root", type=str, default=None,
                         help="Directory holding run subdirs (default experiments/sim/runs).")
@@ -88,6 +94,11 @@ def _record_from_info(episode: int, step: int, info: Dict[str, Any]) -> Dict[str
     return {
         "episode": episode,
         "step": step,
+        # World pose (x, y) → §7.5 trajectory overlay (RL vs PD on the oval);
+        # ey/epsi/s are the Frenet/cage state at the same step.
+        "x": float(info.get("x", 0.0)),
+        "y": float(info.get("y", 0.0)),
+        "yaw": float(info.get("yaw", 0.0)),
         "ey": float(info.get("ey", 0.0)),
         "epsi": float(info.get("epsi", 0.0)),
         "s": float(info.get("s", 0.0)),
@@ -102,7 +113,7 @@ def _record_from_info(episode: int, step: int, info: Dict[str, Any]) -> Dict[str
 
 def _write_cage_status_csv(path: Path, records: List[Dict[str, Any]]) -> None:
     fields = [
-        "episode", "step", "ey", "epsi", "s", "speed",
+        "episode", "step", "x", "y", "yaw", "ey", "epsi", "s", "speed",
         "raw_steer", "safe_steer", "steer_correction",
         "interventions", "emergency",
     ]
@@ -112,6 +123,7 @@ def _write_cage_status_csv(path: Path, records: List[Dict[str, Any]]) -> None:
         for r in records:
             writer.writerow([
                 r["episode"], r["step"],
+                f"{r['x']:.6f}", f"{r['y']:.6f}", f"{r['yaw']:.6f}",
                 f"{r['ey']:.6f}", f"{r['epsi']:.6f}", f"{r['s']:.6f}",
                 f"{r['speed']:.6f}", f"{r['raw_steer']:.6f}",
                 f"{r['safe_steer']:.6f}", f"{r['steer_correction']:.6f}",
@@ -145,6 +157,10 @@ def main(args: Optional[Sequence[str]] = None) -> None:
     # Evaluation starts from the nominal spawn (no perturbation) so the run is
     # deterministic and comparable with the PD baseline (§7.5).
     _disable_spawn_perturbation(train_cfg)
+    # Optional horizon override for a long continuous run (lap-count comparison).
+    # Non-positive means "keep the config default" (the launch passes 0 for that).
+    if cli_args.max_steps is not None and cli_args.max_steps > 0:
+        train_cfg["max_episode_steps"] = int(cli_args.max_steps)
 
     model_path = Path(cli_args.model_path or train_cfg.get("model_path", "cobraflex_ppo_lane"))
     model_path = model_path.expanduser()

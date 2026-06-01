@@ -40,7 +40,7 @@ class GazeboLaneEnv(gym.Env):
         self.cfg = dict(cfg)
         self.fixed_speed = float(self.cfg.get("fixed_speed", 0.2))
         self.control_dt = float(self.cfg.get("control_dt", 0.1))
-        self.max_episode_steps = int(self.cfg.get("max_episode_steps", 400))
+        self.max_episode_steps = int(self.cfg.get("max_episode_steps", 500))
         self.prev_steer = 0.0
         self.step_count = 0
         self.last_track_state: Optional[TrackState] = None

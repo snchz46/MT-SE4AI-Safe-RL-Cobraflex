@@ -172,11 +172,12 @@ Implementación en `GazeboLaneEnv.step`; rationale en
 `docs/09_environment_design.md` (ED-4 / ED-8) y D-34 (addendum F3).
 
 **Truncación** (episodio completo): `step_count ≥ max_episode_steps`.
-Con `max_episode_steps = 400` y `control_dt = 0.10 s`, el episodio dura
-40 s (≈ 0.47 vueltas al óvalo). Episodios más largos aceleran la
+Con `max_episode_steps = 500` y `control_dt = 0.10 s`, el episodio dura
+50 s (≈ 1.14 vueltas al óvalo). Episodios más largos aceleran la
 convergencia porque el agente ve más variedad de estados por episodio.
-El valor de 400 pasos es `[provisional, M-P6]`; se revisará si el agente
-no converge en 50 000 timesteps.
+El valor de 500 pasos es `[provisional, M-P6]`; se revisará si el agente
+no converge en 50 000 timesteps (de hecho la policy aún mejoraba al
+agotar el presupuesto — ver §7.4.2).
 
 ### 7.2.5 Cage durante el entrenamiento
 
@@ -219,7 +220,7 @@ con ajuste del horizonte `n_steps` al periodo del episodio:
 | `total_timesteps` | 50 000 | `[provisional, M-P7]` |
 | `learning_rate` | 3×10⁻⁴ | SB3 default |
 | `gamma` | 0.99 | SB3 default |
-| `n_steps` | 1 024 | ≈ 2.5 episodios de 400 pasos |
+| `n_steps` | 1 024 | ≈ 2 episodios de 500 pasos |
 | `batch_size` | 64 | SB3 default |
 | `device` | cpu | Dev machine sin GPU |
 
@@ -239,7 +240,8 @@ compare la policy RL contra el PD baseline.
 ### 7.2.8 Checkpoints y registro
 
 Los checkpoints se guardan en `policy/checkpoints/` cada `n_steps`
-iteraciones (denominación `cobraflex_ppo_lane_stepXXXXX.zip`).
+pasos (denominación SB3 `cobraflex_ppo_lane_<N>_steps.zip`, p.ej.
+`cobraflex_ppo_lane_50176_steps.zip`).
 El modelo final se guarda como `cobraflex_ppo_lane.zip`. Cada run de
 entrenamiento registra en `experiments/sim/training/` un CSV de curva
 de aprendizaje con columnas `[timestep, ep_rew_mean, ep_len_mean,
@@ -328,7 +330,7 @@ hubiera estabilizado.
   completa fracciones crecientes de vuelta; `std` empieza a bajar de 1.0.
 - **Final (≈90–100%):** `ep_len_mean` ≈ 427 ≈ una vuelta completa; deja de
   salirse con regularidad (las emergencias caen a ~0, confirmado en la
-  evaluación §7.5: 0 emergencias en 500 pasos). `std` baja a 0.74 — la
+  evaluación §7.5: 0 emergencias en las 11.5 vueltas / 4 400 pasos). `std` baja a 0.74 — la
   policy se compromete con acciones concretas.
 - **Oscilación residual:** sí, pero solo en la *actuación cruda* — el
   steering raw conserva un patrón bang-bang (§7.5.2) que el rate-limiter
@@ -464,16 +466,24 @@ APÉNDICE INTERNO — TRABAJO PENDIENTE EN ESTE CAPÍTULO
 Fase 3 (D36+):
   [x] Esqueleto de secciones 7.1–7.6 fijado en D36
   [x] Training Specification §7.2 completa (8 componentes)
-  [ ] Completar §7.4 con datos del primer entrenamiento (curva de convergencia,
-       explained_variance, timesteps hasta convergencia)
-  [ ] Completar §7.5 con evaluación del RL sobre SC-NOM-01
-  [ ] Añadir Figura 7.1: curva de convergencia ep_rew_mean vs timesteps
-  [ ] Añadir Figura 7.2: comparación trayectorias RL vs PD en el óvalo
+  [x] Completar §7.4 con datos del primer entrenamiento (run
+       ppo_train_20260601T150552Z: convergencia, ev→0.73, no satura en 50k)
+  [x] Completar §7.5 con evaluación del RL sobre SC-NOM-01
+       (rl_eval_20260601T172201Z, 11.5 vueltas, RL vs PD)
+  [x] Añadir Figura 7.1: curva de convergencia ep_rew_mean vs timesteps
+       (tools/plot_f3_figures.py → figures/auto/)
+  [x] Añadir Figura 7.2: trayectoria RL sobre el óvalo + 7.2b error lateral
+       RL vs PD + 7.3 captura Gazebo
   [x] Tarea TS-01: cablear GazeboLaneEnv → cage in-process (misma
        SafetyCageNode/cage.yaml que cage_ros_node; D-34 enforcement)
-  [ ] Añadir perturbación aleatoria de spawn en GazeboLaneEnv.reset()
-  [ ] Registrar training runs en experiments/sim/training/
-  [ ] Decidir si aumentar total_timesteps si no converge en 50k
+  [x] Añadir perturbación aleatoria de spawn en GazeboLaneEnv.reset() (§7.3)
+  [x] Registrar training runs en experiments/sim/training/ (§7.2.8)
+  [x] Decidir si aumentar total_timesteps si no converge en 50k → se reporta
+       50k con la limitación documentada (§7.4.2); extensión diferida
+  -- Mejoras F3 abiertas (no bloqueantes para G3), de §7.5.2 / sesión:
+  [ ] Penalizar más el Δsteer crudo (la policy ofrece bang-bang que C-06 suaviza)
+  [ ] Robustez del set_pose timeout recurrente en reset()
+  [ ] (opc.) VecNormalize de observaciones; RTF para acelerar entrenamiento
 
 Fase 4–5:
   [ ] Evaluar sobre todos los escenarios SC-NOM, SC-EDGE, SC-PERT

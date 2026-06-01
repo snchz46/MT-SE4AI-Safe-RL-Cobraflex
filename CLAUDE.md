@@ -25,12 +25,16 @@ script reports orphans on either side.
 ## Phase status (snapshot)
 
 - **Current phase:** F3 — PPO training. Gate G2 passed 2026-05-23.
+  First training cycle + evaluation complete (2026-06-01); F3 docs
+  reconciled, pending the closing commit / F4 entry. The 50k first cycle
+  did **not** saturate; a longer training run is planned to supersede it.
 - **F2 evidence:** `ros_run_20260523T153003Z` — 9.91 laps, 845 s,
   0 emergencies, cage v0.5.1, PD v0.8.0.
-- **F3 entry state:** Training Specification written (Chapter 7 §7.2),
-  training pipeline stubs present (`train_ppo.py`, `GazeboLaneEnv`,
-  `rewards.py`). Open task **TS-01**: wire `GazeboLaneEnv` through
-  `/raw_action → cage → /safe_action` (D-34).
+- **F3 evidence:** training `ppo_train_20260601T150552Z` (seed 42, 50k
+  timesteps; `ep_rew_mean` 29→428, `explained_variance`→0.73, not saturated)
+  and eval `rl_eval_20260601T172201Z` (SC-NOM-01, 11.5 laps, 0 emergencies,
+  mean |ey| 9.2 mm vs PD 23 mm; 85.9% cage rate-limiting, all C-06). TS-01
+  cage wiring done (D-34, in-process); Training Spec (Ch.7 §7.2–§7.5) complete.
 - **Authoritative status sources:** [docs/CHANGELOG.md](docs/CHANGELOG.md)
   and `git log --oneline` (commits prefixed `F3:` are current-phase work).
 
@@ -38,7 +42,7 @@ script reports orphans on either side.
 
 | Path | Role |
 | --- | --- |
-| `docs/` | Living engineering documents (00–08 + CHANGELOG, DECISIONS) |
+| `docs/` | Living engineering documents (00–10 + CHANGELOG, DECISIONS) |
 | `cage/` | Pure-Python safety cage (rules C-01..C-06, cage_node, logger, YAML config). Importable without ROS2. |
 | `cage/ros2/` | ROS2 helper scripts (M-1/M-2 calibration loggers). Not in colcon workspace yet. |
 | `policy/` | RL policy: PD baseline, PPO training, checkpoints (gitignored binaries) |
@@ -143,13 +147,15 @@ Full loop: `ros2 launch cobraflex lane_keeper_gazebo.launch.py`. The ROS2 nodes 
 | --- | --- |
 | Methodology overview | [docs/00_v_model_adapted.md](docs/00_v_model_adapted.md) |
 | ID rules | [docs/01_id_conventions.md](docs/01_id_conventions.md) |
-| Hazards (H-01..H-07) | [docs/02_hazard_register.md](docs/02_hazard_register.md) |
+| Hazards (H-01..H-09) | [docs/02_hazard_register.md](docs/02_hazard_register.md) |
 | Safety Requirements | [docs/03_safety_requirements.md](docs/03_safety_requirements.md) |
 | Cage rule specs | [docs/04_cage_specification.md](docs/04_cage_specification.md) |
 | Scenarios | [docs/05_scenario_library.md](docs/05_scenario_library.md) |
 | Metrics | [docs/06_metrics_catalogue.md](docs/06_metrics_catalogue.md) |
 | Traceability matrix | [docs/07_traceability_matrix.md](docs/07_traceability_matrix.md) |
 | ODD spec | [docs/08_odd_specification.md](docs/08_odd_specification.md) |
+| RL environment design (F3) | [docs/09_environment_design.md](docs/09_environment_design.md) |
+| RL reward function (F3) | [docs/10_reward_function.md](docs/10_reward_function.md) |
 | Decisions (D-NN) | [docs/DECISIONS.md](docs/DECISIONS.md) |
 | What changed when | [docs/CHANGELOG.md](docs/CHANGELOG.md) |
 | Manuscript-to-CSV generation | [TRACEABILITY.md](TRACEABILITY.md) |

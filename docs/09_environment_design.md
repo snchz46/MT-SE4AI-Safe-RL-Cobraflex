@@ -3,10 +3,10 @@
 | Field | Value |
 | --- | --- |
 | Artifact | Output of day **D36** (Phase 3, Week 8) — see `docs/.phases/Fase 3/fase_3_detallada.md` §4 (local plan) |
-| Version | **0.1** (design frozen before the first training run) |
+| Version | **0.2** (2026-06-01 — post-first-run reconciliation with §7.2/§7.3; v0.1 was the pre-first-run freeze) |
 | Phase / Gate | F3 (PPO training), after G2 |
 | Author | Samuel Sanchez |
-| Date | 2026-05-29 |
+| Date | 2026-06-01 (v0.2) · 2026-05-29 (v0.1) |
 | Status | CONFIRMED — implemented in `GazeboLaneEnv` |
 | Normative spec | Training Specification §7.2–§7.3 (Chapter 7). **This document is supporting rationale, not the normative source**: on any numeric discrepancy, §7.2 prevails. |
 | Decisions cited | D-07 (artifact A1), D-34 (cage during training), D-32 (external drivers) |
@@ -129,7 +129,7 @@ Per-episode `reset()`:
    latched C-05, no rate-limiter/oscillation history carried across rollouts).
 
 **Termination** `|ey| > road_width / 2` (the policy leaves the **road**).
-**Truncation** `step_count ≥ max_episode_steps` (400 → 40 s ≈ 0.47 laps).
+**Truncation** `step_count ≥ max_episode_steps` (500 → 50 s ≈ 1.14 laps).
 
 > Note: §7.2.4 phrases termination as `|ey| > lane_width/2`; the code terminates
 > at `road_width/2` (deliberate, commented in the wrapper): with the cage
@@ -137,8 +137,11 @@ Per-episode `reset()`:
 > prevents the random policy from dying in 1–2 steps at the start of training.
 > Pending: reconcile the §7.2.4 wording.
 
-**Pending (no D assigned, §7.3):** random spawn perturbation (heading
-±0.15 rad, lateral ±0.05 m) for start-state diversity.
+**Random spawn perturbation (§7.3, implemented).** Each episode perturbs the
+spawn heading by ±0.15 rad and the lateral position by ±0.05 m
+(`spawn_perturbation` block in `train_ppo.yaml`, ranges `[provisional, M-P5]`)
+for start-state diversity; `eval_policy` disables it for a deterministic,
+comparable start.
 
 ---
 
@@ -242,3 +245,8 @@ real action distribution after the first prototype. If cadence matters,
 
 - **v0.1 (2026-05-29):** first freeze, consistent with the TS-01 cage wiring
   (D-34) and Training Specification §7.2–§7.3.
+- **v0.2 (2026-06-01):** post-first-run reconciliation with §7.2/§7.3 — truncation
+  horizon `max_episode_steps = 500` (50 s ≈ 1.14 laps; was 400 / 40 s / 0.47 laps)
+  and the random spawn perturbation marked **implemented** (§7.3,
+  `train_ppo.yaml`). Design rationale unchanged; numeric values realigned to the
+  Training Specification.

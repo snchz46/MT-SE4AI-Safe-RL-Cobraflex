@@ -31,6 +31,68 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [01.06.2026] — F3 doc reconciliation: `max_episode_steps` 400→500 propagation + status sync
+
+**Document(s) affected:**
+`docs/08_odd_specification.md` (→ v0.4), `docs/09_environment_design.md` (→ v0.2),
+`docs/10_reward_function.md` (version log), `docs/DECISIONS.md` (D-33 Q11 row),
+`experiments/odd_inspection/odd_tbds.yaml` (TBD-Q11 source),
+`manuscript/chapters/chapter_07_training_specification.md` (§7.4.3),
+`src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py` (default), `CLAUDE.md`.
+**Phase:** F3.
+**Gate context:** before the F3 closing commit / F4 entry — a consistency pass over
+the §7.2.4 `max_episode_steps` 400→500 change and the F3 status snapshot.
+**Author:** Samuel.
+
+### Change
+
+- **`max_episode_steps` 400→500 propagation.** Training Spec §7.2.4 set the episode
+  horizon to 500 steps (50 s ≈ 1.14 laps; the value the first run actually used).
+  Realigned every downstream reference still reading 400 / 40 s / 0.47 laps:
+  `docs/09` truncation line (→ v0.2), `docs/08` §6.8 prose + master-parameter table
+  + TBD-Q11 row (→ v0.4, F2-closure history preserved), `docs/DECISIONS.md` D-33
+  Q11 row, and `experiments/odd_inspection/odd_tbds.yaml` (the source
+  `close_odd_tbds.py` reads). The ODD `STUCK_TIMEOUT` closure is **unchanged**
+  (n/a, subsumed by env truncation) — only the illustrative seconds figure moved
+  40→50 s. Code default `gazebo_lane_env.py` 400→500 (behaviour-neutral:
+  `train_ppo.yaml` already sets 500).
+- **`docs/09` spawn perturbation** marked **implemented** (was "Pending"): it is
+  enabled in `train_ppo.yaml` and described in §7.3.
+- **`docs/10`** version log gains the forward-driver **v1.1** entry (progress reward;
+  weights still v1.0).
+- **Chapter 7 §7.4.3** "0 emergencias en 500 pasos" → "0 emergencias en las 11.5
+  vueltas / 4 400 pasos", matching the §7.5 evaluation it cites.
+- **`CLAUDE.md`** phase-status snapshot refreshed (TS-01 done; F3 training+eval
+  evidence IDs; first 50k cycle not saturated, longer run planned); hazard range
+  H-01..H-07 → H-01..H-09; docs range 00–08 → 00–10; docs/09 + docs/10 added to the
+  reference table.
+
+### Rationale
+
+The §7.2.4 horizon change (committed in `train_ppo.yaml`, reflected in the
+working-tree chapter edit) had not propagated to the ODD spec, the environment-
+design doc, or the decision log, leaving "400 / 40 s / 0.47 laps" in four files.
+This is a pre-commit consistency pass so the F3 closing commit is internally
+coherent. No semantic decision was changed — only stale figures realigned to the
+normative §7.2/§7.3.
+
+### Impact
+
+- No hazard / SR / cage-rule / `cage.yaml` / scenario / metric IDs added or changed.
+- No behavioural change: the first run already used 500; the code-default edit is
+  inert because the config sets the key.
+- Confirmed the chapter §7.5.2 quantitative claims (raw sign-flip 46.9 %, ±1
+  saturation 24.0 %, mean |raw| 0.47, mean |safe| 0.28 / max 0.82, 85.9 % of steps
+  at the C-06 rate limit, 0 emergencies) reproduce exactly from
+  `experiments/sim/runs/rl_eval_20260601T172201Z/cage_status.csv`.
+
+### Verification
+
+`/usr/bin/pytest -q` → **174 passed**. `python tools/check_traceability.py` →
+**All checks PASSED. 0 warning(s).**
+
+---
+
 ## [01.06.2026] — F3 §7.5 evidence: first PPO evaluation on SC-NOM-01 (RL vs PD)
 
 **Document(s) affected:**

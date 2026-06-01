@@ -1,11 +1,11 @@
 # ODD Specification — SE4AI Lane Following Thesis
 
 **Document ID:** `ODD-SPEC`  
-**Version:** 0.3 (F2 partial closure, 21.05.2026)  
+**Version:** 0.4 (F3 housekeeping, 01.06.2026; 0.3 = F2 partial closure)  
 **Owner:** Samuel Sánchez  
 **Phase of birth:** F0 — Phase of maturity: F1 — Phase of revision: F5 (physical ODD)  
 **Status:** DRAFT — 6 of 12 TBDs resolved (Q1, Q2, Q3 at F1; Q8, Q9, Q11 at F2 against the oval_R080 preset of `scripts/compose_lane_circuit.py`); 6 remaining explicitly deferred per phase (Q4–Q7, Q12 to F4; Q10 to M-4) — see decision D-33 in `docs/DECISIONS.md`.  
-**Last updated:** 2026-05-21  
+**Last updated:** 2026-06-01  
 **Approving reviewer (Gate 1):** [supervisor name]  
 
 <!--
@@ -25,6 +25,7 @@ renumber sections — only append.
 | 0.1 | 2026-05-02 | SS | Initial structural extraction from `draft_V3.docx` §6.1, with TBDs for unresolved quantitative items. |
 | 0.2 | 2026-05-14 | SS | F1 partial closure of TBD-Q1 (FRICTION = 1.0), TBD-Q2 (A_LAT_MAX = 9.81 m/s²) and TBD-Q3 (CORRIDOR_EDGE = 0.1225 m), against the `src/cobraflex` + `src/cobraflex_rl` workspace. Remaining 9 TBDs deferred per decision D-33: Q4–Q7 and Q12 to F4 (scenario library), Q8–Q11 to F2/F3 (ODD-3 curvy world implementation). Simulator label "MuJoCo" replaced by "Gazebo" throughout. |
 | 0.3 | 2026-05-21 | SS | F2 closure of TBD-Q8 (ROAD_LENGTH = 8.0232 m, perimeter of the oval_R080 preset), TBD-Q9 (KAPPA_MAX = 1.25 m⁻¹ = 1 / R_min with R_min = 0.80 m on the two U-turns) and TBD-Q11 (STUCK_TIMEOUT = n/a — subsumed by `max_episode_steps × control_dt = 40 s` truncation in `gazebo_lane_env.py`; no separate stuck check is configured). Geometry source of truth: `scripts/compose_lane_circuit.py` preset `oval_R080`, which emits both `src/cobraflex/worlds/lane_following_oval.world` and `src/cobraflex_rl/config/oval_centerline.yaml`. TBD-Q10 (A_LAT_MAX ODD-3) remains deferred to the M-4 calibration measurement, which depends on the physical platform. |
+| 0.4 | 2026-06-01 | SS | F3 housekeeping: `max_episode_steps` raised 400→500 in the training env (`train_ppo.yaml`, Training Spec §7.2.4), so the truncation window that subsumes `*.STUCK_TIMEOUT` (TBD-Q11) is now `500 × 0.10 s = 50 s` (was 40 s). The TBD-Q11 closure itself is unchanged (n/a, subsumed by env truncation); only the illustrative figure was realigned. No ODD parameter value changed. |
 
 ---
 
@@ -186,7 +187,7 @@ ODD-3 retains all environmental and actor exclusions from ODD-1. Curvatures larg
 
 ### 6.8 ODD-exit assumptions
 
-Inherits the lateral-offset and contact criteria from ODD-1 with the lane edge now being the local lane edge (the lane following the curve). The F2-closing implementation does not configure a separate stuck check; the `max_episode_steps × control_dt` truncation of `gazebo_lane_env.py` (currently 400 steps × 0.10 s = 40 s) acts as the implicit stuck timeout — if the vehicle cannot complete the loop within that window it is reset. Formal closure: `ODD-3.STUCK_TIMEOUT = n/a (subsumed by env truncation)`. A dedicated stuck monitor can be added later (Phase 4 onwards) without disturbing this entry, since the env-level truncation provides a safe upper bound.
+Inherits the lateral-offset and contact criteria from ODD-1 with the lane edge now being the local lane edge (the lane following the curve). The F2-closing implementation does not configure a separate stuck check; the `max_episode_steps × control_dt` truncation of `gazebo_lane_env.py` (currently 500 steps × 0.10 s = 50 s; was 400/40 s at F2 closure, raised in F3) acts as the implicit stuck timeout — if the vehicle cannot complete the loop within that window it is reset. Formal closure: `ODD-3.STUCK_TIMEOUT = n/a (subsumed by env truncation)`. A dedicated stuck monitor can be added later (Phase 4 onwards) without disturbing this entry, since the env-level truncation provides a safe upper bound.
 
 ---
 
@@ -260,7 +261,7 @@ changes, update it once here and propagate via the IDs.
 | `*.STALENESS_MAX` | Max admissible state staleness (ms) | 200 | 200 | 200 | 200 | SR-007 |
 | `*.LANE_EDGE` | Geometric lane edge (m, from centre) | 0.1225 | 0.1225 | 0.1225 | 0.1225 | LANE_WIDTH / 2 |
 | `*.CORRIDOR_EDGE` | Drivable-corridor edge (m, from centre) | 0.1225 | 0.1225 | 0.1225 | 0.1225 | Episode-termination logic |
-| `*.STUCK_TIMEOUT` | Stuck criterion timeout (s) | n/a | n/a | n/a | n/a | Subsumed by env truncation (`max_episode_steps × control_dt = 40 s`); closes TBD-Q11 |
+| `*.STUCK_TIMEOUT` | Stuck criterion timeout (s) | n/a | n/a | n/a | n/a | Subsumed by env truncation (`max_episode_steps × control_dt = 50 s`); closes TBD-Q11 |
 | `*.OBS_DIM` | Observation vector dimension | 5 | 8 | 5 | 8 | Implementation |
 | `*.ACT_DIM` | Action vector dimension | 1 | 1 | 2 | 2 | Implementation |
 
@@ -294,7 +295,7 @@ with an explicit value.
 | TBD-Q8 | What is the total loop length of the `odd3_curvy_loop` map? | SS | D11 PM | 8.0232 (Sum of `2 × 1.5 m` straights + `2 × π × 0.80 m` arcs = `3 + 1.6π m`, computed by `scripts/compose_lane_circuit.py` preset `oval_R080` and emitted into `src/cobraflex_rl/config/oval_centerline.yaml` under `centerline.perimeter_m`.) -- 2026-05-21 [The composer is the single source of truth; changing `--straight-length` or `--preset` re-derives this value and the polyline simultaneously, so the SRS / cage citation by `ODD-3.ROAD_LENGTH` cannot drift from the world file.] |
 | TBD-Q9 | What is the minimum curvature radius of the `odd3_curvy_loop` map (equivalently, KAPPA_MAX)? | SS | D11 PM | 1.25 (R_min = 0.80 m on the two U-turn tiles `curve_R080cm_A180deg.png` of the `oval_R080` preset. KAPPA_MAX = 1 / 0.80 = 1.25 m⁻¹.) -- 2026-05-21 [Switching to the `oval_R050` or `oval_R120` preset would change KAPPA_MAX to 2.00 m⁻¹ or 0.833 m⁻¹ respectively. For Phase 2 the `oval_R080` value is canonical; revisit when ODD-3 graduates to a multi-radius composite circuit.] |
 | TBD-Q10 | What is the maximum commanded lateral acceleration in ODD-3, derived from FRICTION and V_MAX_CURVE? | SS | M-4 | Deferred to M-4 calibration. Upper bound from no-skid Coulomb limit on the curve tile: `A_LAT_MAX ≤ FRICTION × g = 9.81 m/s²`. Operational value at `V_MAX_CURVE = 0.25 m/s` on `R_min = 0.80 m` is `V² / R = 0.078 m/s²`, well below the Coulomb ceiling. Final figure closes when M-4 measures the achievable acceleration envelope on the physical platform. |
-| TBD-Q11 | What is the stuck-criterion timeout in seconds? | SS | D11 PM | n/a (No separate stuck monitor is configured in the F2 implementation. The `gazebo_lane_env.py` env truncates at `max_episode_steps × control_dt = 400 × 0.10 s = 40 s`, which acts as the implicit stuck timeout.) -- 2026-05-21 [If a dedicated stuck monitor is added later (Phase 4 onwards), this entry should be re-opened to declare its specific value; for now the env truncation is the operational answer.] |
+| TBD-Q11 | What is the stuck-criterion timeout in seconds? | SS | D11 PM | n/a (No separate stuck monitor is configured in the F2 implementation. The `gazebo_lane_env.py` env truncates at `max_episode_steps × control_dt = 400 × 0.10 s = 40 s`, which acts as the implicit stuck timeout.) -- 2026-05-21 [If a dedicated stuck monitor is added later (Phase 4 onwards), this entry should be re-opened to declare its specific value; for now the env truncation is the operational answer.] [F3 update 2026-06-01: `max_episode_steps` was raised 400→500, so the truncation window is now `500 × 0.10 s = 50 s`; the closure is unchanged (n/a, subsumed by env truncation).] |
 | TBD-Q12 | Do the ODD-4 named profiles introduce any stressor not present in their ODD-2 counterparts? If yes, document them. | SS | D11 PM | |
 
 ---

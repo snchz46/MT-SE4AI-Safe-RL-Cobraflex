@@ -81,7 +81,7 @@ tbds:
   TBD-Q11:
     description: "Stuck-criterion timeout (s) used by episode-termination logic."
     value: "n/a"
-    source: "No dedicated stuck monitor configured; gazebo_lane_env.py truncates at max_episode_steps * control_dt = 400 * 0.10 s = 40 s."
+    source: "No dedicated stuck monitor configured; gazebo_lane_env.py truncates at max_episode_steps * control_dt = 500 * 0.10 s = 50 s (raised from 400/40 s in F3; closure unchanged: n/a, subsumed by truncation)."
     notes: "If a separate stuck check is added in Phase 4+, reopen this entry with its specific timeout value."
 
   TBD-Q12:

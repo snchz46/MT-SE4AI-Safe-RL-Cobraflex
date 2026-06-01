@@ -211,3 +211,8 @@ lane-following and makes attributing effects harder. The "reward = quality, cage
 - **weights v1.0 (2026-05-29):** first freeze, consistent with §7.2.3 and the
   reward-on-safe-action of the TS-01 wiring (D-34). Verified by
   `policy/tests/test_rewards.py`.
+- **forward-driver v1.1 (2026-06-01):** after the F3 first run, the forward term
+  changed from `w_fwd·speed` to `w_fwd·max(progress, 0)` (normalised centerline
+  advance) — see the §1 revision note and `docs/CHANGELOG.md` (F3 learning fix).
+  **Weights are unchanged (v1.0)**; only the forward driver changed. Re-verified
+  by the updated `policy/tests/test_rewards.py`.

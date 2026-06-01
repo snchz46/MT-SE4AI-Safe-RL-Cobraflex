@@ -75,6 +75,15 @@ experiments/physical/run_*/raw_logs/
 policy/checkpoints/*.zip
 policy/checkpoints/*.pt
 policy/checkpoints/*.pth
+
+# Demo/evidence videos (large; the manuscript references them as supplementary
+# material and embeds a still frame instead). Keep the .mp4 under manuscript/media/
+# or an experiments run dir; a print PDF cannot play video. Stills (.png) are tracked.
+*.mp4
+*.mkv
+*.webm
+*.mov
+*.avi
 !policy/checkpoints/.gitkeep
 !policy/checkpoints/checkpoint_registry.csv
 

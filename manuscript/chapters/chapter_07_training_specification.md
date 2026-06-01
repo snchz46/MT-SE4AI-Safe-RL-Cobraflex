@@ -293,6 +293,13 @@ La Figura 7.1 muestra ambas curvas (raw + suavizado ventana 5). El
 crecimiento es sostenido y **sin plateau**: la recompensa seguía subiendo
 al agotar el presupuesto de 50 000 timesteps.
 
+<img src="../figures/auto/fig_7_1_convergence.png" alt="Figura 7.1 — Curva de convergencia del entrenamiento PPO: ep_rew_mean y ep_len_mean vs timesteps." width="560"/>
+
+*Figura 7.1 — Curva de convergencia del entrenamiento PPO (run
+`ppo_train_20260601T150552Z`): `ep_rew_mean` (azul) y `ep_len_mean` (rojo)
+vs timesteps, datos crudos + suavizado (ventana 5). Crecimiento monótono
+sin plateau. Generada por `tools/plot_f3_figures.py`.*
+
 ### 7.4.2 Estabilidad y explained_variance
 
 `explained_variance` fue baja y ruidosa durante la fase de mejora rápida
@@ -365,6 +372,21 @@ cae de 23 mm a 9.2 mm (máximo 30 mm, dentro del medio-carril de 122 mm y
 muy por debajo del `d_max = 160 mm` del cage) y el error de heading medio
 de 4.4° a 2.0°.
 
+<img src="../figures/auto/fig_7_2_trajectory.png" alt="Figura 7.2 — Trayectoria de la policy PPO sobre el óvalo." width="460"/>
+
+*Figura 7.2 — Trayectoria de la policy PPO sobre el óvalo (~2 vueltas, run
+`rl_eval_20260601T172201Z`), ciñéndose a la línea central del carril. A
+escala espacial la diferencia de tracking con el PD (mm) no es resoluble;
+ver Figura 7.2b. Generada por `tools/plot_f3_figures.py`.*
+
+<img src="../figures/auto/fig_7_2b_tracking_error.png" alt="Figura 7.2b — Error lateral RL vs PD a lo largo de la corrida." width="600"/>
+
+*Figura 7.2b — Error lateral \|ey\| a lo largo de la corrida: PPO (azul) vs
+PD baseline (rojo), warm-up de 0.3 vueltas recortado. La PPO se mantiene en
+una banda estrecha (~10–25 mm) frente a la oscilación del PD en curva (hasta
+~65 mm), ambos muy por debajo del medio-carril (122 mm). Generada por
+`tools/plot_f3_figures.py`.*
+
 ### 7.5.2 Comportamiento cualitativo
 
 Tres observaciones del log por-paso (`cage_status.csv`):
@@ -398,6 +420,17 @@ Tres observaciones del log por-paso (`cage_status.csv`):
    el cage como salvaguarda activa sobre una policy aprendida, y sugiere un
    refinamiento futuro (penalizar más el `Δsteer` crudo, o un término sobre la
    acción raw) para acercar la suavidad nativa de la RL a la del PD.
+
+<img src="../figures/eval_figure_11_lap.png" alt="Figura 7.3 — Captura de la evaluación en Gazebo: la policy PPO conduciendo el óvalo bajo el cage." width="640"/>
+
+*Figura 7.3 — Captura de la corrida de evaluación (`rl_eval_20260601T172201Z`):
+vista de Gazebo (óvalo + vehículo 1:14, izquierda) y RViz (modelo del robot y
+frames TF, derecha) durante el lane-following de la policy PPO bajo el cage.*
+
+> **Material suplementario (vídeo).** Las grabaciones completas de las corridas
+> están en `manuscript/media/` (no versionadas por tamaño; ver `.gitignore`):
+> `training_1_lap.mp4` (una vuelta, política entrenada) y `eval_11_lap.mp4` (la
+> corrida de evaluación de ~11.5 vueltas de §7.5).
 
 ---
 

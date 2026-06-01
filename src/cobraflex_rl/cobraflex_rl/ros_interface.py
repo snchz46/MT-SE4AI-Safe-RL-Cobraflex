@@ -69,11 +69,108 @@ class RosGazeboInterface(Node):
         msg.angular.z = float(steer)
         self._cmd_pub.publish(msg)
 
+    def _odom_sim_time(self) -> Optional[float]:
+        """Latest odom header stamp in seconds (simulation time), or None.
+
+        The OdometryPublisher stamps each message with gz sim time, so this is a
+        valid sim clock regardless of whether this node has use_sim_time set."""
+        if self._odom_msg is None:
+            return None
+        stamp = self._odom_msg.header.stamp
+        return float(stamp.sec) + float(stamp.nanosec) * 1e-9
+
+    def _drain_odom(self) -> None:
+        """Process all immediately-available odom messages, leaving _odom_msg at
+        the most recent buffered sample.
+
+        gz service subprocesses (set_pose) block the executor for ~0.25 s, during
+        which ~12 messages accumulate at 50 Hz. Without draining, sim-time waits
+        would "advance" instantly by consuming those stale buffered stamps and
+        return before the live sim has actually progressed — which calibrated the
+        spawn pose against a pre-teleport sample (impossible step-1 ey)."""
+        prev = self._odom_sim_time()
+        for _ in range(100):
+            rclpy.spin_once(self, timeout_sec=0.0)
+            cur = self._odom_sim_time()
+            if cur == prev:
+                break
+            prev = cur
+
     def step_ros(self, duration: float) -> None:
-        end_time = time.monotonic() + max(0.0, float(duration))
+        """Advance the control cycle by ``duration`` seconds of *simulation* time.
+
+        Waiting on sim time (from odom header stamps) instead of wall-clock keeps
+        the control cadence correct when Gazebo runs faster than real time, so the
+        per-step wall cost collapses to however fast the sim can produce the next
+        ``duration`` of sim time. Falls back to wall-clock pacing when no sim-time
+        reference is available or when the sim clock is stalled, so the worst case
+        is the old real-time behaviour (no regression)."""
+        duration = max(0.0, float(duration))
+        if duration == 0.0:
+            rclpy.spin_once(self, timeout_sec=0.0)
+            return
+
+        # Baseline must be the latest sample, not the head of a backlog, or the
+        # wait below returns instantly by consuming stale buffered stamps.
+        self._drain_odom()
+        start_sim = self._odom_sim_time()
+        start_wall = time.monotonic()
+        if start_sim is None:
+            self._spin_wall(start_wall + duration)
+            return
+
+        hard_deadline = start_wall + max(2.0, duration * 50.0)
+        while rclpy.ok():
+            rclpy.spin_once(self, timeout_sec=0.02)
+            now_sim = self._odom_sim_time()
+            sim_elapsed = (now_sim - start_sim) if now_sim is not None else 0.0
+            if sim_elapsed >= duration:
+                return
+            wall_elapsed = time.monotonic() - start_wall
+            # Stall guard: if the sim clock isn't advancing at all yet we have
+            # already spent the nominal duration in wall time, treat the clock as
+            # effectively wall-paced (or stalled) and stop — never hang.
+            if sim_elapsed <= 1e-6 and wall_elapsed >= duration:
+                return
+            if wall_elapsed >= hard_deadline - start_wall:
+                return
+
+    def _spin_wall(self, end_time: float) -> None:
         while rclpy.ok() and time.monotonic() < end_time:
             remaining = max(0.0, end_time - time.monotonic())
             rclpy.spin_once(self, timeout_sec=min(0.05, remaining))
+
+    def spin_wall(self, duration: float) -> None:
+        """Spin for ``duration`` *real wall* seconds, continuously processing odom
+        so ``_odom_msg`` ends at the latest live sample.
+
+        Used where genuine elapsed time is required — chiefly letting a set_pose
+        teleport propagate through the gz server before calibrating. Unlike the
+        sim-time ``step_ros``, this cannot be fooled into returning early by a
+        backlog of buffered odom stamps, because it gates on wall time."""
+        self._spin_wall(time.monotonic() + max(0.0, float(duration)))
+
+    def set_real_time_factor(
+        self, real_time_factor: float, max_step_size: float = 0.001
+    ) -> bool:
+        """Bump the live real-time-factor cap via /world/<name>/set_physics.
+
+        Lets headless training run faster than real time without touching the
+        (generated, hash-tracked) .world file or changing physics fidelity —
+        ``max_step_size`` is held at the world's value so the integrator is
+        unchanged. ``real_time_factor`` of 0 means "as fast as possible"; if a
+        given gz build ignores 0, pass a high finite value instead. Best-effort:
+        logs a warning and returns False on failure (e.g. service unavailable)."""
+        request = (
+            f"max_step_size: {float(max_step_size):.9f} "
+            f"real_time_factor: {float(real_time_factor):.6f}"
+        )
+        return self._call_gz_service(
+            service=f"/world/{self.world_name}/set_physics",
+            request_type="gz.msgs.Physics",
+            response_type="gz.msgs.Boolean",
+            request=request,
+        )
 
     def _get_raw_pose(self) -> Tuple[float, float, float]:
         if self._odom_msg is None:

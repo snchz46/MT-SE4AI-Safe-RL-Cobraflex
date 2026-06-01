@@ -31,6 +31,75 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [01.06.2026] — F3 training-loop bring-up: C-05 episode termination + spawn-settle + sim-time pacing
+
+**Document(s) affected:** `src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py`,
+`src/cobraflex_rl/cobraflex_rl/ros_interface.py`,
+`src/cobraflex_rl/cobraflex_rl/train_ppo.py`,
+`src/cobraflex_rl/config/train_ppo.yaml`,
+`docs/DECISIONS.md` (D-34 addendum).
+**Phase:** F3.
+**Gate context:** after G2; first end-to-end run of the in-process cage training
+loop (TS-01) on the Gazebo/Jazzy host.
+**Author:** Samuel.
+
+### Change
+
+- **Episode termination on C-05 emergency.** `GazeboLaneEnv.step` now sets
+  `terminated=True` the instant the cage latches a C-05 emergency, in addition
+  to the pre-existing off-road condition `|ey| > road_width/2`. A latched
+  emergency freezes the car, so the remaining steps carried no learning signal
+  and burned the full `max_episode_steps` per failed rollout. `info` now carries
+  `termination_reason ∈ {cage_emergency, off_road, truncated}`. Both conditions
+  set `terminated` (value bootstraps from 0); they differ only in the reward. Per
+  D-34, the C-05 emergency carries **no** termination penalty (the cage's action
+  is not punished — the episode simply ends, so the policy only forgoes future
+  reward); only a genuine off-road failure, which predates the cage in the loop,
+  incurs the penalty (`done=off_road` to `compute_reward`). The corrective
+  interventions C-01..C-04/C-06 likewise remain transparent dynamics.
+- **Spawn-pose settle fix.** A `set_pose` teleport propagates to `/odom_truth` a
+  few sim steps *after* the gz service returns, so calibrating the odom→world
+  offset immediately latched the previous-crash pose — producing impossible
+  multi-metre `ey` and degenerate 1-step `off_road` terminations that polluted
+  the PPO rollouts. `reset()` now uses `_calibrate_spawn_settled`, which
+  recalibrates against a wall-clock-settled stationary pose and self-corrects if
+  a stale offset was latched.
+- **Sim-time control pacing.** `RosGazeboInterface.step_ros` advances by
+  *simulation* time (odom header stamps) with an odom-backlog drain and a
+  wall-clock fallback, instead of blocking on wall-clock; the reset settle uses a
+  dedicated wall-clock `spin_wall`. A session-only `sim_real_time_factor` knob
+  (default 1 = real-time) is applied via `/world/.../set_physics`. A runtime
+  unthrottle is currently avoided (gz froze on `real_time_update_rate=0`), so
+  headless training still runs at real-time pending the world-RTF lever.
+- Transient `debug_reset_timing` / `debug_cage` console instrumentation was used
+  during bring-up and removed after validation (cage confirmed intervening:
+  C-01/C-02/C-03/C-06 per step, C-05 closing failed episodes).
+
+### Rationale
+
+The first end-to-end run of the in-process cage training loop (D-34 / TS-01)
+exposed three bring-up issues: failed rollouts wasting the full horizon, a spawn
+calibration race injecting garbage transitions, and real-time-locked episode
+pacing. The C-05 termination and spawn-settle changes are correctness/quality;
+the pacing change is groundwork for faster-than-real-time training.
+
+### Impact
+
+- Training throughput: failed rollouts end on emergency (seconds, not the full
+  horizon); the degenerate 1-step `off_road` episodes are gone.
+- Reward semantics: a C-05 emergency ends the episode with **no** termination
+  penalty (only off-road failures are penalised), keeping cage interventions
+  penalty-free per D-34. Cage behaviour and `cage/cage.yaml` are unchanged.
+- No hazard / SR / cage-rule IDs added or changed; no scenario or metric changes.
+- Re-runs: none required for traceability; the F3 first training run subsumes
+  this as its starting code state.
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED. 0 warning(s).**
+
+---
+
 ## [29.05.2026] — F3 off-host prep: training run registration (§7.2.8) + .bak hygiene
 
 **Document(s) affected:** `src/cobraflex_rl/cobraflex_rl/run_io.py` (new),

@@ -1089,6 +1089,37 @@ and more conservative choice: what the policy learns is what gets deployed.
 through `SafetyCageNode`); end-to-end training-loop validation on the
 Gazebo/Jazzy host is the F3 first-run task.
 
+**F3 first-run refinements (01.06.2026).** End-to-end bring-up of the in-process
+loop on the Gazebo/Jazzy host added three behaviours, none of which alters the
+cage class or `cage/cage.yaml`:
+
+- *Episode termination on C-05.* A latched C-05 emergency now ends the episode
+  immediately (`terminated=True`, `info.termination_reason="cage_emergency"`):
+  the policy reached a state the cage could only answer with an emergency stop,
+  and the frozen remainder carries no learning signal (and previously burned the
+  full horizon). Crucially, this termination is **penalty-free** — consistent
+  with the D-34 principle that the cage's intervention is part of the dynamics
+  and is *not* an explicit penalty signal: `compute_reward` receives
+  `done=off_road`, so only a genuine off-road failure (which predates the cage
+  in the loop) incurs the termination penalty, while a C-05 emergency simply
+  ends the episode (the policy forgoes future reward, value bootstraps from 0,
+  but is not punished). The corrective interventions C-01..C-04/C-06 likewise
+  stay transparent. (Observed: ~every early-policy episode ends in C-05 at
+  `|ey|≈0.16`, with C-01/C-02/C-03/C-06 firing throughout — confirming the cage
+  is actively steering, not merely emergency-stopping.)
+- *Spawn-pose settle.* `reset()` calibrates the odom→world offset against a
+  wall-clock-settled post-teleport pose (`_calibrate_spawn_settled`) rather than
+  immediately: a `set_pose` teleport reaches `/odom_truth` a few sim steps after
+  the gz service returns, and calibrating against the stale pre-teleport sample
+  injected impossible step-1 `ey` and degenerate 1-step rollouts.
+- *Pacing.* Per-step waiting advances by simulation time (odom header stamps),
+  keeping the control cadence correct if the sim runs faster than real time; the
+  reset settle uses wall-clock. A `sim_real_time_factor` knob exists but is left
+  at 1 (real-time) pending a safe faster-than-real-time path — a runtime
+  `set_physics` unthrottle froze the sim (`real_time_update_rate=0`), so the
+  world-file RTF (load-time) remains the open lever, deferred as it changes the
+  world hash.
+
 ---
 
 ## Future and pending decisions

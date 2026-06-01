@@ -91,6 +91,9 @@ htmlcov/
 .pytest_cache/
 
 # Misc
+# Transient backups (e.g. check_traceability writes docs/08_..md.bak while it
+# patches the ODD-Spec, then removes it). Ignored so they never show in status.
+*.bak
 docs/.phases*
 docs/.temp_templates/
 tools/assets*

@@ -45,9 +45,9 @@ from the **safe** (post-cage) action and the resulting state (D-34, §5).
 | Term | Sign | What it incentivises / penalises | Magnitude unit |
 | --- | --- | --- | --- |
 | `w_fwd · speed` | + | Moving forward; avoids the degenerate policy that stays still to dodge penalties | m/s |
-| `w_ey · |ey|` | − | Lateral deviation from the lane centre (primary objective) | m |
-| `w_eps · |epsi|` | − | Heading error w.r.t. the lane tangent | rad |
-| `w_ds · |Δsteer|` | − | Abrupt steering changes (actuation smoothness) | [-1,1] |
+| `w_ey · [ey]` | − | Lateral deviation from the lane centre (primary objective) | m |
+| `w_eps · [epsi]` | − | Heading error w.r.t. the lane tangent | rad |
+| `w_ds · [Δsteer]` | − | Abrupt steering changes (actuation smoothness) | [-1,1] |
 | `w_term · [done]` | − | Leaving the road (failure event) | — |
 
 Each term is **interpretable and isolable**, which eases the Chapter 8 ablation

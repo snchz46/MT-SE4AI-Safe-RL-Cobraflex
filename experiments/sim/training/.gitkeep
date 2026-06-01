@@ -1,0 +1,4 @@
+# Training run outputs (Training Spec §7.2.8): one subdir per run, each with
+# learning_curve.csv [timestep, ep_rew_mean, ep_len_mean, explained_variance]
+# and metadata.json (git commit, hashes, seed, hyperparameters). Written by
+# cobraflex_rl/train_ppo.py. Checkpoints (.zip) go to policy/checkpoints/.

@@ -31,6 +31,187 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [29.05.2026] — F3 off-host prep: training run registration (§7.2.8) + .bak hygiene
+
+**Document(s) affected:** `src/cobraflex_rl/cobraflex_rl/run_io.py` (new),
+`src/cobraflex_rl/cobraflex_rl/callbacks.py`,
+`src/cobraflex_rl/cobraflex_rl/train_ppo.py`,
+`src/cobraflex_rl/cobraflex_rl/eval_policy.py`,
+`policy/tests/test_run_io.py` (new),
+`experiments/sim/training/.gitkeep` (new), `.gitignore`.
+**Phase:** F3.
+**Gate context:** after G2; off-host preparation so the first training run is turnkey.
+**Author:** Samuel.
+
+### Change
+
+- **§7.2.8 training run registration**: `train_ppo` now writes
+  `experiments/sim/training/<run_id>/` with `learning_curve.csv`
+  (`[timestep, ep_rew_mean, ep_len_mean, explained_variance]`, via the new
+  `LearningCurveCallback`) and `metadata.json` (git commit; cage/scenario/policy
+  hashes; seed; hyperparameters). Periodic checkpoints go to `policy/checkpoints/`
+  (SB3 `CheckpointCallback`, every `n_steps`) and a row is appended to
+  `checkpoint_registry.csv` on completion — so the Gazebo/Jazzy run produces its
+  §7.4 evidence automatically.
+- New pure `run_io` (sha256 + git commit), shared by `train_ppo` and
+  `eval_policy` (de-duplicated); `test_run_io.py` (3 tests).
+- **`.gitignore`**: ignore `*.bak` so `check_traceability`'s transient
+  `docs/08_..md.bak` backup never shows in `git status`.
+
+### Verification
+
+- `pytest cage/tests policy/tests` → 174 passed (+3 in `test_run_io.py`).
+- `python -m py_compile` on the new/edited `.py` files → OK.
+- `python tools/check_traceability.py --strict` → all checks PASSED, 0 warnings.
+- The training loop still requires the Gazebo/Jazzy host; the pure pieces
+  (`run_io`, metrics) are verified here, the callback/registration syntax-checked.
+
+---
+
+## [29.05.2026] — F3 Week-8 wrap: seed, spawn perturbation, §7.5 eval harness, §7.2.4 reconciled
+
+**Document(s) affected:** `src/cobraflex_rl/config/train_ppo.yaml`,
+`src/cobraflex_rl/cobraflex_rl/train_ppo.py`,
+`src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py`,
+`src/cobraflex_rl/cobraflex_rl/eval_metrics.py` (new),
+`src/cobraflex_rl/cobraflex_rl/eval_policy.py`,
+`policy/tests/test_eval_metrics.py` (new),
+`manuscript/chapters/chapter_07_training_specification.md` (§7.2.4).
+**Phase:** F3.
+**Gate context:** after G2; closing the off-host Week-8 (D36–D40) items before the first training run.
+**Author:** Samuel.
+
+### Change
+
+- **seed = 42** (§7.2.7): added `seed` to `train_ppo.yaml` and passed it to
+  `PPO(...)`. SB3 seeds python/numpy/torch + the action space and propagates to
+  `env.reset(seed=...)`, so the spawn perturbation is reproducible too.
+- **Spawn perturbation** (§7.3): `GazeboLaneEnv.reset` applies a random
+  per-episode start perturbation (lateral ±0.05 m perpendicular to the tangent,
+  heading ±0.15 rad) via `self.np_random`; configurable under
+  `spawn_perturbation` in `train_ppo.yaml`, disabled for deterministic eval.
+- **§7.5 evaluation harness**: new pure `eval_metrics.summarize_eval` (laps,
+  cage intervention rate, emergencies, mean/abs ey & epsi) + `test_eval_metrics.py`
+  (7 tests); `eval_policy.py` rewritten to disable spawn perturbation, collect
+  per-step records, and write `cage_status.csv` + `summary.json` + `metadata.json`
+  under `experiments/sim/runs/<run_id>/`. Evaluation runs through `GazeboLaneEnv`,
+  i.e. under the same in-process cage as deployment (D-34, SR-009).
+- **§7.2.4 reconciled**: termination text updated from `|ey| > lane_width/2` to
+  the implemented `|ey| > road_width/2`, with rationale and a cross-ref to
+  `docs/09_environment_design.md` (ED-4).
+
+### Verification
+
+- `pytest cage/tests policy/tests` → 171 passed (+7 in `test_eval_metrics.py`).
+- `python -m py_compile` on the new/edited `.py` files → OK.
+- `python tools/check_traceability.py --strict` → all checks PASSED, 0 warnings.
+- The training/eval loops still require the Gazebo/Jazzy host; the pure pieces
+  (metrics, reward, cage bridge) are verified here.
+
+---
+
+## [29.05.2026] — F3 D39 closed: reward unit tests + environment/reward design docs
+
+**Document(s) affected:** `policy/tests/test_rewards.py` (new),
+`docs/09_environment_design.md` (new),
+`docs/10_reward_function.md` (new).
+**Phase:** F3.
+**Gate context:** after G2; Week-8 (D36–D40) infrastructure deliverables.
+**Author:** Samuel.
+
+### Change
+
+- Closed F3 day **D39**: added `policy/tests/test_rewards.py` — 10
+  synthetic-state unit tests for `compute_reward` (forward-progress, ey/epsi/
+  Δsteer penalties, termination penalty, negative-speed clamp, linear
+  composition, `w_ey`>`w_eps` dominance, YAML reward-block completeness). The
+  reward function previously had no tests.
+- Added the **D36** deliverable `docs/09_environment_design.md`:
+  observation/action spaces, wrapper structure, reset/episode, actuation
+  mapping, cage-in-loop, design decisions + rejected alternatives, traceability,
+  anticipated defense Q&A.
+- Added `docs/10_reward_function.md`: formula, components, weights v1.0 +
+  rationale, simplicity argument, cage interaction, degeneration / reward-hacking
+  analysis, verification, anticipated defense Q&A.
+- Numbered `docs/0X` are kept in **English** (repo convention); the Spanish
+  working copies live, gitignored, in `docs/.phases/Fase 3/`
+  (`environment_design_v0.1.md`, `reward_function_design.md`).
+
+### Rationale
+
+D39's reward test suite was the one Week-8 deliverable that is pure and closable
+off-host; it guards spec (§7.2.3) ↔ implementation consistency. The two design
+docs are defense-preparation back-up for the viva, expanding §7.2–§7.3 with the
+"why" and the rejected alternatives at a depth the thesis chapter does not
+carry. They are rationale documents; §7.2 remains the normative source.
+
+### Verification
+
+- `pytest cage/tests policy/tests` → 164 passed (154 + 10 in `test_rewards.py`).
+- `python tools/check_traceability.py --strict` → all checks PASSED, 0 warnings.
+
+---
+
+## [29.05.2026] — F3 TS-01: cage wired into PPO training (in-process, D-34)
+
+**Document(s) affected:** `docs/DECISIONS.md` (D-34),
+`manuscript/chapters/chapter_07_training_specification.md` (§7.2.5 + checklist),
+`src/cobraflex_rl/cobraflex_rl/cage_bridge.py` (new),
+`src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py`,
+`src/cobraflex_rl/config/train_ppo.yaml`,
+`policy/tests/test_cage_bridge.py` (new).
+**Phase:** F3.
+**Gate context:** after G2, before the first PPO training run.
+**Author:** Samuel.
+
+### Change
+
+Implemented TS-01: `GazeboLaneEnv` now routes the policy action through the
+safety cage in `enforcement` mode (D-34). The cage is invoked **in-process** —
+the env builds a cage `State` from the tracker, forms
+`raw_action = (policy_steering, throttle_nominal)`, calls the same
+`cage.cage_node.SafetyCageNode.step()` (with the same `cage/cage.yaml`) that
+`cage_ros_node` wraps in deployment, and maps the safe `(steering, throttle)`
+to `/cmd_vel` by replicating `vehicle_control_node` (throttle→speed,
+`angular.z = steering·yaw_gain`, emergency→stop). Reward is computed on the
+safe action. A fresh `SafetyCageNode` is built per episode (no latched C-05 /
+rate-limiter state across rollouts). New ROS-free glue `cage_bridge.py`; new
+`cage:` block in `train_ppo.yaml` (with an `enabled:false` debug fallback).
+D-34's implementation note + Status and §7.2.5 were updated to record the
+in-process mechanism instead of the topic round-trip originally sketched.
+
+### Rationale
+
+The env is a synchronous `gym.Env` loop; a per-step `/raw_action`→`/safe_action`
+ROS handshake with a separate node would add asynchrony (harming determinism
+under seed=42, §7.2.7), latency, and launch complexity. The in-process call is
+byte-identical in cage behaviour (same class + YAML), stays deterministic, and
+needs no launch changes (the env publishes `/cmd_vel` itself, so there is no
+`vehicle_control_node` to co-launch and no double-actuation). Satisfies SR-009
+(train under the deployed envelope) at the behavioural level. User-approved
+this session.
+
+### Impact
+
+- Training now runs under the cage; the first PPO run can proceed (still
+  pending, together with §7.4/§7.5 and `experiments/sim/training/` registration).
+- Actuation constants `throttle_nominal` / `yaw_gain` / `min_speed_scale` are
+  duplicated from `vehicle_control_node` defaults in `train_ppo.yaml`; keep in
+  sync if those change.
+- No cage code changed → cage v0.5.1 and all SR thresholds unchanged.
+
+### Verification
+
+- `pytest cage/tests policy/tests` → 154 passed (was 144; +10 in
+  `test_cage_bridge.py`, incl. a C-01 correction routed through
+  `SafetyCageNode`).
+- `python -m py_compile` on the new/edited `.py` files → OK.
+- `python tools/check_traceability.py --strict` → all checks PASSED, 0 warnings.
+- End-to-end training-loop validation on the Gazebo/Jazzy host is deferred to
+  the F3 first-run task (ROS2/Gazebo cannot launch on the dev Windows host).
+
+---
+
 ## [23.05.2026] — F3 kickoff: Training Specification, training pipeline fixes, D-34
 
 **Document(s) affected:** `manuscript/chapters/chapter_07_training_specification.md`,

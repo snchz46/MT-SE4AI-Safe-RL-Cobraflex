@@ -119,9 +119,14 @@ degeneración (policy que maximiza `forward_progress` sin atender `ey`).
 
 ### 7.2.4 Criterios de terminación y truncación
 
-**Terminación** (episodio falla): `|ey| > lane_width / 2`. El agente
-sale del carril. La cage debería haber evitado esto; si ocurre, indica
-que la cage no puede corregir el nivel de error acumulado.
+**Terminación** (episodio falla): `|ey| > road_width / 2`. El agente sale
+de la **vía**. Se termina en el borde de vía y no en el de carril
+(`lane_width/2`) por una razón deliberada de entrenamiento: una policy
+inicial aleatoria saldría del carril en 1–2 pasos y nunca acumularía
+experiencia útil. La cage corrige las violaciones de **carril** dentro de
+la vía (C-01/C-03); terminar en el borde de **vía** marca el caso "la cage
+no pudo evitarlo". Implementación en `GazeboLaneEnv.step`; rationale en
+`docs/09_environment_design.md` (ED-4).
 
 **Truncación** (episodio completo): `step_count ≥ max_episode_steps`.
 Con `max_episode_steps = 400` y `control_dt = 0.10 s`, el episodio dura

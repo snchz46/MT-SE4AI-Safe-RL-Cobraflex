@@ -1046,27 +1046,48 @@ environment dynamics, not as a penalty signal. The reward function sees the
 delta between raw and safe action is an optional auxiliary signal for
 diagnostic logging only.
 
-**Implementation consequence.** `GazeboLaneEnv.step` must be updated to:
-1. Publish raw action to `/raw_action` (instead of `/cmd_vel`).
-2. Wait for `/safe_action` response from `cage_ros_node`.
-3. Forward the safe action to `vehicle_control_node` (or let it flow through
-   the existing `/safe_action → vehicle_control_node` arc).
-4. Compute reward using the safe action and the resulting state.
+**Implementation (TS-01, in-process).** `GazeboLaneEnv` invokes the cage
+**in-process** rather than over ROS2 topics: it constructs a
+`cage.cage_node.SafetyCageNode` from the same `cage/cage.yaml` as deployment
+and calls `SafetyCageNode.step(state, raw_action, ctx)` each control cycle —
+the identical call `cage_ros_node` makes internally. Per cycle `step()`:
+1. builds the cage `State` from the tracker output (mirroring
+   `lane_perception_node`: `lateral_offset`, `heading_error`, `speed`,
+   `curvature_ahead`, boundary distances against the road half-width),
+2. forms `raw_action = (policy_steering, throttle_nominal)` (the policy
+   controls steering only, §7.2.2),
+3. calls `cage.step(...)` to obtain the safe action,
+4. maps the safe `(steering, throttle)` to `/cmd_vel` by replicating
+   `vehicle_control_node` (throttle→speed, `angular.z = steering·yaw_gain`,
+   emergency→controlled stop),
+5. computes the reward on the safe action and resulting state.
+A fresh `SafetyCageNode` is created per episode so no latched C-05 emergency
+or rate-limiter history leaks across the independent RL rollouts. The pure
+(ROS-free) mapping glue lives in
+`src/cobraflex_rl/cobraflex_rl/cage_bridge.py`.
 
-The `RosGazeboInterface` synchronisation model must be extended accordingly.
-This is F3 task TS-01 (Training Specification §Training loop wiring).
+**Why in-process, not the topic round-trip originally sketched.** The
+training env is a synchronous `gym.Env` loop driving Gazebo directly; a
+per-step publish-`/raw_action` / await-`/safe_action` handshake with a
+separate `cage_ros_node` would inject asynchrony (harming determinism under
+the fixed seed of §7.2.7), add latency, and require co-launching extra nodes.
+The in-process call yields **byte-identical cage behaviour** (same class, same
+YAML) while staying synchronous and deterministic, and needs no launch
+changes — `train_lane.launch.py` already runs only Gazebo + `train_ppo`, the
+env publishes `/cmd_vel` itself, so there is no `vehicle_control_node` to
+co-launch and no double-actuation. This satisfies SR-009 (policy trained under
+the deployed envelope) at the behavioural level, which is what the
+traceability chain requires.
 
-**Consequences.** `train_ppo.py` and `GazeboLaneEnv` require the wiring
-update before the first training run. The cage and `vehicle_control_node`
-must be co-launched with the training loop (already drafted in
-`train_lane.launch.py`).
+**Rationale (unchanged).** Deployment of a policy trained offline from the
+cage would require post-hoc analysis of distribution shift at cage boundaries,
+adding complexity at evaluation time. Training under the cage is the simpler
+and more conservative choice: what the policy learns is what gets deployed.
 
-**Rationale.** Deployment of a policy trained offline from the cage would
-require post-hoc analysis of distribution shift at cage boundaries, adding
-complexity at evaluation time. Training under the cage is the simpler and
-more conservative choice: what the policy learns is what gets deployed.
-
-**Status.** CONFIRMED, implementation pending (F3 task TS-01).
+**Status.** CONFIRMED and IMPLEMENTED (F3 task TS-01, in-process). Verified by
+`policy/tests/test_cage_bridge.py` (mapping mirrors + a C-01 correction routed
+through `SafetyCageNode`); end-to-end training-loop validation on the
+Gazebo/Jazzy host is the F3 first-run task.
 
 ---
 

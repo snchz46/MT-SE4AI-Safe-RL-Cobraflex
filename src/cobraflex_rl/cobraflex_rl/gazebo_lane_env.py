@@ -42,6 +42,12 @@ class GazeboLaneEnv(gym.Env):
         self.control_dt = float(self.cfg.get("control_dt", 0.1))
         self.max_episode_steps = int(self.cfg.get("max_episode_steps", 500))
         self.prev_steer = 0.0
+        # Raw (pre-cage) policy steering of the previous cycle. The smoothness
+        # reward term penalises the *raw* delta, not the post-cage applied delta,
+        # so the policy pays for its own bang-bang instead of letting C-06 absorb
+        # it for free (§7.2.5, §7.5.2; reward v1.2). Kept separate from
+        # prev_steer, which is the applied steering exposed in the observation.
+        self.prev_policy_steer = 0.0
         self.step_count = 0
         self.last_track_state: Optional[TrackState] = None
         self._last_pose = (0.0, 0.0, 0.0)  # world (x, y, yaw), refreshed each cycle
@@ -102,8 +108,11 @@ class GazeboLaneEnv(gym.Env):
     ):
         super().reset(seed=seed)
         self.step_count = 0
-        # prev_steer tracks the steering actually applied (post-cage) last cycle.
+        # prev_steer tracks the steering actually applied (post-cage) last cycle
+        # (for the observation); prev_policy_steer tracks the raw policy command
+        # last cycle (for the smoothness reward term, §7.2.5).
         self.prev_steer = 0.0
+        self.prev_policy_steer = 0.0
 
         # Fresh cage per episode: no latched C-05 emergency, clean rate-limiter
         # and oscillation history. Each RL episode is an independent rollout, so
@@ -215,7 +224,7 @@ class GazeboLaneEnv(gym.Env):
 
     def step(self, action):
         policy_steer = float(np.clip(np.asarray(action).reshape(-1)[0], -1.0, 1.0))
-        prev_steer = self.prev_steer
+        prev_policy_steer = self.prev_policy_steer
 
         applied_steer, cmd_linear, cmd_angular, cage_info = self._apply_cage(
             policy_steer
@@ -250,23 +259,28 @@ class GazeboLaneEnv(gym.Env):
         cage_emergency = bool(cage_info.get("cage_emergency", False))
         terminated = off_road or cage_emergency
         truncated = self.step_count >= self.max_episode_steps
-        # Reward is computed on the *applied* (post-cage) steering and resulting
-        # state — D-34 / Training Spec §7.2.5: the policy sees the cage as part
-        # of the environment dynamics, not as an explicit penalty. Consistent
-        # with that, a C-05 emergency termination carries NO termination penalty
-        # (the cage's action is not punished — the episode simply ends, so the
-        # policy only forgoes future reward); only a genuine off-road failure,
-        # which predates the cage in the loop, incurs the penalty.
+        # Reward is computed on the resulting state (ey/epsi/progress) and, for
+        # the smoothness term only, on the *raw* policy steering delta — D-34 /
+        # Training Spec §7.2.5. The policy sees the cage as part of the
+        # environment dynamics, not as an explicit penalty, so cage interventions
+        # are never punished; but the smoothness term is the deliberate exception
+        # (reward v1.2): measuring the post-cage delta is toothless because C-06
+        # absorbs raw bang-bang for free (§7.5.2), so the policy pays for its own
+        # raw jerk instead. Consistent with the no-punish-the-cage rule, a C-05
+        # emergency termination carries NO termination penalty (the episode simply
+        # ends, the policy only forgoes future reward); only a genuine off-road
+        # failure, which predates the cage in the loop, incurs the penalty.
         reward = compute_reward(
             track_state=track_state,
             progress=progress,
-            steer=applied_steer,
-            prev_steer=prev_steer,
+            steer=policy_steer,
+            prev_steer=prev_policy_steer,
             done=off_road,
             cfg=self.cfg,
         )
 
         self.prev_steer = applied_steer
+        self.prev_policy_steer = policy_steer
         kappa_near, kappa_far = self._curvature_preview(track_state.segment_index)
         observation = self._make_observation(
             track_state, speed, self.prev_steer, kappa_near, kappa_far

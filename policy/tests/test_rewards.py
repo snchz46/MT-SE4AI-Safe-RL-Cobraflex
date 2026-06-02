@@ -31,13 +31,14 @@ from cobraflex_rl.rewards import compute_reward  # noqa: E402
 
 TRAIN_YAML = _PKG_PARENT / "config" / "train_ppo.yaml"
 
-# Weights v1.0 (Training Spec §7.2.3). Values are [provisional, M-P1..M-P4];
-# the formula tests below pin the maths, not the tuning.
+# Weights (Training Spec §7.2.3): forward driver v1.1, steer_delta v1.2
+# (0.10 -> 0.20, now on the RAW policy delta; §7.2.5 / §7.5.2). Values are
+# [provisional, M-P1..M-P4]; the formula tests below pin the maths, not the tuning.
 WEIGHTS = {
     "forward_progress": 1.0,
     "lateral_error": 2.5,
     "heading_error": 0.75,
-    "steer_delta": 0.10,
+    "steer_delta": 0.20,
     "termination": 25.0,
 }
 CFG = {"reward": WEIGHTS}
@@ -90,10 +91,23 @@ def test_heading_error_is_penalised():
 
 
 def test_steer_delta_penalises_change_not_magnitude():
-    # only the change in steering is penalised
-    assert _reward(steer=0.5, prev_steer=0.0) == pytest.approx(NOMINAL - 0.10 * 0.5)
+    # only the change in steering is penalised (steer/prev_steer are the RAW
+    # policy commands; the env feeds raw, not post-cage, deltas — §7.2.5)
+    assert _reward(steer=0.5, prev_steer=0.0) == pytest.approx(NOMINAL - 0.20 * 0.5)
     # holding the same steering costs nothing
     assert _reward(steer=0.5, prev_steer=0.5) == pytest.approx(NOMINAL)
+
+
+def test_raw_bang_bang_costs_more_than_smooth_ramp():
+    # A sign flip (raw bang-bang, |Δ|=2.0) must cost far more than a gradual ramp
+    # within C-06's rate limit (|Δ|=0.15). This is the whole point of measuring
+    # the RAW delta (reward v1.2, §7.5.2): the policy now pays for jerk that C-06
+    # would otherwise absorb for free.
+    flip = _reward(steer=1.0, prev_steer=-1.0)
+    ramp = _reward(steer=0.15, prev_steer=0.0)
+    assert (NOMINAL - flip) == pytest.approx(0.20 * 2.0)
+    assert (NOMINAL - ramp) == pytest.approx(0.20 * 0.15)
+    assert flip < ramp
 
 
 def test_termination_applies_fixed_penalty():
@@ -111,7 +125,7 @@ def test_combined_terms_sum_linearly():
     r = _reward(
         track_state=_ts(ey=0.1, epsi=0.2), progress=1.0, steer=0.5, prev_steer=0.0
     )
-    expected = 1.0 * 1.0 - 2.5 * 0.1 - 0.75 * 0.2 - 0.10 * 0.5
+    expected = 1.0 * 1.0 - 2.5 * 0.1 - 0.75 * 0.2 - 0.20 * 0.5
     assert r == pytest.approx(expected)
 
 

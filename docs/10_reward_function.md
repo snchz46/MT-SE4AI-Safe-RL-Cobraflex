@@ -3,7 +3,7 @@
 | Field | Value |
 | --- | --- |
 | Artifact | Output of days **D38–D39** (Phase 3, Week 8) — see `docs/.phases/Fase 3/fase_3_detallada.md` §4 (local plan) |
-| Weights version | **v1.0** (provisional, subject to experimental tuning) |
+| Weights version | **v1.2** (forward-driver v1.1 + raw-smoothness v1.2; provisional, subject to experimental tuning) |
 | Phase / Gate | F3 (PPO training), after G2 |
 | Author | Samuel Sanchez |
 | Date | 2026-05-29 |
@@ -33,13 +33,14 @@ r = w_fwd · max(progress, 0)
 
 where `progress` is the **normalised centerline advance** this cycle (≈1.0 at
 cruise; the env unwraps the closed-loop arc-length reset and divides by the
-nominal per-step advance), `Δsteer = applied_steer − previous_applied_steer`, and
-`[terminated_off_road]` is 1 only if the episode ends by leaving the **road**
-(not by a C-05 emergency — see §7.2.4 / ED-8). The exact implementation is in
-`cobraflex_rl/rewards.py::compute_reward`.
+nominal per-step advance), `Δsteer = raw_steer − previous_raw_steer` (the **raw
+policy** command, pre-cage — v1.2, see §5), and `[terminated_off_road]` is 1 only
+if the episode ends by leaving the **road** (not by a C-05 emergency — see §7.2.4
+/ ED-8). The exact implementation is in `cobraflex_rl/rewards.py::compute_reward`.
 
-`progress` enters as `max(progress, 0)` (see §6). `ey`, `epsi` and `steer` are
-taken from the **safe** (post-cage) action and the resulting state (D-34, §5).
+`progress` enters as `max(progress, 0)` (see §6). `ey` and `epsi` are taken from
+the resulting state, and the smoothness term from the **raw** policy action; all
+other terms reflect the **safe** (post-cage) outcome (D-34, §5).
 
 > **Revision (F3 first run, v1.1).** The forward term was originally
 > `w_fwd · speed`. Because speed is fixed (cage-controlled cruise), that term was
@@ -60,7 +61,7 @@ taken from the **safe** (post-cage) action and the resulting state (D-34, §5).
 | `w_fwd · progress` | + | Advancing along the centerline (surviving + completing laps); avoids the degenerate policy that stalls to dodge penalties | normalised (≈1.0/step at cruise) |
 | `w_ey · [ey]` | − | Lateral deviation from the lane centre (primary objective) | m |
 | `w_eps · [epsi]` | − | Heading error w.r.t. the lane tangent | rad |
-| `w_ds · [Δsteer]` | − | Abrupt steering changes (actuation smoothness) | [-1,1] |
+| `w_ds · [Δsteer]` | − | Abrupt **raw** steering changes (actuation smoothness; pre-cage, v1.2 — §5) | [-1,1] |
 | `w_term · [done]` | − | Leaving the **road** (off-road failure only; C-05 emergency is penalty-free) | — |
 
 Each term is **interpretable and isolable**, which eases the Chapter 8 ablation
@@ -75,11 +76,11 @@ analysis and the unit tests (§7).
 | `w_fwd` (forward_progress) | 1.0 | Scale reference; with the v1.1 progress driver it contributes ≈+1.0/cycle at cruise (was +0.2 under the old `speed` driver) |
 | `w_ey` (lateral_error) | 2.5 | **Primary penalty.** A 0.1 m offset costs 0.25 → the agent prioritises centring; still small vs the +1.0 progress, so an on-track step stays net-positive |
 | `w_eps` (heading_error) | 0.75 | Secondary penalty; heading is a means to control `ey`, not an end |
-| `w_ds` (steer_delta) | 0.10 | Small; smooths without choking the ability to correct |
+| `w_ds` (steer_delta) | 0.20 | Smooths without choking correction. v1.2: applied to the **raw** policy delta (pre-cage) and raised 0.10→0.20, because the old post-cage term was toothless — C-06 absorbed the raw bang-bang for free (§5, §8) |
 | `w_term` (termination) | 25.0 | **Deliberately high**: applied only on off-road failure (not C-05). Makes staying on the road dominate over optimising speed |
 
 **Priority hierarchy encoded in the weights:**
-`staying on road (25) ≫ progress (1.0 · progress) ≳ lateral centring (2.5·|ey|) > heading (0.75) > smoothness (0.10)`.
+`staying on road (25) ≫ progress (1.0 · progress) ≳ lateral centring (2.5·|ey|) > heading (0.75) > smoothness (0.20, on raw Δ)`.
 Under v1.1 the forward term (≈1.0/step) is comparable to the per-step penalties,
 so every on-track step is net-positive — the agent is pulled toward *continuing*,
 not toward triggering the penalty-free emergency to cut losses.
@@ -107,7 +108,8 @@ explicit heading-oscillation penalty, cage-distance shaping…). Reasons:
 ## 5. Interaction with the cage (D-34)
 
 The reward is computed on the **safe** action (the one actually actuated), not on
-the raw action the policy requested:
+the raw action the policy requested — **with one deliberate exception, the
+smoothness term `w_ds·|Δsteer|` (v1.2)**:
 
 - Cage interventions are **not penalised explicitly**. They are part of the
   environment dynamics from the agent's viewpoint.
@@ -118,6 +120,20 @@ the raw action the policy requested:
 
 This avoids double punishment (penalising the intervention *and* the bad state)
 and lets the policy learn to **not need** the cage, rather than to fear it.
+
+**The smoothness exception (v1.2).** The F3 first-cycle evaluation showed the
+policy exploiting exactly this "reward on safe action" rule against the smoothness
+term: because the rate-limiter **C-06** clamps the steering *change* per cycle
+(`delta_max = 0.15`), a raw bang-bang command (sign-flip 46% of steps, ±1
+saturation 27%, mean |Δraw| ≈ 0.54) produces a post-cage signal that is smooth
+*regardless* of how jerky the raw command was. Measuring `Δsteer` on the post-cage
+action therefore made the term **toothless** — the policy paid nothing for driving
+C-06 to its limit ~89% of steps (§7.5.2 / §8). The smoothness term exists to shape
+the *policy's own* actuation, so it is the one term computed on the **raw** policy
+delta (and weighted up 0.10→0.20). This is *not* punishing the cage: the cage's
+corrective action is still never penalised — what is penalised is the policy's own
+raw jerk, which the cage merely happens to mask. The rationale for the term then
+holds: the policy learns native smoothness instead of outsourcing it to C-06.
 
 ---
 
@@ -186,6 +202,11 @@ efficiency.
 Because what affects the world state — and therefore what the agent must learn to
 anticipate — is the action *actually actuated* after the cage (D-34). Rewarding
 the raw action would teach the policy to optimise something that does not happen.
+**The one exception is the smoothness term `w_ds·|Δsteer|` (v1.2)**: it is
+computed on the *raw* policy delta, because its purpose is to shape the policy's
+own actuation, and C-06 masks raw bang-bang into a near-identical post-cage signal
+— so a post-cage smoothness penalty never bites (see §5, §8 and §7.5.2). The
+state-affecting terms (ey, epsi, progress, termination) stay on the safe outcome.
 
 **Q4. Why not penalise cage interventions explicitly?**
 To avoid double punishment. The bad state that triggers the intervention is
@@ -216,3 +237,13 @@ lane-following and makes attributing effects harder. The "reward = quality, cage
   advance) — see the §1 revision note and `docs/CHANGELOG.md` (F3 learning fix).
   **Weights are unchanged (v1.0)**; only the forward driver changed. Re-verified
   by the updated `policy/tests/test_rewards.py`.
+- **smoothness-term v1.2 (2026-06-02):** after the F3 definitive evaluation
+  (§7.5.2) revealed the policy exploiting the post-cage smoothness term (raw
+  bang-bang absorbed for free by C-06), the `w_ds·|Δsteer|` term was changed to
+  measure the **raw** policy steering delta (pre-cage) and the weight raised
+  `0.10 → 0.20`. Deliberate, documented exception to the reward-on-safe-action
+  convention, for this term only (§5, §7.2.5). Implemented in
+  `gazebo_lane_env.step` + `rewards.py`; re-verified by
+  `policy/tests/test_rewards.py`. Effect on native RL smoothness **pending a new
+  training cycle** (Ubuntu+Jazzy host) and the Ch.8 sensitivity analysis; weights
+  remain `[provisional, M-P4]`.

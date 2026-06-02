@@ -25,7 +25,17 @@ def compute_reward(
     that survives and advances farther scores strictly higher — and keeps each
     on-track step net-positive, so ending early (e.g. via a penalty-free C-05
     emergency) is never preferable to continuing (closes the perverse-incentive
-    interaction noted in D-34's F3 first-run refinements)."""
+    interaction noted in D-34's F3 first-run refinements).
+
+    ``steer``/``prev_steer`` are the **raw policy** steering of this and the
+    previous cycle — NOT the post-cage applied steering. This is a deliberate
+    exception to the otherwise reward-on-safe-action convention (D-34, §7.2.5):
+    the smoothness term exists to shape the *policy's own* actuation, and the
+    rate-limiter C-06 absorbs raw bang-bang into a near-identical smoothed signal,
+    so measuring the post-cage delta makes the penalty toothless (the F3 eval saw
+    the policy drive C-06 to its limit ~89% of steps for free; §7.5.2). Penalising
+    the raw delta makes the policy pay for its own jerk. All other terms stay on
+    the safe action / resulting state."""
     reward_cfg = cfg.get("reward", cfg)
 
     lateral_penalty = float(reward_cfg.get("lateral_error", 1.0)) * abs(track_state.ey)

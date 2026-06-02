@@ -113,17 +113,18 @@ r = w_fwd · max(progress, 0)
 
 donde `progress` es el avance **normalizado** a lo largo de la línea
 central en ese ciclo (≈1.0 a velocidad de crucero; el entorno gestiona el
-wrap del arco en el circuito cerrado), y `[terminated_off_road]` es 1 solo
-si el episodio termina por salida de **vía** (no por emergencia C-05; ver
-§7.2.4). Los pesos nominales (versión 1.0, sujetos a ajuste experimental)
-son:
+wrap del arco en el circuito cerrado), `Δsteering` es el cambio en el
+steering **crudo de la política** (no el post-cage; ver §7.2.5), y
+`[terminated_off_road]` es 1 solo si el episodio termina por salida de
+**vía** (no por emergencia C-05; ver §7.2.4). Los pesos nominales (sujetos
+a ajuste experimental) son:
 
 | Parámetro | Valor | Rationale |
 | --- | --- | --- |
 | `w_fwd` (forward_progress) | 1.0 | Premia progreso real (≈1.0/paso a crucero) |
 | `w_ey` (lateral_error) | 2.5 | Penalización principal: offset lateral |
 | `w_eps` (heading_error) | 0.75 | Penalización secundaria: heading |
-| `w_ds` (steer_delta) | 0.10 | Suavidad de actuación |
+| `w_ds` (steer_delta) | 0.20 | Suavidad de actuación (sobre Δsteering **crudo**, v1.2; ver §7.2.5) |
 | `w_term` (termination) | 25.0 | Desincentiva salida de vía |
 
 **Progreso, no velocidad (revisión F3, primer run).** El término forward
@@ -191,7 +192,17 @@ despliegue `cage_ros_node` envuelve por tópicos. La acción segura
 resultante se mapea a `/cmd_vel` replicando `vehicle_control_node`
 (throttle→velocidad, `angular.z = steering·yaw_gain`, emergencia→parada
 controlada). La recompensa se calcula sobre la acción segura y el estado
-resultante, no sobre la acción raw.
+resultante, no sobre la acción raw, **con una excepción deliberada: el
+término de suavidad `w_ds·|Δsteering|`** (reward v1.2). Ese término existe
+para moldear la actuación de la *propia política*, y C-06 absorbe el
+bang-bang crudo en una señal post-cage casi idéntica se sature o no la
+política — medir el Δ post-cage lo deja sin efecto (la evaluación §7.5.2
+mostró a la policy llevando C-06 a su tope el ~89% de los pasos sin pagar
+por ello). Por eso el término se computa sobre el `Δsteering` **crudo**
+(pre-cage) y se sube de peso (`w_ds = 0.10 → 0.20`): así la política paga
+su propio jerk en lugar de delegarlo gratis en C-06. El resto de términos
+(ey, epsi, progreso, terminación) sigue sobre el estado resultante / la
+acción segura, y las intervenciones de la cage no se penalizan (D-34).
 
 La invocación en proceso —en lugar del intercambio asíncrono
 `/raw_action`→`/safe_action` por tópicos— se elige por determinismo (bajo
@@ -435,9 +446,18 @@ Tres observaciones del log por-paso (`cage_status.csv`):
    steering suave de forma nativa. Ninguna otra regla (C-01..C-05) se activa: la
    policy se mantiene holgadamente dentro del carril, y lo único que el cage
    necesita aportar es **suavizado de actuación**. Esto valida cuantitativamente
-   el cage como salvaguarda activa sobre una policy aprendida, y sugiere un
-   refinamiento futuro (penalizar más el `Δsteer` crudo, o un término sobre la
-   acción raw) para acercar la suavidad nativa de la RL a la del PD.
+   el cage como salvaguarda activa sobre una policy aprendida.
+
+   > **Refinamiento aplicado (reward v1.2).** A raíz de este diagnóstico, el
+   > término de suavidad se reformuló para penalizar el `Δsteering` **crudo**
+   > (pre-cage) en vez del post-cage, y se subió de peso (`w_ds = 0.10 → 0.20`);
+   > así la política paga su propio bang-bang en lugar de delegarlo gratis en C-06
+   > (detalle en §7.2.5 y `docs/10_reward_function.md`). El cambio está
+   > implementado y cubierto por `policy/tests/test_rewards.py`; su efecto sobre la
+   > suavidad nativa de la RL queda **pendiente de confirmar en un nuevo ciclo de
+   > entrenamiento** (host Ubuntu+Jazzy) y en el análisis de sensibilidad del
+   > Capítulo 8 — los pesos siguen `[provisional, M-P4]`. La policy evaluada arriba
+   > corresponde al reward anterior (post-cage, `w_ds = 0.10`).
 
 <img src="../figures/fig_7_3_gazebo_capture.png" alt="Figura 7.3 — Captura de la evaluación en Gazebo: la policy PPO conduciendo el óvalo bajo el cage." width="640"/>
 
@@ -480,11 +500,6 @@ de la tesis.
 
 <!--
 APÉNDICE INTERNO — TRABAJO PENDIENTE EN ESTE CAPÍTULO
-
-  -- Mejoras F3 abiertas (no bloqueantes para G3), de §7.5.2 / sesión:
-  [ ] Penalizar más el Δsteer crudo (la policy ofrece bang-bang que C-06 suaviza)
-  [ ] Robustez del set_pose timeout recurrente en reset()
-  [ ] (opc.) VecNormalize de observaciones; RTF para acelerar entrenamiento
 
 Fase 4–5:
   [ ] Evaluar sobre todos los escenarios SC-NOM, SC-EDGE, SC-PERT

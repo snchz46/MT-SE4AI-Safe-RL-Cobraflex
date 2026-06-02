@@ -31,6 +31,57 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [02.06.2026] — F3 reward v1.2: smoothness term on the raw policy Δsteer (penalise bang-bang)
+
+**Document(s) affected:**
+`src/cobraflex_rl/cobraflex_rl/rewards.py`,
+`src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py`,
+`src/cobraflex_rl/config/train_ppo.yaml`,
+`policy/tests/test_rewards.py`,
+`manuscript/chapters/chapter_07_training_specification.md` (§7.2.3, §7.2.5, §7.5.2),
+`docs/10_reward_function.md`, `docs/09_environment_design.md` (ED-10).
+**Phase:** F3.
+**Gate context:** after G2 — non-blocking refinement from the §7.5.2 backlog (not required for G3).
+**Author:** Samuel.
+
+### Change
+
+- The smoothness reward term `w_ds·|Δsteer|` now measures the **raw** policy
+  steering delta (pre-cage) instead of the post-cage applied delta. `GazeboLaneEnv`
+  tracks `prev_policy_steer` separately from `prev_steer` (the latter still feeds
+  the `prev_steer` observation as the applied steering).
+- `w_ds` raised **0.10 → 0.20** in `train_ppo.yaml` (`[provisional, M-P4]`).
+- Tests: `test_steer_delta_*` updated to the 0.20 weight; new
+  `test_raw_bang_bang_costs_more_than_smooth_ramp` pins that a raw sign-flip
+  (|Δ|=2.0) costs far more than a within-C-06 ramp (|Δ|=0.15). 11/11 pass.
+
+### Rationale
+
+The F3 definitive evaluation (§7.5.2) showed the policy emitting bang-bang raw
+steering (sign-flip 46% of steps, ±1 saturation 27%, mean |Δraw|≈0.54) that the
+rate-limiter **C-06** absorbed into a smooth post-cage signal. Because the old
+term was computed post-cage (per the reward-on-safe-action convention, D-34), the
+smoothed result was near-identical whether or not the policy oscillated, so the
+penalty never bit — the policy drove C-06 to its limit ~89% of steps for free.
+Measuring the raw delta (a deliberate, scoped exception to D-34, this term only)
+makes the policy pay for its own jerk; it does **not** penalise the cage's action.
+
+### Impact
+
+- The change is wired and unit-tested, but its effect on native RL smoothness
+  **requires a new training cycle** on the Ubuntu+Jazzy host — not verifiable on
+  the current dev host. The evaluated policy in §7.5 corresponds to the previous
+  reward (post-cage, `w_ds=0.10`) and is unchanged.
+- Weights remain `[provisional, M-P4]`; the Ch.8 sensitivity analysis confirms
+  them before freeze.
+
+### Verification
+
+`policy/tests/test_rewards.py`: 11/11 pass. `tools/check_traceability.py`: PASS
+(no ID changes; reward weights are not traceability nodes).
+
+---
+
 ## [02.06.2026] — F3 §7.4/§7.5 update: definitive 250k PPO cycle (saturated) + re-evaluation
 
 **Document(s) affected:**

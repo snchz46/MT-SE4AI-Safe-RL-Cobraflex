@@ -1,9 +1,9 @@
-// Figure 3 — Flow diagram of the tools/check_traceability.py validator.
-// Graphviz source (alternative to the Mermaid source check_traceability_flow.mmd).
+// Figure 3.2 — Flow diagram of the tools/check_traceability.py validator.
+// Graphviz source (alternative to the Mermaid source fig_3_2_check_traceability_flow.mmd).
 // Render to PNG:
-//   dot -Tpng check_traceability_flow.dot -o check_traceability_flow.png
+//   dot -Tpng fig_3_2_check_traceability_flow.dot -o fig_3_2_check_traceability_flow.png
 // Render to SVG:
-//   dot -Tsvg check_traceability_flow.dot -o check_traceability_flow.svg
+//   dot -Tsvg fig_3_2_check_traceability_flow.dot -o fig_3_2_check_traceability_flow.svg
 //
 // Five directions of traceability checking over the chain
 //   H <-> SR <-> C <-> SC  with the SR <-> M subgraph hanging from the SR hub.

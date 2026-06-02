@@ -1,8 +1,8 @@
-// Figure 4 — Project phases vs adapted V-Model levels.
+// Figure 3.4 — Project phases vs adapted V-Model levels.
 // Render to PNG:
-//   dot -Tpng project_phases.dot -o project_phases.png
+//   dot -Tpng fig_3_4_project_phases.dot -o fig_3_4_project_phases.png
 // Render to SVG:
-//   dot -Tsvg project_phases.dot -o project_phases.svg
+//   dot -Tsvg fig_3_4_project_phases.dot -o fig_3_4_project_phases.svg
 //
 // Horizontal axis: phases F0..F6 with their gates G0..G6 at close.
 // Vertical axis: adapted V-Model levels (left branch L1..L5,

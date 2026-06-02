@@ -23,8 +23,9 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 import matplotlib
 
@@ -36,9 +37,53 @@ import yaml  # noqa: E402
 REPO = Path(__file__).resolve().parents[1]
 CENTERLINE = REPO / "src" / "cobraflex_rl" / "config" / "oval_right_lane_centerline.yaml"
 
+# A saturating training run logs hundreds of learning-curve rows; an aborted
+# stub has a handful. Require more than this many *data* rows before a training
+# run is eligible for auto-selection (guards against picking a crashed run).
+MIN_TRAIN_ROWS = 20
 
-def _latest(glob_dir: Path, pattern: str) -> Optional[Path]:
+
+def _metadata_ok(run: Path) -> bool:
+    """True if ``run/metadata.json`` exists and, if it carries a ``status``
+    field, reports ``"completed"``. Runs with no metadata.json (e.g. a crashed
+    training run) are rejected; runs whose metadata predates the status field
+    (older ros_run logs) are accepted on metadata presence alone."""
+    meta = run / "metadata.json"
+    if not meta.is_file():
+        return False
+    try:
+        data = json.loads(meta.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return False
+    status = data.get("status")
+    return status is None or status == "completed"
+
+
+def _csv_row_count(path: Path) -> int:
+    """Number of data rows (excluding the header) in a CSV, or 0 if absent."""
+    if not path.is_file():
+        return 0
+    with path.open(newline="", encoding="utf-8") as h:
+        return max(0, sum(1 for _ in h) - 1)
+
+
+def _train_run_ok(run: Path) -> bool:
+    """A training run is usable only if it completed (metadata) *and* logged a
+    non-trivial learning curve — rejects the 5-row aborted-run footgun."""
+    return _metadata_ok(run) and _csv_row_count(run / "learning_curve.csv") >= MIN_TRAIN_ROWS
+
+
+def _latest(
+    glob_dir: Path, pattern: str, ok: Optional[Callable[[Path], bool]] = None
+) -> Optional[Path]:
+    """Newest directory (by mtime) matching ``pattern`` that satisfies ``ok``.
+
+    ``ok(path) -> bool`` filters out incomplete/aborted runs; the newest
+    *eligible* run is returned, not merely the newest on disk. Without ``ok``
+    the raw newest match is returned (legacy behaviour)."""
     hits = sorted(glob_dir.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
+    if ok is not None:
+        hits = [h for h in hits if ok(h)]
     return hits[0] if hits else None
 
 
@@ -176,9 +221,11 @@ def main() -> None:
     ap.add_argument("--laps", type=float, default=2.0, help="laps to draw in Fig 7.2")
     args = ap.parse_args()
 
-    train_run = args.train_run or _latest(REPO / "experiments" / "sim" / "training", "ppo_train_*")
-    rl_run = args.rl_run or _latest(REPO / "experiments" / "sim" / "runs", "rl_eval_*")
-    pd_run = args.pd_run or _latest(REPO / "experiments" / "sim" / "runs", "ros_run_*")
+    train_dir = REPO / "experiments" / "sim" / "training"
+    runs_dir = REPO / "experiments" / "sim" / "runs"
+    train_run = args.train_run or _latest(train_dir, "ppo_train_*", _train_run_ok)
+    rl_run = args.rl_run or _latest(runs_dir, "rl_eval_*", _metadata_ok)
+    pd_run = args.pd_run or _latest(runs_dir, "ros_run_*", _metadata_ok)
     args.out.mkdir(parents=True, exist_ok=True)
 
     print(f"train run: {train_run}\nRL eval  : {rl_run}\nPD run   : {pd_run}\nout      : {args.out}")

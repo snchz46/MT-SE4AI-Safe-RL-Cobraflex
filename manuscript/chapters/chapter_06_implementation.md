@@ -113,9 +113,9 @@ gradiente, intersecciones) cuya gestión se difiere a la scenario library
 de Fase 4. El óvalo permite vueltas repetidas con geometría conocida y
 métricas reproducibles.
 
-<img src="../figures/oval_gazebo_env.png" alt="Figura 6 — Vista superior del mundo Gazebo. Pista oval con marcas de carril, vehículo 1:14 en posición de inicio, sistema de referencia." width="500"/>
+<img src="../figures/fig_6_1_oval_gazebo_env.png" alt="Figura 6.1 — Vista superior del mundo Gazebo. Pista oval con marcas de carril, vehículo 1:14 en posición de inicio, sistema de referencia." width="500"/>
 
-*Figura 6 — Vista superior del mundo Gazebo. Pista oval con marcas de carril, vehículo 1:14 en posición de inicio, sistema de referencia.*
+*Figura 6.1 — Vista superior del mundo Gazebo. Pista oval con marcas de carril, vehículo 1:14 en posición de inicio, sistema de referencia.*
 
 ### 6.2.3 Modelado del vehículo 1:14
 

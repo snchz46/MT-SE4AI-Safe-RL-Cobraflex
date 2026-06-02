@@ -158,9 +158,9 @@ niveles jerárquicos, con correspondencia bidireccional entre especificación
 (rama izquierda descendente) y verificación/validación (rama derecha
 ascendente).
 
-<img src="../figures/adopted_classical_v_model.png" alt="Figura 4 — V-Model adoptado por ISO 26262 simplificado, instanciado sobre el caso lane-following." width="500"/>
+<img src="../figures/fig_3_1_adopted_classical_v_model.png" alt="Figura 3.1 — V-Model adoptado por ISO 26262 simplificado, instanciado sobre el caso lane-following." width="500"/>
 
-*Figura 4 — V-Model adoptado por ISO 26262 simplificado, instanciado sobre el caso lane-following.*
+*Figura 3.1 — V-Model adoptado por ISO 26262 simplificado, instanciado sobre el caso lane-following.*
 
 ### 3.3.1 Supuestos implícitos del V-Model clásico
 
@@ -383,7 +383,7 @@ si detecta huérfanos en cualquier dirección. La matriz de trazabilidad es
 un artefacto vivo, actualizado en cada fase del proyecto.
 
 ```mermaid
-%% Fuente canónica: manuscript/figures/check_traceability_flow.mmd
+%% Fuente canónica: manuscript/figures/fig_3_2_check_traceability_flow.mmd
 flowchart TB
     subgraph IN ["Living documents under docs/"]
         direction LR
@@ -430,7 +430,7 @@ flowchart TB
     class STRICT warn;
 ```
 
-**Figura 5 — Diagrama de flujo del validador `check_traceability.py`.**
+**Figura 3.2 — Diagrama de flujo del validador `check_traceability.py`.**
 La figura representa el flujo del script en cuatro capas: (a) carga de
 los cinco documentos vivos bajo `docs/` (`02_hazard_register.md`,
 `03_safety_requirements.md`, `04_cage_specification.md`,
@@ -512,9 +512,9 @@ Capítulo 10.
 
 ---
 
-<img src="../figures/adapted_v_model.png" alt="Ilustración 6 — V-Model adaptado a IA. Los elementos en gris son heredados del V clásico; los elementos en color son nuevos o modificados por las adaptaciones A1–A5." width="500"/>
+<img src="../figures/fig_3_3_adapted_v_model.png" alt="Figura 3.3 — V-Model adaptado a IA. Los elementos en gris son heredados del V clásico; los elementos en color son nuevos o modificados por las adaptaciones A1–A5." width="500"/>
 
-*Ilustración 6 — V-Model adaptado a IA. Los elementos en gris son heredados del V clásico; los elementos en color son nuevos o modificados por las adaptaciones A1–A5.*
+*Figura 3.3 — V-Model adaptado a IA. Los elementos en gris son heredados del V clásico; los elementos en color son nuevos o modificados por las adaptaciones A1–A5.*
 
 ---
 
@@ -630,9 +630,9 @@ el entrenamiento PPO en Gazebo y la Policy Behavioral Evaluation; la
 (rama derecha del V, niveles L2'–L1'); las fases finales consolidan
 evidencia, redactan capítulos y cierran la matriz de trazabilidad.
 
-<img src="../figures/project_phases.png" alt="Figura 7 — Fases del proyecto vs niveles del V-Model adaptado." width="500"/>
+<img src="../figures/fig_3_4_project_phases.png" alt="Figura 3.4 — Fases del proyecto vs niveles del V-Model adaptado." width="500"/>
 
-**Figura 7 — Fases del proyecto vs niveles del V-Model adaptado.**
+**Figura 3.4 — Fases del proyecto vs niveles del V-Model adaptado.**
 La figura presenta una matriz de doble entrada cuyo eje vertical
 enumera los niveles del V-Model adaptado —la rama izquierda
 descendente (L1 Stakeholder Requirements, L2 System Safety
@@ -905,9 +905,9 @@ sim-to-real—. Las especificaciones detalladas del coche (motor, ESC,
 controlador de bajo nivel, cámara, plataforma de cómputo embebido) se
 documentan en el Capítulo 5 y en el Anexo correspondiente.
 
-<img src="../figures/CAD Design V2.png" alt="Figura 8 — Fotografía del vehículo RC 1:14 instrumentado con la cámara, IMU." width="300"/>
+<img src="../figures/fig_3_5_vehicle_cad.png" alt="Figura 3.5 — Fotografía del vehículo RC 1:14 instrumentado con la cámara, IMU." width="300"/>
 
-*Figura 8 — fotografía/diagrama del vehículo RC 1:14 instrumentado con la cámara, IMU, encoder y SBC, con etiquetas sobre cada componente.*
+*Figura 3.5 — fotografía/diagrama del vehículo RC 1:14 instrumentado con la cámara, IMU, encoder y SBC, con etiquetas sobre cada componente.*
 
 ### 3.6.6 Instrumentación de medida
 
@@ -1234,9 +1234,9 @@ componente ISO 26262 del problema, y la columna de "modo de evidencia
 esperado" (test / análisis estadístico / runtime) cubre la componente
 SOTIF cuando aplica.
 
-<img src="../figures/normative_pyramid.png" alt="Figura 9 — Diagrama de la pirámide normativa." width="500"/>
+<img src="../figures/fig_3_6_normative_pyramid.png" alt="Figura 3.6 — Diagrama de la pirámide normativa." width="500"/>
 
-*Figura 9 — diagrama de la pirámide normativa: ISO26262 en la base como ciclo de vida, SOTIF como complemento para condiciones no anticipadas, TR 5469 como paraguas IA, PAS 8800 como especialización automotriz, UL 4600 como safety case envolvente, AMLAS como patrones argumentativos transversales. Sobre esa pirámide, las cinco adaptaciones A1–A5 marcadas con su ámbito de aplicación. Posición sugerida: cierre de §3.8 Pendiente para Fase 6.*
+*Figura 3.6 — diagrama de la pirámide normativa: ISO26262 en la base como ciclo de vida, SOTIF como complemento para condiciones no anticipadas, TR 5469 como paraguas IA, PAS 8800 como especialización automotriz, UL 4600 como safety case envolvente, AMLAS como patrones argumentativos transversales. Sobre esa pirámide, las cinco adaptaciones A1–A5 marcadas con su ámbito de aplicación. Posición sugerida: cierre de §3.8 Pendiente para Fase 6.*
 
 ---
 

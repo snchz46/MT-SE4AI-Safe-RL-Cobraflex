@@ -31,6 +31,81 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [02.06.2026] — F3 §7.4/§7.5 update: definitive 250k PPO cycle (saturated) + re-evaluation
+
+**Document(s) affected:**
+`manuscript/chapters/chapter_07_training_specification.md`
+(§7.1, §7.2.4, §7.2.6, §7.2.7, §7.4, §7.5, internal appendix),
+`manuscript/figures/fig_7_1_convergence.png` (+ `figures/auto/` copy),
+`manuscript/figures/fig_7_2_trajectory.png` (+ `figures/auto/` copy),
+`manuscript/figures/fig_7_2b_tracking_error.png` (+ `figures/auto/` copy),
+`policy/checkpoints/checkpoint_registry.csv` (250k row), `CLAUDE.md` (status snapshot).
+**Phase:** F3.
+**Gate context:** after G2 — supersedes the preliminary 50k cycle that did not saturate.
+**Author:** Samuel.
+
+### Change
+
+- **Definitive training cycle `ppo_train_20260601T184341Z`** (seed 123,
+  250 000 timesteps, ~7.8 h real, fps≈9, 245 iterations of 1 024). §7.4 rewritten
+  around it; it **supersedes** the preliminary 50k cycle (`ppo_train_20260601T150552Z`,
+  seed 42), which was competent but **not saturated**.
+- **Convergence (§7.4.1):** `ep_rew_mean` 32.4 → plateau **534.7** (max 535.6);
+  `ep_len_mean` 48.4 → **500.0** (the full truncation horizon, ≈1.14 laps/episode).
+  `ep_len_mean` reaches 500 by ~62k timesteps and `ep_rew_mean` hits 99% of final
+  by ~72k — a stable plateau thereafter (with a minor reward dip ~120k–150k to ~490
+  that does not affect episode length). The 50k-cycle "no plateau" limitation is
+  **resolved**.
+- **Stability (§7.4.2):** `explained_variance` sustained >0.4 from ~150k, mean **0.78**
+  over the last 20 iterations (range 0.63–0.88) — the convergence criterion now holds.
+- **Re-evaluation `rl_eval_20260602T070417Z`** (policy `cobraflex_ppo_lane` from the
+  250k cycle, SC-NOM-01, 1 deterministic episode of 4 400 steps ≈ 11.0 continuous
+  laps). §7.5.1/§7.5.2 refreshed.
+- **Hyperparameters §7.2.6:** `total_timesteps` 50 000 → **250 000**; §7.2.7 seed
+  note (definitive seed 123, preliminary seed 42); §7.2.4 horizon note (500-step
+  horizon now saturates).
+- **Figures regenerated** from the 250k cycle + new eval via
+  `python tools/plot_f3_figures.py --train-run … --rl-run … --pd-run …`
+  (explicit `--train-run` is **required**: `plot_f3_figures.py` auto-picks the
+  latest run by mtime, which is a stray 5-row aborted run `ppo_train_20260602T070504Z`;
+  the previously committed `fig_7_1_convergence.png` had been generated from it and
+  showed a 4k-timestep stub — now fixed). The tracked `manuscript/figures/` copies
+  (the ones the chapter `<img>` references) were overwritten with the corrected
+  renders.
+- **`checkpoint_registry.csv`** carries the 250k row (seed 123, commit a15412c).
+- **Fig 7.3 / videos:** the Gazebo capture and `manuscript/media/*.mp4` remain from
+  the preliminary eval (`rl_eval_20260601T172201Z`); caption clarified as a
+  representative, visually-equivalent capture (no new screenshot on this host).
+
+### Rationale
+
+The 50k cycle (§7.4.2, prior entry) ended without saturation — `ep_rew_mean` was
+still rising at budget exhaustion — flagged as a documented limitation [M-P6/M-P7].
+A 250k cycle was run to confirm convergence; it saturates with wide margin, so the
+Training Spec now reports a converged policy.
+
+### Impact
+
+- **Result:** PPO still matches the PD on safety (**0 C-05 emergencies over 11.0
+  laps**) and beats it on tracking (mean |ey| 23 mm → **8.7 mm**, max 25 mm; mean
+  |epsi| 4.4° → **2.1°**). Cage intervention 0.047% (PD) → **89.0%** (PPO) —
+  **entirely C-06**: raw steering is bang-bang (sign-flips 46.4% of steps, ±1
+  saturation 27.2%, mean |raw| 0.53, mean |Δraw| 0.54), smoothed by the rate
+  limiter (mean |safe| 0.28, max 0.80; ~89% of steps exactly at the 0.15/cycle
+  limit). No C-01..C-05 fire.
+- Lap count 11.04 (440 s) vs PD 9.91 (845 s): durations differ, so the raw count
+  is not 1:1; the comparable claim is both ran fault-free.
+- No hazard / SR / cage-rule / `cage.yaml` / scenario / metric IDs added or changed.
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED. 0 warning(s).**
+Chapter §7.4/§7.5 quantitative claims reproduce from
+`experiments/sim/training/ppo_train_20260601T184341Z/learning_curve.csv` and
+`experiments/sim/runs/rl_eval_20260602T070417Z/cage_status.csv`.
+
+---
+
 ## [01.06.2026] — F3 doc reconciliation: `max_episode_steps` 400→500 propagation + status sync
 
 **Document(s) affected:**

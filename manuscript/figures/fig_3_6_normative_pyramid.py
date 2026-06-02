@@ -9,10 +9,10 @@ the AMLAS transversal-patterns sidebar, and the five framework
 adaptations A1..A5 marked on the layer where each applies.
 
 Run:
-    python normative_pyramid.py
+    python fig_3_6_normative_pyramid.py
 
 Produces:
-    normative_pyramid.png in the same directory.
+    fig_3_6_normative_pyramid.png in the same directory.
 """
 
 from pathlib import Path
@@ -23,7 +23,7 @@ from matplotlib.patches import Circle, FancyBboxPatch, Polygon
 
 
 HERE = Path(__file__).resolve().parent
-OUT_PNG = HERE / "normative_pyramid.png"
+OUT_PNG = HERE / "fig_3_6_normative_pyramid.png"
 
 
 def main() -> None:

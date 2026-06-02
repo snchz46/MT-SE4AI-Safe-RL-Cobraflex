@@ -25,16 +25,18 @@ script reports orphans on either side.
 ## Phase status (snapshot)
 
 - **Current phase:** F3 — PPO training. Gate G2 passed 2026-05-23.
-  First training cycle + evaluation complete (2026-06-01); F3 docs
-  reconciled, pending the closing commit / F4 entry. The 50k first cycle
-  did **not** saturate; a longer training run is planned to supersede it.
+  Definitive 250k training cycle + re-evaluation complete (2026-06-02);
+  it **saturates** (`ep_len_mean`→500, plateau by ~72k) and supersedes the
+  preliminary 50k cycle. F3 docs reconciled, pending the closing commit / F4 entry.
 - **F2 evidence:** `ros_run_20260523T153003Z` — 9.91 laps, 845 s,
   0 emergencies, cage v0.5.1, PD v0.8.0.
-- **F3 evidence:** training `ppo_train_20260601T150552Z` (seed 42, 50k
-  timesteps; `ep_rew_mean` 29→428, `explained_variance`→0.73, not saturated)
-  and eval `rl_eval_20260601T172201Z` (SC-NOM-01, 11.5 laps, 0 emergencies,
-  mean |ey| 9.2 mm vs PD 23 mm; 85.9% cage rate-limiting, all C-06). TS-01
-  cage wiring done (D-34, in-process); Training Spec (Ch.7 §7.2–§7.5) complete.
+- **F3 evidence:** definitive training `ppo_train_20260601T184341Z` (seed 123,
+  250k timesteps; `ep_rew_mean` 32→534.7, `ep_len_mean`→500 saturated,
+  `explained_variance`→0.78; supersedes the preliminary 50k cycle that did not
+  saturate) and eval `rl_eval_20260602T070417Z` (SC-NOM-01, 11.0 laps,
+  0 emergencies, mean |ey| 8.7 mm vs PD 23 mm; 89.0% cage rate-limiting, all
+  C-06). TS-01 cage wiring done (D-34, in-process); Training Spec (Ch.7
+  §7.2–§7.5) complete.
 - **Authoritative status sources:** [docs/CHANGELOG.md](docs/CHANGELOG.md)
   and `git log --oneline` (commits prefixed `F3:` are current-phase work).
 

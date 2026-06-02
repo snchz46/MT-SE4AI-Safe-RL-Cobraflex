@@ -984,7 +984,7 @@ El flujo de control del validador —carga de los cinco documentos vivos,
 extracción de identificadores por expresiones regulares, cadena de
 comprobaciones sobre el grafo `H ↔ SR ↔ C ↔ SC` con el subgrafo
 `SR ↔ M`, y agregación con los tres códigos de salida (0/1/2)— es el
-mismo que documenta la **Figura 5 del Capítulo 3** y no se reproduce
+mismo que documenta la **Figura 3.2 del Capítulo 3** y no se reproduce
 aquí para no duplicar el diseño. Lo específico de este capítulo es qué aporta cada regla a ese
 grafo: cada `C-XX` añade una fila a la matriz y participa como nodo C en
 las comprobaciones (3) SR → C y (4) C → SR.
@@ -1040,9 +1040,9 @@ Fase 2 (D21–D35):
   [x] Figura 5.1 (diagrama ROS2) producida con mermaid (camino de
        control + señales auxiliares; topología real /odom..cmd_vel)
   [x] Figura 5.2 (flujo del check_traceability): NO se duplica —
-       §5.8.2 referencia la Figura 5 del Capítulo 3, que es la versión
+       §5.8.2 referencia la Figura 3.2 del Capítulo 3, que es la versión
        canónica del mismo diagrama (mermaid embebido desde
-       manuscript/figures/check_traceability_flow.mmd). Un único diseño.
+       manuscript/figures/fig_3_2_check_traceability_flow.mmd). Un único diseño.
   [x] Listing 5.1 (esqueleto de cage.yaml v0.5.1) extraído del archivo
   [x] Síntesis §5.9 escrita al cierre de D35
 

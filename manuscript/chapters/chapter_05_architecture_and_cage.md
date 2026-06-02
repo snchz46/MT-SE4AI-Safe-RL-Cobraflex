@@ -1034,18 +1034,6 @@ L5 más L4a' más L3') estará operativo y se habrá pasado el Gate 2.
 <!--
 APÉNDICE INTERNO — TRABAJO PENDIENTE EN ESTE CAPÍTULO
 
-Fase 2 (D21–D35):
-  [x] Tabla 5.1 (mapeo SR→C) con datos definitivos del Capítulo 4
-       (SR-001..SR-011; incluye vías training/arbiter de D-25)
-  [x] Figura 5.1 (diagrama ROS2) producida con mermaid (camino de
-       control + señales auxiliares; topología real /odom..cmd_vel)
-  [x] Figura 5.2 (flujo del check_traceability): NO se duplica —
-       §5.8.2 referencia la Figura 3.2 del Capítulo 3, que es la versión
-       canónica del mismo diagrama (mermaid embebido desde
-       manuscript/figures/fig_3_2_check_traceability_flow.mmd). Un único diseño.
-  [x] Listing 5.1 (esqueleto de cage.yaml v0.5.1) extraído del archivo
-  [x] Síntesis §5.9 escrita al cierre de D35
-
 Fase 4–5 (operacionalización):
   [ ] Confirmar valores definitivos de parámetros C-01..C-06 tras
        experimentos con baseline PD y, posteriormente, con RL

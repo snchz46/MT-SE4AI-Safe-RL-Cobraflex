@@ -481,24 +481,6 @@ de la tesis.
 <!--
 APÉNDICE INTERNO — TRABAJO PENDIENTE EN ESTE CAPÍTULO
 
-Fase 3 (D36+):
-  [x] Esqueleto de secciones 7.1–7.6 fijado en D36
-  [x] Training Specification §7.2 completa (8 componentes)
-  [x] Completar §7.4 con datos del entrenamiento definitivo (run
-       ppo_train_20260601T184341Z, seed 123, 250k: satura, ep_len_mean→500,
-       ev→0.78; supersede al ciclo preliminar de 50k que no saturaba)
-  [x] Completar §7.5 con evaluación del RL sobre SC-NOM-01
-       (rl_eval_20260602T070417Z, 11.0 vueltas, RL vs PD)
-  [x] Añadir Figura 7.1: curva de convergencia ep_rew_mean vs timesteps
-       (tools/plot_f3_figures.py → figures/auto/)
-  [x] Añadir Figura 7.2: trayectoria RL sobre el óvalo + 7.2b error lateral
-       RL vs PD + 7.3 captura Gazebo
-  [x] Tarea TS-01: cablear GazeboLaneEnv → cage in-process (misma
-       SafetyCageNode/cage.yaml que cage_ros_node; D-34 enforcement)
-  [x] Añadir perturbación aleatoria de spawn en GazeboLaneEnv.reset() (§7.3)
-  [x] Registrar training runs en experiments/sim/training/ (§7.2.8)
-  [x] Decidir si aumentar total_timesteps si no converge en 50k → extendido a
-       250k (seed 123): satura hacia ~72k, limitación del ciclo de 50k resuelta
   -- Mejoras F3 abiertas (no bloqueantes para G3), de §7.5.2 / sesión:
   [ ] Penalizar más el Δsteer crudo (la policy ofrece bang-bang que C-06 suaviza)
   [ ] Robustez del set_pose timeout recurrente en reset()

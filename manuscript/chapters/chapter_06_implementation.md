@@ -411,9 +411,20 @@ Primera, **validar el pipeline end-to-end**. Si el PD circula por la
 pista con el pipeline activo (Perception → PD → Cage → Vehicle Control
 → Gazebo), el pipeline está estructuralmente correcto. Cualquier
 problema observado al sustituir el PD por un RL entrenado en la
-Fase 7 será atribuible al RL, no al pipeline. Esta es la función
-central en la Fase 2 y es la que justifica que el PD se desarrolle
-antes que el RL.
+Fase 3 (Capítulo 7) será atribuible al RL, no al pipeline. Esta es la
+función central en la Fase 2 y es la que justifica que el PD se
+desarrolle antes que el RL.
+
+Esta predicción se confirma en el Capítulo 7: la policy PPO sustituye
+al PD como fuente de la acción sobre el mismo contrato de cage
+(`step(state, raw_action) → safe_action`), con la cage invocada **en
+proceso** —misma `SafetyCageNode` y mismo `cage.yaml`, replicando el
+mapeo de `vehicle_control_node`— y completa el escenario nominal
+SC-NOM-01 sin emergencias (§7.2.5 y §7.5; D-34). El único problema que
+apareció al pasar de PD a RL fue de la *policy* (aprendizaje bloqueado
+en la curva hasta exponerle el preview de curvatura, §7.2.1), no del
+pipeline ni de la cage —exactamente el tipo de atribución que esta
+función validadora anticipa.
 
 Segunda, **proveer un baseline de referencia clásica** para los
 experimentos comparativos del Capítulo 8. Cuando se evalúa la performance
@@ -557,6 +568,23 @@ serialización del logger + comprobación de versión SR-spec); con
 los 3 tests del baseline PD el repositorio reúne 144 casos.
 Todos pasan con código de retorno cero de pytest
 (`pytest cage/tests policy/tests` → 144 passed, fechado 2026-05-23).
+
+**El patrón por regla es agnóstico a la fuente de la acción.** Los
+tests unitarios construyen pares `(State, raw_action)` sintéticos e
+invocan `evaluate`/`step` directamente; no presuponen que la acción
+raw provenga del PD. El patrón se mantiene, por tanto, sin cambios
+cuando la policy RL sustituye al PD: lo único que cambia es el productor
+de `raw_action`, no el contrato de la cage ni las aserciones por regla
+(compliance / violación marginal / violación severa). La verificación
+de F3 lo confirma: el test `test_lane_violation_triggers_c01_correction`
+en `policy/tests/test_cage_bridge.py` alimenta una violación de borde de
+carril a través del bridge RL en proceso —misma
+`SafetyCageNode` y mismo `cage.yaml`— y comprueba que C-01 dispara con
+la corrección hacia el centro, reutilizando exactamente el mismo patrón
+de aserción de esta sección. La superficie de test que sí es específica
+de la policy se limita a la capa de *glue* (mapeo throttle→velocidad,
+ensamblado de `State`, acción segura→`/cmd_vel`), cubierta por esa
+misma suite.
 
 ### 6.5.3 Tests de propiedades transversales
 
@@ -779,49 +807,6 @@ acotada.
 
 <!--
 APÉNDICE INTERNO — TRABAJO PENDIENTE EN ESTE CAPÍTULO
-
-Fase 2 (D26–D35):
-  [x] Estructura de secciones 6.1–6.7 fijada en D26
-  [x] Borrador de §6.2 (Gazebo) en D25 al cerrar la implementación
-  [x] Borrador de §6.3.1 (patrón común) en D26
-  [x] Borrador de §6.3.2 (Perception) en D26
-  [x] Borrador de §6.3.3 (Vehicle Control) en D27
-  [x] Borrador de §6.3.4 (Cage) en D28-D29
-  [x] Borrador de §6.3.5 (Logger) en D30
-  [x] Borrador de §6.4 (PD) en D32
-  [x] Borrador de §6.5 (testing) en D33
-  [x] Borrador de §6.6 (validación end-to-end) en D34 con placeholders
-  [x] Síntesis §6.7 escrita en D35
-
-Pendientes obligatorios para cierre de Gate 2 (D35):
-  [x] Rellenar todos los [COMPLETAR FASE 2] con cifras reales
-       (run definitivo pre-F3 ros_run_20260523T153003Z, 2026-05-23):
-       - [x] throughput del logger en §6.3.5 y §6.5.4
-       - [x] número exacto de tests unitarios en §6.5.2 (61 per-rule,
-              132 cage total, 144 con PD — actualizado tras añadir
-              test_pipeline_handles_missing_state_until_first_obs y
-              test para speed spike rejection)
-       - [x] resultados del test de demostración en §6.6.1
-              (9.91 vueltas, 0 emergencias, 8 intervenciones)
-       - [x] latencia, tasa de intervención, completion rate en §6.6.2
-              (50.0/50.0/62.0 ms; 0.047%; 100% con N=1)
-       - [x] ganancias finales del PD en §6.4.2 (v0.8.0)
-  [x] Generar Figura 6.1 (vista superior del mundo Gazebo)
-  [x] Generar Listing 6.1 (esqueleto de apply_c01) — extraído de
-       cage/rules/c01_lane_boundary.py
-  [x] Campaña de runs múltiples (N≥30 vueltas) para consolidar
-       completion rate frente al umbral del 80% de la Decisión 6;
-       sustituye al N=1 provisional anotado en §6.6.2
-  [ ] Verificar coherencia con Capítulo 5 (todos los IDs, parámetros
-       y nombres de topics deben coincidir bit-a-bit)
-  [x] Ejecutar `check_traceability.py` y verificar que todas las
-       reglas tienen tests asociados (columna que se añadió en D33)
-
-Fase 3 (D36+):
-  [ ] Añadir nota cruzada al Capítulo 7 cuando esté escrito sobre
-       la integración del RL en el pipeline
-  [ ] Verificar si el patrón de testing por reglas se mantiene
-       cuando la policy RL sustituya al PD
 
 Fase 4–5 (operacionalización):
   [ ] Añadir resultados de tests con escenarios realistas en §6.5

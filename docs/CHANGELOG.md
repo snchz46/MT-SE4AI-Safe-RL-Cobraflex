@@ -31,6 +31,67 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [03.06.2026] — F4 entry: Gate G3 passed, F3 closed; scenario library completed (SC-EDGE-05, SC-PERT-03)
+
+**Document(s) affected:**
+`scenarios/edge/sc_edge_05.yaml` (new), `scenarios/perturbed/sc_pert_03.yaml` (new),
+`CLAUDE.md` (phase snapshot → F4).
+**Phase:** F4 (entry).
+**Gate context:** **Gate G3 passed 2026-06-03**, closing F3 (PPO training). This is the
+F3→F4 transition the prior 03.06 entry left pending ("the closing commit / F4 entry").
+**Author:** Samuel.
+
+### Change
+
+- **Gate G3 / F3 close-out.** F3 (PPO training) is closed. Closing evidence: the
+  definitive reward-v1.2 cycle `ppo_train_42_200k` (seed 42/200k, saturated) and its
+  re-evaluation `rl_eval_42_200k_4k4` (SC-NOM-01, 11.2 laps, 0 emergencies, 0% cage
+  intervention); the Training Spec (Ch.7 §7.2–§7.5) is complete; the mechanical gate
+  `tools/check_traceability.py` passes with 0 warnings. Phase enters **F4 — Sim eval**
+  (scenario-based validation campaign; closes at G4).
+- **Scenario library completed to 11/11 documented.** The two documented scenarios
+  that had no YAML file are now full, schema-valid executable YAMLs translated from
+  `docs/05_scenario_library.md`:
+  - `SC-EDGE-05` (cage-rule co-activation matrix, SR-010): parameterised
+    `(d, θ, v, dκ/dt)` grid with the five documented pair/triple co-activation anchors;
+    primary metrics M-S2/M-I2/M-I3; ≥100 runs per mode (5 reps × ≥20 grid points);
+    per-run verdict = no joint-envelope assertion failure, M-S2 = 0, no inter-cycle
+    oscillation; ≥95% of grid points pass.
+  - `SC-PERT-03` (reward-injection stall test, **negative** test for SR-009): two-arm
+    (released vs ~50k-step stall-fine-tuned) design; primary metrics M-P6/M-P2; 40 runs
+    per mode (20+20), 80 total; verdict = stall variant M-P6 > 0.50 while released
+    M-P6 = 0 and M-P2 = 1; ≥90% of runs pass.
+
+### Rationale
+
+"Initiating F4" requires (a) formally closing F3 at G3 and (b) bringing the scenario
+library — the L2′ artefact F4 executes — to full documented coverage. SC-EDGE-05 and
+SC-PERT-03 were the only two documented scenarios with no YAML at all (the other seven
+non-F2 scenarios remain explicit stubs, full YAMLs deferred); they are written first
+because they carry the most design content and verify the two SRs (SR-010 joint-envelope,
+SR-009 stall) least served by off-the-shelf tooling.
+
+### Impact
+
+- **F4 scope now open.** Remaining F4 entry work (not in this change): the ODD-2 adverse
+  scenario profiles (TBD-Q4–Q7, Q12 — `docs/DECISIONS.md`), the multi-run campaign runner
+  + per-SR verdict aggregation (run-count convention D-39, veto rule D-40), the QED-metric
+  decision (D-17/D-21/D-22), and filling the sim verdicts in `docs/07_traceability_matrix.md`.
+  The seven sibling scenario stubs (NOM-02/03, EDGE-02/03/04, PERT-01/02) are promoted to
+  full YAMLs as the campaign reaches them.
+- No hazard / SR / cage-rule / `cage.yaml` / metric IDs added or changed. No scenario IDs
+  added — SC-EDGE-05 and SC-PERT-03 were already in the traceability matrix; only their
+  YAML *implementations* are new.
+
+### Verification
+
+`python tools/check_scenario_yaml.py` → **PASSED, 0 errors, 7 warning(s)** (the two
+"documented but has no YAML file yet" warnings for SC-EDGE-05/SC-PERT-03 are cleared; the
+7 remaining are the deferred sibling stubs).
+`python tools/check_traceability.py` → **All checks PASSED. 0 warning(s).**
+
+---
+
 ## [03.06.2026] — F3 definitive cycle: seed-42/200k under reward v1.2 (native smoothness, 0 cage interventions)
 
 **Document(s) affected:**

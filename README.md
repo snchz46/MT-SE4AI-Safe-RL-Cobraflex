@@ -67,7 +67,7 @@ A standard RL agent learns a policy by interacting with its environment. We keep
 <br><sub><b>Standard RL loop.</b> The agent observes a state, acts, and receives a reward from the environment.</sub>
 </td>
 <td width="50%" valign="top">
-<img src="manuscript/figures/fig_2_2_safety_cage_idea.png" alt="The same RL loop wrapped in a runtime safety cage" width="100%">
+<img src="manuscript/figures/fig_2_2_safety_cage_idea.png" alt="The same RL loop wrapped in a runtime safety cage" width="65%">
 <br><sub><b>…wrapped in a cage.</b> The raw action is filtered to a <i>safe action</i> before it reaches the environment.</sub>
 </td>
 </tr>
@@ -96,12 +96,12 @@ The definitive F3 training cycle (`ppo_train_42_200k` — seed 42, 200 k steps, 
 <table>
 <tr>
 <td width="50%"><img src="manuscript/figures/fig_7_1_convergence.png" alt="PPO convergence — reward and episode length vs timesteps" width="100%"></td>
-<td width="50%"><img src="manuscript/figures/fig_7_2_trajectory.png" alt="PPO trajectory tracking the lane centreline on the oval" width="100%"></td>
+<td width="45%"><img src="manuscript/figures/fig_7_2_trajectory.png" alt="PPO trajectory tracking the lane centreline on the oval" width="100%"></td>
 </tr>
 </table>
 
 <p align="center">
-  <img src="manuscript/figures/fig_7_2b_tracking_error.png" alt="Lateral tracking error — RL stays roughly 3.5x tighter than the PD baseline" width="780">
+  <img src="manuscript/figures/fig_7_2b_tracking_error.png" alt="Lateral tracking error — RL stays roughly 3.5x tighter than the PD baseline" width="500">
 </p>
 
 **Training** — `ep_rew_mean` climbs 24.8 → **535.2**, `ep_len_mean` reaches the **500-step** cap (saturated by ~71 k steps), and `explained_variance` settles at **0.63** (above the 0.5 threshold).
@@ -119,7 +119,7 @@ The definitive F3 training cycle (`ppo_train_42_200k` — seed 42, 200 k steps, 
 The project follows a V-model **adapted for an AI component**: the classical left/right arms are kept, but the implementation tier is split into a **cage side** (specified, then unit-tested) and a **learned side** (a training specification, then behavioural evaluation), with a **runtime-monitoring** layer running underneath all of it. Compulsory traceability links each left-arm artefact to its right-arm counterpart.
 
 <p align="center">
-  <img src="manuscript/figures/fig_3_3_adapted_v_model.png" alt="Adapted V-model: cage and training specification on the left arm, cage unit tests and policy behavioural evaluation on the right, with runtime monitoring underneath" width="820">
+  <img src="manuscript/figures/fig_3_3_adapted_v_model.png" alt="Adapted V-model: cage and training specification on the left arm, cage unit tests and policy behavioural evaluation on the right, with runtime monitoring underneath" width="500">
 </p>
 
 The work advances through gated phases. Each Gate is blocked until traceability passes with no orphans.
@@ -152,7 +152,7 @@ The work advances through gated phases. Each Gate is blocked until traceability 
 </table>
 
 <p align="center">
-  <img src="manuscript/figures/fig_6_1_oval_gazebo_env.png" alt="Oval lane-following circuit in Gazebo" width="560">
+  <img src="manuscript/figures/fig_6_1_oval_gazebo_env.png" alt="Oval lane-following circuit in Gazebo" width="500">
   <br><sub>The oval lane-following circuit used for training and evaluation in Gazebo.</sub>
 </p>
 

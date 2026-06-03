@@ -24,21 +24,17 @@ script reports orphans on either side.
 
 ## Phase status (snapshot)
 
-- **Current phase:** F3 — PPO training. Gate G2 passed 2026-05-23.
-  Definitive reward-v1.2 cycle (seed 42, 200k) + re-evaluation complete (2026-06-03);
-  it **saturates** (`ep_len_mean`→500, plateau by ~71k) and supersedes the
-  reward-v1.0 250k/seed-123 cycle. F3 docs reconciled, pending the closing commit / F4 entry.
+- **Current phase:** F4 — Sim eval (scenario validation campaign; closes at G4).
+  **Gate G3 passed 2026-06-03**, closing F3 (PPO training). F4 entry: scenario library
+  completed to 11/11 documented (`SC-EDGE-05`, `SC-PERT-03` full YAMLs); next steps (ODD-2
+  adverse profiles, campaign runner + per-SR verdicts, QED decision, sim verdicts) per CHANGELOG 03.06 "F4 entry".
 - **F2 evidence:** `ros_run_20260523T153003Z` — 9.91 laps, 845 s,
   0 emergencies, cage v0.5.1, PD v0.8.0.
-- **F3 evidence:** definitive training `ppo_train_42_200k` (seed 42,
-  200k timesteps, reward v1.2; `ep_rew_mean` 24.8→535.2, `ep_len_mean`→500 saturated,
-  `explained_variance`→0.63; supersedes the reward-v1.0 250k/seed-123 cycle) and
-  eval `rl_eval_42_200k_4k4` (SC-NOM-01, 11.2 laps, 0 emergencies, mean |ey| 6.5 mm
-  vs PD 23 mm; **0% cage intervention** — under v1.2 the policy steers smoothly
-  natively, raw≡safe at every step). TS-01 cage wiring done (D-34, in-process);
-  Training Spec (Ch.7 §7.2–§7.5) complete.
+- **F3 evidence (closed):** training `ppo_train_42_200k` (seed 42, 200k, reward v1.2;
+  `ep_rew_mean`→535.2, `ep_len_mean`→500, `explained_variance`→0.63) + eval `rl_eval_42_200k_4k4`
+  (SC-NOM-01, 11.2 laps, 0 emergencies, |ey| 6.5 mm vs PD 23 mm, 0% cage). Training Spec Ch.7 §7.2–§7.5 complete.
 - **Authoritative status sources:** [docs/CHANGELOG.md](docs/CHANGELOG.md)
-  and `git log --oneline` (commits prefixed `F3:` are current-phase work).
+  and `git log --oneline` (commits prefixed `F4:` are current-phase work).
 
 ## Repo map
 

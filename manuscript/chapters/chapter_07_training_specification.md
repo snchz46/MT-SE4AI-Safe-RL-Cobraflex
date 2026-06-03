@@ -177,9 +177,9 @@ Con `max_episode_steps = 500` y `control_dt = 0.10 s`, el episodio dura
 50 s (≈ 1.14 vueltas al óvalo). Episodios más largos aceleran la
 convergencia porque el agente ve más variedad de estados por episodio.
 El valor de 500 pasos es `[provisional, M-P6]`; el horizonte resultó
-adecuado: en el ciclo de 250 000 timesteps la policy aprende a recorrer
-el episodio completo sin terminar (`ep_len_mean` satura en los 500 pasos,
-§7.4.1), de modo que toda la experiencia tardía es por truncación.
+adecuado: en el ciclo definitivo de 200 000 timesteps la policy aprende a
+recorrer el episodio completo sin terminar (`ep_len_mean` satura en los 500
+pasos, §7.4.1), de modo que toda la experiencia tardía es por truncación.
 
 ### 7.2.5 Cage durante el entrenamiento
 
@@ -194,13 +194,17 @@ resultante se mapea a `/cmd_vel` replicando `vehicle_control_node`
 controlada). La recompensa se calcula sobre la acción segura y el estado
 resultante, no sobre la acción raw, **con una excepción deliberada: el
 término de suavidad `w_ds·|Δsteering|`** (reward v1.2). Ese término existe
-para moldear la actuación de la *propia política*, y C-06 absorbe el
-bang-bang crudo en una señal post-cage casi idéntica se sature o no la
-política — medir el Δ post-cage lo deja sin efecto (la evaluación §7.5.2
-mostró a la policy llevando C-06 a su tope el ~89% de los pasos sin pagar
-por ello). Por eso el término se computa sobre el `Δsteering` **crudo**
-(pre-cage) y se sube de peso (`w_ds = 0.10 → 0.20`): así la política paga
-su propio jerk en lugar de delegarlo gratis en C-06. El resto de términos
+para moldear la actuación de la *propia política*. Bajo el reward anterior
+(v1.0, con el Δ medido **post-cage**) C-06 absorbía el bang-bang crudo en
+una señal post-cage casi idéntica se saturara o no la política, de modo que
+medir el Δ post-cage dejaba el término sin efecto: un ciclo previo mostró a
+la policy llevando C-06 a su tope el ~89% de los pasos sin pagar por ello.
+Por eso el término se computa sobre el `Δsteering` **crudo** (pre-cage) y se
+sube de peso (`w_ds = 0.10 → 0.20`): así la política paga su propio jerk en
+lugar de delegarlo gratis en C-06. **La evaluación del ciclo definitivo
+(§7.5.2) confirma el efecto:** bajo reward v1.2 la policy aprende a girar de
+forma nativa suave (|Δraw| medio 0.027, muy por debajo del límite 0.15 de
+C-06) y la cage deja de intervenir (0 % de los pasos). El resto de términos
 (ey, epsi, progreso, terminación) sigue sobre el estado resultante / la
 acción segura, y las intervenciones de la cage no se penalizan (D-34).
 
@@ -229,29 +233,30 @@ con ajuste del horizonte `n_steps` al periodo del episodio:
 
 | Parámetro | Valor | Fuente |
 | --- | --- | --- |
-| `total_timesteps` | 250 000 | `[provisional, M-P7]` |
+| `total_timesteps` | 200 000 | `[provisional, M-P7]` |
 | `learning_rate` | 3×10⁻⁴ | SB3 default |
 | `gamma` | 0.99 | SB3 default |
 | `n_steps` | 1 024 | ≈ 2 episodios de 500 pasos |
 | `batch_size` | 64 | SB3 default |
 | `device` | cpu | Dev machine sin GPU |
 
-El presupuesto de timesteps `[provisional, M-P7]` se fijó en dos etapas.
-Un primer ciclo de 50 000 timesteps (seed 42) produjo una policy
-competente pero **no saturada** —la recompensa seguía creciendo al agotar
-el presupuesto—, lo que motivó extenderlo. El ciclo definitivo de
-**250 000 timesteps** (seed 123, §7.4) sí satura, con margen holgado: la
-literatura de lane-following simple con PPO sitúa la convergencia entre
-20 000 y 100 000 timesteps según la complejidad del entorno, y aquí la
-curva hace plateau hacia ~72 000 (§7.4.1).
+El presupuesto de timesteps `[provisional, M-P7]` se fijó iterativamente.
+Un primer ciclo de 50 000 timesteps produjo una policy competente pero
+**no saturada** —la recompensa seguía creciendo al agotar el presupuesto—,
+lo que motivó extenderlo. El ciclo definitivo de **200 000 timesteps**
+(seed 42, reward v1.2, §7.4) satura con margen holgado: la literatura de
+lane-following simple con PPO sitúa la convergencia entre 20 000 y 100 000
+timesteps según la complejidad del entorno, y aquí `ep_len_mean` alcanza el
+horizonte completo de 500 pasos hacia ~71 000 timesteps, con la recompensa
+estabilizada en el último tercio del presupuesto (§7.4.1).
 
 ### 7.2.7 Semillas y reproducibilidad
 
-El ciclo de entrenamiento definitivo usa `seed = 123` (el ciclo
-preliminar de 50 000 timesteps usó `seed = 42`). Los resultados reportados
-en §7.4 y §7.5 corresponden a esta semilla única. La evaluación
-estadística multi-semilla (N ≥ 5) se difiere al Capítulo 8 cuando se
-compare la policy RL contra el PD baseline.
+El ciclo de entrenamiento definitivo usa `seed = 42` y 200 000 timesteps
+bajo el reward v1.2 (§7.2.3, §7.2.5). Los resultados reportados en §7.4 y
+§7.5 corresponden a esta semilla única. La evaluación estadística
+multi-semilla (N ≥ 5) se difiere al Capítulo 8 cuando se compare la policy
+RL contra el PD baseline.
 
 ### 7.2.8 Checkpoints y registro
 
@@ -297,94 +302,102 @@ perturbados de Fase 4. Los rangos son `[provisional, M-P5]`.
 
 ## 7.4 Resultados del entrenamiento
 
-Ciclo de entrenamiento PPO definitivo: run `ppo_train_20260601T184341Z`
-(seed 123, 250 000 timesteps, ~7.8 h a tiempo real, fps≈9). Datos crudos:
-`experiments/sim/training/ppo_train_20260601T184341Z/learning_curve.csv`
-(245 iteraciones de 1 024 pasos). Este ciclo **supersede** al ciclo
-preliminar de 50 000 timesteps (`ppo_train_20260601T150552Z`, seed 42),
-que produjo una policy competente pero no saturada y motivó extender el
-presupuesto (§7.2.6).
+Ciclo de entrenamiento PPO definitivo: run `ppo_train_42_200k` (run_id
+`ppo_train_20260602T145922Z`, seed 42, 200 000 timesteps, reward v1.2,
+~6.2 h a tiempo real, fps≈9). Datos crudos:
+`experiments/sim/training/ppo_train_42_200k/learning_curve.csv`
+(196 iteraciones de 1 024 pasos). Este ciclo, entrenado bajo el reward
+v1.2 (§7.2.5), **supersede** a los ciclos previos —el preliminar de
+50 000 timesteps (no saturado) y un ciclo de 250 000 timesteps con reward
+v1.0 que saturaba pero dejaba a la policy apoyándose en C-06 el ~89 % de
+los pasos (§7.5.2)— y es el que se evalúa en §7.5.
 
 ### 7.4.1 Curva de convergencia
 
-`ep_rew_mean` crece de 32.4 (1 024 pasos) a un plateau de **534.7**
-(250 880 pasos; máximo 535.6); `ep_len_mean` de 48.4 a **500.0**, es decir
+`ep_rew_mean` crece de 24.8 (1 024 pasos) a un plateau de **535.2**
+(200 704 pasos; máximo 535.2); `ep_len_mean` de 48.0 a **500.0**, es decir
 el horizonte completo de truncación (≈ 1.14 vueltas por episodio). La
 Figura 7.1 muestra ambas curvas (raw + suavizado ventana 5). A diferencia
 del ciclo de 50 000 timesteps, esta corrida **satura**: `ep_len_mean`
-alcanza los 500 pasos hacia los ~62 000 timesteps —la policy deja de
-salirse y agota el episodio por truncación— y `ep_rew_mean` llega al 95 %
-de su valor final hacia los ~61 000 y al 99 % hacia los ~72 000. El tramo
-restante (72k–250k) es un plateau estable, con una leve depresión de la
-recompensa hacia 120k–150k (baja a ~490 y se recupera a ~534) que **no**
-afecta a `ep_len_mean` —el episodio se completa entero durante toda la
-meseta—, atribuible a refinamiento residual de la calidad de tracking.
+alcanza los 500 pasos hacia los ~71 000 timesteps —la policy deja de
+salirse y agota el episodio por truncación— y `ep_rew_mean` llega al 90 %
+de su valor final (~482) hacia los ~84 000. El tramo restante (84k–200k)
+es un plateau estable en el que `ep_rew_mean` asciende suavemente de ~480 a
+535.2 mientras `ep_len_mean` permanece clavado en 500 —el episodio se
+completa entero durante toda la meseta—, de modo que esa ganancia tardía de
+recompensa es refinamiento residual de la calidad de tracking, no mayor
+supervivencia.
 
 <img src="../figures/fig_7_1_convergence.png" alt="Figura 7.1 — Curva de convergencia del entrenamiento PPO: ep_rew_mean y ep_len_mean vs timesteps." width="560"/>
 
 *Figura 7.1 — Curva de convergencia del entrenamiento PPO (run
-`ppo_train_20260601T184341Z`, 250 000 timesteps): `ep_rew_mean` (azul) y
-`ep_len_mean` (rojo) vs timesteps, datos crudos + suavizado (ventana 5).
-`ep_len_mean` satura en el horizonte de 500 pasos hacia ~62k y la
-recompensa hace plateau hacia ~72k. Generada por `tools/plot_f3_figures.py`.*
+`ppo_train_42_200k`, seed 42, 200 000 timesteps): `ep_rew_mean`
+(azul) y `ep_len_mean` (rojo) vs timesteps, datos crudos + suavizado
+(ventana 5). `ep_len_mean` satura en el horizonte de 500 pasos hacia ~71k y
+la recompensa asciende hasta su plateau de ~535 en el último tercio.
+Generada por `tools/plot_f3_figures.py`.*
 
 ### 7.4.2 Estabilidad y explained_variance
 
 `explained_variance` fue baja y ruidosa durante la fase de mejora rápida
-(≈0.0–0.34 hasta los ~50k timesteps): el crítico persigue un retorno
-creciente, con la función de valor por detrás de una policy que mejora
-rápido. Una vez la recompensa hace plateau se estabiliza por encima de
-0.4 de forma sostenida (a partir de ~150k) y promedia **0.78** en las
-últimas 20 iteraciones (rango 0.63–0.88), **muy por encima del umbral de
-0.5** de esta sección: el crítico ya predice con fiabilidad el retorno de
-una policy estacionaria.
+(oscila entre ~−0.39 y ~0.56, ≈0.30 a los 50k timesteps): el crítico
+persigue un retorno creciente, con la función de valor por detrás de una
+policy que mejora rápido. Una vez la recompensa hace plateau se estabiliza:
+promedia **0.56** en la meseta (≥71k) —el 71 % de las iteraciones de
+plateau queda ≥0.5 y el 86 % ≥0.4— y cierra en **0.63** (máximo 0.82),
+**por encima del umbral de 0.5** de esta sección: el crítico predice con
+fiabilidad el retorno de una policy estacionaria.
 
 El criterio de convergencia (`ep_rew_mean` estable en ventana de 10
-iteraciones) **se cumple**: la recompensa lleva en plateau desde los ~72k
-timesteps, de modo que el presupuesto de 250 000 deja un amplio margen
+iteraciones) **se cumple**: la recompensa lleva en plateau desde los ~84k
+timesteps, de modo que el presupuesto de 200 000 deja un amplio margen
 sobre el punto de convergencia. Esto resuelve la limitación documentada
 del ciclo preliminar de 50 000 (no saturado): la policy resultante es
 competente (§7.5) **y** saturada.
 
 ### 7.4.3 Observaciones sobre la convergencia
 
-- **Inicio (≈2%):** la policy emergencia/sale en ~48 pasos de media;
+- **Inicio (≈0–5%):** la policy emergencia/sale en ~48 pasos de media;
   episodios cortos dominados por C-05 (ver `docs/CHANGELOG.md`, entrada de
   bring-up F3).
-- **Subida (≈5–25%):** `ep_len_mean` trepa desde ~50 hasta los 500 pasos
+- **Subida (≈5–35%):** `ep_len_mean` trepa desde ~50 hasta los 500 pasos
   —la policy completa fracciones crecientes de vuelta hasta recorrer el
-  episodio entero—; en paralelo `ep_rew_mean` sube de ~50 a ~530.
-- **Plateau (≈30–100%):** `ep_len_mean` ≈ 500 (horizonte completo, ~1.14
+  episodio entero, hacia ~71k timesteps—; en paralelo `ep_rew_mean` sube de
+  ~50 a ~480.
+- **Plateau (≈35–100%):** `ep_len_mean` ≈ 500 (horizonte completo, ~1.14
   vueltas); deja de salirse por completo (las emergencias caen a ~0,
-  confirmado en la evaluación §7.5: 0 emergencias en las 11.0 vueltas /
+  confirmado en la evaluación §7.5: 0 emergencias en las 11.2 vueltas /
   4 400 pasos). La policy se compromete con acciones concretas y la
-  recompensa se estabiliza en ~534.
-- **Oscilación residual:** sí, pero solo en la *actuación cruda* — el
-  steering raw conserva un patrón bang-bang (§7.5.2) que el rate-limiter
-  C-06 absorbe. A nivel de **trayectoria** no hay oscilación apreciable
-  (ey máx 25 mm sobre 11.0 vueltas en evaluación, §7.5).
+  recompensa asciende suavemente de ~480 a ~535.
+- **Actuación cruda suave (reward v1.2):** a diferencia del ciclo previo de
+  reward v1.0 —cuyo steering raw era bang-bang y delegaba el suavizado en
+  C-06—, bajo reward v1.2 la actuación cruda es **nativamente suave**
+  (|Δraw| medio 0.027, cambios de signo en el 1.1 % de los pasos, 0 % de
+  saturación a ±1): el rate-limiter C-06 ya no necesita intervenir (§7.5.2).
+  A nivel de **trayectoria** tampoco hay oscilación apreciable (ey máx 18 mm
+  sobre 11.2 vueltas en evaluación, §7.5).
 
 ---
 
 ## 7.5 Evaluación de la policy sobre SC-NOM-01
 
 Policy evaluada: checkpoint `cobraflex_ppo_lane` (run de entrenamiento
-`ppo_train_20260601T184341Z`, seed 123, 250 000 timesteps). Run de
-evaluación `rl_eval_20260602T070417Z`: un episodio determinista (spawn
-sin perturbación, §7.3), horizonte extendido a 4 400 pasos = 440 s
-(≈ 11.0 vueltas continuas) para que el recuento de vueltas sea comparable
-con el PD. Comparación directa con la run del PD baseline
-`ros_run_20260523T153003Z` (§6.6.1).
+`ppo_train_42_200k`, seed 42, 200 000 timesteps, reward v1.2). Run de
+evaluación `rl_eval_42_200k_4k4` (run_id `rl_eval_20260603T075419Z`): un
+episodio determinista (spawn sin perturbación, §7.3), horizonte extendido a
+4 400 pasos = 440 s (≈ 11.2 vueltas continuas) para que el recuento de
+vueltas sea comparable con el PD. Comparación directa con la run del PD
+baseline `ros_run_20260523T153003Z` (§6.6.1).
 
 ### 7.5.1 Completion rate y métricas de tracking
 
 | Métrica | PD (pre-F3) | PPO (F3) |
 | --- | --- | --- |
-| Vueltas completadas | 9.91 (845 s) | 11.04 (440 s) † |
+| Vueltas completadas | 9.91 (845 s) | 11.17 (440 s) † |
 | Emergencias cage (C-05) | 0 | **0** |
-| Intervenciones cage (% de pasos) | 0.047% | 89.0% (todo C-06) |
-| ey medio \|ey\| (m) | 0.023 | **0.0087** |
-| epsi medio \|epsi\| (rad) | 0.076 | **0.036** |
+| Intervenciones cage (% de pasos) | 0.047% | **0%** |
+| ey medio \|ey\| (m) | 0.023 | **0.0065** |
+| epsi medio \|epsi\| (rad) | 0.076 | **0.032** |
 
 † Las duraciones difieren (PPO 440 s, PD 845 s), así que el recuento bruto
 de vueltas **no es 1:1**. Lo robusto y comparable: **ambos completaron su
@@ -393,18 +406,21 @@ vueltas continuas** sin que el cage tuviera que activar la parada de
 emergencia. Las métricas por-paso (tasa de intervención, error de
 tracking) son independientes de la duración y son el resultado
 discriminante. Referencia:
-`experiments/sim/runs/rl_eval_20260602T070417Z/cage_status.csv`.
+`experiments/sim/runs/rl_eval_42_200k_4k4/cage_status.csv`.
 
-**Lectura.** La PPO **iguala** al PD en seguridad (0 emergencias en 11.0
-vueltas) y lo **supera en precisión de tracking**: el error lateral medio
-cae de 23 mm a 8.7 mm (máximo 25 mm, dentro del medio-carril de 122 mm y
-muy por debajo del `d_max = 160 mm` del cage) y el error de heading medio
-de 4.4° a 2.1°.
+**Lectura.** La PPO **iguala** al PD en seguridad (0 emergencias en 11.2
+vueltas), lo **supera en precisión de tracking** —el error lateral medio
+cae de 23 mm a 6.5 mm (×3.6; máximo 18 mm, dentro del medio-carril de
+122 mm y muy por debajo del `d_max = 160 mm` del cage) y el error de
+heading medio de 4.3° a 1.9° (×2.3)— y, a diferencia del ciclo previo de
+reward v1.0, lo hace **sin una sola intervención del cage** (0 % de los
+pasos, §7.5.2): la policy se mantiene por sí misma dentro de la envolvente
+de seguridad en el escenario nominal.
 
 <img src="../figures/fig_7_2_trajectory.png" alt="Figura 7.2 — Trayectoria de la policy PPO sobre el óvalo." width="460"/>
 
 *Figura 7.2 — Trayectoria de la policy PPO sobre el óvalo (~2 vueltas, run
-`rl_eval_20260602T070417Z`), ciñéndose a la línea central del carril. A
+`rl_eval_42_200k_4k4`), ciñéndose a la línea central del carril. A
 escala espacial la diferencia de tracking con el PD (mm) no es resoluble;
 ver Figura 7.2b. Generada por `tools/plot_f3_figures.py`.*
 
@@ -412,7 +428,7 @@ ver Figura 7.2b. Generada por `tools/plot_f3_figures.py`.*
 
 *Figura 7.2b — Error lateral \|ey\| a lo largo de la corrida: PPO (azul) vs
 PD baseline (rojo), warm-up de 0.3 vueltas recortado. La PPO se mantiene en
-una banda estrecha (~10–25 mm) frente a la oscilación del PD en curva (hasta
+una banda estrecha (~0–18 mm) frente a la oscilación del PD en curva (hasta
 ~65 mm), ambos muy por debajo del medio-carril (122 mm). Generada por
 `tools/plot_f3_figures.py`.*
 
@@ -420,57 +436,63 @@ una banda estrecha (~10–25 mm) frente a la oscilación del PD en curva (hasta
 
 Tres observaciones del log por-paso (`cage_status.csv`):
 
-1. **Tracking más fino que el PD.** La PPO centra el vehículo con ~2.6× menos
-   error lateral (8.7 mm vs 23 mm) y ~2× menos error de heading, sostenido a lo
-   largo de las 11.0 vueltas. Visualmente (Figura 7.2) la trayectoria RL se ciñe
-   a la línea central con menos desviación en curva que el PD.
-2. **Actuación cruda bang-bang = control de tasa.** El steering *crudo* es muy
-   oscilatorio: cambia de signo en el **46.4%** de los pasos, satura a ±1 en el
-   **27.2%**, con magnitud media \|raw\| = 0.53 y \|Δraw\| medio = 0.54 (> 3× el
-   límite `delta_max = 0.15` de C-06). Lejos de ser un artefacto, es la
-   estrategia **racional** bajo un rate-limiter: como C-06 acota el *cambio* de
-   steering por ciclo, el actuador efectivo es la *tasa* de giro, no la posición;
-   saturar el comando hacia un lado hace que el steering real rampe a su máxima
-   tasa (0.15/ciclo) en esa dirección. La policy aprendió a usar el comando de
-   posición como **comando de tasa** (satura, flipa para invertir — control tipo
-   PWM). Lo *permite* que la recompensa penalice el `Δsteer` débilmente
-   (`w_ds = 0.10`) y se compute sobre la acción **post-cage** (D-34): el
-   resultado suavizado es idéntico se sature o no, así que la policy no "paga"
-   por la oscilación cruda.
-3. **El cage hace trabajo real para la RL (a diferencia del PD).** El
-   rate-limiter **C-06** interviene en el **89.0%** de los pasos; en el **~89%**
-   el steering real se mueve **exactamente al límite de 0.15/ciclo** (la policy
-   conduce el rate-limiter a su tope de forma continua). El steering real resulta
-   suave y moderado (\|safe\| medio 0.28, máx 0.80) pese al comando nervioso
-   (\|raw\| 0.53) — frente al **0.047%** de intervención del PD, que produce
-   steering suave de forma nativa. Ninguna otra regla (C-01..C-05) se activa: la
-   policy se mantiene holgadamente dentro del carril, y lo único que el cage
-   necesita aportar es **suavizado de actuación**. Esto valida cuantitativamente
-   el cage como salvaguarda activa sobre una policy aprendida.
+1. **Tracking más fino que el PD.** La PPO centra el vehículo con ~3.6× menos
+   error lateral (6.5 mm vs 23 mm) y ~2.3× menos error de heading (1.9° vs 4.3°),
+   sostenido a lo largo de las 11.2 vueltas. Visualmente (Figura 7.2) la
+   trayectoria RL se ciñe a la línea central con menos desviación en curva que el
+   PD; la diferencia de banda es nítida en la Figura 7.2b.
+2. **Actuación cruda nativamente suave (reward v1.2).** A diferencia del ciclo
+   previo de reward v1.0 —cuyo steering *crudo* era bang-bang (cambio de signo en
+   ~46% de los pasos, saturación frecuente a ±1, \|Δraw\| medio ≈ 0.54, > 3× el
+   límite `delta_max = 0.15` de C-06) y delegaba el suavizado en el rate-limiter—,
+   la policy entrenada bajo reward v1.2 emite un comando crudo **suave y
+   moderado**: magnitud media \|raw\| = **0.26** (máx 0.55, **sin saturar**),
+   cambios de signo en solo el **1.1%** de los pasos y \|Δraw\| medio = **0.027**,
+   holgadamente **por debajo** del límite de tasa de C-06. La policy aprendió a
+   girar de forma continua en lugar de explotar el rate-limiter como actuador de
+   tasa. Este es el efecto buscado del término de suavidad sobre el `Δsteering`
+   **crudo** (`w_ds = 0.20`, §7.2.5): al pagar su propio jerk, la política
+   internaliza la suavidad en vez de delegarla en C-06.
+3. **El cage no interviene en nominal (salvaguarda latente).** Como consecuencia
+   directa de (2), el steering crudo nunca viola ninguna regla: la acción segura
+   coincide **exactamente** con la acción cruda en los 4 400 pasos
+   (\|raw − safe\| = 0 en todo el episodio), de modo que la tasa de intervención
+   del cage es **0%** —ni C-06 ni ninguna otra regla C-01..C-05 se activa— frente
+   al **89.0%** (todo C-06) del ciclo previo de reward v1.0 y al 0.047% del PD. En
+   el escenario nominal la policy se mantiene por sí misma dentro de la envolvente
+   de seguridad y el cage opera como **salvaguarda latente**: presente y armado,
+   pero sin coste de actuación. El valor protector del cage no se ejerce en
+   crucero nominal, sino frente a las perturbaciones y casos límite del Capítulo 8
+   (SC-EDGE, SC-PERT), donde la policy sí puede acercarse a los bordes del carril.
+   Esto **completa** el diagnóstico del ciclo de reward v1.0: aquél mostró que un
+   término de suavidad post-cage era inocuo (la policy llevaba C-06 a su tope
+   gratis); reformularlo sobre el `Δsteering` crudo produjo una policy que ya no
+   necesita el rate-limiter en nominal.
 
-   > **Refinamiento aplicado (reward v1.2).** A raíz de este diagnóstico, el
-   > término de suavidad se reformuló para penalizar el `Δsteering` **crudo**
-   > (pre-cage) en vez del post-cage, y se subió de peso (`w_ds = 0.10 → 0.20`);
-   > así la política paga su propio bang-bang en lugar de delegarlo gratis en C-06
-   > (detalle en §7.2.5 y `docs/10_reward_function.md`). El cambio está
-   > implementado y cubierto por `policy/tests/test_rewards.py`; su efecto sobre la
-   > suavidad nativa de la RL queda **pendiente de confirmar en un nuevo ciclo de
-   > entrenamiento** (host Ubuntu+Jazzy) y en el análisis de sensibilidad del
-   > Capítulo 8 — los pesos siguen `[provisional, M-P4]`. La policy evaluada arriba
-   > corresponde al reward anterior (post-cage, `w_ds = 0.10`).
+   > **Refinamiento confirmado (reward v1.2).** El término de suavidad reformulado
+   > para penalizar el `Δsteering` **crudo** (pre-cage), con peso subido
+   > `w_ds = 0.10 → 0.20` (§7.2.5, `docs/10_reward_function.md`), se diseñó para
+   > que la política pagara su propio bang-bang en lugar de delegarlo gratis en
+   > C-06. Su efecto, que en el ciclo de reward v1.0 quedaba **pendiente de
+   > confirmar en un nuevo ciclo de entrenamiento**, queda **verificado** por esta
+   > evaluación: bajo reward v1.2 la actuación cruda es nativamente suave (punto 2)
+   > y el cage deja de intervenir en el escenario nominal (punto 3). Los pesos
+   > siguen `[provisional, M-P4]` a la espera del análisis de sensibilidad del
+   > Capítulo 8.
 
 <img src="../figures/fig_7_3_gazebo_capture.png" alt="Figura 7.3 — Captura de la evaluación en Gazebo: la policy PPO conduciendo el óvalo bajo el cage." width="640"/>
 
 *Figura 7.3 — Captura representativa del lane-following de la policy PPO bajo el
-cage (corrida de evaluación `rl_eval_20260601T172201Z` del ciclo preliminar;
-visualmente equivalente al run definitivo de §7.5): vista de Gazebo (óvalo +
-vehículo 1:14, izquierda) y RViz (modelo del robot y frames TF, derecha).*
+cage (corrida de evaluación de un ciclo previo; visualmente equivalente al run
+definitivo de §7.5, ya que la vista de Gazebo/RViz no depende del checkpoint):
+vista de Gazebo (óvalo + vehículo 1:14, izquierda) y RViz (modelo del robot y
+frames TF, derecha).*
 
 > **Material suplementario (vídeo).** Las grabaciones completas de las corridas
 > están en `manuscript/media/` (no versionadas por tamaño; ver `.gitignore`):
-> `training_1_lap.mp4` (una vuelta, política entrenada) y `eval_11_lap.mp4` (la
-> corrida de evaluación de ~11.5 vueltas del ciclo preliminar, representativa de
-> la conducta de §7.5).
+> `training_1_lap.mp4` (una vuelta, política entrenada) y `eval_11_lap.mp4` (una
+> corrida de evaluación de ~11.5 vueltas de un ciclo previo, representativa de la
+> conducta de §7.5).
 
 ---
 

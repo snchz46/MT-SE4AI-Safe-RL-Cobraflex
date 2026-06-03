@@ -31,6 +31,77 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [03.06.2026] — F3 definitive cycle: seed-42/200k under reward v1.2 (native smoothness, 0 cage interventions)
+
+**Document(s) affected:**
+`manuscript/chapters/chapter_07_training_specification.md`
+(§7.2.4–§7.2.7, §7.4, §7.5, §7.5.2),
+`manuscript/figures/auto/fig_7_1_convergence.png`,
+`manuscript/figures/auto/fig_7_2_trajectory.png`,
+`manuscript/figures/auto/fig_7_2b_tracking_error.png`,
+`docs/09_environment_design.md` (ED-10), `docs/10_reward_function.md`,
+`CLAUDE.md` (status snapshot).
+**Phase:** F3.
+**Gate context:** after G2 — closes the reward-v1.2 backlog item from the two prior
+02.06 entries; supersedes the 250k/seed-123 (reward v1.0) cycle.
+**Author:** Samuel.
+
+### Change
+
+- **New definitive training cycle `ppo_train_42_200k`** (run_id
+  `ppo_train_20260602T145922Z`, seed 42, 200 000 timesteps, **reward v1.2**,
+  commit 666249c, ~6.2 h real, fps≈9, 196 iterations of 1 024). It **supersedes**
+  both prior cycles — the preliminary 50k (not saturated) and the 250k/seed-123
+  reward-v1.0 cycle (saturated but C-06-dependent). §7.4/§7.5 rewritten around it.
+- **Convergence (§7.4.1):** `ep_rew_mean` 24.8 → plateau **535.2** (max 535.2);
+  `ep_len_mean` 48.0 → **500.0**. `ep_len_mean` reaches 500 by ~71k timesteps,
+  `ep_rew_mean` hits 90% of final (~482) by ~84k, then climbs gently to 535.2 over
+  the plateau (episode length pinned at 500 throughout). `explained_variance`
+  averages 0.56 on the plateau, final **0.63** (max 0.82) — above the 0.5 threshold.
+- **Re-evaluation `rl_eval_42_200k_4k4`** (run_id `rl_eval_20260603T075419Z`,
+  SC-NOM-01, 1 deterministic episode of 4 400 steps ≈ **11.17** continuous laps,
+  checkpoint hash 150e496d…). §7.5.1/§7.5.2 refreshed.
+- **Hyperparameters §7.2.6:** `total_timesteps` 250 000 → **200 000**; §7.2.7 seed
+  note now seed 42 under reward v1.2.
+- **Figures regenerated** from the new cycle + eval:
+  `python tools/plot_f3_figures.py --train-run experiments/sim/training/ppo_train_42_200k --rl-run experiments/sim/runs/rl_eval_42_200k_4k4 --pd-run experiments/sim/runs/ros_run_20260523T153003Z`
+  (explicit pins **required**: the re-checked-in seed runs share one mtime, so
+  `plot_f3_figures.py`'s mtime auto-pick is ambiguous).
+- **ED-10 / `docs/10`:** the reward-v1.2 effect, previously "pending re-train", is
+  marked **confirmed**.
+
+### Rationale
+
+The two 02.06 entries left an open loop: reward v1.2 (raw-Δsteer smoothness term,
+`w_ds` 0.10→0.20) was wired and unit-tested, but its effect on native RL smoothness
+"required a new training cycle". This cycle is that re-train, and it confirms the
+hypothesis: the policy now steers smoothly on its own (sign-flips **1.1%** vs ~46%,
+**0%** ±1 saturation, mean |Δraw| **0.027** — below C-06's 0.15 limit), so the cage
+never has to rate-limit it in nominal.
+
+### Impact
+
+- **Result:** PPO matches the PD on safety (**0 C-05 emergencies over 11.2 laps**)
+  and beats it on tracking (mean |ey| 23 mm → **6.5 mm**, ×3.6, max 18 mm; mean
+  |epsi| 4.3° → **1.9°**, ×2.3). Cage intervention 0.047% (PD) → **0%** (PPO):
+  `raw ≡ safe` at every one of the 4 400 steps. The 89.0%/all-C-06 of the prior
+  reward-v1.0 cycle is **superseded** — the cage is now a latent safeguard in
+  nominal, its protective value reserved for the Ch.8 edge/perturbed scenarios.
+- The other seed runs checked in alongside (`*_old` training dirs: 2024/200k,
+  123/250k, 42/50k — reward-v1.0 or under-trained) are retained for the record;
+  **only seed-42/200k is the definitive reward-v1.2 run.** Multi-seed (N≥5) stays
+  deferred to Ch.8 (§7.2.7).
+- No hazard / SR / cage-rule / `cage.yaml` / scenario / metric IDs added or changed.
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED. 0 warning(s).**
+Chapter §7.4/§7.5 quantitative claims reproduce from
+`experiments/sim/training/ppo_train_42_200k/learning_curve.csv` and
+`experiments/sim/runs/rl_eval_42_200k_4k4/cage_status.csv`.
+
+---
+
 ## [02.06.2026] — F3 reward v1.2: smoothness term on the raw policy Δsteer (penalise bang-bang)
 
 **Document(s) affected:**

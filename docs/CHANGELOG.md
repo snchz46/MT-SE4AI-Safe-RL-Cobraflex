@@ -31,6 +31,130 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [03.06.2026] — F4: verdict spine (campaign metrics, criterion eval, scenario loader, SR verdict aggregation)
+
+**Document(s) affected:**
+`src/cobraflex_rl/cobraflex_rl/campaign_metrics.py`, `…/criterion_eval.py`,
+`…/scenario_loader.py`, `…/verdict_aggregation.py` (all new),
+`policy/tests/test_campaign_metrics.py`, `…/test_criterion_eval.py`,
+`…/test_scenario_loader.py`, `…/test_verdict_aggregation.py` (all new).
+**Phase:** F4.
+**Gate context:** after G3 — the pure-Python core of the scenario-campaign verdict pipeline
+(deliverable 2; the Gazebo-coupled driver + env stressor hooks are Phase C, deferred).
+**Author:** Samuel.
+
+### Change
+
+The ROS-free, unit-tested core that turns per-run results into per-SR and global verdicts.
+Mirrors the pure style of `eval_metrics.py` so it runs under `pytest` on any host (the Gazebo
+campaign driver, Phase C, will feed it):
+
+- **`campaign_metrics.py`** — full per-run metric catalogue (docs/06): M-P1/P3/P4/P5/P6/P7,
+  M-S1/S2/S3/S4, M-I1/I2/I3/I4/I5, M-C1/C2, computed from the `cage_status.csv` per-step record
+  schema. Reports an `availability` map for metrics needing data absent from that schema (M-S4
+  needs a ttlc series; M-P3 and M-I4's C-04 arm need per-step curvature; M-C* unmeasured in sim;
+  M-I5 is steering-only). Plus `aggregate_metric` (median/mean/std/p5/p95).
+- **`criterion_eval.py`** — safe, `eval()`-free, **three-valued** evaluator for the
+  `pass_criterion_*` strings (conjunction of comparisons; labelled multi-arm for SC-PERT-03). An
+  unavailable metric yields *indeterminate* (None), never a false fail.
+- **`scenario_loader.py`** — scenario YAML → typed `RunSpec`; skips stubs; exposes the
+  nominal/adverse `family` the D-29 gate needs.
+- **`verdict_aggregation.py`** — per-scenario (`fraction_pass`) → per-SR → global verdict,
+  implementing **D-29** (SR-CL-A needs ≥25 runs in a nominal AND an adverse family; SR-CL-B ≥10
+  in ≥1 family; SR-CL-C informal) and **D-30** (any SR-CL-A failure vetoes the global verdict).
+  SR criticality is injected from `SR_CRITICALITY` (cited to the ch.4 SRS table / D-28) with a
+  guard test asserting it matches `docs/data/safety_requirements.csv`.
+
+### Rationale
+
+The verdict logic is the reusable, correctness-critical heart of the F4 campaign and is pure
+data-in/data-out, so it is built and **unit-tested on the Windows host** (the Gazebo campaign
+cannot run here). Per-run verdicts are produced by `criterion_eval` on each run's metrics and
+fed into `verdict_aggregation` as data, keeping the D-29/D-30 logic testable with synthetic
+inputs.
+
+### Impact
+
+- **Finding (surfaced by a test):** SR-002, SR-005, SR-007 (all SR-CL-A) are mapped only to
+  *adverse* scenario families in the SRS, so the D-29 "nominal AND adverse" gate **cannot be met
+  as currently mapped** — each needs a nominal verifying scenario, or a documented D-29 exception
+  for inherently-adverse requirements. Flagged for review; not changed here.
+- Phase C (deferred, to run on the Ubuntu host): extend `GazeboLaneEnv` with stressor hooks
+  (deterministic ICs, perception noise, action latency, throttle pulse) + a `run_campaign.py`
+  driver writing `experiments/sim/<SC>_<mode>/run_NNN/` and calling this spine.
+- Follow-ups flagged: harden `close_odd_tbds.py` (prose-mention substitution footgun); add a
+  `criticality` column to the SR sync pipeline so `verdict_aggregation` can drop the injected map.
+- No hazard / SR / cage-rule / `cage.yaml` / scenario / metric IDs added or changed.
+
+### Verification
+
+`python -m pytest -q` → **233 passed** (58 new across the four modules; no regression).
+`python tools/check_traceability.py` → **All checks PASSED. 0 warning(s).**
+
+---
+
+## [03.06.2026] — F4: ODD-2 adverse stressor profiles closed (TBD-Q4–Q7, Q12)
+
+**Document(s) affected:**
+`src/cobraflex_rl/config/adverse_profiles.yaml` (new),
+`docs/08_odd_specification.md` (§5.5, §7.2, §11, cover block → v0.5),
+`docs/DECISIONS.md` (D-33 status table + status-update note),
+`experiments/odd_inspection/odd_tbds.yaml` (Q4–Q7, Q12 values).
+**Phase:** F4.
+**Gate context:** after G3 — F4-entry prerequisite (the adverse scenario families need
+parameterised stressor profiles before the campaign can run).
+**Author:** Samuel.
+
+### Change
+
+- **New machine-readable source of truth** `src/cobraflex_rl/config/adverse_profiles.yaml`:
+  per-profile stressor parameters for the ODD-2 named profiles (+ the ODD-4 cross-product),
+  to be consumed by the F4 campaign runner for stressor injection.
+- **ODD-Spec TBD closures (D-33):**
+  - **Q4** `odd2_nominal_adverse` — σ_lateral=0.03 m (SC-PERT-01 mid level) + faded markings
+    / non-uniform light via `lane_following_oval_worn.world`.
+  - **Q5** `odd2_adverse_with_latency` — +100 ms latency (SC-PERT-02 high, over the 50 ms
+    nominal) + 20 ms jitter + 0.02 steering actuation noise.
+  - **Q6** `odd2_adverse_with_obstacle` — 1 static 0.10 m box, ~0.05 m lane intrusion at
+    mid-straight. **Specified only; execution deferred** — the F3 policy observes a 6-dim
+    vector with no obstacle channel (§5.1 specifies an 8-dim ODD-2 obs); the campaign skips
+    `execution: deferred` profiles until obstacle perception is wired.
+  - **Q7** `odd2_adverse_full` — union of Q4+Q5+Q6 (inherits Q6's execution deferral).
+  - **Q12** ODD-4 — no additional stressors; the ODD-4 profiles are the pure cross-product
+    of ODD-3 geometry × ODD-2 stressors.
+  - ODD-Spec §5.5 table now mirrors `adverse_profiles.yaml` with per-column values; §7.2
+    ODD-4 table and §11 resolution rows filled; cover block → **v0.5**, **11 of 12** TBDs
+    resolved (only Q10 remains, deferred to M-4 physical calibration).
+
+### Rationale
+
+The ODD-2 adverse profiles parameterise the perturbed/adverse scenario families the F4
+campaign verifies. Magnitudes are grounded in the existing scenarios (σ from SC-PERT-01,
+latency from SC-PERT-02) and the 50 ms `*.LATENCY_NOMINAL`, not invented.
+
+Closed **by hand** rather than via `tools/close_odd_tbds.py --apply`: the dry-run showed the
+tool's blanket `TBD-QN` substitution would (a) repeat one value across the three σ/latency/
+jitter columns of the §5.5 table, and (b) **corrupt prose mentions of already-closed TBDs** —
+the §0.1 change-log rows and the §9 source column — because it cannot tell a placeholder cell
+from a documentation mention. `odd_tbds.yaml` is kept in sync as provenance; D-33 records the
+decision and flags hardening the tool as a separate follow-up.
+
+### Impact
+
+- Closes the F4-entry ODD prerequisite. Remaining F4 work unchanged (campaign runner +
+  per-SR verdicts **D-29/D-30**, QED decision, sim verdicts in `docs/07`).
+- Obstacle scenarios are spec'd but not executed by the campaign (no obstacle perception);
+  flagged in `adverse_profiles.yaml`, §5.5, and the D-33 table.
+- No hazard / SR / cage-rule / `cage.yaml` / scenario / metric IDs added or changed.
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED. 0 warning(s).**
+`python tools/check_scenario_yaml.py` → **PASSED, 0 errors, 7 warning(s)** (deferred stubs).
+`adverse_profiles.yaml` and `odd_tbds.yaml` parse as valid YAML.
+
+---
+
 ## [03.06.2026] — F4 entry: Gate G3 passed, F3 closed; scenario library completed (SC-EDGE-05, SC-PERT-03)
 
 **Document(s) affected:**
@@ -75,7 +199,7 @@ SR-009 stall) least served by off-the-shelf tooling.
 
 - **F4 scope now open.** Remaining F4 entry work (not in this change): the ODD-2 adverse
   scenario profiles (TBD-Q4–Q7, Q12 — `docs/DECISIONS.md`), the multi-run campaign runner
-  + per-SR verdict aggregation (run-count convention D-39, veto rule D-40), the QED-metric
+  + per-SR verdict aggregation (run-count convention D-29, veto rule D-30), the QED-metric
   decision (D-17/D-21/D-22), and filling the sim verdicts in `docs/07_traceability_matrix.md`.
   The seven sibling scenario stubs (NOM-02/03, EDGE-02/03/04, PERT-01/02) are promoted to
   full YAMLs as the campaign reaches them.

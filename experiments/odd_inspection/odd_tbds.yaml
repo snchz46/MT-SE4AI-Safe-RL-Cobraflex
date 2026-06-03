@@ -38,27 +38,27 @@ tbds:
 
   TBD-Q4:
     description: "Stressor parameters of odd2_nominal_adverse (lighting variance, marking contrast, perception noise sigma)."
-    value: null            # e.g. "lighting_var=0.3, marking_contrast=0.4, sigma_lateral=0.02"
-    source: ""             # e.g. "scenarios/odd2_nominal_adverse.yaml" or "design decision F1"
-    notes: ""
+    value: "faded markings + non-uniform light; observation noise sigma_lateral=0.03 m; latency/jitter nominal"
+    source: "src/cobraflex_rl/config/adverse_profiles.yaml (profiles.odd2_nominal_adverse); sigma = SC-PERT-01 mid level; worn world lane_following_oval_worn.world"
+    notes: "F4-entry closure (D-33); sigma injected on observed ey, lighting/markings realised qualitatively by the worn world asset."
 
   TBD-Q5:
     description: "Stressor parameters of odd2_adverse_with_latency (extra latency ms, jitter ms, actuation noise)."
-    value: null            # e.g. "extra_latency_ms=100, jitter_ms=30, act_noise=0.05"
-    source: ""
-    notes: ""
+    value: "extra latency +100 ms (over 50 ms nominal); jitter 20 ms; steering actuation noise 0.02"
+    source: "src/cobraflex_rl/config/adverse_profiles.yaml (profiles.odd2_adverse_with_latency); latency = SC-PERT-02 high level; *.LATENCY_NOMINAL = 50 ms (ODD-Spec §9)"
+    notes: "F4-entry closure (D-33); injected as an action-delay buffer plus small steering actuation noise."
 
   TBD-Q6:
     description: "Stressor parameters of odd2_adverse_with_obstacle (obstacle geometry, position distribution, quantity)."
-    value: null            # e.g. "cylinder 0.05x0.10 m, uniform along corridor, qty=1"
-    source: ""
-    notes: ""
+    value: "1 static box 0.10x0.10x0.10 m, qty 1, ~0.05 m lane intrusion at mid-straight (spec only; execution deferred)"
+    source: "src/cobraflex_rl/config/adverse_profiles.yaml (profiles.odd2_adverse_with_obstacle); modelled on obstacles.world; partial-intrusion class per ODD-Spec §5.3, ODD-exit on contact §5.7"
+    notes: "F4-entry closure (D-33). EXECUTION DEFERRED: the F3 policy observation is 6-dim with no obstacle channel (ODD-Spec §5.1 specifies 8-dim w/ obstacle channels, not yet implemented), so this profile is specified but not run by the F4 campaign until obstacle perception is added."
 
   TBD-Q7:
     description: "Stressor parameters of odd2_adverse_full (union of TBD-Q4 + Q5 + Q6)."
-    value: null            # e.g. "see TBD-Q4 + TBD-Q5 + TBD-Q6"
-    source: ""
-    notes: ""
+    value: "union of odd2_nominal_adverse + odd2_adverse_with_latency + odd2_adverse_with_obstacle"
+    source: "src/cobraflex_rl/config/adverse_profiles.yaml (profiles.odd2_adverse_full); by construction = Q4 + Q5 + Q6"
+    notes: "F4-entry closure (D-33); closes with its three constituents; inherits the Q6 obstacle execution-deferral."
 
   TBD-Q8:
     description: "Total loop length of odd3_curvy_loop (m)."
@@ -86,6 +86,6 @@ tbds:
 
   TBD-Q12:
     description: "Do ODD-4 named profiles introduce any stressor beyond their ODD-2 counterparts?"
-    value: null            # e.g. "No additional stressors" or "Adds <list>"
-    source: ""
-    notes: ""
+    value: "No additional stressors"
+    source: "ODD-Spec §7.1: ODD-4 = scenery(ODD-3) + environmental+dynamic(ODD-2) + profiles; the named ODD-4 profiles are the pure cross-product of ODD-3 geometry x ODD-2 stressors (src/cobraflex_rl/config/adverse_profiles.yaml odd4_profiles)"
+    notes: "F4-entry closure (D-33); ODD-4 introduces no stressor mechanism absent from ODD-2 — only the curvy-loop geometry differs, already captured by ODD-3."

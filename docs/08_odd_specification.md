@@ -1,11 +1,11 @@
 # ODD Specification — SE4AI Lane Following Thesis
 
 **Document ID:** `ODD-SPEC`  
-**Version:** 0.4 (F3 housekeeping, 01.06.2026; 0.3 = F2 partial closure)  
+**Version:** 0.5 (F4-entry TBD closure, 03.06.2026; 0.4 = F3 housekeeping)  
 **Owner:** Samuel Sánchez  
 **Phase of birth:** F0 — Phase of maturity: F1 — Phase of revision: F5 (physical ODD)  
-**Status:** DRAFT — 6 of 12 TBDs resolved (Q1, Q2, Q3 at F1; Q8, Q9, Q11 at F2 against the oval_R080 preset of `scripts/compose_lane_circuit.py`); 6 remaining explicitly deferred per phase (Q4–Q7, Q12 to F4; Q10 to M-4) — see decision D-33 in `docs/DECISIONS.md`.  
-**Last updated:** 2026-06-01  
+**Status:** DRAFT — 11 of 12 TBDs resolved (Q1–Q3 at F1; Q8, Q9, Q11 at F2 against the oval_R080 preset; Q4–Q7 and Q12 at F4 entry against `src/cobraflex_rl/config/adverse_profiles.yaml`); only Q10 remains, deferred to M-4 (physical lateral-accel calibration) — see decision D-33 in `docs/DECISIONS.md`.  
+**Last updated:** 2026-06-03  
 **Approving reviewer (Gate 1):** [supervisor name]  
 
 <!--
@@ -26,6 +26,7 @@ renumber sections — only append.
 | 0.2 | 2026-05-14 | SS | F1 partial closure of TBD-Q1 (FRICTION = 1.0), TBD-Q2 (A_LAT_MAX = 9.81 m/s²) and TBD-Q3 (CORRIDOR_EDGE = 0.1225 m), against the `src/cobraflex` + `src/cobraflex_rl` workspace. Remaining 9 TBDs deferred per decision D-33: Q4–Q7 and Q12 to F4 (scenario library), Q8–Q11 to F2/F3 (ODD-3 curvy world implementation). Simulator label "MuJoCo" replaced by "Gazebo" throughout. |
 | 0.3 | 2026-05-21 | SS | F2 closure of TBD-Q8 (ROAD_LENGTH = 8.0232 m, perimeter of the oval_R080 preset), TBD-Q9 (KAPPA_MAX = 1.25 m⁻¹ = 1 / R_min with R_min = 0.80 m on the two U-turns) and TBD-Q11 (STUCK_TIMEOUT = n/a — subsumed by `max_episode_steps × control_dt = 40 s` truncation in `gazebo_lane_env.py`; no separate stuck check is configured). Geometry source of truth: `scripts/compose_lane_circuit.py` preset `oval_R080`, which emits both `src/cobraflex/worlds/lane_following_oval.world` and `src/cobraflex_rl/config/oval_centerline.yaml`. TBD-Q10 (A_LAT_MAX ODD-3) remains deferred to the M-4 calibration measurement, which depends on the physical platform. |
 | 0.4 | 2026-06-01 | SS | F3 housekeeping: `max_episode_steps` raised 400→500 in the training env (`train_ppo.yaml`, Training Spec §7.2.4), so the truncation window that subsumes `*.STUCK_TIMEOUT` (TBD-Q11) is now `500 × 0.10 s = 50 s` (was 40 s). The TBD-Q11 closure itself is unchanged (n/a, subsumed by env truncation); only the illustrative figure was realigned. No ODD parameter value changed. |
+| 0.5 | 2026-06-03 | SS | F4-entry closure of TBD-Q4–Q7 (ODD-2 adverse stressor profiles) and TBD-Q12 (ODD-4 adds no stressor beyond ODD-2). `odd2_nominal_adverse` σ_lateral=0.03 m + faded/non-uniform world; `odd2_adverse_with_latency` +100 ms latency / 20 ms jitter / 0.02 steer-noise; `odd2_adverse_with_obstacle` 0.10 m box, ~0.05 m intrusion (**spec only — execution deferred**, no obstacle channel in the 6-dim obs); `odd2_adverse_full` = union. Source of truth: `src/cobraflex_rl/config/adverse_profiles.yaml` (§5.5 mirrors it). Closed **by hand**, not via `close_odd_tbds.py`, whose blanket `TBD-QN` substitution would clobber the prose mentions of already-closed TBDs in §0.1 and the §9 source column. Only Q10 (A_LAT_MAX ODD-3) remains, deferred to M-4. |
 
 ---
 
@@ -130,20 +131,25 @@ Beyond the obstacle-related extension of the observation space declared in §5.1
 
 ### 5.5 Named scenario profiles
 
-<!--
-TEACHER NOTE: This is the section that the audit flagged as missing quantitative
-content. Each named profile must give explicit parameters; an empty cell below
-breaks the citation chain from any SR that references "the adverse_with_latency
-scenario". Fill the TBD-Q4 to TBD-Q7 blocks before Gate 1. If the values live
-already in a YAML or JSON file in the project, copy them here AND link to the file.
--->
+Stressor parameters are maintained as the single source of truth in
+[`src/cobraflex_rl/config/adverse_profiles.yaml`](../src/cobraflex_rl/config/adverse_profiles.yaml);
+the table below mirrors it. "Latency (ms)" is the *total* observation latency
+(nominal `*.LATENCY_NOMINAL = 50 ms` plus any injected excess). Closes TBD-Q4–Q7
+(D-33, F4 entry).
 
-| Profile ID                  | Lighting / markings                  | Obstacle config            | Sensor noise (σ)             | Latency (ms)        | Jitter (ms)      | Actuation imperfection |
-|-----------------------------|--------------------------------------|----------------------------|------------------------------|---------------------|------------------|------------------------|
-| `odd2_nominal_adverse`      | Faded markings + non-uniform light   | None                       | TBD-Q4                       | TBD-Q4              | TBD-Q4           | None                   |
-| `odd2_adverse_with_latency` | Nominal markings + nominal light     | None                       | TBD-Q5                       | TBD-Q5              | TBD-Q5           | TBD-Q5                 |
-| `odd2_adverse_with_obstacle`| Nominal                              | TBD-Q6 (geometry, position)| TBD-Q6                       | TBD-Q6              | TBD-Q6           | None                   |
-| `odd2_adverse_full`         | Faded markings + non-uniform light   | TBD-Q7                     | TBD-Q7                       | TBD-Q7              | TBD-Q7           | TBD-Q7                 |
+| Profile ID                  | Lighting / markings                | Obstacle config                                                                | Sensor noise (σ_lateral) | Latency (ms)   | Jitter (ms) | Actuation imperfection |
+|-----------------------------|------------------------------------|--------------------------------------------------------------------------------|--------------------------|----------------|-------------|------------------------|
+| `odd2_nominal_adverse`      | Faded markings + non-uniform light | None                                                                           | 0.03 m                   | 50 (nominal)   | 0           | None                   |
+| `odd2_adverse_with_latency` | Nominal markings + nominal light   | None                                                                           | 0 (nominal)              | 150 (50 + 100) | 20          | Steering noise 0.02    |
+| `odd2_adverse_with_obstacle`| Nominal                            | 1 static box 0.10×0.10×0.10 m, qty 1, ~0.05 m lane intrusion at mid-straight † | 0 (nominal)              | 50 (nominal)   | 0           | None                   |
+| `odd2_adverse_full`         | Faded markings + non-uniform light | as `odd2_adverse_with_obstacle` †                                              | 0.03 m                   | 150 (50 + 100) | 20          | Steering noise 0.02    |
+
+† **Obstacle profiles are specified but execution-deferred for F4:** the F3 policy
+observation is 6-dimensional with no obstacle channel, whereas §5.1 specifies an
+8-dimensional ODD-2 observation (obstacle-forward distance, obstacle-lateral
+offset, obstacle-detected flag). The F4 campaign runner skips profiles marked
+`execution: deferred` in `adverse_profiles.yaml` until obstacle perception is
+wired and the policy retrained (TBD-Q6 / TBD-Q7 closure rationale; D-33).
 
 ### 5.6 Excluded conditions
 
@@ -208,10 +214,10 @@ inherit their structure from §5.5.
 
 | Profile ID                  | Inherits from                | Curve-specific additions    |
 |-----------------------------|------------------------------|-----------------------------|
-| `odd4_nominal_adverse`      | `odd2_nominal_adverse`       | TBD-Q12                     |
-| `odd4_adverse_with_latency` | `odd2_adverse_with_latency`  | TBD-Q12                     |
-| `odd4_adverse_with_obstacle`| `odd2_adverse_with_obstacle` | TBD-Q12                     |
-| `odd4_adverse_full`         | `odd2_adverse_full`          | TBD-Q12                     |
+| `odd4_nominal_adverse`      | `odd2_nominal_adverse`       | No additional stressors     |
+| `odd4_adverse_with_latency` | `odd2_adverse_with_latency`  | No additional stressors     |
+| `odd4_adverse_with_obstacle`| `odd2_adverse_with_obstacle` | No additional stressors     |
+| `odd4_adverse_full`         | `odd2_adverse_full`          | No additional stressors     |
 
 ### 7.3 Excluded conditions and ODD-exit assumptions
 
@@ -288,15 +294,15 @@ with an explicit value.
 | TBD-Q1 | What friction coefficient is configured in the Gazebo SDF `<surface><friction>` block of the road geom in `src/cobraflex/worlds/odd1_straight_road.world` (or its current alias under `src/cobraflex/worlds/`)? Is the value identical across the ODD-1, ODD-3 and ODD-4 world files? | SS | D11 PM | 1.0 (src/cobraflex/worlds/{empty.world,obstacles.world,test_world.sdf} all use `<surface><friction><ode/></friction></surface>` (empty ODE block); Gazebo ODE defaults mu1=mu2=1.0 when no explicit value is set.) -- 2026-05-14 [Value inferred from Gazebo default rather than from an explicit <mu> tag. If a future world introduces an explicit <mu>, re-read and re-run close_odd_tbds.py.] |
 | TBD-Q2 | What is the maximum commanded lateral acceleration in ODD-1, derived from FRICTION and V_MAX? | SS | D11 PM | 9.81 (Derived: TBD-Q1 * g = 1.0 * 9.81 m/s^2. Upper bound from the no-skid Coulomb limit; the policy's actually-commanded a_lat in ODD-1 is far smaller because curvature is zero.) -- 2026-05-14 [Operational a_lat in ODD-1 is bounded by the steering geometry of the bicycle model, not by this Coulomb ceiling. The figure is the physical envelope, not a typical value.] |
 | TBD-Q3 | What is the numerical "drivable-corridor edge" used by the simulator's episode-termination logic? Why does it differ from LANE_EDGE? | SS | D11 PM | 0.1225 (src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py L93: `terminated = abs(track_state.ey) > (self.lane_width * 0.5)` with lane_width = 0.245 m from src/cobraflex_rl/config/centerline.yaml.) -- 2026-05-14 [CORRIDOR_EDGE == LANE_EDGE = LANE_WIDTH/2 = 0.1225 m. The env terminates the episode exactly at the geometric lane edge; no separate corridor margin is configured. The ODD-Spec note 'if the two differ, document the rationale' resolves to 'they do not differ'.] |
-| TBD-Q4 | What are the lighting-degradation parameters and observation-noise σ in `odd2_nominal_adverse`? | SS | D11 PM | |
-| TBD-Q5 | What are the latency, jitter, and actuation-imperfection parameters in `odd2_adverse_with_latency`? | SS | D11 PM | |
-| TBD-Q6 | What are the obstacle geometry, position distribution, and quantity in `odd2_adverse_with_obstacle`? | SS | D11 PM | |
-| TBD-Q7 | What is the full parameterisation of `odd2_adverse_full` (combining all preceding profiles)? | SS | D11 PM | |
+| TBD-Q4 | What are the lighting-degradation parameters and observation-noise σ in `odd2_nominal_adverse`? | SS | D11 PM | faded markings + non-uniform light; observation noise σ_lateral = 0.03 m; latency/jitter nominal (`src/cobraflex_rl/config/adverse_profiles.yaml` → `odd2_nominal_adverse`; σ = SC-PERT-01 mid level; worn world `lane_following_oval_worn.world`) -- 2026-06-03 [F4-entry closure, D-33] |
+| TBD-Q5 | What are the latency, jitter, and actuation-imperfection parameters in `odd2_adverse_with_latency`? | SS | D11 PM | extra latency +100 ms (over 50 ms nominal); jitter 20 ms; steering actuation noise 0.02 (`adverse_profiles.yaml` → `odd2_adverse_with_latency`; latency = SC-PERT-02 high level) -- 2026-06-03 [F4-entry closure, D-33] |
+| TBD-Q6 | What are the obstacle geometry, position distribution, and quantity in `odd2_adverse_with_obstacle`? | SS | D11 PM | 1 static box 0.10×0.10×0.10 m, qty 1, ~0.05 m lane intrusion at mid-straight (`adverse_profiles.yaml` → `odd2_adverse_with_obstacle`; modelled on `obstacles.world`; partial-intrusion per §5.3, ODD-exit on contact §5.7) -- 2026-06-03 [F4-entry closure, D-33; SPEC ONLY — execution deferred: no obstacle channel in the 6-dim obs, §5.1 specifies 8-dim] |
+| TBD-Q7 | What is the full parameterisation of `odd2_adverse_full` (combining all preceding profiles)? | SS | D11 PM | union of odd2_nominal_adverse + odd2_adverse_with_latency + odd2_adverse_with_obstacle (`adverse_profiles.yaml` → `odd2_adverse_full`) -- 2026-06-03 [F4-entry closure, D-33; inherits the Q6 obstacle execution-deferral] |
 | TBD-Q8 | What is the total loop length of the `odd3_curvy_loop` map? | SS | D11 PM | 8.0232 (Sum of `2 × 1.5 m` straights + `2 × π × 0.80 m` arcs = `3 + 1.6π m`, computed by `scripts/compose_lane_circuit.py` preset `oval_R080` and emitted into `src/cobraflex_rl/config/oval_centerline.yaml` under `centerline.perimeter_m`.) -- 2026-05-21 [The composer is the single source of truth; changing `--straight-length` or `--preset` re-derives this value and the polyline simultaneously, so the SRS / cage citation by `ODD-3.ROAD_LENGTH` cannot drift from the world file.] |
 | TBD-Q9 | What is the minimum curvature radius of the `odd3_curvy_loop` map (equivalently, KAPPA_MAX)? | SS | D11 PM | 1.25 (R_min = 0.80 m on the two U-turn tiles `curve_R080cm_A180deg.png` of the `oval_R080` preset. KAPPA_MAX = 1 / 0.80 = 1.25 m⁻¹.) -- 2026-05-21 [Switching to the `oval_R050` or `oval_R120` preset would change KAPPA_MAX to 2.00 m⁻¹ or 0.833 m⁻¹ respectively. For Phase 2 the `oval_R080` value is canonical; revisit when ODD-3 graduates to a multi-radius composite circuit.] |
 | TBD-Q10 | What is the maximum commanded lateral acceleration in ODD-3, derived from FRICTION and V_MAX_CURVE? | SS | M-4 | Deferred to M-4 calibration. Upper bound from no-skid Coulomb limit on the curve tile: `A_LAT_MAX ≤ FRICTION × g = 9.81 m/s²`. Operational value at `V_MAX_CURVE = 0.25 m/s` on `R_min = 0.80 m` is `V² / R = 0.078 m/s²`, well below the Coulomb ceiling. Final figure closes when M-4 measures the achievable acceleration envelope on the physical platform. |
 | TBD-Q11 | What is the stuck-criterion timeout in seconds? | SS | D11 PM | n/a (No separate stuck monitor is configured in the F2 implementation. The `gazebo_lane_env.py` env truncates at `max_episode_steps × control_dt = 400 × 0.10 s = 40 s`, which acts as the implicit stuck timeout.) -- 2026-05-21 [If a dedicated stuck monitor is added later (Phase 4 onwards), this entry should be re-opened to declare its specific value; for now the env truncation is the operational answer.] [F3 update 2026-06-01: `max_episode_steps` was raised 400→500, so the truncation window is now `500 × 0.10 s = 50 s`; the closure is unchanged (n/a, subsumed by env truncation).] |
-| TBD-Q12 | Do the ODD-4 named profiles introduce any stressor not present in their ODD-2 counterparts? If yes, document them. | SS | D11 PM | |
+| TBD-Q12 | Do the ODD-4 named profiles introduce any stressor not present in their ODD-2 counterparts? If yes, document them. | SS | D11 PM | No additional stressors — ODD-4 named profiles are the pure cross-product of ODD-3 geometry × ODD-2 stressors (§7.1; `adverse_profiles.yaml` → `odd4_profiles`) -- 2026-06-03 [F4-entry closure, D-33] |
 
 ---
 

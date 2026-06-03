@@ -15,7 +15,6 @@ if str(_PKG_PARENT) not in sys.path:
 
 from cobraflex_rl.scenario_loader import family as scenario_family  # noqa: E402
 from cobraflex_rl.verdict_aggregation import (  # noqa: E402
-    SR_CRITICALITY,
     ScenarioOutcome,
     ScenarioRuns,
     SRInfo,
@@ -37,11 +36,10 @@ def _oc(sid, fam, n_runs, passed):
                            1.0 if passed else 0.0, passed)
 
 
-# ---- SR registry / criticality guard ----
+# ---- SR registry / criticality (CSV-sourced) ----
 
-def test_sr_criticality_matches_csv():
+def test_sr_criticality_counts_from_csv():
     reg = load_sr_registry(_CSV)
-    assert set(reg) == set(SR_CRITICALITY), "SR_CRITICALITY drifted from the SR register CSV"
     crit = [info.criticality for info in reg.values()]
     assert crit.count("SR-CL-A") == 7
     assert crit.count("SR-CL-B") == 4

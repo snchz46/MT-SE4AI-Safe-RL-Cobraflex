@@ -228,17 +228,39 @@ el bucle sin cage usado en la depuración preliminar del pipeline.
 ### 7.2.6 Hiperparámetros PPO
 
 Los hiperparámetros de partida (versión 1.0) siguen los valores
-recomendados de Stable-Baselines3 para entornos de control continuo,
-con ajuste del horizonte `n_steps` al periodo del episodio:
+recomendados de Stable-Baselines3 (SB3 2.8.0) para entornos de control
+continuo, con ajuste del horizonte `n_steps` al periodo del episodio. La
+tabla lista la configuración **efectiva completa**: las seis primeras filas
+se fijan explícitamente (`train_ppo.yaml` → `PPO(...)` en `train_ppo.py`);
+el resto son los valores por defecto de SB3 2.8.0, **no sobreescritos**, y se
+documentan aquí para reproducibilidad.
 
-| Parámetro | Valor | Fuente |
-| --- | --- | --- |
-| `total_timesteps` | 200 000 | `[provisional, M-P7]` |
-| `learning_rate` | 3×10⁻⁴ | SB3 default |
-| `gamma` | 0.99 | SB3 default |
-| `n_steps` | 1 024 | ≈ 2 episodios de 500 pasos |
-| `batch_size` | 64 | SB3 default |
-| `device` | cpu | Dev machine sin GPU |
+| Parámetro | Valor | Fijado en | Fuente / nota |
+| --- | --- | --- | --- |
+| `total_timesteps` | 200 000 | `train_ppo.yaml` | `[provisional, M-P7]` |
+| `learning_rate` | 3×10⁻⁴ | `train_ppo.yaml` | = SB3 default |
+| `gamma` | 0.99 | `train_ppo.yaml` | = SB3 default |
+| `n_steps` | 1 024 | `train_ppo.yaml` | ≈ 2 episodios de 500 pasos (SB3 default 2 048) |
+| `batch_size` | 64 | `train_ppo.yaml` | = SB3 default |
+| `device` | cpu | `train_ppo.yaml` | Máquina de desarrollo sin GPU |
+| `n_epochs` | 10 | SB3 default | épocas de optimización por rollout |
+| `gae_lambda` | 0.95 | SB3 default | trade-off sesgo-varianza en GAE |
+| `clip_range` | 0.2 | SB3 default | clip del ratio de probabilidad de PPO |
+| `ent_coef` | 0.0 | SB3 default | sin bonus de entropía explícito |
+| `vf_coef` | 0.5 | SB3 default | peso de la *value loss* en la pérdida total |
+| `max_grad_norm` | 0.5 | SB3 default | clipping de la norma del gradiente |
+| `normalize_advantage` | True | SB3 default | normaliza ventajas por minibatch |
+
+**Arquitectura de red.** La política es la `MlpPolicy` por defecto de SB3:
+dos capas ocultas de 64 unidades con activación `tanh` y **redes separadas**
+para policy y value (sin backbone compartido — el `net_arch` por defecto de
+SB3 2.x es `pi=[64, 64]`, `vf=[64, 64]` sobre un extractor identidad), con
+salida Gaussiana diagonal (media + `log_std` independiente del estado). No se
+modifica `policy_kwargs`: se parte de un default bien probado para minimizar
+el riesgo de configuración. La elección de `ent_coef = 0.0` implica que la
+exploración no se incentiva explícitamente vía bonus de entropía; la entropía
+de la política decae de forma natural al comprometerse con la tarea (su curva
+se diagnostica en §7.4).
 
 El presupuesto de timesteps `[provisional, M-P7]` se fijó iterativamente.
 Un primer ciclo de 50 000 timesteps produjo una policy competente pero
@@ -264,11 +286,34 @@ Los checkpoints se guardan en `policy/checkpoints/` cada `n_steps`
 pasos (denominación SB3 `cobraflex_ppo_lane_<N>_steps.zip`, p.ej.
 `cobraflex_ppo_lane_50176_steps.zip`).
 El modelo final se guarda como `cobraflex_ppo_lane.zip`. Cada run de
-entrenamiento registra en `experiments/sim/training/` un CSV de curva
-de aprendizaje con columnas `[timestep, ep_rew_mean, ep_len_mean,
-explained_variance]` y un `metadata.json` con los mismos campos de
-reproducibilidad que los runs de validación (git commit, YAML hashes,
-seed, timestamp).
+entrenamiento registra en `experiments/sim/training/<run_id>/`:
+
+- `learning_curve.csv` — una fila por rollout con
+  `[timestep, ep_rew_mean, ep_len_mean, explained_variance, value_loss,
+  entropy, approx_kl, clip_fraction, std, intervention_rate, emergency_rate,
+  int_rate_C-01 … int_rate_C-06]`. Las columnas de salud de PPO (`value_loss`,
+  `entropy = −entropy_loss`, `approx_kl`, `clip_fraction`, `std`) y de
+  actividad del cage (tasa de intervención global, tasa de emergencia C-05 y
+  desglose por regla, acumuladas por paso desde el `info` del entorno)
+  habilitan las figuras de dinámica de §7.4. El esquema es un **superconjunto**
+  del histórico de cuatro columnas, de modo que las herramientas que leen por
+  nombre de columna siguen operando sobre runs antiguos.
+- `action_samples.csv` — el steering crudo de la política submuestreado
+  (`[timestep, raw_steer]`, una muestra cada `action_sample_every` pasos, 10 por
+  defecto), para la figura de distribución de acciones inicio-vs-fin (§7.4).
+- `metadata.json` — los mismos campos de reproducibilidad que los runs de
+  validación (git commit, hashes YAML, seed, timestamp).
+
+La instrumentación reside en `cobraflex_rl/callbacks.py`
+(`LearningCurveCallback`, `ActionSampleCallback`) y en el módulo puro
+`cobraflex_rl/training_metrics.py` (esquema de columnas + agregación de la
+actividad del cage; tests en `policy/tests/test_training_metrics.py`).
+
+> **Nota de cobertura.** El ciclo definitivo `ppo_train_42_200k` (§7.4) se
+> registró con el esquema histórico de cuatro columnas; las columnas de
+> actividad del cage y de salud de PPO —y por tanto las figuras 7.4–7.6— se
+> poblarán a partir del siguiente ciclo de entrenamiento (instrumentación ya
+> disponible; multi-semilla N≥5 en §7.2.7).
 
 ---
 
@@ -376,6 +421,25 @@ competente (§7.5) **y** saturada.
   saturación a ±1): el rate-limiter C-06 ya no necesita intervenir (§7.5.2).
   A nivel de **trayectoria** tampoco hay oscilación apreciable (ey máx 18 mm
   sobre 11.2 vueltas en evaluación, §7.5).
+
+<!--
+[COMPLETAR tras re-entrenamiento con el logger extendido] Figuras de dinámica de
+entrenamiento — generadas por `tools/plot_f3_figures.py` desde learning_curve.csv
+(columnas de cage + salud PPO) y action_samples.csv. Descomentar cuando el nuevo
+ciclo (o el set multi-semilla N≥5) esté disponible:
+
+<img src="../figures/fig_7_4_intervention.png" alt="Figura 7.4 — Tasa de intervención del cage y desglose por regla vs timesteps." width="560"/>
+*Figura 7.4 — Actividad del cage durante el entrenamiento: tasa de intervención
+global + emergencia C-05 (arriba) y desglose por regla C-01..C-06 (abajo).
+Evidencia de co-adaptación policy-cage (plan §11.1 Fig. 2/3).*
+
+<img src="../figures/fig_7_5_ppo_health.png" alt="Figura 7.5 — Value loss y entropía de la política vs timesteps." width="560"/>
+*Figura 7.5 — Salud interna de PPO: value loss y entropía de la política.*
+
+<img src="../figures/fig_7_6_action_distribution.png" alt="Figura 7.6 — Distribución del steering crudo, inicio vs fin del entrenamiento." width="560"/>
+*Figura 7.6 — Distribución de la acción (steering crudo) al inicio vs al final del
+entrenamiento: muestra si la política converge a acciones concretas o sigue diversa.*
+-->
 
 ---
 
@@ -524,6 +588,9 @@ de la tesis.
 APÉNDICE INTERNO — TRABAJO PENDIENTE EN ESTE CAPÍTULO
 
 Fase 4–5:
+  [ ] Re-entrenar con el logger extendido (callbacks.py / training_metrics.py) y
+      generar las figuras 7.4 (intervención + desglose), 7.5 (value loss +
+      entropía) y 7.6 (distribución de acciones); descomentar el bloque de §7.4
   [ ] Evaluar sobre todos los escenarios SC-NOM, SC-EDGE, SC-PERT
   [ ] Añadir análisis multi-semilla (N≥5)
 

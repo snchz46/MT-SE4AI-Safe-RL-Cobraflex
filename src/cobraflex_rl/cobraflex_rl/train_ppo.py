@@ -16,7 +16,11 @@ from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback
 from stable_baselines3.common.env_checker import check_env
 import yaml
 
-from .callbacks import LearningCurveCallback, ProgressBarCallback
+from .callbacks import (
+    ActionSampleCallback,
+    LearningCurveCallback,
+    ProgressBarCallback,
+)
 from .gazebo_lane_env import GazeboLaneEnv
 from .ros_interface import RosGazeboInterface
 from .run_io import git_commit, sha256_file
@@ -222,6 +226,10 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         callback = CallbackList([
             ProgressBarCallback(total_timesteps=total_timesteps),
             LearningCurveCallback(csv_path=run_dir / "learning_curve.csv"),
+            ActionSampleCallback(
+                csv_path=run_dir / "action_samples.csv",
+                sample_every=int(train_cfg.get("action_sample_every", 10)),
+            ),
             CheckpointCallback(
                 save_freq=checkpoint_freq,
                 save_path=str(checkpoints_dir),

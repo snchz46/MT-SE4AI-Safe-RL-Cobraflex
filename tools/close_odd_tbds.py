@@ -6,12 +6,22 @@ Close the TBD-Q1..Q12 placeholders in `docs/08_odd_specification.md`
 by substituting them with the resolved values declared in
 `experiments/odd_inspection/odd_tbds.yaml`.
 
-The script does two things:
+The script does two things, and is deliberately conservative about *which*
+`TBD-QN` occurrences it rewrites so that it stays idempotent and never
+corrupts prose that merely mentions an already-closed TBD:
 
-1. In the body of the ODD-Spec, replace every literal `TBD-QN`
-   occurrence outside the open-issues table by the resolved value.
+1. In the body of the ODD-Spec, replace a `TBD-QN` literal by its resolved
+   value ONLY where that token is the sole content of a Markdown table cell
+   (a "designated placeholder") — e.g. the ODD-3/ODD-4 columns of the §9
+   master-parameter-table `*.A_LAT_MAX` row, or the §5/§7 named-profile
+   tables. Prose mentions are left untouched: the §0.1 change-log rows
+   ("F1 partial closure of TBD-Q1 …"), the §9 source column ("closes
+   TBD-Q8"), and inline references such as "A_LAT_MAX = TBD-Q10".
 2. In the open-issues table at section 11, fill the `Resolution`
-   column of each resolved row with `value (source) -- YYYY-MM-DD`.
+   column of each resolved row with `value (source) -- YYYY-MM-DD`,
+   but only when that cell is still blank. A resolution already written
+   (by a prior run, or closed by hand) is left intact, so re-running
+   never re-dates or reformats a closed entry.
 
 By default the script runs in dry-run mode and prints a unified diff.
 Use `--apply` to write the patched ODD-Spec in place (a `.bak` file
@@ -48,8 +58,19 @@ DEFAULT_YAML = REPO_ROOT / "experiments" / "odd_inspection" / "odd_tbds.yaml"
 DEFAULT_ODD_SPEC = REPO_ROOT / "docs" / "08_odd_specification.md"
 
 SECTION_11_HEADING = "## 11. Open issues and TBDs"
-TBD_RE = re.compile(r"TBD-Q(\d+)\b")
+# A `TBD-QN` token that is the *sole* content of a Markdown table cell:
+# a pipe, optional spaces, the token, optional spaces, then a pipe. Only
+# these "designated placeholder" cells are substituted in the body. Prose
+# mentions never match because non-space text separates the pipe from the
+# token (e.g. "| … closes TBD-Q8 |" or "| … F1 partial closure of TBD-Q1 …
+# |"). The trailing pipe is a lookahead, not consumed, so adjacent
+# placeholder cells (`| TBD-Q10 | TBD-Q10 |`) both match.
+CELL_TBD_RE = re.compile(r"(\|[ \t]*)TBD-Q(\d+)([ \t]*)(?=\|)")
 TBD_ROW_RE = re.compile(r"^\|\s*(TBD-Q\d+)\s*\|")
+# Stripped, case-folded contents of a §11 `Resolution` cell that count as
+# "still a placeholder" — the tool fills these. Anything else is treated as
+# an already-written resolution and left intact (keeps the run idempotent).
+_BLANK_RESOLUTION_TOKENS = {"", "-", "–", "—", "tbd", "pending", "(pending)"}
 
 
 # =============================================================
@@ -107,20 +128,44 @@ def split_at_section_11(text: str) -> tuple[str, str]:
 
 
 def substitute_in_body(body: str, resolved: Dict[str, dict]) -> str:
-    """Replace every `TBD-QN` literal in the body with its resolved value."""
+    """Substitute *designated placeholder* `TBD-QN` cells in the body.
+
+    Only a `TBD-QN` that is the sole content of a Markdown table cell (see
+    ``CELL_TBD_RE``) is replaced by its resolved value. Prose mentions of
+    TBDs — change-log narration, the §9 source column's "closes TBD-QN",
+    inline references like "A_LAT_MAX = TBD-Q10" — are deliberately left
+    untouched. Unresolved TBDs (value still null, hence absent from
+    ``resolved``) keep their placeholder. The substitution is idempotent:
+    once a cell holds a value it no longer matches ``CELL_TBD_RE``.
+    """
 
     def repl(m: re.Match) -> str:
-        tbd_id = f"TBD-Q{m.group(1)}"
+        tbd_id = f"TBD-Q{m.group(2)}"
         if tbd_id not in resolved:
             return m.group(0)
-        return format_value(resolved[tbd_id]["value"])
+        value = format_value(resolved[tbd_id]["value"])
+        return f"{m.group(1)}{value}{m.group(3)}"
 
-    return TBD_RE.sub(repl, body)
+    return CELL_TBD_RE.sub(repl, body)
+
+
+def _is_blank_resolution(cell: str) -> bool:
+    """True if a §11 `Resolution` cell is still an unfilled placeholder.
+
+    The tool only *fills* blank cells; an already-written resolution (by a
+    prior run, or closed by hand as the F4-entry TBDs were — see D-33) is
+    left untouched so re-running never re-dates or reformats a closed entry.
+    """
+    return cell.strip().casefold() in _BLANK_RESOLUTION_TOKENS
 
 
 def update_resolution_table(section_11: str, resolved: Dict[str, dict],
                             today: str) -> str:
-    """Fill the `Resolution` column of each resolved row in section 11."""
+    """Fill the blank `Resolution` cell of each resolved row in section 11.
+
+    Rows whose `Resolution` cell already holds content are left intact, so
+    the pass is idempotent and never clobbers a hand-written closure.
+    """
     lines = section_11.split("\n")
     out: List[str] = []
     for line in lines:
@@ -136,6 +181,10 @@ def update_resolution_table(section_11: str, resolved: Dict[str, dict],
         cells = line.split("|")
         # cells[0] is empty (before first `|`), cells[-1] is empty (after last `|`).
         if len(cells) < 7:  # need 5 columns + 2 empty endpoints
+            out.append(line)
+            continue
+        if not _is_blank_resolution(cells[-2]):
+            # Already resolved (hand-written or by a prior run) — leave intact.
             out.append(line)
             continue
         entry = resolved[tbd_id]

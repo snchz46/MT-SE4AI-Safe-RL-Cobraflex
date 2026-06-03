@@ -31,6 +31,56 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [03.06.2026] — F4: SR criticality single-sourced into the SR register CSV
+
+**Document(s) affected:**
+`docs/03_safety_requirements.md` (machine-readable SR table → new Criticality column),
+`tools/sync_safety_requirements.py` (`column_mapping` + `fieldnames`),
+`docs/data/safety_requirements.csv` (regenerated; new `criticality` column),
+`src/cobraflex_rl/cobraflex_rl/verdict_aggregation.py`,
+`policy/tests/test_verdict_aggregation.py`.
+**Phase:** F4.
+**Gate context:** after G3 — closes the follow-up flagged in the 03.06 "verdict spine" entry
+(drop the injected criticality map once the SR sync pipeline carries the column).
+**Author:** Samuel.
+
+### Change
+
+Restored single-source-of-truth for the SR criticality class (SR-CL-A/B/C), which until now
+lived only in the manuscript SRS table (ch.4 §4.7 "Criticidad") and was duplicated in code:
+
+- Added a **Criticality** column to the machine-readable SR table in
+  `docs/03_safety_requirements.md`, with values mirrored from ch.4: SR-001..SR-005, SR-007,
+  SR-008 = SR-CL-A; SR-006, SR-009, SR-010, SR-011 = SR-CL-B (7× A, 4× B).
+- Extended `tools/sync_safety_requirements.py` (`column_mapping` + `fieldnames`) to extract and
+  emit a `criticality` column, and regenerated `docs/data/safety_requirements.csv`.
+- `verdict_aggregation.load_sr_registry` now reads criticality from the CSV; the hard-coded
+  `SR_CRITICALITY` map (previously cited to ch.4 / D-28) and its guard test
+  `test_sr_criticality_matches_csv` are deleted. The criticality-count assertion
+  (7× SR-CL-A, 4× SR-CL-B) is retained, now sourced from the CSV-built registry.
+
+### Rationale
+
+The injected map duplicated a fact that belongs in the generated register; the duplication was
+only kept honest by a guard test. Carrying `criticality` through the Markdown→CSV sync removes
+both the duplication and the guard, so the D-29 run-count gate and D-30 SR-CL-A veto read the
+same source the manuscript does.
+
+### Impact
+
+- No hazard / SR / cage-rule / `cage.yaml` / scenario / metric IDs added or changed; SR semantics
+  unchanged — only the criticality attribute is relocated to its single source.
+- One CSV column added (`criticality`). `load_sr_registry` is its only consumer and is updated;
+  an empty/absent column falls back to SR-CL-C, preserving the previous default for unknown SRs.
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED. 0 warning(s).**
+`python -m pytest -q` → **233 passed** (guard test removed, count assertion retained and now
+CSV-sourced; net test count unchanged).
+
+---
+
 ## [03.06.2026] — F4: verdict spine (campaign metrics, criterion eval, scenario loader, SR verdict aggregation)
 
 **Document(s) affected:**

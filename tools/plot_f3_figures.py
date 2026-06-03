@@ -11,6 +11,18 @@ Outputs (PNG, into --out, default manuscript/figures/auto/):
   * fig_7_2b_tracking_error.png — |ey| vs lap fraction, RL vs PD: the spatial
     overlay cannot resolve the mm-scale tracking difference on an R=0.8 m oval,
     so this companion plot is where the RL-vs-PD precision gap is visible.
+  * fig_7_4_intervention.png — cage intervention + C-05 emergency rate vs
+    timesteps and the per-rule breakdown: the co-adaptation evidence (plan
+    §11.1 Fig. 2/3).
+  * fig_7_5_ppo_health.png — PPO value loss + policy entropy vs timesteps
+    (plan §11.1 Fig. 5).
+  * fig_7_6_action_distribution.png — policy raw-steering histogram, early vs
+    late training (plan §11.1 Fig. 6).
+
+The 7.4/7.5/7.6 figures need a training run produced with the extended logger
+(cobraflex_rl/callbacks.py + training_metrics.py: the cage-rate columns and
+action_samples.csv). On a legacy 4-column run they are skipped with a note,
+while 7.1/7.2/7.2b still render.
 
 Pure post-processing of logged CSVs — no ROS / Gazebo. Run on any host with
 numpy + matplotlib + pyyaml.
@@ -212,6 +224,133 @@ def fig_trajectory(rl_run: Path, pd_run: Optional[Path], out: Path, laps: float 
     print(f"  wrote {out/'fig_7_2b_tracking_error.png'}")
 
 
+# Canonical cage rule IDs (mirrors cobraflex_rl.training_metrics.CAGE_RULES;
+# duplicated so this pure post-processing tool needs no src/ import).
+CAGE_RULES = ("C-01", "C-02", "C-03", "C-04", "C-05", "C-06")
+
+
+def _has_columns(rows: List[dict], cols) -> bool:
+    return bool(rows) and all(c in rows[0] for c in cols)
+
+
+def _col(rows: List[dict], name: str) -> np.ndarray:
+    return np.array([float(r[name]) for r in rows], dtype=float)
+
+
+def fig_intervention(train_run: Path, out: Path) -> None:
+    """Fig. 7.4 — cage intervention + C-05 emergency rate vs timesteps (top) and
+    the per-rule breakdown (bottom): the co-adaptation evidence (plan §11.1
+    Fig. 2/3). Requires a run logged with the extended schema; skipped (with a
+    note) on a legacy 4-column learning_curve.csv."""
+    rows = _read_csv(train_run / "learning_curve.csv")
+    if not _has_columns(rows, ["intervention_rate"]):
+        print("  skip fig_7_4_intervention (no cage columns; re-train with the extended logger)")
+        return
+    ts = _col(rows, "timestep")
+    rate = _col(rows, "intervention_rate") * 100.0
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(7, 6), sharex=True)
+    ax1.plot(ts, rate, color="#9467bd", alpha=0.35, lw=1)
+    ax1.plot(ts, _smooth(rate), color="#9467bd", lw=2, label="cage intervention rate")
+    if "emergency_rate" in rows[0]:
+        emerg = _col(rows, "emergency_rate") * 100.0
+        ax1.plot(ts, _smooth(emerg), color="#d62728", lw=1.5, ls="--",
+                 label="C-05 emergency rate")
+    ax1.set_ylabel("% of steps")
+    ax1.set_title("Fig. 7.4 — Cage activity during training (run %s)" % train_run.name)
+    ax1.legend(fontsize=8)
+    ax1.grid(True, alpha=0.3)
+
+    plotted = 0
+    for rule in CAGE_RULES:
+        col = f"int_rate_{rule}"
+        if col in rows[0]:
+            series = _col(rows, col) * 100.0
+            if np.nanmax(series) > 1e-9:
+                ax2.plot(ts, _smooth(series), lw=1.5, label=rule)
+                plotted += 1
+    if plotted == 0:
+        ax2.text(0.5, 0.5, "no per-rule interventions logged\n(cage stayed latent in nominal)",
+                 ha="center", va="center", transform=ax2.transAxes, fontsize=9, color="0.4")
+    else:
+        ax2.legend(fontsize=8, ncol=3)
+    ax2.set_xlabel("timesteps")
+    ax2.set_ylabel("% of steps (per rule)")
+    ax2.grid(True, alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(out / "fig_7_4_intervention.png", dpi=150)
+    plt.close(fig)
+    print(f"  wrote {out/'fig_7_4_intervention.png'}")
+
+
+def fig_ppo_health(train_run: Path, out: Path) -> None:
+    """Fig. 7.5 — PPO value loss + policy entropy vs timesteps (plan §11.1
+    Fig. 5). Requires the extended schema; skipped otherwise."""
+    rows = _read_csv(train_run / "learning_curve.csv")
+    if not _has_columns(rows, ["value_loss", "entropy"]):
+        print("  skip fig_7_5_ppo_health (no value_loss/entropy columns; re-train with the extended logger)")
+        return
+    ts = _col(rows, "timestep")
+    vloss = _col(rows, "value_loss")
+    entropy = _col(rows, "entropy")
+
+    fig, ax1 = plt.subplots(figsize=(7, 4))
+    ax1.plot(ts, vloss, color="#1f77b4", alpha=0.3, lw=1)
+    ax1.plot(ts, _smooth(vloss), color="#1f77b4", lw=2, label="value loss")
+    ax1.set_xlabel("timesteps")
+    ax1.set_ylabel("value loss", color="#1f77b4")
+    ax1.tick_params(axis="y", labelcolor="#1f77b4")
+
+    ax2 = ax1.twinx()
+    ax2.plot(ts, entropy, color="#ff7f0e", alpha=0.3, lw=1)
+    ax2.plot(ts, _smooth(entropy), color="#ff7f0e", lw=2, label="policy entropy")
+    ax2.set_ylabel("policy entropy", color="#ff7f0e")
+    ax2.tick_params(axis="y", labelcolor="#ff7f0e")
+
+    ax1.set_title("Fig. 7.5 — PPO health: value loss & entropy (run %s)" % train_run.name)
+    fig.tight_layout()
+    fig.savefig(out / "fig_7_5_ppo_health.png", dpi=150)
+    plt.close(fig)
+    print(f"  wrote {out/'fig_7_5_ppo_health.png'}")
+
+
+def fig_action_distribution(train_run: Path, out: Path, frac: float = 0.1) -> None:
+    """Fig. 7.6 — policy raw-steering distribution at the start vs the end of
+    training (plan §11.1 Fig. 6), from the subsampled action_samples.csv.
+    Skipped if that file is absent."""
+    path = train_run / "action_samples.csv"
+    if not path.is_file():
+        print("  skip fig_7_6_action_distribution (no action_samples.csv; re-train with the extended logger)")
+        return
+    rows = _read_csv(path)
+    if not _has_columns(rows, ["timestep", "raw_steer"]):
+        print("  skip fig_7_6_action_distribution (action_samples.csv missing columns)")
+        return
+    ts = _col(rows, "timestep")
+    steer = _col(rows, "raw_steer")
+    tmax = ts.max() if len(ts) else 0.0
+    early = steer[ts <= frac * tmax]
+    late = steer[ts >= (1.0 - frac) * tmax]
+
+    fig, ax = plt.subplots(figsize=(7, 4))
+    bins = np.linspace(-1.0, 1.0, 41)
+    if len(early):
+        ax.hist(early, bins=bins, density=True, alpha=0.5, color="#1f77b4",
+                label=f"early (first {frac:.0%} of steps)")
+    if len(late):
+        ax.hist(late, bins=bins, density=True, alpha=0.5, color="#d62728",
+                label=f"late (last {frac:.0%} of steps)")
+    ax.set_xlabel("raw policy steering")
+    ax.set_ylabel("density")
+    ax.set_title("Fig. 7.6 — Policy action distribution: early vs late training")
+    ax.legend(fontsize=8)
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(out / "fig_7_6_action_distribution.png", dpi=150)
+    plt.close(fig)
+    print(f"  wrote {out/'fig_7_6_action_distribution.png'}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Generate F3 (Chapter 7) figures.")
     ap.add_argument("--train-run", type=Path, default=None)
@@ -231,6 +370,9 @@ def main() -> None:
     print(f"train run: {train_run}\nRL eval  : {rl_run}\nPD run   : {pd_run}\nout      : {args.out}")
     if train_run:
         fig_convergence(train_run, args.out)
+        fig_intervention(train_run, args.out)
+        fig_ppo_health(train_run, args.out)
+        fig_action_distribution(train_run, args.out)
     if rl_run:
         fig_trajectory(rl_run, pd_run, args.out, laps=args.laps)
 

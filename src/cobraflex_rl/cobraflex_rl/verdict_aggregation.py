@@ -14,10 +14,10 @@ Pure (only PyYAML/csv via stdlib + sibling `criterion_eval`). The per-run verdic
 and fed in here as data, so this module is fully unit-testable with synthetic
 inputs.
 
-SR criticality is not present in `docs/data/safety_requirements.csv`; it lives in
-the SRS table (manuscript ch.4 §4.7 / docs/03) and decision D-28. It is mirrored
-here in ``SR_CRITICALITY`` with a guard test asserting the keys match the CSV.
-(Adding a `criticality` column to the SR sync pipeline is a tracked follow-up.)
+SR criticality (SR-CL-A/B/C) is carried by the `criticality` column of
+`docs/data/safety_requirements.csv`, generated from the SRS table (manuscript
+ch.4 §4.7 / docs/03) by `tools/sync_safety_requirements.py`. That CSV is the single
+source consumed here; ``load_sr_registry`` reads the column directly.
 """
 
 from __future__ import annotations
@@ -29,14 +29,6 @@ from typing import Dict, List, Optional, Union
 
 from .criterion_eval import evaluate
 from .scenario_loader import family as scenario_family
-
-# Source of truth: SRS table, manuscript ch.4 §4.7 (Criticidad column) / D-28.
-SR_CRITICALITY: Dict[str, str] = {
-    "SR-001": "SR-CL-A", "SR-002": "SR-CL-A", "SR-003": "SR-CL-A",
-    "SR-004": "SR-CL-A", "SR-005": "SR-CL-A", "SR-006": "SR-CL-B",
-    "SR-007": "SR-CL-A", "SR-008": "SR-CL-A", "SR-009": "SR-CL-B",
-    "SR-010": "SR-CL-B", "SR-011": "SR-CL-B",
-}
 
 # D-29 minimum runs per family by criticality (0 == informal, no gate).
 RUN_COUNT_THRESHOLD: Dict[str, int] = {"SR-CL-A": 25, "SR-CL-B": 10, "SR-CL-C": 0}
@@ -183,8 +175,9 @@ def aggregate_campaign(
 
 
 def load_sr_registry(csv_path: Union[str, Path]) -> Dict[str, SRInfo]:
-    """Build the SR registry from docs/data/safety_requirements.csv, attaching
-    criticality from ``SR_CRITICALITY``."""
+    """Build the SR registry from docs/data/safety_requirements.csv, reading
+    criticality from the `criticality` column (generated from the SRS table).
+    An SR with no/empty criticality defaults to SR-CL-C (informal evidence)."""
     registry: Dict[str, SRInfo] = {}
     with open(csv_path, newline="", encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
@@ -193,9 +186,10 @@ def load_sr_registry(csv_path: Union[str, Path]) -> Dict[str, SRInfo]:
                 continue
             raw = (row.get("scenarios") or "").strip()
             scenarios = ["ALL"] if raw.upper() == "ALL" else [s.strip() for s in raw.split(",") if s.strip()]
+            criticality = (row.get("criticality") or "").strip() or "SR-CL-C"
             registry[sid] = SRInfo(
                 id=sid,
-                criticality=SR_CRITICALITY.get(sid, "SR-CL-C"),
+                criticality=criticality,
                 scenarios=scenarios,
             )
     return registry

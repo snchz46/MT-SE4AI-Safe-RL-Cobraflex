@@ -3,11 +3,18 @@ from __future__ import annotations
 import csv
 import sys
 import time
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Optional
 
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.utils import safe_mean
+
+from .training_metrics import (
+    LEARNING_CURVE_COLUMNS,
+    SB3_SCALAR_COLUMNS,
+    RolloutCageStats,
+)
 
 
 class ProgressBarCallback(BaseCallback):
@@ -90,19 +97,30 @@ class ProgressBarCallback(BaseCallback):
 
 class LearningCurveCallback(BaseCallback):
     """Persist the PPO learning curve to a CSV (Training Spec §7.2.8): one row
-    per rollout with ``[timestep, ep_rew_mean, ep_len_mean, explained_variance]``.
+    per rollout with the columns in ``training_metrics.LEARNING_CURVE_COLUMNS`` —
+    the episode aggregates (``ep_rew_mean``/``ep_len_mean``), the PPO health
+    scalars (``explained_variance``, ``value_loss``, ``entropy``, ``approx_kl``,
+    ``clip_fraction``, ``std``) and the safety-cage activity (``intervention_rate``,
+    ``emergency_rate`` and per-rule ``int_rate_C-0x``). The cage series is what
+    the original 4-column schema lacked, so the co-adaptation figures (plan
+    §11.1 Fig. 2/3) and the PPO-health figure (Fig. 5) can be drawn from a
+    re-trained run.
 
-    ``ep_rew_mean`` / ``ep_len_mean`` come from ``model.ep_info_buffer`` (the
-    source SB3 logs as ``rollout/*``). ``explained_variance`` is captured
-    opportunistically in ``_on_step`` from the SB3 logger — PPO records
-    ``train/explained_variance`` after each update — so the value written is the
-    most recent completed update's (NaN before the first update).
+    ``ep_rew_mean``/``ep_len_mean`` come from ``model.ep_info_buffer`` (the source
+    SB3 logs as ``rollout/*``). The PPO scalars are captured opportunistically in
+    ``_on_step`` from the SB3 logger — PPO records ``train/*`` after each update —
+    so the value written is the most recent completed update's (NaN before the
+    first update; the same one-rollout lag the original callback had for
+    ``explained_variance``, kept here for every scalar). The cage rates are
+    accumulated per env step from the env ``info`` dicts (``RolloutCageStats``)
+    and reset every rollout.
     """
 
     def __init__(self, csv_path, verbose: int = 0) -> None:
         super().__init__(verbose)
         self.csv_path = Path(csv_path)
-        self._last_ev = float("nan")
+        self._scalars = {col: float("nan") for col, _key, _sign in SB3_SCALAR_COLUMNS}
+        self._cage = RolloutCageStats()
         self._header_written = False
 
     def _ep_stats(self) -> tuple[float, float]:
@@ -118,24 +136,76 @@ class LearningCurveCallback(BaseCallback):
         self.csv_path.parent.mkdir(parents=True, exist_ok=True)
 
     def _on_step(self) -> bool:
-        ev = self.model.logger.name_to_value.get("train/explained_variance")
-        if ev is not None:
-            self._last_ev = float(ev)
+        # Capture the latest PPO health scalars. name_to_value is cleared on each
+        # logger dump, so only overwrite the cached value when the key is present
+        # (otherwise the last completed update's value persists — see docstring).
+        name_to_value = self.model.logger.name_to_value
+        for col, key, sign in SB3_SCALAR_COLUMNS:
+            value = name_to_value.get(key)
+            if value is not None:
+                self._scalars[col] = sign * float(value)
+        # Accumulate this step's cage activity (SB3 passes one info per parallel env).
+        self._cage.update_many(self.locals.get("infos", ()))
         return True
 
     def _on_rollout_end(self) -> None:
         mean_reward, mean_length = self._ep_stats()
+        row = {
+            "timestep": self.num_timesteps,
+            "ep_rew_mean": f"{mean_reward:.6f}",
+            "ep_len_mean": f"{mean_length:.3f}",
+        }
+        for col, _key, _sign in SB3_SCALAR_COLUMNS:
+            row[col] = f"{self._scalars[col]:.6f}"
+        for col, value in self._cage.rates().items():
+            row[col] = f"{value:.6f}"
+
+        write_header = not self.csv_path.exists() and not self._header_written
+        with self.csv_path.open("a", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=list(LEARNING_CURVE_COLUMNS))
+            if write_header:
+                writer.writeheader()
+            writer.writerow(row)
+        self._header_written = True
+        self._cage.reset()
+
+
+class ActionSampleCallback(BaseCallback):
+    """Subsample the policy's steering command during rollout collection to a CSV
+    ``[timestep, raw_steer]`` for the action-distribution figure (early- vs
+    late-training; plan §11.1 Fig. 6). One row every ``sample_every`` env steps,
+    reading the applied raw policy steering from the env ``info`` (``raw_steer``,
+    set by ``GazeboLaneEnv`` on both the caged and debug paths). Subsampling keeps
+    the file small (≈ total_timesteps / sample_every rows).
+    """
+
+    def __init__(self, csv_path, sample_every: int = 10, verbose: int = 0) -> None:
+        super().__init__(verbose)
+        self.csv_path = Path(csv_path)
+        self.sample_every = max(1, int(sample_every))
+        self._header_written = False
+        self._step = 0
+
+    def _on_training_start(self) -> None:
+        self.csv_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _on_step(self) -> bool:
+        self._step += 1
+        if self._step % self.sample_every != 0:
+            return True
+        rows = [
+            (self.num_timesteps, float(info["raw_steer"]))
+            for info in (self.locals.get("infos") or ())
+            if isinstance(info, Mapping) and "raw_steer" in info
+        ]
+        if not rows:
+            return True
         write_header = not self.csv_path.exists() and not self._header_written
         with self.csv_path.open("a", newline="", encoding="utf-8") as handle:
             writer = csv.writer(handle)
             if write_header:
-                writer.writerow(
-                    ["timestep", "ep_rew_mean", "ep_len_mean", "explained_variance"]
-                )
-            writer.writerow([
-                self.num_timesteps,
-                f"{mean_reward:.6f}",
-                f"{mean_length:.3f}",
-                f"{self._last_ev:.6f}",
-            ])
+                writer.writerow(["timestep", "raw_steer"])
+            for timestep, steer in rows:
+                writer.writerow([timestep, f"{steer:.6f}"])
         self._header_written = True
+        return True

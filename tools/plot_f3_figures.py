@@ -2,27 +2,26 @@
 """
 plot_f3_figures — generate the Chapter 7 (F3) figures from the run artifacts.
 
-Outputs (PNG, into --out, default manuscript/figures/auto/):
+Outputs (PNG, into --out, default manuscript/figures/auto/), numbered in
+reading order (§7.4 training dynamics, then §7.5 evaluation):
   * fig_7_1_convergence.png  — ep_rew_mean + ep_len_mean vs timesteps (raw +
     window-5 smoothing), from a training run's learning_curve.csv (§7.4.1).
-  * fig_7_2_trajectory.png   — RL trajectory on the oval (exact, from x/y) with
+  * fig_7_2_intervention.png — cage intervention + C-05 emergency rate vs
+    timesteps and the per-rule breakdown: the co-adaptation evidence (§7.4).
+  * fig_7_3_ppo_health.png   — PPO value loss + policy entropy vs timesteps (§7.4).
+  * fig_7_4_action_distribution.png — policy raw-steering histogram, early vs
+    late training (§7.4).
+  * fig_7_5_trajectory.png   — RL trajectory on the oval (exact, from x/y) with
     the PD baseline overlaid (reconstructed from its ey + speed-integrated arc
     length, since the F2 PD log has no world pose) and the lane centerline (§7.5).
-  * fig_7_2b_tracking_error.png — |ey| vs lap fraction, RL vs PD: the spatial
+  * fig_7_6_tracking_error.png — |ey| vs lap fraction, RL vs PD: the spatial
     overlay cannot resolve the mm-scale tracking difference on an R=0.8 m oval,
-    so this companion plot is where the RL-vs-PD precision gap is visible.
-  * fig_7_4_intervention.png — cage intervention + C-05 emergency rate vs
-    timesteps and the per-rule breakdown: the co-adaptation evidence (plan
-    §11.1 Fig. 2/3).
-  * fig_7_5_ppo_health.png — PPO value loss + policy entropy vs timesteps
-    (plan §11.1 Fig. 5).
-  * fig_7_6_action_distribution.png — policy raw-steering histogram, early vs
-    late training (plan §11.1 Fig. 6).
+    so this companion plot is where the RL-vs-PD precision gap is visible (§7.5).
 
-The 7.4/7.5/7.6 figures need a training run produced with the extended logger
+The 7.2/7.3/7.4 figures need a training run produced with the extended logger
 (cobraflex_rl/callbacks.py + training_metrics.py: the cage-rate columns and
 action_samples.csv). On a legacy 4-column run they are skipped with a note,
-while 7.1/7.2/7.2b still render.
+while 7.1/7.5/7.6 still render.
 
 Pure post-processing of logged CSVs — no ROS / Gazebo. Run on any host with
 numpy + matplotlib + pyyaml.
@@ -188,12 +187,12 @@ def fig_trajectory(rl_run: Path, pd_run: Optional[Path], out: Path, laps: float 
     ax.set_aspect("equal")
     ax.set_xlabel("x (m)")
     ax.set_ylabel("y (m)")
-    ax.set_title(f"Fig. 7.2 — PPO trajectory on the oval (~{laps:g} laps)")
+    ax.set_title(f"Fig. 7.5 — PPO trajectory on the oval (~{laps:g} laps)")
     ax.legend(loc="center", fontsize=8)
     fig.tight_layout()
-    fig.savefig(out / "fig_7_2_trajectory.png", dpi=150)
+    fig.savefig(out / "fig_7_5_trajectory.png", dpi=150)
     plt.close(fig)
-    print(f"  wrote {out/'fig_7_2_trajectory.png'}")
+    print(f"  wrote {out/'fig_7_5_trajectory.png'}")
 
     # --- Fig 7.2b: |ey| vs cumulative laps, RL vs PD (same v·dt integration for
     #     both, so the x-axis is consistent); warm-up (first 0.3 laps) trimmed. ---
@@ -215,13 +214,13 @@ def fig_trajectory(rl_run: Path, pd_run: Optional[Path], out: Path, laps: float 
     ax2.text(0.02, 124, "half-lane 122 mm", fontsize=7, color="0.4")
     ax2.set_xlabel(f"laps (first {warm:g} lap warm-up trimmed)")
     ax2.set_ylabel("|ey| (mm)")
-    ax2.set_title("Fig. 7.2b — Lateral tracking error: RL vs PD")
+    ax2.set_title("Fig. 7.6 — Lateral tracking error: RL vs PD")
     ax2.legend(loc="upper right", fontsize=8)
     ax2.grid(True, alpha=0.3)
     fig2.tight_layout()
-    fig2.savefig(out / "fig_7_2b_tracking_error.png", dpi=150)
+    fig2.savefig(out / "fig_7_6_tracking_error.png", dpi=150)
     plt.close(fig2)
-    print(f"  wrote {out/'fig_7_2b_tracking_error.png'}")
+    print(f"  wrote {out/'fig_7_6_tracking_error.png'}")
 
 
 # Canonical cage rule IDs (mirrors cobraflex_rl.training_metrics.CAGE_RULES;
@@ -244,7 +243,7 @@ def fig_intervention(train_run: Path, out: Path) -> None:
     note) on a legacy 4-column learning_curve.csv."""
     rows = _read_csv(train_run / "learning_curve.csv")
     if not _has_columns(rows, ["intervention_rate"]):
-        print("  skip fig_7_4_intervention (no cage columns; re-train with the extended logger)")
+        print("  skip fig_7_2_intervention (no cage columns; re-train with the extended logger)")
         return
     ts = _col(rows, "timestep")
     rate = _col(rows, "intervention_rate") * 100.0
@@ -257,7 +256,7 @@ def fig_intervention(train_run: Path, out: Path) -> None:
         ax1.plot(ts, _smooth(emerg), color="#d62728", lw=1.5, ls="--",
                  label="C-05 emergency rate")
     ax1.set_ylabel("% of steps")
-    ax1.set_title("Fig. 7.4 — Cage activity during training (run %s)" % train_run.name)
+    ax1.set_title("Fig. 7.2 — Cage activity during training (run %s)" % train_run.name)
     ax1.legend(fontsize=8)
     ax1.grid(True, alpha=0.3)
 
@@ -278,9 +277,9 @@ def fig_intervention(train_run: Path, out: Path) -> None:
     ax2.set_ylabel("% of steps (per rule)")
     ax2.grid(True, alpha=0.3)
     fig.tight_layout()
-    fig.savefig(out / "fig_7_4_intervention.png", dpi=150)
+    fig.savefig(out / "fig_7_2_intervention.png", dpi=150)
     plt.close(fig)
-    print(f"  wrote {out/'fig_7_4_intervention.png'}")
+    print(f"  wrote {out/'fig_7_2_intervention.png'}")
 
 
 def fig_ppo_health(train_run: Path, out: Path) -> None:
@@ -288,7 +287,7 @@ def fig_ppo_health(train_run: Path, out: Path) -> None:
     Fig. 5). Requires the extended schema; skipped otherwise."""
     rows = _read_csv(train_run / "learning_curve.csv")
     if not _has_columns(rows, ["value_loss", "entropy"]):
-        print("  skip fig_7_5_ppo_health (no value_loss/entropy columns; re-train with the extended logger)")
+        print("  skip fig_7_3_ppo_health (no value_loss/entropy columns; re-train with the extended logger)")
         return
     ts = _col(rows, "timestep")
     vloss = _col(rows, "value_loss")
@@ -307,11 +306,11 @@ def fig_ppo_health(train_run: Path, out: Path) -> None:
     ax2.set_ylabel("policy entropy", color="#ff7f0e")
     ax2.tick_params(axis="y", labelcolor="#ff7f0e")
 
-    ax1.set_title("Fig. 7.5 — PPO health: value loss & entropy (run %s)" % train_run.name)
+    ax1.set_title("Fig. 7.3 — PPO health: value loss & entropy (run %s)" % train_run.name)
     fig.tight_layout()
-    fig.savefig(out / "fig_7_5_ppo_health.png", dpi=150)
+    fig.savefig(out / "fig_7_3_ppo_health.png", dpi=150)
     plt.close(fig)
-    print(f"  wrote {out/'fig_7_5_ppo_health.png'}")
+    print(f"  wrote {out/'fig_7_3_ppo_health.png'}")
 
 
 def fig_action_distribution(train_run: Path, out: Path, frac: float = 0.1) -> None:
@@ -320,11 +319,11 @@ def fig_action_distribution(train_run: Path, out: Path, frac: float = 0.1) -> No
     Skipped if that file is absent."""
     path = train_run / "action_samples.csv"
     if not path.is_file():
-        print("  skip fig_7_6_action_distribution (no action_samples.csv; re-train with the extended logger)")
+        print("  skip fig_7_4_action_distribution (no action_samples.csv; re-train with the extended logger)")
         return
     rows = _read_csv(path)
     if not _has_columns(rows, ["timestep", "raw_steer"]):
-        print("  skip fig_7_6_action_distribution (action_samples.csv missing columns)")
+        print("  skip fig_7_4_action_distribution (action_samples.csv missing columns)")
         return
     ts = _col(rows, "timestep")
     steer = _col(rows, "raw_steer")
@@ -342,13 +341,13 @@ def fig_action_distribution(train_run: Path, out: Path, frac: float = 0.1) -> No
                 label=f"late (last {frac:.0%} of steps)")
     ax.set_xlabel("raw policy steering")
     ax.set_ylabel("density")
-    ax.set_title("Fig. 7.6 — Policy action distribution: early vs late training")
+    ax.set_title("Fig. 7.4 — Policy action distribution: early vs late training")
     ax.legend(fontsize=8)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
-    fig.savefig(out / "fig_7_6_action_distribution.png", dpi=150)
+    fig.savefig(out / "fig_7_4_action_distribution.png", dpi=150)
     plt.close(fig)
-    print(f"  wrote {out/'fig_7_6_action_distribution.png'}")
+    print(f"  wrote {out/'fig_7_4_action_distribution.png'}")
 
 
 def main() -> None:

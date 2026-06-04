@@ -31,6 +31,73 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [04.06.2026] — F3: extended training instrumentation + re-instrumented seed-42 cycle; Ch.7 figures 7.1–7.7
+
+**Document(s) affected:**
+`manuscript/chapters/chapter_07_training_specification.md` (§7.2.6 hyperparameter table,
+§7.2.7 multi-seed note, §7.2.8 CSV schema, §7.4 + Figures 7.2–7.4, §7.5 + §7.5.2),
+`manuscript/figures/fig_7_1..fig_7_7*.png` (regenerated + renumbered to reading order),
+`src/cobraflex_rl/cobraflex_rl/training_metrics.py` (new), `.../callbacks.py`,
+`.../train_ppo.py`, `tools/plot_f3_figures.py`,
+`policy/tests/test_training_metrics.py` (new),
+`docs/09_environment_design.md` (ED-10), `docs/10_reward_function.md` (§5), `CLAUDE.md`.
+**Phase:** F3 (Training Spec / Ch.7 refinement; recorded during F4).
+**Gate context:** after G3 — closes the co-adaptation-evidence gap left open at G3 (the
+training-time cage-intervention curve was never logged, so the cage's contribution had to
+be argued indirectly).
+**Author:** Samuel.
+
+### Change
+
+- **Extended PPO learning-curve logger.** `LearningCurveCallback` now records, per rollout,
+  the PPO-health scalars (`value_loss`, `entropy = −entropy_loss`, `approx_kl`,
+  `clip_fraction`, `std`) and the safety-cage activity (`intervention_rate`,
+  `emergency_rate`, per-rule `int_rate_C-01..C-06`) — a superset of the legacy 4-column
+  schema (§7.2.8). New `ActionSampleCallback` → `action_samples.csv` (subsampled raw
+  steering). Aggregation lives in the pure, dependency-free `training_metrics.py`
+  (unit-tested in `policy/tests/test_training_metrics.py`, 10 tests).
+- **Re-instrumented definitive cycle.** `ppo_train_42_200k` (run_id
+  `ppo_train_20260603T203630Z`, seed 42, 200k, reward v1.2) + eval `rl_eval_42_200k_4k4`
+  (run_id `rl_eval_20260604T083959Z`) replace the prior seed-42/200k run (retained as
+  `*_old`): same config, now with the full logging. §7.4/§7.5 rewritten around it.
+- **Figures 7.1–7.7, renumbered to reading order.** New training-dynamics figures —
+  7.2 (cage intervention + per-rule co-adaptation), 7.3 (value-loss/entropy), 7.4 (action
+  distribution) — and the eval figures renumbered (7.5 trajectory, 7.6 tracking error,
+  7.7 Gazebo capture). `tools/plot_f3_figures.py` emits all six auto-generated figures.
+- **§7.2.6 hyperparameter table** completed to the full effective SB3 2.8.0 config
+  (`n_epochs`, `gae_lambda`, `clip_range`, `ent_coef`, `vf_coef`, `max_grad_norm`,
+  `normalize_advantage`) + `MlpPolicy` architecture note.
+- **Number sync** to the new run in `docs/09` (ED-10), `docs/10` (§5) and `CLAUDE.md`.
+
+### Rationale
+
+At G3 the nominal evaluation showed ~0% cage interventions, so co-adaptation could only be
+argued indirectly. The direct signal — the cage intervention rate *during training* — was
+not logged. The extended logger captures it: the new cycle shows the intervention rate
+falling monotonically from ~89% to ~4.7% (Figure 7.2), entropy decaying 1.42 → −1.56
+(Figure 7.3) and the raw action distribution moving from bang-bang to smooth (Figure 7.4) —
+the constraint-respecting co-adaptation the methodology predicts.
+
+### Impact
+
+- **Result (re-instrumented run):** `ep_rew_mean` → 530.2, `ep_len_mean` → 500,
+  `explained_variance` → 0.55; eval 11.03 laps, 0 emergencies, mean |ey| 11.6 mm (×2.0 vs
+  PD), cage 0.023% (one C-06 step). Slightly less precise than the prior seed-42 run
+  (6.5 mm) — run-to-run variance, not budget: 200k is saturated (plateau from ~83k).
+- Additional seeds (123, 2024, …) under the **same** config are in progress; the
+  median±band overlay and the §7.2.7 cross-seed consolidation are deferred to that set
+  (Ch.8).
+- No hazard / SR / cage-rule / `cage.yaml` / scenario / metric IDs added or changed.
+
+### Verification
+
+`python -m pytest policy/tests/test_training_metrics.py` → **10 passed**.
+`python -m py_compile` on `training_metrics.py`, `callbacks.py`, `train_ppo.py`,
+`plot_f3_figures.py` → OK. `tools/plot_f3_figures.py` regenerates `fig_7_1..fig_7_6` with
+the new names. `python tools/check_traceability.py` → **All checks PASSED. 0 warning(s).**
+
+---
+
 ## [03.06.2026] — F4: SR criticality single-sourced into the SR register CSV
 
 **Document(s) affected:**

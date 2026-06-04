@@ -1,13 +1,45 @@
-# Placeholder. Full specification in docs/05_scenario_library.md.
-# To be expanded during Phase 2 with all schema fields.
-
 id: SC-EDGE-03
 category: edge
-description: "TODO — see docs/05_scenario_library.md for the full spec."
+# Track mapping (F4 reconciliation, Option A — run on the oval; see docs/05, 'Track mapping').
+track:
+  world: lane_following_oval.world
+  centerline: oval_right_lane_centerline.yaml
+  start_s_m: 0.0          # 0.0 = straight start, 1.5 = curve entry
+commanded_speed_mps: 0.2     # env fixed_speed (supersedes the 0.3/0.4 prose in docs/05)
 
-# Required fields not yet specified:
-# initial_conditions, perturbations, termination,
-# metrics_primary, metrics_secondary,
-# pass_criterion_per_run, pass_criterion_per_scenario,
-# references_SR, n_runs_recommended
-status: stub
+description: |
+  Speed perturbation. During nominal straight operation, a 200 ms throttle
+  override to maximum is injected at t = 5 s (an exogenous action forcing a
+  sudden acceleration), then released. Tests C-04 (speed limit) without lane
+  exit. With the fixed 0.2 m/s cruise as the baseline, the pulse drives speed
+  above v_max(κ) and C-04 must clamp it.
+
+initial_conditions:
+  pose: { x: 0.0, y: 0.0, theta_deg: 0.0 }
+  speed_mps: 0.2
+  randomisation:
+    lateral_offset_uniform_m: [-0.02, 0.02]
+    heading_uniform_deg: [-2.0, 2.0]
+
+perturbations:
+  type: throttle_override
+  at_time_s: 5.0
+  duration_s: 0.2
+  throttle: 1.0          # maximum, then released
+
+termination:
+  type: time_or_event
+  timeout_s: 15.0
+  events: [lane_exit, emergency_stop, straight_completed]
+
+metrics_primary: [M-I1, M-P3, M-S1]
+metrics_secondary: [M-P1, M-S4]
+
+pass_criterion_per_run: "M-S1 < 0.16 AND emergency == False"
+pass_criterion_per_scenario: "fraction_pass >= 0.90"
+
+references_SR: [SR-004]
+
+n_runs_recommended:
+  enforcement: 25          # ≥25 per D-29 (verifies SR-004, SR-CL-A)
+  monitoring: 25

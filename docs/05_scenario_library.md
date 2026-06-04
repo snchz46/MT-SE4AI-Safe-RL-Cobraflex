@@ -39,6 +39,39 @@ The full YAML schema is in `scenarios/_schema.yaml`.
 
 ---
 
+## Track mapping (Phase 4 reconciliation)
+
+The scenarios were specified (Phase 2) in **abstract geometry** ("a straight
+section", "a curved section") without pinning a Gazebo world. The Phase 3 policy
+and the Phase 2 PD baseline were, however, trained and validated on a single
+closed **oval** (`lane_following_oval.world`, centerline
+`oval_right_lane_centerline.yaml`; straight length 1.5 m, curve radius 0.8 m,
+perimeter 8.79 m). The Phase 4 campaign therefore runs **all** scenarios on that
+oval (*Option A*): the oval already contains straight and curved segments, so no
+second world is required and the RL↔PD comparison stays on identical geometry.
+
+Each scenario YAML carries an explicit `track` block:
+
+- `world` / `centerline`: the oval world and its right-lane centerline.
+- `start_s_m`: the arc-length position at which the run initialises —
+  **0.0** = start of the straight (also the training/eval start), **1.5** =
+  curve entry. The straight scenarios start at 0.0; the curved-nominal scenario
+  (SC-NOM-02) at 1.5.
+- `commanded_speed_mps: 0.2`: the system runs at the environment's **fixed
+  speed** (0.2 m/s; Training Spec §7.2.2). **This supersedes** the per-scenario
+  "nominal commanded speed" values (0.3–0.4 m/s) quoted in the prose below, which
+  predate the fixed-speed decision.
+
+**Recovery fits the straight.** At 0.2 m/s the straight scenarios' recovery
+budgets — e.g. SC-EDGE-01 heading recovery ≤ 2 s = 0.4 m, SC-EDGE-02 lateral
+recovery ≤ 3 s = 0.6 m — complete well within the 1.5 m straight, before the
+curve begins, so the single-rule isolation each scenario intends is preserved.
+
+The dedicated **`straight_road.world`** (a pure straight) is reserved for the
+physical subset (Phase 5), where a straight is simpler to set up than an oval.
+
+---
+
 ## SC-NOM-01 — Straight nominal
 
 **Description.** Vehicle initialises at the start of a straight section with zero offset and zero heading error. Nominal commanded speed (0.4 m/s). No perturbations. Run for the time required to traverse the straight twice.
@@ -104,9 +137,18 @@ The full YAML schema is in `scenarios/_schema.yaml`.
 
 **Pass criterion per scenario.** ≥ 90% of runs pass.
 
-**References SR.** SR-001, SR-002, SR-003, SR-004, SR-006, SR-008, SR-009.
+**References SR.** SR-001, SR-002, SR-003, SR-004, SR-005, SR-006, SR-007, SR-008, SR-009.
 
-**Recommended runs.** 20 per mode.
+> **Nominal coverage of SR-002 / SR-005 / SR-007 (D-29 nominal family).** SR-002
+> (heading stability) is verified positively here — the heading stays within
+> `θ_max` over the circuit (M-P4 gate). SR-005 (compound-state emergency) and
+> SR-007 (state staleness) have hazards that do **not** arise in nominal, so their
+> nominal-family evidence is a **no-false-activation** check: the C-05 emergency
+> must never false-trigger (`emergency == False`, M-S3 = 0) across the extended
+> run. This is the negative half of D-29's nominal+adverse coverage; the positive
+> demonstrations are in SC-EDGE-04 (SR-005) and SC-PERT-02 (SR-007).
+
+**Recommended runs.** 25 per mode (≥25 per D-29 — verifies SR-008, SR-CL-A).
 
 ---
 
@@ -172,7 +214,7 @@ The full YAML schema is in `scenarios/_schema.yaml`.
 
 **References SR.** SR-004.
 
-**Recommended runs.** 20 per mode.
+**Recommended runs.** 25 per mode (≥25 per D-29 — SR-004 is SR-CL-A).
 
 ---
 

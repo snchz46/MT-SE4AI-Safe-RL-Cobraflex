@@ -312,12 +312,12 @@ The **Criticality** column carries the SR criticality class (SR-CL-A/B/C) define
 | SR ID | Statement | Pattern | Hazards | implementation_type | Criticality | Scenarios | Metric | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | SR-001 | Lane departure prevention (direct) | Direct threshold | H-01 | C-01 | SR-CL-A | SC-NOM-01, SC-NOM-02, SC-EDGE-02 | M-S1 | Open | d_max = 0.16 m |
-| SR-002 | Heading stability | Direct threshold | H-02 | C-02 | SR-CL-A | SC-EDGE-01, SC-EDGE-04 | M-P4 | Open | θ_max = 25 deg |
+| SR-002 | Heading stability | Direct threshold | H-02 | C-02 | SR-CL-A | SC-EDGE-01, SC-EDGE-04, SC-NOM-03 | M-P4 | Open | θ_max = 25 deg |
 | SR-003 | Predictive lane departure prevention (TTLC) | Predictive threshold | H-01, H-02 | C-03 | SR-CL-A | SC-NOM-02, SC-EDGE-01 | M-S4 | Open | t_min = 1.0 s; provisional |
 | SR-004 | Speed compliance | Direct threshold | H-03 | C-04 | SR-CL-A | SC-NOM-02, SC-EDGE-03 | M-P3 | Open | Curvature-parameterised ceiling |
-| SR-005 | Emergency mode for compound state | Emergency mode | H-04, H-07 | C-05 | SR-CL-A | SC-EDGE-04 | M-S3 | Open | Δt_max = 0.2 s; a_min provisional |
+| SR-005 | Emergency mode for compound state | Emergency mode | H-04, H-07 | C-05 | SR-CL-A | SC-EDGE-04, SC-NOM-03 | M-S3 | Open | Δt_max = 0.2 s; a_min provisional |
 | SR-006 | Actuator smoothness | Bounded derivative | H-05 | C-06 | SR-CL-B | ALL | M-I5 | Open | Always active |
-| SR-007 | State validity and freshness | Availability + emergency | H-06 | C-05 | SR-CL-A | SC-PERT-02 | M-S3 | Open | staleness_max = 200 ms |
+| SR-007 | State validity and freshness | Availability + emergency | H-06 | C-05 | SR-CL-A | SC-PERT-02, SC-NOM-03 | M-S3 | Open | staleness_max = 200 ms |
 | SR-008 | Controlled stop on demand | Emergency mode | H-07 | C-05 | SR-CL-A | SC-NOM-03, SC-EDGE-04 | M-S3 | Open | t_stop_max = 1.7 s |
 | SR-009 | Minimum forward progress (liveness) | Liveness | H-08 | training | SR-CL-B | SC-NOM-01, SC-NOM-02, SC-NOM-03, SC-PERT-03 | M-P6, M-S2 (monitoring) | Open | Δs_min = 0.10 m / t_window = 2.0 s / Δt_settle = 1.0 s |
 | SR-010 | Cage rule composition consistency | Operational envelope + bounded oscillation | H-09 | arbiter | SR-CL-B | SC-EDGE-04, SC-EDGE-05 | M-S2, M-I3 | Open | Joint-envelope assertion + f_osc_max = 5 Hz |

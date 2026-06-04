@@ -1,5 +1,12 @@
 id: SC-NOM-01
 category: nominal
+# Track mapping (F4 reconciliation, Option A — run on the oval; see docs/05, 'Track mapping').
+track:
+  world: lane_following_oval.world
+  centerline: oval_right_lane_centerline.yaml
+  start_s_m: 0.0          # 0.0 = straight start, 1.5 = curve entry
+commanded_speed_mps: 0.2     # env fixed_speed (supersedes the 0.3/0.4 prose in docs/05)
+
 description: |
   Straight nominal run. Vehicle initialises at the start of a straight
   section with near-zero offset and near-zero heading error. Nominal

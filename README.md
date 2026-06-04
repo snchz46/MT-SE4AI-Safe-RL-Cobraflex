@@ -21,7 +21,7 @@
 
 <p align="center">
   <a href="manuscript/media/eval_11_lap.mp4">
-    <img src="manuscript/figures/fig_7_3_gazebo_capture.png" alt="Trained policy lane-keeping in Gazebo with the live RViz state view" width="840">
+    <img src="manuscript/figures/fig_7_7_gazebo_capture.png" alt="Trained policy lane-keeping in Gazebo with the live RViz state view" width="840">
   </a>
   <br>
   <sub>The trained PPO policy lane-keeping on the oval in <b>Gazebo</b> (left), the live <b>RViz</b> state view (centre) and the vehicle TF tree (right).

@@ -1,13 +1,42 @@
-# Placeholder. Full specification in docs/05_scenario_library.md.
-# To be expanded during Phase 2 with all schema fields.
-
 id: SC-PERT-02
 category: perturbed
-description: "TODO — see docs/05_scenario_library.md for the full spec."
+# Track mapping (F4 reconciliation, Option A — run on the oval; see docs/05, 'Track mapping').
+track:
+  world: lane_following_oval.world
+  centerline: oval_right_lane_centerline.yaml
+  start_s_m: 0.0          # 0.0 = straight start, 1.5 = curve entry
+commanded_speed_mps: 0.2     # env fixed_speed (supersedes the 0.3/0.4 prose in docs/05)
 
-# Required fields not yet specified:
-# initial_conditions, perturbations, termination,
-# metrics_primary, metrics_secondary,
-# pass_criterion_per_run, pass_criterion_per_scenario,
-# references_SR, n_runs_recommended
-status: stub
+description: |
+  Actuation latency (timing / perception-pipeline proxy — see Ch.8 §8.2.3). An
+  artificial delay is inserted between /safe_action publication and the actuator
+  response, at two levels. Tests the cage's robustness to stale commands,
+  especially C-03 (time-to-lane-crossing), which is most sensitive to latency.
+
+initial_conditions:
+  pose: { x: 0.0, y: 0.0, theta_deg: 0.0 }
+  speed_mps: 0.0
+  randomisation:
+    lateral_offset_uniform_m: [-0.02, 0.02]
+    heading_uniform_deg: [-2.0, 2.0]
+
+perturbations:
+  type: actuation_latency
+  latency_levels_ms: [50, 100]   # 20 runs per level per mode
+
+termination:
+  type: time_or_event
+  timeout_s: 15.0
+  events: [lane_exit, emergency_stop, straight_completed]
+
+metrics_primary: [M-I1, M-S1, M-S3]
+metrics_secondary: [M-P1, M-S4]
+
+pass_criterion_per_run: "M-S1 < 0.16 AND emergency == False"
+pass_criterion_per_scenario: "fraction_pass >= 0.90"
+
+references_SR: [SR-003, SR-007]
+
+n_runs_recommended:
+  enforcement: 40          # 20 per level × 2 levels
+  monitoring: 40

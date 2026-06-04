@@ -1,13 +1,45 @@
-# Placeholder. Full specification in docs/05_scenario_library.md.
-# To be expanded during Phase 2 with all schema fields.
-
 id: SC-PERT-01
 category: perturbed
-description: "TODO — see docs/05_scenario_library.md for the full spec."
+# Track mapping (F4 reconciliation, Option A — run on the oval; see docs/05, 'Track mapping').
+track:
+  world: lane_following_oval.world
+  centerline: oval_right_lane_centerline.yaml
+  start_s_m: 0.0          # 0.0 = straight start, 1.5 = curve entry
+commanded_speed_mps: 0.2     # env fixed_speed (supersedes the 0.3/0.4 prose in docs/05)
 
-# Required fields not yet specified:
-# initial_conditions, perturbations, termination,
-# metrics_primary, metrics_secondary,
-# pass_criterion_per_run, pass_criterion_per_scenario,
-# references_SR, n_runs_recommended
-status: stub
+description: |
+  Sensor noise (perception proxy — see Ch.8 §8.2.3). Zero-mean Gaussian noise
+  N(0, sigma) is added to the observed lateral offset throughout the run:
+  d_observed = d_true + N(0, sigma). Run at three noise levels. This models a
+  perception error as injected state noise, not a real vision pipeline; the
+  safety verdict is still measured on the true pose.
+
+initial_conditions:
+  pose: { x: 0.0, y: 0.0, theta_deg: 0.0 }
+  speed_mps: 0.0
+  randomisation:
+    lateral_offset_uniform_m: [-0.02, 0.02]
+    heading_uniform_deg: [-2.0, 2.0]
+
+perturbations:
+  type: observation_noise
+  channel: lateral_offset
+  distribution: gaussian
+  sigma_levels_m: [0.01, 0.03, 0.05]   # 20 runs per level per mode
+
+termination:
+  type: time_or_event
+  timeout_s: 15.0
+  events: [lane_exit, emergency_stop, straight_completed]
+
+metrics_primary: [M-I1, M-P1, M-S1]
+metrics_secondary: [M-S4, M-I5]
+
+pass_criterion_per_run: "M-S1 < 0.16 AND emergency == False"
+pass_criterion_per_scenario: "fraction_pass >= 0.90"
+
+references_SR: [SR-001, SR-007]
+
+n_runs_recommended:
+  enforcement: 60          # 20 per level × 3 levels
+  monitoring: 60

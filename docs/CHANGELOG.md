@@ -31,6 +31,172 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [04.06.2026] — F4: SR-002/005/007 nominal-family coverage added; scenario library now 11/11 D-29-feasible
+
+**Document(s) affected:**
+`docs/03_safety_requirements.md` (SR-002/005/007 Scenarios += SC-NOM-03),
+`docs/data/safety_requirements.csv` (regenerated),
+`docs/05_scenario_library.md` (SC-NOM-03 References SR + nominal-coverage note),
+`scenarios/nominal/sc_nom_03.yaml` (references_SR += SR-005/007; M-P4 gate).
+**Phase:** F4 (entry).
+**Gate context:** after G3 — closes the 3 D-29 nominal-coverage gaps the campaign
+dry-run surfaced; the scenario library is now fully D-29-feasible.
+**Author:** Samuel.
+
+### Change
+
+- **SR-002 / SR-005 / SR-007 gain nominal-family coverage via SC-NOM-03** (the
+  full-circuit run, 25 nominal runs), so each of these SR-CL-A is now verified in a
+  nominal *and* an adverse family (D-29). SR-002 (heading) is verified positively —
+  M-P4 promoted to primary with a `M-P4 < 0.436` (θ_max = 25°) gate. SR-005
+  (compound-state emergency) and SR-007 (state staleness) are verified as
+  **no-false-activation** checks: their hazards do not arise in nominal, so the
+  nominal evidence is `emergency == False` / M-S3 = 0 over the run (documented in
+  docs/05). A pre-existing docs/03↔docs/05 inconsistency (SC-NOM-03 already
+  referenced SR-002 on the scenario side but not in the SR register) is resolved.
+- `safety_requirements.csv` regenerated from docs/03 via
+  `tools/sync_safety_requirements.py`.
+
+### Rationale
+
+The dry-run showed SR-002/005/007 (all SR-CL-A) verified only in adverse families,
+failing D-29's nominal+adverse requirement. SC-NOM-03 already exercises the relevant
+metrics (M-P4 heading, M-S3 emergency) over an extended nominal run, so it is the
+natural nominal carrier. The no-false-activation framing keeps the emergency-SR
+nominal evidence honest rather than fabricating a positive demonstration of a hazard
+that cannot occur in nominal.
+
+### Impact
+
+- `run_campaign --dry-run`: **0 GAP — 11/11 SRs D-29-feasible** (was 3 GAP). The
+  scenario library is ready for the campaign (pending the Gazebo executor).
+- No hazard / SR / cage-rule / metric / scenario IDs added or changed; only the
+  SR↔scenario links and SC-NOM-03's metrics/gate.
+
+### Verification
+
+`python tools/sync_safety_requirements.py` → 11 SRs written.
+`python tools/check_traceability.py` → All checks PASSED, 0 warning(s).
+`python tools/check_scenario_yaml.py` → PASSED, 0 errors, 0 warnings.
+`python tools/run_campaign.py --dry-run` → 0 SR not feasible (11/11).
+
+---
+
+## [04.06.2026] — F4: 7 scenario stubs promoted to full YAMLs; dry-run resolves D-29 run-count gaps
+
+**Document(s) affected:**
+`scenarios/{nominal,edge,perturbed}/*.yaml` (7 stubs → full: SC-NOM-02/03,
+SC-EDGE-02/03/04, SC-PERT-01/02), `docs/05_scenario_library.md` (SC-EDGE-03 /
+SC-NOM-03 run counts → 25), `tools/run_campaign.py` ("ALL" convention + message),
+`policy/tests/test_run_campaign.py`.
+**Phase:** F4 (entry).
+**Gate context:** after G3 — the `run_campaign --dry-run` had flagged the 7 stubs
+as blocking SR coverage; this promotes them and closes the run-count gaps.
+**Author:** Samuel.
+
+### Change
+
+- **7 stub scenarios promoted to full, schema-valid YAMLs** (SC-NOM-02 curved
+  nominal, SC-NOM-03 full circuit, SC-EDGE-02 lateral, SC-EDGE-03 speed pulse,
+  SC-EDGE-04 compound, SC-PERT-01 sensor noise, SC-PERT-02 latency), translated
+  from docs/05 onto the oval track mapping, with a small per-run randomisation so
+  the runs are **independent** (D-29) and pass criteria on catalogued M-* metrics.
+  `check_scenario_yaml.py` now reports 0 warnings (was 7 stubs).
+- **Run-count reconciliation for D-29.** SC-EDGE-03 (verifies SR-004) and SC-NOM-03
+  (verifies SR-008) bumped 20 → 25 runs/mode, the SR-CL-A minimum (D-29); docs/05
+  updated to match.
+- **`run_campaign.py`:** handle the docs/05 "ALL" scenario convention (SR-006, the
+  always-active rate limiter, is verified by every scenario), and fix the stale
+  "blocked by stubs" message.
+
+### Rationale
+
+The `--dry-run` planner showed 8/11 SRs not D-29-feasible because the verifying
+scenarios were stubs. Promoting them + the two run-count bumps + the SR-006 fix
+brings it to **8/11 feasible**. The remaining 3 gaps (SR-002, SR-005, SR-007) are
+**structural**: each is verified only in adverse (EDGE/PERT) scenarios, while D-29
+requires an SR-CL-A to be covered in a nominal family too. Closing those needs a
+scenario↔SR mapping decision (add a nominal reference, or argue the SR is
+inherently adverse) — deferred to the supervisor.
+
+### Impact
+
+- D-29 feasibility: 3/11 → **8/11** SRs feasible (dry-run). Remaining GAPs: SR-002,
+  SR-005, SR-007 (no nominal-family coverage — design decision).
+- No hazard / SR / cage-rule / `cage.yaml` / metric / scenario IDs added or changed;
+  only the 7 YAML bodies and two run counts changed. The 11 scenario IDs stay
+  consistent with docs/05 and the traceability matrix.
+
+### Verification
+
+`python tools/check_scenario_yaml.py` → PASSED, 0 errors, 0 warnings.
+`python tools/check_traceability.py` → All checks PASSED, 0 warning(s).
+`python -m pytest policy/tests/test_run_campaign.py` → 11 passed.
+`python tools/run_campaign.py --dry-run` → 11/11 executable, 8/11 SRs D-29-feasible.
+
+---
+
+## [04.06.2026] — F4: scenario track-mapping reconciliation + campaign-runner core (plan + D-29/D-30 aggregation)
+
+**Document(s) affected:**
+`docs/05_scenario_library.md` (new "Track mapping" section),
+`scenarios/{nominal,edge,perturbed}/*.yaml` (11 files: explicit `track` block +
+`commanded_speed_mps`), `tools/run_campaign.py` (new),
+`policy/tests/test_run_campaign.py` (new).
+**Phase:** F4 (entry).
+**Gate context:** after G3 — prepares the L2′ campaign for launch: pins the
+scenarios to the trained world and provides the orchestration/verdict spine.
+**Author:** Samuel.
+
+### Change
+
+- **Scenario↔world reconciliation (Option A — run on the oval).** The scenarios
+  were specified (Phase 2) in abstract geometry without a world, while the policy
+  and PD baseline were trained/validated only on the oval. Every scenario YAML now
+  carries an explicit `track` block (`world: lane_following_oval.world`,
+  `centerline: oval_right_lane_centerline.yaml`, `start_s_m` = 0.0 straight start /
+  1.5 curve entry for SC-NOM-02) and `commanded_speed_mps: 0.2` (the env fixed
+  speed, superseding the per-scenario 0.3–0.4 prose). Documented authoritatively in
+  a new "Track mapping" section of `docs/05`. `straight_road.world` is reserved for
+  the Phase-5 physical subset. No retraining needed — the policy already drives the
+  oval's κ=0 straights.
+- **Campaign-runner core `tools/run_campaign.py`.** Pure, ROS-free orchestration +
+  aggregation: scenario/SR loading, run-matrix generation
+  (scenario × mode × controller × seed × rep), per-run verdict from the
+  pass-criterion strings (sandboxed eval), and aggregation per **D-29** (≥25
+  runs/family for SR-CL-A, 10 for SR-CL-B, nominal+adverse coverage) and **D-30**
+  (any SR-CL-A failure vetoes the global verdict). A `--dry-run` planner validates
+  the run matrix and the D-29 feasibility against the current library before any
+  run is launched. The Gazebo executor (`execute_run`: mode/start_s/perturbation
+  via `eval_policy`) is a documented stub for the Ubuntu+Jazzy host.
+
+### Rationale
+
+Launching F4 needs two things this change provides: (a) the scenarios must point at
+the world the policy actually runs on (they did not), and (b) an orchestration spine
+that turns the campaign into per-SR and global verdicts under the agreed counting
+(D-29) and veto (D-30) rules. The `--dry-run` surfaces, before spending the run
+budget, that 8 of 11 SRs are not yet feasible because the scenarios that verify them
+are still stubs — making "promote the 7 stub scenarios" the concrete next F4 task.
+
+### Impact
+
+- `--dry-run` on the current library: 11 scenarios (4 executable, 7 stub),
+  1760 matrix runs, 3/11 SRs D-29-feasible (SR-009/010/011), 8 GAP (stub-blocked).
+- Known refinement: the SR-006 "ALL"-scenario convention (docs/05) is not yet
+  special-cased in the runner (shows as a gap).
+- No hazard / SR / cage-rule / `cage.yaml` / metric IDs added or changed; the 11
+  scenario IDs are unchanged (only their YAML bodies gained the `track` block).
+
+### Verification
+
+`python tools/check_scenario_yaml.py` → PASSED, 0 errors, 7 warnings (the
+pre-existing stubs). `python -m pytest policy/tests/test_run_campaign.py` →
+11 passed. `python -m py_compile tools/run_campaign.py` → OK.
+`python tools/check_traceability.py` → All checks PASSED, 0 warning(s).
+
+---
+
 ## [04.06.2026] — F3: extended training instrumentation + re-instrumented seed-42 cycle; Ch.7 figures 7.1–7.7
 
 **Document(s) affected:**

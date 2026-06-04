@@ -282,6 +282,53 @@ esta tesis, para evitar expectativas mal calibradas.
 Estas limitaciones se desarrollan con mayor detalle en el capítulo de
 metodología (§3.9) y en el capítulo de discusión final (Capítulo 11).
 
+### 1.6.3 Abstracciones deliberadas del caso de estudio  [LISTO]
+
+Más allá de las limitaciones metodológicas anteriores, el caso de estudio
+incorpora un conjunto de **abstracciones técnicas** sobre el sistema físico que
+conviene declarar de forma explícita, porque no son simplificaciones de
+conveniencia sino **controles experimentales**: cada una fija una capa del
+sistema para poder aislar la que esta tesis estudia —la cage y su integración
+trazable—. El sistema se entiende como una pila de capas:
+
+> `percepción → estado (ey, epsi, v, κ) → [ policy + cage ] → actuación → dinámica`
+
+La aportación reside en el bloque `[policy + cage]`, especificado sobre el
+**estado abstracto** (offset lateral `ey`, error de heading `epsi`, velocidad y
+curvatura `κ`) en el que las reglas de la cage (C-01..C-06) están definidas. Las
+abstracciones que rodean a ese bloque son:
+
+- **Estado a partir de pose *ground-truth*, no de percepción visual del carril.**
+  En simulación, `(ey, epsi, v)` se obtienen proyectando la pose ground-truth
+  sobre una línea central conocida, no detectando marcas de carril con cámara o
+  lidar. Esto aísla el problema de **control** del problema de **percepción**:
+  cualquier fallo observado es atribuible a la policy o a la cage, no al sensor.
+  La cage es **agnóstica al origen del estado**, y los veredictos de seguridad se
+  miden sobre la pose verdadera —salir del carril es un hecho físico, no un
+  artefacto—. La capa de percepción real se introduce como estresor (ruido de
+  estado) en la evaluación (Capítulo 8) y se aborda en el despliegue físico
+  (Capítulo 9).
+
+- **Velocidad longitudinal fija.** El componente aprendido controla únicamente la
+  dirección; la velocidad se mantiene constante. Esto reduce el problema de
+  aprendizaje a **control lateral** —suficiente para el ODD nominal— y preserva la
+  separación "la recompensa guía, la cage garantiza". El control longitudinal y su
+  regla de seguridad asociada (C-04) se ejercitan mediante perturbación inyectada
+  en la campaña de evaluación (SC-EDGE-03); su aprendizaje queda como extensión.
+
+- **Una geometría de pista y una plataforma.** La validación se realiza sobre un
+  óvalo único (R = 0.8 m) y el vehículo 1:14; la generalización a otras geometrías
+  o vehículos se argumenta por plausibilidad estructural, no por evidencia
+  empírica (cf. §1.6.2).
+
+El hilo conductor es que estas fronteras **no debilitan** la afirmación central
+de la tesis —que la cage añade seguridad **medible y trazable** a un componente
+aprendido— sino que la hacen *limpia*: al fijar las capas vecinas, el efecto de la
+cage puede atribuirse sin confusión, en lugar de quedar enmascarado por el ruido
+de la percepción, el control longitudinal o la transferencia a hardware. Cada
+frontera se vuelve a tratar, en su contexto experimental, en el Capítulo 8
+(§8.2.3 y §8.8).
+
 ---
 
 ## 1.7 Estructura del documento  [LISTO]

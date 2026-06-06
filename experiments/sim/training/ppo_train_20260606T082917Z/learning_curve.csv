@@ -1,3 +1,0 @@
-timestep,ep_rew_mean,ep_len_mean,explained_variance,value_loss,entropy,approx_kl,clip_fraction,std,intervention_rate,emergency_rate,int_rate_C-01,int_rate_C-02,int_rate_C-03,int_rate_C-04,int_rate_C-05,int_rate_C-06
-1024,20.935942,40.760,nan,nan,nan,nan,nan,nan,0.903320,0.024414,0.146484,0.053711,0.247070,0.000000,0.024414,0.867188
-2048,20.554681,40.520,-0.000763,36.405507,1.415670,0.001955,0.003418,0.994550,0.905273,0.024414,0.207031,0.031250,0.277344,0.000000,0.024414,0.874023

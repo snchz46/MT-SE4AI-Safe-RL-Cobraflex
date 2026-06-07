@@ -176,7 +176,7 @@ controlador × semilla), agrega por-(escenario, modo) y emite los veredictos.
 ## 8.3 Resultados — Escenarios nominales (SC-NOM)  [COMPLETAR FASE 4]
 
 Verifica que el sistema opera dentro del ODD y establece la línea base RL-vs-PD.
-SC-NOM-01 ya tiene su evaluación de referencia en §7.5 (run `rl_eval_42_200k_4k4`
+SC-NOM-01 ya tiene su evaluación de referencia en §7.5 (run `rl_eval_2024_200k_4k4`
 vs PD `ros_run_20260523T153003Z`); aquí se completa con SC-NOM-02 (curva) y
 SC-NOM-03 (circuito completo), en ambos modos.
 

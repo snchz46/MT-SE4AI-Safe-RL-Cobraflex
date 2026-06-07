@@ -47,8 +47,14 @@ The `metadata.json` is what makes a run reproducible: with the same git commit, 
 
 ## Phase status
 
-- Phase 4: simulation experiments executed; ~900 runs accumulated.
-- Phase 5: physical experiments executed; ~30-60 runs across selected scenarios.
+- **Phases 2–3 (done):** F2 PD-baseline closed-loop runs (`sim/runs/ros_run_*`) and the F3
+  PPO training (`sim/training/ppo_train_*`) + evaluation (`sim/runs/rl_eval_*`) cycles are
+  logged here.
+- **Phase 4 (in progress):** the scenario-validation campaign is planned at ~900 runs across
+  the 11 scenarios × modes; the Gazebo executor (`tools/run_campaign.py::execute_run`) is
+  still a stub on the Ubuntu host, so no campaign runs are accumulated yet.
+- **Phase 5 (planned):** physical CobraFlex experiments, ~30–60 runs across selected
+  scenarios; `physical/runs/` is currently empty.
 
 ## Data not in version control
 

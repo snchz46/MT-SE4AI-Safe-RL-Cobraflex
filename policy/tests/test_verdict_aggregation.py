@@ -176,10 +176,12 @@ def test_aggregate_campaign_end_to_end():
     assert report["global"]["verdict"] == "satisfied"
 
 
-def test_real_registry_surfaces_adverse_only_srs():
-    """Finding: SR-002/005/007 (all SR-CL-A) are mapped only to adverse families,
-    so the D-29 'nominal AND adverse' gate cannot be met as currently mapped."""
+def test_real_registry_sr_cl_a_have_nominal_and_adverse():
+    """SR-002/005/007 (all SR-CL-A) gained nominal-family coverage via SC-NOM-03
+    (04.06 F4), resolving the earlier adverse-only finding, so the D-29
+    'nominal AND adverse' gate is now feasible for them."""
     reg = load_sr_registry(_CSV)
     for sid in ("SR-002", "SR-005", "SR-007"):
         fams = {scenario_family(s) for s in reg[sid].scenarios}
-        assert fams == {"adverse"}, f"{sid} expected adverse-only families, got {fams}"
+        assert "nominal" in fams and "adverse" in fams, \
+            f"{sid} expected nominal+adverse families, got {sorted(fams)}"

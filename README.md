@@ -6,8 +6,8 @@
 </p>
 
 <p align="center">
-  <img alt="Phase" src="https://img.shields.io/badge/phase-F3%20·%20PPO%20training-1f6feb">
-  <img alt="Gate" src="https://img.shields.io/badge/gate%20G2-passed-2da44e">
+  <img alt="Phase" src="https://img.shields.io/badge/phase-F4%20·%20Sim%20eval-1f6feb">
+  <img alt="Gate" src="https://img.shields.io/badge/gate%20G3-passed-2da44e">
   <img alt="Methodology" src="https://img.shields.io/badge/methodology-SE4AI-8957e5">
   <img alt="ROS 2" src="https://img.shields.io/badge/ROS%202-Jazzy-22314E?logo=ros&logoColor=white">
   <img alt="Simulator" src="https://img.shields.io/badge/simulator-Gazebo-FB6C2C">
@@ -87,26 +87,26 @@ The cage ([`cage/`](cage/)) is **pure Python** and importable without ROS 2, so 
 
 ## Results at a glance
 
-The definitive F3 training cycle (`ppo_train_42_200k` — seed 42, 200 k steps, reward v1.2) **saturates**: the policy learns to complete full laps and then refines its smoothness on the plateau.
+The definitive F3 training cycle (`ppo_train_2024_200k` — seed 2024, 200 k steps, reward v1.2) **saturates**: the policy learns to complete full laps and then refines its smoothness on the plateau. Seed 2024 is the main run of the five-seed campaign (best reward + PPO health; 4/5 seeds constraint-respecting).
 
 <p align="center">
-  <b>11.2 continuous laps&nbsp;·&nbsp; 0 emergencies&nbsp;·&nbsp; 6.5 mm mean lateral error&nbsp;·&nbsp; 0 % cage intervention</b>
+  <b>11.2 continuous laps&nbsp;·&nbsp; 0 emergencies&nbsp;·&nbsp; 9.9 mm mean lateral error&nbsp;·&nbsp; 0 % cage intervention</b>
 </p>
 
 <table>
 <tr>
 <td width="50%"><img src="manuscript/figures/fig_7_1_convergence.png" alt="PPO convergence — reward and episode length vs timesteps" width="100%"></td>
-<td width="45%"><img src="manuscript/figures/fig_7_2_trajectory.png" alt="PPO trajectory tracking the lane centreline on the oval" width="100%"></td>
+<td width="45%"><img src="manuscript/figures/fig_7_5_trajectory.png" alt="PPO trajectory tracking the lane centreline on the oval" width="100%"></td>
 </tr>
 </table>
 
 <p align="center">
-  <img src="manuscript/figures/fig_7_2b_tracking_error.png" alt="Lateral tracking error — RL stays roughly 3.5x tighter than the PD baseline" width="500">
+  <img src="manuscript/figures/fig_7_6_tracking_error.png" alt="Lateral tracking error — RL stays roughly 2.3x tighter than the PD baseline" width="500">
 </p>
 
-**Training** — `ep_rew_mean` climbs 24.8 → **535.2**, `ep_len_mean` reaches the **500-step** cap (saturated by ~71 k steps), and `explained_variance` settles at **0.63** (above the 0.5 threshold).
+**Training** — `ep_rew_mean` climbs 20.9 → **536.8**, `ep_len_mean` reaches the **500-step** cap (saturated by ~75 k steps), and `explained_variance` settles at **0.67** (above the 0.5 threshold).
 
-**Evaluation** (`rl_eval_42_200k_4k4`, scenario `SC-NOM-01`) — the policy drives **11.2 continuous laps** with a mean lateral error of **6.5 mm**, against **23 mm** for the PD baseline on the same scenario (~3.5× tighter, see the tracking-error figure). Crucially the cage records **0 % interventions**: under reward v1.2 the policy already steers within every cage rule, so the raw action *equals* the safe action at every step — the cage stays silent because the policy is well-behaved, not because it is switched off.
+**Evaluation** (`rl_eval_2024_200k_4k4`, scenario `SC-NOM-01`) — the policy drives **11.2 continuous laps** with a mean lateral error of **9.9 mm**, against **23 mm** for the PD baseline on the same scenario (~2.3× tighter, see the tracking-error figure). Crucially the cage records **0 % interventions**: under reward v1.2 the policy already steers within every cage rule, so the raw action *equals* the safe action at every step — the cage stays silent because the policy is well-behaved, not because it is switched off.
 
 > Earlier F2 milestone — the PD baseline **+ cage** closed-loop demo (`ros_run_20260523T153003Z`) drove 9.91 laps over 845 s with 0 emergencies, validating the runtime pipeline end-to-end before the RL policy existed.
 
@@ -129,8 +129,8 @@ The work advances through gated phases. Each Gate is blocked until traceability 
 | **F0** | Foundation & workspace | G0 | complete |
 | **F1** | Hazard analysis + safety requirements (9 H / 11 SR) | G1 | complete |
 | **F2** | Safety cage (`C-01…C-06`) + ROS 2 pipeline | G2 | complete — passed 2026-05-23 |
-| **F3** | PPO training & policy | G3 | **in progress** |
-| F4 | Simulation-based scenario evaluation | G4 | planned |
+| **F3** | PPO training & policy | G3 | complete — passed 2026-06-03 |
+| **F4** | Simulation-based scenario evaluation | G4 | **in progress** |
 | F5 | Physical CobraFlex platform | G5 | planned |
 | F6 | Closure & defence | G6 | planned |
 

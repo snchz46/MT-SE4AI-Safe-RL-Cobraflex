@@ -3,6 +3,7 @@ Unit tests for cobraflex_rl.scenario_loader — parsing the real scenario YAMLs
 under scenarios/. Runs without ROS/Gazebo.
 """
 
+import shutil
 import sys
 from pathlib import Path
 
@@ -48,17 +49,35 @@ def test_load_full_scenario_sc_edge_05():
     assert spec.family == "adverse"
 
 
-def test_stub_raises():
-    # sc_nom_02 is an explicit stub in the repo
+# The scenario library is fully promoted (no stubs remain in the repo since the
+# 04.06 F4 stub-promotion), so the stub mechanism is exercised on synthetic YAMLs.
+_ALL_SCENARIO_IDS = (
+    "SC-NOM-01", "SC-NOM-02", "SC-NOM-03",
+    "SC-EDGE-01", "SC-EDGE-02", "SC-EDGE-03", "SC-EDGE-04", "SC-EDGE-05",
+    "SC-PERT-01", "SC-PERT-02", "SC-PERT-03",
+)
+
+
+def test_stub_raises(tmp_path):
+    stub = tmp_path / "sc_stub.yaml"
+    stub.write_text("id: SC-STUB-01\nstatus: stub\n", encoding="utf-8")
     with pytest.raises(ScenarioStub):
-        load_scenario(_SCEN / "nominal" / "sc_nom_02.yaml")
+        load_scenario(stub)
 
 
-def test_load_scenarios_skips_stubs():
+def test_load_scenarios_loads_all_full():
+    # all 11 documented scenarios are promoted to full YAMLs (none skipped)
     specs = load_scenarios(_SCEN)
-    # the four full scenarios are present...
-    for sid in ("SC-NOM-01", "SC-EDGE-01", "SC-EDGE-05", "SC-PERT-03"):
-        assert sid in specs
-    # ...and the known stubs are not
-    assert "SC-NOM-02" not in specs
-    assert "SC-PERT-02" not in specs
+    for sid in _ALL_SCENARIO_IDS:
+        assert sid in specs, f"{sid} missing from loaded scenarios"
+
+
+def test_load_scenarios_skips_stub_in_dir(tmp_path):
+    # a stub dropped alongside full scenarios is skipped by the bulk loader
+    cat = tmp_path / "nominal"
+    cat.mkdir()
+    shutil.copy(_SCEN / "nominal" / "sc_nom_01.yaml", cat / "sc_nom_01.yaml")
+    (cat / "sc_stub.yaml").write_text("id: SC-STUB-01\nstatus: stub\n", encoding="utf-8")
+    specs = load_scenarios(tmp_path)
+    assert "SC-NOM-01" in specs
+    assert "SC-STUB-01" not in specs

@@ -4,7 +4,7 @@ gamma: 0.99
 n_steps: 1024
 batch_size: 64
 device: cpu
-seed: 666                  # §7.2.7: first training cycle uses seed 23/42/123/666/2024 for reproducibility; later cycles may randomize or sweep seeds for robustness.
+seed: 23                  # §7.2.7: first training cycle uses seed 23/42/123/666/2024 for reproducibility; later cycles may randomize or sweep seeds for robustness.
 max_episode_steps: 500
 control_dt: 0.10
 fixed_speed: 0.20

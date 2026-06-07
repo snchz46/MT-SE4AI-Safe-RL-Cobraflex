@@ -1,0 +1,16 @@
+{
+  "run_id": "rl_eval_20260607T083557Z",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-06-07T08:35:57.801045+00:00",
+  "duration_s": 440.0,
+  "git_commit": "393c23c67bbe8c9b31d41e3108fe2cdc9f025fbf",
+  "cage_yaml": "/home/admit/Samuel/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "7a08ea91d2ff70c1db1e49fd4742ab099b47647395aca4509289e226fa3f5346",
+  "policy_checkpoint": "cobraflex_ppo_lane.zip",
+  "policy_checkpoint_hash": "f416955504a69d666f1e0b0e9e9df68963b496c468e8b21928561465a04e1ea9",
+  "scenario_yaml_hash": "54f5d47cdf4d8c6a107e0e107f107fbc9d56310ac16ad731c65281875f160e33",
+  "seed": 666,
+  "platform": "sim",
+  "status": "completed"
+}

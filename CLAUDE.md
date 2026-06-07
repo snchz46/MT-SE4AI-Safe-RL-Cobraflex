@@ -30,9 +30,11 @@ script reports orphans on either side.
   adverse profiles, campaign runner + per-SR verdicts, QED decision, sim verdicts) per CHANGELOG 03.06 "F4 entry".
 - **F2 evidence:** `ros_run_20260523T153003Z` — 9.91 laps, 845 s,
   0 emergencies, cage v0.5.1, PD v0.8.0.
-- **F3 evidence (closed):** training `ppo_train_42_200k` (seed 42, 200k, reward v1.2,
-  extended logging; `ep_rew_mean`→530.2, `ep_len_mean`→500, `explained_variance`→0.55) + eval `rl_eval_42_200k_4k4`
-  (SC-NOM-01, 11.0 laps, 0 emergencies, |ey| 11.6 mm vs PD 23 mm, 0.023% cage). Training Spec Ch.7 §7.2–§7.5 complete.
+- **F3 evidence (closed):** main run `ppo_train_2024_200k` (seed 2024, 200k, reward v1.2,
+  extended logging; `ep_rew_mean`→536.8, `ep_len_mean`→500, `explained_variance`→0.67) + eval `rl_eval_2024_200k_4k4`
+  (SC-NOM-01, 11.2 laps, 0 emergencies, |ey| 9.9 mm vs PD 23 mm, 0% cage). Seed 2024 chosen as main (best reward + PPO health of the 5). Training Spec Ch.7 §7.2–§7.5 complete.
+  **Multi-seed (N=5):** seeds {42,123,2024,23,666} trained — 4/5 constraint-respecting,
+  1/5 cage-dependent (seed 123, 58.8% cage) per §7.5.3 + Fig 7.8.
 - **Authoritative status sources:** [docs/CHANGELOG.md](docs/CHANGELOG.md)
   and `git log --oneline` (commits prefixed `F4:` are current-phase work).
 

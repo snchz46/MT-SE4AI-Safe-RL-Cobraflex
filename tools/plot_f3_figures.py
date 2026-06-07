@@ -17,6 +17,9 @@ reading order (§7.4 training dynamics, then §7.5 evaluation):
   * fig_7_6_tracking_error.png — |ey| vs lap fraction, RL vs PD: the spatial
     overlay cannot resolve the mm-scale tracking difference on an R=0.8 m oval,
     so this companion plot is where the RL-vs-PD precision gap is visible (§7.5).
+  * fig_7_8_multiseed.png — reward + cage intervention rate vs timesteps, one
+    line per seed (--seed-runs dir1,dir2,...): the constraint-respecting vs
+    cage-dependent basins (§7.5.3).
 
 The 7.2/7.3/7.4 figures need a training run produced with the extended logger
 (cobraflex_rl/callbacks.py + training_metrics.py: the cage-rate columns and
@@ -350,6 +353,65 @@ def fig_action_distribution(train_run: Path, out: Path, frac: float = 0.1) -> No
     print(f"  wrote {out/'fig_7_4_action_distribution.png'}")
 
 
+def _seed_of(run: Path) -> str:
+    """Seed label for a training run: from metadata.json, else parsed from the
+    dir name (``ppo_train_<seed>_...``), else the dir name."""
+    meta = run / "metadata.json"
+    if meta.is_file():
+        try:
+            seed = json.loads(meta.read_text(encoding="utf-8")).get("seed")
+            if seed is not None:
+                return str(seed)
+        except (json.JSONDecodeError, OSError):
+            pass
+    import re
+    m = re.search(r"ppo_train_(\d+)_", run.name)
+    return m.group(1) if m else run.name
+
+
+def fig_multiseed(train_runs: List[Path], out: Path) -> None:
+    """Fig. 7.8 — multi-seed comparison: ``ep_rew_mean`` (top) and cage
+    intervention rate (bottom) vs timesteps, one line per seed. Surfaces the
+    constraint-respecting vs cage-dependent basins (a seed whose intervention
+    rate stays high ended up relying on the cage; one that decays to ~0 learned
+    to satisfy the constraints natively)."""
+    series = []
+    for run in train_runs:
+        rows = _read_csv(run / "learning_curve.csv")
+        if not rows:
+            print(f"  skip seed run {run} (no learning_curve.csv)")
+            continue
+        ts = _col(rows, "timestep")
+        rew = _col(rows, "ep_rew_mean")
+        iv = _col(rows, "intervention_rate") * 100.0 if "intervention_rate" in rows[0] else None
+        series.append((_seed_of(run), ts, rew, iv))
+    if not series:
+        print("  skip fig_7_8_multiseed (no usable seed runs)")
+        return
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(7, 6.4), sharex=True)
+    colors = plt.cm.tab10.colors
+    for i, (seed, ts, rew, iv) in enumerate(series):
+        c = colors[i % 10]
+        ax1.plot(ts, rew, color=c, alpha=0.25, lw=1)
+        ax1.plot(ts, _smooth(rew), color=c, lw=2, label=f"seed {seed}")
+        if iv is not None:
+            ax2.plot(ts, iv, color=c, alpha=0.25, lw=1)
+            ax2.plot(ts, _smooth(iv), color=c, lw=2, label=f"seed {seed}")
+    ax1.set_ylabel("ep_rew_mean")
+    ax1.set_title("Fig. 7.8 — Multi-seed comparison (reward + cage intervention)")
+    ax1.legend(fontsize=8)
+    ax1.grid(True, alpha=0.3)
+    ax2.set_ylabel("cage intervention rate (%)")
+    ax2.set_xlabel("timesteps")
+    ax2.legend(fontsize=8)
+    ax2.grid(True, alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(out / "fig_7_8_multiseed.png", dpi=150)
+    plt.close(fig)
+    print(f"  wrote {out/'fig_7_8_multiseed.png'}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Generate F3 (Chapter 7) figures.")
     ap.add_argument("--train-run", type=Path, default=None)
@@ -357,7 +419,17 @@ def main() -> None:
     ap.add_argument("--pd-run", type=Path, default=None)
     ap.add_argument("--out", type=Path, default=REPO / "manuscript" / "figures" / "auto")
     ap.add_argument("--laps", type=float, default=2.0, help="laps to draw in Fig 7.2")
+    ap.add_argument("--seed-runs", type=str, default=None,
+                    help="comma-separated training run dirs for the multi-seed comparison (Fig. 7.8)")
     args = ap.parse_args()
+    args.out.mkdir(parents=True, exist_ok=True)
+
+    if args.seed_runs:
+        runs = [Path(p.strip()) for p in args.seed_runs.split(",") if p.strip()]
+        print(f"seed runs: {[r.name for r in runs]}\nout      : {args.out}")
+        fig_multiseed(runs, args.out)
+        if not (args.train_run or args.rl_run):
+            return  # only the multi-seed figure was requested
 
     train_dir = REPO / "experiments" / "sim" / "training"
     runs_dir = REPO / "experiments" / "sim" / "runs"

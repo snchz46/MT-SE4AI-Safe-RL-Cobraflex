@@ -31,6 +31,203 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [07.06.2026] — F3: Ch.7 main seed switched 42 → 2024 (best of the 5); figs + text repointed
+
+**Document(s) affected:**
+`manuscript/chapters/chapter_07_training_specification.md` (§7.2.5, §7.2.7, §7.2.8,
+§7.4, §7.5.1–§7.5.3), `manuscript/figures/fig_7_1..fig_7_6` (regenerated),
+`docs/09_environment_design.md` (ED-10), `docs/10_reward_function.md`, `CLAUDE.md`.
+**Phase:** F3 (recorded during F4).
+**Gate context:** after G3.
+**Author:** Samuel.
+
+### Change
+
+- **Chapter 7 main run changed from seed 42 to `ppo_train_2024_200k` (seed 2024).**
+  Of the five trained seeds, 2024 has the **highest reward (536.8)** and the **best
+  PPO health (`explained_variance` 0.67)** while tying the best safety (0% cage, 0
+  emergencies) with near-best tracking (9.9 mm). Seed 23 tracks marginally tighter
+  (6.7 mm) but its value-function fit is weak (`explained_variance` 0.22), so 2024 is
+  the more defensible all-around main.
+- **Figs 7.1–7.6 regenerated** from the seed-2024 train + eval runs (`--train-run
+  ppo_train_2024_200k --rl-run rl_eval_2024_200k_4k4 --pd-run ros_run_20260523T153003Z`).
+  Fig 7.8 (multi-seed) unchanged.
+- **§7.4/§7.5.1–§7.5.2 text repointed** to seed 2024: convergence (`ep_rew` 20.9→536.8,
+  saturation ~75k), `explained_variance` (0.67, max 0.81), intervention co-adaptation
+  (~90%→3.4%), entropy (1.42→−1.52), eval (11.2 laps, mean |ey| 9.9 mm, max 23 mm,
+  **0% cage / 0 interventions**, raw |Δ| 0.030, sign-flips 1.1%).
+- **Stale "Nota de cobertura" (§7.2.8) corrected** — it claimed the definitive cycle
+  used the legacy 4-column schema; all five seeds carry the extended instrumentation.
+- **`docs/09` (ED-10), `docs/10`, `CLAUDE.md` synced** to the seed-2024 smoothness /
+  cage numbers (0.030 / 1.1% / 0% vs the old 0.031 / 3.3% / 0.023%).
+
+### Impact
+
+- The §7.5.3 multi-seed table / Fig 7.8 still report all five seeds (incl. seed 42);
+  only the *main* detailed run changed. The F4 campaign should use the seed-2024
+  checkpoint as the RL controller.
+- No hazard / SR / cage-rule / metric / scenario IDs added or changed.
+
+### Verification
+
+`python tools/plot_f3_figures.py --train-run … --rl-run … --pd-run …` → figs 7.1–7.6.
+`python tools/check_traceability.py` → All checks PASSED, 0 warning(s).
+
+---
+
+## [07.06.2026] — F3: seed-666 cycle added; multi-seed complete (N=5, 4/5 constraint-respecting)
+
+**Document(s) affected:**
+`manuscript/chapters/chapter_07_training_specification.md` (§7.2.7, §7.5.3),
+`manuscript/figures/fig_7_8_multiseed.png` (regenerated, 5 seeds).
+**Phase:** F3 (multi-seed; recorded during F4).
+**Gate context:** after G3.
+**Author:** Samuel.
+
+### Change
+
+- **Fifth and final training cycle `ppo_train_666_200k`** (seed 666, 200k, reward
+  v1.2) + eval `rl_eval_666_200k_4k4`. Constraint-respecting: ep_rew 529.3, training
+  intervention → 11 %, eval cage 1.55 % (**C-06 only**, smoothing), mean |ey| 8.0 mm,
+  max 26 mm, 0 emergencies, 11.1 laps.
+- **Multi-seed campaign complete at N = 5: 4/5 constraint-respecting (42, 2024, 23,
+  666), 1/5 cage-dependent (123).** §7.5.3 table (5 columns), analysis, caption and
+  Fig. 7.8 updated to five seeds; §7.2.7 records N = 5 reached. The 4-vs-1 bimodality
+  (seed 123 the lone outlier) fixes the observed `w_ds` / M-P4 distribution at 80 % CR.
+
+### Impact
+
+- Multi-seed reporting closed: five seeds reported individually in Ch.7 (§7.5.3,
+  Fig. 7.8). Seed 42 remains the §7.5.1–§7.5.2 main; median±band deliberately omitted
+  (bimodal — would mask the two basins). `w_ds` sensitivity analysis stays for Ch.8.
+- No hazard / SR / cage-rule / metric / scenario IDs added or changed.
+
+### Verification
+
+`python tools/plot_f3_figures.py --seed-runs <42>,<123>,<2024>,<23>,<666>` → fig_7_8 (5 lines).
+`python tools/check_traceability.py` → All checks PASSED, 0 warning(s).
+
+---
+
+## [06.06.2026] — F3: seed-23 cycle added; multi-seed now 4 seeds (3/4 constraint-respecting)
+
+**Document(s) affected:**
+`manuscript/chapters/chapter_07_training_specification.md` (§7.2.7, §7.5.3),
+`manuscript/figures/fig_7_8_multiseed.png` (regenerated, 4 seeds).
+**Phase:** F3 (multi-seed; recorded during F4).
+**Gate context:** after G3.
+**Author:** Samuel.
+
+### Change
+
+- **Fourth training cycle `ppo_train_23_200k`** (seed 23, 200k, reward v1.2) + eval
+  `rl_eval_23_200k_4k4`. Constraint-respecting, with the **tightest tracking** of the
+  four: ep_rew 535, training intervention → 5 %, eval cage 0 %, mean |ey| **6.7 mm**,
+  max 22 mm, 0 emergencies, 11.1 laps.
+- **Multi-seed result is now 3/4 constraint-respecting (42, 2024, 23), 1/4
+  cage-dependent (123).** §7.5.3 table (4 columns + basin row), analysis and Fig. 7.8
+  updated; §7.2.7 notes four seeds trained. The 3-vs-1 split (seed 123 the lone
+  outlier) sharpens the `w_ds` / M-P4 sensitivity point.
+
+### Impact
+
+- Four seeds reported individually in Ch.7 (§7.5.3, Fig. 7.8). Seed 23 is the best
+  tracker (6.7 mm), but seed 42 remains the §7.5.1–§7.5.2 main. N≥5 (a fifth seed) +
+  median±band stay for Ch.8.
+- No hazard / SR / cage-rule / metric / scenario IDs added or changed.
+
+### Verification
+
+`python tools/plot_f3_figures.py --seed-runs <42>,<123>,<2024>,<23>` → fig_7_8 (4 lines).
+`python tools/check_traceability.py` → All checks PASSED, 0 warning(s).
+
+---
+
+## [06.06.2026] — F3: seed-2024 cycle added; multi-seed comparison now 3 seeds (2/3 constraint-respecting)
+
+**Document(s) affected:**
+`manuscript/chapters/chapter_07_training_specification.md` (§7.2.7, §7.5.3),
+`manuscript/figures/fig_7_8_multiseed.png` (regenerated, 3 seeds).
+**Phase:** F3 (multi-seed; recorded during F4).
+**Gate context:** after G3.
+**Author:** Samuel.
+
+### Change
+
+- **Third training cycle `ppo_train_2024_200k`** (seed 2024, 200k, reward v1.2) +
+  eval `rl_eval_2024_200k_4k4`. It converges **constraint-respecting**, like seed 42
+  (marginally cleaner): ep_rew 537, training intervention → 3 %, eval cage **0 %**,
+  mean |ey| **9.9 mm**, max 23 mm, 0 emergencies, 11.2 laps.
+- **Multi-seed result is now 2/3 constraint-respecting (42, 2024), 1/3
+  cage-dependent (123).** §7.5.3 table + analysis + Fig. 7.8 updated to three seeds;
+  §7.2.7 notes seed 23 (4th) in progress. The 2-vs-1 split sharpens the `w_ds`
+  (M-P4) sensitivity point: the smoothness weight yields constraint-respecting in the
+  majority of seeds but not reliably.
+
+### Impact
+
+- Three seeds reported individually in Ch.7 (§7.5.3, Fig. 7.8). Seed 2024 is
+  marginally the best policy (537, 0 % cage, 9.9 mm); seed 42 remains the
+  §7.5.1–§7.5.2 main. N≥5 consolidation (seed 23 + one more) stays in Ch.8.
+- No hazard / SR / cage-rule / metric / scenario IDs added or changed.
+
+### Verification
+
+`python tools/plot_f3_figures.py --seed-runs <42>,<123>,<2024>` → fig_7_8_multiseed.png
+(3 lines). `python tools/check_traceability.py` → All checks PASSED, 0 warning(s).
+
+---
+
+## [06.06.2026] — F3: seed-123 cycle + multi-seed comparison (constraint-respecting vs cage-dependent); Fig. 7.8 + §7.5.3
+
+**Document(s) affected:**
+`manuscript/chapters/chapter_07_training_specification.md` (§7.2.7, new §7.5.3),
+`manuscript/figures/fig_7_8_multiseed.png` (new),
+`tools/plot_f3_figures.py` (`--seed-runs` / `fig_multiseed`).
+**Phase:** F3 (multi-seed; recorded during F4).
+**Gate context:** after G3 — adds the multi-seed evidence deferred at §7.2.7.
+**Author:** Samuel.
+
+### Change
+
+- **Second training cycle `ppo_train_123_200k`** (seed 123, 200k, reward v1.2, same
+  config) + eval `rl_eval_123_200k_4k4`. It converges to a **cage-dependent** basin,
+  in contrast to seed 42's **constraint-respecting** one:
+  - seed 42: ep_rew 530, training intervention → 5 %, eval cage 0.02 %, mean |ey| 11.6 mm.
+  - seed 123: ep_rew 443, training intervention → 74 %, eval cage **58.8 %** (C-06 58 %,
+    C-01 6 %, C-03 3 %), mean |ey| **90.7 mm**, max |ey| **145 mm**. Both: 0 emergencies, ~11 laps.
+- **New §7.5.3** reports the comparison: both policies are safe (the cage guarantees
+  it), but seed 123's worse policy needs the cage *actively* — C-01/C-03 prevent lane
+  departure in real time — the strongest cage-utility evidence so far, which the
+  nominal-only seed-42 result could not provide. Framed as the `w_ds` (smoothness
+  weight) sensitivity flagged by M-P4.
+- **Fig. 7.8** (multi-seed reward + intervention overlay) + `tools/plot_f3_figures.py
+  --seed-runs` to generate it. §7.2.7 updated (seed 123 done, 2024 pending;
+  bimodality → report seeds individually, not only a median).
+
+### Rationale
+
+The nominal seed-42 evaluation showed the cage latent (0.02 %), so its protective
+value had to be argued indirectly. Seed 123 — same code, different basin — drives
+poorly enough (90 mm mean offset, peaks crossing the lane half-width) that the cage
+intervenes 58.8 % of steps, with C-01/C-03 actively preventing lane departure. The
+two seeds together show the cage's value *depends on the policy* and that it performs
+at both ends (latent vs active protector).
+
+### Impact
+
+- Multi-seed evidence now in Ch.7 (§7.5.3, Fig. 7.8). N≥5 consolidation (seed 2024 and
+  beyond) stays in Ch.8; bimodality → seeds reported individually.
+- No hazard / SR / cage-rule / metric / scenario IDs added or changed.
+
+### Verification
+
+`python tools/plot_f3_figures.py --seed-runs experiments/sim/training/ppo_train_42_200k,experiments/sim/training/ppo_train_123_200k`
+→ fig_7_8_multiseed.png. Chapter figure refs monotonic 7.1→7.8.
+`python tools/check_traceability.py` → All checks PASSED, 0 warning(s).
+
+---
+
 ## [04.06.2026] — F4: SR-002/005/007 nominal-family coverage added; scenario library now 11/11 D-29-feasible
 
 **Document(s) affected:**

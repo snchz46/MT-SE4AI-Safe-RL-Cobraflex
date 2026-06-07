@@ -75,10 +75,12 @@ validez estadística (de 20 a ≥100 según el escenario); el total en simulaci�
 es de **≈1100 runs** sumando escenarios y modos.
 
 > **Multi-semilla (RL).** La variabilidad entre semillas de la policy
-> (`seed ∈ {42, 123, 2024, …}`, §7.2.7) se trata como una fuente de varianza de
-> primer orden: los escenarios discriminantes se ejecutan sobre **N ≥ 5**
-> semillas y se reportan con mediana ± banda, no sobre una única policy. Esto
-> cumple el diferido explícito de §7.2.7.
+> (`seed ∈ {42, 123, 2024, 23, 666}`, **N = 5** entrenadas, §7.2.7) se trata como
+> una fuente de varianza de primer orden: los escenarios discriminantes se ejecutan
+> sobre las cinco semillas, no sobre una única policy. Dada la **bimodalidad**
+> observada en §7.5.3 (**4/5 *constraint-respecting*, 1/5 *cage-dependent***), se
+> reportan las semillas individualmente además de su agregado. Esto cumple el
+> diferido explícito de §7.2.7.
 
 ### 8.2.2 Modos enforcement vs monitoring — el test causal de la cage
 
@@ -260,9 +262,10 @@ Es la versión "poblada con verdictos" de docs/07; aquí se reporta, en docs/07 
 
 Síntesis, con los números de §8.3–§8.6, de (i) **qué añade la cage y dónde**
 —latente en nominal, protectora en la frontera— y (ii) la **relación
-policy–cage**: lectura conjunta con §7.5.2 (la policy aprendió comportamiento
-*constraint-respecting* y degradaría con gracia sin cage en nominal) frente a una
-hipotética dependencia de la cage. La curva de co-adaptación de §7.4 (la
+policy–cage**: lectura conjunta con §7.5.2–§7.5.3 (4/5 semillas aprendieron
+comportamiento *constraint-respecting* y degradarían con gracia sin cage en
+nominal, mientras la seed 123 quedó *cage-dependent* —una dependencia ya
+**observada**, no hipotética). La curva de co-adaptación de §7.4 (la
 intervención del cage decreciendo durante el entrenamiento) y el delta de §8.6
 (la protección que el cage ejerce en runtime) son las dos caras de la misma
 evidencia: el cage participó causalmente en *producir* la policy y la protege

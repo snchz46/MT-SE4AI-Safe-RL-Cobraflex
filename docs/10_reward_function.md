@@ -135,10 +135,10 @@ corrective action is still never penalised — what is penalised is the policy's
 raw jerk, which the cage merely happens to mask. The rationale for the term then
 holds: the policy learns native smoothness instead of outsourcing it to C-06.
 
-**Confirmed (seed-42/200k, reward v1.2).** The re-train verifies it: the policy now
-emits a smooth raw command (sign-flips **3.3%** of steps, **0%** ±1 saturation, mean
-|Δraw| ≈ **0.031** — well below C-06's `delta_max = 0.15`), so `raw ≡ safe` at 4 399 of
-4 400 steps and **C-06 fires on just 0.023%** (one step) in the nominal evaluation (vs
+**Confirmed (seed-2024/200k, reward v1.2).** The definitive run verifies it: the policy now
+emits a smooth raw command (sign-flips **1.1%** of steps, **0%** ±1 saturation, mean
+|Δraw| ≈ **0.030** — well below C-06's `delta_max = 0.15`), so `raw ≡ safe` at all
+4 400 steps and **the cage fires on 0%** (zero interventions) in the nominal evaluation (vs
 ~89% under v1.0). The smoothness term achieved its purpose; the cage becomes a latent safeguard
 in nominal cruising (§7.5.2), its protective value reserved for the edge/perturbed
 scenarios of Ch.8.

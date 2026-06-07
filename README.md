@@ -20,13 +20,19 @@
 ## See it in action
 
 <p align="center">
-  <a href="manuscript/media/eval_11_lap.mp4">
-    <img src="manuscript/figures/fig_7_7_gazebo_capture.png" alt="Trained policy lane-keeping in Gazebo with the live RViz state view" width="840">
+  <a href="manuscript/media/PPO_Eval.gif">
+    <img src="manuscript/media/PPO_Eval.gif" alt="Trained policy lane-keeping in Gazebo with the live RViz state view" width="840">
   </a>
   <br>
   <sub>The trained PPO policy lane-keeping on the oval in <b>Gazebo</b> (left), the live <b>RViz</b> state view (centre) and the vehicle TF tree (right).
-  <b>▶ Click to play</b> the 11-lap evaluation run.<br>
-  Demo clips <code>eval_11_lap.mp4</code> and <code>training_1_lap.mp4</code> live under <a href="manuscript/media/"><code>manuscript/media/</code></a> — local artefacts, not tracked in git due to size.</sub>
+</p>
+
+<p align="center">
+  <a href="manuscript/media/PPO_Training.gif">
+    <img src="manuscript/media/PPO_Training.gif" alt="Trained policy lane-keeping in Gazebo with the live RViz state view" width="840">
+  </a>
+  <br>
+  <sub>Training the PPO policy lane-keeping on the oval in <b>Gazebo</b> (left), the live <b>RViz</b> state view (centre) and the vehicle TF tree (right).
 </p>
 
 ---

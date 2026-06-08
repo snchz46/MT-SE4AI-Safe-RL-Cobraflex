@@ -10,6 +10,12 @@ Verification and synchronisation utilities for the repository.
 - `sync_safety_requirements.py` — extracts the machine-readable table from `docs/03_safety_requirements.md` and writes `docs/data/safety_requirements.csv`. Run: `python tools/sync_safety_requirements.py [--verbose]`.
 - `traceability_matrix.csv` — machine-readable form of the traceability matrix, kept in sync with `docs/07_traceability_matrix.md`.
 
+### Campaign & evaluation (F4)
+
+- `run_campaign.py` — orchestrates the Phase-4 scenario-validation campaign (run matrix → per-run → per-scenario → per-SR D-29 / global D-30 verdicts). `--dry-run` validates the plan + D-29 feasibility without Gazebo (runs anywhere); a real run drives Gazebo on the Ubuntu+Jazzy host. After a campaign that includes frontier scenarios it **auto-renders the cage-efficacy figures** (best-effort; `--no-frontier-plots` to skip).
+- `frontier_contrast.py` — text aggregation of the frontier (SC-FRONT) cage-efficacy study as the paired enforcement-vs-monitoring contrast (D-35): per-cell road-edge-contact rate and max-excursion reduction.
+- `plot_frontier.py` — figure companion to `frontier_contrast.py`: renders `fig_frontier_excursion.png` and `fig_frontier_cage_benefit.png` from `<campaign-dir>/runs/*/summary.json`, **aggregating over the N reps per cell** (serves both the rep00 pilot and the full 25-rep campaign). Run: `python tools/plot_frontier.py --campaign-dir <dir>`. Auto-invoked by `run_campaign.py`; needs matplotlib (use the figure host).
+
 ## To be implemented
 
 - `sync_traceability.py` — syncs `docs/07_traceability_matrix.md` ↔ `tools/traceability_matrix.csv` (Phase 0/1).

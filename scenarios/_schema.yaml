@@ -5,18 +5,30 @@
 
 # Required top-level keys:
 #
-# id:                   string, format SC-{NOM|EDGE|PERT}-NN
-# category:             nominal | edge | perturbed
+# id:                   string, format SC-{NOM|EDGE|PERT|FRONT}-NN
+# category:             nominal | edge | perturbed | frontier
 # description:          free-text summary
 # initial_conditions:   block of pose, speed, randomisation
 # perturbations:        block describing applied perturbations (or "none")
 # termination:          block of termination criteria
-# metrics_primary:      list of metric IDs (M-*)
+# metrics_primary:      list of metric IDs (M-*); a few per-run event/quantity
+#                       fields the executor records directly are also accepted by
+#                       name: time_to_recovery_heading, road_edge_contact (the
+#                       per-run event behind M-S5) and max_excursion_m (= M-S1).
 # metrics_secondary:    list of metric IDs
 # pass_criterion_per_run:   string with rule for pass/fail per run
 # pass_criterion_per_scenario: string with aggregate rule
 # references_SR:        list of SR IDs (SR-XXX)
 # n_runs_recommended:   integer per mode
+#
+# Categories:
+#   nominal (NOM)   — operational conditions within the ODD.
+#   edge (EDGE)     — at the ODD boundary, stressing a specific cage rule.
+#   perturbed (PERT)— sensor noise, latency or other runtime perturbations.
+#   frontier (FRONT)— out-of-ODD / cage-efficacy study (docs/05). Analysed as a
+#                     PAIRED enforcement-vs-monitoring contrast (monitoring = the
+#                     no-cage counterfactual), not aggregated by fraction_pass for
+#                     the global verdict.
 
 # Example minimal scenario:
 #

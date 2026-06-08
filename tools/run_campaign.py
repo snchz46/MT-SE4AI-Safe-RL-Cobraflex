@@ -619,9 +619,34 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     p.add_argument("--stop-on-error", action="store_true",
                    help="abort the campaign on the first failed run (default: record + continue).")
     p.add_argument("--out", type=Path, default=REPO / "experiments" / "sim" / "campaign")
+    p.add_argument("--no-frontier-plots", dest="frontier_plots", action="store_false",
+                   help="skip auto-rendering the frontier cage-efficacy figures after the run.")
+    p.set_defaults(frontier_plots=True)
     p.add_argument("--dry-run", action="store_true",
                    help="build the matrix + D-29 feasibility and stop (no Gazebo).")
     return p.parse_args(argv)
+
+
+def render_frontier_plots(out_dir: Path) -> None:
+    """Best-effort: render the frontier cage-efficacy figures (`tools/plot_frontier.py`)
+    after a campaign that included SC-FRONT scenarios. matplotlib may be absent on the
+    headless ROS host — then print the command to render them on the figure host instead.
+    Never raises: a plotting issue must not fail a completed campaign."""
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    try:
+        import plot_frontier
+
+        figs = plot_frontier.render(out_dir)
+        if figs:
+            print("\nFrontier cage-efficacy figures:")
+            for f in figs:
+                print(f"  {f}")
+    except Exception as exc:  # noqa: BLE001 - never fail the campaign on a plotting issue
+        print(f"\n[frontier figures not rendered here: {type(exc).__name__}: {exc}]")
+        print("  render them on a host with matplotlib via:")
+        print(f"    python tools/plot_frontier.py --campaign-dir {out_dir}")
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
@@ -694,6 +719,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     print(f"  SR-CL-A: {gv['n_sr_cl_a']}  blocking: {gv['blocking_sr_cl_a']}")
     print(f"  runs: {report['n_runs']}  errors: {report['n_error']}")
     print(f"  report: {args.out / 'campaign_report.json'}")
+
+    # If the campaign included frontier scenarios, render the cage-efficacy figures
+    # (D-35 paired enforcement-vs-monitoring contrast). Best-effort — see the helper.
+    if args.frontier_plots and any(r.scenario_id.startswith("SC-FRONT") for r in matrix):
+        render_frontier_plots(args.out)
+
     return 0 if gv["verdict"] == "SATISFIED" else 1
 
 

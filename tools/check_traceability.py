@@ -52,14 +52,14 @@ MATRIX_CSV = REPO_ROOT / "tools" / "traceability_matrix.csv"
 RX_HAZARD = re.compile(r"\bH-\d{2}\b")
 RX_SR = re.compile(r"\bSR-\d{3}\b")
 RX_CAGE = re.compile(r"\bC-\d{2}\b")
-RX_SC = re.compile(r"\bSC-(?:NOM|EDGE|PERT)-\d{2}\b")
+RX_SC = re.compile(r"\bSC-(?:NOM|EDGE|PERT|FRONT)-\d{2}\b")
 RX_METRIC = re.compile(r"\bM-[PSIC]\d\b")
 
 # Heading regexes (start of definition for each entity)
 RX_H_DEF = re.compile(r"^##\s+(H-\d{2})\s*[—-]", re.MULTILINE)
 RX_SR_DEF = re.compile(r"^##\s+(SR-\d{3})\s*[—-]", re.MULTILINE)
 RX_C_DEF = re.compile(r"^###\s+(C-\d{2})\s*", re.MULTILINE)
-RX_SC_DEF = re.compile(r"^##\s+(SC-(?:NOM|EDGE|PERT)-\d{2})\s*[—-]", re.MULTILINE)
+RX_SC_DEF = re.compile(r"^##\s+(SC-(?:NOM|EDGE|PERT|FRONT)-\d{2})\s*[—-]", re.MULTILINE)
 RX_M_DEF = re.compile(r"^###\s+(M-[PSIC]\d)\s*[—-]", re.MULTILINE)
 
 # ---------- Result containers -----------------------------------------------

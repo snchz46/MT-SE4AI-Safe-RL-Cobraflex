@@ -24,10 +24,17 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SCENARIO_DIR = REPO_ROOT / "scenarios"
 SCENARIO_DOC = REPO_ROOT / "docs" / "05_scenario_library.md"
 
-ID_RE = re.compile(r"^SC-(NOM|EDGE|PERT)-\d{2}$")
+ID_RE = re.compile(r"^SC-(NOM|EDGE|PERT|FRONT)-\d{2}$")
 SR_RE = re.compile(r"^SR-\d{3}$")
 METRIC_RE = re.compile(r"^M-[A-Z]\d+$")
-DOC_SCENARIO_RE = re.compile(r"^## (SC-(?:NOM|EDGE|PERT)-\d{2})\b", re.MULTILINE)
+DOC_SCENARIO_RE = re.compile(r"^## (SC-(?:NOM|EDGE|PERT|FRONT)-\d{2})\b", re.MULTILINE)
+
+# Bare-name (non-M-id) tokens accepted in metrics_primary/secondary. These are
+# per-run event/quantity fields the executor records directly rather than
+# catalogued M-* metrics: time_to_recovery_heading (SC-EDGE-01) and the frontier
+# cage-efficacy fields road_edge_contact (per-run event behind M-S5) and
+# max_excursion_m (the realised value of M-S1). Documented in docs/06.
+NON_METRIC_TOKENS = {"time_to_recovery_heading", "road_edge_contact", "max_excursion_m"}
 
 REQUIRED_FULL_KEYS = {
     "id",
@@ -48,6 +55,7 @@ EXPECTED_CATEGORY = {
     "NOM": "nominal",
     "EDGE": "edge",
     "PERT": "perturbed",
+    "FRONT": "frontier",
 }
 
 F2_REQUIRED_FULL = {"SC-NOM-01", "SC-EDGE-01"}
@@ -110,7 +118,7 @@ def validate_yaml_file(path: Path, result: Result, yaml_by_id: dict[str, Path]) 
 
     scenario_id = data.get("id")
     if not isinstance(scenario_id, str) or not ID_RE.match(scenario_id):
-        result.error(f"{rel(path)}: id must match SC-{{NOM|EDGE|PERT}}-NN.")
+        result.error(f"{rel(path)}: id must match SC-{{NOM|EDGE|PERT|FRONT}}-NN.")
         return
 
     if scenario_id in yaml_by_id:
@@ -121,9 +129,10 @@ def validate_yaml_file(path: Path, result: Result, yaml_by_id: dict[str, Path]) 
         "nominal": "nominal",
         "edge": "edge",
         "perturbed": "perturbed",
+        "frontier": "frontier",
     }.get(data.get("category"))
     if expected_dir is None:
-        result.error(f"{rel(path)}: category must be nominal, edge, or perturbed.")
+        result.error(f"{rel(path)}: category must be nominal, edge, perturbed, or frontier.")
     elif path.parent.name != expected_dir:
         result.error(f"{rel(path)}: category does not match parent directory.")
 
@@ -156,7 +165,7 @@ def validate_full_scenario(path: Path, data: dict, result: Result) -> None:
         result.error(f"{rel(path)}: metrics_secondary must be a list.")
 
     for metric in data.get("metrics_primary", []) + data.get("metrics_secondary", []):
-        if metric == "time_to_recovery_heading":
+        if metric in NON_METRIC_TOKENS:
             continue
         if not isinstance(metric, str) or not METRIC_RE.match(metric):
             result.error(f"{rel(path)}: invalid metric id {metric!r}.")

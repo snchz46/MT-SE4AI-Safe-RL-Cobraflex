@@ -1,7 +1,7 @@
 # Scenario Library
 
-**Status:** Living document — Phase 2 deliverable, closed at G2; updated through G3 and G4  
-**Last update:** 13.05.2026
+**Status:** Living document — Phase 2 deliverable, closed at G2; updated through G3 and G4; Frontier (FRONT) family added in F4  
+**Last update:** 08.06.2026
 **Approved at Gate:** G2 (initial), G4 (final)
 
 ## Purpose
@@ -15,6 +15,7 @@ A scenario is *closed* when its YAML definition under `scenarios/<category>/sc_<
 - **Nominal (NOM)** — operational conditions within the ODD.
 - **Edge (EDGE)** — at the boundary of the ODD, designed to stress specific cage rules.
 - **Perturbed (PERT)** — sensor noise, latency, or other perturbations applied during operation.
+- **Frontier (FRONT)** — out-of-ODD / cage-efficacy study (added in F4, decision **D-35**). The vehicle starts at or beyond the ODD boundary, where the policy is not designed to recover; analysed as a **paired enforcement-vs-monitoring contrast**, not aggregated into the global verdict. See the Frontier section below.
 
 ## Scenario template
 
@@ -340,6 +341,158 @@ physical subset (Phase 5), where a straight is simpler to set up than an oval.
 
 ---
 
+## Frontier scenarios (out-of-ODD / cage-efficacy study)
+
+Added in F4 (decision **D-35**). These scenarios start the vehicle **at or beyond the ODD-1 boundary** (`|ey| > 0.1225 m` and/or heading beyond C-02's `θ_max = 25°`), where the lane-following policy is *not* designed to recover — recovery is the cage's responsibility (C-01 / C-02 / C-05). They are therefore analysed as a **paired enforcement-vs-monitoring contrast** (monitoring = the no-cage counterfactual), **not** aggregated by `fraction_pass` into the global G4 verdict (D-30). The headline metric is **M-S5 (road-edge departure)**, with `max_excursion_m` (= M-S1) reported alongside; the measured cage benefit is `M-S5(monitoring) − M-S5(enforcement)`, computed by `tools/frontier_contrast.py`. The enforcement arm additionally contributes positive SR-005 / SR-007 / SR-008 containment evidence (the cage stops or steers before the road edge).
+
+Six scenarios span lateral / heading / compound stressors across two regimes: an **out-of-ODD pair** (01–03), where the start is already past the boundary and the cage may act immediately, and an **in-ODD-drift pair** (04–06), where the start is inside ODD-1 with an outward heading so the cage responds in a **graded** way (C-01 steering correction first, C-05 only if the drift cannot be arrested) — showing both that the cage catches a *developing* hazard and that it does not interfere with a policy that recovers on its own. All run on the oval (`start_s = 0.0`, 0.2 m/s) with a 15 s timeout and a `{road_edge_contact, emergency_stop, recovered}` event set.
+
+---
+
+## SC-FRONT-01 — Lateral out-of-ODD start
+
+**Description.** Vehicle initialises at 0.16 m lateral offset — past the lane edge (0.1225 m), at the cage's C-01 `d_max` threshold (0.16 m) — with zero heading. Tests whether the cage holds the vehicle off the road edge (0.26 m) when the policy starts beyond its design envelope. Under monitoring the no-cage policy is expected to drift to the edge (H-01).
+
+**Initial conditions.** Pose `(x=0, y=0.16, θ=0)` ± `[-0.01, +0.01] m` lateral, `[-2°, +2°]` heading. Speed 0.2 m/s.
+
+**Perturbations.** None.
+
+**Termination.** 15 s timeout, or event {road_edge_contact, emergency_stop, recovered}.
+
+**Metrics primary.** M-S5 (road-edge departure, `road_edge_contact`), M-S1 (`max_excursion_m`), M-S2.
+
+**Pass criterion per run.** `road_edge_contact == False` (the vehicle never reached the road edge).
+
+**Pass criterion per scenario.** ≥ 90% of runs pass — reported **per arm** as the enforcement-vs-monitoring contrast, not folded into the global verdict.
+
+**References SR.** SR-001, SR-005.
+
+**Cage rules exercised.** C-01 (boundary), C-05 (emergency), C-06 (rate limiter, always active under enforcement).
+
+**Recommended runs.** 25 per mode (enforcement, monitoring).
+
+---
+
+## SC-FRONT-02 — Heading out-of-ODD start
+
+**Description.** Vehicle initialises with a 32-degree heading error — beyond the cage's C-02 bound (`θ_max = 25°`) — and zero lateral offset. The aggressive heading drives the vehicle off-corridor before it can recover; under enforcement C-02 must clamp the heading and keep it off the road edge, under monitoring the policy is expected to overshoot toward the edge.
+
+**Initial conditions.** Pose `(x=0, y=0, θ=32°)` ± `[-0.01, +0.01] m` lateral, `[-2°, +2°]` heading. Speed 0.2 m/s.
+
+**Perturbations.** None.
+
+**Termination.** 15 s timeout, or event {road_edge_contact, emergency_stop, recovered}.
+
+**Metrics primary.** M-S5 (road-edge departure), M-S1 (`max_excursion_m`), M-P4 (heading error max).
+
+**Pass criterion per run.** `road_edge_contact == False`.
+
+**Pass criterion per scenario.** ≥ 90% of runs pass — reported per arm as the enforcement-vs-monitoring contrast.
+
+**References SR.** SR-002, SR-005.
+
+**Cage rules exercised.** C-02 (heading bound), C-05 (emergency), C-06 (rate limiter, always active under enforcement).
+
+**Recommended runs.** 25 per mode.
+
+---
+
+## SC-FRONT-03 — Compound out-of-ODD start
+
+**Description.** Compound out-of-ODD start: the vehicle begins already past the lane edge (0.14 m lateral) **and** with a 20-degree heading error pointing further toward the road boundary. Neither alone may defeat the constraint-respecting policy, but the compound state drives it toward the road edge. Under enforcement the cage (C-01 then C-05) must keep it off the road edge; under monitoring the run is expected to reach the edge — the difference is the cage's measured value (H-04).
+
+**Initial conditions.** Pose `(x=0, y=0.14, θ=20°)` ± `[-0.01, +0.01] m` lateral, `[-2°, +2°]` heading. Speed 0.2 m/s.
+
+**Perturbations.** None.
+
+**Termination.** 15 s timeout, or event {road_edge_contact, emergency_stop, recovered}.
+
+**Metrics primary.** M-S5 (road-edge departure), M-S1 (`max_excursion_m`), M-S2.
+
+**Pass criterion per run.** `road_edge_contact == False`.
+
+**Pass criterion per scenario.** ≥ 90% of runs pass — reported per arm as the enforcement-vs-monitoring contrast.
+
+**References SR.** SR-001, SR-005, SR-007, SR-008.
+
+**Cage rules exercised.** C-01 (boundary), C-05 (emergency; state-validity and external-stop triggers cover SR-007/SR-008), C-06 (rate limiter, always active under enforcement).
+
+**Recommended runs.** 25 per mode.
+
+---
+
+## SC-FRONT-04 — Lateral-dominant in-ODD drift
+
+**Description.** In-ODD-drift variant of SC-FRONT-01. The vehicle starts at 0.10 m lateral (inside the lane edge 0.1225 m) with an 8-degree outward heading. The lateral offset is recoverable, but the outward heading lets a weak policy drift toward the road edge; the cage should arrest it (C-01 first, graded — not a step-1 stop). A constraint-respecting policy recovers without the cage acting.
+
+**Initial conditions.** Pose `(x=0, y=0.10, θ=8°)` ± `[-0.01, +0.01] m` lateral, `[-2°, +2°]` heading. Speed 0.2 m/s.
+
+**Perturbations.** None.
+
+**Termination.** 15 s timeout, or event {road_edge_contact, emergency_stop, recovered}.
+
+**Metrics primary.** M-S5 (road-edge departure), M-S1 (`max_excursion_m`), M-S2.
+
+**Pass criterion per run.** `road_edge_contact == False`.
+
+**Pass criterion per scenario.** ≥ 90% of runs pass — reported per arm as the enforcement-vs-monitoring contrast.
+
+**References SR.** SR-001, SR-005.
+
+**Cage rules exercised.** C-01 (boundary), C-05 (emergency), C-06 (rate limiter, always active under enforcement).
+
+**Recommended runs.** 25 per mode.
+
+---
+
+## SC-FRONT-05 — Heading-dominant in-ODD drift
+
+**Description.** In-ODD-drift variant of SC-FRONT-02. The vehicle starts centred (zero lateral) with a 22-degree heading error — aggressive but within the cage's C-02 bound (25°), so C-02 does not fire immediately. The heading drives the lateral error outward over the next cycles; a weak policy is expected to reach the road edge under monitoring, while the cage arrests the growth under enforcement.
+
+**Initial conditions.** Pose `(x=0, y=0, θ=22°)` ± `[-0.01, +0.01] m` lateral, `[-2°, +2°]` heading. Speed 0.2 m/s.
+
+**Perturbations.** None.
+
+**Termination.** 15 s timeout, or event {road_edge_contact, emergency_stop, recovered}.
+
+**Metrics primary.** M-S5 (road-edge departure), M-S1 (`max_excursion_m`), M-P4 (heading error max).
+
+**Pass criterion per run.** `road_edge_contact == False`.
+
+**Pass criterion per scenario.** ≥ 90% of runs pass — reported per arm as the enforcement-vs-monitoring contrast.
+
+**References SR.** SR-002, SR-005.
+
+**Cage rules exercised.** C-01 (boundary), C-02 (heading bound), C-05 (emergency), C-06 (rate limiter, always active under enforcement).
+
+**Recommended runs.** 25 per mode.
+
+---
+
+## SC-FRONT-06 — Compound in-ODD drift
+
+**Description.** In-ODD-drift variant of SC-FRONT-03. The vehicle starts at 0.10 m lateral (inside the lane edge 0.1225 m) with a 14-degree heading error pointing toward the boundary. The state is recoverable in principle, but the outward momentum drives a weak policy toward the road edge over the next several cycles. Under enforcement the cage should arrest the drift in a graded way (C-01 … C-05); under monitoring a weak policy is expected to reach the road edge while a constraint-respecting policy recovers.
+
+**Initial conditions.** Pose `(x=0, y=0.10, θ=14°)` ± `[-0.01, +0.01] m` lateral, `[-2°, +2°]` heading. Speed 0.2 m/s.
+
+**Perturbations.** None.
+
+**Termination.** 15 s timeout, or event {road_edge_contact, emergency_stop, recovered}.
+
+**Metrics primary.** M-S5 (road-edge departure), M-S1 (`max_excursion_m`), M-S2.
+
+**Pass criterion per run.** `road_edge_contact == False`.
+
+**Pass criterion per scenario.** ≥ 90% of runs pass — reported per arm as the enforcement-vs-monitoring contrast.
+
+**References SR.** SR-001, SR-005, SR-007, SR-008.
+
+**Cage rules exercised.** C-01 (boundary), C-05 (emergency; state-validity and external-stop triggers cover SR-007/SR-008), C-06 (rate limiter, always active under enforcement).
+
+**Recommended runs.** 25 per mode.
+
+---
+
 ## Subset for physical deployment (Phase 5)
 
 Not all scenarios are exported to the physical platform; the budget of physical runs is limited. The selected subset:
@@ -352,9 +505,9 @@ The selection rationale and the physical-specific adaptations are documented in 
 
 ## Total scenario count
 
-Current count: 11 scenarios (3 NOM, 5 EDGE, 3 PERT with multiple levels). SC-EDGE-05 and SC-PERT-03 added 13.05.2026 (G-3 and G-4 in the SR audit).
+Current count: **17 scenarios** — 11 verdict-bearing (3 NOM, 5 EDGE, 3 PERT with multiple levels) plus 6 FRONT (cage-efficacy study). SC-EDGE-05 and SC-PERT-03 added 13.05.2026 (G-3 and G-4 in the SR audit); SC-FRONT-01…06 added in F4 (08.06.2026).
 
-Total recommended runs in simulation, summed across all scenarios and both modes: approximately 1100 runs.
+Total recommended runs in simulation for the **verdict-bearing** campaign (NOM/EDGE/PERT), summed across all scenarios and both modes: approximately 1100 runs (the global G4 verdict, D-29/D-30). The 6 FRONT scenarios add 6 × 25 × 2 = **300 runs** reported separately as the paired enforcement-vs-monitoring cage-efficacy contrast (not part of the global-verdict budget).
 
 ## Convention for `metrics_primary` value `"ALL"`
 

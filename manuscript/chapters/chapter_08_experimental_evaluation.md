@@ -122,6 +122,7 @@ distinción se hace explícita para acotar qué afirma cada resultado:
 | **SC-EDGE-01..05** | dinámica/geometría al borde del ODD | estado **verdadero** empujado a la frontera (heading, lateral, velocidad, estado compuesto, co-activación de reglas) |
 | **SC-PERT-01/02** | estimación de estado | **proxy de percepción**: ruido (`d_obs = d_true + N(0,σ)`) / latencia inyectados sobre el estado |
 | **SC-PERT-03** | máquina de verificación | meta-test (inyección de fallo) de la detectabilidad de SR-009 |
+| **SC-FRONT-01..06** | eficacia de la cage fuera del ODD | estado **verdadero** iniciado en/más allá de la frontera del ODD-1, donde la policy no está diseñada para recuperar; contraste **enforcement-vs-monitoring** pareado sobre M-S5 (contacto con borde de calzada), reportado aparte —no agregado al veredicto global— como medida del valor protector de la cage (§8.2.2) |
 
 Lectura: los veredictos de seguridad se miden sobre la **pose verdadera** (salir
 del carril es un hecho físico), por lo que la validación del *mecanismo* de
@@ -133,7 +134,7 @@ pipeline de percepción real y el gap sim-to-real se difieren al Capítulo 9.
 ### 8.2.4 Métricas y reglas de veredicto
 
 Las métricas se definen en `docs/06` y se agrupan en performance (M-P1..M-P7),
-seguridad (M-S1..M-S4), intervención (M-I1..M-I5) y cómputo (M-C1..M-C2). Cada
+seguridad (M-S1..M-S5), intervención (M-I1..M-I5) y cómputo (M-C1..M-C2). Cada
 escenario declara sus `metrics_primary` (deciden el veredicto) y `secondary`
 (se reportan). El formato estándar por métrica es mediana, media, desviación
 típica y percentiles 5/95.

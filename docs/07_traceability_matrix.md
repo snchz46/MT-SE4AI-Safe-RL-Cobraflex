@@ -52,6 +52,8 @@ The full matrix is in `tools/traceability_matrix.csv`. The summary below shows t
 
 The `Cage Rule(s)` column accepts three implementation kinds (cf. D-25 in `docs/DECISIONS.md`): a numbered rule `C-XX`, a `training` constraint discharged at policy-training time (SR-009), or an `arbiter` property of the cage pipeline (SR-010). SR-011 is implemented jointly by `C-06` (runtime attenuation of high-frequency content) and a training-side heading-variance penalty.
 
+The **Frontier** scenarios (`SC-FRONT-01..06`, `docs/05`) exercise SR-001/002/005/007/008 but are **deliberately absent** from this matrix and from `traceability_matrix.csv`: per **D-35** they form an out-of-ODD cage-efficacy study reported as a paired enforcement-vs-monitoring contrast on **M-S5** (road-edge departure), *not* a pass/fail verdict folded into the D-30 aggregation. The cage's marginal value beyond the ODD is reported separately via `tools/frontier_contrast.py` and manuscript §8.2.2–§8.2.3, and never vetoes the global verdict.
+
 ## Verdict possibilities
 
 - **Satisfied** — the criterion holds with margin across all relevant runs in enforcement mode.

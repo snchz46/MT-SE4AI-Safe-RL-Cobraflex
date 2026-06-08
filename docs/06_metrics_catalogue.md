@@ -1,7 +1,7 @@
 # Metrics Catalogue
 
-**Status:** Living document — Phase 0 baseline, refined through Phase 1  
-**Last update:** 11.05.2026  
+**Status:** Living document — Phase 0 baseline, refined through Phase 1; M-S5 added in F4  
+**Last update:** 08.06.2026  
 **Approved at Gate:** G1  
 
 ## Purpose
@@ -140,6 +140,18 @@ A companion CSV (`docs/data/metrics.csv`) is generated automatically.
 **Computation.** `M_S4 = percentile_5(ttlc[t] for t in run)`. NaN values (no projected crossing) are excluded.
 
 **Contributes evidence to.** SR-003.
+
+### M-S5 — Road-edge departure
+
+**Definition.** Whether the vehicle reached the drivable-road edge during the run — the harm proxy for the frontier cage-efficacy study. A per-run boolean recorded as `road_edge_contact`, true iff the maximum absolute lateral offset reached the road half-width. Distinct from M-S2 (which counts *lane*-boundary breaches at `d_max`): M-S5 marks the more severe *road*-edge departure and is the verdict driver of the SC-FRONT-* scenarios.
+
+**Units.** Binary per run (`road_edge_contact`); aggregated as percentage of runs (departure rate) per (scenario, mode).
+
+**Computation.** Per run: `road_edge_contact = (max(abs(ey[t]) for t in run) >= road_half_m)`, with `road_half_m = 0.5 · road_width` (the oval right-lane road edge, ≈ 0.26 m — beyond the 0.1225 m lane edge). Per-(scenario, mode) aggregate: `M_S5 = count(road_edge_contact) / count(runs) * 100`. The companion `max_excursion_m = max(abs(ey[t]))` reported alongside in those scenarios is the realised value of M-S1 (max lateral offset).
+
+**Note — paired enforcement-vs-monitoring contrast.** Reported as the no-cage counterfactual difference, **not** by the global `fraction_pass` aggregation: on a frontier (out-of-ODD) start the monitoring arm (cage observes only) is expected to reach the edge while the enforcement arm should not. The measured cage benefit is `M_S5(monitoring) − M_S5(enforcement)`, computed by `tools/frontier_contrast.py`. This is the H-04 cage-value evidence (cf. D-35).
+
+**Contributes evidence to.** SR-001, SR-005, SR-007, SR-008 (cage containment beyond the ODD).
 
 ## Intervention metrics
 

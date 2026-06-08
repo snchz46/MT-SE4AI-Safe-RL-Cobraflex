@@ -31,6 +31,87 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [08.06.2026] — F4: Frontier cage-efficacy scenario family (SC-FRONT-01…06 + M-S5) registered; Gazebo executor live
+
+**Document(s) affected:**
+`docs/05_scenario_library.md` (Frontier category + study section + 6 SC-FRONT entries; count 11→17),
+`docs/06_metrics_catalogue.md` (new M-S5), `scenarios/_schema.yaml`,
+`tools/check_scenario_yaml.py`, `tools/check_traceability.py`, `docs/DECISIONS.md` (D-35 + index),
+`docs/07_traceability_matrix.md` (D-35 carve-out note),
+`manuscript/chapters/chapter_03_methodology.md`, `manuscript/chapters/chapter_08_experimental_evaluation.md`,
+`CLAUDE.md`.
+New code/scenarios this entry documents: `scenarios/frontier/sc_front_01…06.yaml`,
+`tools/run_campaign.py` (`execute_run` + frontier-plot hook), `tools/frontier_contrast.py`,
+`tools/plot_frontier.py`, `tools/README.md`,
+`src/cobraflex_rl/cobraflex_rl/scenario_metrics.py`, `…/eval_policy.py`.
+**Phase:** F4.
+**Gate context:** before G4.
+**Author:** Samuel.
+
+### Change
+
+- **New Frontier (FRONT) scenario family — SC-FRONT-01…06.** Out-of-ODD /
+  cage-efficacy scenarios: an out-of-ODD pair (01–03: lateral 0.16 m / heading 32° /
+  compound) where the start is already past the boundary, and an in-ODD-drift pair
+  (04–06: 0.10 m + 8°/22°/14° outward) where the cage responds **graded** rather than
+  with an immediate stop. All on the oval (`start_s=0.0`, 0.2 m/s, 15 s), 25 runs/mode.
+  Registered in `docs/05` (new category, study section, per-scenario entries; total
+  scenario count **11 → 17**). They reference existing SR-001/002/005/007/008 — no new SR.
+- **New safety metric M-S5 — Road-edge departure** (`road_edge_contact = max|ey| ≥
+  road_half_m`, road half-width ≈ 0.26 m, beyond the 0.1225 m lane edge) — the
+  cage-efficacy harm proxy, mirroring the M-S3/`emergency` per-run-event ↔ aggregate-rate
+  pattern. `max_excursion_m` documented as the realised value of M-S1. Added to `docs/06`.
+- **Gazebo executor live.** `run_campaign.execute_run` now drives
+  `ros2 launch cobraflex_rl eval_scenario_batch.launch.py` per matrix cell (per-run
+  `GZ_PARTITION` isolation, orphan-`gz` reaping, retries, resume) — **no longer a stub.**
+- **Scenario-evaluation framework.** `scenario_metrics.py` (`max_excursion_m`,
+  `road_edge_contact`, `time_to_recovery_heading`) wired into
+  `eval_policy._evaluate_scenario`; `tools/frontier_contrast.py` aggregates the paired
+  enforcement-vs-monitoring benefit (`M-S5(monitoring) − M-S5(enforcement)`).
+- **Validators/schema taught the FRONT family.** `FRONT` added to the id/category
+  allowlists in `check_scenario_yaml.py` and to `RX_SC`/`RX_SC_DEF` in
+  `check_traceability.py`; `road_edge_contact`/`max_excursion_m` whitelisted as per-run
+  bare-name fields; `_schema.yaml` documents the category and tokens.
+- **Decision D-35 recorded** in `docs/DECISIONS.md` (+ index row, + D-34 index row backfilled):
+  the frontier scenario family and its **non-verdict-bearing** cage-efficacy semantics —
+  the explicit D-30 carve-out that a frontier result never vetoes the global verdict. A
+  matching note added to `docs/07` explains the deliberate SC-FRONT absence from the verdict matrix.
+- **Cage-efficacy figures wired into the campaign.** `tools/plot_frontier.py` renders the paired
+  enforcement-vs-monitoring figures (`fig_frontier_excursion`, `fig_frontier_cage_benefit`)
+  **aggregating over the N reps per cell** (mean ± std + road-edge-contact rate) — the same script
+  serves the rep00 pilot and the full 25-rep campaign. `run_campaign.py` auto-invokes it after a
+  frontier campaign (best-effort; `--no-frontier-plots` to skip; falls back to printing the manual
+  command when matplotlib is absent, e.g. the headless ROS host).
+
+### Rationale
+
+The frontier family answers *what the cage is worth*: on an out-of-ODD start the policy is
+not designed to recover, so the monitoring arm (no-cage counterfactual) is expected to
+reach the road edge while enforcement is not — the contrast is the H-04 cage-value
+evidence. The scenarios, the M-S5 harm proxy and a pilot campaign already existed as
+**committed run artifacts** (`experiments/sim/campaign_frontier`, today's `F4:` commits) but
+were **unregistered** — invisible to the traceability spine and rejected by the scenario
+validator (`id must match SC-{NOM|EDGE|PERT}-NN`). This entry closes that orphan gap.
+
+### Impact
+
+- Frontier evidence is **not** folded into the global G4 verdict (D-30; recorded as decision
+  **D-35**); it is reported as a per-arm enforcement-vs-monitoring contrast. The 6 × 25 × 2 =
+  **300** frontier runs are separate from the ~1100-run verdict-bearing (NOM/EDGE/PERT) campaign.
+- No hazard / SR / cage-rule IDs added or changed; one metric added (M-S5).
+- Still pending (Ubuntu+Jazzy host): the full verdict-bearing campaign → per-SR sim
+  verdicts in `docs/07` (all still `TBD`); scaling the frontier pilot (rep00, seeds 123 &
+  2024) to the recommended 25 reps incl. SC-FRONT-01/02/03; the QED-metric decision
+  (D-17/D-21/D-22).
+
+### Verification
+
+`python tools/check_scenario_yaml.py --strict` → PASSED, 0 error(s), 0 warning(s).
+`python tools/check_traceability.py` → All checks PASSED, 0 warning(s)
+(Defined scenarios now 17 incl. SC-FRONT-01…06; Defined metrics incl. M-S5).
+
+---
+
 ## [07.06.2026] — F3: Ch.7 main seed switched 42 → 2024 (best of the 5); figs + text repointed
 
 **Document(s) affected:**

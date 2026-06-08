@@ -1,7 +1,7 @@
 # DECISIONS.md — Project decision log
 
 <!--
-Status: D9 (Phase 0 close) + F1 audit additions (D-25, D-26..D-31).
+Status: D9 (Phase 0 close) + F1 audit additions (D-25..D-33) + F3 (D-34) + F4 (D-35).
 Last update: see Git commit date.
 -->
 
@@ -71,6 +71,8 @@ consistent with the chapters.
 | D-31 | Deliberate exclusion of non-functional AI-specific hazard families (adversarial attacks, distribution shift, explainability, dataset bias, low-magnitude brittleness) from the F1 Hazard Register | §4.9 | CONFIRMED |
 | D-32 | Integration of the ROS2 workspace under `src/` by fresh copy of `cobraflex` + `cobraflex_rl`; third-party drivers (`sllidar_ros2`, `zed-ros2-wrapper`) deferred | infrastructure | CONFIRMED |
 | D-33 | Phase 1 ODD-Spec closes 3 of 12 TBDs against the actual `src/` workspace (Q1, Q2, Q3); the remaining 9 are explicitly deferred per phase | §11 of `docs/08_odd_specification.md` | CONFIRMED |
+| D-34 | Cage active in enforcement mode during PPO training (in-process, TS-01) | §7 Training Spec (TS-01) | CONFIRMED |
+| D-35 | Frontier (out-of-ODD) scenario family as a non-verdict-bearing cage-efficacy contrast (M-S5) | `docs/05` (Frontier scenarios); §8.2.2–§8.2.3 | CONFIRMED |
 
 ---
 
@@ -1121,6 +1123,77 @@ cage class or `cage/cage.yaml`:
   `set_physics` unthrottle froze the sim (`real_time_update_rate=0`), so the
   world-file RTF (load-time) remains the open lever, deferred as it changes the
   world hash.
+
+---
+
+### D-35 — Frontier (out-of-ODD) scenario family as a non-verdict-bearing cage-efficacy contrast
+
+| Field | Value |
+| --- | --- |
+| Section | `docs/05` (Frontier scenarios); manuscript §8.2.2–§8.2.3 |
+| Status | CONFIRMED |
+| Date | F4 (08.06.2026) |
+| Planned review | None (scenario-family methodology decision) |
+
+**Decision.** A fourth scenario family, **Frontier (SC-FRONT)**, is added to the
+scenario library alongside Nominal / Edge / Perturbed. Frontier scenarios initialise
+the vehicle **at or beyond the ODD-1 boundary** (`|ey| > 0.1225 m` and/or heading
+beyond C-02's `θ_max = 25°`), where the lane-following policy is not designed to
+recover — recovery is the cage's responsibility (C-01 / C-02 / C-05). They are
+evaluated as a **paired enforcement-vs-monitoring contrast** on a dedicated harm-proxy
+metric **M-S5 (road-edge departure)**, and their evidence is **explicitly excluded
+from the global SR-verdict aggregation of D-30**: a frontier result never vetoes the
+global verdict and never contributes a per-SR pass/fail. The measured cage benefit is
+the counterfactual difference `M-S5(monitoring) − M-S5(enforcement)`.
+
+**Alternatives considered and rejected.**
+- *Fold the frontier scenarios into the EDGE family and the D-29/D-30 verdict.*
+  Rejected: EDGE scenarios sit within or at the ODD boundary and carry pass/fail
+  criteria the constraint-respecting policy is expected to meet; frontier starts are
+  deliberately out-of-ODD, where the policy is *not* expected to recover, so a
+  `fraction_pass` verdict on the policy would be ill-posed and a monitoring-arm
+  "failure" (reaching the road edge) is the *intended* demonstration, not a defect.
+  Aggregating that into D-30 would let a designed-for outcome veto the global verdict.
+- *Demonstrate cage value only through the existing M-S2 enforcement-vs-monitoring
+  delta on EDGE/PERT scenarios (§8.2.2).* Rejected as insufficient: inside the ODD the
+  constraint-respecting policy rarely breaches the lane boundary, so the M-S2 delta is
+  often null (the policy suffices) — precisely the defence objection of §7.5.2. A
+  frontier family forces the regime where the cage's contribution is non-null and
+  measurable.
+- *Introduce a new hazard / SR / cage rule for road-edge departure.* Rejected: no new
+  requirement is created — frontier scenarios verify the existing SR-001 / SR-002 /
+  SR-005 / SR-007 / SR-008 (cage containment). M-S5 is a measurement instrument, and
+  road-edge departure is a more severe instance of the already-registered H-01 / H-04.
+
+**Rationale.** The thesis must answer the standing defence question "if the policy is
+good, what is the cage for?" (§7.5.2, §8.2.2). Inside the ODD the honest answer is
+often "nothing — the policy suffices"; the cage's value materialises only where the
+policy leaves its design envelope. The frontier family constructs exactly that regime
+and measures the cage's protective contribution as a clean counterfactual (same start,
+cage enforcing vs cage observing-only). Keeping this evidence *out* of the D-30 verdict
+preserves the semantic integrity of both: the global verdict stays a statement about
+the policy+cage system *inside* its ODD, while the frontier contrast is a separate,
+honest statement about the cage's marginal value *beyond* it (the H-04 cage-value
+evidence).
+
+**Consequences.**
+- Six scenarios `SC-FRONT-01..06` are added under `scenarios/frontier/` and documented
+  in `docs/05` (out-of-ODD pair 01–03; in-ODD-drift pair 04–06, where the cage responds
+  graded rather than with an immediate stop). Scenario count 11 → 17; no new H/SR/C.
+- One safety metric **M-S5 — Road-edge departure** is added to `docs/06`
+  (`road_edge_contact = max|ey| ≥ road_half_m`), the per-run boolean behind the
+  contrast, mirroring the M-S3/`emergency` event↔rate pattern; `max_excursion_m` is the
+  realised value of M-S1.
+- The frontier 6 × 25 × 2 = 300 runs are budgeted **separately** from the ~1100-run
+  verdict-bearing campaign (D-29) and do **not** enter `traceability_matrix.csv` /
+  `docs/07` verdict rows. The cage-benefit aggregation is produced by
+  `tools/frontier_contrast.py`.
+- The scenario validators (`check_scenario_yaml.py`, `check_traceability.py`) and
+  `scenarios/_schema.yaml` recognise the FRONT family and the per-run bare tokens
+  `road_edge_contact` / `max_excursion_m`.
+- Reported in manuscript §8.2.2–§8.2.3 as the cage-value evidence. The full 25-rep study
+  is pending on the Ubuntu+Jazzy host; a pilot (rep00, seeds 123 & 2024) exists under
+  `experiments/sim/campaign_frontier`.
 
 ---
 

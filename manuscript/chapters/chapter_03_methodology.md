@@ -599,7 +599,7 @@ del HARA (D13) y de la Cage Specification (D19).
 | L4a' — Cage Unit Tests | `tests/cage/test_rules.py` | Cap. 6 |
 | L4b' — Policy Behavioral Evaluation | Análisis estadístico sobre scenario library | Cap. 8 |
 | L3' — Integration Testing | Tests de integración de pipeline | Cap. 6 |
-| L2' — Scenario-Based Testing | Library SC-NOM / SC-EDGE / SC-PERT | Cap. 6, Cap. 8 |
+| L2' — Scenario-Based Testing | Library SC-NOM / SC-EDGE / SC-PERT / SC-FRONT | Cap. 6, Cap. 8 |
 | L1' — Operational Validation | Sim (Cap. 9) + Sim-to-Real Gap (Cap. 9) + verdicto SR (Cap. 10) | Cap. 9, Cap. 10 |
 | Runtime Monitoring (A3) | Logger Node + intervention logs (transversal) | Cap. 5–10 |
 

@@ -26,11 +26,15 @@ script reports orphans on either side.
 
 - **Current phase:** F4 — Sim eval (scenario validation campaign; closes at G4).
   **Gate G3 passed 2026-06-03**, closing F3 (PPO training). F4 entry **done**: scenario
-  library at 11/11 full YAMLs (D-29-feasible), ODD-2 adverse profiles closed (D-33),
-  campaign runner + pure-Python verdict spine (D-29/D-30) built and unit-tested. **Remaining
-  F4 work:** the Gazebo campaign executor (`execute_run` is still a stub on the Ubuntu host),
-  the resulting per-SR sim verdicts in `docs/07`, and the QED-metric decision (D-17/D-21/D-22).
-  See CHANGELOG 03.06–04.06 "F4" entries.
+  library at **17 scenarios** (11 verdict-bearing NOM/EDGE/PERT + 6 FRONT cage-efficacy
+  per D-35, D-29-feasible), ODD-2 adverse profiles closed (D-33), campaign runner + pure-Python
+  verdict spine (D-29/D-30) built and unit-tested. **Gazebo executor is live** —
+  `run_campaign.execute_run` drives `eval_scenario_batch.launch.py` (GZ_PARTITION isolation,
+  orphan-gz reaping, retries, resume); a **pilot** frontier campaign has run
+  (`experiments/sim/campaign_frontier`, rep00, seeds 123 & 2024). **Remaining F4 work:**
+  run the full verdict-bearing campaign on the Ubuntu host → fill the per-SR sim verdicts
+  in `docs/07` (all still `TBD`); scale the frontier study to 25 reps (incl. SC-FRONT-01/02/03);
+  the QED-metric decision (D-17/D-21/D-22). See CHANGELOG 03.06–08.06 "F4" entries.
 - **F2 evidence:** `ros_run_20260523T153003Z` — 9.91 laps, 845 s,
   0 emergencies, cage v0.5.1, PD v0.8.0.
 - **F3 evidence (closed):** main run `ppo_train_2024_200k` (seed 2024, 200k, reward v1.2,

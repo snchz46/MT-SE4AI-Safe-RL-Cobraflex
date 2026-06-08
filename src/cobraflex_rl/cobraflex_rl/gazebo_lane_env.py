@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from collections import deque
 from typing import Any, Dict, Mapping, Optional
 
 import gymnasium as gym
@@ -16,6 +17,8 @@ from .cage_bridge import (
 from .polyline_tracker import PolylineTracker, TrackState
 from .rewards import compute_reward
 from .ros_interface import RosGazeboInterface
+from .scenario_perturbations import NONE as NO_PERTURBATION
+from .scenario_perturbations import ScenarioPerturbation
 
 
 class GazeboLaneEnv(gym.Env):
@@ -91,6 +94,15 @@ class GazeboLaneEnv(gym.Env):
         self.min_speed_scale = float(cage_cfg.get("min_speed_scale", 0.35))
         self.cage: Optional[SafetyCageNode] = None
 
+        # F4 runtime perturbation injection (SC-PERT-01/02, SC-EDGE-03). Set per
+        # episode from reset(options["perturbation"]); NONE for training / nominal
+        # eval. `_perceived_ey` is the (noisy) lateral offset fed to the policy
+        # observation and the cage; `_cmd_delay` buffers /cmd_vel for actuation
+        # latency. The verdict is always measured on the *true* pose.
+        self._perturbation: ScenarioPerturbation = NO_PERTURBATION
+        self._perceived_ey: float = 0.0
+        self._cmd_delay: "deque" = deque()
+
         # Random spawn perturbation per episode (Training Spec §7.3) for
         # start-state diversity. Disabled (exact centerline spawn) for
         # deterministic evaluation. Reproducible via self.np_random, seeded by
@@ -128,6 +140,10 @@ class GazeboLaneEnv(gym.Env):
         # 15 deg) and/or lateral offset (`lateral_offset_m`). Absent (training /
         # nominal eval), the spawn is the first centerline point as before.
         opts = options or {}
+        # Runtime perturbation for this episode (obs noise / latency / throttle
+        # pulse). Reset the latency buffer so no command leaks across episodes.
+        self._perturbation = opts.get("perturbation") or NO_PERTURBATION
+        self._cmd_delay.clear()
         start_s = opts.get("start_s_m")
         if start_s is not None:
             base_x, base_y, base_heading = self.tracker.pose_at_arclength(
@@ -167,7 +183,7 @@ class GazeboLaneEnv(gym.Env):
 
         kappa_near, kappa_far = self._curvature_preview(track_state.segment_index)
         observation = self._make_observation(
-            track_state, speed, self.prev_steer, kappa_near, kappa_far
+            self._perceived_ey, track_state.epsi, speed, self.prev_steer, kappa_near, kappa_far
         )
         info = self._make_info(track_state, speed)
         return observation, info
@@ -244,6 +260,10 @@ class GazeboLaneEnv(gym.Env):
             policy_steer
         )
 
+        # Actuation latency (SC-PERT-02): the /cmd_vel command reaches the actuator
+        # `latency_steps` cycles late. Identity for an unperturbed run.
+        cmd_linear, cmd_angular = self._delayed_command(cmd_linear, cmd_angular)
+
         # send_action(steer, speed) publishes Twist(angular.z=steer, linear.x=speed).
         self.ros_interface.send_action(cmd_angular, cmd_linear)
         self.ros_interface.step_ros(self.control_dt)
@@ -305,7 +325,7 @@ class GazeboLaneEnv(gym.Env):
         self.prev_policy_steer = policy_steer
         kappa_near, kappa_far = self._curvature_preview(track_state.segment_index)
         observation = self._make_observation(
-            track_state, speed, self.prev_steer, kappa_near, kappa_far
+            self._perceived_ey, track_state.epsi, speed, self.prev_steer, kappa_near, kappa_far
         )
         info = self._make_info(track_state, speed)
         info.update(cage_info)
@@ -341,11 +361,18 @@ class GazeboLaneEnv(gym.Env):
             )
 
         # The policy controls steering only; throttle is the fixed cruise nominal
-        # so C-04/C-05/C-06 act on a realistic throttle stream (§7.2.2).
-        raw_action = (policy_steer, self.throttle_nominal)
+        # so C-04/C-05/C-06 act on a realistic throttle stream (§7.2.2). A
+        # throttle-override perturbation (SC-EDGE-03) substitutes a timed pulse fed
+        # to the cage's C-04. NB the fixed-speed actuation
+        # (target_speed_from_throttle) caps the resulting speed at fixed_speed, so
+        # the *speed-excess magnitude* is limited in this env (see
+        # scenario_perturbations / experiments/README).
         timestamp = self.step_count * self.control_dt
+        override = self._perturbation.throttle_override(timestamp)
+        raw_throttle = self.throttle_nominal if override is None else float(override)
+        raw_action = (policy_steer, raw_throttle)
         state = build_cage_state(
-            lateral_offset=self.last_track_state.ey,
+            lateral_offset=self._perceived_ey,
             heading_error=self.last_track_state.epsi,
             speed=self.ros_interface.get_speed(),
             road_width=self.road_width,
@@ -384,6 +411,19 @@ class GazeboLaneEnv(gym.Env):
         }
         return float(safe_steer), cmd_linear, cmd_angular, info
 
+    def _delayed_command(self, cmd_linear: float, cmd_angular: float):
+        """Actuation latency (SC-PERT-02): return the command issued
+        ``latency_steps`` cycles ago, buffering the current one. Until the buffer
+        fills (start-of-episode latency) the actuator is idle. Identity (no-op)
+        when the active perturbation carries no latency."""
+        steps = self._perturbation.latency_steps
+        if steps <= 0:
+            return cmd_linear, cmd_angular
+        self._cmd_delay.append((cmd_linear, cmd_angular))
+        if len(self._cmd_delay) > steps:
+            return self._cmd_delay.popleft()
+        return 0.0, 0.0
+
     def close(self) -> None:
         try:
             self.ros_interface.send_action(0.0, 0.0)
@@ -396,20 +436,32 @@ class GazeboLaneEnv(gym.Env):
         # Cache the world pose so _make_info can expose it (x, y for the §7.5
         # trajectory plots; the cage/Frenet state is in ey/epsi/s).
         self._last_pose = (float(x), float(y), float(yaw))
-        return self.tracker.track(x, y, yaw)
+        track_state = self.tracker.track(x, y, yaw)
+        # Perceived lateral offset = true + sensor noise (SC-PERT-01), or the true
+        # value for an unperturbed run. Fed to the policy observation and the cage
+        # state; the true `track_state.ey` still drives metrics, reward and
+        # termination (the verdict is on the true pose, Ch.8 §8.2.3).
+        self._perceived_ey = self._perturbation.perceive_lateral(
+            track_state.ey, self.np_random
+        )
+        return track_state
 
     @staticmethod
     def _make_observation(
-        track_state: TrackState,
+        ey: float,
+        epsi: float,
         speed: float,
         previous_steer: float,
         kappa_near: float,
         kappa_far: float,
     ) -> np.ndarray:
+        # `ey` is the *perceived* lateral offset (true + sensor noise under
+        # SC-PERT-01; true otherwise); `epsi` is the true heading error (the noise
+        # channel is lateral_offset only).
         return np.array(
             [
-                track_state.ey,
-                track_state.epsi,
+                ey,
+                epsi,
                 speed,
                 previous_steer,
                 kappa_near,

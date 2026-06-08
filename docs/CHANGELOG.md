@@ -31,6 +31,62 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [08.06.2026] — F4: Runtime perturbation injection wired (SC-PERT-01/02, SC-EDGE-03)
+
+**Document(s) affected:**
+New: `src/cobraflex_rl/cobraflex_rl/scenario_perturbations.py`,
+`policy/tests/test_scenario_perturbations.py`.
+Modified: `…/scenario_runner.py`, `…/gazebo_lane_env.py`, `…/eval_policy.py`,
+`policy/tests/test_scenario_runner.py`, `scenarios/_schema.yaml`, `experiments/README.md`.
+**Phase:** F4.
+**Gate context:** before G4.
+**Author:** Samuel.
+
+### Change
+
+- **New pure module `scenario_perturbations.py`** — resolves a scenario `perturbations:` block +
+  rep index into a concrete, level-resolved `ScenarioPerturbation`: `observation_noise` (Gaussian
+  on the perceived lateral offset, SC-PERT-01), `actuation_latency` (command delay in control
+  steps, SC-PERT-02), `throttle_override` (timed pulse fed to C-04, SC-EDGE-03). Multi-level types
+  pick their level by `rep % n_levels` (the YAML's "20 runs per level"). ROS-free, unit-tested.
+- **`scenario_runner.derive_run_config`** now carries the resolved `perturbation` and a per-rep
+  `env_seed` on `RunConfig`.
+- **`gazebo_lane_env`** applies the three perturbations: the *perceived* lateral offset
+  (true + noise) feeds the policy observation **and** the cage state, while metrics / reward /
+  termination stay on the *true* pose (Ch.8 §8.2.3); a `deque` buffers `/cmd_vel` for actuation
+  latency; the throttle pulse substitutes the nominal throttle into the cage input.
+- **`eval_policy`** passes the perturbation through `reset(options=…)`, seeds the env reset with
+  the per-rep `env_seed` (independent yet reproducible obs-noise per rep), and records the level
+  in `summary["perturbation"]`.
+
+### Rationale
+
+The F4 verdict campaign's adverse arm for SR-001/003/004/007 (and the SR-009 negative test)
+depends on SC-PERT-01/02 and SC-EDGE-03, but the executor previously ignored the `perturbations:`
+block entirely — those runs would have executed as plain nominal runs and reported a misleading
+PASS (the 08.06 readiness review). This wires the three runtime stressors so the perturbed
+scenarios test what they claim.
+
+### Impact
+
+- **Not yet Gazebo-validated.** The pure logic is unit-tested (28 cases) but the env application
+  runs only on the Ubuntu+Jazzy host — smoke-test per `experiments/README.md` step 3b before
+  trusting the perturbed verdicts.
+- **SC-EDGE-03 caveat:** the fixed-speed actuation (`target_speed_from_throttle` caps speed at
+  `fixed_speed` ≈ 0.2 m/s < `v_max` 0.5 m/s) limits the achievable over-speed, so the override
+  reaches C-04 but exercises little real speed excess; a full SR-004 test needs variable-speed
+  actuation (flagged in the runbook).
+- **Still unwired (different mechanisms):** SC-EDGE-05 (initial-condition grid expansion) and
+  SC-PERT-03 (pre-run stall-variant checkpoint). No H/SR/C/SC/M ids added or changed.
+
+### Verification
+
+`python -m pytest policy/tests/test_scenario_perturbations.py policy/tests/test_scenario_runner.py`
+→ 28 passed. `py_compile` of `scenario_perturbations` / `scenario_runner` / `gazebo_lane_env` /
+`eval_policy` → clean. `python tools/check_traceability.py` → unaffected (All checks PASSED, 0 warnings).
+
+---
+
 ## [08.06.2026] — F4: Frontier cage-efficacy scenario family (SC-FRONT-01…06 + M-S5) registered; Gazebo executor live
 
 **Document(s) affected:**

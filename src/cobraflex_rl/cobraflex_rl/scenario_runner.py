@@ -15,10 +15,13 @@ from __future__ import annotations
 
 import hashlib
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
+
+from .scenario_perturbations import NONE as NO_PERTURBATION
+from .scenario_perturbations import ScenarioPerturbation, resolve_perturbation
 
 
 @dataclass
@@ -28,6 +31,12 @@ class RunConfig:
     fixed_speed: float
     max_steps: int
     pass_criterion_per_run: str
+    # Runtime perturbation for this (scenario, rep): observation noise / actuation
+    # latency / throttle pulse, level-resolved by rep. NONE for unperturbed runs.
+    perturbation: ScenarioPerturbation = field(default=NO_PERTURBATION)
+    # Stable per-rep env seed (drives the obs-noise stream so each rep is
+    # independent yet reproducible). Same basis as the initial-condition jitter.
+    env_seed: int = 0
 
 
 def run_seed(scenario_id: str, rep: int, base_seed: int) -> int:
@@ -85,10 +94,16 @@ def derive_run_config(
     timeout_s = float((scenario.get("termination") or {}).get("timeout_s", 0.0))
     max_steps = int(round(timeout_s / control_dt)) if timeout_s > 0 else 0
 
+    perturbation = resolve_perturbation(
+        scenario.get("perturbations"), rep, control_dt=control_dt
+    )
+
     return RunConfig(
         scenario_id=sid,
         reset_options=reset_options,
         fixed_speed=speed,
         max_steps=max_steps,
         pass_criterion_per_run=str(scenario.get("pass_criterion_per_run", "")),
+        perturbation=perturbation,
+        env_seed=run_seed(sid, rep, base_seed),
     )

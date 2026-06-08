@@ -9,7 +9,16 @@
 # category:             nominal | edge | perturbed | frontier
 # description:          free-text summary
 # initial_conditions:   block of pose, speed, randomisation
-# perturbations:        block describing applied perturbations (or "none")
+# perturbations:        block describing applied perturbations (or "none").
+#                       Runtime types injected by the F4 executor
+#                       (cobraflex_rl.scenario_perturbations), level-resolved by rep:
+#                         observation_noise: {channel: lateral_offset, distribution: gaussian,
+#                                             sigma_levels_m: [..]}   # SC-PERT-01
+#                         actuation_latency: {latency_levels_ms: [..]}              # SC-PERT-02
+#                         throttle_override: {at_time_s, duration_s, throttle}      # SC-EDGE-03
+#                       Non-runtime mechanisms live elsewhere: SC-EDGE-05 uses
+#                       initial_conditions.type=parameterised_grid; SC-PERT-03 uses
+#                       perturbations.type=pre_run_policy_finetune (a pre-run policy swap).
 # termination:          block of termination criteria
 # metrics_primary:      list of metric IDs (M-*); a few per-run event/quantity
 #                       fields the executor records directly are also accepted by

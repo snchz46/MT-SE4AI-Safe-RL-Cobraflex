@@ -107,6 +107,35 @@ def test_different_reps_differ():
     assert a != b
 
 
+# --------------------------------------------------------------------------- #
+# derive_run_config — perturbation + env_seed (F4 runtime injection)
+# --------------------------------------------------------------------------- #
+def test_run_config_carries_level_resolved_perturbation():
+    sc = {
+        **_SC_EDGE_02,
+        "perturbations": {"type": "observation_noise", "sigma_levels_m": [0.01, 0.03, 0.05]},
+    }
+    c0 = derive_run_config(sc, rep=0, control_dt=0.1)
+    c1 = derive_run_config(sc, rep=1, control_dt=0.1)
+    assert c0.perturbation.kind == "observation_noise"
+    assert c0.perturbation.obs_noise_sigma_m == pytest.approx(0.01)
+    assert c1.perturbation.obs_noise_sigma_m == pytest.approx(0.03)  # level by rep
+
+
+def test_run_config_env_seed_reproducible_and_rep_specific():
+    c0 = derive_run_config(_SC_EDGE_02, rep=0)
+    c0_again = derive_run_config(_SC_EDGE_02, rep=0)
+    c1 = derive_run_config(_SC_EDGE_02, rep=1)
+    assert c0.env_seed == c0_again.env_seed == run_seed("SC-EDGE-02", 0, 0)
+    assert c0.env_seed != c1.env_seed
+
+
+def test_run_config_without_perturbations_is_inert():
+    c = derive_run_config(_SC_EDGE_01, rep=0)  # _SC_EDGE_01 has no perturbations key
+    assert c.perturbation.kind == "none"
+    assert not c.perturbation.active
+
+
 def test_run_seed_stable_across_calls():
     assert run_seed("SC-EDGE-02", 5, 0) == run_seed("SC-EDGE-02", 5, 0)
     assert run_seed("SC-EDGE-02", 5, 0) != run_seed("SC-EDGE-02", 6, 0)

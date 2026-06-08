@@ -195,7 +195,7 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             scenario_cfg, cli_args.rep, control_dt=control_dt, base_seed=cli_args.base_seed
         )
         scenario_id = run_config.scenario_id
-        reset_options = run_config.reset_options
+        reset_options = {**run_config.reset_options, "perturbation": run_config.perturbation}
         train_cfg["fixed_speed"] = run_config.fixed_speed
         if not (cli_args.max_steps and cli_args.max_steps > 0) and run_config.max_steps > 0:
             train_cfg["max_episode_steps"] = run_config.max_steps
@@ -213,6 +213,10 @@ def main(args: Optional[Sequence[str]] = None) -> None:
     model_path = Path(cli_args.model_path or train_cfg.get("model_path", "cobraflex_ppo_lane"))
     model_path = model_path.expanduser()
     seed = int(train_cfg.get("seed", 42))
+    # Env reset seed: in scenario mode use the per-rep env_seed so the obs-noise
+    # stream (SC-PERT-01) is independent across reps yet reproducible; otherwise
+    # the legacy policy seed (§7.5 eval).
+    reset_seed = run_config.env_seed if run_config is not None else seed
 
     interface: Optional[RosGazeboInterface] = None
     env: Optional[GazeboLaneEnv] = None
@@ -245,7 +249,7 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         last_terminated = False
         last_info: Dict[str, Any] = {}
         for episode in range(cli_args.episodes):
-            observation, info = env.reset(seed=seed + episode, options=reset_options)
+            observation, info = env.reset(seed=reset_seed + episode, options=reset_options)
             terminated = False
             truncated = False
             step_index = 0
@@ -265,6 +269,13 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             last_info = info
 
         summary = summarize_eval(records, perimeter=perimeter, cycle_dt_s=env.control_dt)
+        if run_config is not None and run_config.perturbation.active:
+            # Record which perturbation level this rep ran (σ / latency / pulse) so
+            # the per-run summary.json is self-describing for the analysis.
+            summary["perturbation"] = {
+                "kind": run_config.perturbation.kind,
+                "level": run_config.perturbation.level_label,
+            }
         _print_summary(summary)
         # `completed` (M-P2): the run reached its horizon / goal without a
         # road-boundary termination. Used only in the scenario verdict.

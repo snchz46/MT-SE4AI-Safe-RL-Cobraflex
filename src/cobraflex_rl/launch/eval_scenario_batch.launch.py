@@ -38,6 +38,8 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument("gui", default_value="false",
                               description="Gazebo GUI (off for batch)."),
+        DeclareLaunchArgument("rviz", default_value="false",
+                              description="RViz (off for batch; on to watch a run)."),
         DeclareLaunchArgument("model_path", default_value="cobraflex_ppo_lane",
                               description="Trained PPO checkpoint (.zip)."),
         DeclareLaunchArgument("scenario", default_value="",
@@ -61,6 +63,7 @@ def generate_launch_description():
         launch_arguments={
             "world": LaunchConfiguration("world"),
             "gui": LaunchConfiguration("gui"),
+            "rviz": LaunchConfiguration("rviz"),
         }.items(),
     )
 

@@ -223,3 +223,15 @@ def test_run_id_for_is_deterministic_and_unique():
     assert rc.run_id_for(a) == rc.run_id_for(a)
     assert rc.run_id_for(a) != rc.run_id_for(b)
     assert "rep03" in rc.run_id_for(a)
+
+
+def test_execute_run_resume_reads_cached_summary(tmp_path):
+    # With resume=True and an existing summary.json, execute_run must read it back
+    # without launching Gazebo (subprocess 'ros2' would fail in this env).
+    rs = rc.RunSpec("SC-EDGE-01", "enforcement", "rl", 2024, 0)
+    scen = _scen("SC-EDGE-01")
+    run_dir = tmp_path / rc.run_id_for(rs)
+    run_dir.mkdir(parents=True)
+    (run_dir / "summary.json").write_text('{"verdict": true, "scenario_id": "SC-EDGE-01"}')
+    out = rc.execute_run(rs, scen, output_root=tmp_path, resume=True)
+    assert out["verdict"] is True

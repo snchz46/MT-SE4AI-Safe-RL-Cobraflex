@@ -349,6 +349,14 @@ def run_id_for(run_spec: RunSpec) -> str:
     return f"camp_{sid}_{run_spec.controller}_{who}_{run_spec.mode}_rep{run_spec.rep:02d}"
 
 
+def _read_summary(output_root: Path, run_id: str) -> Optional[Dict[str, object]]:
+    summary_path = Path(output_root) / run_id / "summary.json"
+    if summary_path.is_file():
+        with summary_path.open(encoding="utf-8") as handle:
+            return json.load(handle)
+    return None
+
+
 def execute_run(
     run_spec: RunSpec,
     scenario: Scenario,
@@ -356,7 +364,9 @@ def execute_run(
     output_root: Path,
     model_path: Optional[Path] = None,
     gui: bool = False,
+    rviz: bool = False,
     timeout_s: int = 900,
+    resume: bool = False,
 ) -> Dict[str, object]:  # pragma: no cover - drives Gazebo, host-only
     """Drive one scenario run in Gazebo (headless) and return its ``summary.json``.
 
@@ -365,8 +375,19 @@ def execute_run(
     conditions through ``eval_policy`` and auto-shuts-down on completion — then
     reads back the per-run metric catalogue + verdict the node wrote. RL only;
     the PD-baseline arm is a separate node (deferred).
+
+    With ``resume=True`` a cell whose ``summary.json`` already exists is read back
+    without re-launching, so an interrupted long campaign continues where it
+    stopped instead of re-running completed cells.
     """
+    import os
     import subprocess
+
+    run_id = run_id_for(run_spec)
+    if resume:
+        cached = _read_summary(output_root, run_id)
+        if cached is not None:
+            return cached
 
     if run_spec.controller != "rl":
         raise NotImplementedError(
@@ -379,7 +400,6 @@ def execute_run(
     if not checkpoint.is_file():
         raise FileNotFoundError(f"checkpoint not found for seed {run_spec.seed}: {checkpoint}")
 
-    run_id = run_id_for(run_spec)
     output_root = Path(output_root)
     cmd = [
         "ros2", "launch", "cobraflex_rl", "eval_scenario_batch.launch.py",
@@ -390,12 +410,21 @@ def execute_run(
         f"run_id:={run_id}",
         f"output_root:={output_root}",
         f"gui:={'true' if gui else 'false'}",
+        f"rviz:={'true' if rviz else 'false'}",
     ]
+    # Isolate this run's Gazebo transport in its own partition, so a lingering
+    # gz server from the previous run (the EmitEvent(Shutdown) teardown can lag
+    # past ros2 launch's exit) cannot cross-talk with this one via gz's
+    # aggressive discovery — the cause of the inter-run odom "jump". Within the
+    # run all components inherit the same partition and talk to each other fine.
+    env = dict(os.environ)
+    env["GZ_PARTITION"] = run_id
+
     # Don't gate on the launch return code: tearing Gazebo down via the on-exit
     # Shutdown can surface a non-zero exit even when the run itself completed and
     # wrote its summary. Success is "the node wrote a summary.json"; otherwise the
     # return code is reported to help diagnose a genuine launch failure.
-    proc = subprocess.run(cmd, timeout=timeout_s)
+    proc = subprocess.run(cmd, timeout=timeout_s, env=env)
 
     summary_path = output_root / run_id / "summary.json"
     if not summary_path.is_file():
@@ -427,12 +456,17 @@ def run_matrix(
     executor: Executor = execute_run,
     *,
     continue_on_error: bool = True,
+    settle_s: float = 0.0,
     on_progress: Optional[Callable[[int, int, RunOutcome], None]] = None,
 ) -> List[RunOutcome]:
     """Execute every matrix cell through ``executor`` and collect per-run
     verdicts. ``executor`` is injectable so the orchestration is unit-tested with
     a stub (no Gazebo). A failed run is recorded as an outcome with ``error`` set
-    (and ``verdict=None``) unless ``continue_on_error`` is False."""
+    (and ``verdict=None``) unless ``continue_on_error`` is False. ``settle_s``
+    pauses between runs to let the previous Gazebo fully tear down before the
+    next launch (belt-and-suspenders alongside the per-run GZ_PARTITION)."""
+    import time
+
     outcomes: List[RunOutcome] = []
     total = len(matrix)
     for i, run_spec in enumerate(matrix, start=1):
@@ -448,6 +482,8 @@ def run_matrix(
         outcomes.append(outcome)
         if on_progress is not None:
             on_progress(i, total, outcome)
+        if settle_s > 0 and i < total:
+            time.sleep(settle_s)
     return outcomes
 
 
@@ -539,6 +575,11 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     p.add_argument("--reps", type=int, default=None,
                    help="cap per-scenario repetitions (default: full D-29 n_runs_recommended).")
     p.add_argument("--gui", action="store_true", help="show the Gazebo GUI per run (slow).")
+    p.add_argument("--rviz", action="store_true", help="show RViz per run (to spot-check spawn/odom).")
+    p.add_argument("--resume", action="store_true",
+                   help="skip cells whose summary.json already exists (resume a long campaign).")
+    p.add_argument("--settle", type=float, default=3.0,
+                   help="seconds to pause between runs for clean Gazebo teardown (default 3).")
     p.add_argument("--stop-on-error", action="store_true",
                    help="abort the campaign on the first failed run (default: record + continue).")
     p.add_argument("--out", type=Path, default=REPO / "experiments" / "sim" / "campaign")
@@ -595,11 +636,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(line + (f"  ({outcome.error})" if outcome.error else ""))
 
     executor: Executor = (
-        lambda rs, sc, **kw: execute_run(rs, sc, gui=args.gui, **kw)
+        lambda rs, sc, **kw: execute_run(
+            rs, sc, gui=args.gui, rviz=args.rviz, resume=args.resume, **kw)
     )
     outcomes = run_matrix(
         matrix, scenarios, runs_root, executor=executor,
-        continue_on_error=not args.stop_on_error, on_progress=_progress,
+        continue_on_error=not args.stop_on_error, settle_s=args.settle,
+        on_progress=_progress,
     )
 
     report = aggregate_campaign(outcomes, scenarios, srs, verdict_mode=args.verdict_mode)

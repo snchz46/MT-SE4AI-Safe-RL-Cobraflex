@@ -1,0 +1,19 @@
+{
+  "run_id": "camp_front06_rl_seed2024_monitoring_rep00",
+  "scenario_id": "SC-FRONT-06",
+  "mode": "monitoring",
+  "timestamp_iso": "2026-06-08T10:13:49.015472+00:00",
+  "duration_s": 15.0,
+  "git_commit": "974cff2bad91d6755fe9d9119bf569acb01f0430",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "7a08ea91d2ff70c1db1e49fd4742ab099b47647395aca4509289e226fa3f5346",
+  "policy_checkpoint": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/experiments/sim/cobraflex_ppo_lane_2024_200k.zip",
+  "policy_checkpoint_hash": "c77b39783ce6462a522d06cb34db71efbc8dbd4204b00e7d88c9eb5ae4a6103e",
+  "centerline_yaml_hash": "54f5d47cdf4d8c6a107e0e107f107fbc9d56310ac16ad731c65281875f160e33",
+  "scenario_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/scenarios/frontier/sc_front_06.yaml",
+  "scenario_yaml_hash": "7d49a4c0fb616fb5672a63d7c309f1fef714912f8d3905cbcefa151eecb859ea",
+  "rep": 0,
+  "seed": 23,
+  "platform": "sim",
+  "status": "completed"
+}

@@ -271,7 +271,15 @@ class GazeboLaneEnv(gym.Env):
         # the reward, see below. (Requested extension to D-34 / TS-01.)
         off_road = abs(track_state.ey) > (self.road_width * 0.5)
         cage_emergency = bool(cage_info.get("cage_emergency", False))
-        terminated = off_road or cage_emergency
+        # A cage emergency only ENDS the episode when the cage is actually
+        # enforcing (the emergency stop is real). In monitoring the cage observes
+        # only — the raw policy action is applied — so a *shadow* emergency must
+        # not terminate the run; otherwise the no-cage counterfactual would stop
+        # at the same point as enforcement and the cage-efficacy contrast (max
+        # excursion / road-edge contact) would vanish. Training is enforcement, so
+        # this leaves the training/eval terminate-on-emergency behaviour unchanged.
+        cage_stop = cage_emergency and (self.cage_mode == "enforcement")
+        terminated = off_road or cage_stop
         truncated = self.step_count >= self.max_episode_steps
         # Reward is computed on the resulting state (ey/epsi/progress) and, for
         # the smoothness term only, on the *raw* policy steering delta — D-34 /
@@ -302,7 +310,7 @@ class GazeboLaneEnv(gym.Env):
         info = self._make_info(track_state, speed)
         info.update(cage_info)
         if terminated:
-            info["termination_reason"] = "cage_emergency" if cage_emergency else "off_road"
+            info["termination_reason"] = "cage_emergency" if cage_stop else "off_road"
         elif truncated:
             info["termination_reason"] = "truncated"
         return observation, reward, terminated, truncated, info
@@ -351,10 +359,16 @@ class GazeboLaneEnv(gym.Env):
         )
         safe_steer, safe_throttle = result["safe_action"]
         emergency = bool(result["emergency"])
+        # In monitoring the cage observes only: the raw action is applied and a
+        # *shadow* emergency must not brake the robot — that is the no-cage
+        # counterfactual the efficacy study needs. The controlled stop is actuated
+        # only when enforcing. The shadow flag is still recorded in cage_emergency
+        # so the analysis can see "the cage would have stopped here".
+        apply_emergency = emergency and (self.cage_mode == "enforcement")
         cmd_linear, cmd_angular = safe_action_to_cmd(
             safe_steer,
             safe_throttle,
-            emergency,
+            apply_emergency,
             fixed_speed=self.fixed_speed,
             throttle_nominal=self.throttle_nominal,
             min_speed_scale=self.min_speed_scale,

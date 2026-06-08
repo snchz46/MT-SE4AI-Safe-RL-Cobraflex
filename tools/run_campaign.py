@@ -52,7 +52,7 @@ MIN_RUNS_BY_CRITICALITY: Dict[str, int] = {
 # NOM = nominal family; EDGE/PERT = adverse family (D-29 requires an SR-CL-A to be
 # covered in >=1 nominal AND >=1 adverse family).
 NOMINAL_PREFIXES = ("SC-NOM",)
-ADVERSE_PREFIXES = ("SC-EDGE", "SC-PERT")
+ADVERSE_PREFIXES = ("SC-EDGE", "SC-PERT", "SC-FRONT")
 
 
 # --------------------------------------------------------------------------- #
@@ -315,6 +315,9 @@ def plan_feasibility(
                 continue
             runs = int(scen.n_runs.get(verdict_mode, 0))
             fam = scen.family
+            if fam not in families:
+                gaps.append(f"{sid}:family={fam}")
+                continue
             if runs >= min_runs:
                 families[fam] = max(families[fam], runs)
             else:
@@ -357,6 +360,25 @@ def _read_summary(output_root: Path, run_id: str) -> Optional[Dict[str, object]]
     return None
 
 
+def _reap_orphan_gazebo() -> int:
+    """Kill any lingering ``gz sim`` server for a cobraflex world.
+
+    The launch's on-exit Shutdown does NOT reliably kill the ``gz sim`` ruby
+    server: it ignores SIGINT and is frequently reparented to init, surviving the
+    ``ros2 launch`` exit. Across a campaign these orphans accumulate at ~2 GB each
+    and exhaust RAM (observed: 14 orphans = 25 GB, system thrashing). Campaign
+    runs are strictly serial (subprocess.run blocks, with a settle between), so
+    after a run returns there must be no gz server we still need — reap it. Scoped
+    to the cobraflex worlds path so an unrelated gz the user started is untouched.
+    Returns the pkill return code (0 = killed something, 1 = nothing to kill)."""
+    import subprocess
+    proc = subprocess.run(
+        ["pkill", "-9", "-f", r"gz sim.*cobraflex/share/cobraflex/worlds"],
+        check=False,
+    )
+    return proc.returncode
+
+
 def execute_run(
     run_spec: RunSpec,
     scenario: Scenario,
@@ -367,6 +389,7 @@ def execute_run(
     rviz: bool = False,
     timeout_s: int = 900,
     resume: bool = False,
+    retries: int = 2,
 ) -> Dict[str, object]:  # pragma: no cover - drives Gazebo, host-only
     """Drive one scenario run in Gazebo (headless) and return its ``summary.json``.
 
@@ -382,6 +405,7 @@ def execute_run(
     """
     import os
     import subprocess
+    import time
 
     run_id = run_id_for(run_spec)
     if resume:
@@ -420,19 +444,29 @@ def execute_run(
     env = dict(os.environ)
     env["GZ_PARTITION"] = run_id
 
-    # Don't gate on the launch return code: tearing Gazebo down via the on-exit
-    # Shutdown can surface a non-zero exit even when the run itself completed and
-    # wrote its summary. Success is "the node wrote a summary.json"; otherwise the
-    # return code is reported to help diagnose a genuine launch failure.
-    proc = subprocess.run(cmd, timeout=timeout_s, env=env)
-
-    summary_path = output_root / run_id / "summary.json"
-    if not summary_path.is_file():
-        raise RuntimeError(
-            f"run produced no summary.json (launch rc={proc.returncode}): {summary_path}"
-        )
-    with summary_path.open(encoding="utf-8") as handle:
-        return json.load(handle)
+    # Retry on a flaky Gazebo boot: a run occasionally produces no summary even
+    # with launch rc=0 (e.g. /odom never arrived within the env's wait, so reset
+    # raised). These are transient and recover on a fresh launch, so re-attempt a
+    # few times before recording the cell as a hard failure — important for an
+    # unattended multi-hundred-run campaign. Success = "the node wrote a
+    # summary.json"; the launch rc is not gated on (Gazebo teardown can be non-zero
+    # even on a completed run).
+    last_rc: Optional[int] = None
+    for attempt in range(retries + 1):
+        proc = subprocess.run(cmd, timeout=timeout_s, env=env)
+        last_rc = proc.returncode
+        summary = _read_summary(output_root, run_id)
+        # Reap the gz server the launch leaves orphaned (see _reap_orphan_gazebo)
+        # before returning or retrying — otherwise every run leaks ~2 GB.
+        _reap_orphan_gazebo()
+        if summary is not None:
+            return summary
+        if attempt < retries:
+            time.sleep(3.0)  # let Gazebo fully die before re-launching
+    raise RuntimeError(
+        f"run produced no summary.json after {retries + 1} attempts "
+        f"(last launch rc={last_rc}): {output_root / run_id / 'summary.json'}"
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -580,6 +614,8 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
                    help="skip cells whose summary.json already exists (resume a long campaign).")
     p.add_argument("--settle", type=float, default=3.0,
                    help="seconds to pause between runs for clean Gazebo teardown (default 3).")
+    p.add_argument("--retries", type=int, default=2,
+                   help="re-attempts for a run that produced no summary (flaky Gazebo boot).")
     p.add_argument("--stop-on-error", action="store_true",
                    help="abort the campaign on the first failed run (default: record + continue).")
     p.add_argument("--out", type=Path, default=REPO / "experiments" / "sim" / "campaign")
@@ -626,6 +662,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     # Execution path (Ubuntu+Jazzy host): drive each matrix cell through Gazebo,
     # then aggregate per-run -> per-scenario -> per-SR (D-29) -> global (D-30).
     runs_root = args.out / "runs"
+    # Clear any gz servers a previously-crashed campaign left orphaned, so we
+    # start from a clean memory baseline (each orphan is ~2 GB).
+    _reap_orphan_gazebo()
     print(f"\nExecuting {len(matrix)} run(s) -> {runs_root}\n" + "=" * 56)
 
     def _progress(i: int, total: int, outcome: RunOutcome) -> None:
@@ -637,7 +676,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     executor: Executor = (
         lambda rs, sc, **kw: execute_run(
-            rs, sc, gui=args.gui, rviz=args.rviz, resume=args.resume, **kw)
+            rs, sc, gui=args.gui, rviz=args.rviz, resume=args.resume,
+            retries=args.retries, **kw)
     )
     outcomes = run_matrix(
         matrix, scenarios, runs_root, executor=executor,

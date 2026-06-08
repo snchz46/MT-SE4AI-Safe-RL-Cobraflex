@@ -1,0 +1,13 @@
+scenario,mode,controller,seed,rep,verdict,error
+SC-FRONT-04,enforcement,rl,2024,0,True,
+SC-FRONT-04,enforcement,rl,123,0,True,
+SC-FRONT-04,monitoring,rl,2024,0,True,
+SC-FRONT-04,monitoring,rl,123,0,False,
+SC-FRONT-05,enforcement,rl,2024,0,True,
+SC-FRONT-05,enforcement,rl,123,0,True,
+SC-FRONT-05,monitoring,rl,2024,0,True,
+SC-FRONT-05,monitoring,rl,123,0,True,
+SC-FRONT-06,enforcement,rl,2024,0,True,
+SC-FRONT-06,enforcement,rl,123,0,True,
+SC-FRONT-06,monitoring,rl,2024,0,True,
+SC-FRONT-06,monitoring,rl,123,0,True,

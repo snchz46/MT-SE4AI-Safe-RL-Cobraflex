@@ -32,7 +32,11 @@ from .eval_metrics import summarize_eval
 from .gazebo_lane_env import GazeboLaneEnv
 from .ros_interface import RosGazeboInterface
 from .run_io import git_commit, sha256_file
-from .scenario_metrics import time_to_recovery_heading
+from .scenario_metrics import (
+    max_excursion_m,
+    road_edge_contact,
+    time_to_recovery_heading,
+)
 from .scenario_runner import derive_run_config
 
 
@@ -232,9 +236,14 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         )
         perimeter = float(env.tracker.cumulative_lengths[-1])
 
-        model = PPO.load(str(resolve_load_path(model_path)))
+        # Load on CPU: the lane-following policy is a tiny MLP, CPU inference at
+        # 20 Hz is ample, and it avoids GPU VRAM exhaustion across the hundreds of
+        # back-to-back runs of a campaign (the "CUDA out of memory" on the 4th
+        # consecutive run that defaulting to the GPU caused).
+        model = PPO.load(str(resolve_load_path(model_path)), device="cpu")
 
         last_terminated = False
+        last_info: Dict[str, Any] = {}
         for episode in range(cli_args.episodes):
             observation, info = env.reset(seed=seed + episode, options=reset_options)
             terminated = False
@@ -253,6 +262,7 @@ def main(args: Optional[Sequence[str]] = None) -> None:
                     f"reward={reward:.4f} interv={info.get('cage_interventions', [])}"
                 )
             last_terminated = terminated
+            last_info = info
 
         summary = summarize_eval(records, perimeter=perimeter, cycle_dt_s=env.control_dt)
         _print_summary(summary)
@@ -261,7 +271,9 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         campaign = None
         if run_config is not None:
             campaign = _evaluate_scenario(
-                records, run_config, completed=not last_terminated, control_dt=env.control_dt
+                records, run_config, completed=not last_terminated,
+                control_dt=env.control_dt, road_half_m=0.5 * env.road_width,
+                termination_reason=str(last_info.get("termination_reason", "")),
             )
             _print_verdict(scenario_id, campaign)
         _write_run(
@@ -303,6 +315,8 @@ def _evaluate_scenario(
     *,
     completed: bool,
     control_dt: float,
+    road_half_m: Optional[float] = None,
+    termination_reason: str = "",
 ) -> Dict[str, Any]:
     """Compute the full per-run metric catalogue + scenario-specific metrics and
     score the scenario's ``pass_criterion_per_run`` (three-valued; an unavailable
@@ -312,6 +326,12 @@ def _evaluate_scenario(
     values: Dict[str, Any] = dict(metrics)
     values["emergency"] = any(bool(r.get("emergency")) for r in records)
     values["time_to_recovery_heading"] = time_to_recovery_heading(records, control_dt=control_dt)
+    # Frontier / out-of-ODD tokens (cage-efficacy contrast): how far out it got
+    # and whether it reached the road edge (the harm proxy).
+    values["max_excursion_m"] = max_excursion_m(records)
+    values["road_edge_contact"] = (
+        road_edge_contact(records, road_half_m) if road_half_m else None
+    )
 
     expr = run_config.pass_criterion_per_run
     if is_labelled(expr):
@@ -327,6 +347,7 @@ def _evaluate_scenario(
         "clauses": _jsonable(clauses),
         "values": _jsonable(values),
         "availability": res["availability"],
+        "termination_reason": termination_reason,
         "note": note,
     }
 
@@ -338,6 +359,11 @@ def _print_verdict(scenario_id: str, campaign: Dict[str, Any]) -> None:
     for c in campaign["clauses"]:
         mark = {True: "ok ", False: "FAIL", None: "n/a "}.get(c.get("passed"))
         print(f"   [{mark}] {c.get('clause')}  (lhs={c.get('lhs')})")
+    vals = campaign.get("values", {})
+    if campaign.get("termination_reason") or vals.get("max_excursion_m") is not None:
+        print(f"  termination={campaign.get('termination_reason')!r}  "
+              f"max_excursion={vals.get('max_excursion_m')} m  "
+              f"road_edge_contact={vals.get('road_edge_contact')}")
     if campaign.get("note"):
         print(f"  note: {campaign['note']}")
     print("=" * 47 + "\n")

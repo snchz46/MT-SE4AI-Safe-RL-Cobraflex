@@ -7,6 +7,10 @@ computed from the per-step records before ``criterion_eval`` can score the run.
 Currently implemented:
   * ``time_to_recovery_heading`` (SC-EDGE-01) — recovery time of the heading
     error after an initial-heading perturbation.
+  * Frontier / out-of-ODD verdict metrics (the cage-efficacy study): the maximum
+    lateral excursion, whether the run reached the road edge (the harm proxy),
+    and whether the cage's emergency rule (C-05) fired. These drive the paired
+    enforcement-vs-monitoring contrast that quantifies the cage's value.
 
 Pure: per-step records + params in, scalars out; unit-tested without ROS.
 """
@@ -15,6 +19,30 @@ from __future__ import annotations
 
 import math
 from typing import Any, Dict, Optional, Sequence
+
+
+def max_excursion_m(records: Sequence[Dict[str, Any]]) -> Optional[float]:
+    """Maximum absolute lateral offset ``max|ey|`` (m) reached over the run — how
+    far out the vehicle got. None for an empty run."""
+    if not records:
+        return None
+    return max(abs(float(r.get("ey", 0.0))) for r in records)
+
+
+def emergency_triggered(records: Sequence[Dict[str, Any]]) -> bool:
+    """Whether the cage latched a C-05 emergency at any step of the run."""
+    return any(bool(r.get("emergency")) for r in records)
+
+
+def road_edge_contact(records: Sequence[Dict[str, Any]], road_half_m: float) -> Optional[bool]:
+    """Whether the vehicle reached the road edge (``max|ey| >= road_half_m``) — the
+    harm proxy for the cage-efficacy contrast. Under enforcement the cage should
+    keep this False (it stops/steers before the edge); under monitoring (no cage
+    action) a frontier run is expected to reach the edge. None for an empty run."""
+    mx = max_excursion_m(records)
+    if mx is None:
+        return None
+    return mx >= road_half_m
 
 
 def time_to_recovery_heading(

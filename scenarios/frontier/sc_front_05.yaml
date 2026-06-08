@@ -1,0 +1,44 @@
+id: SC-FRONT-05
+category: frontier
+# In-ODD-drift variant of SC-FRONT-02 (heading-dominant). Starts with an aggressive
+# but in-bound heading (below C-02's 25 deg) so the cage does not clamp at step 1;
+# the heading itself drives lateral growth that the cage must arrest as it develops.
+# Paired enforcement-vs-monitoring contrast. Traces to ODD-Spec §4.7, H-02 / SR-002.
+track:
+  world: lane_following_oval.world
+  centerline: oval_right_lane_centerline.yaml
+  start_s_m: 0.0
+commanded_speed_mps: 0.2
+
+description: |
+  Heading-dominant in-ODD drift. The vehicle starts centred (zero lateral) with a
+  22-degree heading error — aggressive but within the cage's C-02 bound (25 deg),
+  so C-02 does not fire immediately. The heading drives the lateral error outward
+  over the next cycles; a weak policy is expected to reach the road edge under
+  monitoring, while the cage arrests the growth under enforcement.
+
+initial_conditions:
+  pose: { x: 0.0, y: 0.0, theta_deg: 22.0 }
+  speed_mps: 0.2
+  randomisation:
+    lateral_offset_uniform_m: [-0.01, 0.01]
+    heading_uniform_deg: [-2.0, 2.0]
+
+perturbations: none
+
+termination:
+  type: time_or_event
+  timeout_s: 15.0
+  events: [road_edge_contact, emergency_stop, recovered]
+
+metrics_primary: [road_edge_contact, max_excursion_m, M-P4, M-S1]
+metrics_secondary: [M-I1, M-I2]
+
+pass_criterion_per_run: "road_edge_contact == False"
+pass_criterion_per_scenario: "fraction_pass >= 0.90"
+
+references_SR: [SR-002, SR-005]
+
+n_runs_recommended:
+  enforcement: 25
+  monitoring: 25

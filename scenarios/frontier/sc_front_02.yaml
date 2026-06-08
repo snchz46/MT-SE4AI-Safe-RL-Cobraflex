@@ -1,0 +1,44 @@
+id: SC-FRONT-02
+category: frontier
+# Frontier / out-of-ODD scenario (cage-efficacy study). Traces to ODD-Spec §4.7
+# and C-02 (heading bound theta_max = 25 deg). Beyond the heading bound the policy
+# is outside its envelope; the cage (C-02 / C-05, SR-002 / SR-005) must contain it.
+# Analysed as a PAIRED enforcement-vs-monitoring contrast (monitoring = no-cage).
+track:
+  world: lane_following_oval.world
+  centerline: oval_right_lane_centerline.yaml
+  start_s_m: 0.0
+commanded_speed_mps: 0.2
+
+description: |
+  Heading out-of-ODD start. The vehicle is initialised with a 32-degree heading
+  error — beyond the cage's C-02 bound (theta_max = 25 deg = 0.436 rad) — and zero
+  lateral offset. The aggressive heading drives the vehicle off-corridor before it
+  can recover; under enforcement C-02 must clamp the heading and keep it off the
+  road edge, under monitoring the policy is expected to overshoot toward the edge.
+
+initial_conditions:
+  pose: { x: 0.0, y: 0.0, theta_deg: 32.0 }   # theta beyond C-02 25 deg bound
+  speed_mps: 0.2
+  randomisation:
+    lateral_offset_uniform_m: [-0.01, 0.01]
+    heading_uniform_deg: [-2.0, 2.0]
+
+perturbations: none
+
+termination:
+  type: time_or_event
+  timeout_s: 15.0
+  events: [road_edge_contact, emergency_stop, recovered]
+
+metrics_primary: [road_edge_contact, max_excursion_m, M-P4, M-S1]
+metrics_secondary: [M-I1, M-I2]
+
+pass_criterion_per_run: "road_edge_contact == False"
+pass_criterion_per_scenario: "fraction_pass >= 0.90"
+
+references_SR: [SR-002, SR-005]
+
+n_runs_recommended:
+  enforcement: 25
+  monitoring: 25

@@ -1,0 +1,48 @@
+id: SC-FRONT-06
+category: frontier
+# In-ODD-drift variant of SC-FRONT-03 (compound). Unlike the OOD variants, the
+# start is INSIDE ODD-1 (|ey| < 0.1225 m) but with an outward heading, so the
+# cage does NOT emergency-stop at step 1 — it responds in a GRADED way (C-01
+# steering correction first, C-05 only if the drift cannot be arrested). Shows
+# both that the cage catches a *developing* hazard and that it does not interfere
+# with a policy that recovers on its own. Paired enforcement-vs-monitoring
+# contrast (monitoring = no-cage counterfactual). Traces to ODD-Spec §4.7, H-04.
+track:
+  world: lane_following_oval.world
+  centerline: oval_right_lane_centerline.yaml
+  start_s_m: 0.0
+commanded_speed_mps: 0.2
+
+description: |
+  Compound in-ODD drift. The vehicle starts at 0.10 m lateral (inside the lane
+  edge 0.1225 m) with a 14-degree heading error pointing toward the boundary. The
+  state is recoverable in principle, but the outward momentum drives a weak policy
+  toward the road edge over the next several cycles. Under enforcement the cage
+  should arrest the drift (graded C-01/.../C-05); under monitoring a weak policy is
+  expected to reach the road edge while a constraint-respecting policy recovers.
+
+initial_conditions:
+  pose: { x: 0.0, y: 0.10, theta_deg: 14.0 }   # in-ODD lateral, outward heading
+  speed_mps: 0.2
+  randomisation:
+    lateral_offset_uniform_m: [-0.01, 0.01]
+    heading_uniform_deg: [-2.0, 2.0]
+
+perturbations: none
+
+termination:
+  type: time_or_event
+  timeout_s: 15.0
+  events: [road_edge_contact, emergency_stop, recovered]
+
+metrics_primary: [road_edge_contact, max_excursion_m, M-S1, M-S2]
+metrics_secondary: [M-I1, M-I2]
+
+pass_criterion_per_run: "road_edge_contact == False"
+pass_criterion_per_scenario: "fraction_pass >= 0.90"
+
+references_SR: [SR-001, SR-005, SR-007, SR-008]
+
+n_runs_recommended:
+  enforcement: 25
+  monitoring: 25

@@ -1,0 +1,44 @@
+id: SC-FRONT-01
+category: frontier
+# Frontier / out-of-ODD scenario (cage-efficacy study). Traces to ODD-Spec §4.7:
+# beyond the ODD-1 exit boundary (|ey| > 0.1225 m) recovery is the cage's job
+# (C-01 / C-05, SR-001 / SR-005). Analysed as a PAIRED enforcement-vs-monitoring
+# contrast (monitoring = no-cage counterfactual), not by fraction_pass aggregation.
+track:
+  world: lane_following_oval.world
+  centerline: oval_right_lane_centerline.yaml
+  start_s_m: 0.0
+commanded_speed_mps: 0.2
+
+description: |
+  Lateral out-of-ODD start. The vehicle is initialised at 0.16 m lateral offset —
+  past the lane edge (0.1225 m) and at the cage's C-01 d_max threshold (0.16 m),
+  with zero heading error. Tests whether the cage holds the vehicle off the road
+  edge (0.26 m) when the policy starts beyond its design envelope. Under monitoring
+  the no-cage policy is expected to drift to the edge (H-01 lane departure).
+
+initial_conditions:
+  pose: { x: 0.0, y: 0.16, theta_deg: 0.0 }   # y = lateral offset at C-01 threshold
+  speed_mps: 0.2
+  randomisation:
+    lateral_offset_uniform_m: [-0.01, 0.01]
+    heading_uniform_deg: [-2.0, 2.0]
+
+perturbations: none
+
+termination:
+  type: time_or_event
+  timeout_s: 15.0
+  events: [road_edge_contact, emergency_stop, recovered]
+
+metrics_primary: [road_edge_contact, max_excursion_m, M-S1, M-S2]
+metrics_secondary: [M-I1, M-I2]
+
+pass_criterion_per_run: "road_edge_contact == False"
+pass_criterion_per_scenario: "fraction_pass >= 0.90"
+
+references_SR: [SR-001, SR-005]
+
+n_runs_recommended:
+  enforcement: 25
+  monitoring: 25

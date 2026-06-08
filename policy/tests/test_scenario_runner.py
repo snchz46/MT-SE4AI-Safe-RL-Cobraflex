@@ -110,3 +110,35 @@ def test_different_reps_differ():
 def test_run_seed_stable_across_calls():
     assert run_seed("SC-EDGE-02", 5, 0) == run_seed("SC-EDGE-02", 5, 0)
     assert run_seed("SC-EDGE-02", 5, 0) != run_seed("SC-EDGE-02", 6, 0)
+
+
+# --------------------------------------------------------------------------- #
+# frontier / OOD verdict metrics
+# --------------------------------------------------------------------------- #
+from cobraflex_rl.scenario_metrics import (  # noqa: E402
+    max_excursion_m, emergency_triggered, road_edge_contact)
+
+
+def _recE(ey, emergency=False):
+    return {"ey": ey, "epsi": 0.0, "emergency": emergency}
+
+
+def test_max_excursion_and_contact():
+    # Enforcement-like: caught at 0.18 m, road half 0.26 -> no contact.
+    enf = [_recE(0.14), _recE(0.18), _recE(0.16)]
+    assert max_excursion_m(enf) == pytest.approx(0.18)
+    assert road_edge_contact(enf, 0.26) is False
+    # Monitoring-like: drove to the road edge -> contact.
+    mon = [_recE(0.14), _recE(0.22), _recE(0.27)]
+    assert road_edge_contact(mon, 0.26) is True
+
+
+def test_emergency_triggered():
+    assert emergency_triggered([_recE(0.1), _recE(0.18, emergency=True)]) is True
+    assert emergency_triggered([_recE(0.1), _recE(0.12)]) is False
+
+
+def test_frontier_metrics_empty_run():
+    assert max_excursion_m([]) is None
+    assert road_edge_contact([], 0.26) is None
+    assert emergency_triggered([]) is False

@@ -41,6 +41,24 @@ def generate_launch_description():
         default_value="cobraflex_ppo_lane",
         description="Path to the trained PPO checkpoint (.zip).",
     )
+    # F4 scenario campaign: drive the run from an SC-* YAML (initial conditions,
+    # commanded speed, timeout) and score its pass_criterion. Empty = legacy
+    # SC-NOM-01 §7.5 eval.
+    scenario_arg = DeclareLaunchArgument(
+        "scenario",
+        default_value="",
+        description="Path to a scenario YAML (scenarios/<cat>/*.yaml); empty = NOM-01 eval.",
+    )
+    mode_arg = DeclareLaunchArgument(
+        "mode",
+        default_value="enforcement",
+        description="Cage mode: enforcement | monitoring.",
+    )
+    rep_arg = DeclareLaunchArgument(
+        "rep",
+        default_value="0",
+        description="Repetition index (seeds the per-run randomisation jitter).",
+    )
 
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -60,6 +78,9 @@ def generate_launch_description():
             "--episodes", LaunchConfiguration("episodes"),
             "--max-steps", LaunchConfiguration("max_steps"),
             "--model-path", LaunchConfiguration("model_path"),
+            "--scenario", LaunchConfiguration("scenario"),
+            "--mode", LaunchConfiguration("mode"),
+            "--rep", LaunchConfiguration("rep"),
         ],
     )
 
@@ -69,6 +90,9 @@ def generate_launch_description():
         episodes_arg,
         max_steps_arg,
         model_path_arg,
+        scenario_arg,
+        mode_arg,
+        rep_arg,
         gazebo,
         eval_node,
     ])

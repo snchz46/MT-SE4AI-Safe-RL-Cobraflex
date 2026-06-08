@@ -146,3 +146,80 @@ def test_load_scenarios_and_srs_real_files():
     srs = rc.load_srs()
     assert srs["SR-001"]["criticality"] == "SR-CL-A"
     assert "SC-NOM-01" in srs["SR-001"]["scenarios"]
+
+
+# ----- orchestration: run_matrix + aggregate_campaign (stub executor) ------ #
+def _stub_executor(verdict_by_scenario):
+    """Build an executor that returns a fixed per-run verdict per scenario id,
+    writing a deterministic run_id dir read-back is not needed (returns inline)."""
+    def _exec(run_spec, scenario, *, output_root, **kw):
+        v = verdict_by_scenario.get(run_spec.scenario_id)
+        if v == "raise":
+            raise RuntimeError("simulated Gazebo failure")
+        return {"verdict": v, "scenario_id": run_spec.scenario_id}
+    return _exec
+
+
+def test_run_matrix_collects_verdicts_and_errors():
+    scens = {"SC-NOM-01": _scen("SC-NOM-01", n_enf=2, n_mon=0),
+             "SC-EDGE-01": _scen("SC-EDGE-01", n_enf=2, n_mon=0)}
+    matrix = rc.build_matrix(scens, ["rl"], [2024], ["enforcement"])
+    execu = _stub_executor({"SC-NOM-01": True, "SC-EDGE-01": "raise"})
+    outcomes = rc.run_matrix(matrix, scens, Path("/tmp/none"), executor=execu)
+    assert len(outcomes) == 4
+    nom = [o for o in outcomes if o.run_spec.scenario_id == "SC-NOM-01"]
+    edge = [o for o in outcomes if o.run_spec.scenario_id == "SC-EDGE-01"]
+    assert all(o.verdict is True for o in nom)
+    assert all(o.verdict is None and o.error for o in edge)
+
+
+def test_run_matrix_stop_on_error_raises():
+    scens = {"SC-NOM-01": _scen("SC-NOM-01", n_enf=2, n_mon=0)}
+    matrix = rc.build_matrix(scens, ["rl"], [2024], ["enforcement"])
+    execu = _stub_executor({"SC-NOM-01": "raise"})
+    try:
+        rc.run_matrix(matrix, scens, Path("/tmp/none"), executor=execu, continue_on_error=False)
+        assert False, "expected RuntimeError"
+    except RuntimeError:
+        pass
+
+
+def test_aggregate_campaign_global_pass_and_veto():
+    # One SR-CL-A (SR-001) covered by a nominal + an adverse scenario, enough runs.
+    scens = {
+        "SC-NOM-01": _scen("SC-NOM-01", n_enf=25, n_mon=0, srs=["SR-001"], per_scen="fraction_pass >= 0.90"),
+        "SC-EDGE-01": _scen("SC-EDGE-01", n_enf=25, n_mon=0, srs=["SR-001"], per_scen="fraction_pass >= 0.90"),
+    }
+    srs = {"SR-001": {"criticality": "SR-CL-A", "scenarios": ["SC-NOM-01", "SC-EDGE-01"]}}
+    matrix = rc.build_matrix(scens, ["rl"], [2024], ["enforcement"])
+
+    all_pass = rc.run_matrix(matrix, scens, Path("/tmp/x"), executor=_stub_executor(
+        {"SC-NOM-01": True, "SC-EDGE-01": True}))
+    rep = rc.aggregate_campaign(all_pass, scens, srs, verdict_mode="enforcement")
+    assert rep["global"]["verdict"] == "SATISFIED"
+
+    # An SR-CL-A scenario failing its fraction vetoes the global verdict (D-30).
+    edge_fail = rc.run_matrix(matrix, scens, Path("/tmp/x"), executor=_stub_executor(
+        {"SC-NOM-01": True, "SC-EDGE-01": False}))
+    rep2 = rc.aggregate_campaign(edge_fail, scens, srs, verdict_mode="enforcement")
+    assert rep2["global"]["verdict"] == "NOT SATISFIED"
+    assert "SR-001" in rep2["global"]["blocking_sr_cl_a"]
+
+
+def test_write_report_emits_json_and_csv(tmp_path):
+    scens = {"SC-NOM-01": _scen("SC-NOM-01", n_enf=2, n_mon=0, srs=["SR-001"])}
+    srs = {"SR-001": {"criticality": "SR-CL-B", "scenarios": ["SC-NOM-01"]}}
+    matrix = rc.build_matrix(scens, ["rl"], [2024], ["enforcement"])
+    outcomes = rc.run_matrix(matrix, scens, tmp_path, executor=_stub_executor({"SC-NOM-01": True}))
+    report = rc.aggregate_campaign(outcomes, scens, srs)
+    rc.write_report(report, outcomes, tmp_path)
+    assert (tmp_path / "campaign_report.json").is_file()
+    assert (tmp_path / "campaign_runs.csv").is_file()
+
+
+def test_run_id_for_is_deterministic_and_unique():
+    a = rc.RunSpec("SC-EDGE-01", "enforcement", "rl", 2024, 3)
+    b = rc.RunSpec("SC-EDGE-01", "monitoring", "rl", 2024, 3)
+    assert rc.run_id_for(a) == rc.run_id_for(a)
+    assert rc.run_id_for(a) != rc.run_id_for(b)
+    assert "rep03" in rc.run_id_for(a)

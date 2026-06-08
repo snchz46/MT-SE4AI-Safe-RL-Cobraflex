@@ -25,10 +25,15 @@ from rclpy.utilities import remove_ros_args
 from stable_baselines3 import PPO
 import yaml
 
+from .campaign_metrics import compute_run_metrics
+from .criterion_eval import evaluate as evaluate_criterion
+from .criterion_eval import is_labelled
 from .eval_metrics import summarize_eval
 from .gazebo_lane_env import GazeboLaneEnv
 from .ros_interface import RosGazeboInterface
 from .run_io import git_commit, sha256_file
+from .scenario_metrics import time_to_recovery_heading
+from .scenario_runner import derive_run_config
 
 
 PACKAGE_NAME = "cobraflex_rl"
@@ -72,6 +77,20 @@ def parse_args(args: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument("--run-id", type=str, default=None)
     parser.add_argument("--output-root", type=str, default=None,
                         help="Directory holding run subdirs (default experiments/sim/runs).")
+    # F4 scenario-campaign mode. With --scenario the run is driven by an SC-*
+    # YAML (initial conditions, commanded speed, timeout) instead of the nominal
+    # SC-NOM-01 defaults, and the output carries the full per-run metric
+    # catalogue + the pass_criterion verdict.
+    parser.add_argument("--scenario", type=str, default=None,
+                        help="Path to a scenario YAML (scenarios/<cat>/*.yaml). "
+                             "Omit for the legacy SC-NOM-01 §7.5 eval.")
+    parser.add_argument("--mode", type=str, default=None,
+                        choices=["enforcement", "monitoring"],
+                        help="Cage mode override (default: train_ppo.yaml cage.mode).")
+    parser.add_argument("--rep", type=int, default=0,
+                        help="Repetition index — seeds the per-run randomisation jitter.")
+    parser.add_argument("--base-seed", type=int, default=0,
+                        help="Base seed folded into the per-rep jitter (reproducibility).")
     cleaned_args = remove_ros_args(args=args)
     if cleaned_args and not cleaned_args[0].startswith("-"):
         cleaned_args = cleaned_args[1:]
@@ -154,11 +173,36 @@ def main(args: Optional[Sequence[str]] = None) -> None:
 
     centerline_cfg = load_yaml(centerline_path)
     train_cfg = load_yaml(train_cfg_path)
-    # Evaluation starts from the nominal spawn (no perturbation) so the run is
-    # deterministic and comparable with the PD baseline (§7.5).
+    # Evaluation starts from the deterministic scenario/nominal spawn (random
+    # spawn perturbation off); the F4 scenario path injects its initial
+    # conditions through reset(options=...) instead (§7.5, D-34).
     _disable_spawn_perturbation(train_cfg)
-    # Optional horizon override for a long continuous run (lap-count comparison).
-    # Non-positive means "keep the config default" (the launch passes 0 for that).
+
+    # F4 scenario mode: derive the run config (initial conditions, commanded
+    # speed, horizon) from the SC-* YAML for this repetition. Absent --scenario,
+    # the legacy SC-NOM-01 §7.5 eval runs unchanged.
+    run_config = None
+    scenario_id = SCENARIO_ID
+    reset_options: Optional[Dict[str, Any]] = None
+    if cli_args.scenario:
+        scenario_cfg = load_yaml(Path(cli_args.scenario))
+        control_dt = float(train_cfg.get("control_dt", 0.1))
+        run_config = derive_run_config(
+            scenario_cfg, cli_args.rep, control_dt=control_dt, base_seed=cli_args.base_seed
+        )
+        scenario_id = run_config.scenario_id
+        reset_options = run_config.reset_options
+        train_cfg["fixed_speed"] = run_config.fixed_speed
+        if not (cli_args.max_steps and cli_args.max_steps > 0) and run_config.max_steps > 0:
+            train_cfg["max_episode_steps"] = run_config.max_steps
+
+    # Cage mode override (enforcement vs monitoring campaign axis).
+    if cli_args.mode:
+        cage_cfg = dict(train_cfg.get("cage", {}))
+        cage_cfg["mode"] = cli_args.mode
+        train_cfg["cage"] = cage_cfg
+
+    # Explicit --max-steps always wins (e.g. the §7.5.1 long lap-count run).
     if cli_args.max_steps is not None and cli_args.max_steps > 0:
         train_cfg["max_episode_steps"] = int(cli_args.max_steps)
 
@@ -190,8 +234,9 @@ def main(args: Optional[Sequence[str]] = None) -> None:
 
         model = PPO.load(str(resolve_load_path(model_path)))
 
+        last_terminated = False
         for episode in range(cli_args.episodes):
-            observation, info = env.reset(seed=seed + episode)
+            observation, info = env.reset(seed=seed + episode, options=reset_options)
             terminated = False
             truncated = False
             step_index = 0
@@ -207,9 +252,18 @@ def main(args: Optional[Sequence[str]] = None) -> None:
                     f"epsi={info['epsi']:.4f} speed={info['speed']:.4f} "
                     f"reward={reward:.4f} interv={info.get('cage_interventions', [])}"
                 )
+            last_terminated = terminated
 
         summary = summarize_eval(records, perimeter=perimeter, cycle_dt_s=env.control_dt)
         _print_summary(summary)
+        # `completed` (M-P2): the run reached its horizon / goal without a
+        # road-boundary termination. Used only in the scenario verdict.
+        campaign = None
+        if run_config is not None:
+            campaign = _evaluate_scenario(
+                records, run_config, completed=not last_terminated, control_dt=env.control_dt
+            )
+            _print_verdict(scenario_id, campaign)
         _write_run(
             cli_args=cli_args,
             train_cfg=train_cfg,
@@ -218,6 +272,8 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             seed=seed,
             records=records,
             summary=summary,
+            scenario_id=scenario_id,
+            campaign=campaign,
         )
     finally:
         if env is not None:
@@ -228,6 +284,65 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             rclpy.shutdown()
 
 
+def _jsonable(value: Any) -> Any:
+    """JSON-safe copy: non-finite floats (e.g. time_to_recovery_heading == inf
+    when the heading never recovers) -> None, recursively through dicts/lists."""
+    import math as _math
+    if isinstance(value, float):
+        return value if _math.isfinite(value) else None
+    if isinstance(value, dict):
+        return {k: _jsonable(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_jsonable(v) for v in value]
+    return value
+
+
+def _evaluate_scenario(
+    records: List[Dict[str, Any]],
+    run_config: Any,
+    *,
+    completed: bool,
+    control_dt: float,
+) -> Dict[str, Any]:
+    """Compute the full per-run metric catalogue + scenario-specific metrics and
+    score the scenario's ``pass_criterion_per_run`` (three-valued; an unavailable
+    metric is 'indeterminate', a real breach is a fail)."""
+    res = compute_run_metrics(records, params={"control_dt": control_dt}, completed=completed)
+    metrics = res["metrics"]
+    values: Dict[str, Any] = dict(metrics)
+    values["emergency"] = any(bool(r.get("emergency")) for r in records)
+    values["time_to_recovery_heading"] = time_to_recovery_heading(records, control_dt=control_dt)
+
+    expr = run_config.pass_criterion_per_run
+    if is_labelled(expr):
+        verdict, clauses, note = None, [], "labelled multi-arm criterion (PERT-03) not scored in single-run eval"
+    else:
+        result = evaluate_criterion(expr, values)
+        verdict, clauses, note = result["passed"], result["clauses"], result.get("error")
+
+    return {
+        "scenario_id": run_config.scenario_id,
+        "criterion": expr,
+        "verdict": verdict,           # True / False / None (indeterminate)
+        "clauses": _jsonable(clauses),
+        "values": _jsonable(values),
+        "availability": res["availability"],
+        "note": note,
+    }
+
+
+def _print_verdict(scenario_id: str, campaign: Dict[str, Any]) -> None:
+    label = {True: "PASS", False: "FAIL", None: "INDETERMINATE"}[campaign["verdict"]]
+    print(f"\n===== {scenario_id} per-run verdict: {label} =====")
+    print(f"  criterion: {campaign['criterion']}")
+    for c in campaign["clauses"]:
+        mark = {True: "ok ", False: "FAIL", None: "n/a "}.get(c.get("passed"))
+        print(f"   [{mark}] {c.get('clause')}  (lhs={c.get('lhs')})")
+    if campaign.get("note"):
+        print(f"  note: {campaign['note']}")
+    print("=" * 47 + "\n")
+
+
 def _write_run(
     cli_args: argparse.Namespace,
     train_cfg: Dict[str, Any],
@@ -236,6 +351,8 @@ def _write_run(
     seed: int,
     records: List[Dict[str, Any]],
     summary: Dict[str, Any],
+    scenario_id: str = SCENARIO_ID,
+    campaign: Optional[Dict[str, Any]] = None,
 ) -> None:
     runs_dir = resolve_runs_dir(cli_args.output_root)
     run_id = cli_args.run_id or "rl_eval_" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -254,13 +371,16 @@ def _write_run(
     _write_cage_status_csv(out_dir / "cage_status.csv", records)
 
     summary_out = dict(summary)
-    summary_out.update({"run_id": run_id, "scenario_id": SCENARIO_ID, "mode": mode})
+    summary_out.update({"run_id": run_id, "scenario_id": scenario_id, "mode": mode})
+    if campaign is not None:
+        summary_out["verdict"] = campaign["verdict"]
+        summary_out["campaign"] = campaign
     with (out_dir / "summary.json").open("w", encoding="utf-8") as handle:
         json.dump(summary_out, handle, indent=2)
 
     metadata = {
         "run_id": run_id,
-        "scenario_id": SCENARIO_ID,
+        "scenario_id": scenario_id,
         "mode": mode,
         "timestamp_iso": datetime.now(timezone.utc).isoformat(),
         "duration_s": summary["duration_s"],
@@ -269,7 +389,10 @@ def _write_run(
         "cage_yaml_hash": sha256_file(cage_yaml),
         "policy_checkpoint": str(model_path),
         "policy_checkpoint_hash": sha256_file(model_path),
-        "scenario_yaml_hash": sha256_file(centerline_path),
+        "centerline_yaml_hash": sha256_file(centerline_path),
+        "scenario_yaml": str(cli_args.scenario or ""),
+        "scenario_yaml_hash": sha256_file(Path(cli_args.scenario)) if cli_args.scenario else sha256_file(centerline_path),
+        "rep": int(getattr(cli_args, "rep", 0)),
         "seed": seed,
         "platform": "sim",
         "status": "completed",

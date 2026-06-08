@@ -1,0 +1,127 @@
+{
+  "verdict_mode": "enforcement",
+  "global": {
+    "verdict": "NOT SATISFIED",
+    "blocking_sr_cl_a": [
+      "SR-001",
+      "SR-002",
+      "SR-003",
+      "SR-004",
+      "SR-005",
+      "SR-007",
+      "SR-008"
+    ],
+    "n_sr_cl_a": 7
+  },
+  "per_scenario": [
+    {
+      "scenario": "SC-EDGE-01",
+      "mode": "enforcement",
+      "n_runs": 2,
+      "n_pass": 2,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    }
+  ],
+  "per_sr": [
+    {
+      "sr": "SR-001",
+      "criticality": "SR-CL-A",
+      "verdict": false,
+      "run_count_ok": false,
+      "families": [],
+      "notes": "no executable scenario yet (all stubs/missing)"
+    },
+    {
+      "sr": "SR-002",
+      "criticality": "SR-CL-A",
+      "verdict": true,
+      "run_count_ok": false,
+      "families": [
+        "adverse"
+      ],
+      "notes": "D-29 not met (insufficient runs or family coverage)"
+    },
+    {
+      "sr": "SR-003",
+      "criticality": "SR-CL-A",
+      "verdict": true,
+      "run_count_ok": false,
+      "families": [
+        "adverse"
+      ],
+      "notes": "D-29 not met (insufficient runs or family coverage)"
+    },
+    {
+      "sr": "SR-004",
+      "criticality": "SR-CL-A",
+      "verdict": false,
+      "run_count_ok": false,
+      "families": [],
+      "notes": "no executable scenario yet (all stubs/missing)"
+    },
+    {
+      "sr": "SR-005",
+      "criticality": "SR-CL-A",
+      "verdict": false,
+      "run_count_ok": false,
+      "families": [],
+      "notes": "no executable scenario yet (all stubs/missing)"
+    },
+    {
+      "sr": "SR-006",
+      "criticality": "SR-CL-B",
+      "verdict": true,
+      "run_count_ok": false,
+      "families": [
+        "adverse"
+      ],
+      "notes": "D-29 not met (insufficient runs or family coverage)"
+    },
+    {
+      "sr": "SR-007",
+      "criticality": "SR-CL-A",
+      "verdict": false,
+      "run_count_ok": false,
+      "families": [],
+      "notes": "no executable scenario yet (all stubs/missing)"
+    },
+    {
+      "sr": "SR-008",
+      "criticality": "SR-CL-A",
+      "verdict": false,
+      "run_count_ok": false,
+      "families": [],
+      "notes": "no executable scenario yet (all stubs/missing)"
+    },
+    {
+      "sr": "SR-009",
+      "criticality": "SR-CL-B",
+      "verdict": false,
+      "run_count_ok": false,
+      "families": [],
+      "notes": "no executable scenario yet (all stubs/missing)"
+    },
+    {
+      "sr": "SR-010",
+      "criticality": "SR-CL-B",
+      "verdict": false,
+      "run_count_ok": false,
+      "families": [],
+      "notes": "no executable scenario yet (all stubs/missing)"
+    },
+    {
+      "sr": "SR-011",
+      "criticality": "SR-CL-B",
+      "verdict": true,
+      "run_count_ok": false,
+      "families": [
+        "adverse"
+      ],
+      "notes": "D-29 not met (insufficient runs or family coverage)"
+    }
+  ],
+  "n_runs": 2,
+  "n_error": 0
+}

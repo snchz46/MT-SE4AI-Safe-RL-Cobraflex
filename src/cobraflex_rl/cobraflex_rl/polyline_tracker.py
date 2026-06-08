@@ -90,6 +90,34 @@ class PolylineTracker:
         """
         self._prev_best_index = None
 
+    def pose_at_arclength(
+        self, s: float, lateral_offset: float = 0.0
+    ) -> Tuple[float, float, float]:
+        """World pose ``(x, y, heading)`` at centerline arc-length ``s`` (m).
+
+        Used by the F4 scenario executor to spawn the vehicle at a scenario's
+        ``track.start_s_m`` (e.g. 0.0 straight start vs 1.5 curve entry) instead
+        of always at the first centerline point. ``s`` wraps modulo the perimeter
+        for a closed polyline (the oval) and is clamped to ``[0, length]`` for an
+        open one. ``lateral_offset`` (m) shifts the spawn along the left normal
+        (+ = left of the travel direction) so a scenario can start the car
+        off-centre; heading is the segment tangent (add a heading error on top).
+        """
+        total = float(self.cumulative_lengths[-1])
+        if self._closed and total > 0.0:
+            s = s % total
+        else:
+            s = float(np.clip(s, 0.0, total))
+        idx = int(np.searchsorted(self.cumulative_lengths, s, side="right") - 1)
+        idx = max(0, min(idx, len(self.segment_vectors) - 1))
+        frac = (s - float(self.cumulative_lengths[idx])) / float(self.segment_lengths[idx])
+        point = self.points[idx] + frac * self.segment_vectors[idx]
+        heading = float(self.segment_headings[idx])
+        if lateral_offset:
+            normal = np.array([-math.sin(heading), math.cos(heading)], dtype=float)
+            point = point + lateral_offset * normal
+        return float(point[0]), float(point[1]), heading
+
     def track(self, x: float, y: float, yaw: float) -> TrackState:
         position = np.array([x, y], dtype=float)
         n_segments = len(self.segment_vectors)

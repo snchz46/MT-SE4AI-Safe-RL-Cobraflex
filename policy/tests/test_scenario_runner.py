@@ -1,0 +1,112 @@
+"""
+Unit tests for the pure F4 scenario-execution helpers:
+  * cobraflex_rl.scenario_metrics.time_to_recovery_heading
+  * cobraflex_rl.scenario_runner.derive_run_config
+Both run without ROS/Gazebo (scenario_runner needs numpy for its seeded RNG).
+"""
+
+import math
+import sys
+from pathlib import Path
+
+import pytest
+
+_PKG_PARENT = Path(__file__).resolve().parents[2] / "src" / "cobraflex_rl"
+if str(_PKG_PARENT) not in sys.path:
+    sys.path.insert(0, str(_PKG_PARENT))
+
+from cobraflex_rl.scenario_metrics import time_to_recovery_heading  # noqa: E402
+
+np = pytest.importorskip("numpy")
+from cobraflex_rl.scenario_runner import derive_run_config, run_seed  # noqa: E402
+
+
+def _rec(epsi):
+    return {"epsi": epsi}
+
+
+# --------------------------------------------------------------------------- #
+# time_to_recovery_heading
+# --------------------------------------------------------------------------- #
+def test_recovery_immediate_when_already_settled():
+    # |epsi| below threshold from the start, held → recovery at t=0.
+    recs = [_rec(0.01) for _ in range(20)]
+    assert time_to_recovery_heading(recs, control_dt=0.1) == pytest.approx(0.0)
+
+
+def test_recovery_after_decay():
+    # Large error for 10 steps, then settled below threshold and held.
+    recs = [_rec(0.3) for _ in range(10)] + [_rec(0.01) for _ in range(10)]
+    # settle_s=0.5 → 5 steps; first sustained window starts at step 10 → 1.0 s.
+    assert time_to_recovery_heading(recs, control_dt=0.1, settle_s=0.5) == pytest.approx(1.0)
+
+
+def test_no_sustained_recovery_returns_inf():
+    # Dips below threshold for only 2 steps, never holds the 5-step settle window.
+    recs = [_rec(0.3), _rec(0.01), _rec(0.01), _rec(0.3), _rec(0.3)]
+    assert time_to_recovery_heading(recs, control_dt=0.1, settle_s=0.5) == math.inf
+
+
+def test_empty_run_returns_none():
+    assert time_to_recovery_heading([], control_dt=0.1) is None
+
+
+# --------------------------------------------------------------------------- #
+# derive_run_config
+# --------------------------------------------------------------------------- #
+_SC_EDGE_01 = {
+    "id": "SC-EDGE-01",
+    "track": {"start_s_m": 0.0},
+    "commanded_speed_mps": 0.2,
+    "initial_conditions": {"pose": {"x": 0.0, "y": 0.0, "theta_deg": 15.0},
+                           "randomisation": "none"},
+    "termination": {"timeout_s": 15.0},
+    "pass_criterion_per_run": "emergency == False AND M-S1 < 0.16",
+}
+
+_SC_EDGE_02 = {
+    "id": "SC-EDGE-02",
+    "track": {"start_s_m": 0.0},
+    "commanded_speed_mps": 0.2,
+    "initial_conditions": {
+        "pose": {"x": 0.0, "y": 0.12, "theta_deg": 0.0},
+        "randomisation": {"lateral_offset_uniform_m": [-0.02, 0.02],
+                          "heading_uniform_deg": [-2.0, 2.0]},
+    },
+    "termination": {"timeout_s": 15.0},
+    "pass_criterion_per_run": "M-S1 < 0.16 AND emergency == False",
+}
+
+
+def test_seed_heading_error_no_jitter():
+    cfg = derive_run_config(_SC_EDGE_01, rep=0, control_dt=0.1)
+    assert cfg.reset_options["heading_error_rad"] == pytest.approx(math.radians(15.0))
+    assert cfg.reset_options["lateral_offset_m"] == pytest.approx(0.0)
+    assert cfg.reset_options["start_s_m"] == 0.0
+    assert cfg.fixed_speed == pytest.approx(0.2)
+    assert cfg.max_steps == 150  # 15 s / 0.1 s
+
+
+def test_lateral_seed_plus_jitter_within_bounds():
+    cfg = derive_run_config(_SC_EDGE_02, rep=3, control_dt=0.1)
+    # 0.12 seed + jitter in [-0.02, 0.02].
+    assert 0.10 <= cfg.reset_options["lateral_offset_m"] <= 0.14
+    # heading jitter in [-2, 2] deg.
+    assert abs(cfg.reset_options["heading_error_rad"]) <= math.radians(2.0) + 1e-9
+
+
+def test_jitter_is_reproducible_per_rep():
+    a = derive_run_config(_SC_EDGE_02, rep=7, control_dt=0.1).reset_options
+    b = derive_run_config(_SC_EDGE_02, rep=7, control_dt=0.1).reset_options
+    assert a == b
+
+
+def test_different_reps_differ():
+    a = derive_run_config(_SC_EDGE_02, rep=1, control_dt=0.1).reset_options
+    b = derive_run_config(_SC_EDGE_02, rep=2, control_dt=0.1).reset_options
+    assert a != b
+
+
+def test_run_seed_stable_across_calls():
+    assert run_seed("SC-EDGE-02", 5, 0) == run_seed("SC-EDGE-02", 5, 0)
+    assert run_seed("SC-EDGE-02", 5, 0) != run_seed("SC-EDGE-02", 6, 0)

@@ -122,10 +122,24 @@ class GazeboLaneEnv(gym.Env):
                 resolve_cage_yaml(self.cage_yaml_path), mode=self.cage_mode
             )
 
-        start_point = self.tracker.points[0]
-        start_heading = float(self.tracker.segment_headings[0])
+        # Scenario initial conditions (F4 executor): an SC-* run can start at a
+        # given centerline arc-length (`start_s_m`, e.g. 1.5 = curve entry), with
+        # a deterministic heading error (`heading_error_rad`, e.g. SC-EDGE-01's
+        # 15 deg) and/or lateral offset (`lateral_offset_m`). Absent (training /
+        # nominal eval), the spawn is the first centerline point as before.
+        opts = options or {}
+        start_s = opts.get("start_s_m")
+        if start_s is not None:
+            base_x, base_y, base_heading = self.tracker.pose_at_arclength(
+                float(start_s), float(opts.get("lateral_offset_m", 0.0) or 0.0)
+            )
+            base_heading += float(opts.get("heading_error_rad", 0.0) or 0.0)
+        else:
+            start_point = self.tracker.points[0]
+            base_x, base_y = float(start_point[0]), float(start_point[1])
+            base_heading = float(self.tracker.segment_headings[0])
         spawn_x, spawn_y, spawn_heading = self._perturbed_spawn(
-            float(start_point[0]), float(start_point[1]), start_heading
+            base_x, base_y, base_heading
         )
 
         self.ros_interface.reset_world()

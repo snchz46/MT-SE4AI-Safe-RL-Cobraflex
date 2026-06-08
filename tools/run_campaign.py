@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -67,6 +68,7 @@ class Scenario:
     pass_criterion_per_scenario: str = ""
     n_runs: Dict[str, int] = field(default_factory=dict)  # mode -> count
     track: Dict[str, object] = field(default_factory=dict)
+    path: Optional[Path] = None  # source YAML, for the Gazebo executor
 
     @property
     def family(self) -> str:
@@ -92,6 +94,7 @@ def load_scenarios(scenario_dir: Path = SCENARIO_DIR) -> Dict[str, Scenario]:
             pass_criterion_per_scenario=str(data.get("pass_criterion_per_scenario", "")),
             n_runs=dict(data.get("n_runs_recommended", {}) or {}),
             track=dict(data.get("track", {}) or {}),
+            path=path,
         )
     return out
 
@@ -136,15 +139,20 @@ def build_matrix(
     seeds: Sequence[int],
     modes: Sequence[str],
     include_stubs: bool = False,
+    reps_cap: Optional[int] = None,
 ) -> List[RunSpec]:
     """Cartesian campaign matrix: scenario × mode × controller × (seed for rl) ×
-    repetition (n_runs_recommended[mode]). Stubs are skipped unless requested."""
+    repetition (n_runs_recommended[mode]). Stubs are skipped unless requested.
+    ``reps_cap`` caps the per-scenario repetitions (for a quick validation subset
+    below the full D-29 counts)."""
     runs: List[RunSpec] = []
     for sid, scen in scenarios.items():
         if scen.is_stub and not include_stubs:
             continue
         for mode in modes:
             n = int(scen.n_runs.get(mode, 0))
+            if reps_cap is not None:
+                n = min(n, reps_cap)
             for controller in controllers:
                 seed_axis: Sequence[Optional[int]] = seeds if controller == "rl" else [None]
                 for seed in seed_axis:
@@ -325,20 +333,194 @@ def plan_feasibility(
 # --------------------------------------------------------------------------- #
 # Executor seam (ROS / Gazebo — Ubuntu host)
 # --------------------------------------------------------------------------- #
-def execute_run(run_spec: RunSpec, scenario: Scenario) -> Dict[str, object]:  # pragma: no cover
-    """Drive one scenario run in Gazebo and return its computed metrics.
+CHECKPOINT_DIR = REPO / "experiments" / "sim"
 
-    NOT IMPLEMENTED here: this is the ROS/Gazebo layer. It must invoke
-    ``eval_policy`` with the scenario's ``track`` (world/centerline/start_s_m),
-    the run mode (``--mode enforcement|monitoring`` — the cage already supports
-    monitoring, see cage_node.py), the controller (rl/pd), the policy seed, and
-    the scenario perturbations, then parse the run's metrics. Implement on the
-    Ubuntu+Jazzy host as the next step; ``--dry-run`` does not call this.
+
+def checkpoint_for_seed(seed: Optional[int]) -> Path:
+    """The trained PPO checkpoint for a policy seed (the F3 multi-seed set)."""
+    return CHECKPOINT_DIR / f"cobraflex_ppo_lane_{seed}_200k.zip"
+
+
+def run_id_for(run_spec: RunSpec) -> str:
+    """Deterministic, collision-free run id for a matrix cell, so the executor
+    can locate the run dir it just produced and the campaign tree is traceable."""
+    who = "pd" if run_spec.controller == "pd" else f"seed{run_spec.seed}"
+    sid = run_spec.scenario_id.replace("SC-", "").replace("-", "").lower()
+    return f"camp_{sid}_{run_spec.controller}_{who}_{run_spec.mode}_rep{run_spec.rep:02d}"
+
+
+def execute_run(
+    run_spec: RunSpec,
+    scenario: Scenario,
+    *,
+    output_root: Path,
+    model_path: Optional[Path] = None,
+    gui: bool = False,
+    timeout_s: int = 900,
+) -> Dict[str, object]:  # pragma: no cover - drives Gazebo, host-only
+    """Drive one scenario run in Gazebo (headless) and return its ``summary.json``.
+
+    Shells out to ``ros2 launch cobraflex_rl eval_scenario_batch.launch.py`` for
+    the (scenario, mode, rep) cell — the launch injects the scenario's initial
+    conditions through ``eval_policy`` and auto-shuts-down on completion — then
+    reads back the per-run metric catalogue + verdict the node wrote. RL only;
+    the PD-baseline arm is a separate node (deferred).
     """
-    raise NotImplementedError(
-        "execute_run requires the Gazebo executor (eval_policy with "
-        "--mode/--start-s/--perturbation); run on the Ubuntu+Jazzy host."
-    )
+    import subprocess
+
+    if run_spec.controller != "rl":
+        raise NotImplementedError(
+            "execute_run drives the RL policy via eval_policy; the PD-baseline "
+            "arm uses pd_baseline_node and is not wired yet (use --controllers rl)."
+        )
+    if scenario.path is None:
+        raise ValueError(f"{scenario.id}: scenario has no source path to run")
+    checkpoint = Path(model_path) if model_path else checkpoint_for_seed(run_spec.seed)
+    if not checkpoint.is_file():
+        raise FileNotFoundError(f"checkpoint not found for seed {run_spec.seed}: {checkpoint}")
+
+    run_id = run_id_for(run_spec)
+    output_root = Path(output_root)
+    cmd = [
+        "ros2", "launch", "cobraflex_rl", "eval_scenario_batch.launch.py",
+        f"model_path:={checkpoint}",
+        f"scenario:={scenario.path}",
+        f"mode:={run_spec.mode}",
+        f"rep:={run_spec.rep}",
+        f"run_id:={run_id}",
+        f"output_root:={output_root}",
+        f"gui:={'true' if gui else 'false'}",
+    ]
+    # Don't gate on the launch return code: tearing Gazebo down via the on-exit
+    # Shutdown can surface a non-zero exit even when the run itself completed and
+    # wrote its summary. Success is "the node wrote a summary.json"; otherwise the
+    # return code is reported to help diagnose a genuine launch failure.
+    proc = subprocess.run(cmd, timeout=timeout_s)
+
+    summary_path = output_root / run_id / "summary.json"
+    if not summary_path.is_file():
+        raise RuntimeError(
+            f"run produced no summary.json (launch rc={proc.returncode}): {summary_path}"
+        )
+    with summary_path.open(encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+# --------------------------------------------------------------------------- #
+# Orchestration (drives the matrix, aggregates per D-29/D-30)
+# --------------------------------------------------------------------------- #
+@dataclass
+class RunOutcome:
+    run_spec: RunSpec
+    verdict: Optional[bool]            # per-run pass (eval_policy's 3-valued result)
+    summary: Dict[str, object] = field(default_factory=dict)
+    error: Optional[str] = None
+
+
+Executor = Callable[..., Dict[str, object]]
+
+
+def run_matrix(
+    matrix: Sequence[RunSpec],
+    scenarios: Dict[str, Scenario],
+    output_root: Path,
+    executor: Executor = execute_run,
+    *,
+    continue_on_error: bool = True,
+    on_progress: Optional[Callable[[int, int, RunOutcome], None]] = None,
+) -> List[RunOutcome]:
+    """Execute every matrix cell through ``executor`` and collect per-run
+    verdicts. ``executor`` is injectable so the orchestration is unit-tested with
+    a stub (no Gazebo). A failed run is recorded as an outcome with ``error`` set
+    (and ``verdict=None``) unless ``continue_on_error`` is False."""
+    outcomes: List[RunOutcome] = []
+    total = len(matrix)
+    for i, run_spec in enumerate(matrix, start=1):
+        scenario = scenarios[run_spec.scenario_id]
+        try:
+            summary = executor(run_spec, scenario, output_root=output_root)
+            verdict = summary.get("verdict") if isinstance(summary, dict) else None
+            outcome = RunOutcome(run_spec, verdict if isinstance(verdict, bool) else None, dict(summary))
+        except Exception as exc:  # noqa: BLE001 - record and continue the campaign
+            if not continue_on_error:
+                raise
+            outcome = RunOutcome(run_spec, None, {}, error=f"{type(exc).__name__}: {exc}")
+        outcomes.append(outcome)
+        if on_progress is not None:
+            on_progress(i, total, outcome)
+    return outcomes
+
+
+def aggregate_campaign(
+    outcomes: Sequence[RunOutcome],
+    scenarios: Dict[str, Scenario],
+    srs: Dict[str, Dict[str, object]],
+    verdict_mode: str = "enforcement",
+) -> Dict[str, object]:
+    """Aggregate per-run outcomes into per-scenario, per-SR (D-29) and global
+    (D-30) verdicts. A per-run ``verdict`` of None (indeterminate or errored) is
+    counted as a non-pass for the scenario fraction, and surfaced in ``n_error``."""
+    # Group per (scenario, mode).
+    groups: Dict[tuple, List[RunOutcome]] = {}
+    for o in outcomes:
+        groups.setdefault((o.run_spec.scenario_id, o.run_spec.mode), []).append(o)
+
+    scenario_results: Dict[str, ScenarioResult] = {}   # verdict_mode results, by scenario
+    runs_per_scenario: Dict[str, int] = {}
+    per_scenario_report: List[Dict[str, object]] = []
+    for (sid, mode), group in sorted(groups.items()):
+        scen = scenarios.get(sid)
+        if scen is None:
+            continue
+        flags = [o.verdict is True for o in group]
+        result = aggregate_scenario(scen, mode, flags)
+        n_error = sum(1 for o in group if o.error is not None)
+        per_scenario_report.append({
+            "scenario": sid, "mode": mode, "n_runs": result.n_runs,
+            "n_pass": result.n_pass, "fraction_pass": round(result.fraction_pass, 4),
+            "verdict": result.verdict, "n_error": n_error,
+        })
+        if mode == verdict_mode:
+            scenario_results[sid] = result
+            runs_per_scenario[sid] = result.n_runs
+
+    sr_results: List[SRResult] = []
+    for sr_id, sr in sorted(srs.items()):
+        crit = str(sr["criticality"])
+        sr_scen = expand_sr_scenarios(sr["scenarios"], list(scenarios))
+        sr_results.append(aggregate_sr(
+            sr_id, crit, sr_scen, scenarios, scenario_results, runs_per_scenario,
+            verdict_mode=verdict_mode,
+        ))
+
+    gv = global_verdict(sr_results)
+    return {
+        "verdict_mode": verdict_mode,
+        "global": gv,
+        "per_scenario": per_scenario_report,
+        "per_sr": [
+            {"sr": r.sr_id, "criticality": r.criticality, "verdict": r.verdict,
+             "run_count_ok": r.run_count_ok, "families": r.families_covered, "notes": r.notes}
+            for r in sr_results
+        ],
+        "n_runs": len(outcomes),
+        "n_error": sum(1 for o in outcomes if o.error is not None),
+    }
+
+
+def write_report(report: Dict[str, object], outcomes: Sequence[RunOutcome], out_dir: Path) -> None:
+    """Write the campaign report (JSON) + a flat per-run CSV under ``out_dir``."""
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    with (out_dir / "campaign_report.json").open("w", encoding="utf-8") as handle:
+        json.dump(report, handle, indent=2)
+    with (out_dir / "campaign_runs.csv").open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["scenario", "mode", "controller", "seed", "rep", "verdict", "error"])
+        for o in outcomes:
+            rs = o.run_spec
+            writer.writerow([rs.scenario_id, rs.mode, rs.controller, rs.seed, rs.rep,
+                             o.verdict, o.error or ""])
 
 
 # --------------------------------------------------------------------------- #
@@ -346,10 +528,19 @@ def execute_run(run_spec: RunSpec, scenario: Scenario) -> Dict[str, object]:  # 
 # --------------------------------------------------------------------------- #
 def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Phase-4 scenario validation campaign.")
-    p.add_argument("--controllers", default="rl,pd")
-    p.add_argument("--seeds", default="42,123,2024")
+    p.add_argument("--controllers", default="rl",
+                   help="rl | pd | rl,pd (PD arm not wired yet — use rl).")
+    p.add_argument("--seeds", default="2024",
+                   help="policy seeds for the rl arm (checkpoints cobraflex_ppo_lane_<seed>_200k.zip).")
     p.add_argument("--modes", default="enforcement,monitoring")
     p.add_argument("--verdict-mode", default="enforcement")
+    p.add_argument("--scenarios", default="",
+                   help="comma list of scenario ids to run (default: all non-stub).")
+    p.add_argument("--reps", type=int, default=None,
+                   help="cap per-scenario repetitions (default: full D-29 n_runs_recommended).")
+    p.add_argument("--gui", action="store_true", help="show the Gazebo GUI per run (slow).")
+    p.add_argument("--stop-on-error", action="store_true",
+                   help="abort the campaign on the first failed run (default: record + continue).")
     p.add_argument("--out", type=Path, default=REPO / "experiments" / "sim" / "campaign")
     p.add_argument("--dry-run", action="store_true",
                    help="build the matrix + D-29 feasibility and stop (no Gazebo).")
@@ -363,7 +554,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     controllers = [c.strip() for c in args.controllers.split(",") if c.strip()]
     seeds = [int(s) for s in args.seeds.split(",") if s.strip()]
     modes = [m.strip() for m in args.modes.split(",") if m.strip()]
-    matrix = build_matrix(scenarios, controllers, seeds, modes)
+    matrix = build_matrix(scenarios, controllers, seeds, modes, reps_cap=args.reps)
+    only = {s.strip() for s in args.scenarios.split(",") if s.strip()}
+    if only:
+        matrix = [r for r in matrix if r.scenario_id in only]
 
     n_full = sum(1 for s in scenarios.values() if not s.is_stub)
     n_stub = sum(1 for s in scenarios.values() if s.is_stub)
@@ -388,12 +582,36 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print("\n--dry-run: plan only, no Gazebo execution.")
         return 0
 
-    # Execution path (Ubuntu+Jazzy host): execute_run per matrix entry, then
-    # aggregate. Left as the executor-wiring step.
-    raise SystemExit(
-        "Execution path not wired on this host. Use --dry-run for planning, or "
-        "implement execute_run() on the Ubuntu+Jazzy host (see its docstring)."
+    # Execution path (Ubuntu+Jazzy host): drive each matrix cell through Gazebo,
+    # then aggregate per-run -> per-scenario -> per-SR (D-29) -> global (D-30).
+    runs_root = args.out / "runs"
+    print(f"\nExecuting {len(matrix)} run(s) -> {runs_root}\n" + "=" * 56)
+
+    def _progress(i: int, total: int, outcome: RunOutcome) -> None:
+        rs = outcome.run_spec
+        tag = ("ERROR" if outcome.error else
+               {True: "PASS", False: "FAIL", None: "INDET"}[outcome.verdict])
+        line = f"[{i:>4}/{total}] {rs.scenario_id} {rs.mode} seed{rs.seed} rep{rs.rep:02d} -> {tag}"
+        print(line + (f"  ({outcome.error})" if outcome.error else ""))
+
+    executor: Executor = (
+        lambda rs, sc, **kw: execute_run(rs, sc, gui=args.gui, **kw)
     )
+    outcomes = run_matrix(
+        matrix, scenarios, runs_root, executor=executor,
+        continue_on_error=not args.stop_on_error, on_progress=_progress,
+    )
+
+    report = aggregate_campaign(outcomes, scenarios, srs, verdict_mode=args.verdict_mode)
+    write_report(report, outcomes, args.out)
+
+    gv = report["global"]
+    print("\n" + "=" * 56)
+    print(f"Campaign global verdict ({report['verdict_mode']}): {gv['verdict']}")
+    print(f"  SR-CL-A: {gv['n_sr_cl_a']}  blocking: {gv['blocking_sr_cl_a']}")
+    print(f"  runs: {report['n_runs']}  errors: {report['n_error']}")
+    print(f"  report: {args.out / 'campaign_report.json'}")
+    return 0 if gv["verdict"] == "SATISFIED" else 1
 
 
 if __name__ == "__main__":

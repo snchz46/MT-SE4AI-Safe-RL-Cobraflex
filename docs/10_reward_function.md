@@ -191,7 +191,7 @@ subject of the **Chapter 8** sensitivity/ablation analysis; until then the
 weights remain `[provisional]`.
 
 ---
-
+<!--
 ## 9. Anticipated defense questions
 
 **Q1. How were the weights chosen? Aren't they arbitrary?**
@@ -234,7 +234,7 @@ lane-following and makes attributing effects harder. The "reward = quality, cage
 = safety" separation stays sharp.
 
 ---
-
+--->
 ## Version log
 
 - **weights v1.0 (2026-05-29):** first freeze, consistent with §7.2.3 and the

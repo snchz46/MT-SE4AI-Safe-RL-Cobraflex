@@ -302,7 +302,28 @@ The systematic pass does not introduce new cage rules: it produces additional co
 The following potential hazards are under active consideration but not yet registered:
 
 - *H-?? Sensor calibration drift over physical operation.* Specific to physical deployment; to be addressed in Phase 5.
+<!--
+## Anticipated defense questions
 
+**Q1. Why rate severity as if on a full-scale road vehicle (S3 = potentially fatal) when the platform is a 1:14 RC car that cannot injure anyone?**
+The analogue-real-vehicle convention (decision D-03, manuscript §4.9) preserves the conceptual mapping to ISO 26262 and the case for the cage's existence. Rating at 1:14 scale would collapse every hazard to S1 and make the safety analysis vacuous. The convention is registered as a decision and discussed as a limitation — it is a declared interpretive choice, not a hidden inflation.
+
+**Q2. ISO 26262 prescribes one S/E/C rating per hazard, yet several rationales say "C=2, degrading to C=3 if the predictor fails" — is that admissible?**
+The *assigned* rating is single-valued; the rationale states the *conditionality* to be transparent about what the rating assumes (e.g. H-01's C=2 is conditional on the TTLC predictor, verified by SR-003 / M-S4). H-03 explicitly consolidated a former "S=2 (S=3 in curve)" split into a single conservative S=3 precisely to honour the one-rating rule.
+
+**Q3. STPA-light is applied to only three of nine hazards — isn't that selective analysis?**
+The scope statement justifies each inclusion and exclusion. STPA is applied where the unsafe-control-action lens exposes something HARA misses (H-01, H-02, H-04). For localised hazards (H-03 speed, H-05 rate, H-06 state-validity, H-07 stop) the UCA grid produces no new actionable insight beyond the HARA-derived SR; H-08 is a training-time pathology where the UCA categories do not apply; H-09 is a composition hazard handled at the architecture level. The exclusions are argued, not silent.
+
+**Q4. H-08 (reward exploitation) and H-09 (cage rule conflict) look like late, defensive additions — are they genuine hazards?**
+Both are first-class and literature-backed (H-08: Skalse et al. 2022, Krakovna et al. 2020; H-09: coordination / composition UCAs) and, tellingly, each needs a *different* mitigation mechanism than H-01..H-07: H-08 a training constraint (SR-009 — a runtime rule forcing `throttle > 0` would violate cage philosophy), H-09 an arbiter property (SR-010). Their addition reflects SR-audit maturity and is recorded in the changelog.
+
+**Q5. H-04's controllability is C=3 "by construction" because compound state is *defined* as unrecoverable — isn't that circular?**
+The register names the circularity and defuses it: the mitigation is not to improve the policy's controllability but to *substitute* the policy entirely (C-05 emergency mode, a deterministic override). C=3 is sustainable precisely because the external intervention is a substitution, not a modification of policy commands.
+
+**Q6. Every hazard is still "Open" with F4 underway — why has none been closed?**
+A hazard closes only when its mitigating SR carries a "Satisfied" verdict backed by campaign evidence, and the per-SR sim verdicts in `docs/07` are still TBD pending the full F4 run on the Ubuntu host. Marking them Open is the honest state; closing them on unit-test evidence alone would overclaim (cf. the project rule: do not claim a feature works without running it).
+
+--->
 ## Change log
 
 See `docs/CHANGELOG.md`.

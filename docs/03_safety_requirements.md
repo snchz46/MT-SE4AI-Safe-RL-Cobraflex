@@ -338,6 +338,28 @@ Current coverage at the time of this document's last update: see the change log 
 
 - *SR-???* on calibration drift detection during physical operation. To be registered if Phase 5 reveals the need.
 
+<!--
+## Anticipated defense questions
+
+**Q1. Many thresholds are "provisional pending measurement" (the 0.7 s policy term of `t_min`, `a_min`, `δ_max`, `σ_θ_max`) — how can an SR be "falsifiable" if its number isn't final?**
+Falsifiability is a property of the *form* — a measurable condition with a defined verdict procedure — not of the parameter being frozen. The `[provisional, M-x]` tag marks a value awaiting calibration (M-3 / M-4 / M-5) with an explicit resolution workflow (update `cage.yaml` → bump version → re-run scenarios). The SR is testable today against its current value; the value can tighten without changing the requirement's structure.
+
+**Q2. SR-001's `d_max = 0.16 m` is a chain of first-order estimates summed to 0.085 m and then "rounded up to 0.09" — isn't that a fudge factor dressed as a derivation?**
+The three contributions (estimator noise, one-latency drift, footprint half-width) are each defensible and traced to ODD parameters, and the round-up direction matters: it *shrinks* the safe band by 5 mm, so it can only be conservative — it cannot make the requirement unsafe. The arithmetic is shown precisely so a reviewer can challenge any single term rather than the lumped result.
+
+**Q3. SR-009 and SR-011 are "training constraints", not cage rules — doesn't that mean they aren't actually enforced at runtime?**
+Correct, and deliberately so. A runtime rule that injected progress (SR-009) or authored heading (SR-011) would be orthogonal to the cage's philosophy — correct unsafe commands, do not author behaviour. These SRs are mitigated where the pathology is born (training) and *verified* at runtime through M-P6 / M-P7; the cage observes (and may emit a stall signal) but does not actuate liveness. The `implementation_type` column records this honestly.
+
+**Q4. SR-009 explicitly "yields to" SR-005 and SR-008 — what stops a policy from hiding a stall inside a permanent emergency / stop state to evade the liveness check?**
+The settling clause (`Δt_settle`) and eligibility windows are bounded and one-directional: liveness is suspended only during legitimate cage responses, which are themselves governed by SR-005 / SR-008 verdicts. A policy parked in emergency mode shows up as non-zero M-S3 and a failed nominal completion (M-P2) — the evasion surfaces through a different metric, not a blind spot.
+
+**Q5. SR-010 depends on the joint-envelope assertion that the Cage Specification marks as *deferred* (Trigger 7 not implemented) — is SR-010 satisfiable today?**
+Only partially, and the document says so: the inter-cycle oscillation half of SR-010 is implemented and tested (cage 0.5.1), but the per-rule `safe_envelope_predicate` (Trigger 7) is deferred pending a rule-contract extension. SR-010's verdict therefore cannot be "Satisfied" until that lands, and the matrix carries it as TBD. No overclaim.
+
+**Q6. Why add SR-011 when SR-002 already bounds heading error — isn't it redundant?**
+No. SR-002 bounds *magnitude* (`|θ| ≤ θ_max`); SR-011 bounds *variance* (`σ_θ` over a sliding window), catching the within-band oscillation mode of H-02 that a magnitude bound passes. M-P4 alone cannot distinguish "bounded and stable" from "bounded and oscillating"; M-P7 can. The split mirrors the two branches of H-02 (divergence vs oscillation).
+
+--->
 ## Change log
 
 See `docs/CHANGELOG.md`.

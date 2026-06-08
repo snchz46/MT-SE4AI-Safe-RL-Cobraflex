@@ -24,7 +24,7 @@ Every scenario specifies, at minimum:
 | Field | Meaning |
 | ------- | --------- |
 | `id` | The identifier (SC-NOM-01, etc.) |
-| `category` | nominal, edge, or perturbed |
+| `category` | nominal, edge, perturbed, or frontier |
 | `description` | Free-text |
 | `initial_conditions` | Vehicle pose, velocity, environment state |
 | `perturbations` | What is applied during the run, when, with what magnitude |
@@ -516,6 +516,29 @@ Some SRs (notably SR-006, the always-active rate limiter) are exercised across e
 ## Bidirectional coverage
 
 Every SR is referenced by at least one scenario. Every scenario references at least one SR. Verified by `tools/check_traceability.py`.
+
+<!--
+## Anticipated defense questions
+
+**Q1. Every scenario now runs on a single oval at a fixed 0.2 m/s, superseding the per-scenario speeds (0.3–0.4 m/s) still in the prose — doesn't the library no longer match what is executed?**
+The Track-mapping note (Option A, D-37) is explicit that the per-scenario `track` block and the fixed 0.2 m/s **supersede** the legacy prose speeds, which predate the fixed-speed decision; the prose is kept for provenance, not as the executed configuration. The single oval is justified — it contains both straight and curve tiles selected by `start_s`, so the RL↔PD comparison stays on identical geometry and no second world is required.
+
+**Q2. The Frontier scenarios are "not folded into the global verdict" — isn't excluding scenarios from the verdict a way to avoid failing them?**
+The opposite. FRONT scenarios start *beyond* the ODD, where the policy is by design not expected to recover, so a pass/fail verdict on the policy would be meaningless. They are analysed as a paired enforcement-vs-monitoring contrast on M-S5 (road-edge departure) — a *stronger* claim, because the monitoring arm is the no-cage counterfactual and the difference is the cage's measured value. Folding them into `fraction_pass` (D-30) would conflate cage-efficacy evidence with in-ODD compliance. This is decision D-35.
+
+**Q3. SC-PERT-03 deliberately trains a *broken* policy to confirm the metric fires — why spend runs proving you can fail?**
+Because it closes a genuine epistemic gap: "M-P6 = 0 on the released policy" is only meaningful if M-P6 *can* be non-zero. Without this failure-injection test, a zero is indistinguishable between "the policy is sound" and "the metric never detects anything". SC-PERT-03 validates the SR-009 verification machinery itself, not the policy.
+
+**Q4. Run counts range from 25 to 100+ per mode — how were they chosen, and is 25 enough for a statistical verdict?**
+The floor of 25 per mode is the D-29 run-count gate for SR-CL-A requirements; higher counts are assigned where the pass criterion is tighter or the grid larger (SC-EDGE-05 enumerates pair and triple activations). The verdict statistics (Welch's t, Cohen's d, Fisher exact for binary outcomes; `docs/06`) are selected to be valid at these sample sizes — 25 is the defensible gate minimum for the enforcement-vs-monitoring contrast, not an arbitrary figure.
+
+**Q5. SC-EDGE-05 verifies SR-010, but the Cage Specification says SR-010's joint-envelope assertion (Trigger 7) is deferred — is the scenario testing something that doesn't exist yet?**
+Partly. SC-EDGE-05's oscillation half is live (cage 0.5.1, `test_oscillation.py`); the joint-envelope-failure half awaits the per-rule predicate. The scenario is specified in full so it is ready when Trigger 7 lands; until then its joint-envelope criterion is exercised only by the unit tests that exist, and the SR-010 verdict stays TBD. The dependency is stated, not hidden.
+
+**Q6. With F4 underway, the per-SR sim verdicts are still TBD — what has actually run?**
+A pilot frontier campaign has run on the Ubuntu host (`experiments/sim/campaign_frontier`, rep00, seeds 123 and 2024) exercising the live Gazebo executor. The full verdict-bearing campaign (~1100 runs) and the 25-rep frontier study are the remaining F4 work. The library itself is closed (schema-validated at G2 / G4); the open item is the evidence that fills the verdicts, reported as such per the project's "don't claim it works without running it" rule.
+
+--->
 
 ## Change log
 

@@ -254,6 +254,29 @@ For distributions (intervention duration): two-sample Kolmogorov-Smirnov.
 
 Significance threshold: p < 0.05 for the primary comparisons, p < 0.01 for any claim of strong effect.
 
+<!--
+## Anticipated defense questions
+
+**Q1. M-S2 "should be 0 by design" in enforcement mode — if a metric is constructed to be zero, what does measuring it prove?**
+M-S2 = 0 in enforcement is the *claim under test*, not an assumption: it becomes non-zero if C-01 or the SR-010 joint-envelope composition fails, which is exactly what M-S2 exists to catch. Its scientific value is in the *contrast* — M-S2(monitoring) quantifies what the policy alone would have done — so a zero in enforcement beside a non-zero in monitoring is a positive result, not a tautology.
+
+**Q2. Why add M-S5 (road-edge departure) when M-S1 (max lateral offset) already exists — isn't it derivable from M-S1?**
+M-S5 is a thresholded boolean on M-S1 (`road_edge_contact = max|ey| ≥ road_half`), but it is conceptually distinct: M-S2 counts *lane*-edge breaches at `d_max`, whereas M-S5 marks the more severe *road*-edge departure used as the harm proxy for the frontier study. It is reported as a paired enforcement-vs-monitoring rate (`frontier_contrast.py`), which a continuous RMSE-style metric cannot express as cleanly; M-S1 is reported alongside as `max_excursion_m`.
+
+**Q3. M-P6 and M-P7 are "undefined" when there are no eligible windows — doesn't an undefined metric break the verdict pipeline?**
+Undefined is handled explicitly: when `eligible_steps == 0` (e.g. a run entirely in emergency mode) the SR-009 verdict falls through to scenario semantics rather than coercing a misleading 0 % or 100 %. The eligibility carve-outs (settling window, emergency, stop-signal) are defined so that "undefined" means "this run carries no liveness evidence", not "pass" — which prevents a silent false-pass.
+
+**Q4. The statistical tests carry assumptions (Welch's t assumes approximate normality of the means) — are the sample sizes and distributions adequate?**
+The catalogue pre-commits to alternatives: Mann-Whitney U for heavily non-Gaussian distributions, Fisher exact for small-sample binary outcomes, Kolmogorov–Smirnov for distributions. Thresholds are tiered (p < 0.05 for primary comparisons, p < 0.01 for any strong-effect claim) and Cohen's d is always reported, so significance is never claimed on a p-value alone. The run counts (`docs/05`, D-29) are set to keep these tests valid.
+
+**Q5. M-C1 / M-C2 (latency, cage overhead) — are these even measured in simulation, and do they transfer to the physical platform?**
+They are measured in simulation as median and 95th-percentile per step and are primarily a *feasibility* argument — the cage is cheap enough to run at the control rate, and at higher rates. Their sim-to-real transfer is exactly one of the gap statements that A5 / Phase 5 is meant to characterise; the simulation figures are a baseline, not a hardware claim.
+
+**Q6. Each metric lists the SRs it "contributes evidence to" — what stops a metric from being gamed (a good number with unsafe behaviour)?**
+The metric set is deliberately multi-angle per hazard: H-08 needs *two* metrics — M-P6 for the stall sub-mode and M-S2-in-monitoring for the adversarial-direction sub-mode — because either alone is gameable. Safety is guaranteed by the cage, not by any metric, so a metric exploit cannot produce unsafe runtime behaviour; it can only fail to *detect*, which the negative tests (SC-PERT-03) and the monitoring-mode contrasts are built to surface.
+
+--->
+
 ## Change log
 
 See `docs/CHANGELOG.md`.

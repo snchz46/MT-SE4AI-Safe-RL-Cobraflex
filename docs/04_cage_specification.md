@@ -321,6 +321,29 @@ The integration tests in `test_cage_node.py` exercise rule interaction (composit
 
 The full suite is run before any commit to `main` and before any Gate review.
 
+<!--
+## Anticipated defense questions
+
+**Q1. Why this specific evaluation order, and why is C-06 (rate limiter) first while C-05 (emergency) is last?**
+The order is ascending criticality (Phase 2 plan §2.1). C-06 first sanitises the raw command into a physically realisable baseline so downstream rules never reason about implausible jumps; C-05 last guarantees override semantics — its substitution (brake + frozen steering) must win regardless of what upstream rules did. The order is fixed, deterministic, and exercised by `test_cage_node.py`.
+
+**Q2. The spec admits a "known approximation": C-06 bounds the action *entering* the chain, but C-01..C-04 can introduce a step that violates the rate bound on the *emitted* action. Isn't that a hole in SR-006?**
+It is a real, declared F2 approximation. Its consequence is bounded (only the last firing rule's correction can exceed the per-cycle delta, and only by that correction's magnitude), and the candidate fixes are named — a terminal second C-06 pass or per-rule rate-budgeting — gated on Phase 4 logs that quantify whether it occurs in practice. Declaring it is more defensible than silently assuming the emitted action is smooth.
+
+**Q3. The cage is specified at 20 Hz (50 ms) but the RL environment runs at 10 Hz — which is the real cadence, and does the mismatch invalidate the per-cycle deltas?**
+This is a known open point (also flagged in `docs/09`). C-06's per-cycle deltas are interpreted per environment step and are provisional `[M-5 + F3 prototype]`; they will be recalibrated against the policy's real action distribution, and if cadence matters `control_dt` is aligned to the cage cycle or the deltas rescaled. Because the cage class and `cage.yaml` are identical in training and deployment (D-34), whatever cadence is chosen there is no train/deploy divergence.
+
+**Q4. Monitoring mode passes the unsafe raw action straight to `/safe_action` — isn't running an unsafe controller on the platform reckless?**
+Monitoring mode is a *diagnostic* for the causal enforcement-vs-monitoring contrast and for offline replay; in simulation it is free, and on hardware it is used only inside the bounded, supervised frontier study where the no-cage counterfactual *is* the measurement (D-35). The active mode is recorded in every run's `metadata.json`, so no result is ever ambiguous about which was in force.
+
+**Q5. The cage is "pure-Python, importable without ROS2" yet deployed as a ROS2 node — how do you know the node behaves like the tested class?**
+The ROS2 wrapper (`src/safety_cage`) imports the very `cage` package the unit-test suite exercises; the rules and `cage.yaml` are shared, not reimplemented. The residual risk lives in the thin wrapper (topic plumbing), which is integration-tested — not in the rule logic. The project rule is explicit that typecheck / pytest ≠ feature works for ROS2, which is why the deployment claim rests on the live Gazebo executor, not on unit tests alone.
+
+**Q6. `cage.yaml` is at 0.5.1 — how do you guarantee an older config doesn't silently change behaviour as the schema evolves?**
+By the backward-compatibility discipline: new features must default inert for older YAMLs (precedent 0.4.0→0.5.0), and bumping `compatible_sr_spec_version` requires updating `_ACCEPTED_SR_SPEC_VERSIONS` or load raises `IncompatibleCageConfigError`. Every run records the `cage.yaml` hash, binding each result to its exact parameter set. Version 0.5.1 specifically fixed the oscillation-window reset bug across ROS launches — a concrete instance of this discipline.
+
+--->
+
 ## Change log
 
 See `docs/CHANGELOG.md`.

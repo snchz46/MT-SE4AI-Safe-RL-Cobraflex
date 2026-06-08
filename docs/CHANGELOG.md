@@ -31,6 +31,122 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [08.06.2026] — F4: Anticipated defense questions added to docs 00–08
+
+**Document(s) affected:** `docs/00`–`docs/08` (new "Anticipated defense questions" section in each; `docs/08` as new §13).  
+**Phase:** F4.  
+**Gate context:** before G4.  
+**Author:** Samuel.  
+
+### Change
+
+Added an **"Anticipated defense questions"** section (the format already used in
+`docs/09` and `docs/10`) to each of the nine numbered engineering documents
+`docs/00`–`docs/08`. Each section is six bold Q&A pairs anticipating the
+committee's most probing questions on that document, with answers that cite the
+relevant IDs, decisions (D-03, D-11, D-25, D-28/29/30, D-34, D-35, D-37),
+sections and evidence, and that surface the known open points honestly (e.g. the
+SR-010 Trigger 7 deferral, the 10 Hz vs 20 Hz cadence mismatch, the ODD-3/4
+coverage gaps, the 5↔6 observation-dimension reconciliation). Placed before each
+document's `## Change log`; in `docs/08` (which uses numbered sections) appended
+as `## 13.` before the end marker.
+
+### Rationale
+
+`docs/09` and `docs/10` carry a defense-questions bank that consolidates the
+*why* of each design decision in viva-ready form; extending it to the rest of the
+engineering documents gives the whole `docs/` set a uniform, defensible closing
+section for the thesis defense. Scope confirmed with the author: numbered
+engineering specs only (`00`–`08`); the process registries `CHANGELOG.md` and
+`DECISIONS.md` were deliberately left out as a poor genre fit.
+
+### Impact
+
+Prose-only addition. No H / SR / C / SC / M identifier, parameter, threshold, ODD
+value, or cage constant changes; no `traceability_matrix.csv` rows. The new text
+*cites* existing IDs but defines none, so coverage is unaffected.
+
+### Verification
+
+`python tools/check_traceability.py` → All checks PASSED, 0 warnings.
+
+---
+
+## [08.06.2026] — F4: D-37 — single-world ODD reconciliation (docs/08 §12)
+
+**Document(s) affected:** `docs/08_odd_specification.md` (new §12, version 0.5→0.6, change-log row); `docs/DECISIONS.md` (new D-37; decision-index row; header `Status:` comment).  
+**Phase:** F4.  
+**Gate context:** before G4.  
+**Author:** Samuel.  
+
+### Change
+
+Added **D-37** and `docs/08` §12 "F4 evaluation realisation on a single world". §12 records
+that the F4 sim campaign runs every scenario on the single oval world (Option A, `docs/05`
+Track-mapping) at one fixed-speed `ACT_DIM=1` operating point (0.2 m/s, 6-dim obs), and
+declares the ODD coverage: ODD-1/2 covered (geometry/obs caveats), ODD-3 partial (curve
+geometry exercised, 2-dim speed envelope `v_max(κ)` not), ODD-4 not exercised (no
+adverse-curvy scenario). ODD-spec version bumped 0.5 → 0.6.
+
+### Rationale
+
+The ODD-spec stratifies four domains across two worlds (straight for ODD-1/2, oval for
+ODD-3/4) with a 2-dim speed-adaptive action for ODD-3/4. The F4 campaign collapses this to
+one world + one fixed-speed steering-only operating point, so the spec no longer literally
+describes what is evaluated. Per `docs/08`'s own convention (numerical authority flows
+spec → evidence), the parameters are **not** rewritten; §12 declares the evaluated subset
+and its gaps — the Phase-4 analogue of D-11's bounded validation. Surfaced while assessing
+how to handle `docs/08` given the single-map evaluation.
+
+### Impact
+
+No ODD parameter, SR threshold, or cage constant changes; no H/SR/C/SC/M artefacts; no
+`traceability_matrix.csv` rows. **Follow-up:** align the manuscript Cap. 8 ODD-coverage
+claim (ODD-1/2 covered, ODD-3 partial, ODD-4 deferred) and report the gap in Limitations.
+A variable-speed `ACT_DIM=2` policy + an adverse-curvy scenario are future work (F5+).
+
+### Verification
+
+`python tools/check_traceability.py` → All checks PASSED, 0 warnings.
+
+---
+
+## [08.06.2026] — F4: D-36 — seed policy for the verdict / frontier campaigns
+
+**Document(s) affected:** `docs/DECISIONS.md` (new D-36; decision-index row; header `Status:` comment).  
+**Phase:** F4.  
+**Gate context:** before G4.  
+**Author:** Samuel.  
+
+### Change
+
+Added decision **D-36** fixing which policy seeds enter each F4 campaign: the D-29/D-30
+verdict-bearing campaign certifies the G3-selected main policy **seed 2024** only, while
+the cage-dependent **seed 123** (58.8 % cage, §7.5.3) appears solely in the D-35 frontier
+cage-efficacy contrast (and, optionally, a separately-reported robustness sweep with its
+own `--out`). Updated the decision index and the header status comment to list D-36.
+
+### Rationale
+
+`aggregate_campaign` (`tools/run_campaign.py`) groups per-run outcomes by
+`(scenario, mode)` and pools all seeds into one `fraction_pass`; running seed 123 inside
+the verdict campaign would average the deliberately cage-dependent policy into the
+per-scenario verdict and could veto an SR-CL-A (D-30) on the basis of a policy not chosen
+for delivery. Surfaced during the 08.06 campaign-readiness review.
+
+### Impact
+
+No H/SR/C/SC/M artefacts and no `traceability_matrix.csv` rows. Operational: the
+verdict-bearing run uses `--seeds 2024 --out experiments/sim/campaign`; the frontier run
+uses `--seeds 2024,123 --reps 25 --out experiments/sim/campaign_frontier` (realised budget
+6 × 25 × 2 modes × 2 seeds = 600 runs). Both still pending on the Ubuntu+Jazzy host.
+
+### Verification
+
+`python tools/check_traceability.py` → All checks PASSED, 0 warnings.
+
+---
+
 ## [08.06.2026] — F4: Runtime perturbation injection wired (SC-PERT-01/02, SC-EDGE-03)
 
 **Document(s) affected:**

@@ -1,11 +1,11 @@
 # ODD Specification — SE4AI Lane Following Thesis
 
 **Document ID:** `ODD-SPEC`  
-**Version:** 0.5 (F4-entry TBD closure, 03.06.2026; 0.4 = F3 housekeeping)  
+**Version:** 0.6 (F4 single-world eval reconciliation §12 + D-37, 08.06.2026; 0.5 = F4-entry TBD closure 03.06.2026; 0.4 = F3 housekeeping)  
 **Owner:** Samuel Sánchez  
 **Phase of birth:** F0 — Phase of maturity: F1 — Phase of revision: F5 (physical ODD)  
 **Status:** DRAFT — 11 of 12 TBDs resolved (Q1–Q3 at F1; Q8, Q9, Q11 at F2 against the oval_R080 preset; Q4–Q7 and Q12 at F4 entry against `src/cobraflex_rl/config/adverse_profiles.yaml`); only Q10 remains, deferred to M-4 (physical lateral-accel calibration) — see decision D-33 in `docs/DECISIONS.md`.  
-**Last updated:** 2026-06-03  
+**Last updated:** 2026-06-08  
 **Approving reviewer (Gate 1):** [supervisor name]  
 
 <!--
@@ -27,6 +27,7 @@ renumber sections — only append.
 | 0.3 | 2026-05-21 | SS | F2 closure of TBD-Q8 (ROAD_LENGTH = 8.0232 m, perimeter of the oval_R080 preset), TBD-Q9 (KAPPA_MAX = 1.25 m⁻¹ = 1 / R_min with R_min = 0.80 m on the two U-turns) and TBD-Q11 (STUCK_TIMEOUT = n/a — subsumed by `max_episode_steps × control_dt = 40 s` truncation in `gazebo_lane_env.py`; no separate stuck check is configured). Geometry source of truth: `scripts/compose_lane_circuit.py` preset `oval_R080`, which emits both `src/cobraflex/worlds/lane_following_oval.world` and `src/cobraflex_rl/config/oval_centerline.yaml`. TBD-Q10 (A_LAT_MAX ODD-3) remains deferred to the M-4 calibration measurement, which depends on the physical platform. |
 | 0.4 | 2026-06-01 | SS | F3 housekeeping: `max_episode_steps` raised 400→500 in the training env (`train_ppo.yaml`, Training Spec §7.2.4), so the truncation window that subsumes `*.STUCK_TIMEOUT` (TBD-Q11) is now `500 × 0.10 s = 50 s` (was 40 s). The TBD-Q11 closure itself is unchanged (n/a, subsumed by env truncation); only the illustrative figure was realigned. No ODD parameter value changed. |
 | 0.5 | 2026-06-03 | SS | F4-entry closure of TBD-Q4–Q7 (ODD-2 adverse stressor profiles) and TBD-Q12 (ODD-4 adds no stressor beyond ODD-2). `odd2_nominal_adverse` σ_lateral=0.03 m + faded/non-uniform world; `odd2_adverse_with_latency` +100 ms latency / 20 ms jitter / 0.02 steer-noise; `odd2_adverse_with_obstacle` 0.10 m box, ~0.05 m intrusion (**spec only — execution deferred**, no obstacle channel in the 6-dim obs); `odd2_adverse_full` = union. Source of truth: `src/cobraflex_rl/config/adverse_profiles.yaml` (§5.5 mirrors it). Closed **by hand**, not via `close_odd_tbds.py`, whose blanket `TBD-QN` substitution would clobber the prose mentions of already-closed TBDs in §0.1 and the §9 source column. Only Q10 (A_LAT_MAX ODD-3) remains, deferred to M-4. |
+| 0.6 | 2026-06-08 | SS | F4 single-world evaluation reconciliation. New §12 records that the F4 simulation campaign realises ODD-1..ODD-4 on the **single oval world** `lane_following_oval.world` at one fixed-speed `ACT_DIM=1` operating point (0.2 m/s, 6-dim obs), per *Option A* of the `docs/05` Track-mapping note. ODD-1/ODD-2 claimed covered; ODD-3 partial (curve geometry exercised, 2-dim speed envelope not); ODD-4 not exercised (no adverse-curvy scenario). Coverage gaps declared §12.2. **No ODD parameter changed.** Decision D-37. |
 
 ---
 
@@ -306,4 +307,96 @@ with an explicit value.
 
 ---
 
-*End of ODD-SPEC v0.1.*
+## 12. F4 evaluation realisation on a single world (Phase-4 reconciliation)
+
+<!--
+Append-only reconciliation (cf. §1 TEACHER NOTE: numerical authority flows
+spec → evidence, never the reverse). This section changes NO ODD parameter; it
+records which sub-region of the ODD-1..ODD-4 stratification the F4 simulation
+campaign actually exercises, and declares the coverage gaps. Recorded as D-37.
+-->
+
+The four ODDs above are specified across **two** geometries — a dedicated
+straight world for ODD-1/ODD-2 and the curvy oval for ODD-3/ODD-4. The F4
+**simulation** campaign, however, runs **every** scenario on the single oval
+world `lane_following_oval.world` (preset `oval_R080`), per *Option A* of the
+Track-mapping note in `docs/05` and decision **D-37**. The oval already contains
+both straight tiles (1.5 m) and U-turn curve tiles, so the straight/curvy axis
+is realised by the **start arc-length** `start_s` rather than by separate
+worlds. The dedicated `odd1_straight_road.world` is **reserved for the F5
+physical subset** (a straight is simpler to set up on hardware than an oval).
+
+All F4 runs share **one operating point**: fixed forward speed **0.2 m/s**,
+**steering-only** action (`ACT_DIM = 1`, throttle held constant; Training Spec
+§7.2.2), a **6-dimensional** observation (the F3 policy; cf. §5.5 footnote), and
+no obstacle channel.
+
+### 12.1 ODD → oval realisation
+
+| ODD | Realised on the oval as | Speed / ACT_DIM | Scenarios | Coverage |
+| --- | --- | --- | --- | --- |
+| ODD-1 — nominal straight | `start_s = 0.0`, straight tile (1.5 m) | 0.2 m/s, 1 | SC-NOM-01, SC-EDGE-01..05, SC-PERT-03 | **Covered** (caveat 12.2-a) |
+| ODD-2 — adverse straight | `start_s = 0.0` + inline stressors (levels match §5.5) | 0.2 m/s, 1 | SC-PERT-01 (noise σ), SC-PERT-02 (latency), SC-EDGE-03 (throttle) | **Covered** except obstacles (deferred, D-33) |
+| ODD-3 — nominal curvy | `start_s = 1.5` (curve entry) + full loop | 0.2 m/s, **1** | SC-NOM-02, SC-NOM-03 | **Partial** — curve geometry yes, speed envelope no (12.2-b) |
+| ODD-4 — adverse curvy | *(no scenario combines curve + stressor)* | — | none | **Not exercised** — no adverse-curvy scenario; `odd4_*` profiles (§7.2) spec-only (12.2-b, 12.2-e) |
+| Beyond ODD-1 | `start_s = 0.0`, out-of-ODD initial state | 0.2 m/s, 1 | SC-FRONT-01..06 | Cage-efficacy contrast (D-35) — paired, not a verdict |
+
+### 12.2 Declared coverage gaps
+
+- **(a) ODD-1/2 length & curvature.** `ODD-1.ROAD_LENGTH = 10 m, κ ≡ 0` is
+  approximated by the oval's **1.5 m** straight tile; curvature is zero only
+  within the recovery window before curve entry. The single-rule isolation each
+  straight scenario intends is preserved because the recovery budgets complete
+  within 1.5 m at 0.2 m/s (cf. `docs/05`, "Recovery fits the straight").
+- **(b) ODD-3/4 speed envelope NOT exercised.** ODD-3/ODD-4 are *defined* by a
+  **2-dimensional** action space (steering + speed) and a curvature-dependent
+  speed cap `v_max(κ)` with `ODD-3.V_MAX_CURVE = 0.25 m/s`. The evaluated policy
+  is **fixed-speed, `ACT_DIM = 1`**, so this envelope is **not** validated by
+  closed-loop policy control. ODD-3 is therefore claimed **partial**: the curve
+  *geometry* and the cage's lateral behaviour on curves are exercised
+  (SC-NOM-02/03), but the speed-adaptation envelope is validated only at the
+  cage-rule level (C-04 unit tests), not end-to-end. Closing this gap needs a
+  variable-speed (`ACT_DIM = 2`) policy — future work (F5+).
+- **(c) Observation / obstacles.** The evaluated policy is 6-dim; the spec's
+  `ODD-1.OBS_DIM = 5` / `ODD-2,4.OBS_DIM = 8` are not the evaluated config. The
+  8-dim obstacle profiles remain execution-deferred (D-33); the 5↔6 difference
+  for the nominal vector is a separate documentation reconciliation, noted here,
+  with no effect on any SR or cage threshold.
+- **(d) Single operating speed.** 0.2 m/s is below both `V_MAX = 0.5` and
+  `V_MAX_CURVE = 0.25`; F4 is a single conservative operating point, not a speed
+  sweep.
+- **(e) ODD-4 has no dedicated scenario.** No scenario in the F4 verdict library
+  layers an adverse stressor on a curve start, and the `odd4_*` named profiles
+  (§7.2) are specified but unused. ODD-4 (adverse × curvy) is therefore deferred
+  in full, compounding gap (b).
+
+These gaps are the Phase-4 analogue of the bounded-validation principle (D-11)
+and are reported in the manuscript Limitations (§1.6.3 / Cap. 11). They change no
+ODD parameter, SR threshold, or cage constant; the spec above remains the
+authoritative definition of the *intended* domain.
+
+---
+<!--
+## 13. Anticipated defense questions
+
+**Q1. `ODD-1.A_LAT_MAX = 9.81 m/s²` is just *g* — is that a real envelope or a placeholder?**
+It is the no-skid Coulomb ceiling (`FRICTION × g = 1.0 × 9.81`), i.e. the *physical* envelope, not a typical value — and the document says so (TBD-Q2 note). On a straight (`κ ≡ 0`) the operationally commanded lateral acceleration is far smaller, bounded by the bicycle-model steering geometry. The Coulomb figure is the bound the platform cannot exceed without sliding; the consequential curve value (`ODD-3.A_LAT_MAX`, TBD-Q10) is the one deferred to the M-4 physical calibration.
+
+**Q2. §12 admits the F4 campaign runs everything on one oval at one fixed speed, leaving ODD-3's speed envelope and all of ODD-4 unexercised — isn't that a large hole in the validation?**
+It is a *declared, bounded* gap (D-37, §12.2), not a silent one. ODD-3 is claimed **partial** — curve geometry yes, the 2-D `v_max(κ)` speed envelope no, because the evaluated policy is `ACT_DIM = 1` fixed-speed — and ODD-4 is **not exercised** (no adverse-curvy scenario). Closing it needs a variable-speed policy (future work, F5+). The speed envelope is still checked at the cage-rule level (C-04 unit tests), just not end-to-end. This is the Phase-4 analogue of the bounded-validation principle (D-11), reported in the manuscript Limitations.
+
+**Q3. Several "closed" TBDs are *inferred*, not measured — friction = 1.0 comes from an empty Gazebo ODE block, not an explicit `<mu>`. Is that a real closure?**
+TBD-Q1 is closed to the Gazebo ODE default (`mu1 = mu2 = 1.0`) because the world files ship an empty `<friction>` block, and the closure note explicitly flags the value as *inferred* and instructs re-reading if a future world sets an explicit `<mu>`. That is a defensible, documented closure with its assumption surfaced — not a fabricated number. The one genuinely unmeasurable item (Q10) is left open and deferred to M-4.
+
+**Q4. The document insists numerical authority flows spec → evidence "never the reverse", yet §12 was added to reconcile the spec with what F4 actually ran — didn't the evidence drive the spec here?**
+No: §12 changes *no* ODD parameter (it states this three times). It records which sub-region of the specified domain the campaign exercises and declares the gaps; the `ODD-N.<PARAM>` values remain the authoritative definition of the *intended* domain. The append-only reconciliation documents coverage — it does not back-propagate a measured value into a threshold.
+
+**Q5. There is a 5-vs-6 observation-dimension discrepancy: the spec says `ODD-1.OBS_DIM = 5` but the evaluated F3 policy is 6-dimensional. Which is correct?**
+The evaluated policy is 6-dim (a signed curvature preview, `kappa_near` / `kappa_far`, added in F3 — see `docs/09`). The spec's `OBS_DIM = 5` predates that and is flagged in §12.2(c) as a documentation reconciliation with *no effect on any SR or cage threshold*: the extra signal is an abstract centerline preview, not a new ODD attribute. It is a known, scoped, harmless bookkeeping mismatch, not a contradiction in the safety-relevant parameters.
+
+**Q6. Why specify four ODDs and a full PAS 1883 / ISO 34503 taxonomy for a 1:14 lane-follower — isn't that ceremony disproportionate to the system?**
+The stratification (ODD-1 nominal → ODD-2 + stressors → ODD-3 + curvature → ODD-4 combined) is precisely what lets an observed safety or performance change be attributed to a *single* axis of complexity rather than a confounded mixture — that is the methodological core of an SE4AI thesis, not ceremony. The taxonomy supplies the standards vocabulary the automotive committee expects, and the parameter-ID single-sourcing is what prevents the documentation cycles the document's own notes warn about. The cost is upfront; the payoff is clean attribution and non-drifting thresholds.
+
+--->
+
+*End of ODD-SPEC v0.6.*

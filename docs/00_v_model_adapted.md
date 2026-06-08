@@ -77,6 +77,28 @@ The output of A5 is not a single "validated" verdict but a pair of statements: w
 
 - Whether Runtime Monitoring (A3) should be considered a permanent V level or a project-specific extension. To be discussed at G1.
 - Whether the Training Specification (A1) should include reward shaping decisions or only the specification before the policy is trained. Tentative answer: reward decisions go into the Training Specification, with rationale.
+<!--
+## Anticipated defense questions
+
+**Q1. Why adapt the V-Model at all instead of adopting an ML-native lifecycle (CRISP-DM, MLOps, the "W-model", or SOTIF / ISO PAS 8800)?**
+Because the V-Model is the lingua franca of automotive systems engineering and ISO 26262, which is the frame this thesis (and its committee) works in. The five adaptations import precisely what an ML lifecycle adds — a data-derived component (A1), statistical rather than pass/fail evaluation (A2), runtime evidence as validation (A3) — *without* discarding the bidirectional traceability spine on which the safety argument rests. SOTIF / ISO 8800 are treated as complementary (cited in Ch. 5), not as replacements.
+
+**Q2. Isn't "Runtime Monitoring as a new V level" (A3) just operational telemetry under a new name?**
+The novelty is not that logs are collected but that the cage's structured intervention logs are treated as *validation evidence mapped to specific SRs* via the Traceability Matrix — they feed the per-SR verdict, closing the Hazard→…→Verdict chain. Classical V-Models treat runtime data as post-deployment, outside validation. Honest caveat: whether A3 is a permanent V level or a project-specific extension is itself an open question flagged for G1.
+
+**Q3. A1 specifies "the procedure that produces the policy" rather than the policy — isn't that an admission that you cannot specify the safety-critical component?**
+Yes, and that is the methodological point. A learned controller is not fully specifiable at design time, so meta-design (specifying environment, reward, observation/action spaces, termination) is the honest substitute. Crucially, the safety case does not rest on the policy's internal correctness: A1 keeps the Cage Specification and the Training Specification as separate artefacts precisely so the guarantee lives in the cage's explicitly specified envelope, not in the unspecifiable half.
+
+**Q4. A4 makes traceability a hard, mechanically-checked constraint — does `check_traceability.py` actually demonstrate safety?**
+It demonstrates *coverage*, not *sufficiency*: no hazard without an SR, no SR without a mechanism, a scenario and a metric — no orphan claims on either branch. It does not prove the thresholds are correct; that is the scenario campaign's job. The distinction is stated openly: the check is a necessary gate, not a safety proof.
+
+**Q5. Most quantitative claims live in "In-simulation Validation" (A5) with only *bounded* physical validation — isn't a largely sim-based thesis weak?**
+A5 deliberately yields a *pair* of statements — what the simulation evidence supports, and how it transfers to hardware with what gap — rather than a single "validated" verdict. The bounded physical transfer characterises the sim-to-real gap on an exported scenario subset rather than re-proving every claim (scoping decision D-11). The contribution is the SE4AI method plus the cage, demonstrated primarily in simulation and probed on the platform.
+
+**Q6. A2's "statistical pass/fail" is not deterministic like a unit test — how is that reproducible?**
+A2 separates the two kinds of evidence on exactly this axis: cage unit tests are deterministic pass/fail, while policy behavioural evaluation is a statistical statement over many seeded runs (e.g. mean lateral RMSE, a TTLC percentile). Reproducibility is preserved through fixed seeds and per-run metadata (git commit, cage-YAML hash, checkpoint hash, scenario hash), so the statistical claim is itself re-derivable.
+
+--->
 
 ## Change log
 

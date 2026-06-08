@@ -195,7 +195,7 @@ in `cobraflex_rl/cage_bridge.py`.
   `cage_bridge.py`; config `train_ppo.yaml`.
 
 ---
-
+<!--
 ## 9. Anticipated defense questions
 
 **Q1. Why fixed speed if a real car modulates its speed?**
@@ -244,7 +244,7 @@ real action distribution after the first prototype. If cadence matters,
 `control_dt` will be aligned with the cage cycle or the deltas rescaled.
 
 ---
-
+--->
 ## Version log
 
 - **v0.1 (2026-05-29):** first freeze, consistent with the TS-01 cage wiring

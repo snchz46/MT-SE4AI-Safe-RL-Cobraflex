@@ -126,6 +126,28 @@ Examples: `sc_nom_01.yaml`, `sc_edge_04.yaml`, `sc_pert_02.yaml`.
 ## Cross-reference rules
 
 When referencing an identifier in the manuscript or in any document, use the identifier *exactly* as defined here, in monospace if the document format supports it. Do not invent shortened forms ("the cage rule 1" instead of "C-01") because such shortened forms break the mechanical traceability check.
+<!--
+## Anticipated defense questions
+
+**Q1. The metric prefix `M-` visually collides with the milestone prefix `M` — isn't that a latent defect in a traceability-critical scheme?**
+The collision is acknowledged in §Milestones and disambiguated by context: a milestone is `M1` (no category letter), a metric is `M-P1` (category letter). It is tolerated rather than fixed because milestones never appear in the `H↔SR↔C↔SC↔M` chain that `check_traceability.py` parses, so there is no *mechanical* ambiguity where it would matter. Renaming milestones would itself violate the never-reuse rule.
+
+**Q2. Why are System Requirements (`SyR-XXX`) outside the mechanical traceability chain?**
+SyRs are the L1 anchor, maintained as a documentary layer above the SRs; their refinement into SRs is reviewed manually at G1. The mechanical chain begins at `H↔SR` because that is where falsifiable, cage-implementable content starts. The SyR→SR step is not unchecked — only not *mechanically* checked — and that scoping is stated explicitly.
+
+**Q3. "Assigned once, never reused" means the registers accumulate dead identifiers — doesn't that pollute the matrix?**
+Deprecated entries keep their ID, marked deprecated in their living document, so historical cross-references in the manuscript and in run metadata never dangle. Gaps in numbering are explicitly acceptable. A handful of tombstone IDs is a far smaller cost than a reused ID silently re-pointing an old reference to a new referent.
+
+**Q4. Scenario IDs hard-code the category (`NOM` / `EDGE` / `PERT` / `FRONT`) — what happens to traceability when a scenario's character changes?**
+The category is part of the immutable ID, so a scenario never migrates categories; a re-characterised scenario receives a new ID. The F4 Frontier family was introduced as a *new* category with its own range (D-35), not by re-tagging existing `SC-*`, which keeps it consistent with the never-reuse rule.
+
+**Q5. Why forbid prose forms like "cage rule 1" and insist on `C-01` in monospace — isn't that pedantry?**
+Because `check_traceability.py` extracts identifiers by pattern from the Markdown; a paraphrase is invisible to the extractor and silently breaks a coverage edge. Exact-form citation is the precondition for the mechanical gate to mean anything — the pedantry is load-bearing.
+
+**Q6. The conventions are a Phase 0 deliverable — have they survived the later additions (M-S5, SC-FRONT, SR-011)?**
+Yes: `M-S5` (F4), `SR-011`, and `SC-FRONT-01..06` all slot into the existing ranges with no scheme change, which is the evidence the conventions were pitched at the right abstraction. The only stress points met in practice are the two documented ones (the `M-` collision and the `SyR` carve-out), not a breakage of the scheme.
+
+--->
 
 ## Change log
 

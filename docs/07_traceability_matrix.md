@@ -107,6 +107,29 @@ Each row of the CSV represents one chain from a hazard to a metric (with possibl
 
 - (none expected; if any appear, list them here with rationale)
 
+<!--
+## Anticipated defense questions
+
+**Q1. Every verdict in the matrix is "TBD" — so at this point does the traceability matrix prove anything?**
+It proves the *structure* is complete and orphan-free: the eight coverage constraints, mechanically enforced by `check_traceability.py`, guarantee every hazard has a mitigation path down to a metric. The verdicts are the *evidence* layer, filled in Phase 4 / 5. A complete-but-TBD matrix is the honest pre-campaign state — it guarantees that when evidence arrives there is exactly one place to record each verdict and no claim is left without a home.
+
+**Q2. The Frontier scenarios are "deliberately absent" from the matrix — doesn't omitting scenarios from the master record contradict the no-orphans rule?**
+No, because the SRs that FRONT scenarios touch are already covered by in-ODD scenarios, so removing FRONT creates no orphan. They are excluded because they yield a paired M-S5 contrast, not a `fraction_pass` verdict (D-35); folding them in would let an out-of-ODD result veto the in-ODD verdict (D-30). Their evidence lives in manuscript §8.2.2–§8.2.3 and `frontier_contrast.py`, cross-referenced but outside the CSV.
+
+**Q3. The matrix admits three "implementation kinds", including "training constraint" and "arbiter" that are not cage rules — doesn't that weaken the claim that every SR is enforced?**
+It makes the claim *honest*. SR-009 (liveness) and SR-011 (oscillation) cannot be discharged by a reactive rule without violating cage philosophy, and SR-010 is a pipeline property rather than a rule. Labelling the kind (D-25) is more truthful than inventing a cage rule; the verification side still demands a scenario and a metric for each, so the chain is unbroken whatever the implementation kind.
+
+**Q4. You allow a "Partially satisfied" verdict — isn't that a loophole to avoid declaring failure?**
+"Partial" is bounded by a requirement: it holds in most conditions *with documented exceptions plus an impact analysis*. The document commits to defending only "Satisfied" / "Partial" with rigour and to reporting "Not satisfied" honestly in the Limitations chapter. The grade exists because a binary verdict would force either overclaim or the discarding of genuinely useful evidence (e.g. an SR that holds at σ = 0.01 noise but degrades at σ = 0.05).
+
+**Q5. Sim and Phys verdicts are split, and some SRs will have "no Phys verdict by design" — isn't a requirement without physical evidence unvalidated?**
+The split is deliberate and disclosed: an SR verified only in scenarios not exported to the physical subset (`docs/05` Phase-5 subset) carries `out_of_scope` for Phys, not a false pass. The bounded-validation principle (A5 / D-11) means physical evidence characterises the gap on the *exported* subset, not on every SR; which SRs lack Phys evidence is itself recorded, so the limitation is explicit.
+
+**Q6. The Markdown table is hand-summarised but the CSV is generated — how do you guarantee they don't drift?**
+`sync_traceability.py` keeps the two forms in sync and `check_traceability.py` verifies the eight constraints on the CSV; the Markdown is the human view, the CSV the checked artefact. The working rule is single-source-of-truth in the Markdown with re-derivable CSVs that are never hand-edited, so any drift surfaces as a check failure that blocks the next Gate.
+
+--->
+
 ## Change log
 
 See `docs/CHANGELOG.md`.

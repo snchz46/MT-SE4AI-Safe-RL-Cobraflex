@@ -1,7 +1,7 @@
 # DECISIONS.md — Project decision log
 
 <!--
-Status: D9 (Phase 0 close) + F1 audit additions (D-25..D-33) + F3 (D-34) + F4 (D-35).
+Status: D9 (Phase 0 close) + F1 audit additions (D-25..D-33) + F3 (D-34) + F4 (D-35, D-36, D-37).
 Last update: see Git commit date.
 -->
 
@@ -73,6 +73,8 @@ consistent with the chapters.
 | D-33 | Phase 1 ODD-Spec closes 3 of 12 TBDs against the actual `src/` workspace (Q1, Q2, Q3); the remaining 9 are explicitly deferred per phase | §11 of `docs/08_odd_specification.md` | CONFIRMED |
 | D-34 | Cage active in enforcement mode during PPO training (in-process, TS-01) | §7 Training Spec (TS-01) | CONFIRMED |
 | D-35 | Frontier (out-of-ODD) scenario family as a non-verdict-bearing cage-efficacy contrast (M-S5) | `docs/05` (Frontier scenarios); §8.2.2–§8.2.3 | CONFIRMED |
+| D-36 | Seed policy for F4 campaigns: main seed 2024 certifies the D-29/D-30 verdict; cage-dependent seed 123 only in the D-35 frontier contrast, never pooled into the global verdict | §7.5.3 (seed selection); §8.2 (sim-eval campaign) | CONFIRMED |
+| D-37 | F4 realises ODD-1..4 on the single oval world at a fixed-speed (ACT_DIM=1) operating point; ODD-1/2 covered, ODD-3 partial (geometry yes, speed envelope no), ODD-4 deferred | `docs/08` §12; `docs/05` Track mapping; §8 | CONFIRMED |
 
 ---
 
@@ -1194,6 +1196,126 @@ evidence).
 - Reported in manuscript §8.2.2–§8.2.3 as the cage-value evidence. The full 25-rep study
   is pending on the Ubuntu+Jazzy host; a pilot (rep00, seeds 123 & 2024) exists under
   `experiments/sim/campaign_frontier`.
+
+---
+
+### D-36 — Seed policy for F4 campaigns: main seed 2024 certifies the verdict; cage-dependent seed 123 only in the frontier contrast
+
+| Field | Value |
+| --- | --- |
+| Section | §7.5.3 (multi-seed selection); §8.2 (sim-eval campaign); `tools/run_campaign.py` seed axis |
+| Status | CONFIRMED |
+| Date | F4 (08.06.2026) |
+| Planned review | None (campaign-methodology decision) |
+
+**Decision.** The Phase-4 **verdict-bearing campaign** (D-29 run counts → D-30 global
+verdict) is executed with the single G3-selected main policy **seed 2024** as the
+certified configuration. The cage-dependent **seed 123** (58.8 % cage intervention,
+§7.5.3) is run **only** in the D-35 **frontier** cage-efficacy contrast — where the
+per-seed panels require it — and, optionally, in a separately-reported robustness sweep
+with its own `--out` directory. Seed 123 is **never pooled into the D-30 verdict
+aggregation**.
+
+**Alternatives considered and rejected.**
+- *Run both seeds (`--seeds 2024,123`) in the verdict-bearing campaign.* Rejected:
+  `aggregate_campaign` (`tools/run_campaign.py`) groups per-run outcomes by
+  `(scenario, mode)` and pools **all seeds and reps** into one `fraction_pass` per
+  scenario. Seed 123's deliberately cage-dependent behaviour (it relies on the cage for
+  58.8 % of steps) would therefore be averaged into the per-scenario verdict and could
+  drag an SR-CL-A scenario below its pass threshold — vetoing the global verdict (D-30)
+  on the basis of a policy the thesis did **not** select for delivery. The verdict must
+  characterise the *certified* configuration.
+- *Certify with seed 123, or re-open the main-seed choice here.* Rejected: at G3 seed
+  2024 was fixed as the main run (best reward + PPO health; 4/5 seeds
+  constraint-respecting, §7.5.3, Fig 7.8). The campaign executes that decision; it does
+  not re-litigate it.
+- *Drop seed 123 from F4 entirely.* Rejected: the D-35 frontier study is a **per-seed
+  paired contrast** whose entire point is that a cage-dependent policy (123) is rescued
+  by the cage in regimes where a constraint-respecting one (2024) needs no help.
+  `tools/plot_frontier.py` renders one panel per seed and labels 123 explicitly as the
+  "policy dependiente de la cage"; without 123 the cage-benefit figure loses its
+  contrast and reduces to the null-delta objection of §7.5.2.
+
+**Rationale.** Because the aggregator treats seeds and reps interchangeably as
+"independent runs" for the D-29 count, the lever that controls *what the verdict
+certifies* is simply **which seeds enter which campaign**. Keeping the two campaigns on
+disjoint seed sets — verdict = {2024}, frontier = {2024, 123} — preserves the semantics
+that D-30 and D-35 each established: the global verdict is a statement about the
+*delivered* policy+cage system inside its ODD, while the frontier contrast is a separate,
+honest statement about the cage's marginal value for a weak policy beyond it. The
+separation needs no new code — only distinct `--out` directories (`campaign` vs
+`campaign_frontier`), which the repo layout already provides.
+
+**Consequences.**
+- Verdict-bearing campaign: `--controllers rl --seeds 2024 --out experiments/sim/campaign`
+  (the ~1260-run matrix reported by `--dry-run`), feeding the per-SR sim-verdict rows of
+  `docs/07`.
+- Frontier campaign: `--controllers rl --seeds 2024,123 --scenarios SC-FRONT-01..06
+  --reps 25 --out experiments/sim/campaign_frontier`. The two-seed axis makes the
+  realised budget `6 × 25 reps × 2 modes × 2 seeds = 600 runs` (D-35's "300" counted a
+  single seed); the pilot already exercised both arms (rep00, seeds 123 & 2024).
+- Any seed-123 data over the NOM/EDGE/PERT families is run under a separate `--out`
+  (e.g. `experiments/sim/campaign_seed123`) and reported as a **secondary robustness
+  sweep**, never merged into the D-30 aggregation that closes G4.
+- No new H/SR/C/SC/M artefacts and no `traceability_matrix.csv` rows. Cites D-29, D-30,
+  D-34, D-35.
+
+---
+
+### D-37 — F4 realises the ODD-1..4 stratification on a single oval world at a fixed-speed (ACT_DIM=1) operating point
+
+| Field | Value |
+| --- | --- |
+| Section | `docs/08` §12 (single-world reconciliation); `docs/05` Track-mapping note; manuscript §8 / §1.6.3 / Cap. 11 |
+| Status | CONFIRMED |
+| Date | F4 (08.06.2026) |
+| Planned review | F5 (physical ODD), or when a variable-speed `ACT_DIM=2` policy is trained |
+
+**Decision.** The F4 **simulation** evaluation realises all four ODDs on the single oval
+world `lane_following_oval.world` (preset `oval_R080`; *Option A* of the `docs/05`
+Track-mapping note) at **one operating point** — fixed forward speed **0.2 m/s**,
+**steering-only** action (`ACT_DIM = 1`), 6-dim observation, no obstacles. **ODD-1 and
+ODD-2** are claimed **covered** (with the geometry/observation caveats of §12.2); **ODD-3**
+is **partial** — its curve geometry is exercised (SC-NOM-02/03) but its defining
+2-dimensional curvature-dependent speed envelope (`v_max(κ)`, `ODD-3.V_MAX_CURVE`) is not;
+**ODD-4** (adverse × curvy) is **not exercised** (no scenario combines a curve start with
+an adverse stressor). The ODD-spec parameters are **not** rewritten; `docs/08` §12 records
+the evaluated subset and its gaps (append-only).
+
+**Alternatives considered and rejected.**
+- *Two worlds — ODD-1/2 on the dedicated straight, ODD-3/4 on the oval, as the spec
+  geometry implies.* Rejected: the F3 policy and the F2 PD baseline were trained and
+  validated on the oval only; a second world forces a parallel training+eval pipeline and
+  breaks the RL↔PD comparison on identical geometry (Option A). The straight world is
+  reserved for the F5 physical subset.
+- *Descope ODD-3/ODD-4 to future work entirely.* Rejected: F4 does exercise the oval's
+  curve geometry under the cage (SC-NOM-02 curve entry, SC-NOM-03 full loop), so a blanket
+  descope understates the evidence. The honest position is ODD-3 partial + ODD-4 deferred,
+  with the speed-envelope gap named.
+- *Rewrite the ODD-spec numbers (ROAD_LENGTH, ACT_DIM, V_MAX) to match the oval operating
+  point.* Rejected: `docs/08`'s own convention (§1 TEACHER NOTE) requires numerical
+  authority to flow spec → evidence; editing the spec to fit the campaign would invert that
+  and silently change the thresholds that SR-001 / SR-004 and Cage Rule C-04 cite.
+
+**Rationale.** The ODD-spec defines the *intended* domain; the campaign samples a
+sub-region of it. Conflating the two would either overstate coverage (claiming the 2-dim
+ODD-3 envelope is validated) or corrupt the upstream thresholds. An append-only
+reconciliation (§12) keeps the spec authoritative and the F4 coverage auditable — the same
+honesty pattern as D-11 (bounded validation + explicit gap) and D-33 (TBDs closed/deferred
+explicitly). The single-world choice is itself the RL↔PD-comparability decision (Option A);
+D-37 records what that choice costs in ODD coverage so the G4 reviewer sees it stated, not
+inferred.
+
+**Consequences.**
+- `docs/08` gains §12 (append-only): the ODD→oval realisation table (§12.1) and the
+  declared coverage gaps (§12.2). Version 0.5 → 0.6. **No ODD parameter value changes.**
+- The manuscript's ODD-coverage claim (Cap. 8) must read ODD-1/2 covered, ODD-3 partial,
+  ODD-4 deferred, and report the fixed-speed / single-world gaps in Limitations
+  (§1.6.3 / Cap. 11). *(Manuscript edit pending — see follow-up.)*
+- A variable-speed (`ACT_DIM = 2`) policy that closes the ODD-3/ODD-4 speed envelope, and
+  an adverse-curvy scenario for ODD-4, are future work (F5+).
+- No new H/SR/C/SC/M artefacts and no `traceability_matrix.csv` rows. Cites D-11, D-33,
+  D-34, D-35, D-36.
 
 ---
 

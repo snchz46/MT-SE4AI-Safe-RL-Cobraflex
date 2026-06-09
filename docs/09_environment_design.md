@@ -245,6 +245,72 @@ real action distribution after the first prototype. If cadence matters,
 
 ---
 --->
+## 10. Track E — end-to-end camera observation variant (D-38 / D-39)
+
+> Parallel track 'E' (branch `e2e-camera`). This section specifies how the F3
+> environment above changes for the **end-to-end front-camera** policy. Everything
+> not listed here is **unchanged** — that minimal delta is the point of D-39.
+
+**What changes: the observation only.** ED-1 rejected an image observation *for F3*
+(to keep RL↔PD comparable and isolate perception). **D-38 supersedes that choice for
+track 'E'**: the observation becomes the front-camera image; the policy *learns*
+perception.
+
+```text
+obs    = front-camera frame      (Box, uint8, shape (H, W, C); provisional H=W=84, C=1 grayscale or 3 RGB)
+action = [steering]              (UNCHANGED: Box float32 dim 1; fixed speed 0.2 m/s)
+```
+
+- **Policy network:** a CNN feature extractor (SB3 `CnnPolicy`, or a custom
+  `BaseFeaturesExtractor`) replaces the MLP over the 6-dim vector. The
+  curvature-preview scalars (`kappa_near/far`, ED-7) are **not** in the obs — the
+  policy must infer bend geometry from the image (the harder perception problem D-38
+  accepts; budget the larger training set, Shalev-Shwartz & Shashua 2016).
+- **Frame stacking** (e.g. `VecFrameStack`, k=2–4) to recover the velocity/rate
+  cues a single frame loses — fixed at E-design (GE0/GE1).
+
+**What does NOT change.**
+
+- **Action / actuation** (§3, §6): steering-only, fixed speed, same `cmd_vel` mapping.
+- **Reward** (`docs/10`): computed on ground-truth state + progress, hence
+  **observation-agnostic** → carries over unchanged (smoothness term still on the raw
+  policy steering delta).
+- **Cage:** `SafetyCageNode` still consumes the ground-truth-projected state from
+  `PolylineTracker(/odom_truth)`, **not the camera** (D-39). The cage's inputs are the
+  F3 inputs byte-for-byte; only the *policy*'s input changed. This is what keeps the
+  cage independent across the architecture change, and `ey/epsi/speed` stay available
+  as a **privileged** signal for the cage and the reward.
+- **Reset / episode / termination** (§5).
+
+**Visual-degradation stressors (SC-PERT-04..06 → SR-012 → H-10).** Applied to the
+**camera frame** (the observation) before it reaches the policy — glare/over-exposure,
+low-light/under-exposure, motion blur, contrast/shadow — and **never** to the cage's
+state. The pure transforms live in `cobraflex_rl/visual_degradation.py` (numpy,
+host-testable); the Gazebo camera plug-in and the runtime injector are the Ubuntu part.
+Domain randomisation over the same envelope is the training-side mitigation of H-10.
+
+**Perception loss (SC-PERT-07 → SR-013 → H-11).** A perception-health monitor
+(occlusion / absent features / frame stale-or-dropped beyond `perc_staleness_max`)
+raises the C-05 perception-health trigger (Trigger 8, `docs/04`) → controlled safe
+state. The monitor logic is host-testable (`cobraflex_rl/perception_health.py`); the
+camera subscription is the Ubuntu part.
+
+**Independent state for the cage.** In simulation the independent state is the
+privileged ground truth (already used in F3). For E-physical a robust independent
+estimator is required (deferred, cf. D-39).
+
+**What needs Ubuntu (deferred).** The Gazebo front-camera sensor (URDF/SDF) + image
+topic, the camera observation bridge in `gazebo_lane_env`, the CNN training run, and
+the runtime degradation/loss injectors. The host-side pieces (the two pure modules
+above, this design) come first.
+
+**Traceability.** Spec: this §10 + Training Spec (E-design, pending). Decisions: D-38,
+D-39 (supersedes ED-1 for track 'E'); D-34 (cage in enforcement during training)
+carries over. Safety: SR-012, SR-013. Code (host): `visual_degradation.py`,
+`perception_health.py`; (Ubuntu): camera bridge in `gazebo_lane_env.py`.
+
+---
+
 ## Version log
 
 - **v0.1 (2026-05-29):** first freeze, consistent with the TS-01 cage wiring
@@ -254,3 +320,7 @@ real action distribution after the first prototype. If cadence matters,
   and the random spawn perturbation marked **implemented** (§7.3,
   `train_ppo.yaml`). Design rationale unchanged; numeric values realigned to the
   Training Specification.
+- **v0.3 (2026-06-09):** added §10 (Track E — end-to-end camera observation variant,
+  D-38/D-39): the observation becomes the front-camera image (CNN policy), while the
+  action, reward, cage (on independent ground-truth state) and episode logic are
+  unchanged. F-track design (v0.2) untouched.

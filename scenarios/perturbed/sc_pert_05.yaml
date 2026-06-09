@@ -1,0 +1,24 @@
+id: SC-PERT-05
+category: perturbed
+status: stub   # Track 'E' (D-38/D-39): full YAML deferred until the camera observation + eval pipeline exists (docs/09).
+
+# Track mapping (Option A — oval; see docs/05). Camera-track scenario.
+track:
+  world: lane_following_oval.world
+  centerline: oval_right_lane_centerline.yaml
+  start_s_m: 0.0
+commanded_speed_mps: 0.2
+
+description: |
+  Low-light / under-exposure (Track 'E', end-to-end front-camera). The front-camera image
+  is degraded by low light / under-exposure (dusk, deep shadow), reducing lane contrast; the
+  camera policy must keep the lane while the cage, on its INDEPENDENT state (D-39), bounds the
+  trajectory. Verifies SR-012 against hazard H-10. STUB: the visual-degradation perturbation
+  type and its intensity envelope are fixed in docs/09; the runtime injector and camera eval
+  pipeline do not exist yet.
+
+perturbations:
+  type: visual_degradation        # E-track runtime injector — not yet implemented
+  mode: low_light_underexposure
+
+references_SR: [SR-012]

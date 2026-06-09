@@ -305,6 +305,61 @@ The emergency mode is characterised by:
 
 ---
 
+## SR-012 — Lane-keeping under degraded visual input
+
+> **Track 'E' (end-to-end front-camera), decisions D-38 / D-39.** Mitigates the
+> camera-perception hazard H-10. Realised by the *independent-state* cage plus a training
+> constraint — the cage never reads the camera.
+
+**Statement.** Under the operational ODD, when the front-camera image is degraded within the specified visual-degradation envelope (glare / exposure, motion blur, low contrast, shadow), the vehicle's lateral offset and heading error shall remain within the SR-001 / SR-002 envelopes (`|d| ≤ d_max` and `|θ| ≤ θ_max`) at every time step during autonomous operation. A degraded percept shall not produce a lane- or heading-limit breach.
+
+**Pattern.** Direct threshold (under a perception-degradation stressor).
+
+**Parameters.**
+
+- `d_max = 0.16 m` (reused from SR-001) and `θ_max = 25°` (reused from SR-002) — the safe envelope is unchanged; SR-012 asserts it holds *under the visual stressor*.
+- **Visual-degradation envelope** — the specific intensities of glare/exposure, motion blur, contrast reduction and shadow that the policy must tolerate. **Provisional, defined in the E-track scenario set (SC-PERT-04..06) and the E-training augmentation spec** (`docs/09`, deferred): the numeric envelope is fixed when the camera observation and domain-randomisation ranges are designed.
+
+**References hazard.** H-10.
+
+**Implemented by.** C-01 (lane boundary hard limit), C-02 (heading error limit), C-03 (predictive TTLC) — the independent-state cage (D-39) — **and** a *training constraint* (visual-domain augmentation / randomisation so the camera policy is robust across the degradation envelope).
+
+**Verified by scenarios.** SC-PERT-04, SC-PERT-05, SC-PERT-06.
+
+**Verifying metric.** M-S1 (max lateral offset) and M-S2 (boundary violations).
+
+**Satisfaction criterion.** Across all runs of the verifying scenarios in enforcement mode, M-S1 shall not exceed `d_max` in any time step and M-S2 shall be 0. In monitoring mode the cage-off boundary-violation rate quantifies the perception-induced risk the cage absorbs (the cage-value contrast under a perception stressor).
+
+---
+
+## SR-013 — Safe degradation on loss of valid perception
+
+> **Track 'E' (end-to-end front-camera), decisions D-38 / D-39.** Mitigates H-11. The
+> perception-health signal is consumed by the cage as an external C-05 trigger, so the cage
+> stays camera-agnostic — the camera-side analogue of SR-007's state-validity triggers.
+
+**Statement.** When the policy's perception of the lane becomes invalid — a perception-health signal indicates occlusion, absent lane features, or camera frames stale / dropped beyond `perc_staleness_max` — the system shall enter a controlled safe state (emergency-mode deceleration to a full stop with steering frozen, per C-05) within one control cycle of the condition being confirmed, and shall not exceed lateral offset `d_max` during the manoeuvre.
+
+**Pattern.** Availability + emergency mode (the camera-input analogue of SR-007).
+
+**Parameters.**
+
+- `perc_staleness_max = 200 ms` (4 control cycles at 20 Hz) — **provisional**, mirrored from SR-007's `staleness_max`; calibrated at E-integration once the camera frame rate and perception latency are measured.
+- **Perception-health signal definition** (confidence threshold / minimum lane-feature count / frame-staleness) — **provisional, part of the E-perception spec** (`docs/09`, deferred).
+- `d_max = 0.16 m` (same as SR-001).
+
+**References hazard.** H-11.
+
+**Implemented by.** Part of C-05 (emergency mode) — triggered by a perception-health supervisor whose signal the cage consumes as an external C-05 trigger, keeping the cage itself independent of the camera (D-39), exactly as SR-007 / SR-008 extend C-05's trigger set.
+
+**Verified by scenarios.** SC-PERT-07.
+
+**Verifying metric.** M-S3 (emergency stop rate and behaviour).
+
+**Satisfaction criterion.** In every run where the perception-loss condition is induced, the controlled safe state activates within one control cycle of confirmation; once active, the deceleration is at least `a_min`, the steering remains frozen, and the lateral offset never exceeds `d_max` during the stop.
+
+---
+
 ## Machine-readable Safety Requirements Table
 
 The **Criticality** column carries the SR criticality class (SR-CL-A/B/C) defined by the rubric in manuscript ch.4 §4.7 (decision D-28). It is emitted into `docs/data/safety_requirements.csv` by `tools/sync_safety_requirements.py` and consumed by the F4 verdict aggregation (D-29 run-count gate, D-30 SR-CL-A veto).
@@ -322,6 +377,8 @@ The **Criticality** column carries the SR criticality class (SR-CL-A/B/C) define
 | SR-009 | Minimum forward progress (liveness) | Liveness | H-08 | training | SR-CL-B | SC-NOM-01, SC-NOM-02, SC-NOM-03, SC-PERT-03 | M-P6, M-S2 (monitoring) | Open | Δs_min = 0.10 m / t_window = 2.0 s / Δt_settle = 1.0 s |
 | SR-010 | Cage rule composition consistency | Operational envelope + bounded oscillation | H-09 | arbiter | SR-CL-B | SC-EDGE-04, SC-EDGE-05 | M-S2, M-I3 | Open | Joint-envelope assertion + f_osc_max = 5 Hz |
 | SR-011 | Heading stability without sustained oscillation | Bounded variance | H-02 | C-06 + training | SR-CL-B | SC-EDGE-01, SC-EDGE-04 | M-P7 | Open | σ_θ_max = 5°, t_psd = 1.0 s |
+| SR-012 | Lane-keeping under degraded visual input | Direct threshold (visual-degradation stressor) | H-10 | C-01, C-02, C-03 + training | SR-CL-A | SC-PERT-04, SC-PERT-05, SC-PERT-06 | M-S1, M-S2 | Open | Track 'E'; d_max/θ_max reused; cf. D-38, D-39 |
+| SR-013 | Safe degradation on loss of valid perception | Availability + emergency mode | H-11 | C-05 (perception-health trigger) | SR-CL-A | SC-PERT-07 | M-S3 | Open | Track 'E'; perc_staleness_max provisional; cf. D-39 |
 
 ---
 

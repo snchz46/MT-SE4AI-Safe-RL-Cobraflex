@@ -273,6 +273,64 @@ Two further STPA-informed design findings sit outside the standard UCA grid and 
 
 ---
 
+## H-10 — Lane misperception under degraded visual input
+
+> **Track 'E' (end-to-end front-camera), decisions D-38 / D-39.** This hazard exists
+> because the policy's input becomes the camera image (it learns perception). It does not
+> apply to the F-track, whose policy consumes a hand-built state vector.
+
+**Description.** The camera-based policy produces an erroneous lane/pose estimate because the front-camera image is degraded — glare / over-exposure, under-exposure / low light, motion blur, low contrast, or strong shadows — and therefore computes its steering command from a wrong perception of the lane. The cage's *independent* state estimate (D-39) is unaffected; only the policy's percept is wrong.
+
+**Consequence (analogue real-vehicle interpretation).** The vehicle acts on a misread lane, accumulating lateral offset or heading error and escalating into H-01 / H-02; on a real road, departure into adjacent traffic.
+
+**Consequence (scaled context).** Loss of track-following; physical contact with track edges.
+
+**Hypothesised root causes.**
+
+- Lighting conditions outside the policy's training distribution (sun glare, deep shadow, dusk).
+- Motion blur and rolling-shutter artefacts at speed.
+- Camera auto-exposure lag after an abrupt brightness change.
+- Reflections / specular highlights washing out lane features.
+
+**Rating.** S=3, E=3, C=2, Criticality=High.
+
+**Rating rationale.** S=3 follows the analogue convention (acting on a misread lane is a lane-exit hazard, as H-01). E=3 ("medium", 10–50 %): for a camera-driven system, visually-degrading conditions (glare, shadow transitions, exposure changes, blur at speed) occur in a large fraction of operating time — they are the norm, not the exception. C=2 is conditional on the **independent-state cage** intercepting the resulting trajectory error: C-01/C-02 bound lateral offset and heading, and C-03 fires preemptively on TTLC — all computed on state the camera degradation does not touch (D-39). Without a valid independent state the controllability would degrade, but that condition is H-06 (the cage's own state pipeline), a distinct hazard.
+
+**Mitigated by.** SR-012 (lane-keeping under degraded visual input), realised by the existing independent-state cage (C-01, C-02, C-03) **and** a training constraint (visual-domain augmentation / randomisation during E-training).
+
+**STPA-light findings.** Treated by analogy with H-01's steering-action pass: a degraded percept manifests as UCA3 (corrective steering of inappropriate magnitude) and UCA4 (correction at the wrong time), both driven by a wrong input rather than a defective control law. The mitigation is identical in spirit to H-01 — do not trust the percept; bound the resulting trajectory on the independent cage state (C-01 at the boundary, C-03 preemptively).
+
+---
+
+## H-11 — Loss of valid lane perception
+
+> **Track 'E' (end-to-end front-camera), decisions D-38 / D-39.** Distinct from H-06: H-06
+> is the *cage's* independent state becoming invalid; H-11 is the *policy's camera input*
+> becoming invalid while the cage's independent state remains valid.
+
+**Description.** The camera-based policy loses a valid lane reference entirely — lane markings occluded (debris, glare wash-out, severe shadow), absent (worn or missing paint), or the camera signal drops, freezes, or arrives with excessive latency — so the policy has no trustworthy basis for its action.
+
+**Consequence (analogue real-vehicle interpretation).** Policy commands become arbitrary; absent a safe fallback, an undefined and potentially high-energy trajectory.
+
+**Consequence (scaled context).** Loss of track-following; the platform acts on a blind percept.
+
+**Hypothesised root causes.**
+
+- Occlusion of the lane by debris, another object, or a cast shadow.
+- Absent or worn lane features the policy was never trained to handle.
+- Camera dropout, frozen frames, or frame latency beyond the control budget.
+- Total wash-out under extreme glare or darkness.
+
+**Rating.** S=3, E=2, C=2, Criticality=High.
+
+**Rating rationale.** S=3 follows the analogue convention (an arbitrary command on a blind percept can produce a high-energy lane exit). E=2 ("low", 1–10 %): total loss of valid perception is rarer than degradation (cf. H-10's E=3) — it arises occasionally through occlusion events or signal dropout rather than continuously. C=2 is conditional on two layers: (a) the independent-state cage still bounding the trajectory (D-39), and (b) a **perception-health supervisor** detecting the loss and commanding a controlled safe state (SR-013 → C-05). Without detection, controllability collapses to C=3.
+
+**Mitigated by.** SR-013 (safe degradation on loss of valid perception), realised by a perception-health supervisor that raises the existing C-05 emergency trigger, keeping the cage itself camera-agnostic (D-39).
+
+**STPA-light findings.** Treated by analogy with H-04: when perception is invalid, **all** policy commands are untrustworthy by definition, so the four UCA categories collapse — the mitigation is not to tweak a command but to substitute it entirely with a deterministic controlled safe state (C-05 via the perception-health supervisor), exactly as H-04 substitutes rather than modifies.
+
+---
+
 ## Machine-readable Hazard Table
 
 | Hazard ID | Description | Severity | Mitigation | implementation_type | Status | Notes |
@@ -286,6 +344,8 @@ Two further STPA-informed design findings sit outside the standard UCA grid and 
 | H-07 | Inability to perform a controlled stop | S3/E1/C1 - High | SR-005, SR-008 | C-05 | Open | Emergency stop behaviour |
 | H-08 | Progress stall via reward exploitation | S2/E3/C2 - Medium-High | SR-009 | training | Open | Policy convergence to inaction equilibrium |
 | H-09 | Cage rule conflict | S3/E1/C2 - Medium | SR-010 | arbiter | Open | Composition hazard across C-01..C-06 |
+| H-10 | Lane misperception under degraded visual input | S3/E3/C2 - High | SR-012 | C-01, C-02, C-03 + training | Open | Track 'E' (camera); cf. D-38, D-39 |
+| H-11 | Loss of valid lane perception | S3/E2/C2 - High | SR-013 | C-05 (via perception-health supervisor) | Open | Track 'E' (camera); distinct from H-06 (cage state), cf. D-39 |
 
 ---
 
@@ -296,6 +356,8 @@ The STPA-light pass covers H-01, H-02 and H-04, where the unsafe-control-action 
 Hazards H-03, H-05, H-06 and H-07 are not analysed with STPA because their causal structure is sufficiently localised (speed ceiling, rate limiter, state-validity triggers and stop mechanism respectively) that the additional perspective produces no new actionable insight beyond what the HARA-derived SRs already capture. H-08 is also outside STPA scope: it is a training-time convergence pathology rather than a runtime control-action defect, so the UCA categories do not apply (see rationale in §H-08). H-09 is registered as a *composition* hazard whose treatment is at the cage-architecture level (priority ordering, arbiter, convergence guarantee) rather than at the per-UCA level; see rationale in §H-09.
 
 The systematic pass does not introduce new cage rules: it produces additional confidence in the existing design and refinements of the SR rationale (notably the Δt_max persistence requirement and the asymmetric reset for emergency mode), both of which are now incorporated into the rationale of SR-005 in the SRS.
+
+**Track 'E' addendum (D-38).** The camera-perception hazards H-10 and H-11 are treated by analogy rather than by a fresh four-UCA enumeration: H-10 mirrors H-01's steering-action pass (a wrong percept produces UCA3/UCA4 corrections, mitigated by bounding the trajectory on the *independent* cage state, D-39), and H-11 mirrors H-04's collapse-to-substitution (invalid perception ⇒ all policy commands untrustworthy ⇒ controlled safe state via C-05). Neither introduces a new cage rule; see §H-10 and §H-11.
 
 ## Open hazards under consideration
 

@@ -55,6 +55,12 @@ Operational Validation, which classically lives at the top right of the V, is sp
 
 The output of A5 is not a single "validated" verdict but a pair of statements: what the simulation evidence supports, and how that evidence transfers to the physical setup with which gap.
 
+## Parallel track E — end-to-end front-camera variant
+
+A second, parallel development cycle — **track 'E'** (decision D-38) — re-traverses the left arm of this adapted V-Model for an **end-to-end front-camera** instantiation of the lane-following function: the learned policy maps the front-camera image directly to the action (it *learns* perception), superseding the F-track's modular perception → state-vector front-end (D-01, now superseded). Track 'E' lives on branch `e2e-camera`, numbers its phases/gates **E0..E6 / GE0..GE6** (commit prefix `E2:`, see `docs/01`), and runs independently of the main F-track without invalidating its frozen F2/F3/F4 evidence.
+
+The five adaptations (A1–A5) and the bidirectional-traceability spine (A4) carry over unchanged. The reason they survive an end-to-end *policy* is that the **safety cage stays modular and independent** (decision D-39): it evaluates C-01..C-06 over an independent state estimate, never over the camera. Pixels enter the policy but not the safety envelope, so A1 (Cage Spec ≠ Training Spec), A2 (independently-verifiable cage) and A4 (traceability) remain viable. Track 'E' extends the shared registers with camera-perception hazards (H-10, H-11), their safety requirements (SR-012, SR-013) and verifying scenarios (SC-PERT-04..07), reusing the existing cage rules and metrics.
+
 ## Mapping to thesis chapters
 
 | V-Model level (adapted) | Thesis chapter |  

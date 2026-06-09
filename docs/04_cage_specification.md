@@ -49,6 +49,10 @@ The cage is a dedicated ROS2 node, distinct from the policy node. Its interface:
 
 The mode is set by a launch parameter and recorded in the metadata of every run.
 
+### Track-E note — cage independence from the camera (D-39)
+
+On the parallel **track 'E'** (end-to-end front-camera policy, decision D-38) the cage's inputs are **unchanged**: it still reads `/state_obs` (the *independent* state estimate — its own pipeline, or privileged simulation ground-truth) and `/raw_action`, and **never the camera image**. Track 'E' moves perception *into the policy* (`/raw_action` becomes a function of pixels), but the cage continues to evaluate C-01..C-06 over independent state — pixels enter the policy, not the safety envelope. This preserves the A2 "independently-verifiable cage" property across the architecture change and keeps **H-06** (invalid *cage* state) distinct from **H-11** (invalid *camera* perception). The two camera-perception SRs are realised **without a new cage rule**: SR-012 (degraded vision) by the existing C-01/C-02/C-03 + a training constraint, and SR-013 (perception loss) by an external **perception-health supervisor** that raises a C-05 emergency trigger (Trigger 8 below).
+
 ## Rules
 
 The cage implements six rules, C-01 through C-06. Each rule is an independent module under `cage/rules/`. The full rule code is in `cage/rules/cXX_<name>.py`; the specification below is the source of truth for what that code must implement.
@@ -163,8 +167,8 @@ if v > v_ceiling:
 
 ### C-05 Emergency mode
 
-**Implements.** SR-005, SR-007, SR-008.
-**Mitigates.** H-04, H-06, H-07.
+**Implements.** SR-005, SR-007, SR-008, SR-013 (SR-013 on track 'E' only — see Trigger 8).
+**Mitigates.** H-04, H-06, H-07, H-11 (H-11 on track 'E').
 **Type.** Trigger-based (procedural safety).
 
 **Triggers (any of these activates emergency mode):**
@@ -176,8 +180,9 @@ if v > v_ceiling:
 5. Missing state: no `/state_obs` received for `N_missing_max` consecutive cycles.
 6. External stop: `/external_stop` signal received.
 7. Joint-envelope assertion failure (see §Joint-envelope assertion below).
+8. (Track 'E', D-38 / D-39) Perception-health invalid: an external perception-health supervisor signals loss of valid camera perception — occlusion, absent lane features, or camera frames stale / dropped beyond `perc_staleness_max`. Implements SR-013, mitigates H-11. The supervisor is **external to the cage**, so the cage itself stays camera-agnostic; it raises this trigger exactly as `/external_stop` raises Trigger 6.
 
-**Implementation status (cage YAML 0.5.1).** Triggers 1–6 are implemented in [cage/rules/c05_emergency.py](../cage/rules/c05_emergency.py); Triggers 1–4 and 6 are exercised by [test_c05_emergency.py](../cage/tests/test_c05_emergency.py) and Triggers 2 and 5 by [test_c05_triggers_extended.py](../cage/tests/test_c05_triggers_extended.py). Trigger 5 (missing state) is fed by the cage_node-level counter in [cage/cage_node.py](../cage/cage_node.py) (`_cycles_since_last_state`), verified by [test_cage_node_missing_state.py](../cage/tests/test_cage_node_missing_state.py). The inter-cycle oscillation check (SR-010 Part 2) is also implemented in `cage_node` (per-rule signed-correction history, sliding-window alternation rate, persistence timer) and surfaces as an additional `oscillation_detected` trigger of C-05; coverage in [test_oscillation.py](../cage/tests/test_oscillation.py). Version 0.5.1 fixes the oscillation-window reset bug observed when simulation time restarted between ROS launches. Trigger 7 (joint-envelope assertion, SR-010 Part 1) is **deferred**: it requires a per-rule `safe_envelope_predicate_holds(state, action) -> bool` method that does not yet exist on the rule contract.
+**Implementation status (cage YAML 0.5.1).** Triggers 1–6 are implemented in [cage/rules/c05_emergency.py](../cage/rules/c05_emergency.py); Triggers 1–4 and 6 are exercised by [test_c05_emergency.py](../cage/tests/test_c05_emergency.py) and Triggers 2 and 5 by [test_c05_triggers_extended.py](../cage/tests/test_c05_triggers_extended.py). Trigger 5 (missing state) is fed by the cage_node-level counter in [cage/cage_node.py](../cage/cage_node.py) (`_cycles_since_last_state`), verified by [test_cage_node_missing_state.py](../cage/tests/test_cage_node_missing_state.py). The inter-cycle oscillation check (SR-010 Part 2) is also implemented in `cage_node` (per-rule signed-correction history, sliding-window alternation rate, persistence timer) and surfaces as an additional `oscillation_detected` trigger of C-05; coverage in [test_oscillation.py](../cage/tests/test_oscillation.py). Version 0.5.1 fixes the oscillation-window reset bug observed when simulation time restarted between ROS launches. Trigger 7 (joint-envelope assertion, SR-010 Part 1) is **deferred**: it requires a per-rule `safe_envelope_predicate_holds(state, action) -> bool` method that does not yet exist on the rule contract. Trigger 8 (perception-health, track 'E') is **deferred** to the E-track: it requires the external perception-health supervisor node, not yet built (cf. D-39).
 
 **On activation:**
 

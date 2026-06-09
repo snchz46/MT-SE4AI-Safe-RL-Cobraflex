@@ -31,6 +31,45 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [09.06.2026] — E2: Track 'E' scaffolding (end-to-end front-camera) — D-38/D-39, H-10/H-11, SR-012/013, SC-PERT-04..07
+
+**Document(s) affected:** `docs/00`, `docs/01`, `docs/02`, `docs/03`, `docs/04`, `docs/05`, `docs/07`, `docs/DECISIONS.md`; `docs/data/hazard_register.csv` + `docs/data/safety_requirements.csv` (regenerated); `manuscript/chapters/chapter_04_*`; `scenarios/perturbed/sc_pert_04..07.yaml` (new stubs); `policy/tests/test_verdict_aggregation.py` (count).  
+**Phase:** E0 (parallel track; branch `e2e-camera`).  
+**Gate context:** track entry, before GE0. The main F-track (F4 → G4) is unaffected.  
+**Author:** Samuel.  
+
+### Change
+
+Opened the parallel **track 'E'** for an end-to-end front-camera lane-following variant and scaffolded its left-arm artefacts (HARA → SRS → Cage → scenarios):
+
+- **Decisions:** D-38 (open track 'E'; phases `E0..E6` / gates `GE0..GE6`; commit prefix `E2:`; **supersedes D-01**) and D-39 (the cage stays on an *independent* state estimate, not the camera). D-01 status → SUPERSEDED by D-38.
+- **Numbering:** E-phase/gate scheme added to `docs/01`; "Parallel track E" section added to `docs/00`.
+- **Hazards:** H-10 (lane misperception under degraded visual input) and H-11 (loss of valid lane perception) in `docs/02` + machine-readable table + STPA scope addendum.
+- **SRs:** SR-012 (lane-keeping under degraded visual input → C-01/C-02/C-03 + training) and SR-013 (safe degradation on loss of valid perception → C-05 via a perception-health supervisor) in `docs/03` + table.
+- **Cage:** `docs/04` cage-independence note (D-39) and C-05 Trigger 8 (perception-health, deferred). C-01..C-06 reused unchanged — **no new cage rule**.
+- **Scenarios:** SC-PERT-04..07 (glare, low-light, motion-blur, occlusion/perception-loss) documented in `docs/05` + **stub** YAMLs under `scenarios/perturbed/` (reuse the PERT family — no schema/`RX_SC` change).
+- **Matrix / manuscript:** H-10/H-11 rows added to `docs/07`; `chapter_04` hazard/SR tables mirrored.
+
+### Rationale
+
+The camera→action variant is a second instantiation of the SE4AI method on a harder perception problem and a full new left-arm cycle, so it is isolated on its own branch + phase numbering with the F-track evidence frozen. The supersession of D-01 is safe because the **modular cage is retained** (D-39): pixels enter the policy, never the safety envelope, so framework adaptations A1/A2/A4 stay viable. The new hazards are functional sensor/environment perception failures — narrower than D-31's still-excluded non-functional AI families — and the cage's independence keeps H-06 (cage state) distinct from H-11 (camera perception).
+
+### Impact
+
+- Shared global ID space extended: H-10/H-11, SR-012/SR-013, SC-PERT-04..07. CSVs regenerated via `tools/sync_hazard_register.py` + `tools/sync_safety_requirements.py`.
+- `policy/tests/test_verdict_aggregation.py` SR-CL-A count updated 7 → 9 (the two new track-'E' SRs are SR-CL-A).
+- SC-PERT-04..07 are stubs (skipped by `run_campaign.build_matrix`), so the F-track verdict-bearing campaign budget is unchanged.
+- **Deferred to later E-phases:** camera observation / CNN env design (`docs/09`), reward (`docs/10`), Gazebo camera sensor + perception node + perception-health supervisor, PPO retraining, un-stubbing SC-PERT-04..07.
+- **Follow-ups pending:** manuscript §3.5.1 (record the D-01 supersession + retained-cage argument); `tools/traceability_matrix.csv` (hand-maintained granular matrix) left unchanged — already partial (missing H-08/H-09) — track-E rows deferred to a matrix-reconciliation pass.
+
+### Verification
+
+- `python tools/check_traceability.py` → **All checks PASSED, 0 warnings** (11 hazards H-01..H-11; 13 SRs SR-001..SR-013; 21 scenarios incl. SC-PERT-04..07; constraints 1–8 OK).
+- `python tools/check_scenario_yaml.py` → PASSED, 4 warnings (SC-PERT-04..07 explicit stubs).
+- `pytest` (root) → **307 passed**.
+
+---
+
 ## [08.06.2026] — F4: Anticipated defense questions added to docs 00–08
 
 **Document(s) affected:** `docs/00`–`docs/08` (new "Anticipated defense questions" section in each; `docs/08` as new §13).  

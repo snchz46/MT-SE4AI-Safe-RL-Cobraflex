@@ -1,7 +1,7 @@
 # DECISIONS.md — Project decision log
 
 <!--
-Status: D9 (Phase 0 close) + F1 audit additions (D-25..D-33) + F3 (D-34) + F4 (D-35, D-36, D-37).
+Status: D9 (Phase 0 close) + F1 audit additions (D-25..D-33) + F3 (D-34) + F4 (D-35, D-36, D-37) + E-track (D-38 supersedes D-01, D-39).
 Last update: see Git commit date.
 -->
 
@@ -43,7 +43,7 @@ consistent with the chapters.
 
 | ID | Title | Chapter / Section | Status |
 | --- | --- | --- | --- |
-| D-01 | No *end-to-end* architecture for the integration of the RL *policy* | §3.5.1 (additional motivation in §3.4) | CONFIRMED |
+| D-01 | No *end-to-end* architecture for the integration of the RL *policy* | §3.5.1 (additional motivation in §3.4) | SUPERSEDED by D-38 |
 | D-02 | Three chained hypotheses (H1, H2, H3) | §1.3 | CONFIRMED |
 | D-03 | Seven specific objectives (OE1–OE7) with 1:1 mapping to chapters | §1.4 | CONFIRMED |
 | D-04 | Bounded scope: SAE Level 2, single *lane-following* case, controlled track | §1.6 | CONFIRMED |
@@ -75,6 +75,8 @@ consistent with the chapters.
 | D-35 | Frontier (out-of-ODD) scenario family as a non-verdict-bearing cage-efficacy contrast (M-S5) | `docs/05` (Frontier scenarios); §8.2.2–§8.2.3 | CONFIRMED |
 | D-36 | Seed policy for F4 campaigns: main seed 2024 certifies the D-29/D-30 verdict; cage-dependent seed 123 only in the D-35 frontier contrast, never pooled into the global verdict | §7.5.3 (seed selection); §8.2 (sim-eval campaign) | CONFIRMED |
 | D-37 | F4 realises ODD-1..4 on the single oval world at a fixed-speed (ACT_DIM=1) operating point; ODD-1/2 covered, ODD-3 partial (geometry yes, speed envelope no), ODD-4 deferred | `docs/08` §12; `docs/05` Track mapping; §8 | CONFIRMED |
+| D-38 | Track 'E' (parallel, end-to-end front-camera): **supersedes D-01**; camera→action policy behind a retained modular cage; phases E0..E6 / gates GE0..GE6, commit prefix `E2:` | `docs/00`; `docs/01`; §3.5.1 | CONFIRMED |
+| D-39 | Track 'E' cage operates on an independent state estimate, not the camera (preserves cage independence; distinguishes H-06 cage-state from H-11 camera-perception) | `docs/04`; `docs/02` | CONFIRMED |
 
 ---
 
@@ -85,7 +87,7 @@ consistent with the chapters.
 | Field | Value |
 | --- | --- |
 | Section | §3.5.1 (additional motivation in §3.4) |
-| Status | CONFIRMED |
+| Status | SUPERSEDED by D-38 (camera track adopts a camera→action policy behind the retained modular cage) |
 | Date | D9 (Phase 0) |
 | Planned review | None (foundational architectural decision) |
 
@@ -1316,6 +1318,121 @@ inferred.
   an adverse-curvy scenario for ODD-4, are future work (F5+).
 - No new H/SR/C/SC/M artefacts and no `traceability_matrix.csv` rows. Cites D-11, D-33,
   D-34, D-35, D-36.
+
+---
+
+### D-38 — Track 'E': parallel end-to-end front-camera lane-following (supersedes D-01)
+
+| Field | Value |
+| --- | --- |
+| Section | `docs/00` (Parallel track E); `docs/01` (E-phase numbering); manuscript §3.5.1 (supersedes D-01) |
+| Status | CONFIRMED |
+| Date | F4 / E0 (09.06.2026) |
+| Planned review | GE0 (track-entry gate) |
+
+**Supersedes D-01.**
+
+**Decision.** A parallel development track — **track 'E'** — is opened on branch
+`e2e-camera` to re-develop the lane-following function with an **end-to-end
+front-camera policy**: the RL policy maps the front-camera image directly to the
+action, *learning* perception instead of consuming the hand-built state vector
+(`/state_obs`) of the F-track. This **supersedes D-01**'s prohibition on pixels
+entering the learned component. The **modular safety architecture is retained**: a
+rule-based **cage remains a distinct, independently-verifiable module** that mediates
+actuation (D-39), so the *system* is not end-to-end from pixels to actuators — only
+the *policy*'s perception is. The track carries its own phase/gate numbering —
+**E0..E6 / GE0..GE6**, commit prefix **`E2:`** — re-traverses the V's left arm
+(HARA → SRS → Cage → Training Spec) for the new front-end, and **shares the global,
+never-reused artefact ID space** (`docs/01`). The F-track continues independently on
+`main` (F4 → G4); its F2/F3/F4 evidence is frozen, not invalidated.
+
+**Alternatives considered and rejected.**
+- *Keep D-01 and reject the camera track.* Rejected: the camera variant is a second
+  instantiation of the SE4AI method on a harder perception problem and strengthens the
+  generality claim; foreclosing it on a Phase-0 decision taken before the cage was even
+  demonstrated would be premature.
+- *Full PilotNet-style end-to-end (pixels → actuation, no cage).* Rejected for exactly
+  D-01's original reasons (Salay et al. 2017; Shalev-Shwartz & Shashua 2016) **and**
+  because it would delete the cage — the thesis's contribution. D-38 supersedes only the
+  "no pixels into the policy" clause, never the modular-cage commitment.
+- *Scoped relaxation that leaves D-01 CONFIRMED for the F-track.* Considered; rejected in
+  favour of a clean formal supersession so the decision ledger carries a single current
+  architectural stance going forward rather than two conditionally-active ones. The
+  F-track evidence stands on its own run metadata regardless of D-01's status.
+
+**Rationale.** D-01 rejected end-to-end because it would make framework adaptations
+A1/A2/A4 unviable (D-07/D-08/D-10). That rationale is **answered, not ignored**: A1 (Cage
+Spec ≠ Training Spec) holds because cage and policy remain distinct modules; A2 (cage
+independently verifiable) holds because the cage runs on an **independent state estimate**
+(D-39), fully separable from the camera policy; A4 (traceability) holds because the
+H/SR/C/SC/M chain and the cage rules C-01..C-06 are unchanged. The policy was *already* a
+black box in the F-track; moving its *input* from a hand-built state vector to pixels does
+not reduce cage verifiability, because the cage never depended on the policy's internals or
+inputs. What the track accepts as a known cost is D-01's *other* concern — the larger
+training-set requirement of end-to-end perception (Shalev-Shwartz & Shashua 2016) —
+budgeted into the E-training phase.
+
+**Consequences.**
+- Branch `e2e-camera`, commit prefix `E2:`. `docs/01` gains the E-phase/gate scheme;
+  `docs/00` gains a "Parallel track E" section.
+- D-01 status → **SUPERSEDED by D-38**; manuscript §3.5.1 to be revised to record the
+  supersession and the retained-cage argument *(manuscript edit pending — follow-up)*.
+- Shared-register left-arm extensions: H-10/H-11 (`docs/02`), SR-012/SR-013 (`docs/03`),
+  SC-PERT-04..07 (`docs/05`); cage C-01..C-06 and metrics reused (D-39).
+- Deferred to later E-phases: camera-observation / CNN env design (`docs/09`), reward
+  (`docs/10`), Gazebo camera sensor + perception/`policy`, PPO retraining, un-stubbing
+  SC-PERT-04..07.
+- Cites D-31 (the new perception hazards are functional sensor/environment failure modes,
+  narrower than D-31's still-excluded non-functional AI families), D-39, D-07/D-08/D-10.
+
+---
+
+### D-39 — Track 'E' cage operates on an independent state estimate, not the camera
+
+| Field | Value |
+| --- | --- |
+| Section | `docs/04` (cage independence); `docs/02` (H-06 vs H-11) |
+| Status | CONFIRMED |
+| Date | F4 / E0 (09.06.2026) |
+| Planned review | GE2 (cage integration on the camera track) |
+
+**Decision.** On track 'E' the safety cage continues to evaluate its rules C-01..C-06
+over an **independent state estimate** — its own state pipeline (and, in simulation,
+privileged ground-truth) — **not** over the camera image or the policy's learned
+perception. The camera-to-action policy and the cage therefore consume **disjoint
+inputs**: the policy sees pixels, the cage sees state. C-01..C-06 are reused unchanged.
+
+**Alternatives considered and rejected.**
+- *Cage derives its state from the same camera/perception as the policy.* Rejected: it
+  injects perception error into the safety monitor and couples the cage to the very
+  component it is meant to bound — destroying the A2 "independently-verifiable cage"
+  property and the central thesis argument that the cage is independent of the controller
+  *and its perception*. It would also turn a camera failure into a common-cause failure of
+  policy *and* cage at once.
+- *Hybrid (some rules on state, others on camera).* Rejected: partial coupling still
+  breaks independence for the camera-fed rules and complicates traceability for no benefit.
+
+**Rationale.** The thesis's safety claim rests on the cage being an *independent* runtime
+monitor. Keeping the cage on an independent state estimate is precisely what makes D-38's
+supersession of D-01 safe: pixels may enter the *policy*, but they never enter the *safety
+envelope*. This yields a clean hazard separation — **H-06** (operation under invalid /
+unobservable *cage* state: the cage's own pipeline failing) and **H-11** (loss of valid
+*camera* perception: the policy's input failing) become genuinely distinct hazards with
+distinct mitigations rather than one conflated failure. Under camera degradation the policy
+may command poorly, but the cage — seeing valid independent state — still bounds the
+trajectory (the core cage-value demonstration, now under a perception stressor).
+
+**Consequences.**
+- C-01..C-06 reused unchanged; **no new numbered cage rule** required for H-10 (mitigated
+  by the existing cage + training augmentation).
+- H-11's "safe degradation on loss of valid perception" (SR-013) is realised by a
+  **perception-health supervisor** that raises an existing C-05 emergency trigger, keeping
+  the cage itself camera-agnostic. The final mechanism is fixed in `docs/04` at GE2
+  (candidate mini-ADR if it warrants its own rule).
+- Requires an independent state source on the camera track (sim ground-truth initially; a
+  robust independent estimator for physical deployment — deferred to E-physical).
+- Cites D-38, D-01 (the superseded decision whose modular-safety intent D-39 preserves),
+  D-08 (A2).
 
 ---
 

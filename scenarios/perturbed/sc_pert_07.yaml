@@ -1,0 +1,25 @@
+id: SC-PERT-07
+category: perturbed
+status: stub   # Track 'E' (D-38/D-39): full YAML deferred until the camera observation + eval pipeline exists (docs/09).
+
+# Track mapping (Option A — oval; see docs/05). Camera-track scenario.
+track:
+  world: lane_following_oval.world
+  centerline: oval_right_lane_centerline.yaml
+  start_s_m: 0.0
+commanded_speed_mps: 0.2
+
+description: |
+  Lane occlusion / perception loss (Track 'E', end-to-end front-camera). The front-camera
+  lane reference is lost mid-run — markings occluded (debris / cast shadow / glare wash-out)
+  or the camera signal dropped / frozen — so the policy has no valid percept. The
+  perception-health supervisor must detect the loss and command a controlled safe state via
+  C-05 (D-39), keeping the cage camera-agnostic. Verifies SR-013 against hazard H-11 (and
+  SR-012 secondarily). STUB: the perception_loss injector, the perception-health supervisor
+  and the camera eval pipeline do not exist yet (see docs/09 and docs/04 §C-05 Trigger 8).
+
+perturbations:
+  type: perception_loss           # E-track runtime injector — not yet implemented
+  mode: occlusion_or_dropout
+
+references_SR: [SR-013, SR-012]

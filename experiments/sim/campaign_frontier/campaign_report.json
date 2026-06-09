@@ -15,10 +15,64 @@
   },
   "per_scenario": [
     {
+      "scenario": "SC-FRONT-01",
+      "mode": "enforcement",
+      "n_runs": 50,
+      "n_pass": 50,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-FRONT-01",
+      "mode": "monitoring",
+      "n_runs": 50,
+      "n_pass": 25,
+      "fraction_pass": 0.5,
+      "verdict": false,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-FRONT-02",
+      "mode": "enforcement",
+      "n_runs": 50,
+      "n_pass": 50,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-FRONT-02",
+      "mode": "monitoring",
+      "n_runs": 50,
+      "n_pass": 47,
+      "fraction_pass": 0.94,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-FRONT-03",
+      "mode": "enforcement",
+      "n_runs": 50,
+      "n_pass": 50,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-FRONT-03",
+      "mode": "monitoring",
+      "n_runs": 50,
+      "n_pass": 25,
+      "fraction_pass": 0.5,
+      "verdict": false,
+      "n_error": 0
+    },
+    {
       "scenario": "SC-FRONT-04",
       "mode": "enforcement",
-      "n_runs": 2,
-      "n_pass": 2,
+      "n_runs": 50,
+      "n_pass": 50,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -26,8 +80,8 @@
     {
       "scenario": "SC-FRONT-04",
       "mode": "monitoring",
-      "n_runs": 2,
-      "n_pass": 1,
+      "n_runs": 50,
+      "n_pass": 25,
       "fraction_pass": 0.5,
       "verdict": false,
       "n_error": 0
@@ -35,8 +89,8 @@
     {
       "scenario": "SC-FRONT-05",
       "mode": "enforcement",
-      "n_runs": 2,
-      "n_pass": 2,
+      "n_runs": 50,
+      "n_pass": 50,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -44,8 +98,8 @@
     {
       "scenario": "SC-FRONT-05",
       "mode": "monitoring",
-      "n_runs": 2,
-      "n_pass": 2,
+      "n_runs": 50,
+      "n_pass": 50,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -53,8 +107,8 @@
     {
       "scenario": "SC-FRONT-06",
       "mode": "enforcement",
-      "n_runs": 2,
-      "n_pass": 2,
+      "n_runs": 50,
+      "n_pass": 50,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -62,10 +116,10 @@
     {
       "scenario": "SC-FRONT-06",
       "mode": "monitoring",
-      "n_runs": 2,
-      "n_pass": 2,
-      "fraction_pass": 1.0,
-      "verdict": true,
+      "n_runs": 50,
+      "n_pass": 26,
+      "fraction_pass": 0.52,
+      "verdict": false,
       "n_error": 0
     }
   ],
@@ -161,6 +215,6 @@
       "notes": "no executable scenario yet (all stubs/missing)"
     }
   ],
-  "n_runs": 12,
+  "n_runs": 600,
   "n_error": 0
 }

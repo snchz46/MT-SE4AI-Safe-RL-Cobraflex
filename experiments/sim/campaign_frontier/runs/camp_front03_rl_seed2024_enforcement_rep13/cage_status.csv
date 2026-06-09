@@ -1,0 +1,2 @@
+episode,step,x,y,yaw,ey,epsi,s,speed,raw_steer,safe_steer,steer_correction,interventions,emergency
+0,1,-0.003760,0.023076,0.354808,0.145183,0.468217,8.783143,0.000000,-1.000000,-0.037775,0.962225,C-02;C-01;C-05,1

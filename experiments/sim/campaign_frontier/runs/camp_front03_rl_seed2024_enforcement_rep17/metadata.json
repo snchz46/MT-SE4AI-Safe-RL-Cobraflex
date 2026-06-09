@@ -1,0 +1,19 @@
+{
+  "run_id": "camp_front03_rl_seed2024_enforcement_rep17",
+  "scenario_id": "SC-FRONT-03",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-06-09T16:16:12.627408+00:00",
+  "duration_s": 1.1,
+  "git_commit": "3a68374ea1b648d2d7e942dd94ceede345aba557",
+  "cage_yaml": "/home/admit/Samuel/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "7a08ea91d2ff70c1db1e49fd4742ab099b47647395aca4509289e226fa3f5346",
+  "policy_checkpoint": "/home/admit/Samuel/thesis_repo/experiments/sim/cobraflex_ppo_lane_2024_200k.zip",
+  "policy_checkpoint_hash": "c77b39783ce6462a522d06cb34db71efbc8dbd4204b00e7d88c9eb5ae4a6103e",
+  "centerline_yaml_hash": "54f5d47cdf4d8c6a107e0e107f107fbc9d56310ac16ad731c65281875f160e33",
+  "scenario_yaml": "/home/admit/Samuel/thesis_repo/scenarios/frontier/sc_front_03.yaml",
+  "scenario_yaml_hash": "a692bebb8d185cdfe266437d2975ce08f56988696174733cdbecc24e8bc0105a",
+  "rep": 17,
+  "seed": 23,
+  "platform": "sim",
+  "status": "completed"
+}

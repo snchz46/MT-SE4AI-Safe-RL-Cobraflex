@@ -88,6 +88,20 @@ le permite anticipar la curva. Con el preview, el agente pasó a completar
 vueltas y terminar por truncación. Decisión (ED-7) en
 `docs/09_environment_design.md`.
 
+**Track paralelo 'E' (D-38 / D-39).** En el track end-to-end con cámara frontal la
+observación deja de ser este vector de 6 dimensiones y pasa a ser la **imagen de la
+cámara frontal** (política CNN): la *policy* aprende la percepción en lugar de
+consumir el estado construido a mano (supersede a D-01 / ED-1 para este track). El
+**espacio de acción y la recompensa no cambian** (la recompensa se computa sobre
+estado ground-truth + progreso, agnóstica a la observación), y la **cage sigue sobre
+estado independiente de la cámara** (D-39), por lo que `ey/epsi/speed` siguen
+disponibles como señal privilegiada. La especificación de la observación de cámara
+(resolución, grayscale/RGB, frame-stacking, extractor CNN) y la *domain
+randomisation* sobre las degradaciones visuales (H-10 / SR-012) viven en
+`docs/09_environment_design.md` §10. El entrenamiento PPO con cámara, el sensor de
+cámara en Gazebo y el puente de observación quedan **diferidos al host Ubuntu**
+(fase de entrenamiento del track 'E').
+
 ### 7.2.2 Espacio de acción
 
 El espacio de acción es un array de un flotante: `action = [steering]`

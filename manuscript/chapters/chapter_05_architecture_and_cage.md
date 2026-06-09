@@ -158,6 +158,18 @@ y empíricas, no formales. Esta declaración de alcance es necesaria para
 no inducir lectores a confundir el alcance de la contribución (cf. §3.9
 sobre limitaciones del marco).
 
+La cage tampoco depende de la percepción de la *policy*. Evalúa sus reglas sobre un
+estimador de estado **independiente** del controlador y de su percepción (en
+simulación, el ground-truth privilegiado proyectado al centerline; en despliegue
+físico, un estimador independiente). Esta independencia es la que sostiene el
+argumento A2 (cage verificable por separado) y se vuelve decisiva en el **track
+paralelo 'E'** (end-to-end con cámara frontal, D-38): allí la *policy* mapea píxeles
+a acción, pero la cage **no lee la cámara** (D-39) —los píxeles entran a la *policy*,
+nunca a la envolvente de seguridad—. Por eso un fallo de cámara degrada a la *policy*
+pero no ciega a la cage, y los hazards de estado del cage (H-06) y de percepción de
+la *policy* (H-11) quedan separados. El detalle vive en `docs/04_cage_specification.md`
+(nota de independencia y Trigger 8 de C-05).
+
 ---
 
 ## 5.3 Retos conceptuales del diseño  [BORRADOR D22]

@@ -31,6 +31,28 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [09.06.2026] — E2: manuscript — track 'E' notes in ch.3 / ch.5 / ch.7
+
+**Document(s) affected:** `manuscript/chapters/chapter_03_methodology.md`, `chapter_05_architecture_and_cage.md`, `chapter_07_training_specification.md`.  
+**Phase:** E0/E1 (track 'E'; branch `e2e-camera`).  
+**Author:** Samuel.  
+
+### Change
+
+- **§3.5.1** records that **D-01 ("no end-to-end") is superseded by D-38** for track 'E', with the retained-modular-cage argument (A1/A2/A4 stay viable; D-39). Closes the §3.5.1 follow-up flagged in the scaffolding entry.
+- **§5.2.3** ("Lo que la cage no es") adds the property *the cage does not depend on the policy's perception* — it runs on an independent state estimate (D-39), which keeps H-06 (cage state) distinct from H-11 (camera perception).
+- **§7.2.1** notes the camera-observation variant (CNN; action and reward unchanged; cage on independent state; PPO/camera training deferred to Ubuntu), pointing to `docs/09` §10.
+
+### Rationale
+
+Keep the manuscript consistent with the E-track architectural decisions (D-38/D-39) recorded under `docs/`.
+
+### Verification
+
+Prose only; `tools/check_traceability.py` parses `docs/`, not the manuscript, so it is unaffected (still PASS). `pytest` unaffected (340 passed).
+
+---
+
 ## [09.06.2026] — E2: E-design — camera env (docs/09 §10), reward unchanged (docs/10 §10), pure-Python perception modules
 
 **Document(s) affected:** `docs/09`, `docs/10`; `src/cobraflex_rl/cobraflex_rl/visual_degradation.py` + `perception_health.py` (new); `policy/tests/test_visual_degradation.py` + `test_perception_health.py` (new).  

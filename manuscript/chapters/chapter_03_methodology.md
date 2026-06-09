@@ -578,6 +578,25 @@ entrenamiento exponencialmente mayores que las arquitecturas modulares
 para alcanzar prestaciones equivalentes. Esta decisión se documenta en
 `DECISIONS.md` como decisión D-01 del proyecto.
 
+**Actualización — track paralelo 'E' (D-38, que supersede a D-01).** Con la
+campaña F4 en curso se abrió un track de desarrollo **paralelo** (rama
+`e2e-camera`) que reconsidera esta decisión para una variante **end-to-end con
+cámara frontal**: la *policy* aprende la percepción mapeando la imagen de la
+cámara directamente a la acción, en lugar de consumir el vector de estado
+construido a mano. D-38 supersede formalmente a D-01 en este punto. La
+supersesión es **segura** porque no se reemplaza la arquitectura de seguridad: el
+**cage modular se conserva** y opera sobre un estimador de estado **independiente
+de la cámara** (D-39), de modo que los píxeles entran a la *policy* pero **nunca a
+la envolvente de seguridad** —la actuación sigue mediada por el cage—. Las
+adaptaciones del framework que motivaban D-01 siguen siendo viables: A1 (Cage Spec
+≠ Training Spec), porque cage y *policy* siguen siendo módulos distintos; A2 (cage
+verificable de forma independiente), porque el cage es separable de la *policy* de
+cámara; y A4 (trazabilidad), porque la cadena H↔SR↔C↔SC↔M no cambia. El coste que
+el track sí asume es el otro motivo de D-01 —el mayor tamaño de conjunto de
+entrenamiento del end-to-end (Shalev-Shwartz y Shashua, 2016)—, presupuestado en
+la fase de entrenamiento del track. El F-track conserva su arquitectura modular y
+su evidencia F2/F3/F4 intacta.
+
 ### 3.5.2 Mapeo del framework al caso
 
 La tabla siguiente proyecta cada nivel del V-Model adaptado sobre el

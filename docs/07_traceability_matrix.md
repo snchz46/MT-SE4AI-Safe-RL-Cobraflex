@@ -47,12 +47,13 @@ The full matrix is in `tools/traceability_matrix.csv`. The summary below shows t
 | H-07 | SR-008 | C-05 (external-stop trigger) | SC-NOM-03, SC-EDGE-04 | M-S3 | TBD |
 | H-08 | SR-009 | training | SC-NOM-01, SC-NOM-02, SC-NOM-03, SC-PERT-03 | M-P6, M-S2 (monitoring) | TBD |
 | H-09 | SR-010 | arbiter | SC-EDGE-04, SC-EDGE-05 | M-S2, M-I3 | TBD |
-| H-10 | SR-012 | C-01, C-02, C-03 + training | SC-PERT-04, SC-PERT-05, SC-PERT-06 | M-S1, M-S2 | TBD (track 'E') |
-| H-11 | SR-013 | C-05 (perception-health trigger) | SC-PERT-07 | M-S3 | TBD (track 'E') |
+| H-10 | SR-012 | C-01, C-02, C-03 (over CV state) + training | SC-PERT-04, SC-PERT-05, SC-PERT-06 | M-S1, M-S2 | TBD (track 'E') |
+| H-11 | SR-013 | C-05 (CV-estimator health → controlled stop) | SC-PERT-07 | M-S3 | TBD (track 'E') |
+| H-12 | SR-014 | C-05 (plausibility check → controlled stop) | SC-PERT-08, SC-PERT-04..06 | M-S1, M-S3 | TBD (track 'E') |
 
 "TBD" verdicts are filled in during Phase 4 (simulation results) and Phase 5 (physical results, where applicable).
 
-The last two rows (**H-10 / H-11 → SR-012 / SR-013**) belong to the parallel **track 'E'** (end-to-end front-camera, **D-38 / D-39**): the cage stays on independent state and never reads the camera, so these reuse C-01..C-06. Their verifying scenarios SC-PERT-04..07 are currently **stubs**; their verdicts are deferred to the E-eval phase and are *not* part of the F-track G4 verdict.
+The last three rows (**H-10 / H-11 / H-12 → SR-012 / SR-013 / SR-014**) belong to the parallel **track 'E'** (end-to-end front-camera, **D-38 / D-40**): the cage's state comes from its **own deterministic CV lane-estimator** (D-40, supersedes D-39), separate from the policy's CNN, so it generalises to any road with visible lines and still reuses C-01..C-06 unchanged. H-12 (cage lane-misdetection) is the new failure mode that the CV estimator introduces. Their verifying scenarios SC-PERT-04..08 are currently **stubs**; the verdicts are deferred to the E-eval phase and are *not* part of the F-track G4 verdict.
 
 The `Cage Rule(s)` column accepts three implementation kinds (cf. D-25 in `docs/DECISIONS.md`): a numbered rule `C-XX`, a `training` constraint discharged at policy-training time (SR-009), or an `arbiter` property of the cage pipeline (SR-010). SR-011 is implemented jointly by `C-06` (runtime attenuation of high-frequency content) and a training-side heading-variance penalty.
 

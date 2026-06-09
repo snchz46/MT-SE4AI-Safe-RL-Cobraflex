@@ -1,0 +1,26 @@
+id: SC-PERT-08
+category: perturbed
+status: stub   # Track 'E' (D-40): full YAML deferred until the camera eval pipeline + cage CV-estimator exist (docs/09, docs/04).
+
+# Track mapping (Option A — oval; see docs/05). Camera-track scenario.
+track:
+  world: lane_following_oval.world
+  centerline: oval_right_lane_centerline.yaml
+  start_s_m: 0.0
+commanded_speed_mps: 0.2
+
+description: |
+  Misleading lane markings / false-lane injection (Track 'E', end-to-end front-camera).
+  A plausible-but-wrong lane feature (fork/merge, old or temporary paint, tar seam, or a
+  strong shadow/reflection read as an edge) is introduced in the camera's view so the
+  CAGE's CV lane-estimator can lock onto a FALSE lane. Verifies SR-014 against hazard H-12
+  (cage lane-misdetection): the cage's plausibility / temporal-consistency check must reject
+  the suspect estimate and fall back to the controlled stop (C-05) rather than steer toward
+  the false lane. The "wrong-belief" counterpart of SC-PERT-07 ("no belief"). STUB: the
+  false-lane injector, the cage CV-estimator and its plausibility check do not exist yet.
+
+perturbations:
+  type: false_lane          # E-track runtime injector — not yet implemented
+  mode: misleading_markings
+
+references_SR: [SR-014]

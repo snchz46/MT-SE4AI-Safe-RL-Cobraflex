@@ -245,11 +245,12 @@ real action distribution after the first prototype. If cadence matters,
 
 ---
 --->
-## 10. Track E — end-to-end camera observation variant (D-38 / D-39)
+## 10. Track E — end-to-end camera observation variant (D-38 / D-40)
 
 > Parallel track 'E' (branch `e2e-camera`). This section specifies how the F3
 > environment above changes for the **end-to-end front-camera** policy. Everything
-> not listed here is **unchanged** — that minimal delta is the point of D-39.
+> not listed here is **unchanged** — that minimal delta is the point of D-40 (which refines
+> D-39's cage independence into a deterministic vision lane-estimator for generalisation).
 
 **What changes: the observation only.** ED-1 rejected an image observation *for F3*
 (to keep RL↔PD comparable and isolate perception). **D-38 supersedes that choice for
@@ -269,45 +270,61 @@ action = [steering]              (UNCHANGED: Box float32 dim 1; fixed speed 0.2 
 - **Frame stacking** (e.g. `VecFrameStack`, k=2–4) to recover the velocity/rate
   cues a single frame loses — fixed at E-design (GE0/GE1).
 
+**Training-world diversity (decided: oval first).** The first camera-policy prototype trains
+on the **current oval** (`lane_following_oval`) — now with **visible lane lines** rendered for
+the camera — to validate that a CNN can drive from the camera at all. World diversity
+(varied geometries / appearances, for the "any road with visible lines" generalisation goal)
+is added **after** that first result; the appearance axis is already covered by the
+visual-degradation domain randomisation below.
+
 **What does NOT change.**
 
 - **Action / actuation** (§3, §6): steering-only, fixed speed, same `cmd_vel` mapping.
 - **Reward** (`docs/10`): computed on ground-truth state + progress, hence
   **observation-agnostic** → carries over unchanged (smoothness term still on the raw
   policy steering delta).
-- **Cage:** `SafetyCageNode` still consumes the ground-truth-projected state from
-  `PolylineTracker(/odom_truth)`, **not the camera** (D-39). The cage's inputs are the
-  F3 inputs byte-for-byte; only the *policy*'s input changed. This is what keeps the
-  cage independent across the architecture change, and `ey/epsi/speed` stay available
-  as a **privileged** signal for the cage and the reward.
+- **Cage:** `SafetyCageNode` still evaluates C-01..C-06 **unchanged**, but its `state` now
+  comes from a **dedicated deterministic CV lane-estimator** (D-40, supersedes D-39) — not
+  from `PolylineTracker(/odom_truth)` and not from the policy's CNN. The cage thus generalises
+  to any road with visible lines, like the policy, and stays independent of the *learned*
+  policy and auditable. **Trade-off:** a camera fault now blinds policy and cage alike
+  (common-cause) → residual safety is the open-loop controlled stop (SR-013 / SR-014). Ground
+  truth survives **in sim only**, as the reward signal and an **oracle** to validate the CV
+  estimator's error.
 - **Reset / episode / termination** (§5).
 
-**Visual-degradation stressors (SC-PERT-04..06 → SR-012 → H-10).** Applied to the
-**camera frame** (the observation) before it reaches the policy — glare/over-exposure,
-low-light/under-exposure, motion blur, contrast/shadow — and **never** to the cage's
-state. The pure transforms live in `cobraflex_rl/visual_degradation.py` (numpy,
-host-testable); the Gazebo camera plug-in and the runtime injector are the Ubuntu part.
-Domain randomisation over the same envelope is the training-side mitigation of H-10.
+**Visual-degradation stressors (SC-PERT-04..06 → SR-012 → H-10).** Applied to the **camera
+frame** before it reaches *both* consumers — the policy's CNN **and** the cage's CV detector
+(common-cause, D-40) — glare/over-exposure, low-light/under-exposure, motion blur,
+contrast/shadow. The pure transforms live in `cobraflex_rl/visual_degradation.py` (numpy,
+host-testable); the Gazebo camera plug-in and the runtime injector are the Ubuntu part. Domain
+randomisation over the same envelope (`cobraflex_rl/visual_domain_randomization.py`,
+host-testable) is the training-side mitigation of H-10.
 
-**Perception loss (SC-PERT-07 → SR-013 → H-11).** A perception-health monitor
-(occlusion / absent features / frame stale-or-dropped beyond `perc_staleness_max`)
-raises the C-05 perception-health trigger (Trigger 8, `docs/04`) → controlled safe
-state. The monitor logic is host-testable (`cobraflex_rl/perception_health.py`); the
-camera subscription is the Ubuntu part.
+**Perception loss & misdetection (SC-PERT-07/08 → SR-013/SR-014 → H-11/H-12).** The cage's
+**CV-estimator health check** raises the C-05 controlled-stop trigger (Trigger 8, `docs/04`)
+on either a lost lane (occlusion / absent features / stale-or-dropped frame, H-11) or a
+suspect estimate failing the plausibility / temporal-consistency check (false lane, H-12). The
+stop is open-loop (needs no perception). The health / plausibility logic is host-testable
+(`cobraflex_rl/perception_health.py`); the camera subscription and the CV detector are the
+Ubuntu part.
 
-**Independent state for the cage.** In simulation the independent state is the
-privileged ground truth (already used in F3). For E-physical a robust independent
-estimator is required (deferred, cf. D-39).
+**Cage state source.** The cage runs a **deterministic classical-CV lane estimator** on the
+camera (D-40), separate from the policy's CNN. In simulation, ground truth is used to (a)
+compute the reward and (b) **validate** the CV estimator's error (an oracle). The same CV
+estimator transfers to E-physical with no ground truth required.
 
 **What needs Ubuntu (deferred).** The Gazebo front-camera sensor (URDF/SDF) + image
 topic, the camera observation bridge in `gazebo_lane_env`, the CNN training run, and
 the runtime degradation/loss injectors. The host-side pieces (the two pure modules
 above, this design) come first.
 
-**Traceability.** Spec: this §10 + Training Spec (E-design, pending). Decisions: D-38,
-D-39 (supersedes ED-1 for track 'E'); D-34 (cage in enforcement during training)
-carries over. Safety: SR-012, SR-013. Code (host): `visual_degradation.py`,
-`perception_health.py`; (Ubuntu): camera bridge in `gazebo_lane_env.py`.
+**Traceability.** Spec: this §10 + Training Spec (E-design, pending). Decisions: D-38
+(supersedes ED-1/D-01 for track 'E'), **D-40** (cage on a deterministic CV estimator,
+supersedes D-39); D-34 (cage in enforcement during training) carries over. Safety: SR-012,
+SR-013, SR-014 (H-10/H-11/H-12). Code (host): `visual_degradation.py`,
+`visual_domain_randomization.py`, `perception_health.py`; (Ubuntu): camera bridge in
+`gazebo_lane_env.py` + the CV lane-estimator node + plausibility check.
 
 ---
 
@@ -322,5 +339,9 @@ carries over. Safety: SR-012, SR-013. Code (host): `visual_degradation.py`,
   Training Specification.
 - **v0.3 (2026-06-09):** added §10 (Track E — end-to-end camera observation variant,
   D-38/D-39): the observation becomes the front-camera image (CNN policy), while the
-  action, reward, cage (on independent ground-truth state) and episode logic are
-  unchanged. F-track design (v0.2) untouched.
+  action, reward, cage and episode logic are unchanged. F-track design (v0.2) untouched.
+- **v0.4 (2026-06-09):** §10 revised for **D-40** (supersedes D-39): the cage's state now
+  comes from a dedicated deterministic CV lane-estimator (not ground truth), for
+  generalisation to any road with visible lines; common-cause trade-off + the new H-12/SR-014
+  (cage misdetection) recorded; training-world diversity decided as **oval-first**; ground
+  truth retained in sim only as reward + CV-estimator oracle.

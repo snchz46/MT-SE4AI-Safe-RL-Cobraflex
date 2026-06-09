@@ -14,7 +14,7 @@ A scenario is *closed* when its YAML definition under `scenarios/<category>/sc_<
 
 - **Nominal (NOM)** — operational conditions within the ODD.
 - **Edge (EDGE)** — at the boundary of the ODD, designed to stress specific cage rules.
-- **Perturbed (PERT)** — sensor noise, latency, or other perturbations applied during operation. Track 'E' (D-38) extends PERT with the camera-perception scenarios SC-PERT-04..07 (visual degradation and perception loss), currently stubs pending the camera eval pipeline.
+- **Perturbed (PERT)** — sensor noise, latency, or other perturbations applied during operation. Track 'E' (D-38 / D-40) extends PERT with the camera-perception scenarios SC-PERT-04..08 (visual degradation, perception loss, and a false-lane test for the cage CV estimator), currently stubs pending the camera eval pipeline.
 - **Frontier (FRONT)** — out-of-ODD / cage-efficacy study (added in F4, decision **D-35**). The vehicle starts at or beyond the ODD boundary, where the policy is not designed to recover; analysed as a **paired enforcement-vs-monitoring contrast**, not aggregated into the global verdict. See the Frontier section below.
 
 ## Scenario template
@@ -343,10 +343,10 @@ physical subset (Phase 5), where a straight is simpler to set up than an oval.
 
 ## SC-PERT-04 — Camera glare / over-exposure
 
-> **Track 'E' (end-to-end front-camera), D-38 / D-39 — STUB.** Verifies SR-012 against H-10.
+> **Track 'E' (end-to-end front-camera), D-38 / D-40 — STUB.** Verifies SR-012 against H-10.
 > Full YAML deferred until the E-track camera observation + eval pipeline exists (`docs/09`).
 
-**Description.** The front-camera image is degraded by strong glare / over-exposure throughout the run (sun glare, specular highlights washing out lane features). The camera policy must keep the lane while the cage — on its independent state (D-39) — bounds the trajectory.
+**Description.** The front-camera image is degraded by strong glare / over-exposure throughout the run (sun glare, specular highlights washing out lane features). The camera policy must keep the lane while the cage — on its own CV lane estimate (D-40) — bounds the trajectory.
 
 **Initial conditions.** Nominal start (SC-NOM-01 layout).
 
@@ -368,9 +368,9 @@ physical subset (Phase 5), where a straight is simpler to set up than an oval.
 
 ## SC-PERT-05 — Low-light / under-exposure
 
-> **Track 'E' (end-to-end front-camera), D-38 / D-39 — STUB.** Verifies SR-012 against H-10.
+> **Track 'E' (end-to-end front-camera), D-38 / D-40 — STUB.** Verifies SR-012 against H-10.
 
-**Description.** The front-camera image is degraded by low light / under-exposure (dusk, deep shadow), reducing lane contrast. The camera policy must keep the lane; the independent-state cage bounds the trajectory.
+**Description.** The front-camera image is degraded by low light / under-exposure (dusk, deep shadow), reducing lane contrast. The camera policy must keep the lane; the cage, on its own CV lane estimate (D-40), bounds the trajectory.
 
 **Initial conditions.** Nominal start (SC-NOM-01 layout).
 
@@ -392,9 +392,9 @@ physical subset (Phase 5), where a straight is simpler to set up than an oval.
 
 ## SC-PERT-06 — Motion blur
 
-> **Track 'E' (end-to-end front-camera), D-38 / D-39 — STUB.** Verifies SR-012 against H-10.
+> **Track 'E' (end-to-end front-camera), D-38 / D-40 — STUB.** Verifies SR-012 against H-10.
 
-**Description.** The front-camera image is degraded by motion blur (and rolling-shutter artefacts) at operating speed. The camera policy must keep the lane; the independent-state cage bounds the trajectory.
+**Description.** The front-camera image is degraded by motion blur (and rolling-shutter artefacts) at operating speed. The camera policy must keep the lane; the cage, on its own CV lane estimate (D-40), bounds the trajectory.
 
 **Initial conditions.** Nominal start (SC-NOM-01 layout).
 
@@ -416,11 +416,11 @@ physical subset (Phase 5), where a straight is simpler to set up than an oval.
 
 ## SC-PERT-07 — Lane occlusion / perception loss
 
-> **Track 'E' (end-to-end front-camera), D-38 / D-39 — STUB.** Verifies SR-013 against H-11
+> **Track 'E' (end-to-end front-camera), D-38 / D-40 — STUB.** Verifies SR-013 against H-11
 > (and SR-012 secondarily). The negative-recovery analogue for the camera input — mirrors
 > SC-PERT-02 (latency) for the perception channel.
 
-**Description.** The front-camera lane reference is lost — markings occluded (debris / cast shadow / glare wash-out) or the camera signal dropped / frozen — so the policy has no valid percept. The perception-health supervisor must detect the loss and command a controlled safe state via C-05 (D-39), keeping the cage camera-agnostic.
+**Description.** The front-camera lane reference is lost — markings occluded (debris / cast shadow / glare wash-out) or the camera signal dropped / frozen — so the policy has no valid percept. The cage's CV lane-estimator health check must detect the loss and command the open-loop controlled stop via C-05 (D-40) — which needs no perception, so it holds even when policy and cage are both blind.
 
 **Initial conditions.** Nominal start (SC-NOM-01 layout).
 
@@ -435,6 +435,32 @@ physical subset (Phase 5), where a straight is simpler to set up than an oval.
 **Pass criterion per scenario.** `fraction_pass >= 0.90`.
 
 **References SR.** SR-013, SR-012. **Cage rules exercised.** C-05 (via the perception-health supervisor).
+
+**Recommended runs.** TBD (E-track).
+
+---
+
+## SC-PERT-08 — Misleading lane markings (false-lane injection)
+
+> **Track 'E' (end-to-end front-camera), D-40 — STUB.** Verifies SR-014 against H-12
+> (cage lane-misdetection). The "wrong-belief" counterpart of SC-PERT-07 ("no belief"):
+> here the cage's CV detector can lock onto a *false* lane.
+
+**Description.** Misleading markings are introduced in the camera's view — a fork / merge, an old or temporary painted line, a tar seam, or a strong shadow / reflection read as an edge — so the cage's CV lane-estimator can produce a *plausible but wrong* lane. SR-014's plausibility / temporal-consistency check must reject the suspect estimate and fall back to the controlled stop, rather than steer toward the false lane.
+
+**Initial conditions.** Nominal start (SC-NOM-01 layout).
+
+**Perturbations.** A false / misleading lane feature injected into the camera view at a controlled location (onset resolved by rep).
+
+**Termination.** Controlled stop, lane exit, or timeout.
+
+**Metrics primary.** M-S1 (max lateral offset — a cage-induced excursion toward the false lane), M-S3 (controlled-stop behaviour).
+
+**Pass criterion per run.** The vehicle never exceeds `d_max` toward the false lane: either the plausibility check rejects the estimate and the controlled stop activates (C-05), or `M-S1 < 0.16` throughout.
+
+**Pass criterion per scenario.** `fraction_pass >= 0.90`.
+
+**References SR.** SR-014. **Cage rules exercised.** C-05 (plausibility check → controlled stop).
 
 **Recommended runs.** TBD (E-track).
 
@@ -604,7 +630,7 @@ The selection rationale and the physical-specific adaptations are documented in 
 
 ## Total scenario count
 
-Current count: **21 scenarios**. **F-track (main):** 17 — 11 verdict-bearing (3 NOM, 5 EDGE, 3 PERT with multiple levels) plus 6 FRONT (cage-efficacy study). SC-EDGE-05 and SC-PERT-03 added 13.05.2026 (G-3 and G-4 in the SR audit); SC-FRONT-01…06 added in F4 (08.06.2026). **Track 'E' (D-38):** 4 camera-perception scenarios SC-PERT-04..07 (verify SR-012 / SR-013), added 09.06.2026 as **stubs** — deferred until the E-track camera eval pipeline exists, and *not* part of the F-track verdict-bearing campaign.
+Current count: **22 scenarios**. **F-track (main):** 17 — 11 verdict-bearing (3 NOM, 5 EDGE, 3 PERT with multiple levels) plus 6 FRONT (cage-efficacy study). SC-EDGE-05 and SC-PERT-03 added 13.05.2026 (G-3 and G-4 in the SR audit); SC-FRONT-01…06 added in F4 (08.06.2026). **Track 'E' (D-38 / D-40):** 5 camera-perception scenarios SC-PERT-04..08 (verify SR-012 / SR-013 / SR-014), added 09.06.2026 as **stubs** — deferred until the E-track camera eval pipeline exists, and *not* part of the F-track verdict-bearing campaign.
 
 Total recommended runs in simulation for the **verdict-bearing** campaign (NOM/EDGE/PERT, F-track), summed across all scenarios and both modes: approximately 1100 runs (the global G4 verdict, D-29/D-30). The 6 FRONT scenarios add 6 × 25 × 2 = **300 runs** reported separately as the paired enforcement-vs-monitoring cage-efficacy contrast (not part of the global-verdict budget). The Track-'E' SC-PERT-04..07 run budget is fixed when those scenarios are un-stubbed (E-eval phase).
 

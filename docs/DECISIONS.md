@@ -1,7 +1,7 @@
 # DECISIONS.md — Project decision log
 
 <!--
-Status: D9 (Phase 0 close) + F1 audit additions (D-25..D-33) + F3 (D-34) + F4 (D-35, D-36, D-37) + E-track (D-38 supersedes D-01, D-39).
+Status: D9 (Phase 0 close) + F1 audit additions (D-25..D-33) + F3 (D-34) + F4 (D-35, D-36, D-37) + E-track (D-38 supersedes D-01; D-39 superseded by D-40; D-40).
 Last update: see Git commit date.
 -->
 
@@ -76,7 +76,8 @@ consistent with the chapters.
 | D-36 | Seed policy for F4 campaigns: main seed 2024 certifies the D-29/D-30 verdict; cage-dependent seed 123 only in the D-35 frontier contrast, never pooled into the global verdict | §7.5.3 (seed selection); §8.2 (sim-eval campaign) | CONFIRMED |
 | D-37 | F4 realises ODD-1..4 on the single oval world at a fixed-speed (ACT_DIM=1) operating point; ODD-1/2 covered, ODD-3 partial (geometry yes, speed envelope no), ODD-4 deferred | `docs/08` §12; `docs/05` Track mapping; §8 | CONFIRMED |
 | D-38 | Track 'E' (parallel, end-to-end front-camera): **supersedes D-01**; camera→action policy behind a retained modular cage; phases E0..E6 / gates GE0..GE6, commit prefix `E2:` | `docs/00`; `docs/01`; §3.5.1 | CONFIRMED |
-| D-39 | Track 'E' cage operates on an independent state estimate, not the camera (preserves cage independence; distinguishes H-06 cage-state from H-11 camera-perception) | `docs/04`; `docs/02` | CONFIRMED |
+| D-39 | Track 'E' cage operates on an independent state estimate, not the camera (preserves cage independence; distinguishes H-06 cage-state from H-11 camera-perception) | `docs/04`; `docs/02` | SUPERSEDED by D-40 |
+| D-40 | Track 'E' cage state comes from a dedicated deterministic vision lane-estimator (separate from the policy CNN), not ground truth — for generalisation to any road with visible lines; accepts common-cause + new hazard H-12 | `docs/04`; `docs/09` §10; `docs/02` | CONFIRMED |
 
 ---
 
@@ -1392,7 +1393,7 @@ budgeted into the E-training phase.
 | Field | Value |
 | --- | --- |
 | Section | `docs/04` (cage independence); `docs/02` (H-06 vs H-11) |
-| Status | CONFIRMED |
+| Status | SUPERSEDED by D-40 (cage state moves from privileged ground truth to a dedicated deterministic vision lane-estimator, for generalisation) |
 | Date | F4 / E0 (09.06.2026) |
 | Planned review | GE2 (cage integration on the camera track) |
 
@@ -1433,6 +1434,71 @@ trajectory (the core cage-value demonstration, now under a perception stressor).
   robust independent estimator for physical deployment — deferred to E-physical).
 - Cites D-38, D-01 (the superseded decision whose modular-safety intent D-39 preserves),
   D-08 (A2).
+
+---
+
+### D-40 — Track 'E' cage state comes from a dedicated deterministic vision lane-estimator (supersedes D-39)
+
+| Field | Value |
+| --- | --- |
+| Section | `docs/04` (cage perception); `docs/09` §10; `docs/02` (H-10/H-11/H-12) |
+| Status | CONFIRMED |
+| Date | E1 (09.06.2026) |
+| Planned review | GE2 (CV-estimator integration + accuracy vs the ground-truth oracle) |
+
+**Supersedes D-39.**
+
+**Decision.** On track 'E' the cage's independent state (the `ey/epsi/…` that C-01..C-06
+consume) is produced by a **dedicated, deterministic (classical computer-vision)
+lane-detection pipeline**, separate from the policy's learned CNN — **not** by
+privileged ground truth and **not** by the policy's perception. This supersedes D-39's
+"cage on ground truth, never the camera". The goal is generalisation: the cage, like the
+policy, must work on **any road with visible lane lines** without an authored centerline.
+Ground truth remains available **in simulation only**, as (a) the training **reward**
+signal and (b) an **oracle** to measure the CV estimator's error; neither policy nor cage
+consumes ground truth at **runtime**. C-01..C-06 are reused unchanged — only the *source*
+of the `state` they receive changes (CV estimator instead of `PolylineTracker(/odom_truth)`).
+
+**Alternatives considered and rejected.**
+- *Keep D-39 (cage on privileged ground truth).* Rejected for the generalisation goal:
+  ground truth needs an authored centerline per world, so the cage could not protect on an
+  arbitrary / real road with no centerline — only the policy would generalise, not the
+  safety net.
+- *Cage shares the policy's CNN perception.* Rejected: it couples the safety monitor to the
+  learned, opaque controller and destroys the A2 "independently-verifiable cage" property.
+  A *separate, deterministic* CV pipeline keeps the cage independent of the **policy** and
+  auditable, even though it now uses vision.
+- *Hybrid (ground truth in sim now, CV interface later).* Considered; rejected as the
+  primary path because deferring the estimator would leave the generalisation claim
+  unverified and re-open the design at E-physical. The CV estimator is built now; ground
+  truth stays as the sim oracle that validates it.
+
+**Rationale.** "Any road, sees lines → drives" requires the *whole* system — policy and
+cage — to key on visible lane lines, not on an authored centerline. A deterministic CV
+lane detector for the cage preserves what D-39 actually protected (independence from the
+*learned policy* + auditability: a classical algorithm is inspectable, unlike the CNN)
+while extending it to ungrounded roads. It also yields a **cross-check**: divergence
+between the policy's behaviour and the cage's CV estimate is a safety signal (a CNN
+hallucinating a lane the CV does not see is bounded by C-01/C-02 on the CV state).
+
+**Consequences (including the honest trade-off).**
+- **Common-cause failure (accepted).** A camera fault (glare / occlusion / dropout —
+  H-10/H-11) can now blind **both** the policy and the cage at once — the isolation D-39
+  provided is given up. Mitigations: (i) the cage detector is *deterministic*, with failure
+  modes that differ from the CNN's, partially decorrelating the two; (ii) when valid lines
+  are absent for the cage detector, the safe action is an **open-loop controlled stop**
+  (SR-013 / C-05), which needs no perception — so "no lines ⇒ stop" is the designed
+  behaviour, matching the track's intent.
+- **New hazard.** A confidently *wrong* CV lane estimate (a *plausible but false* lane)
+  would make the cage enforce a wrong envelope — impossible under ground-truth D-39. To be
+  registered as **H-12 (cage lane-misdetection)** with **SR-014** (cage-estimator
+  plausibility / temporal-consistency check + conservative-on-uncertainty fall-back to C-05).
+- The cage's `state` source becomes the CV-estimator node (Ubuntu); C-01..C-06 and the
+  reward (`docs/10`) are unchanged. `docs/04`, `docs/09` §10 and the H-10/H-11/SR-012/SR-013
+  framing are revised from "cage on ground truth" to "cage on its own CV estimate".
+- D-39 status → **SUPERSEDED by D-40**.
+- Cites D-38, D-39 (superseded), D-08 (A2), D-01 (whose modular, auditable-cage spirit is
+  retained: the cage is still a distinct, deterministic, inspectable module).
 
 ---
 

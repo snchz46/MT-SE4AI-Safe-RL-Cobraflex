@@ -307,9 +307,10 @@ The emergency mode is characterised by:
 
 ## SR-012 — Lane-keeping under degraded visual input
 
-> **Track 'E' (end-to-end front-camera), decisions D-38 / D-39.** Mitigates the
-> camera-perception hazard H-10. Realised by the *independent-state* cage plus a training
-> constraint — the cage never reads the camera.
+> **Track 'E' (end-to-end front-camera), decisions D-38 / D-40.** Mitigates the
+> camera-perception hazard H-10. Realised by the cage over its **own deterministic CV lane
+> estimate** plus a training constraint, with a controlled-stop fall-back when the lane is
+> undetectable. (Common-cause, D-40: a camera fault degrades the policy and the cage alike.)
 
 **Statement.** Under the operational ODD, when the front-camera image is degraded within the specified visual-degradation envelope (glare / exposure, motion blur, low contrast, shadow), the vehicle's lateral offset and heading error shall remain within the SR-001 / SR-002 envelopes (`|d| ≤ d_max` and `|θ| ≤ θ_max`) at every time step during autonomous operation. A degraded percept shall not produce a lane- or heading-limit breach.
 
@@ -322,7 +323,7 @@ The emergency mode is characterised by:
 
 **References hazard.** H-10.
 
-**Implemented by.** C-01 (lane boundary hard limit), C-02 (heading error limit), C-03 (predictive TTLC) — the independent-state cage (D-39) — **and** a *training constraint* (visual-domain augmentation / randomisation so the camera policy is robust across the degradation envelope).
+**Implemented by.** C-01 (lane boundary hard limit), C-02 (heading error limit), C-03 (predictive TTLC) evaluated over the cage's **own CV lane estimate** (D-40) — **and** a *training constraint* (visual-domain augmentation / randomisation so the camera policy is robust across the degradation envelope) — with the SR-013 controlled-stop fall-back when the lane becomes undetectable for the cage's detector.
 
 **Verified by scenarios.** SC-PERT-04, SC-PERT-05, SC-PERT-06.
 
@@ -334,11 +335,12 @@ The emergency mode is characterised by:
 
 ## SR-013 — Safe degradation on loss of valid perception
 
-> **Track 'E' (end-to-end front-camera), decisions D-38 / D-39.** Mitigates H-11. The
-> perception-health signal is consumed by the cage as an external C-05 trigger, so the cage
-> stays camera-agnostic — the camera-side analogue of SR-007's state-validity triggers.
+> **Track 'E' (end-to-end front-camera), decisions D-38 / D-40.** Mitigates H-11. The cage's
+> own CV lane-estimator health check raises a C-05 controlled-stop trigger; the stop is
+> **open-loop** (needs no perception), so it holds even when policy and cage are both blind
+> (common-cause). The camera-side analogue of SR-007's state-validity triggers.
 
-**Statement.** When the policy's perception of the lane becomes invalid — a perception-health signal indicates occlusion, absent lane features, or camera frames stale / dropped beyond `perc_staleness_max` — the system shall enter a controlled safe state (emergency-mode deceleration to a full stop with steering frozen, per C-05) within one control cycle of the condition being confirmed, and shall not exceed lateral offset `d_max` during the manoeuvre.
+**Statement.** When a valid lane is not detectable — the cage's CV lane-estimator health check indicates occlusion, absent lane features, or camera frames stale / dropped beyond `perc_staleness_max` — the system shall enter a controlled **open-loop** stop (deceleration to a full stop with steering frozen, per C-05) within one control cycle of the condition being confirmed, and shall not exceed lateral offset `d_max` during the manoeuvre.
 
 **Pattern.** Availability + emergency mode (the camera-input analogue of SR-007).
 
@@ -350,13 +352,40 @@ The emergency mode is characterised by:
 
 **References hazard.** H-11.
 
-**Implemented by.** Part of C-05 (emergency mode) — triggered by a perception-health supervisor whose signal the cage consumes as an external C-05 trigger, keeping the cage itself independent of the camera (D-39), exactly as SR-007 / SR-008 extend C-05's trigger set.
+**Implemented by.** Part of C-05 (controlled stop) — triggered by the cage's **CV lane-estimator health check** (D-40, Trigger 8); the stop is open-loop, exactly as SR-007 / SR-008 extend C-05's trigger set.
 
 **Verified by scenarios.** SC-PERT-07.
 
 **Verifying metric.** M-S3 (emergency stop rate and behaviour).
 
 **Satisfaction criterion.** In every run where the perception-loss condition is induced, the controlled safe state activates within one control cycle of confirmation; once active, the deceleration is at least `a_min`, the steering remains frozen, and the lateral offset never exceeds `d_max` during the stop.
+
+---
+
+## SR-014 — Cage lane-estimator plausibility (no enforcement on a suspect estimate)
+
+> **Track 'E' (end-to-end front-camera), decision D-40.** Mitigates H-12 — a confidently
+> *wrong* CV lane estimate. New because under D-40 the cage's state is camera-derived (it was
+> ground truth under the superseded D-39, where this failure could not occur).
+
+**Statement.** The cage shall not enforce its rules on a lane estimate that fails a plausibility / temporal-consistency check. When the cage's CV lane-estimator yields an estimate that is geometrically implausible (lane width / curvature outside the ODD ranges) or temporally inconsistent (an inter-frame jump incompatible with the vehicle's motion) beyond `plaus_tol` for more than `Δt_plaus`, the cage shall treat the lane as not valid and enter the controlled stop (C-05) rather than steer toward the suspect lane.
+
+**Pattern.** Operational envelope (estimate validity) + emergency mode.
+
+**Parameters.**
+
+- `plaus_tol`, `Δt_plaus` — **provisional**, fixed at E-integration against the ground-truth oracle (D-40): the geometric plausibility bounds (lane width, curvature within the ODD) and the maximum inter-frame lane jump consistent with the vehicle's speed.
+- Geometric plausibility rejects forks, shadow lines and reflections that fall outside the ODD lane geometry.
+
+**References hazard.** H-12.
+
+**Implemented by.** Part of C-05 (controlled stop) — gated by a plausibility / temporal-consistency check on the cage's CV estimate (a cage-perception architecture property, akin to the SR-010 pipeline assertion). On a failed check the cage substitutes the controlled stop instead of enforcing C-01/C-02/C-03 on a suspect envelope.
+
+**Verified by scenarios.** SC-PERT-08 (misleading lane markings — false-lane injection); SC-PERT-04..06 secondary (degraded vision that corrupts rather than removes the detection).
+
+**Verifying metric.** M-S1 (max lateral offset — a wrong envelope would drive an excursion) and M-S3 (controlled-stop behaviour).
+
+**Satisfaction criterion.** Across all runs where a false / misleading lane is induced, the cage does not steer the vehicle beyond `d_max` toward the false lane: either the plausibility check rejects the estimate and the controlled stop activates (M-S3), or M-S1 stays within `d_max`. No run records a cage-induced excursion driven by a suspect estimate.
 
 ---
 
@@ -377,8 +406,9 @@ The **Criticality** column carries the SR criticality class (SR-CL-A/B/C) define
 | SR-009 | Minimum forward progress (liveness) | Liveness | H-08 | training | SR-CL-B | SC-NOM-01, SC-NOM-02, SC-NOM-03, SC-PERT-03 | M-P6, M-S2 (monitoring) | Open | Δs_min = 0.10 m / t_window = 2.0 s / Δt_settle = 1.0 s |
 | SR-010 | Cage rule composition consistency | Operational envelope + bounded oscillation | H-09 | arbiter | SR-CL-B | SC-EDGE-04, SC-EDGE-05 | M-S2, M-I3 | Open | Joint-envelope assertion + f_osc_max = 5 Hz |
 | SR-011 | Heading stability without sustained oscillation | Bounded variance | H-02 | C-06 + training | SR-CL-B | SC-EDGE-01, SC-EDGE-04 | M-P7 | Open | σ_θ_max = 5°, t_psd = 1.0 s |
-| SR-012 | Lane-keeping under degraded visual input | Direct threshold (visual-degradation stressor) | H-10 | C-01, C-02, C-03 + training | SR-CL-A | SC-PERT-04, SC-PERT-05, SC-PERT-06 | M-S1, M-S2 | Open | Track 'E'; d_max/θ_max reused; cf. D-38, D-39 |
-| SR-013 | Safe degradation on loss of valid perception | Availability + emergency mode | H-11 | C-05 (perception-health trigger) | SR-CL-A | SC-PERT-07 | M-S3 | Open | Track 'E'; perc_staleness_max provisional; cf. D-39 |
+| SR-012 | Lane-keeping under degraded visual input | Direct threshold (visual-degradation stressor) | H-10 | C-01, C-02, C-03 (over CV state) + training | SR-CL-A | SC-PERT-04, SC-PERT-05, SC-PERT-06 | M-S1, M-S2 | Open | Track 'E'; cage on CV (D-40); common-cause; cf. D-38 |
+| SR-013 | Safe degradation on loss of valid perception | Availability + emergency mode | H-11 | C-05 (CV-estimator health → controlled stop) | SR-CL-A | SC-PERT-07 | M-S3 | Open | Track 'E'; open-loop stop; cf. D-40 |
+| SR-014 | Cage lane-estimator plausibility (no enforcement on a suspect estimate) | Operational envelope + emergency mode | H-12 | C-05 (plausibility check → controlled stop) | SR-CL-A | SC-PERT-08, SC-PERT-04, SC-PERT-05, SC-PERT-06 | M-S1, M-S3 | Open | Track 'E'; new under D-40; plaus_tol provisional |
 
 ---
 

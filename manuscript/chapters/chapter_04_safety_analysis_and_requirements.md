@@ -376,7 +376,8 @@ como artefacto autónomo en `docs/02_hazard_register.md`.
 | H-08 | Stall por explotación del reward: la policy converge a inacción o a una dirección adversa que acumula más reward que el lane-following nominal. | S2 | E3 | C2 | Medium-High | 1, 2, 3, 4 | Vehículo detenido o derivando sistemáticamente fuera de la trayectoria segura; episodio no progresa. | Especificación de reward desalineada durante entrenamiento; horizonte o factor de descuento que premia inacción. |
 | H-09 | Conflicto entre cage rules: dos o más reglas activas en el mismo ciclo producen un comando combinado fuera de la envolvente segura, o una oscilación entre correcciones contradictorias. | S3 (hereda del hazard más severo cuya envolvente se rompa) | E1 | C2 | Medium | 1, 2, 3, 4 | La cage deja de ser garantía y se vuelve fuente de mandos inseguros. | Reglas diseñadas en aislamiento sin arbitraje explícito; acoplamiento de estado entre C-04/C-06/C-03; emergencia activándose durante cascada. |
 | H-10 | (Track 'E') Mala percepción de carril por entrada visual degradada (glare, exposición, motion blur, bajo contraste, sombras). | S3 | E3 | C2 | High | 1, 2, 3, 4 | Acción sobre un carril mal leído; deriva lateral / error de heading que escala a H-01/H-02. | Iluminación fuera de la distribución de entrenamiento; blur de movimiento; reflejos/sombras. |
-| H-11 | (Track 'E') Pérdida de percepción de carril válida (oclusión, ausencia de features, caída/latencia de cámara); distinto de H-06 (estado del cage). | S3 | E2 | C2 | High | 1, 2, 3, 4 | Comandos arbitrarios sobre percepción ciega; sin fallback, trayectoria indefinida. | Oclusión; features ausentes; dropout/freeze de cámara; wash-out extremo. |
+| H-11 | (Track 'E') Pérdida de percepción de carril válida (oclusión, ausencia de features, caída/latencia de cámara); ciega a policy y cage (causa común, D-40). | S3 | E2 | C2 | High | 1, 2, 3, 4 | Comandos arbitrarios sobre percepción ciega; sin fallback, trayectoria indefinida. | Oclusión; features ausentes; dropout/freeze de cámara; wash-out extremo. |
+| H-12 | (Track 'E') Mala detección del cage: el detector CV del cage produce un carril falso plausible y la cage impone una envolvente errónea. | S3 | E2 | C2 | High | 1, 2, 3, 4 | La cage deja de ser garantía y puede sacar al vehículo del carril verdadero. | Marcas engañosas (bifurcaciones, pintura antigua); sombras/reflejos como bordes; visión degradada que corrompe la detección. |
 
 La tabla anterior es la versión compacta del Hazard Register
 consolidado en `docs/02_hazard_register.md`. Las entradas siguen
@@ -406,15 +407,20 @@ autónomo. Cualquier modificación al registro debe propagarse a esta
 tabla en el mismo commit para que `tools/check_traceability.py`
 mantenga consistencia.
 
-**Extensión del track 'E' (D-38 / D-39).** El track paralelo end-to-end con
-cámara frontal (§3.5.1; D-38, que supersede a D-01) añade dos hazards de
+**Extensión del track 'E' (D-38 / D-40).** El track paralelo end-to-end con
+cámara frontal (§3.5.1; D-38, que supersede a D-01) añade tres hazards de
 percepción de cámara en el espacio de IDs compartido: **H-10** (mala percepción
-por entrada visual degradada) y **H-11** (pérdida de percepción válida). Son
-**fallos funcionales de percepción** —de sensor y entorno—, más estrechos que
-las familias no-funcionales que D-31 mantiene fuera de alcance. Como el cage
-permanece sobre estado **independiente** (D-39), H-11 queda genuinamente
-distinto de H-06 (estado inválido del propio cage). El rationale extendido vive
-en `docs/02_hazard_register.md`; estos hazards no pertenecen al verdict F-track.
+por entrada visual degradada), **H-11** (pérdida de percepción válida) y **H-12**
+(mala detección del cage: carril falso). Son **fallos funcionales de percepción**
+—de sensor y entorno—, más estrechos que las familias no-funcionales que D-31
+mantiene fuera de alcance. Por **D-40** el cage toma su estado de un **detector de
+líneas por visión propio** (clásico/determinista, distinto de la CNN de la policy),
+no de ground-truth: esto generaliza a cualquier carretera con líneas, pero acepta un
+**fallo de causa común** (una avería de cámara puede cegar policy y cage a la vez)
+cuya seguridad residual es la **parada controlada open-loop** (SR-013), y abre el
+nuevo hazard **H-12** (el detector del cage puede equivocarse con confianza). El
+rationale extendido vive en `docs/02_hazard_register.md`; estos hazards no pertenecen
+al verdict F-track.
 
 ### 4.4.4 Cobertura de los hazards respecto al espacio del problema
 
@@ -706,7 +712,8 @@ todos los SRs de esta tabla mediante la columna de Verificación.
 | SR-010 | Cuando dos o más cage rules activen en el mismo ciclo, el comando final satisfará la envolvente segura de toda regla activada y el patrón inter-ciclo no exhibirá oscilación sostenida a más de `f_osc_max`. | `f_osc_max = 5 Hz`; joint-envelope assertion | H-09 | arbiter (D-25) | SR-CL-B | SC-EDGE-04, SC-EDGE-05 |
 | SR-011 | La desviación estándar del error de heading sobre ventanas elegibles de `t_psd` se mantendrá por debajo de `σ_θ_max`, cubriendo la rama in-band de H-02 que SR-002 no acota. | `σ_θ_max = 5°`; `t_psd = 1.0 s` | H-02 (rama oscilatoria) | C-06 + training | SR-CL-B | SC-EDGE-01, SC-EDGE-04 |
 | SR-012 | (Track 'E') El lane-keeping se mantendrá dentro de la envolvente SR-001/SR-002 bajo entrada visual degradada (glare, exposición, motion blur, contraste, sombra). | `d_max = 0.16 m`; `θ_max = 25°` (reutilizados); envolvente visual provisional (docs/09) | H-10 | C-01, C-02, C-03 + training | SR-CL-A | SC-PERT-04, SC-PERT-05, SC-PERT-06 |
-| SR-013 | (Track 'E') Ante pérdida de percepción válida (oclusión/ausencia de features/frames obsoletos o caídos), el sistema entrará en estado seguro controlado vía C-05 sin exceder `d_max`. | `perc_staleness_max = 200 ms` (provisional); `d_max = 0.16 m` | H-11 | parte de C-05 (trigger de salud de percepción) | SR-CL-A | SC-PERT-07 |
+| SR-013 | (Track 'E') Ante pérdida de percepción válida (oclusión/ausencia de features/frames obsoletos o caídos), el sistema entrará en parada controlada open-loop vía C-05 sin exceder `d_max`. | `perc_staleness_max = 200 ms` (provisional); `d_max = 0.16 m` | H-11 | parte de C-05 (salud del estimador CV del cage) | SR-CL-A | SC-PERT-07 |
+| SR-014 | (Track 'E') El cage no impondrá sus reglas sobre una estimación de carril que falle la verificación de plausibilidad/consistencia temporal; en su lugar entrará en parada controlada (C-05). | `plaus_tol`, `Δt_plaus` (provisionales, vs oráculo ground-truth) | H-12 | parte de C-05 (check de plausibilidad → parada) | SR-CL-A | SC-PERT-08, SC-PERT-04..06 |
 
 Los valores presentes en la tabla son los fijados en
 `docs/03_safety_requirements.md` tras el cierre de D14–D15 y la
@@ -737,15 +744,18 @@ SR-CL-A, cf. D-29) instancia la rama L4b' de la adaptación A2
 caracterización estadística del comportamiento de la policy
 complementaria a los Cage Unit Tests deterministas.
 
-**Extensión del track 'E' (D-38 / D-39).** El track end-to-end con cámara frontal
-añade dos Safety Requirements en el espacio de IDs compartido: **SR-012**
-(lane-keeping bajo degradación visual, cubre H-10) y **SR-013** (degradación
-segura ante pérdida de percepción, cubre H-11). Ambos son **SR-CL-A** y, conforme
-a D-28, se apoyan en reglas deterministas existentes (C-01/C-02/C-03 y C-05): el
-cage no se modifica, porque permanece sobre estado **independiente** (D-39). Sus
-escenarios verificadores SC-PERT-04..07 están aún como *stubs* (pipeline de cámara
-diferido); el rationale completo vive en `docs/03_safety_requirements.md`. No forman
-parte del verdict F-track.
+**Extensión del track 'E' (D-38 / D-40).** El track end-to-end con cámara frontal
+añade tres Safety Requirements en el espacio de IDs compartido: **SR-012**
+(lane-keeping bajo degradación visual, cubre H-10), **SR-013** (degradación segura
+ante pérdida de percepción, cubre H-11) y **SR-014** (plausibilidad del estimador del
+cage: no enforcement sobre una detección sospechosa, cubre H-12). Los tres son
+**SR-CL-A** y, conforme a D-28, se apoyan en reglas deterministas existentes
+(C-01/C-02/C-03 y C-05). Las **reglas del cage no se modifican**; lo que cambia (D-40)
+es la **fuente** de su estado: un detector de líneas por visión propio (determinista),
+no ground-truth — el ground-truth queda solo como señal de reward y oráculo de
+validación en sim. Sus escenarios verificadores SC-PERT-04..08 están aún como *stubs*
+(pipeline de cámara diferido); el rationale completo vive en
+`docs/03_safety_requirements.md`. No forman parte del verdict F-track.
 
 ### 4.6.4 Rationale por Safety Requirement
 

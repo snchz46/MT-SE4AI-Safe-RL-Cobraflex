@@ -8,5 +8,6 @@ H-06,Operation under invalid or unobservable state,S3/E2/C2 - High,SR-007,C-05,O
 H-07,Inability to perform a controlled stop,S3/E1/C1 - High,"SR-005, SR-008",C-05,Open,Emergency stop behaviour
 H-08,Progress stall via reward exploitation,S2/E3/C2 - Medium-High,SR-009,training,Open,Policy convergence to inaction equilibrium
 H-09,Cage rule conflict,S3/E1/C2 - Medium,SR-010,arbiter,Open,Composition hazard across C-01..C-06
-H-10,Lane misperception under degraded visual input,S3/E3/C2 - High,SR-012,"C-01, C-02, C-03 + training",Open,"Track 'E' (camera); cf. D-38, D-39"
-H-11,Loss of valid lane perception,S3/E2/C2 - High,SR-013,C-05 (via perception-health supervisor),Open,"Track 'E' (camera); distinct from H-06 (cage state), cf. D-39"
+H-10,Lane misperception under degraded visual input,S3/E3/C2 - High,SR-012,"C-01, C-02, C-03 + training",Open,"Track 'E' (camera); cage on CV, common-cause; cf. D-38, D-40"
+H-11,Loss of valid lane perception,S3/E2/C2 - High,SR-013,C-05 (CV-estimator health → controlled stop),Open,Track 'E' (camera); common-cause w/ cage CV; cf. D-40
+H-12,Cage lane-misdetection (false safety envelope),S3/E2/C2 - High,SR-014,C-05 (plausibility check → controlled stop),Open,Track 'E' (camera); new under D-40; cf. H-09

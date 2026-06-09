@@ -31,6 +31,40 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [09.06.2026] — E2: D-40 — cage on a dedicated vision lane-estimator (supersedes D-39); H-12 / SR-014 / SC-PERT-08
+
+**Document(s) affected:** `docs/DECISIONS.md` (D-40; D-39 → SUPERSEDED), `docs/02` (H-10/H-11 reframe + new H-12), `docs/03` (SR-012/SR-013 reframe + new SR-014), `docs/04`, `docs/05` (SC-PERT-08 + reframe), `docs/07`, `docs/09` §10 (v0.4), `docs/10` §10; `docs/data/*.csv` (regenerated); `tools/traceability_matrix.csv`; `manuscript/chapters/chapter_04`, `chapter_05`; `scenarios/perturbed/sc_pert_08.yaml` (new stub); `policy/tests/test_verdict_aggregation.py` (count); `src/cobraflex_rl/cobraflex_rl/visual_domain_randomization.py` + test (new).  
+**Phase:** E1 (track 'E'; branch `e2e-camera`).  
+**Gate context:** E-design, before GE2. F-track unaffected.  
+**Author:** Samuel.  
+
+### Change
+
+Re-architected the track-'E' cage perception after the design clarification that the system must drive on **any road with visible lane lines** from the camera (policy *and* cage), without an authored centerline:
+
+- **D-40 (supersedes D-39).** The cage's `state` now comes from a **dedicated, deterministic CV lane-estimator** (separate from the policy's CNN), not from privileged ground truth. Ground truth is kept **in sim only** as the training reward and an oracle to validate the estimator. C-01..C-06 unchanged — only the state *source* changes. D-39 → SUPERSEDED by D-40.
+- **Reframed H-10 / H-11 and SR-012 / SR-013** (`docs/02`, `docs/03`, `docs/04`, `docs/05`, `docs/07`, chapters 04/05): the cage now reads the camera (its own CV detector), so a camera fault is **common-cause** (blinds policy and cage alike); the residual safety is the **open-loop controlled stop** (SR-013/C-05, "no lines ⇒ stop").
+- **New hazard H-12** (cage lane-misdetection: a confidently-wrong CV estimate → false envelope) + **SR-014** (estimator plausibility / temporal-consistency check + conservative fall-back to C-05) + **SC-PERT-08** stub (misleading-markings / false-lane test). Registers the failure mode the CV estimator introduces (impossible under D-39).
+- **Training-world diversity decided: oval-first** (`docs/09` §10): first camera-policy prototype on the current oval with visible lines; world diversity added afterwards.
+- Added the host-testable **visual domain-randomization sampler** (`visual_domain_randomization.py` + test) — the training-side mitigation of H-10 referenced by `docs/09` §10.
+
+### Rationale
+
+The generalisation goal requires the *whole* system to key on visible lines, so the cage cannot rely on an authored centerline. A separate **deterministic CV** estimator keeps the cage independent of the *learned policy* and auditable (a classical algorithm is inspectable). The honest cost — common-cause blindness and a new misdetection hazard — is registered explicitly (D-40 consequences, H-12) rather than hidden; the open-loop stop is the residual safeguard.
+
+### Impact
+
+- Shared registers extended: H-12, SR-014, SC-PERT-08 (stub). SR-CL-A count 9 → 10.
+- **Deferred to Ubuntu:** the cage's CV lane-estimator node + plausibility/temporal-consistency check, the camera obs bridge, the runtime injectors, and CNN training. Sim ground truth validates the estimator (oracle).
+
+### Verification
+
+- `python tools/check_traceability.py` → **All checks PASSED, 0 warnings** (12 hazards H-01..H-12; 14 SRs SR-001..SR-014; 22 scenarios incl. SC-PERT-08).
+- `python tools/check_scenario_yaml.py` → PASSED, 5 stub warnings.
+- `pytest` (root) → **352 passed**.
+
+---
+
 ## [09.06.2026] — E2: manuscript — track 'E' notes in ch.3 / ch.5 / ch.7
 
 **Document(s) affected:** `manuscript/chapters/chapter_03_methodology.md`, `chapter_05_architecture_and_cage.md`, `chapter_07_training_specification.md`.  

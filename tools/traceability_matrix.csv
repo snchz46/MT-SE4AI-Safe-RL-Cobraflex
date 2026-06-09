@@ -30,8 +30,10 @@ H-09,SR-010,,arbiter,SC-EDGE-04,M-S2,tbd,tbd,,cage-rule composition consistency 
 H-09,SR-010,,arbiter,SC-EDGE-05,M-S2,tbd,tbd,,co-activation matrix
 H-09,SR-010,,arbiter,SC-EDGE-04,M-I3,tbd,tbd,,intervention-duration under co-activation
 H-09,SR-010,,arbiter,SC-EDGE-05,M-I3,tbd,tbd,,intervention-duration under co-activation
-H-10,SR-012,C-01,cage_rule,SC-PERT-04,M-S1,tbd,tbd,,"track E (D-38/D-39); SC stub, deferred"
-H-10,SR-012,C-02,cage_rule,SC-PERT-05,M-S1,tbd,tbd,,"track E (D-38/D-39); SC stub, deferred"
-H-10,SR-012,C-03,cage_rule,SC-PERT-06,M-S2,tbd,tbd,,"track E (D-38/D-39); SC stub, deferred"
-H-10,SR-012,,training,SC-PERT-04,M-S2,tbd,tbd,,"track E (D-38/D-39); SC stub, deferred"
-H-11,SR-013,C-05,cage_rule,SC-PERT-07,M-S3,tbd,tbd,,"track E (D-38/D-39); SC stub, deferred"
+H-10,SR-012,C-01,cage_rule,SC-PERT-04,M-S1,tbd,tbd,,"track E (D-40); cage on CV; SC stub, deferred"
+H-10,SR-012,C-02,cage_rule,SC-PERT-05,M-S1,tbd,tbd,,"track E (D-40); cage on CV; SC stub, deferred"
+H-10,SR-012,C-03,cage_rule,SC-PERT-06,M-S2,tbd,tbd,,"track E (D-40); cage on CV; SC stub, deferred"
+H-10,SR-012,,training,SC-PERT-04,M-S2,tbd,tbd,,"track E (D-40); cage on CV; SC stub, deferred"
+H-11,SR-013,C-05,cage_rule,SC-PERT-07,M-S3,tbd,tbd,,"track E (D-40); CV-estimator health -> open-loop stop; SC stub"
+H-12,SR-014,C-05,cage_rule,SC-PERT-08,M-S1,tbd,tbd,,"track E (D-40); cage CV-misdetection; SC stub, deferred"
+H-12,SR-014,C-05,cage_rule,SC-PERT-08,M-S3,tbd,tbd,,"track E (D-40); plausibility check -> controlled stop; SC stub"

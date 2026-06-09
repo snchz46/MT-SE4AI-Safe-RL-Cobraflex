@@ -15,10 +15,28 @@
   },
   "per_scenario": [
     {
-      "scenario": "SC-EDGE-01",
-      "mode": "monitoring",
-      "n_runs": 1,
-      "n_pass": 1,
+      "scenario": "SC-EDGE-03",
+      "mode": "enforcement",
+      "n_runs": 2,
+      "n_pass": 2,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-01",
+      "mode": "enforcement",
+      "n_runs": 2,
+      "n_pass": 2,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-02",
+      "mode": "enforcement",
+      "n_runs": 2,
+      "n_pass": 2,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -52,10 +70,12 @@
     {
       "sr": "SR-004",
       "criticality": "SR-CL-A",
-      "verdict": false,
+      "verdict": true,
       "run_count_ok": false,
-      "families": [],
-      "notes": "no executable scenario yet (all stubs/missing)"
+      "families": [
+        "adverse"
+      ],
+      "notes": "D-29 not met (insufficient runs or family coverage)"
     },
     {
       "sr": "SR-005",
@@ -68,18 +88,22 @@
     {
       "sr": "SR-006",
       "criticality": "SR-CL-B",
-      "verdict": false,
+      "verdict": true,
       "run_count_ok": false,
-      "families": [],
-      "notes": "no executable scenario yet (all stubs/missing)"
+      "families": [
+        "adverse"
+      ],
+      "notes": "D-29 not met (insufficient runs or family coverage)"
     },
     {
       "sr": "SR-007",
       "criticality": "SR-CL-A",
-      "verdict": false,
+      "verdict": true,
       "run_count_ok": false,
-      "families": [],
-      "notes": "no executable scenario yet (all stubs/missing)"
+      "families": [
+        "adverse"
+      ],
+      "notes": "D-29 not met (insufficient runs or family coverage)"
     },
     {
       "sr": "SR-008",
@@ -114,6 +138,6 @@
       "notes": "no executable scenario yet (all stubs/missing)"
     }
   ],
-  "n_runs": 1,
+  "n_runs": 6,
   "n_error": 0
 }

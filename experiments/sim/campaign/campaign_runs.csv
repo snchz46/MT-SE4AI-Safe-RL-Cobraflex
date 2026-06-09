@@ -1,2 +1,7 @@
 scenario,mode,controller,seed,rep,verdict,error
-SC-EDGE-01,monitoring,rl,2024,0,True,
+SC-EDGE-03,enforcement,rl,2024,0,True,
+SC-EDGE-03,enforcement,rl,2024,1,True,
+SC-PERT-01,enforcement,rl,2024,0,True,
+SC-PERT-01,enforcement,rl,2024,1,True,
+SC-PERT-02,enforcement,rl,2024,0,True,
+SC-PERT-02,enforcement,rl,2024,1,True,

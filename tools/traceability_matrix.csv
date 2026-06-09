@@ -8,6 +8,10 @@ H-01,SR-003,C-03,cage_rule,SC-EDGE-01,M-S4,tbd,tbd,,predictive chain
 H-02,SR-002,C-02,cage_rule,SC-EDGE-01,M-P4,tbd,tbd,,heading limit chain
 H-02,SR-002,C-02,cage_rule,SC-EDGE-04,M-P4,tbd,tbd,,heading limit chain
 H-02,SR-003,C-03,cage_rule,SC-EDGE-01,M-S4,tbd,tbd,,partial mitigation
+H-02,SR-011,C-06,cage_rule,SC-EDGE-01,M-P7,tbd,tbd,,oscillation: C-06 runtime attenuation (joint with training penalty)
+H-02,SR-011,C-06,cage_rule,SC-EDGE-04,M-P7,tbd,tbd,,oscillation: C-06 runtime attenuation (joint with training penalty)
+H-02,SR-011,,training,SC-EDGE-01,M-P7,tbd,tbd,,training-side heading-variance penalty (joint with C-06)
+H-02,SR-011,,training,SC-EDGE-04,M-P7,tbd,tbd,,training-side heading-variance penalty (joint with C-06)
 H-03,SR-004,C-04,cage_rule,SC-NOM-02,M-P3,tbd,tbd,,speed compliance
 H-03,SR-004,C-04,cage_rule,SC-EDGE-03,M-P3,tbd,tbd,,speed compliance under perturbation
 H-04,SR-005,C-05,cage_rule,SC-EDGE-04,M-S3,tbd,tbd,,emergency mode for compound state
@@ -17,3 +21,17 @@ H-06,SR-007,C-05,cage_rule,SC-PERT-02,M-S3,tbd,tbd,,state validity triggers
 H-07,SR-005,C-05,cage_rule,SC-EDGE-04,M-S3,tbd,tbd,,emergency mode partial coverage
 H-07,SR-008,C-05,cage_rule,SC-NOM-03,M-S3,tbd,tbd,,controlled stop
 H-07,SR-008,C-05,cage_rule,SC-EDGE-04,M-S3,tbd,tbd,,controlled stop
+H-08,SR-009,,training,SC-NOM-01,M-P6,tbd,tbd,,liveness (min forward progress) training constraint
+H-08,SR-009,,training,SC-NOM-02,M-P6,tbd,tbd,,liveness training constraint
+H-08,SR-009,,training,SC-NOM-03,M-P6,tbd,tbd,,liveness training constraint
+H-08,SR-009,,training,SC-PERT-03,M-P6,tbd,tbd,,liveness under perturbation
+H-08,SR-009,,training,SC-NOM-01,M-S2,tbd,tbd,,M-S2 monitoring cross-check (no enforcement)
+H-09,SR-010,,arbiter,SC-EDGE-04,M-S2,tbd,tbd,,cage-rule composition consistency (arbiter property per D-25)
+H-09,SR-010,,arbiter,SC-EDGE-05,M-S2,tbd,tbd,,co-activation matrix
+H-09,SR-010,,arbiter,SC-EDGE-04,M-I3,tbd,tbd,,intervention-duration under co-activation
+H-09,SR-010,,arbiter,SC-EDGE-05,M-I3,tbd,tbd,,intervention-duration under co-activation
+H-10,SR-012,C-01,cage_rule,SC-PERT-04,M-S1,tbd,tbd,,"track E (D-38/D-39); SC stub, deferred"
+H-10,SR-012,C-02,cage_rule,SC-PERT-05,M-S1,tbd,tbd,,"track E (D-38/D-39); SC stub, deferred"
+H-10,SR-012,C-03,cage_rule,SC-PERT-06,M-S2,tbd,tbd,,"track E (D-38/D-39); SC stub, deferred"
+H-10,SR-012,,training,SC-PERT-04,M-S2,tbd,tbd,,"track E (D-38/D-39); SC stub, deferred"
+H-11,SR-013,C-05,cage_rule,SC-PERT-07,M-S3,tbd,tbd,,"track E (D-38/D-39); SC stub, deferred"

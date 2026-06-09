@@ -235,6 +235,21 @@ lane-following and makes attributing effects harder. The "reward = quality, cage
 
 ---
 --->
+## 10. Track E — reward unchanged (D-38 / D-39)
+
+The end-to-end front-camera variant (track 'E', `docs/09` §10) leaves this reward
+**unchanged**. The reward is a function of the resulting **ground-truth state**
+(`ey`, `epsi`, `progress`) and the **raw policy steering delta** — none of which
+depend on the observation modality. The camera changes what the *policy sees*, not
+what the *environment measures* to score it; and because the cage stays on the
+independent ground-truth state (D-39), `ey/epsi/progress` remain available exactly as
+in F3. Consequently the §1 formula, the §3 weights and the §7 unit tests all carry
+over, and **no new reward term is introduced for the camera track**. (If E-training
+reveals a camera-specific pathology — e.g. the policy exploiting a visual artefact to
+gain reward — a revision would be recorded here as v2.x; none is assumed at E-design.)
+
+---
+
 ## Version log
 
 - **weights v1.0 (2026-05-29):** first freeze, consistent with §7.2.3 and the
@@ -255,3 +270,6 @@ lane-following and makes attributing effects harder. The "reward = quality, cage
   `policy/tests/test_rewards.py`. Effect on native RL smoothness **pending a new
   training cycle** (Ubuntu+Jazzy host) and the Ch.8 sensitivity analysis; weights
   remain `[provisional, M-P4]`.
+- **track E note (2026-06-09):** added §10 — the reward is **unchanged** for the
+  end-to-end camera variant (D-38/D-39); it is observation-agnostic (computed on
+  ground-truth state + progress + raw steering delta). No formula/weight change.

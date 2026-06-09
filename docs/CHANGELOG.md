@@ -31,6 +31,35 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [09.06.2026] — E2: E-design — camera env (docs/09 §10), reward unchanged (docs/10 §10), pure-Python perception modules
+
+**Document(s) affected:** `docs/09`, `docs/10`; `src/cobraflex_rl/cobraflex_rl/visual_degradation.py` + `perception_health.py` (new); `policy/tests/test_visual_degradation.py` + `test_perception_health.py` (new).  
+**Phase:** E0/E1 (track 'E' design; branch `e2e-camera`).  
+**Gate context:** E-design, before GE1. F-track unaffected.  
+**Author:** Samuel.  
+
+### Change
+
+- **docs/09 §10** (v0.3): the E-track environment changes **only the observation** — the front-camera image (CNN policy) replaces the 6-dim state vector. Action, reward, cage (on the independent ground-truth state, D-39) and episode logic are unchanged; supersedes ED-1's image-obs rejection for track 'E'. Visual degradations act on the observation; perception loss raises C-05 Trigger 8.
+- **docs/10 §10:** the reward is **unchanged** for track 'E' — it is observation-agnostic (computed on ground-truth state + progress + raw steering delta).
+- **New host-testable pure modules** (numpy / stdlib only, no ROS): `visual_degradation.py` (glare / low-light / motion-blur primitives → SC-PERT-04..06 / SR-012 / H-10) and `perception_health.py` (`PerceptionHealthMonitor` raising the C-05 perception-health trigger → SC-PERT-07 / SR-013 / H-11), each with a unit-test file under `policy/tests/`.
+
+### Rationale
+
+The E-track changes only the policy's input; the reward and cage are observation-agnostic / on the independent state, so they carry over (the minimal-delta point of D-39). The two pure modules are the host-doable, unit-testable kernels of the camera stressors; the Gazebo camera sensor, the observation bridge, the runtime injectors and the ROS perception-health node are the Ubuntu part.
+
+### Impact
+
+- No change to F-track artefacts or the H→SR→C→SC→M chain. SC-PERT-04..07 remain stubs.
+- **Deferred to Ubuntu:** Gazebo front-camera sensor (URDF/SDF) + observation bridge in `gazebo_lane_env`, CNN/PPO training, runtime degradation/loss injectors, the ROS perception-health supervisor node.
+
+### Verification
+
+- `pytest` (root) → **340 passed** (33 new across `test_visual_degradation.py` + `test_perception_health.py`).
+- `python tools/check_traceability.py` → **All checks PASSED, 0 warnings**.
+
+---
+
 ## [09.06.2026] — E2: Track 'E' scaffolding (end-to-end front-camera) — D-38/D-39, H-10/H-11, SR-012/013, SC-PERT-04..07
 
 **Document(s) affected:** `docs/00`, `docs/01`, `docs/02`, `docs/03`, `docs/04`, `docs/05`, `docs/07`, `docs/DECISIONS.md`; `docs/data/hazard_register.csv` + `docs/data/safety_requirements.csv` (regenerated); `manuscript/chapters/chapter_04_*`; `scenarios/perturbed/sc_pert_04..07.yaml` (new stubs); `policy/tests/test_verdict_aggregation.py` (count).  

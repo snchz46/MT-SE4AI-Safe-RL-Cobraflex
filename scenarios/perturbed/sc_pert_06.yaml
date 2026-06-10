@@ -1,8 +1,7 @@
 id: SC-PERT-06
 category: perturbed
-status: stub   # Track 'E' (D-38/D-39): full YAML deferred until the camera observation + eval pipeline exists (docs/09).
 
-# Track mapping (Option A — oval; see docs/05). Camera-track scenario.
+# Track mapping (Option A — oval; see docs/05). Camera-track scenario (track 'E').
 track:
   world: lane_following_oval.world
   centerline: oval_right_lane_centerline.yaml
@@ -10,14 +9,38 @@ track:
 commanded_speed_mps: 0.2
 
 description: |
-  Motion blur (Track 'E', end-to-end front-camera). The front-camera image is degraded by
-  motion blur (and rolling-shutter artefacts) at operating speed; the camera policy must keep
-  the lane while the cage, on its INDEPENDENT state (D-39), bounds the trajectory. Verifies
-  SR-012 against hazard H-10. STUB: the visual-degradation perturbation type and its blur
-  envelope are fixed in docs/09; the runtime injector and camera eval pipeline do not exist yet.
+  Motion blur (Track 'E', end-to-end front-camera). A directional box blur
+  (visual_degradation.apply_motion_blur, horizontal axis — the dominant smear for a
+  forward camera on a turning vehicle) degrades the frame throughout the run, before
+  both consumers (D-40 common cause). The policy must keep the lane; the cage's CV
+  estimator tolerates blur well (GE2 oracle validation: detection 100% at level 0.5,
+  |ey| MAE ~10 mm). Verifies SR-012 against hazard H-10.
+
+initial_conditions:
+  pose: { x: 0.0, y: 0.0, theta_deg: 0.0 }
+  speed_mps: 0.0
+  randomisation:
+    lateral_offset_uniform_m: [-0.02, 0.02]
+    heading_uniform_deg: [-2.0, 2.0]
 
 perturbations:
-  type: visual_degradation        # E-track runtime injector — not yet implemented
+  type: visual_degradation
   mode: motion_blur
+  level_levels: [0.4, 0.8]
+
+termination:
+  type: time_or_event
+  timeout_s: 15.0
+  events: [lane_exit, emergency_stop, straight_completed]
+
+metrics_primary: [M-S1, M-P1, M-I1]
+metrics_secondary: [M-S3, M-I5]
+
+pass_criterion_per_run: "M-S1 < 0.16 AND road_edge_contact == False AND emergency == False"
+pass_criterion_per_scenario: "fraction_pass >= 0.90"
 
 references_SR: [SR-012]
+
+n_runs_recommended:
+  enforcement: 40          # 20 per level × 2 levels
+  monitoring: 40

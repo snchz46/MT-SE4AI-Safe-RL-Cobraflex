@@ -138,11 +138,36 @@ def test_no_lane_on_blank_frame(estimator, cam):
     assert est.confidence == 0.0
 
 
-def test_single_line_is_not_a_lane(estimator, cam):
-    img = render_lane(cam, [lambda x: 0.1])
-    est = estimator.estimate(img)
+def test_single_line_fallback_left_line(cam):
+    # One line ~half a lane to the LEFT: the fallback infers the centre from
+    # the running lane width (lane_keeper single-side precedent).
+    est = CvLaneEstimator(cam).estimate(render_lane(cam, [lambda x: LANE_W / 2.0]))
+    assert est.ok
+    assert est.reason == "single_line"
+    assert est.ey == pytest.approx(0.0, abs=0.02)
+    assert est.confidence <= 0.5  # halved confidence
+
+
+def test_single_line_fallback_right_line(cam):
+    est = CvLaneEstimator(cam).estimate(render_lane(cam, [lambda x: -LANE_W / 2.0]))
+    assert est.ok
+    assert est.reason == "single_line"
+    assert est.ey == pytest.approx(0.0, abs=0.02)
+
+
+def test_single_line_far_from_half_lane_rejected(cam):
+    # A lone line 0.4 m out: side assignment too ambiguous -> no estimate.
+    est = CvLaneEstimator(cam).estimate(render_lane(cam, [lambda x: 0.4]))
     assert not est.ok
     assert est.reason == "fewer_than_two_lines"
+
+
+def test_single_line_fallback_can_be_disabled(cam):
+    cfg = CvLaneEstimatorConfig(single_line_fallback=False)
+    est = CvLaneEstimator(cam, cfg).estimate(
+        render_lane(cam, [lambda x: LANE_W / 2.0])
+    )
+    assert not est.ok
 
 
 def test_pair_separation_must_be_plausible(estimator, cam):

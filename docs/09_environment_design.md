@@ -258,17 +258,29 @@ track 'E'**: the observation becomes the front-camera image; the policy *learns*
 perception.
 
 ```text
-obs    = front-camera frame      (Box, uint8, shape (H, W, C); provisional H=W=84, C=1 grayscale or 3 RGB)
+obs    = front-camera frame      (Box, uint8, shape (84, 84, 1) grayscale — FIXED at E2, inside the v0.3 envelope)
 action = [steering]              (UNCHANGED: Box float32 dim 1; fixed speed 0.2 m/s)
 ```
 
-- **Policy network:** a CNN feature extractor (SB3 `CnnPolicy`, or a custom
-  `BaseFeaturesExtractor`) replaces the MLP over the 6-dim vector. The
-  curvature-preview scalars (`kappa_near/far`, ED-7) are **not** in the obs — the
-  policy must infer bend geometry from the image (the harder perception problem D-38
-  accepts; budget the larger training set, Shalev-Shwartz & Shashua 2016).
-- **Frame stacking** (e.g. `VecFrameStack`, k=2–4) to recover the velocity/rate
-  cues a single frame loses — fixed at E-design (GE0/GE1).
+- **Fixed observation parameters (E2).** 84×84 **grayscale**, frame stack **k=4**
+  (`VecFrameStack` in the trainer; the env emits single frames). Grayscale because the
+  lane cue is white-on-asphalt luminance — colour adds 3× input for no lane information
+  and would invite reliance on the very appearance axis the H-10 domain randomisation
+  varies; 84×84 is the SB3 `CnnPolicy`/NatureCNN native input, at which the ~0.01 m-wide
+  rendered lane lines remain ≥1 px in the near field; k=4 (envelope upper end) because
+  steering-rate cues must come entirely from the stack — the camera obs has no
+  `prev_steer` channel. Constants in `cobraflex_rl/camera_pipeline.py`; config
+  `train_ppo_camera.yaml`.
+- **Source camera:** the existing `ZEDm Cam` Gazebo sensor (640×480 RGB @ 20 Hz, HFOV
+  1.3962634, topic `camera/image_raw`, bridged in `gz_bridge.yaml`), **pitched down
+  0.25 rad** (E2: flat-mounted, the R=0.80 m curve swept out of the FOV — evidence in
+  `experiments/sim/e_cam_visibility/`). Native frames are area-downsampled to the obs
+  in the shared `CameraPipeline` (one degradation point before both consumers, D-40).
+- **Policy network:** SB3 `CnnPolicy` (NatureCNN feature extractor) replaces the MLP
+  over the 6-dim vector. The curvature-preview scalars (`kappa_near/far`, ED-7) are
+  **not** in the obs — the policy must infer bend geometry from the image (the harder
+  perception problem D-38 accepts; budget the larger training set, Shalev-Shwartz &
+  Shashua 2016).
 
 **Training-world diversity (decided: oval first).** The first camera-policy prototype trains
 on the **current oval** (`lane_following_oval`) — now with **visible lane lines** rendered for
@@ -314,17 +326,26 @@ camera (D-40), separate from the policy's CNN. In simulation, ground truth is us
 compute the reward and (b) **validate** the CV estimator's error (an oracle). The same CV
 estimator transfers to E-physical with no ground truth required.
 
-**What needs Ubuntu (deferred).** The Gazebo front-camera sensor (URDF/SDF) + image
-topic, the camera observation bridge in `gazebo_lane_env`, the CNN training run, and
-the runtime degradation/loss injectors. The host-side pieces (the two pure modules
-above, this design) come first.
+**Implementation status (E2, 2026-06-10).** The "deferred to Ubuntu" list is built and
+live: the camera sensor publishes headless and the lane lines are evidence-verified
+(`experiments/sim/e_cam_visibility/`); `gazebo_lane_env` has the camera observation mode
+(`observation.type: camera` — image obs via the shared `CameraPipeline`, cage state via
+`CagePerceptionSupervisor`); the runtime degradation injectors run per episode from
+`reset(options)` (scenario stressors) or from the in-env H-10 domain randomisation
+(`domain_randomization` config block, per-episode draw via the seeded `np_random`); the
+deterministic CV lane-estimator + SR-013/SR-014 supervision feed C-05 Trigger 8 (cage
+YAML 0.6.0). Estimator-vs-oracle accuracy per D-40's plan:
+`experiments/sim/runs/cv_estimator_val_*`. Remaining for later E-phases: the CNN
+training runs themselves and the eval campaign.
 
 **Traceability.** Spec: this §10 + Training Spec (E-design, pending). Decisions: D-38
 (supersedes ED-1/D-01 for track 'E'), **D-40** (cage on a deterministic CV estimator,
 supersedes D-39); D-34 (cage in enforcement during training) carries over. Safety: SR-012,
 SR-013, SR-014 (H-10/H-11/H-12). Code (host): `visual_degradation.py`,
-`visual_domain_randomization.py`, `perception_health.py`; (Ubuntu): camera bridge in
-`gazebo_lane_env.py` + the CV lane-estimator node + plausibility check.
+`visual_domain_randomization.py`, `perception_health.py`, `lane_plausibility.py`,
+`camera_geometry.py`, `cv_lane_estimator.py`, `cage_perception.py`, `camera_pipeline.py`;
+(sim loop): camera mode in `gazebo_lane_env.py` + image subscription in
+`ros_interface.py`; (tools): `validate_cv_estimator.py`, `capture_camera_frames.py`.
 
 ---
 
@@ -345,3 +366,11 @@ SR-013, SR-014 (H-10/H-11/H-12). Code (host): `visual_degradation.py`,
   generalisation to any road with visible lines; common-cause trade-off + the new H-12/SR-014
   (cage misdetection) recorded; training-world diversity decided as **oval-first**; ground
   truth retained in sim only as reward + CV-estimator oracle.
+- **v0.5 (2026-06-10, E2):** §10 reconciled to the implementation. Provisional obs
+  choices **fixed inside the v0.3 envelope**: 84×84 **grayscale**, frame stack **k=4**
+  (rationale in §10; no new D-NN — the envelope was the decided design, this freezes the
+  point). Source camera documented (ZEDm 640×480@20 Hz, pitch 0.25 rad, E2 evidence);
+  the "deferred to Ubuntu" list replaced by the implementation-status block (camera obs
+  mode + in-env H-10 domain randomisation + CV estimator/supervisor → C-05 Trigger 8,
+  cage YAML 0.6.0; oracle validation runs under `experiments/sim/runs/cv_estimator_val_*`).
+  F-track design (§1–§9) untouched.

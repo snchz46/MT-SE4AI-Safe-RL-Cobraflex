@@ -51,14 +51,18 @@ class CvLaneEstimatorConfig:
     """Tunables of the deterministic pipeline. Defaults mirror the proven
     `lane_keeper_gazebo_node` thresholds and the ODD-1 lane geometry."""
 
-    # Mask thresholds are TIGHTER than lane_keeper_gazebo_node's (70/150):
-    # the pale grass beside the road has S≈48, V≈176 and passed that mask,
-    # merging the road-edge line with the grass at far rows and biasing
-    # ey/epsi (found in the GE2 oracle validation, see
-    # experiments/sim/runs/cv_estimator_val_*). Painted lines are S≈0-15,
-    # V≈200-240.
+    # Saturation cap is TIGHTER than lane_keeper_gazebo_node's 70: the pale
+    # grass beside the road has S≈48, V≈176 and passed that mask, merging the
+    # road-edge line with the grass at far rows and biasing ey/epsi (found in
+    # the GE2 oracle validation, experiments/sim/runs/cv_estimator_val_*).
+    # Painted lines are S≈0-15, V≈200-240. The vegetation-hue exclusion below
+    # covers the glare case where wash-out drives the grass's S under the cap.
     white_sat_max: int = 30          # HSV S ≤ → white candidate
-    white_val_min: int = 170         # HSV V ≥ → white candidate
+    white_val_min: int = 150         # HSV V ≥ → white candidate
+    # Vegetation exclusion: pixels with a green hue and at least this much
+    # saturation are never line candidates, whatever their brightness.
+    vegetation_hue_range: tuple = (35, 85)   # OpenCV H in [0, 179]
+    vegetation_sat_min: int = 8
     near_distance_m: float = 0.15    # row scan: nearest ground distance
     far_distance_m: float = 1.00     # row scan: farthest ground distance
     n_scan_rows: int = 24            # rows sampled between near and far
@@ -70,6 +74,18 @@ class CvLaneEstimatorConfig:
     lane_width_tol_m: float = 0.10   # accepted pair separation = nominal ± tol
     min_rows_for_curvature: int = 8  # quadratic fit needs enough X span
     max_abs_y_m: float = 1.5         # discard candidates far off to the side
+    # Single-line fallback (mirrors the proven lane_keeper_gazebo_node
+    # single-side mode): when no plausible pair exists, infer the lane centre
+    # from the nearest single line + the running lane-width estimate, at
+    # halved confidence. In the tight oval curves the dashed separator drops
+    # out of the scan band while the solid outer edge survives; without the
+    # fallback those stretches read as perception loss.
+    single_line_fallback: bool = True
+    single_line_confidence_scale: float = 0.5
+    # The surviving line must sit roughly half a lane to one side; beyond
+    # this slack the side assignment is too ambiguous to trust (H-12 risk —
+    # the plausibility temporal check is the backstop).
+    single_line_side_slack_m: float = 0.12
 
 
 @dataclass(frozen=True)
@@ -107,6 +123,9 @@ class CvLaneEstimator:
         v_hi = max(0.0, min(v_far, self.camera.height_px - 1.0))
         rows = np.linspace(v_lo, v_hi, self.config.n_scan_rows)
         self._scan_rows = np.unique(np.round(rows).astype(int))
+        # Running lane-width estimate for the single-line fallback, updated
+        # whenever a full pair is found (EMA, lane_keeper precedent).
+        self._lane_width_ema = float(self.config.lane_width_nominal_m)
 
     # ------------------------------------------------------------------ mask
     def white_mask(self, frame_bgr: np.ndarray) -> np.ndarray:
@@ -115,7 +134,7 @@ class CvLaneEstimator:
             return ((frame_bgr >= self.config.white_val_min) * 255).astype(np.uint8)
         if cv2 is not None:
             hsv = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2HSV)
-            sat, val = hsv[:, :, 1], hsv[:, :, 2]
+            hue, sat, val = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]
         else:  # numpy fallback (max/min channel approximation of S and V)
             f = frame_bgr.astype(np.float32)
             val = f.max(axis=2)
@@ -124,7 +143,13 @@ class CvLaneEstimator:
                 sat = np.where(val > 0, (val - cmin) / val * 255.0, 0.0)
             val = val.astype(np.uint8)
             sat = sat.astype(np.uint8)
+            hue = np.zeros_like(sat)  # fallback path skips the hue exclusion
         mask = (sat <= self.config.white_sat_max) & (val >= self.config.white_val_min)
+        # Vegetation exclusion: under glare wash-out the grass's saturation
+        # drops below white_sat_max, but as long as any saturation survives the
+        # hue still says "green" — never a painted line.
+        h_lo, h_hi = self.config.vegetation_hue_range
+        mask &= ~((hue >= h_lo) & (hue <= h_hi) & (sat >= self.config.vegetation_sat_min))
         return (mask * 255).astype(np.uint8)
 
     # ------------------------------------------------------- candidate points
@@ -215,6 +240,8 @@ class CvLaneEstimator:
 
         lines = self._cluster_lines(points)
         if len(lines) < 2:
+            if len(lines) == 1:
+                return self._single_line_estimate(lines, points, "fewer_than_two_lines")
             return CvLaneEstimate(
                 ok=False,
                 feature_count=len(points),
@@ -236,12 +263,7 @@ class CvLaneEstimator:
                 best_pair = (right, left)
                 best_center = center
         if best_pair is None:
-            return CvLaneEstimate(
-                ok=False,
-                feature_count=len(points),
-                n_lines=len(lines),
-                reason="no_plausible_lane_pair",
-            )
+            return self._single_line_estimate(lines, points, "no_plausible_lane_pair")
 
         # Lane-centre polynomial = mean of the two line fits; the state is
         # read off its coefficients at the vehicle (X=0).
@@ -264,6 +286,8 @@ class CvLaneEstimator:
 
         n_pair_points = len(pair_pts)
         confidence = min(1.0, n_pair_points / (2.0 * len(self._scan_rows)))
+        # Feed the running width estimate for the single-line fallback.
+        self._lane_width_ema = 0.8 * self._lane_width_ema + 0.2 * lane_width
         return CvLaneEstimate(
             ok=True,
             ey=ey,
@@ -274,5 +298,55 @@ class CvLaneEstimator:
             feature_count=n_pair_points,
             n_lines=len(lines),
             reason="ok",
+            line_fits=tuple((cl["c0"], cl["c1"]) for cl in lines),
+        )
+
+    def _single_line_estimate(
+        self,
+        lines: List[dict],
+        points: Sequence[Tuple[float, float, int]],
+        fail_reason: str,
+    ) -> CvLaneEstimate:
+        """Fallback when no plausible pair exists (lane_keeper single-side
+        precedent): infer the lane centre from the single line nearest a
+        half-lane offset, using the running lane-width estimate. The side is
+        the line's own sign — trustworthy only while the line sits roughly
+        half a lane away (slack-bounded); a wrong-side lock is the H-12 case
+        the SR-014 temporal check backstops."""
+        cfg = self.config
+        if not cfg.single_line_fallback or not lines:
+            return CvLaneEstimate(
+                ok=False, feature_count=len(points), n_lines=len(lines),
+                reason=fail_reason,
+            )
+        half = self._lane_width_ema / 2.0
+        best = min(lines, key=lambda cl: abs(abs(cl["c0"]) - half))
+        if abs(abs(best["c0"]) - half) > cfg.single_line_side_slack_m:
+            return CvLaneEstimate(
+                ok=False, feature_count=len(points), n_lines=len(lines),
+                reason=fail_reason,
+            )
+        side = 1.0 if best["c0"] >= 0 else -1.0  # +1: left line, -1: right line
+        center0 = best["c0"] - side * half
+        heading = float(np.arctan(best["c1"]))
+        xs = np.array([p[0] for p in best["pts"]])
+        curvature = (
+            float(2.0 * best["c2"])
+            if len(xs) >= cfg.min_rows_for_curvature and float(xs.ptp()) > 0.2
+            else 0.0
+        )
+        confidence = cfg.single_line_confidence_scale * min(
+            1.0, len(best["pts"]) / float(len(self._scan_rows))
+        )
+        return CvLaneEstimate(
+            ok=True,
+            ey=-float(center0),
+            epsi=-heading,
+            lane_width=float(self._lane_width_ema),
+            curvature=curvature,
+            confidence=float(confidence),
+            feature_count=len(best["pts"]),
+            n_lines=len(lines),
+            reason="single_line",
             line_fits=tuple((cl["c0"], cl["c1"]) for cl in lines),
         )

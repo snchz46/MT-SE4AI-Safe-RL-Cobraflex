@@ -1,8 +1,7 @@
 id: SC-PERT-05
 category: perturbed
-status: stub   # Track 'E' (D-38/D-39): full YAML deferred until the camera observation + eval pipeline exists (docs/09).
 
-# Track mapping (Option A — oval; see docs/05). Camera-track scenario.
+# Track mapping (Option A — oval; see docs/05). Camera-track scenario (track 'E').
 track:
   world: lane_following_oval.world
   centerline: oval_right_lane_centerline.yaml
@@ -10,15 +9,41 @@ track:
 commanded_speed_mps: 0.2
 
 description: |
-  Low-light / under-exposure (Track 'E', end-to-end front-camera). The front-camera image
-  is degraded by low light / under-exposure (dusk, deep shadow), reducing lane contrast; the
-  camera policy must keep the lane while the cage, on its INDEPENDENT state (D-39), bounds the
-  trajectory. Verifies SR-012 against hazard H-10. STUB: the visual-degradation perturbation
-  type and its intensity envelope are fixed in docs/09; the runtime injector and camera eval
-  pipeline do not exist yet.
+  Low light / under-exposure (Track 'E', end-to-end front-camera). The camera frame is
+  darkened with contrast compression (visual_degradation.apply_low_light) throughout the
+  run, before both consumers (D-40 common cause). Two levels with DIFFERENT expected
+  behaviours, hence the labelled two-arm pass criterion (SC-PERT-03 precedent):
+  at the low level the system must keep driving the lane (SR-012); at the high level the
+  cage's CV estimator loses the lines (GE2 oracle validation: detection 50% at level 0.3,
+  0% at 0.6) and the specified-safe outcome is the SR-013 controlled stop via C-05
+  Trigger 8 — the run passes if the trajectory stays bounded with no road-edge contact,
+  emergency allowed. Verifies SR-012 (low arm) and SR-013 (high arm) against H-10/H-11.
+
+initial_conditions:
+  pose: { x: 0.0, y: 0.0, theta_deg: 0.0 }
+  speed_mps: 0.0
+  randomisation:
+    lateral_offset_uniform_m: [-0.02, 0.02]
+    heading_uniform_deg: [-2.0, 2.0]
 
 perturbations:
-  type: visual_degradation        # E-track runtime injector — not yet implemented
+  type: visual_degradation
   mode: low_light_underexposure
+  level_levels: [0.2, 0.5]      # low arm / high arm
 
-references_SR: [SR-012]
+termination:
+  type: time_or_event
+  timeout_s: 15.0
+  events: [lane_exit, emergency_stop, straight_completed]
+
+metrics_primary: [M-S1, M-P2, M-S3]
+metrics_secondary: [M-P1, M-I5]
+
+pass_criterion_per_run: "low: M-P2 == 1 AND M-S1 < 0.16 AND road_edge_contact == False; high: M-S1 < 0.16 AND road_edge_contact == False"
+pass_criterion_per_scenario: "fraction_pass >= 0.90"
+
+references_SR: [SR-012, SR-013]
+
+n_runs_recommended:
+  enforcement: 40          # 20 per level × 2 levels
+  monitoring: 40

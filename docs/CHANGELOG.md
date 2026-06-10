@@ -31,6 +31,37 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [10.06.2026] — E2: track-'E' perception stack — CV lane-estimator (D-40) validated vs oracle, C-05 Trigger 8 live (cage 0.6.0), camera obs mode in the env, SC-PERT-04..08 un-stubbed
+
+**Document(s) affected:** `cage/cage.yaml` (**0.5.1 → 0.6.0**), `cage/rules/c05_emergency.py` (Trigger 8), `cage/tests/test_c05_perception_trigger.py` (new) + 3 version-assert updates; `src/cobraflex_rl/cobraflex_rl/`: `camera_geometry.py`, `cv_lane_estimator.py`, `cage_perception.py`, `camera_pipeline.py` (new), `visual_degradation.py` (+occlusion, +false_lane), `gazebo_lane_env.py` (camera obs mode + in-env H-10 DR), `ros_interface.py` (camera subscription), `train_ppo.py` (CnnPolicy + VecFrameStack), `config/train_ppo_camera.yaml` (new); `policy/tests/` (+5 test files); `tools/validate_cv_estimator.py` (new); `docs/04` (Trigger 8 un-deferred, cage state source implemented), `docs/05` (SC-PERT-04..08 un-stubbed), `docs/09` §10 (v0.5); `scenarios/perturbed/sc_pert_04..08.yaml` (full schema-valid YAMLs); `experiments/sim/runs/cv_estimator_val_*` (oracle-validation evidence).
+**Phase:** E2 (track 'E'; branch `e2e-camera`).
+**Gate context:** GE2 core evidence — the cage may now rely on camera perception. F-track unaffected (cage 0.6.0 keeps Trigger 8 inert for pre-0.6.0 YAMLs; `perception_invalid` is never set by F-track callers).
+**Author:** Samuel.
+
+### Change
+
+- **C-05 Trigger 8 implemented** (SR-013 loss / SR-014 misdetection; H-11/H-12): `ctx["perception_invalid"]`, raised by the external supervisor, fires the open-loop controlled stop. Gated by `c05_emergency.perception_trigger_enabled` (code default false → back-compat per the 0.4.0→0.5.0 precedent; the 0.6.0 YAML ships true). `compatible_sr_spec_version` stays "1.0" (SR-012..014 are additive).
+- **Deterministic CV lane-estimator** (D-40): closed-form pitch-only ground-plane projection (`camera_geometry.py`, constants from the URDF/sensor); HSV white mask with **vegetation-hue exclusion**; per-row run candidates → polynomial line clustering → driven-lane pair selection → `ey/epsi/lane-width/curvature`; **single-line fallback** (lane_keeper precedent) for the dash-gap stretches in the tight curves. Composed with the SR-013 health monitor + SR-014 plausibility check in `cage_perception.CagePerceptionSupervisor`.
+- **Oracle validation per D-40's plan** (`tools/validate_cv_estimator.py`; 4 iterations recorded under `experiments/sim/runs/cv_estimator_val_*`): the first run exposed two real defects — the proven lane-keeper mask thresholds let the **pale grass (S≈48) pass as "white"**, merging the road-edge line with the grass and biasing ey (gain 0.70, −20 mm offset) and epsi (+0.175 rad); and the linear cluster fits could not follow the KAPPA_MAX=1.25 curvature. Final state (run `cv_estimator_val_20260610T181634Z`): **clean detection 100%, ey bias −9 mm, MAE 23 mm, p95 58 mm; epsi MAE 0.16 rad**; glare 0.3/0.6 detected 100% (ey bias −13/−32 mm); motion blur 0.5 detected 100% (MAE 10 mm); low-light 0.3 → 67% detection, 0.6 → 0% (→ designed SR-013 stop); occlusion: far-field single-line persists at 0.5, full loss at 1.0; false-lane 0.8: ey stays accurate but **epsi pulled ~0.5 rad — the exact H-12 "confidently wrong" signature** the SR-014 check exists for.
+- **Shared camera path** (`camera_pipeline.py`): one degradation point before **both** consumers (policy CNN + cage CV — the D-40 common cause); obs fixed at **84×84 grayscale, frame stack k=4** (docs/09 §10 v0.5, inside the documented envelope — no new D-NN). `GazeboLaneEnv` camera mode: image obs, cage on the supervisor's state/Trigger-8 flag, ground truth confined to reward/termination/metrics; in-env per-episode **H-10 domain randomisation** (seeded via `np_random`; eval-only modes occlusion/false-lane excluded from the training envelope by design). `train_ppo.py` gains CnnPolicy + VecFrameStack; E-config `train_ppo_camera.yaml`.
+- **`visual_degradation.py`**: +`apply_occlusion` (SC-PERT-07) and `apply_false_lane` (SC-PERT-08) as `EVAL_ONLY_MODES`; `MODES` (the DR envelope) unchanged.
+- **SC-PERT-04..08 un-stubbed** into full schema-valid YAMLs (`check_scenario_yaml.py`: 0 errors, 0 warnings) with levels grounded in the oracle validation; docs/05 sections updated (incl. the SC-PERT-05 labelled two-arm criterion and SC-PERT-07's level-1.0 rationale); run budget 320 across both modes.
+
+### Rationale
+
+D-40 made the estimator-vs-oracle evidence the precondition for the cage relying on camera perception; building the estimator exposed two genuine perception defects that pure host tests could not have caught (grass-as-white, curvature-blind linear fits) — exactly the kind of finding the oracle-validation step exists for.
+
+### Impact
+
+- Cage consumers on the camera track must run cage YAML ≥ 0.6.0; F-track behaviour is bit-identical (back-compat default).
+- The E-training pilot (Stage E3) is unblocked: env camera mode + config exist. Known limitation recorded: estimator epsi MAE ≈ 0.16 rad clean (p95 0.35) — C-02 enforcement on the CV state will be noisier than on ground truth; to be observed in the pilot and, if spurious C-02/C-05 fires dominate, a deterministic temporal smoothing (EMA) is the candidate fix.
+
+### Verification
+
+`pytest` → **426 passed** (60 new). `python tools/check_traceability.py` → All checks PASSED, 0 warnings. `python tools/check_scenario_yaml.py` → 0 errors, 0 warnings (stub warnings gone). Oracle validation: `experiments/sim/runs/cv_estimator_val_20260610T181634Z/summary.json` (numbers above) with full repro metadata (git commit, world/centerline/cage hashes, camera model, estimator config).
+
+---
+
 ## [10.06.2026] — E2: camera evidence baseline — pitched front camera, matte road materials, lane-line visibility verified in-sim
 
 **Document(s) affected:** `src/cobraflex/urdf/my_robot_gazebo.urdf` + `my_robot_gazebo_mesh.urdf` (camera pitch), `scripts/compose_lane_circuit.py` (matte PBR material), `src/cobraflex/worlds/lane_following_oval{,_wet,_worn}.world` (regenerated), `tools/capture_camera_frames.py` + `tools/cam_evidence_session.sh` + `tools/reap_sim.sh` (new evidence tools), `experiments/sim/e_cam_visibility/` (frame evidence).

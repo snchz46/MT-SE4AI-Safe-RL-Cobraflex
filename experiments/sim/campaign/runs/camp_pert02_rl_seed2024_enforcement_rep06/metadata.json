@@ -1,0 +1,19 @@
+{
+  "run_id": "camp_pert02_rl_seed2024_enforcement_rep06",
+  "scenario_id": "SC-PERT-02",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-06-10T07:28:09.630118+00:00",
+  "duration_s": 15.0,
+  "git_commit": "a2a1453eb5d202ce9c1e7713bb0bc45f3bcfb969",
+  "cage_yaml": "/home/admit/Samuel/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "7a08ea91d2ff70c1db1e49fd4742ab099b47647395aca4509289e226fa3f5346",
+  "policy_checkpoint": "/home/admit/Samuel/thesis_repo/experiments/sim/cobraflex_ppo_lane_2024_200k.zip",
+  "policy_checkpoint_hash": "c77b39783ce6462a522d06cb34db71efbc8dbd4204b00e7d88c9eb5ae4a6103e",
+  "centerline_yaml_hash": "54f5d47cdf4d8c6a107e0e107f107fbc9d56310ac16ad731c65281875f160e33",
+  "scenario_yaml": "/home/admit/Samuel/thesis_repo/scenarios/perturbed/sc_pert_02.yaml",
+  "scenario_yaml_hash": "63b9a7549945634579f785be9ab4d40f30deed613c594ae3da42482c5242af6c",
+  "rep": 6,
+  "seed": 23,
+  "platform": "sim",
+  "status": "completed"
+}

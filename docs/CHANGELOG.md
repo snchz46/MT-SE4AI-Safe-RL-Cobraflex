@@ -31,7 +31,128 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
-## [08.06.2026] — F4: Anticipated defense questions added to docs 00–08
+## [10.06.2026] — F4: Reconcile campaign aggregators on indeterminate verdicts (D-38)
+
+**Document(s) affected:** `tools/run_campaign.py`, `policy/tests/test_run_campaign.py`, `policy/tests/test_verdict_aggregation.py`, `experiments/sim/campaign/campaign_report.json` (regenerated), `docs/DECISIONS.md` (D-38), `docs/07_traceability_matrix.md` (aggregator caveat → reconciliation note).  
+**Phase:** F4.  
+**Gate context:** before G4.  
+**Author:** Samuel.  
+
+### Change
+
+Reconciled the two campaign verdict aggregators so an *indeterminate* (`None`)
+per-run verdict is handled identically by both. `tools/run_campaign.py` previously
+counted `None` runs inside the pass-fraction denominator (`n_pass / n_total`),
+collapsing "no evidence" into a fail; it now **excludes** them (`n_pass / n_evaluable`,
+`None` if no evaluable run) and propagates `insufficient_evidence`, matching the
+unit-tested D-29/D-30 spine `src/cobraflex_rl/cobraflex_rl/verdict_aggregation.py`.
+
+- `aggregate_scenario` returns a three-valued verdict with `n_fail`/`n_indeterminate`.
+- `aggregate_sr` returns a `status` ∈ {satisfied, failed, insufficient_evidence,
+  not_run} (a genuine failure dominates an indeterminate sibling).
+- `global_verdict` distinguishes `NOT SATISFIED` (an SR-CL-A failed) from `INCOMPLETE`
+  (an SR-CL-A under-evidenced).
+- `campaign_report.json` **regenerated from the raw `campaign_runs.csv`** (the per-run
+  `None`s were already logged) — **no Gazebo re-run**. SC-EDGE-05 / SC-PERT-03 now read
+  `verdict: null`; **SR-009 / SR-010 move from `false` to `insufficient_evidence`**.
+- Tests added for "all runs `None` → insufficient_evidence, not failed" and the
+  failed-dominates-indeterminate precedence in both test suites. Decision recorded as
+  **D-38**; the `docs/07` "Aggregator caveat" replaced by a reconciliation note.
+
+### Rationale
+
+A `false` verdict must mean a demonstrated safety violation, not an instrumentation
+gap. The old `run_campaign.py` denominator mis-reported two known gaps (SC-EDGE-05's
+predicate references operands absent from the run-record schema; SC-PERT-03's labelled
+multi-arm criterion is not scorable in the single-run evaluator) as failures, dragging
+SR-009/SR-010 to `false`. The spine already used three-valued logic to avoid exactly
+this; the fix brings the runner into line rather than adding a third rule.
+
+### Impact
+
+**The global verdict is unchanged: `SATISFIED`, all 7 SR-CL-A satisfied (D-30 veto
+clear).** Only the classification of three non-blocking **SR-CL-B** verdicts is
+touched: SR-009 and SR-010 are now correctly `insufficient_evidence`; **SR-006 remains
+`failed`** because it inherits the *genuine* SC-PERT-01 fraction fail (0.883 < 0.90) —
+a separate per-metric re-aggregation issue, not a `None`. The `docs/07` matrix verdict
+cells for SR-006/009/010 stay **TBD** (held open until the schema/evaluator gaps close
+and the scenarios are re-scored). No H/SR/C/SC/M artefacts changed; no
+`traceability_matrix.csv` rows.
+
+### Verification
+
+`python -m pytest` → 314 passed (incl. the new D-38 cases).
+`python tools/check_traceability.py` → all checks PASSED, 0 warnings.
+`campaign_report.json` re-validated: valid JSON, ASCII-clean, `global.verdict =
+SATISFIED`, `n_runs = 1260`, `n_error = 0`.
+
+---
+
+## [10.06.2026] — F4: Sim-eval campaign closed; docs/07 verdicts filled
+
+**Document(s) affected:** `docs/07_traceability_matrix.md`, `tools/traceability_matrix.csv`, `manuscript/chapters/chapter_08_experimental_evaluation.md` (§8.2.1, §8.2.4, §8.2.6, §8.3–§8.7, §8.8.1), `CLAUDE.md` (phase status).  
+**Phase:** F4.  
+**Gate context:** before G4.  
+**Author:** Samuel.  
+
+### Change
+
+The verdict-bearing simulation campaign ran to completion: **1260 runs**, main
+seed **2024** (D-36), every verdict-bearing scenario × {enforcement, monitoring}.
+Roll-up committed at `experiments/sim/campaign/campaign_report.json` +
+`campaign_runs.csv`; out-of-ODD frontier contrast at
+`experiments/sim/campaign_frontier/frontier_contrast.json` (+ two figures).
+
+- **`docs/07`** — the `Verdict` column moves from all-`TBD` to the sim verdicts.
+  **Global verdict `SATISFIED`**: all 7 **SR-CL-A** (SR-001..005, SR-007, SR-008)
+  satisfied with margin → D-30 veto not triggered. SR-011 (CL-B) also Satisfied.
+  Three **SR-CL-B** verdicts held **TBD** by deliberate abstention (notes ¹²³):
+  SR-006 (coarse `ALL` aggregation inherits the SC-PERT-01 σ=0.05 emergency-trip
+  failures, M-I5 itself not breached), SR-009 and SR-010 (instrumentation gaps —
+  SC-PERT-03 multi-arm meta-test and SC-EDGE-05 predicate operands are not in the
+  single-run evaluator / run-record schema, so those runs are *indeterminate*,
+  not failing).
+- **`tools/traceability_matrix.csv`** — `verdict_sim` set to `satisfied` and
+  `evidence_path` populated for the SR-001/002/003/004/005/007/008 rows; SR-006
+  rows kept `tbd` with a pointer to the docs/07 note.
+- **`manuscript` §8** — §8.3–§8.7 and §8.8.1 (marked `[COMPLETAR FASE 4]`) written
+  from the campaign data; the inline `[COMPLETAR]` placeholders in §8.2.4 (D-29/D-30
+  summary) and §8.2.6 (runner reference) resolved; §8.2.1 corrected to the realised
+  design (main seed 2024 per D-36, RL controller; the earlier "≈1100 runs / N=5
+  across all scenarios / PD axis" draft did not match the executed campaign).
+
+### Rationale
+
+The campaign is the evidence layer the traceability matrix was built to receive.
+Recording the honest picture matters more than a clean pass: the central in-ODD
+finding is that **M-S2 (boundary violation) = 0 in both modes everywhere**, i.e.
+the constraint-respecting main policy never approaches the boundary inside the ODD,
+so the cage is **latent** there (enforcement ≈ monitoring). The cage's protective
+value is shown **out-of-ODD** by the D-35 frontier contrast: for the cage-dependent
+seed 123 the cage removes **96–100 % of road-edge contacts** (M-S5) the bare policy
+would incur (SC-FRONT-01/03/04/06), while the constraint-respecting seed 2024
+recovers on its own (benefit ≈ 0) — the §7.5.3 bimodality realised at runtime.
+The three TBDs are abstentions, not failures: collapsing an indeterminate verdict
+to a fail (as `run_campaign.py` does) would overstate the result, so they are held
+open until the evaluator / run-record schema gaps are closed and the scenarios
+re-scored.
+
+### Impact
+
+- No H/SR/C/SC/M artefacts added or changed; no new orphans.
+- **Open before G4:** close the three TBDs (SR-006 per-metric re-aggregation on
+  M-I5; SR-009/SR-010 schema-gap fix in the run record + multi-arm scoring in the
+  evaluator, then re-score SC-PERT-03 / SC-EDGE-05). Tracked as the remaining F4
+  work in `CLAUDE.md`.
+- `run_campaign.py`'s indeterminate→fail collapse vs `verdict_aggregation.py`'s
+  indeterminate→`insufficient_evidence` is recorded as a caveat in docs/07; a
+  reconciliation of the two aggregators is a candidate decision (D-NN) for G4.
+
+### Verification
+
+`python tools/check_traceability.py` → all 8 constraints PASS, 0 warnings (the
+verdict column is free-text and not constraint-checked; structure unchanged).
+
 
 **Document(s) affected:** `docs/00`–`docs/08` (new "Anticipated defense questions" section in each; `docs/08` as new §13).  
 **Phase:** F4.  

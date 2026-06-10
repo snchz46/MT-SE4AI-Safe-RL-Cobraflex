@@ -130,6 +130,27 @@ def test_sr_not_run():
     assert sr_verdict(sr, {})["status"] == "not_run"
 
 
+def test_sr_indeterminate_scenario_is_insufficient_not_failed():
+    """An all-indeterminate verifying scenario (every run None — an instrumentation
+    gap) must yield insufficient_evidence, NOT failed (mirrors SR-010 / SC-EDGE-05
+    in the F4 campaign; the run_campaign aggregator was reconciled to this under D-38)."""
+    sr = SRInfo("SR-010", "SR-CL-B", ["SC-EDGE-04", "SC-EDGE-05"])
+    outs = {"SC-EDGE-04": _oc("SC-EDGE-04", "adverse", 30, True),
+            "SC-EDGE-05": ScenarioOutcome("SC-EDGE-05", "adverse", 100, 0, 0, 100, None, None)}
+    v = sr_verdict(sr, outs)
+    assert v["status"] == "insufficient_evidence"
+    assert "SC-EDGE-05" in v["reason"]
+
+
+def test_sr_real_failure_dominates_indeterminate():
+    """failed has precedence over insufficient: a genuine scenario failure wins
+    over an indeterminate sibling."""
+    sr = SRInfo("SR-009", "SR-CL-B", ["SC-NOM-01", "SC-PERT-03"])
+    outs = {"SC-NOM-01": _oc("SC-NOM-01", "nominal", 50, False),
+            "SC-PERT-03": ScenarioOutcome("SC-PERT-03", "adverse", 40, 0, 0, 40, None, None)}
+    assert sr_verdict(sr, outs)["status"] == "failed"
+
+
 # ---- D-30 global veto ----
 
 def _verdicts(*items):

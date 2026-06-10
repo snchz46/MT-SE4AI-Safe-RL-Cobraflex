@@ -3,6 +3,7 @@
   "global": {
     "verdict": "SATISFIED",
     "blocking_sr_cl_a": [],
+    "incomplete_sr_cl_a": [],
     "n_sr_cl_a": 7
   },
   "per_scenario": [
@@ -11,6 +12,8 @@
       "mode": "enforcement",
       "n_runs": 30,
       "n_pass": 30,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -20,6 +23,8 @@
       "mode": "monitoring",
       "n_runs": 30,
       "n_pass": 30,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -29,6 +34,8 @@
       "mode": "enforcement",
       "n_runs": 30,
       "n_pass": 30,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -38,6 +45,8 @@
       "mode": "monitoring",
       "n_runs": 30,
       "n_pass": 30,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -47,6 +56,8 @@
       "mode": "enforcement",
       "n_runs": 25,
       "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -56,6 +67,8 @@
       "mode": "monitoring",
       "n_runs": 25,
       "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -65,6 +78,8 @@
       "mode": "enforcement",
       "n_runs": 30,
       "n_pass": 30,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -74,6 +89,8 @@
       "mode": "monitoring",
       "n_runs": 30,
       "n_pass": 30,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -83,8 +100,10 @@
       "mode": "enforcement",
       "n_runs": 100,
       "n_pass": 0,
-      "fraction_pass": 0.0,
-      "verdict": false,
+      "n_fail": 0,
+      "n_indeterminate": 100,
+      "fraction_pass": null,
+      "verdict": null,
       "n_error": 0
     },
     {
@@ -92,8 +111,10 @@
       "mode": "monitoring",
       "n_runs": 100,
       "n_pass": 0,
-      "fraction_pass": 0.0,
-      "verdict": false,
+      "n_fail": 0,
+      "n_indeterminate": 100,
+      "fraction_pass": null,
+      "verdict": null,
       "n_error": 0
     },
     {
@@ -101,6 +122,8 @@
       "mode": "enforcement",
       "n_runs": 25,
       "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -110,6 +133,8 @@
       "mode": "monitoring",
       "n_runs": 25,
       "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -119,6 +144,8 @@
       "mode": "enforcement",
       "n_runs": 25,
       "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -128,6 +155,8 @@
       "mode": "monitoring",
       "n_runs": 25,
       "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -137,6 +166,8 @@
       "mode": "enforcement",
       "n_runs": 25,
       "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -146,6 +177,8 @@
       "mode": "monitoring",
       "n_runs": 25,
       "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -155,6 +188,8 @@
       "mode": "enforcement",
       "n_runs": 25,
       "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -164,6 +199,8 @@
       "mode": "monitoring",
       "n_runs": 25,
       "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -173,6 +210,8 @@
       "mode": "enforcement",
       "n_runs": 25,
       "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -182,6 +221,8 @@
       "mode": "monitoring",
       "n_runs": 25,
       "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -191,6 +232,8 @@
       "mode": "enforcement",
       "n_runs": 25,
       "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -200,6 +243,8 @@
       "mode": "monitoring",
       "n_runs": 25,
       "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -209,6 +254,8 @@
       "mode": "enforcement",
       "n_runs": 50,
       "n_pass": 50,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -218,6 +265,8 @@
       "mode": "monitoring",
       "n_runs": 50,
       "n_pass": 50,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -227,6 +276,8 @@
       "mode": "enforcement",
       "n_runs": 50,
       "n_pass": 50,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -236,6 +287,8 @@
       "mode": "monitoring",
       "n_runs": 50,
       "n_pass": 50,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -245,6 +298,8 @@
       "mode": "enforcement",
       "n_runs": 25,
       "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -254,6 +309,8 @@
       "mode": "monitoring",
       "n_runs": 25,
       "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -263,6 +320,8 @@
       "mode": "enforcement",
       "n_runs": 60,
       "n_pass": 53,
+      "n_fail": 7,
+      "n_indeterminate": 0,
       "fraction_pass": 0.8833,
       "verdict": false,
       "n_error": 0
@@ -272,6 +331,8 @@
       "mode": "monitoring",
       "n_runs": 60,
       "n_pass": 53,
+      "n_fail": 7,
+      "n_indeterminate": 0,
       "fraction_pass": 0.8833,
       "verdict": false,
       "n_error": 0
@@ -281,6 +342,8 @@
       "mode": "enforcement",
       "n_runs": 40,
       "n_pass": 40,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -290,6 +353,8 @@
       "mode": "monitoring",
       "n_runs": 40,
       "n_pass": 40,
+      "n_fail": 0,
+      "n_indeterminate": 0,
       "fraction_pass": 1.0,
       "verdict": true,
       "n_error": 0
@@ -299,8 +364,10 @@
       "mode": "enforcement",
       "n_runs": 40,
       "n_pass": 0,
-      "fraction_pass": 0.0,
-      "verdict": false,
+      "n_fail": 0,
+      "n_indeterminate": 40,
+      "fraction_pass": null,
+      "verdict": null,
       "n_error": 0
     },
     {
@@ -308,8 +375,10 @@
       "mode": "monitoring",
       "n_runs": 40,
       "n_pass": 0,
-      "fraction_pass": 0.0,
-      "verdict": false,
+      "n_fail": 0,
+      "n_indeterminate": 40,
+      "fraction_pass": null,
+      "verdict": null,
       "n_error": 0
     }
   ],
@@ -317,120 +386,162 @@
     {
       "sr": "SR-001",
       "criticality": "SR-CL-A",
+      "status": "satisfied",
       "verdict": true,
       "run_count_ok": true,
       "families": [
         "adverse",
         "nominal"
       ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
       "notes": ""
     },
     {
       "sr": "SR-002",
       "criticality": "SR-CL-A",
+      "status": "satisfied",
       "verdict": true,
       "run_count_ok": true,
       "families": [
         "adverse",
         "nominal"
       ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
       "notes": ""
     },
     {
       "sr": "SR-003",
       "criticality": "SR-CL-A",
+      "status": "satisfied",
       "verdict": true,
       "run_count_ok": true,
       "families": [
         "adverse",
         "nominal"
       ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
       "notes": ""
     },
     {
       "sr": "SR-004",
       "criticality": "SR-CL-A",
+      "status": "satisfied",
       "verdict": true,
       "run_count_ok": true,
       "families": [
         "adverse",
         "nominal"
       ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
       "notes": ""
     },
     {
       "sr": "SR-005",
       "criticality": "SR-CL-A",
+      "status": "satisfied",
       "verdict": true,
       "run_count_ok": true,
       "families": [
         "adverse",
         "nominal"
       ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
       "notes": ""
     },
     {
       "sr": "SR-006",
       "criticality": "SR-CL-B",
+      "status": "failed",
       "verdict": false,
       "run_count_ok": true,
       "families": [
         "adverse",
         "nominal"
       ],
-      "notes": ""
+      "failing_scenarios": [
+        "SC-PERT-01"
+      ],
+      "indeterminate_scenarios": [
+        "SC-EDGE-05",
+        "SC-PERT-03"
+      ],
+      "notes": "failing scenario(s): ['SC-PERT-01']"
     },
     {
       "sr": "SR-007",
       "criticality": "SR-CL-A",
+      "status": "satisfied",
       "verdict": true,
       "run_count_ok": true,
       "families": [
         "adverse",
         "nominal"
       ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
       "notes": ""
     },
     {
       "sr": "SR-008",
       "criticality": "SR-CL-A",
+      "status": "satisfied",
       "verdict": true,
       "run_count_ok": true,
       "families": [
         "adverse",
         "nominal"
       ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
       "notes": ""
     },
     {
       "sr": "SR-009",
       "criticality": "SR-CL-B",
-      "verdict": false,
+      "status": "insufficient_evidence",
+      "verdict": null,
       "run_count_ok": true,
       "families": [
         "adverse",
         "nominal"
       ],
-      "notes": ""
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [
+        "SC-PERT-03"
+      ],
+      "notes": "indeterminate scenario(s) - instrumentation gap, not a failure: ['SC-PERT-03']"
     },
     {
       "sr": "SR-010",
       "criticality": "SR-CL-B",
-      "verdict": false,
+      "status": "insufficient_evidence",
+      "verdict": null,
       "run_count_ok": true,
       "families": [
         "adverse"
       ],
-      "notes": ""
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [
+        "SC-EDGE-05"
+      ],
+      "notes": "indeterminate scenario(s) - instrumentation gap, not a failure: ['SC-EDGE-05']"
     },
     {
       "sr": "SR-011",
       "criticality": "SR-CL-B",
+      "status": "satisfied",
       "verdict": true,
       "run_count_ok": true,
       "families": [
         "adverse"
       ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
       "notes": ""
     }
   ],

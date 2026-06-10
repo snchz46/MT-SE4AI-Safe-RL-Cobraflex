@@ -1,7 +1,7 @@
 # Traceability Matrix
 
 **Status:** Living document — Phase 0 baseline, refined through every phase, closed at G6  
-**Last update:** 14.05.2026  
+**Last update:** 10.06.2026 (F4 sim verdicts filled from the end-of-campaign roll-up)  
 **Approved at Gate:** every Gate (incrementally)  
 
 ## Purpose
@@ -34,21 +34,65 @@ Any violation is a blocker for the next Gate review.
 
 The full matrix is in `tools/traceability_matrix.csv`. The summary below shows the chain Hazard → SR → Cage Rule → Scenario.
 
-| Hazard | Safety Requirement | Cage Rule(s) | Scenarios | Verifying Metric(s) | Verdict |
+| Hazard | Safety Requirement | Cage Rule(s) | Scenarios | Verifying Metric(s) | Verdict (Sim) |
 | ------ | ------------------ | ------------ | --------- | ------------------- | ------- |
-| H-01 | SR-001 | C-01 | SC-NOM-01, SC-NOM-02, SC-EDGE-02 | M-S1 | TBD |
-| H-01, H-02 | SR-003 | C-03 | SC-NOM-02, SC-EDGE-01 | M-S4 | TBD |
-| H-02 | SR-002 | C-02 | SC-EDGE-01, SC-EDGE-04 | M-P4 | TBD |
-| H-02 | SR-011 | C-06 + training | SC-EDGE-01, SC-EDGE-04 | M-P7 | TBD |
-| H-03 | SR-004 | C-04 | SC-NOM-02, SC-EDGE-03 | M-P3 | TBD |
-| H-04, H-07 | SR-005 | C-05 | SC-EDGE-04 | M-S3 | TBD |
-| H-05 | SR-006 | C-06 | All scenarios | M-I5 | TBD |
-| H-06 | SR-007 | C-05 (state-validity triggers) | SC-PERT-02 | M-S3 | TBD |
-| H-07 | SR-008 | C-05 (external-stop trigger) | SC-NOM-03, SC-EDGE-04 | M-S3 | TBD |
-| H-08 | SR-009 | training | SC-NOM-01, SC-NOM-02, SC-NOM-03, SC-PERT-03 | M-P6, M-S2 (monitoring) | TBD |
-| H-09 | SR-010 | arbiter | SC-EDGE-04, SC-EDGE-05 | M-S2, M-I3 | TBD |
+| H-01 | SR-001 | C-01 | SC-NOM-01, SC-NOM-02, SC-EDGE-02 | M-S1 | **Satisfied** |
+| H-01, H-02 | SR-003 | C-03 | SC-NOM-02, SC-EDGE-01 | M-S4 | **Satisfied** |
+| H-02 | SR-002 | C-02 | SC-EDGE-01, SC-EDGE-04 | M-P4 | **Satisfied** |
+| H-02 | SR-011 | C-06 + training | SC-EDGE-01, SC-EDGE-04 | M-P7 | **Satisfied** |
+| H-03 | SR-004 | C-04 | SC-NOM-02, SC-EDGE-03 | M-P3 | **Satisfied** |
+| H-04, H-07 | SR-005 | C-05 | SC-EDGE-04 | M-S3 | **Satisfied** |
+| H-05 | SR-006 | C-06 | All scenarios | M-I5 | TBD ¹ |
+| H-06 | SR-007 | C-05 (state-validity triggers) | SC-PERT-02 | M-S3 | **Satisfied** |
+| H-07 | SR-008 | C-05 (external-stop trigger) | SC-NOM-03, SC-EDGE-04 | M-S3 | **Satisfied** |
+| H-08 | SR-009 | training | SC-NOM-01, SC-NOM-02, SC-NOM-03, SC-PERT-03 | M-P6, M-S2 (monitoring) | TBD ² |
+| H-09 | SR-010 | arbiter | SC-EDGE-04, SC-EDGE-05 | M-S2, M-I3 | TBD ³ |
 
-"TBD" verdicts are filled in during Phase 4 (simulation results) and Phase 5 (physical results, where applicable).
+**Sim evidence (10.06.2026).** The verdicts above come from the end-of-campaign
+roll-up `experiments/sim/campaign/campaign_report.json` (1260 runs, main seed
+2024, enforcement + monitoring; D-36). The **global verdict is `SATISFIED`**:
+all **7 SR-CL-A** (SR-001..005, SR-007, SR-008) pass with margin, so the D-30 veto
+is not triggered. M-S2 (boundary violation) is **0 in both modes across the whole
+in-ODD set**, i.e. the constraint-respecting main policy does not approach the
+boundary inside the ODD and the cage is **latent** there; its protective value
+materialises out-of-ODD in the D-35 frontier contrast (§8.6, `frontier_contrast.json`).
+
+Three **SR-CL-B** verdicts remain **TBD** by deliberate abstention (they do **not**
+veto the global verdict, D-30):
+
+- **¹ SR-006 (actuator smoothness).** Its `ALL`-scenarios aggregation inherits the
+  SC-PERT-01 failure (53/60 = 0.883 < 0.90), whose 7 failing runs are **all at
+  σ = 0.05 m** and are **emergency trips** (`emergency == True`) provoked by the
+  injected observation noise, not boundary violations — the *true* M-S1 stays
+  ≤ 0.034 m (threshold 0.16 m). The smoothness metric M-I5 itself is not breached;
+  the coarse `ALL` inheritance is what flips the verdict. Pending a per-metric
+  re-aggregation that scores SR-006 on M-I5 rather than on any failing scenario.
+- **² SR-009 (liveness).** Nominal liveness (SC-NOM-01/02/03) passes; the verdict
+  is driven by **SC-PERT-03**, a two-arm failure-injection meta-test
+  (released vs stall-variant) that is **not scorable in the single-run evaluator**
+  ("labelled multi-arm criterion not scored in single-run eval"). This is an
+  **instrumentation gap**, not a liveness failure.
+- **³ SR-010 (cage-rule composition).** SC-EDGE-04 passes; the verdict is driven by
+  **SC-EDGE-05**, whose per-run predicate references operands
+  (`joint_envelope_assertion_failures`, `inter_cycle_oscillations`) **absent from
+  the current run-record schema** → every run is *indeterminate*, not failing
+  (underlying M-S2 = 0, no emergency). Another **instrumentation gap**.
+
+> **Aggregator reconciliation (D-38).** The campaign runner now treats an
+> *indeterminate* (`None`) per-run verdict the same way as the unit-tested D-29/D-30
+> spine `verdict_aggregation.py`: it is **excluded** from the pass-fraction
+> denominator and propagated as `insufficient_evidence`, never collapsed to a fail.
+> In the regenerated `campaign_report.json` (rebuilt from the raw per-run
+> `campaign_runs.csv`, no Gazebo re-run) SC-EDGE-05 and SC-PERT-03 read
+> `verdict: null` (`fraction_pass: null`) and **SR-009 / SR-010 read
+> `insufficient_evidence`, not `false`** — the matrix verdicts below stay **TBD**
+> (these are genuine gaps, not violations) and the three TBDs are held open until
+> the schema/evaluator gaps are closed and the affected scenarios re-scored. SR-006
+> remains driven by the *genuine* SC-PERT-01 fraction fail (a separate per-metric
+> re-aggregation issue, footnote ¹), not by an indeterminate. None of this affects
+> the SR-CL-A global verdict, which stays `SATISFIED`.
+
+The remaining "TBD" verdicts are closed in Phase 5 (physical results, where applicable).
 
 The `Cage Rule(s)` column accepts three implementation kinds (cf. D-25 in `docs/DECISIONS.md`): a numbered rule `C-XX`, a `training` constraint discharged at policy-training time (SR-009), or an `arbiter` property of the cage pipeline (SR-010). SR-011 is implemented jointly by `C-06` (runtime attenuation of high-frequency content) and a training-side heading-variance penalty.
 

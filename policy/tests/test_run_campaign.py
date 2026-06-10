@@ -81,8 +81,14 @@ def test_aggregate_scenario_threshold():
 
 
 # ----- aggregate_sr (D-29) ------------------------------------------------- #
-def _result(sid, verdict):
-    return rc.ScenarioResult(sid, "enforcement", 50, 50 if verdict else 0, verdict)
+def _result(sid, verdict, n=50):
+    """Build a ScenarioResult with a three-valued verdict. ``verdict=None`` makes
+    every run indeterminate (n_pass=n_fail=0, all in n_indeterminate)."""
+    if verdict is None:
+        return rc.ScenarioResult(sid, "enforcement", n, 0, 0, n, None)
+    n_pass = n if verdict else 0
+    n_fail = 0 if verdict else n
+    return rc.ScenarioResult(sid, "enforcement", n, n_pass, n_fail, 0, verdict)
 
 
 def test_sr_cl_a_needs_nominal_and_adverse_coverage():
@@ -119,21 +125,66 @@ def test_sr_failed_scenario_fails_verdict():
     results = {"SC-NOM-01": _result("SC-NOM-01", True), "SC-EDGE-02": _result("SC-EDGE-02", False)}
     runs = {"SC-NOM-01": 50, "SC-EDGE-02": 50}
     sr = rc.aggregate_sr("SR-001", "SR-CL-A", ["SC-NOM-01", "SC-EDGE-02"], objs, results, runs)
-    assert sr.verdict is False
+    assert sr.status == "failed" and sr.verdict is False
+
+
+# ----- three-valued / indeterminate handling (D-38 reconciliation) --------- #
+def test_aggregate_scenario_excludes_indeterminate_from_fraction():
+    # 24 pass + 1 indeterminate -> fraction over *evaluable* = 1.0, verdict True.
+    scen = _scen("SC-NOM-01", per_scen="fraction_pass >= 0.95")
+    res = rc.aggregate_scenario(scen, "enforcement", [True] * 24 + [None])
+    assert (res.n_pass, res.n_fail, res.n_indeterminate) == (24, 0, 1)
+    assert res.evaluable == 24 and res.fraction_pass == 1.0 and res.verdict is True
+
+
+def test_aggregate_scenario_all_indeterminate_is_none_not_fail():
+    # Mirrors SC-EDGE-05 / SC-PERT-03 in the F4 campaign: every run is None
+    # (instrumentation gap). The scenario verdict must be None, not False.
+    scen = _scen("SC-EDGE-05", per_scen="fraction_pass >= 0.95")
+    res = rc.aggregate_scenario(scen, "enforcement", [None] * 100)
+    assert res.n_indeterminate == 100 and res.evaluable == 0
+    assert res.fraction_pass is None and res.verdict is None
+
+
+def test_sr_indeterminate_scenario_is_insufficient_not_failed():
+    # Mirrors SR-010: SC-EDGE-04 passes, SC-EDGE-05 is all-indeterminate. The SR
+    # must read insufficient_evidence (a gap), never failed.
+    objs = {"SC-EDGE-04": _scen("SC-EDGE-04"), "SC-EDGE-05": _scen("SC-EDGE-05")}
+    results = {"SC-EDGE-04": _result("SC-EDGE-04", True),
+               "SC-EDGE-05": _result("SC-EDGE-05", None, n=100)}
+    runs = {"SC-EDGE-04": 30, "SC-EDGE-05": 100}
+    sr = rc.aggregate_sr("SR-010", "SR-CL-B", ["SC-EDGE-04", "SC-EDGE-05"], objs, results, runs)
+    assert sr.status == "insufficient_evidence" and sr.verdict is None
+    assert sr.failing_scenarios == [] and sr.indeterminate_scenarios == ["SC-EDGE-05"]
+
+
+def test_sr_real_failure_dominates_indeterminate():
+    # failed has precedence over insufficient: a genuine fraction failure wins.
+    objs = {"SC-NOM-01": _scen("SC-NOM-01"), "SC-EDGE-05": _scen("SC-EDGE-05")}
+    results = {"SC-NOM-01": _result("SC-NOM-01", False),
+               "SC-EDGE-05": _result("SC-EDGE-05", None, n=100)}
+    runs = {"SC-NOM-01": 50, "SC-EDGE-05": 100}
+    sr = rc.aggregate_sr("SR-009", "SR-CL-B", ["SC-NOM-01", "SC-EDGE-05"], objs, results, runs)
+    assert sr.status == "failed" and sr.verdict is False
 
 
 # ----- global_verdict (D-30 veto) ------------------------------------------ #
 def test_global_verdict_veto():
-    good_a = rc.SRResult("SR-001", "SR-CL-A", verdict=True, run_count_ok=True, families_covered=["nominal", "adverse"])
-    bad_a = rc.SRResult("SR-002", "SR-CL-A", verdict=False, run_count_ok=True, families_covered=["nominal", "adverse"])
-    nuance_b = rc.SRResult("SR-006", "SR-CL-B", verdict=False, run_count_ok=True, families_covered=["nominal"])
+    good_a = rc.SRResult("SR-001", "SR-CL-A", "satisfied", run_count_ok=True, families_covered=["nominal", "adverse"])
+    bad_a = rc.SRResult("SR-002", "SR-CL-A", "failed", run_count_ok=True, families_covered=["nominal", "adverse"])
+    nuance_b = rc.SRResult("SR-006", "SR-CL-B", "failed", run_count_ok=True, families_covered=["nominal"])
 
     assert rc.global_verdict([good_a, nuance_b])["verdict"] == "SATISFIED"  # B failure does not veto
     out = rc.global_verdict([good_a, bad_a])
     assert out["verdict"] == "NOT SATISFIED" and out["blocking_sr_cl_a"] == ["SR-002"]
-    # An SR-CL-A that passes but lacks D-29 sufficiency also blocks.
-    insufficient = rc.SRResult("SR-003", "SR-CL-A", verdict=True, run_count_ok=False, families_covered=["nominal"])
-    assert rc.global_verdict([good_a, insufficient])["verdict"] == "NOT SATISFIED"
+    # An SR-CL-A that passes its scenarios but lacks D-29 sufficiency is INCOMPLETE
+    # (under-covered), not a failure (D-38): distinct from a real veto.
+    insufficient = rc.SRResult("SR-003", "SR-CL-A", "satisfied", run_count_ok=False, families_covered=["nominal"])
+    inc = rc.global_verdict([good_a, insufficient])
+    assert inc["verdict"] == "INCOMPLETE" and inc["incomplete_sr_cl_a"] == ["SR-003"]
+    # An SR-CL-A whose evidence is indeterminate is likewise INCOMPLETE, not failed.
+    indet = rc.SRResult("SR-004", "SR-CL-A", "insufficient_evidence", run_count_ok=True, families_covered=["nominal", "adverse"])
+    assert rc.global_verdict([good_a, indet])["verdict"] == "INCOMPLETE"
 
 
 # ----- loaders smoke (real repo files) ------------------------------------- #
@@ -204,6 +255,29 @@ def test_aggregate_campaign_global_pass_and_veto():
     rep2 = rc.aggregate_campaign(edge_fail, scens, srs, verdict_mode="enforcement")
     assert rep2["global"]["verdict"] == "NOT SATISFIED"
     assert "SR-001" in rep2["global"]["blocking_sr_cl_a"]
+
+
+def test_aggregate_campaign_all_indeterminate_scenario_is_insufficient():
+    # End-to-end: a scenario whose every run is indeterminate (None) must surface
+    # as insufficient_evidence at the SR level, with fraction_pass=None at the
+    # scenario level — never collapsed to a fail (D-38). SR-CL-B does not veto.
+    scens = {
+        "SC-NOM-01": _scen("SC-NOM-01", n_enf=25, n_mon=0, srs=["SR-009"], per_scen="fraction_pass >= 0.90"),
+        "SC-EDGE-05": _scen("SC-EDGE-05", n_enf=25, n_mon=0, srs=["SR-009"], per_scen="fraction_pass >= 0.90"),
+    }
+    srs = {"SR-009": {"criticality": "SR-CL-B", "scenarios": ["SC-NOM-01", "SC-EDGE-05"]}}
+    matrix = rc.build_matrix(scens, ["rl"], [2024], ["enforcement"])
+    outcomes = rc.run_matrix(matrix, scens, Path("/tmp/x"), executor=_stub_executor(
+        {"SC-NOM-01": True, "SC-EDGE-05": None}))
+    rep = rc.aggregate_campaign(outcomes, scens, srs, verdict_mode="enforcement")
+
+    edge = next(s for s in rep["per_scenario"] if s["scenario"] == "SC-EDGE-05")
+    assert edge["verdict"] is None and edge["fraction_pass"] is None
+    assert edge["n_indeterminate"] == 25 and edge["n_fail"] == 0
+    sr = next(r for r in rep["per_sr"] if r["sr"] == "SR-009")
+    assert sr["status"] == "insufficient_evidence" and sr["verdict"] is None
+    assert sr["indeterminate_scenarios"] == ["SC-EDGE-05"]
+    assert rep["global"]["verdict"] == "SATISFIED"  # no SR-CL-A, B does not veto
 
 
 def test_write_report_emits_json_and_csv(tmp_path):

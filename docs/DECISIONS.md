@@ -1,7 +1,7 @@
 # DECISIONS.md — Project decision log
 
 <!--
-Status: D9 (Phase 0 close) + F1 audit additions (D-25..D-33) + F3 (D-34) + F4 (D-35, D-36, D-37).
+Status: D9 (Phase 0 close) + F1 audit additions (D-25..D-33) + F3 (D-34) + F4 (D-35, D-36, D-37, D-38).
 Last update: see Git commit date.
 -->
 
@@ -75,6 +75,7 @@ consistent with the chapters.
 | D-35 | Frontier (out-of-ODD) scenario family as a non-verdict-bearing cage-efficacy contrast (M-S5) | `docs/05` (Frontier scenarios); §8.2.2–§8.2.3 | CONFIRMED |
 | D-36 | Seed policy for F4 campaigns: main seed 2024 certifies the D-29/D-30 verdict; cage-dependent seed 123 only in the D-35 frontier contrast, never pooled into the global verdict | §7.5.3 (seed selection); §8.2 (sim-eval campaign) | CONFIRMED |
 | D-37 | F4 realises ODD-1..4 on the single oval world at a fixed-speed (ACT_DIM=1) operating point; ODD-1/2 covered, ODD-3 partial (geometry yes, speed envelope no), ODD-4 deferred | `docs/08` §12; `docs/05` Track mapping; §8 | CONFIRMED |
+| D-38 | Indeterminate (None) per-run verdicts are excluded from the pass fraction and propagate as `insufficient_evidence`, not as a failure; `run_campaign.py` reconciled to the `verdict_aggregation.py` spine | §8.2 (sim-eval aggregation); `tools/run_campaign.py`; `docs/07` | CONFIRMED |
 
 ---
 
@@ -1316,6 +1317,76 @@ inferred.
   an adverse-curvy scenario for ODD-4, are future work (F5+).
 - No new H/SR/C/SC/M artefacts and no `traceability_matrix.csv` rows. Cites D-11, D-33,
   D-34, D-35, D-36.
+
+---
+
+### D-38 — Indeterminate per-run verdicts are insufficient evidence, not failures (aggregator reconciliation)
+
+| Field | Value |
+| --- | --- |
+| Section | §8.2 (sim-eval aggregation); `tools/run_campaign.py`; `docs/07` |
+| Status | CONFIRMED |
+| Date | F4 (10.06.2026) |
+
+**Decision.** A per-run verdict of `None` (indeterminate — the run's pass-criterion
+referenced a metric absent from the run-record schema, the criterion is not scorable
+in the single-run evaluator, or the run errored) is **excluded from the denominator**
+of a scenario's pass fraction and **propagated as `insufficient_evidence`**, never
+collapsed into a failure. A scenario whose runs are *all* indeterminate has verdict
+`None` (not `False`); an SR verified only by such a scenario reads
+`insufficient_evidence`; and at the global level an under-evidenced **SR-CL-A** makes
+the verdict `INCOMPLETE` rather than `NOT SATISFIED`. A *genuine* scenario failure
+still dominates an indeterminate sibling (failed > insufficient). The two campaign
+aggregators are reconciled to this single semantics: `tools/run_campaign.py`'s
+`aggregate_scenario`/`aggregate_sr`/`global_verdict` now mirror the unit-tested
+D-29/D-30 spine `src/cobraflex_rl/cobraflex_rl/verdict_aggregation.py`.
+
+**Alternatives considered and rejected.**
+- *Keep the two aggregators as-is.* Rejected: `run_campaign.py` computed
+  `fraction_pass = n_pass / n_total`, counting `None` runs inside the denominator and
+  thus collapsing "no evidence" into "0 % pass → fail". This silently mis-reported two
+  instrumentation gaps (SC-EDGE-05, SC-PERT-03) as safety violations, dragging SR-009
+  and SR-010 to `false` — an honesty defect the spine already avoided.
+- *Make `run_campaign.py` import `verdict_aggregation.py` directly.* Rejected for now:
+  the spine lives inside the `cobraflex_rl` ROS package with package-relative imports
+  (`.criterion_eval`, `.scenario_loader`) and a different data shape (`ScenarioRuns`),
+  whereas `run_campaign.py` is deliberately ROS-free and importable by file path from
+  `tools/`. Replicating the *semantics* (with cross-references in code) keeps the tool
+  self-contained while removing the divergence; a later refactor to a shared module is
+  left open.
+- *Treat an errored run as a failure.* Rejected: an executor crash is missing evidence,
+  not a demonstrated unsafe behaviour; it is counted as indeterminate and surfaced
+  separately via `n_error`.
+
+**Rationale.** The traceability commitment requires that a verdict mean what it says: a
+`failed` SR is a demonstrated safety violation, an `insufficient_evidence` SR is a gap
+in instrumentation or coverage. Conflating the two would either fabricate a violation
+(as happened for SR-009/SR-010) or, symmetrically, risk laundering a gap into a pass.
+The D-29/D-30 spine was designed with three-valued logic precisely for this; the fix
+brings the campaign runner into line with it rather than inventing a third rule.
+
+**Consequences.**
+- `tools/run_campaign.py`: `ScenarioResult` gains `n_fail`/`n_indeterminate` and a
+  three-valued `verdict`/`fraction_pass` (over evaluable runs); `SRResult` carries a
+  `status` ∈ {satisfied, failed, insufficient_evidence, not_run} plus failing/
+  indeterminate scenario lists; `global_verdict` distinguishes `NOT SATISFIED` (an
+  SR-CL-A failed) from `INCOMPLETE` (an SR-CL-A under-evidenced). The per-scenario and
+  per-SR report schemas gain the corresponding fields.
+- `experiments/sim/campaign/campaign_report.json` **regenerated from the raw
+  `campaign_runs.csv` per-run verdicts — no Gazebo re-run** (the per-run `None`s were
+  already recorded). SC-EDGE-05 and SC-PERT-03 now read `verdict: null`
+  (`fraction_pass: null`); SR-009 and SR-010 move from `false` to
+  `insufficient_evidence`. SR-006 remains `failed` (it inherits the *genuine*
+  SC-PERT-01 fraction fail, a separate per-metric-aggregation issue, not a `None`).
+- **The global verdict is unchanged: `SATISFIED`, all 7 SR-CL-A satisfied** (D-30 veto
+  clear). Only the classification of three non-blocking SR-CL-B verdicts is affected.
+- Tests added in `policy/tests/test_run_campaign.py` and
+  `policy/tests/test_verdict_aggregation.py` for the "all runs `None` →
+  insufficient_evidence, not failed" case and the failed-dominates-indeterminate
+  precedence.
+- The `docs/07` "Aggregator caveat" is removed (the divergence it documented is
+  resolved). No new H/SR/C/SC/M artefacts, no `traceability_matrix.csv` rows. Cites
+  D-29, D-30.
 
 ---
 

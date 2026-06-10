@@ -30,11 +30,22 @@ script reports orphans on either side.
   per D-35, D-29-feasible), ODD-2 adverse profiles closed (D-33), campaign runner + pure-Python
   verdict spine (D-29/D-30) built and unit-tested. **Gazebo executor is live** —
   `run_campaign.execute_run` drives `eval_scenario_batch.launch.py` (GZ_PARTITION isolation,
-  orphan-gz reaping, retries, resume); a **pilot** frontier campaign has run
-  (`experiments/sim/campaign_frontier`, rep00, seeds 123 & 2024). **Remaining F4 work:**
-  run the full verdict-bearing campaign on the Ubuntu host → fill the per-SR sim verdicts
-  in `docs/07` (all still `TBD`); scale the frontier study to 25 reps (incl. SC-FRONT-01/02/03);
-  the QED-metric decision (D-17/D-21/D-22). See CHANGELOG 03.06–08.06 "F4" entries.
+  orphan-gz reaping, retries, resume). **Campaign done (2026-06-10):** the verdict-bearing
+  run completed — **1260 runs**, main seed 2024 (D-36), every scenario × {enforcement,
+  monitoring}; roll-up at `experiments/sim/campaign/campaign_report.json`, frontier contrast
+  (25 reps) at `experiments/sim/campaign_frontier/frontier_contrast.json`. **Global verdict
+  `SATISFIED`** — all 7 SR-CL-A satisfied (D-30 veto clear); `docs/07` verdicts filled (8
+  Satisfied + SR-011; **3 SR-CL-B held TBD** — SR-006/009/010). Central finding: M-S2 = 0 in
+  both modes in-ODD (cage **latent**, policy never nears the boundary); cage value shows
+  out-of-ODD in the frontier contrast (seed-123 cage removes 96–100% of road-edge contacts).
+  **Remaining F4 work:** close the 3 TBDs (SR-006 per-metric re-aggregation on M-I5;
+  SR-009/SR-010 run-record schema + multi-arm evaluator fix, then re-score SC-PERT-03 /
+  SC-EDGE-05); the QED-metric decision (D-17/D-21/D-22). The `run_campaign.py`
+  indeterminate→fail collapse vs the `verdict_aggregation.py` spine is **reconciled
+  (D-38)**: both now exclude indeterminate runs and report `insufficient_evidence`;
+  `campaign_report.json` regenerated from the raw CSV (no Gazebo re-run) — SR-009/SR-010
+  now read `insufficient_evidence`, global verdict unchanged (`SATISFIED`).
+  See CHANGELOG 03.06–10.06 "F4" entries.
 - **F2 evidence:** `ros_run_20260523T153003Z` — 9.91 laps, 845 s,
   0 emergencies, cage v0.5.1, PD v0.8.0.
 - **F3 evidence (closed):** main run `ppo_train_2024_200k` (seed 2024, 200k, reward v1.2,

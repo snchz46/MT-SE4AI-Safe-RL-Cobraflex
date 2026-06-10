@@ -1,0 +1,266 @@
+[
+  {
+    "scenario": "SC-FRONT-01",
+    "seed": "123",
+    "enforcement": {
+      "n": 25,
+      "contact_rate": 0.0,
+      "emergency_rate": 0.36,
+      "max_excursion_median": 0.15947930327091797,
+      "max_excursion_mean": 0.15869045819851368
+    },
+    "monitoring": {
+      "n": 25,
+      "contact_rate": 1.0,
+      "emergency_rate": 1.0,
+      "max_excursion_median": 0.2608581222574111,
+      "max_excursion_mean": 0.2611662126023322
+    },
+    "cage_benefit": {
+      "contact_rate_reduction": 1.0,
+      "max_excursion_reduction_median": 0.10137881898649315
+    }
+  },
+  {
+    "scenario": "SC-FRONT-01",
+    "seed": "2024",
+    "enforcement": {
+      "n": 25,
+      "contact_rate": 0.0,
+      "emergency_rate": 0.36,
+      "max_excursion_median": 0.15946362686714152,
+      "max_excursion_mean": 0.15869028276969804
+    },
+    "monitoring": {
+      "n": 25,
+      "contact_rate": 0.0,
+      "emergency_rate": 0.36,
+      "max_excursion_median": 0.15945046704350577,
+      "max_excursion_mean": 0.15861562223465875
+    },
+    "cage_benefit": {
+      "contact_rate_reduction": 0.0,
+      "max_excursion_reduction_median": -1.3159823635755519e-05
+    }
+  },
+  {
+    "scenario": "SC-FRONT-02",
+    "seed": "123",
+    "enforcement": {
+      "n": 25,
+      "contact_rate": 0.0,
+      "emergency_rate": 1.0,
+      "max_excursion_median": 0.0047816687301220195,
+      "max_excursion_mean": 0.004707906366960191
+    },
+    "monitoring": {
+      "n": 25,
+      "contact_rate": 0.12,
+      "emergency_rate": 1.0,
+      "max_excursion_median": 0.2510656649893072,
+      "max_excursion_mean": 0.2513354549038584
+    },
+    "cage_benefit": {
+      "contact_rate_reduction": 0.12,
+      "max_excursion_reduction_median": 0.2462839962591852
+    }
+  },
+  {
+    "scenario": "SC-FRONT-02",
+    "seed": "2024",
+    "enforcement": {
+      "n": 25,
+      "contact_rate": 0.0,
+      "emergency_rate": 1.0,
+      "max_excursion_median": 0.0047816687301220195,
+      "max_excursion_mean": 0.004707906366960191
+    },
+    "monitoring": {
+      "n": 25,
+      "contact_rate": 0.0,
+      "emergency_rate": 1.0,
+      "max_excursion_median": 0.04158825207675858,
+      "max_excursion_mean": 0.04163575035239333
+    },
+    "cage_benefit": {
+      "contact_rate_reduction": 0.0,
+      "max_excursion_reduction_median": 0.03680658334663656
+    }
+  },
+  {
+    "scenario": "SC-FRONT-03",
+    "seed": "123",
+    "enforcement": {
+      "n": 25,
+      "contact_rate": 0.0,
+      "emergency_rate": 1.0,
+      "max_excursion_median": 0.1395729413777891,
+      "max_excursion_mean": 0.14325526486167525
+    },
+    "monitoring": {
+      "n": 25,
+      "contact_rate": 1.0,
+      "emergency_rate": 1.0,
+      "max_excursion_median": 0.26057543132816935,
+      "max_excursion_mean": 0.2610221640134595
+    },
+    "cage_benefit": {
+      "contact_rate_reduction": 1.0,
+      "max_excursion_reduction_median": 0.12100248995038024
+    }
+  },
+  {
+    "scenario": "SC-FRONT-03",
+    "seed": "2024",
+    "enforcement": {
+      "n": 25,
+      "contact_rate": 0.0,
+      "emergency_rate": 1.0,
+      "max_excursion_median": 0.1395729413777891,
+      "max_excursion_mean": 0.1431718139050775
+    },
+    "monitoring": {
+      "n": 25,
+      "contact_rate": 0.0,
+      "emergency_rate": 0.8,
+      "max_excursion_median": 0.13648416624279713,
+      "max_excursion_mean": 0.13792237840824964
+    },
+    "cage_benefit": {
+      "contact_rate_reduction": 0.0,
+      "max_excursion_reduction_median": -0.003088775134991978
+    }
+  },
+  {
+    "scenario": "SC-FRONT-04",
+    "seed": "123",
+    "enforcement": {
+      "n": 25,
+      "contact_rate": 0.0,
+      "emergency_rate": 0.0,
+      "max_excursion_median": 0.14123566051054778,
+      "max_excursion_mean": 0.14100353657585304
+    },
+    "monitoring": {
+      "n": 25,
+      "contact_rate": 1.0,
+      "emergency_rate": 1.0,
+      "max_excursion_median": 0.2609589273945068,
+      "max_excursion_mean": 0.26125772538159525
+    },
+    "cage_benefit": {
+      "contact_rate_reduction": 1.0,
+      "max_excursion_reduction_median": 0.11972326688395904
+    }
+  },
+  {
+    "scenario": "SC-FRONT-04",
+    "seed": "2024",
+    "enforcement": {
+      "n": 25,
+      "contact_rate": 0.0,
+      "emergency_rate": 0.0,
+      "max_excursion_median": 0.10153533400591502,
+      "max_excursion_mean": 0.10046755817447471
+    },
+    "monitoring": {
+      "n": 25,
+      "contact_rate": 0.0,
+      "emergency_rate": 0.0,
+      "max_excursion_median": 0.10154367312375558,
+      "max_excursion_mean": 0.10045935154914419
+    },
+    "cage_benefit": {
+      "contact_rate_reduction": 0.0,
+      "max_excursion_reduction_median": 8.339117840552857e-06
+    }
+  },
+  {
+    "scenario": "SC-FRONT-05",
+    "seed": "123",
+    "enforcement": {
+      "n": 25,
+      "contact_rate": 0.0,
+      "emergency_rate": 0.68,
+      "max_excursion_median": 0.008809590114720501,
+      "max_excursion_mean": 0.04870231922043782
+    },
+    "monitoring": {
+      "n": 25,
+      "contact_rate": 0.0,
+      "emergency_rate": 1.0,
+      "max_excursion_median": 0.2190307824764682,
+      "max_excursion_mean": 0.22213655816979302
+    },
+    "cage_benefit": {
+      "contact_rate_reduction": 0.0,
+      "max_excursion_reduction_median": 0.21022119236174772
+    }
+  },
+  {
+    "scenario": "SC-FRONT-05",
+    "seed": "2024",
+    "enforcement": {
+      "n": 25,
+      "contact_rate": 0.0,
+      "emergency_rate": 0.68,
+      "max_excursion_median": 0.008809590114720501,
+      "max_excursion_mean": 0.015183226372803347
+    },
+    "monitoring": {
+      "n": 25,
+      "contact_rate": 0.0,
+      "emergency_rate": 0.68,
+      "max_excursion_median": 0.022175921430659433,
+      "max_excursion_mean": 0.022360776815474107
+    },
+    "cage_benefit": {
+      "contact_rate_reduction": 0.0,
+      "max_excursion_reduction_median": 0.013366331315938932
+    }
+  },
+  {
+    "scenario": "SC-FRONT-06",
+    "seed": "123",
+    "enforcement": {
+      "n": 25,
+      "contact_rate": 0.0,
+      "emergency_rate": 0.0,
+      "max_excursion_median": 0.1408515041460063,
+      "max_excursion_mean": 0.14110165483477136
+    },
+    "monitoring": {
+      "n": 25,
+      "contact_rate": 0.96,
+      "emergency_rate": 1.0,
+      "max_excursion_median": 0.2611104712629613,
+      "max_excursion_mean": 0.25993978337284773
+    },
+    "cage_benefit": {
+      "contact_rate_reduction": 0.96,
+      "max_excursion_reduction_median": 0.12025896711695497
+    }
+  },
+  {
+    "scenario": "SC-FRONT-06",
+    "seed": "2024",
+    "enforcement": {
+      "n": 25,
+      "contact_rate": 0.0,
+      "emergency_rate": 0.0,
+      "max_excursion_median": 0.10272220669214613,
+      "max_excursion_mean": 0.10199528694076662
+    },
+    "monitoring": {
+      "n": 25,
+      "contact_rate": 0.0,
+      "emergency_rate": 0.0,
+      "max_excursion_median": 0.1027149370106971,
+      "max_excursion_mean": 0.10198885024970022
+    },
+    "cage_benefit": {
+      "contact_rate_reduction": 0.0,
+      "max_excursion_reduction_median": -7.2696814490263995e-06
+    }
+  }
+]

@@ -42,7 +42,7 @@ The full matrix is in `tools/traceability_matrix.csv`. The summary below shows t
 | H-02 | SR-011 | C-06 + training | SC-EDGE-01, SC-EDGE-04 | M-P7 | **Satisfied** |
 | H-03 | SR-004 | C-04 | SC-NOM-02, SC-EDGE-03 | M-P3 | **Satisfied** |
 | H-04, H-07 | SR-005 | C-05 | SC-EDGE-04 | M-S3 | **Satisfied** |
-| H-05 | SR-006 | C-06 | All scenarios | M-I5 | TBD ¹ |
+| H-05 | SR-006 | C-06 | All scenarios | M-I5 | **Satisfied** ¹ |
 | H-06 | SR-007 | C-05 (state-validity triggers) | SC-PERT-02 | M-S3 | **Satisfied** |
 | H-07 | SR-008 | C-05 (external-stop trigger) | SC-NOM-03, SC-EDGE-04 | M-S3 | **Satisfied** |
 | H-08 | SR-009 | training | SC-NOM-01, SC-NOM-02, SC-NOM-03, SC-PERT-03 | M-P6, M-S2 (monitoring) | TBD ² |
@@ -57,26 +57,43 @@ in-ODD set**, i.e. the constraint-respecting main policy does not approach the
 boundary inside the ODD and the cage is **latent** there; its protective value
 materialises out-of-ODD in the D-35 frontier contrast (§8.6, `frontier_contrast.json`).
 
-Three **SR-CL-B** verdicts remain **TBD** by deliberate abstention (they do **not**
-veto the global verdict, D-30):
+One SR-CL-B verdict (**SR-006**) is now resolved by a dedicated metric analysis
+(note ¹, D-39); **two** SR-CL-B verdicts remain **TBD** by deliberate abstention
+(they do **not** veto the global verdict, D-30):
 
-- **¹ SR-006 (actuator smoothness).** Its `ALL`-scenarios aggregation inherits the
-  SC-PERT-01 failure (53/60 = 0.883 < 0.90), whose 7 failing runs are **all at
-  σ = 0.05 m** and are **emergency trips** (`emergency == True`) provoked by the
-  injected observation noise, not boundary violations — the *true* M-S1 stays
-  ≤ 0.034 m (threshold 0.16 m). The smoothness metric M-I5 itself is not breached;
-  the coarse `ALL` inheritance is what flips the verdict. Pending a per-metric
-  re-aggregation that scores SR-006 on M-I5 rather than on any failing scenario.
-- **² SR-009 (liveness).** Nominal liveness (SC-NOM-01/02/03) passes; the verdict
-  is driven by **SC-PERT-03**, a two-arm failure-injection meta-test
-  (released vs stall-variant) that is **not scorable in the single-run evaluator**
-  ("labelled multi-arm criterion not scored in single-run eval"). This is an
-  **instrumentation gap**, not a liveness failure.
-- **³ SR-010 (cage-rule composition).** SC-EDGE-04 passes; the verdict is driven by
-  **SC-EDGE-05**, whose per-run predicate references operands
+- **¹ SR-006 (actuator smoothness) — Satisfied (D-39).** The coarse `ALL`-scenarios
+  aggregation had made SR-006 inherit the SC-PERT-01 fraction fail (σ = 0.05
+  emergency trips, unrelated to smoothness), so it was scored directly on its own
+  metric instead. The cage chain runs C-06 first (it bounds the *raw* action's
+  per-cycle rate), then a downstream safety rule (C-01/C-02/C-03/C-05) may command a
+  larger correction to avert a hazard — by design smoothness yields to safety. On
+  the steps the rate limiter actually governs (no safety-override rule, no
+  emergency), the committed-steer per-cycle delta stays within `δ_max = 0.15` in
+  **559/559** evaluable enforcement runs (worst rate exactly 0.15); in *monitoring*
+  (C-06 inert) only 67.6 % of runs hold and the worst rate is 0.43 — a direct
+  measure of C-06's value. Analysis: `tools/sr006_smoothness.py` (reads the
+  committed-steer trace from `cage_status.csv`, no Gazebo). The per-SR entry in
+  `campaign_report.json` still reads `failed` from the superseded `ALL` inheritance;
+  re-pointing SR-006 to this metric in `run_campaign.py` is a flagged follow-up
+  (D-39) and does not change the global verdict (CL-B).
+- **² SR-009 (liveness) — needs re-run.** Nominal liveness (SC-NOM-01/02/03) passes;
+  the verdict is driven by **SC-PERT-03**, a two-arm failure-injection meta-test
+  (released vs stall-variant). The multi-arm evaluator already exists
+  (`criterion_eval.evaluate_labelled`); the gap is that (a) the **stall-variant arm
+  was never executed** (the 40 logged runs are a single arm) and (b) the campaign
+  driver does not yet *group* the two arms' values before calling it. Closing it
+  needs the stall fine-tune + run and the driver grouping (Ubuntu). Not a liveness
+  failure.
+- **³ SR-010 (cage-rule composition) — needs scenario fix + re-run.** SC-EDGE-04
+  passes. SC-EDGE-05's per-run predicate references operands
   (`joint_envelope_assertion_failures`, `inter_cycle_oscillations`) **absent from
-  the current run-record schema** → every run is *indeterminate*, not failing
-  (underlying M-S2 = 0, no emergency). Another **instrumentation gap**.
+  the run-record schema**, *and*, more fundamentally, the scenario **as-run induced
+  zero rule co-activation** — 0 interventions across all 100 runs, the vehicle drove
+  nominally (max |d| ≈ 0.02 m) — because the `parameterised_grid` initial conditions
+  are **not injected by the runner**. So SR-010 cannot be verified from these logs
+  regardless of the counters: the scenario must first actually stress co-activation
+  (wire the grid-IC injection), then re-run with the two counters added (Ubuntu).
+  Not a composition failure.
 
 > **Aggregator reconciliation (D-38).** The campaign runner now treats an
 > *indeterminate* (`None`) per-run verdict the same way as the unit-tested D-29/D-30
@@ -85,12 +102,13 @@ veto the global verdict, D-30):
 > In the regenerated `campaign_report.json` (rebuilt from the raw per-run
 > `campaign_runs.csv`, no Gazebo re-run) SC-EDGE-05 and SC-PERT-03 read
 > `verdict: null` (`fraction_pass: null`) and **SR-009 / SR-010 read
-> `insufficient_evidence`, not `false`** — the matrix verdicts below stay **TBD**
-> (these are genuine gaps, not violations) and the three TBDs are held open until
-> the schema/evaluator gaps are closed and the affected scenarios re-scored. SR-006
-> remains driven by the *genuine* SC-PERT-01 fraction fail (a separate per-metric
-> re-aggregation issue, footnote ¹), not by an indeterminate. None of this affects
-> the SR-CL-A global verdict, which stays `SATISFIED`.
+> `insufficient_evidence`, not `false`** — the SR-009 / SR-010 matrix verdicts stay
+> **TBD** (genuine gaps, not violations) until the scenario/evaluator gaps are closed
+> and re-scored (notes ²³). SR-006 read `failed` in `campaign_report.json` from the
+> coarse `ALL`-scenario inheritance of SC-PERT-01; it is now verified directly on its
+> own metric and is **Satisfied** (note ¹, D-39), with the report re-pointing flagged
+> as a follow-up. None of this affects the SR-CL-A global verdict, which stays
+> `SATISFIED`.
 
 The remaining "TBD" verdicts are closed in Phase 5 (physical results, where applicable).
 

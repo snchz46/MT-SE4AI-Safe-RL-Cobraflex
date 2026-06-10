@@ -375,6 +375,19 @@ and are reported in the manuscript Limitations (§1.6.3 / Cap. 11). They change 
 ODD parameter, SR threshold, or cage constant; the spec above remains the
 authoritative definition of the *intended* domain.
 
+### 12.3 Version status at G4 (v1.0 carries one open TBD to F5)
+
+The maturation plan (D-33 rationale) targeted **v1.0 "all TBDs resolved, signed off
+at G4."** With the F4 campaign closed, **11 of 12 TBDs are resolved**; the sole
+remainder, **TBD-Q10 (`ODD-3.A_LAT_MAX`, maximum lateral acceleration)**, depends on
+the **physical** lateral-accel calibration **M-4** and is by construction
+**unmeasurable in simulation** — it is deferred to F5 (D-33). The ODD-Spec is
+therefore signed off at G4 at its current minor version with **Q10 explicitly
+carried forward to F5**, not promoted to 1.0; 1.0 is reached when M-4 closes Q10 on
+the physical platform. This is a disclosed limitation, not an open orphan: every
+*simulation-resolvable* TBD is closed, and Q10's dependency on hardware is recorded
+here and in D-33.
+
 ---
 <!--
 ## 13. Anticipated defense questions

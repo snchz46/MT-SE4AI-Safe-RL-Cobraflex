@@ -509,6 +509,14 @@ Current count: **17 scenarios** — 11 verdict-bearing (3 NOM, 5 EDGE, 3 PERT wi
 
 Total recommended runs in simulation for the **verdict-bearing** campaign (NOM/EDGE/PERT), summed across all scenarios and both modes: approximately 1100 runs (the global G4 verdict, D-29/D-30). The 6 FRONT scenarios add 6 × 25 × 2 = **300 runs** reported separately as the paired enforcement-vs-monitoring cage-efficacy contrast (not part of the global-verdict budget).
 
+> **Executed campaign (10.06.2026).** The campaign ran to **1260 runs** on the main
+> seed 2024 (D-36): ≈960 verdict-bearing (NOM/EDGE/PERT) + 300 FRONT, both modes.
+> Roll-up `experiments/sim/campaign/campaign_report.json`; frontier contrast
+> `experiments/sim/campaign_frontier/frontier_contrast.json`. **Global verdict
+> `SATISFIED`** (all 7 SR-CL-A). Verdicts populated in `docs/07`; SR-009 / SR-010
+> need an Ubuntu re-run (SC-PERT-03 stall arm; SC-EDGE-05 grid-IC injection + the
+> two co-activation counters — the scenario as-run induced zero co-activation).
+
 ## Convention for `metrics_primary` value `"ALL"`
 
 Some SRs (notably SR-006, the always-active rate limiter) are exercised across every scenario. When a SR is listed in a scenario's `References SR` and the verifying metric is global (i.e., computed identically in every run), the scenario's `metrics_primary` field uses the literal value `"ALL"` to indicate that the SR is verified by the scenario implicitly without requiring a dedicated primary metric. The `check_traceability.py` tool treats `"ALL"` as a valid scenario reference for back-coverage purposes.
@@ -535,8 +543,8 @@ The floor of 25 per mode is the D-29 run-count gate for SR-CL-A requirements; hi
 **Q5. SC-EDGE-05 verifies SR-010, but the Cage Specification says SR-010's joint-envelope assertion (Trigger 7) is deferred — is the scenario testing something that doesn't exist yet?**
 Partly. SC-EDGE-05's oscillation half is live (cage 0.5.1, `test_oscillation.py`); the joint-envelope-failure half awaits the per-rule predicate. The scenario is specified in full so it is ready when Trigger 7 lands; until then its joint-envelope criterion is exercised only by the unit tests that exist, and the SR-010 verdict stays TBD. The dependency is stated, not hidden.
 
-**Q6. With F4 underway, the per-SR sim verdicts are still TBD — what has actually run?**
-A pilot frontier campaign has run on the Ubuntu host (`experiments/sim/campaign_frontier`, rep00, seeds 123 and 2024) exercising the live Gazebo executor. The full verdict-bearing campaign (~1100 runs) and the 25-rep frontier study are the remaining F4 work. The library itself is closed (schema-validated at G2 / G4); the open item is the evidence that fills the verdicts, reported as such per the project's "don't claim it works without running it" rule.
+**Q6. What has actually run, and what verdicts did it produce?**
+The full verdict-bearing campaign has run (1260 runs, main seed 2024, both modes; `campaign_report.json`) plus the 25-rep frontier contrast. The **global verdict is `SATISFIED`** — all 7 SR-CL-A satisfied with margin (`docs/07`). Of the SR-CL-B requirements, SR-006 and SR-011 are Satisfied; SR-009 and SR-010 remain open pending an Ubuntu re-run (SC-PERT-03's stall-variant arm was not executed; SC-EDGE-05 induced zero rule co-activation because the `parameterised_grid` initial conditions are not yet injected by the runner, and the two co-activation counters are not in the run-record schema). The library itself is closed (schema-validated at G2 / G4); the open items are scenario/instrumentation fixes, reported as such per the project's "don't claim it works without running it" rule.
 
 --->
 

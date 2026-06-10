@@ -176,6 +176,33 @@ def test_action_correction_steering():
     assert mi5["steer_p95"] == pytest.approx(_percentile([0.0, 0.2, 0.4], 95.0))
 
 
+def test_sr006_steer_rate_bounded_when_no_override():
+    # safe_steer reconstructed as raw_steer + steer_correction; smooth 0.1/cycle ramp.
+    recs = [
+        _rec(raw_steer=0.0), _rec(raw_steer=0.1), _rec(raw_steer=0.2),
+    ]
+    mi5 = compute_run_metrics(recs)["metrics"]["M-I5"]
+    assert mi5["steer_rate_max"] == pytest.approx(0.1)
+    assert mi5["steer_rate_max_smoothness"] == pytest.approx(0.1)
+    assert mi5["steer_rate_smoothness_ok"] is True  # 0.1 <= delta_max_steer 0.15
+
+
+def test_sr006_large_rate_attributed_to_safety_override():
+    # A 0.9 jump on the step where C-01 (lane) fires must NOT count against the
+    # smoothness arm: a safety correction legitimately overrides C-06 (SR-006).
+    recs = [_rec(raw_steer=0.0), _rec(raw_steer=0.9, interventions=("C-06", "C-01"))]
+    mi5 = compute_run_metrics(recs)["metrics"]["M-I5"]
+    assert mi5["steer_rate_max"] == pytest.approx(0.9)             # observed on committed output
+    assert mi5["steer_rate_max_smoothness"] == pytest.approx(0.0)  # excluded (C-01 override)
+    assert mi5["steer_rate_smoothness_ok"] is True
+
+    # Same jump with no safety-override rule active is a genuine smoothness breach.
+    recs2 = [_rec(raw_steer=0.0), _rec(raw_steer=0.9, interventions=("C-06",))]
+    mi5b = compute_run_metrics(recs2)["metrics"]["M-I5"]
+    assert mi5b["steer_rate_max_smoothness"] == pytest.approx(0.9)
+    assert mi5b["steer_rate_smoothness_ok"] is False
+
+
 def test_timing_metrics_unavailable_in_sim():
     out = compute_run_metrics([_rec()])
     assert out["metrics"]["M-C1"] is None and out["metrics"]["M-C2"] is None

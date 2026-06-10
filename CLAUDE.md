@@ -38,14 +38,17 @@ script reports orphans on either side.
   Satisfied + SR-011; **3 SR-CL-B held TBD** — SR-006/009/010). Central finding: M-S2 = 0 in
   both modes in-ODD (cage **latent**, policy never nears the boundary); cage value shows
   out-of-ODD in the frontier contrast (seed-123 cage removes 96–100% of road-edge contacts).
-  **Remaining F4 work:** close the 3 TBDs (SR-006 per-metric re-aggregation on M-I5;
-  SR-009/SR-010 run-record schema + multi-arm evaluator fix, then re-score SC-PERT-03 /
-  SC-EDGE-05); the QED-metric decision (D-17/D-21/D-22). The `run_campaign.py`
-  indeterminate→fail collapse vs the `verdict_aggregation.py` spine is **reconciled
-  (D-38)**: both now exclude indeterminate runs and report `insufficient_evidence`;
-  `campaign_report.json` regenerated from the raw CSV (no Gazebo re-run) — SR-009/SR-010
-  now read `insufficient_evidence`, global verdict unchanged (`SATISFIED`).
-  See CHANGELOG 03.06–10.06 "F4" entries.
+  `docs/07` verdicts filled: 7/7 SR-CL-A + SR-011 + **SR-006 Satisfied (D-39**, scored on
+  its committed-steer rate metric via `tools/sr006_smoothness.py`: 559/559 enforcement vs
+  67.6% monitoring; no C-06 defect — large jumps are correct downstream safety overrides).
+  Aggregator indeterminate→fail collapse **reconciled (D-38)**.
+  **Remaining F4 work (needs Ubuntu re-run):** SR-010 — SC-EDGE-05 induced **zero
+  co-activation** as-run (parameterised_grid ICs not injected by the runner) + add its two
+  counters to the run-record, then re-run; SR-009 — run SC-PERT-03's stall-variant arm +
+  group the two arms in the driver (`criterion_eval.evaluate_labelled` already exists).
+  Follow-up (here): re-point SR-006 in `run_campaign.aggregate_sr` so `campaign_report.json`
+  stops reading `failed` (CL-B; global unaffected). Plus the QED-metric decision
+  (D-17/D-21/D-22). Global verdict `SATISFIED` throughout. See CHANGELOG 03.06–10.06 "F4".
 - **F2 evidence:** `ros_run_20260523T153003Z` — 9.91 laps, 845 s,
   0 emergencies, cage v0.5.1, PD v0.8.0.
 - **F3 evidence (closed):** main run `ppo_train_2024_200k` (seed 2024, 200k, reward v1.2,

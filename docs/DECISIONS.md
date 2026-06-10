@@ -1,7 +1,7 @@
 # DECISIONS.md — Project decision log
 
 <!--
-Status: D9 (Phase 0 close) + F1 audit additions (D-25..D-33) + F3 (D-34) + F4 (D-35, D-36, D-37, D-38).
+Status: D9 (Phase 0 close) + F1 audit additions (D-25..D-33) + F3 (D-34) + F4 (D-35, D-36, D-37, D-38, D-39).
 Last update: see Git commit date.
 -->
 
@@ -76,6 +76,7 @@ consistent with the chapters.
 | D-36 | Seed policy for F4 campaigns: main seed 2024 certifies the D-29/D-30 verdict; cage-dependent seed 123 only in the D-35 frontier contrast, never pooled into the global verdict | §7.5.3 (seed selection); §8.2 (sim-eval campaign) | CONFIRMED |
 | D-37 | F4 realises ODD-1..4 on the single oval world at a fixed-speed (ACT_DIM=1) operating point; ODD-1/2 covered, ODD-3 partial (geometry yes, speed envelope no), ODD-4 deferred | `docs/08` §12; `docs/05` Track mapping; §8 | CONFIRMED |
 | D-38 | Indeterminate (None) per-run verdicts are excluded from the pass fraction and propagate as `insufficient_evidence`, not as a failure; `run_campaign.py` reconciled to the `verdict_aggregation.py` spine | §8.2 (sim-eval aggregation); `tools/run_campaign.py`; `docs/07` | CONFIRMED |
+| D-39 | SR-006 (actuator smoothness) verified directly on its committed-steer rate metric (non-safety-override steps), reported outside the D-30 per-scenario aggregation (precedent D-35); not by `ALL`-scenario inheritance | §8.5/§8.7; `tools/sr006_smoothness.py`; `docs/07` | CONFIRMED |
 
 ---
 
@@ -1376,8 +1377,9 @@ brings the campaign runner into line with it rather than inventing a third rule.
   `campaign_runs.csv` per-run verdicts — no Gazebo re-run** (the per-run `None`s were
   already recorded). SC-EDGE-05 and SC-PERT-03 now read `verdict: null`
   (`fraction_pass: null`); SR-009 and SR-010 move from `false` to
-  `insufficient_evidence`. SR-006 remains `failed` (it inherits the *genuine*
-  SC-PERT-01 fraction fail, a separate per-metric-aggregation issue, not a `None`).
+  `insufficient_evidence`. SR-006 remains `failed` here (it inherits the SC-PERT-01
+  fraction fail, a separate per-metric-aggregation issue, not a `None`) — **resolved
+  to Satisfied by D-39**, which scores SR-006 on its own metric.
 - **The global verdict is unchanged: `SATISFIED`, all 7 SR-CL-A satisfied** (D-30 veto
   clear). Only the classification of three non-blocking SR-CL-B verdicts is affected.
 - Tests added in `policy/tests/test_run_campaign.py` and
@@ -1387,6 +1389,62 @@ brings the campaign runner into line with it rather than inventing a third rule.
 - The `docs/07` "Aggregator caveat" is removed (the divergence it documented is
   resolved). No new H/SR/C/SC/M artefacts, no `traceability_matrix.csv` rows. Cites
   D-29, D-30.
+
+---
+
+### D-39 — SR-006 (actuator smoothness) verified on its own metric, not by scenario inheritance
+
+| Field | Value |
+| --- | --- |
+| Section | §8.5/§8.7 (sim-eval); `tools/sr006_smoothness.py`; `src/cobraflex_rl/cobraflex_rl/campaign_metrics.py`; `docs/07` |
+| Status | CONFIRMED |
+| Date | F4 (10.06.2026) |
+
+**Decision.** SR-006 (actuator smoothness, C-06) is verified **directly on its own
+metric** — the per-cycle rate of the committed steering command — pooled across runs,
+**not** by inheriting the pass/fail of the scenarios it maps to. Because C-06 is
+"always active", SR-006 maps to *all* scenarios; the D-30 per-scenario aggregation
+therefore made it inherit *any* failing scenario, and it was dragged to `failed` by
+SC-PERT-01 (whose σ = 0.05 failures are emergency trips under observation noise,
+unrelated to actuator smoothness). The cage chain is C-06 → C-04 → C-02 → C-03 →
+C-01 → C-05: C-06 bounds the *raw* action's per-cycle rate first, then a downstream
+safety rule (C-01/C-02/C-03/C-05) may command a larger correction to avert an
+imminent hazard — **smoothness yields to safety by design**. SR-006 is therefore
+measured on the steps the rate limiter actually governs (no downstream safety-override
+rule, no emergency): it holds iff the committed-steer per-cycle delta stays within
+`δ_max_steering = 0.15` (`cage.yaml`) on those steps. The analysis is a dedicated tool
+`tools/sr006_smoothness.py` reporting **outside** the D-30 per-scenario aggregation,
+exactly as the frontier M-S5 contrast does (precedent **D-35**).
+
+**Evidence.** On the main-seed campaign logs (`cage_status.csv`): enforcement
+**559/559** evaluable runs hold (worst non-override rate exactly 0.15); monitoring
+(C-06 inert) only **67.6 %** hold (worst rate 0.43) — a direct measure of C-06's
+contribution. Verdict: **Satisfied** (enforcement).
+
+**Alternatives considered and rejected.**
+- *Keep SR-006 under the `ALL`-scenario inheritance.* Rejected: it conflates an
+  unrelated scenario failure (SC-PERT-01 noise-induced emergency trips) with a
+  smoothness verdict — the same honesty defect D-38 fixed for indeterminates, here for
+  a genuine-but-irrelevant failure.
+- *Measure SR-006 on the final committed steer over **all** steps.* Rejected: that
+  penalises the cage for the *correct* behaviour of a downstream safety rule overriding
+  C-06 to prevent lane/heading/TTLC hazards; it would report a safety success as a
+  smoothness failure (worst all-step rate 0.97, all on C-01/C-02/C-03 intervention
+  steps).
+- *Add a smoothness pass-criterion to every scenario YAML.* Rejected as redundant and
+  error-prone; one always-active metric is better verified once, pooled, like M-S5.
+
+**Consequences.**
+- `campaign_metrics.compute_run_metrics` M-I5 gains `steer_rate_max`,
+  `steer_rate_p95`, `steer_rate_max_smoothness`, `steer_rate_smoothness_ok`,
+  `delta_max_steer` (pure, unit-tested in `policy/tests/test_campaign_metrics.py`).
+- `tools/sr006_smoothness.py` added (reads `cage_status.csv`; no Gazebo).
+- `docs/07`: SR-006 verdict TBD → **Satisfied** (note ¹).
+- **Follow-up (open):** `tools/run_campaign.py` still scores SR-006 by `ALL`-scenario
+  inheritance, so `campaign_report.json` per-SR SR-006 reads `failed`; re-point SR-006
+  to this metric in `aggregate_sr` (a "metric-verified SR" path) so the report agrees.
+  SR-006 is **SR-CL-B**, so neither the current nor the corrected value changes the
+  **global verdict (`SATISFIED`, D-30)**. Cites D-30, D-35, D-38.
 
 ---
 

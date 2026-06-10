@@ -49,6 +49,12 @@ DEFAULT_PARAMS: Dict[str, float] = {
 
 CAGE_RULES = ("C-01", "C-02", "C-03", "C-04", "C-05", "C-06")
 
+# Rules whose correction legitimately overrides the C-06 rate limit (a safety
+# correction takes precedence over actuator smoothness, SR-006). Used to split the
+# committed-steer rate into the regime the limiter actually governs vs. safety
+# overrides. C-04 (speed) does not act on the steering channel, so it is excluded.
+_SAFETY_OVERRIDE_RULES = frozenset({"C-01", "C-02", "C-03", "C-05"})
+
 
 # --------------------------------------------------------------------------
 # Small pure-python statistics helpers (no numpy dependency).
@@ -234,7 +240,45 @@ def compute_run_metrics(
         "steer_median": _percentile(steer_corr, 50.0),
         "steer_p95": _percentile(steer_corr, 95.0),
     }
-    avail["M-I5"] = "steering channel only (throttle correction not in record schema)"
+    # SR-006/C-06 verification arm: per-cycle rate of the *committed* (post-cage)
+    # steering command. C-06 is first in the chain (C-06 → C-04 → C-02 → C-03 →
+    # C-01 → C-05): it bounds the *raw* action's rate, but a downstream safety
+    # rule (C-01 lane, C-02 heading, C-03 TTLC, C-05 emergency) may then command a
+    # larger correction to avert an imminent hazard — by design, smoothness yields
+    # to safety. So SR-006 ("actuator smoothness", δ_max_steer per cycle) is
+    # measured on the committed command and reported in two arms: ``rate_max`` over
+    # all steps, and ``rate_max_smoothness`` over steps where no safety-override
+    # rule fired (the regime the rate limiter actually governs). ``safe_steer`` is
+    # read directly when present, else reconstructed as raw_steer + steer_correction.
+    def _safe_steer(r: Dict[str, Any]) -> float:
+        v = r.get("safe_steer")
+        if v is not None:
+            return float(v)
+        return float(r.get("raw_steer", 0.0)) + float(r.get("steer_correction", 0.0))
+
+    safe_steer = [_safe_steer(r) for r in records]
+    rate_all: List[float] = []
+    rate_smooth: List[float] = []
+    for i in range(1, n):
+        d = abs(safe_steer[i] - safe_steer[i - 1])
+        rate_all.append(d)
+        overridden = bool(_SAFETY_OVERRIDE_RULES & set(interventions[i])) or emergency_flags[i]
+        if not overridden:
+            rate_smooth.append(d)
+    metrics["M-I5"].update({
+        "steer_rate_max": max(rate_all) if rate_all else 0.0,
+        "steer_rate_p95": _percentile(rate_all, 95.0),
+        "steer_rate_max_smoothness": max(rate_smooth) if rate_smooth else 0.0,
+        "delta_max_steer": p["delta_max_steer"],
+        "steer_rate_smoothness_ok": (
+            max(rate_smooth) <= p["delta_max_steer"] + 1e-9 if rate_smooth else True
+        ),
+    })
+    avail["M-I5"] = (
+        "steering channel only (throttle correction not in record schema); "
+        "steer_rate_* = per-cycle |Δ committed steer|, 'smoothness' arm excludes "
+        "steps with a downstream safety-override rule (C-01/C-02/C-03/C-05) — see SR-006"
+    )
 
     # ---- Computational (not measured in sim) ----
     metrics["M-C1"] = None

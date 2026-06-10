@@ -190,6 +190,21 @@ Umbral de significación: **p < 0.05** para las comparaciones primarias, **p <
 reportan junto a los p-valores para evitar leer significación estadística como
 relevancia práctica.
 
+> **Dónde aplica la inferencia (y dónde es degenerada).** El contraste
+> enforcement-vs-monitoring **dentro del ODD** resultó **degenerado** para la
+> métrica decisiva: `M-S2 = 0` en *ambos* modos en los 11 escenarios
+> verdict-bearing (§8.3–§8.5), de modo que el delta no tiene varianza y un test
+> sobre él no está definido (no hay diferencia que contrastar — la policy principal
+> no se acerca a la frontera). La afirmación in-ODD es por tanto **descriptiva**
+> (cero violaciones en ambos modos, con sus N), no inferencial. Los tests de esta
+> sección se aplican donde *sí* hay variación: (i) el **contraste frontier** sobre
+> M-S5 / tasa de contacto y excursión máxima (§8.6), donde χ²/Fisher sobre la
+> reducción de contacto y Welch/Mann-Whitney sobre la excursión cuantifican el valor
+> de la cage fuera del ODD; y (ii) el contraste de **suavidad SR-006** (tasa de
+> steering comprometida), donde enforcement mantiene el bound (559/559) frente a
+> monitoring (67.6 %). Reportar un p-valor sobre un delta idénticamente nulo sería
+> teatro estadístico; se declara la degeneración en lugar de fabricar significación.
+
 ### 8.2.6 Reproducibilidad
 
 Cada run registra sus metadatos de reproducibilidad (commit git, hash de
@@ -257,17 +272,21 @@ de 0.16 m. SR-002 (heading), SR-004 (velocidad), SR-005 (modo de emergencia para
 estado compuesto) y SR-011 (estabilidad de heading sin oscilación sostenida)
 quedan satisfechos.
 
-**SC-EDGE-05 (co-activación de reglas, SR-010) es indeterminado, no un fallo.**
-Su `pass_criterion_per_run` referencia dos contadores específicos del escenario
-—`joint_envelope_assertion_failures` e `inter_cycle_oscillations`— que **no
-existen en el esquema actual del registro de runs**; el evaluador los marca
-`operand unavailable` y deja el veredicto por-run en `None`. Las métricas de
-seguridad subyacentes sí están y son limpias (`M-S2 = 0`, sin emergencia,
-`max |d| ≈ 20 mm`), pero la propiedad que SR-010 exige —la aserción de
-joint-envelope y la ausencia de oscilación inter-ciclo— **no se mide**. Por tanto
-SR-010 se mantiene **TBD** en `docs/07` (hueco de instrumentación, §8.2.4), no
-FAIL. Cerrarlo requiere añadir ambos contadores al registro del run y re-puntuar
-el escenario antes de G4.
+**SC-EDGE-05 (co-activación de reglas, SR-010) es indeterminado, no un fallo — y
+con un matiz importante.** Su `pass_criterion_per_run` referencia dos contadores
+específicos del escenario —`joint_envelope_assertion_failures` e
+`inter_cycle_oscillations`— que **no existen en el esquema actual del registro de
+runs**, así que el veredicto por-run queda en `None`. Pero hay un problema más
+fundamental: el escenario **as-run no indujo co-activación alguna** — **0
+intervenciones en los 100 runs**, el vehículo condujo nominal (`max |d| ≈ 20 mm`,
+`M-S2 = 0`), mientras que SC-EDGE-04 (estado compuesto) sí dispara C-06 56 veces de
+referencia. La causa es que las condiciones iniciales del `parameterised_grid`
+—que deben sembrar estados donde ≥2 reglas coactivan— **no se inyectan en el
+runner**. Por tanto SR-010 **no puede verificarse desde estos logs** ni siquiera
+añadiendo los contadores: primero hay que **cablear la inyección de IC del grid**
+para que el escenario realmente estrese la co-activación, y luego re-correr con los
+dos contadores en el registro. SR-010 se mantiene **TBD** (no FAIL); el trabajo es
+de runner + re-run (Ubuntu), no solo de instrumentación.
 
 ---
 
@@ -308,12 +327,14 @@ disparadores de C-05) se mantiene bajo la latencia inyectada. SR-007 satisfecho.
 **SC-PERT-03 — meta-test de stall (SR-009) — indeterminado, no fallo.** Es un test
 de **inyección de fallo de dos brazos** (policy *released* vs variante *stall*) que
 verifica que la maquinaria de SR-009 *detecta* un stall inducido (M-P6 alto en la
-variante, M-P6 = 0 en la released). El evaluador single-run **no puntúa criterios
-multi-brazo etiquetados** (`"labelled multi-arm criterion not scored in single-run
-eval"`), de modo que los 40 runs quedan `None`. La liveness **nominal** sí está
+variante, M-P6 = 0 en la released). El **evaluador multi-brazo ya existe**
+(`criterion_eval.evaluate_labelled`); el hueco es doble: (a) el **brazo
+stall-variant no se ejecutó** (los 40 runs logueados son un solo brazo) y (b) el
+driver de campaña aún **no agrupa** los valores de los dos brazos antes de
+puntuar, por lo que los runs quedan `None`. La liveness **nominal** sí está
 verificada y pasa (SC-NOM-01/02/03, M-P6 = 0, M-P2 = 1). Por tanto SR-009 se
-mantiene **TBD** en `docs/07` (hueco de instrumentación del evaluador, §8.2.4), no
-FAIL; cerrarlo requiere puntuar el criterio de dos brazos.
+mantiene **TBD** en `docs/07`, no FAIL; cerrarlo requiere el fine-tune + corrida del
+brazo stall y el agrupado de brazos en el driver (Ubuntu).
 
 ---
 
@@ -331,10 +352,17 @@ frontera, de modo que no hay violación que monitoring revele ni que enforcement
 prevenga. El **delta enforcement-vs-monitoring es nulo en M-S2** en todo el set
 in-ODD. Esto responde de raíz a la pregunta de defensa "si la policy es buena,
 ¿de qué sirve la cage?" (§7.5.2): dentro del ODD la respuesta honesta es que
-*esta* policy no la necesita, y el experimento lo **mide** en lugar de
-postularlo. (El único delta intra-ODD aparece en M-I1 bajo ruido —SC-PERT-01,
-§8.5—, donde la cage interviene más en monitoring; pero es disponibilidad, no
-prevención de violación.)
+*esta* policy no la necesita **para no salirse**, y el experimento lo **mide** en
+lugar de postularlo.
+
+Hay, no obstante, un valor in-ODD que sí es medible: la **suavidad de actuación**
+(SR-006, C-06). La tasa por-ciclo del steering comprometido se mantiene en el bound
+`δ_max = 0.15` en **559/559** runs de enforcement, frente a solo **67.6 %** en
+monitoring (peor tasa 0.43) — la policy cruda emite cambios bruscos que el rate
+limiter absorbe (D-39, §8.7). Es un delta enforcement-vs-monitoring **no nulo**
+dentro del ODD, pero sobre *suavidad/desgaste de actuador*, no sobre prevención de
+violación de frontera. (Análogamente, bajo ruido alto —SC-PERT-01, §8.5— la cage
+interviene más en monitoring; pero eso es disponibilidad.)
 
 **Fuera del ODD (frontier, D-35): la cage protege.** El valor protector se mide
 donde la policy *no* está diseñada para recuperar: los escenarios SC-FRONT-01..06,
@@ -391,27 +419,39 @@ están satisfechas con margen, por lo que el veto D-30 no se dispara.
 | SR-007 | CL-A | SC-PERT-02 | M-S3 | **Satisfied** |
 | SR-008 | CL-A | SC-NOM-03, SC-EDGE-04 | M-S3 | **Satisfied** |
 | SR-011 | CL-B | SC-EDGE-01/04 | M-P7 | **Satisfied** |
-| SR-006 | CL-B | (todos) | M-I5 | **TBD ¹** |
+| SR-006 | CL-B | (todos) | M-I5 | **Satisfied ¹** |
 | SR-009 | CL-B | SC-NOM-01/02/03, SC-PERT-03 | M-P6 | **TBD ²** |
 | SR-010 | CL-B | SC-EDGE-04, SC-EDGE-05 | M-S2, M-I3 | **TBD ³** |
 
-Las tres SR-CL-B en TBD son **abstenciones deliberadas**, no fallos, y no vetan el
-veredicto global (D-30):
+SR-006 cierra sobre su propia métrica (nota ¹, D-39); **dos** SR-CL-B quedan en TBD
+—abstenciones deliberadas, no fallos, que no vetan el veredicto global (D-30):
 
-- **¹ SR-006 (suavidad de actuación).** Su agregación `ALL`-escenarios hereda el
-  fallo de SC-PERT-01 (σ = 0.05, paros de emergencia espurios; §8.5), pero M-I5
-  —la métrica que la SR exige— no se incumple. Pendiente de re-agregar SR-006
-  sobre M-I5 en lugar de sobre cualquier escenario fallido.
-- **² SR-009 (liveness).** Liveness nominal verificada y satisfecha; el veredicto lo
-  arrastra SC-PERT-03, meta-test de dos brazos no puntuable por el evaluador
-  single-run (§8.5). Hueco de instrumentación.
-- **³ SR-010 (composición de reglas).** SC-EDGE-04 pasa; SC-EDGE-05 es indeterminado
-  porque su predicado referencia contadores ausentes del esquema de registro
-  (§8.4). Hueco de instrumentación.
+- **¹ SR-006 (suavidad de actuación) — Satisfied (D-39).** La agregación
+  `ALL`-escenarios hacía heredar a SR-006 el fallo de SC-PERT-01 (trips de
+  emergencia por ruido, ajenos a la suavidad), así que se puntúa **directamente sobre
+  su métrica**. La cadena corre C-06 primero (acota la tasa del raw); las reglas de
+  seguridad downstream (C-01/C-02/C-03/C-05) pueden aplicar después una corrección
+  mayor para evitar un hazard —la suavidad cede ante la seguridad por diseño. En los
+  pasos que el rate limiter gobierna (sin override de seguridad), la tasa por-ciclo
+  del steering comprometido se mantiene en `δ_max = 0.15` en **559/559** runs
+  evaluables de enforcement (peor tasa exactamente 0.15); en *monitoring* (C-06
+  inerte) solo el 67.6 % cumple (peor tasa 0.43) — medida directa del valor de C-06.
+  Análisis: `tools/sr006_smoothness.py`. (Re-apuntar SR-006 a esta métrica en
+  `run_campaign.py` es un follow-up; no cambia el veredicto global, CL-B.)
+- **² SR-009 (liveness) — necesita re-run.** Liveness nominal verificada y satisfecha;
+  el veredicto lo arrastra SC-PERT-03, meta-test de dos brazos. El evaluador
+  multi-brazo ya existe (`criterion_eval.evaluate_labelled`); falta (a) ejecutar el
+  brazo *stall-variant* (no corrido) y (b) que el driver agrupe ambos brazos. No es
+  un fallo de liveness.
+- **³ SR-010 (composición de reglas) — necesita arreglo de escenario + re-run.**
+  SC-EDGE-04 pasa; SC-EDGE-05 **no indujo co-activación alguna** (0 intervenciones en
+  100 runs, conducción nominal) porque las IC de `parameterised_grid` no se inyectan
+  en el runner, y sus dos contadores no están en el esquema de registro (§8.4). No es
+  un fallo de composición.
 
-Cerrar las tres requiere, antes de G4: la re-agregación por-métrica de SR-006; y
-añadir al registro del run los contadores de SC-EDGE-05 más la puntuación
-multi-brazo de SC-PERT-03 en el evaluador, re-puntuando ambos escenarios.
+Cerrar los dos TBD requiere, antes de G4: ejecutar el brazo stall de SC-PERT-03 +
+agrupar brazos; e inyectar las IC del grid de SC-EDGE-05 + añadir sus contadores,
+re-corriendo ambos en el host Ubuntu.
 `tools/check_traceability.py` confirma que no quedan SRs huérfanos a ningún lado.
 
 ---
@@ -520,12 +560,17 @@ F4 (campaña):
   [x] §8.6: contraste frontier (M-S5) poblado con frontier_contrast.json + figuras
   [x] §8.7: veredictos por-SR poblados y sincronizados con docs/07
   [x] §8.8.1: lectura de resultados redactada con los números reales
-  [ ] Cerrar los 3 TBD (SR-006/009/010) antes de G4: re-agregación por-métrica de
-       SR-006 sobre M-I5; añadir contadores de SC-EDGE-05 al registro del run +
-       puntuación multi-brazo de SC-PERT-03; re-puntuar ambos escenarios
-  [x] Reconciliar run_campaign.py (indeterminado→fail) vs verdict_aggregation.py
-       (indeterminado→insufficient_evidence) — hecho como D-38; report regenerado
-       desde el CSV crudo (sin re-correr Gazebo); SR-009/010 → insufficient_evidence
+  [x] SR-006 → Satisfied (D-39): métrica steer-rate en campaign_metrics +
+       tools/sr006_smoothness.py; 559/559 enforcement vs 67.6% monitoring. FOLLOW-UP:
+       re-apuntar SR-006 en run_campaign.aggregate_sr para que campaign_report.json
+       deje de leer 'failed' (CL-B; no cambia el global).
+  [x] Reconciliar run_campaign.py vs verdict_aggregation.py (indeterminado) — D-38.
+  --- PENDIENTE (necesita host Ubuntu / re-run) ---
+  [ ] SR-010 / SC-EDGE-05: cablear inyección de IC de parameterised_grid en el runner
+       (as-run = 0 co-activación); añadir contadores joint_envelope_assertion_failures
+       e inter_cycle_oscillations al registro; re-correr.
+  [ ] SR-009 / SC-PERT-03: fine-tune + correr el brazo stall-variant; agrupar los dos
+       brazos en el driver y puntuar con criterion_eval.evaluate_labelled (ya existe).
   [ ] Resolver la decisión de métrica QED (D-17/D-21/D-22) si aplica a §8.6
   [ ] (Pendiente análisis estadístico §8.2.5: como M-S2=0 in-ODD en ambos modos,
        los tests χ²/Welch sobre el delta son degenerados; documentar o aplicar

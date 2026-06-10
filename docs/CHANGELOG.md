@@ -31,6 +31,73 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [10.06.2026] — F4: SR-006 closed on its own metric (D-39); SR-009/SR-010 blockers diagnosed
+
+**Document(s) affected:** `src/cobraflex_rl/cobraflex_rl/campaign_metrics.py`, `policy/tests/test_campaign_metrics.py`, `tools/sr006_smoothness.py` (new), `docs/DECISIONS.md` (D-39), `docs/07_traceability_matrix.md`, `docs/05_scenario_library.md`, `docs/08_odd_specification.md` (§12.3), `manuscript/chapters/chapter_08_experimental_evaluation.md` (§8.2.5, §8.4–§8.7, appendix), `CLAUDE.md`.  
+**Phase:** F4.  
+**Gate context:** before G4.  
+**Author:** Samuel.  
+
+### Change
+
+Pushed the three open SR-CL-B TBDs as far as possible without a Gazebo re-run, and
+diagnosed precisely what each still needs:
+
+- **SR-006 (actuator smoothness) → Satisfied (D-39).** Added a committed-steer
+  per-cycle rate metric to `campaign_metrics` (`M-I5.steer_rate_max`,
+  `steer_rate_max_smoothness`, `steer_rate_smoothness_ok`) and a dedicated analysis
+  tool `tools/sr006_smoothness.py` (reads `cage_status.csv`, no Gazebo, precedent
+  D-35). SR-006 is now scored **on its own metric** instead of inheriting the
+  unrelated SC-PERT-01 fraction fail. The cage runs C-06 first (bounds the raw rate),
+  then downstream safety rules (C-01/C-02/C-03/C-05) may legitimately exceed it; on
+  the steps C-06 governs (no override), the committed rate holds at δ_max = 0.15 in
+  **559/559** evaluable enforcement runs vs **67.6 %** in monitoring (worst 0.43) — a
+  direct measure of C-06's value. **No cage defect:** every apparent excursion
+  coincides with a downstream safety intervention.
+- **SR-010 (SC-EDGE-05) — diagnosed, needs re-run.** The scenario as-run induced
+  **zero rule co-activation** (0 interventions across 100 runs); the
+  `parameterised_grid` initial conditions are not injected by the runner. So SR-010
+  cannot be verified from these logs even with the two missing counters added — the
+  scenario must first actually stress co-activation, then re-run.
+- **SR-009 (SC-PERT-03) — diagnosed, needs re-run.** The multi-arm evaluator already
+  exists (`criterion_eval.evaluate_labelled`); the stall-variant arm was never
+  executed and the driver does not group the two arms. Needs the fine-tune + run +
+  grouping.
+
+Documentation synced to the executed campaign: `docs/05` (1100→1260 runs, seed 2024,
+SATISFIED, open items), §8.2.5 (the in-ODD enforcement-vs-monitoring delta is
+*degenerate* — M-S2 = 0 in both modes, no variance — so inference applies to the
+frontier and SR-006 contrasts, not the in-ODD M-S2 delta), `docs/08` §12.3 (the
+ODD-Spec carries the lone TBD-Q10 to F5; it is not promoted to v1.0 at G4).
+
+### Rationale
+
+"Do everything possible without a re-run." SR-006 needed no re-run — its evidence is
+in the committed-steer trace already logged — so it is closed here on a defensible,
+architecture-grounded operationalisation (smoothness subordinate to safety, D-39).
+SR-009/SR-010 genuinely need the Ubuntu host (a fine-tuned stall policy; a runner
+that injects grid ICs), so the honest deliverable is a precise diagnosis + the
+pure-Python pieces that make the re-run productive, not speculative untested code.
+The investigation also cleared a scare: the large committed-steer jumps are correct
+downstream safety corrections, **not** a C-06 rate-limiter defect.
+
+### Impact
+
+- `campaign_report.json` per-SR SR-006 still reads `failed` (coarse `ALL` inheritance);
+  re-pointing it to the metric in `run_campaign.aggregate_sr` is a flagged D-39
+  follow-up. SR-006 is CL-B → **global verdict unchanged (`SATISFIED`)**.
+- **Ubuntu re-run punch-list (before G4):** SC-EDGE-05 grid-IC injection + counters;
+  SC-PERT-03 stall arm + arm grouping; then re-score SR-009/SR-010. Plus the QED
+  metric decision (D-17/D-21).
+- No H/SR/C/SC/M artefacts changed; no new orphans.
+
+### Verification
+
+`pytest` → 316 passed (2 new SR-006 metric tests). `python tools/check_traceability.py`
+→ 8/8 constraints PASS, 0 warnings.
+
+---
+
 ## [10.06.2026] — F4: Reconcile campaign aggregators on indeterminate verdicts (D-38)
 
 **Document(s) affected:** `tools/run_campaign.py`, `policy/tests/test_run_campaign.py`, `policy/tests/test_verdict_aggregation.py`, `experiments/sim/campaign/campaign_report.json` (regenerated), `docs/DECISIONS.md` (D-38), `docs/07_traceability_matrix.md` (aggregator caveat → reconciliation note).  

@@ -99,10 +99,7 @@ Prose only; `tools/check_traceability.py` parses `docs/`, not the manuscript, so
 - **docs/09 §10** (v0.3): the E-track environment changes **only the observation** — the front-camera image (CNN policy) replaces the 6-dim state vector. Action, reward, cage (on the independent ground-truth state, D-39) and episode logic are unchanged; supersedes ED-1's image-obs rejection for track 'E'. Visual degradations act on the observation; perception loss raises C-05 Trigger 8.
 - **docs/10 §10:** the reward is **unchanged** for track 'E' — it is observation-agnostic (computed on ground-truth state + progress + raw steering delta).
 - **New host-testable pure modules** (numpy / stdlib only, no ROS): `visual_degradation.py` (glare / low-light / motion-blur primitives → SC-PERT-04..06 / SR-012 / H-10) and `perception_health.py` (`PerceptionHealthMonitor` raising the C-05 perception-health trigger → SC-PERT-07 / SR-013 / H-11), each with a unit-test file under `policy/tests/`.
-<<<<<<< HEAD
 - **`tools/traceability_matrix.csv` reconciled** (the hand-maintained granular matrix flagged as stale in the scaffolding entry): it now covers every `H→SR→C→SC→M` chain, adding the previously-missing H-08/H-09/SR-011 rows and the new track-'E' H-10/H-11 rows. Aligns the CSV with `docs/07`.
-=======
->>>>>>> 4299f88d6c751ebaf2e09c36ab69e068f47beffa
 
 ### Rationale
 

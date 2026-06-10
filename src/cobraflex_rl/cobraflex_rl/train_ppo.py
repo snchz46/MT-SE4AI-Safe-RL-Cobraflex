@@ -14,6 +14,7 @@ from rclpy.utilities import remove_ros_args
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback
 from stable_baselines3.common.env_checker import check_env
+from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
 import yaml
 
@@ -228,7 +229,12 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         policy_name = str(train_cfg.get("policy", "MlpPolicy"))
         if camera_obs:
             frame_stack = int(obs_cfg.get("camera", {}).get("frame_stack", 4))
-            train_env = VecFrameStack(DummyVecEnv([lambda: env]), n_stack=frame_stack)
+            # Monitor must wrap the raw env (SB3 only auto-wraps non-vec
+            # envs); without it ep_rew_mean/ep_len_mean stay NaN in the
+            # learning curve.
+            train_env = VecFrameStack(
+                DummyVecEnv([lambda: Monitor(env)]), n_stack=frame_stack
+            )
         else:
             train_env = env
 

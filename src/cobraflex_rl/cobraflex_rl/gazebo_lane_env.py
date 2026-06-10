@@ -292,6 +292,21 @@ class GazeboLaneEnv(gym.Env):
             mode = str(vd["mode"])
             level = float(vd["level"])
             return lambda frame: degrade(frame, mode, level)
+        # Scenario visual stressor (SC-PERT-04..08): onset-timed, reading the
+        # episode clock so SC-PERT-07/08's nominal lead-in stays clean.
+        if self._perturbation.kind == "visual_degradation":
+            perturbation = self._perturbation
+
+            def scenario_injector(frame):
+                active = perturbation.visual_degradation_at(
+                    self.step_count * self.control_dt
+                )
+                if active is None:
+                    return frame
+                mode, level = active
+                return degrade(frame, mode, level)
+
+            return scenario_injector
         if self.dr_enabled and self.domain_randomizer is not None:
             spec = self.domain_randomizer.sample(self.np_random)
             self._dr_spec = spec

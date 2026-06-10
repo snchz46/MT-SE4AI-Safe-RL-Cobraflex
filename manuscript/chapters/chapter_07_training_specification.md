@@ -88,19 +88,20 @@ le permite anticipar la curva. Con el preview, el agente pasó a completar
 vueltas y terminar por truncación. Decisión (ED-7) en
 `docs/09_environment_design.md`.
 
-**Track paralelo 'E' (D-38 / D-39).** En el track end-to-end con cámara frontal la
+**Track paralelo 'E' (D-38 / D-40).** En el track end-to-end con cámara frontal la
 observación deja de ser este vector de 6 dimensiones y pasa a ser la **imagen de la
 cámara frontal** (política CNN): la *policy* aprende la percepción en lugar de
 consumir el estado construido a mano (supersede a D-01 / ED-1 para este track). El
 **espacio de acción y la recompensa no cambian** (la recompensa se computa sobre
-estado ground-truth + progreso, agnóstica a la observación), y la **cage sigue sobre
-estado independiente de la cámara** (D-39), por lo que `ey/epsi/speed` siguen
-disponibles como señal privilegiada. La especificación de la observación de cámara
-(resolución, grayscale/RGB, frame-stacking, extractor CNN) y la *domain
-randomisation* sobre las degradaciones visuales (H-10 / SR-012) viven en
-`docs/09_environment_design.md` §10. El entrenamiento PPO con cámara, el sensor de
-cámara en Gazebo y el puente de observación quedan **diferidos al host Ubuntu**
-(fase de entrenamiento del track 'E').
+estado ground-truth + progreso, agnóstica a la observación). La cage, por **D-40**
+(que supersede a D-39), evalúa C-01..C-06 sobre el estado producido por un
+**estimador de carril CV determinista propio** — ni ground truth ni la CNN de la
+política — de modo que cage y política generalizan a cualquier vía con líneas
+visibles; el ground truth queda confinado en simulación a la recompensa y al
+papel de oráculo de validación del estimador. La especificación completa del
+track 'E' (observación, pipeline de cámara, *domain randomisation*, supervisor de
+percepción y Trigger 8 de C-05) se desarrolla en la **§7.7** de este capítulo y en
+`docs/09_environment_design.md` §10.
 
 ### 7.2.2 Espacio de acción
 
@@ -690,6 +691,113 @@ SC-PERT-01..03), con las métricas M-S1..M-S4, M-P1..M-P7, M-I1..M-I5,
 M-C1..M-C2 definidas en `docs/06_metrics_catalogue.md`. La comparación
 sistemática entre RL+cage y PD+cage es el resultado experimental central
 de la tesis.
+
+---
+
+## 7.7 Track 'E' — Especificación de entrenamiento end-to-end con cámara  [E2]
+
+Esta sección extiende la Training Specification al track paralelo 'E'
+(D-38): la política pasa de consumir el vector de estado de 6 dimensiones
+(§7.2.1) a consumir directamente la **imagen de la cámara frontal**. Todo lo
+que no se redefine aquí — acción (§7.2.2), recompensa (§7.2.3), terminación
+(§7.2.4), hiperparámetros PPO (§7.2.6), checkpoints y registro (§7.2.8) —
+**se hereda sin cambios**: ése es el delta mínimo que D-38/D-40 persiguen.
+
+### 7.7.1 Observación: imagen de cámara y pipeline compartido
+
+La observación es la imagen de la cámara frontal reescalada a **84×84
+píxeles en escala de grises** (uint8), con **frame stack k=4** aplicado por
+el entrenador (`VecFrameStack`); ambos valores quedan fijados en E2 dentro
+de la envolvente que `docs/09` §10 dejó abierta (84×84, gris o RGB, k=2–4):
+
+- **Escala de grises:** la señal de carril es luminancia (líneas blancas
+  sobre asfalto); el color triplica la entrada sin información de carril y
+  invita a depender exactamente del eje de apariencia que la *domain
+  randomisation* de H-10 varía.
+- **84×84:** entrada nativa del extractor NatureCNN de SB3; a esa
+  resolución las líneas (~10 mm) conservan ≥1 píxel en el campo cercano.
+- **k=4:** la observación de cámara no incluye el canal `prev_steer` del
+  track F, así que las pistas de velocidad angular deben salir íntegramente
+  del stack; se toma el extremo superior de la envolvente.
+
+La cámara fuente es el sensor `ZEDm Cam` de Gazebo (640×480 RGB, 20 Hz,
+HFOV 1.396 rad), **inclinada 0,25 rad hacia abajo** (E2: montada plana, la
+curva de R = 0,80 m salía del campo visual en la entrada de curva; evidencia
+en `experiments/sim/e_cam_visibility/`). Cada fotograma nativo atraviesa el
+**pipeline compartido** (`camera_pipeline.CameraPipeline`): un único punto
+de degradación (estresor de escenario o *domain randomisation*) **antes de
+ambos consumidores** — la CNN de la política y el estimador CV de la cage —
+que es exactamente la causa común que D-40 acepta y documenta.
+
+### 7.7.2 Arquitectura de la política
+
+`CnnPolicy` de SB3 (extractor NatureCNN: conv 32@8×8/4 → 64@4×4/2 →
+64@3×3/1 → FC 512, con normalización de imagen interna), sobre la
+observación apilada (84×84×4 tras `VecFrameStack` + `VecTransposeImage`).
+Los escalares de *curvature preview* (`kappa_near/far`, ED-7) **no** están
+en la observación: la política debe inferir la geometría de la curva desde
+la imagen — el problema de percepción más difícil que D-38 asume, con su
+coste presupuestado en datos (Shalev-Shwartz & Shashua 2016).
+
+### 7.7.3 Domain randomisation visual (H-10 / SR-012)
+
+Mitigación de H-10 en entrenamiento: por episodio se sortea una degradación
+del trío H-10 — `glare_overexposure`, `low_light_underexposure`,
+`motion_blur` — con probabilidad `p_degrade = 0.5` e intensidad uniforme en
+`[0.2, 0.8]`, reproducible vía la semilla del entorno
+(`domain_randomization` en `train_ppo_camera.yaml`). Los modos `occlusion`
+y `false_lane` (SC-PERT-07/08) quedan **excluidos del entrenamiento por
+diseño**: entrenar sobre ellos enseñaría a la política a ignorar
+exactamente las señales cuya pérdida debe disparar la parada de SR-013 /
+SR-014.
+
+### 7.7.4 La cage durante el entrenamiento del track 'E'
+
+D-34 se mantiene: la cage opera **en enforcement** dentro del bucle de
+entrenamiento, con la misma `cage.yaml` que despliegue (v0.6.1). Lo que
+cambia es la **fuente de su estado** (D-40): el supervisor de percepción
+(`cage_perception.CagePerceptionSupervisor`) compone el estimador CV
+determinista con el monitor de salud (SR-013) y el chequeo de
+plausibilidad/consistencia temporal (SR-014); cuando el estimado es
+aceptable produce el `State` de la cage, y cuando la percepción se pierde o
+es sospechosa levanta el **Trigger 8 de C-05** (parada controlada en lazo
+abierto). El ground truth queda confinado a recompensa, terminación y
+métricas. Los presupuestos temporales están alineados al ciclo de control
+de 10 Hz (cage 0.6.1): `staleness_max_s = n_missing_max_cycles × control_dt
+= 0.5 s`, persistencia del supervisor 4 ciclos. En el reset de cada
+episodio el supervisor se ceba (*priming*) sobre la vista de spawn asentada
+antes del primer ciclo de la cage.
+
+### 7.7.5 Hiperparámetros, presupuesto y semillas
+
+Idénticos a §7.2.6 salvo: `policy: CnnPolicy`, `device: auto` (CUDA si
+existe). Presupuesto principal **≥200k pasos** — D-38 acepta explícitamente
+la mayor demanda de datos del extremo a extremo; el piloto de ~20k pasos
+valida el bucle (obs fluyendo, cage interviniendo, recompensa sana, FPS
+viable) antes de comprometer el presupuesto. Semilla principal **2024**
+(precedente D-36: la semilla principal del track F); multi-seed N=5 si el
+cómputo lo permite, con la misma batería {42, 123, 2024, 23, 666} para que
+el contraste *constraint-respecting* vs *cage-dependent* de §7.5.3 sea
+comparable entre tracks.
+
+### 7.7.6 Registro y reproducibilidad
+
+Igual que §7.2.8 (curva de aprendizaje, muestras de acción, checkpoints,
+`metadata.json` con commit, hashes de cage/escenario/checkpoint y semilla),
+más la procedencia del track 'E': clase de política, bloque de observación
+y envolvente de DR quedan en `metadata.json`. La configuración fuente es
+`src/cobraflex_rl/config/train_ppo_camera.yaml`. Restricción operativa
+registrada: con cámara el simulador queda ligado a tiempo real (la
+renderización a RTF > 1 deja sin atender los servicios de gz — medido en
+E2), de modo que el coste de pared es ≈ control_dt por paso (~8 FPS).
+
+### 7.7.7 Resultados del piloto y del run principal  [PENDIENTE]
+
+Esta subsección se completará con las curvas y métricas del piloto
+(`ppo_cam_pilot_2024_20k`) y del run principal del track 'E', con el mismo
+aparato de §7.4: `ep_rew_mean`, `ep_len_mean`, `explained_variance`, tasa
+de intervención de la cage y disponibilidad de percepción
+(`cv_state_available`).
 
 ---
 

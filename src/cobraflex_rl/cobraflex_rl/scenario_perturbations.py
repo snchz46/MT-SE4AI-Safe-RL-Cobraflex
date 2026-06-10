@@ -45,7 +45,7 @@ class _Rng(Protocol):  # minimal structural type for numpy Generator
 class ScenarioPerturbation:
     """A concrete, level-resolved runtime perturbation for one (scenario, rep)."""
 
-    kind: str = "none"  # none | observation_noise | actuation_latency | throttle_override
+    kind: str = "none"  # none | observation_noise | actuation_latency | throttle_override | visual_degradation
     # observation_noise
     obs_noise_sigma_m: float = 0.0
     obs_noise_channel: str = "lateral_offset"
@@ -55,6 +55,14 @@ class ScenarioPerturbation:
     pulse_t_start_s: float = 0.0
     pulse_duration_s: float = 0.0
     pulse_throttle: float = 0.0
+    # visual_degradation (track 'E', SC-PERT-04..08): a visual_degradation
+    # primitive applied to the camera frame from ``visual_onset_s`` on, before
+    # BOTH consumers (policy CNN + cage CV estimator — D-40 common cause).
+    # ``visual_mode`` is a cobraflex_rl.visual_degradation mode string; this
+    # module stays string-only (the env binds the primitive).
+    visual_mode: str = ""
+    visual_level: float = 0.0
+    visual_onset_s: float = 0.0
     # human-readable level tag for run logging (e.g. "sigma=0.03m", "latency=100ms")
     level_label: str = ""
 
@@ -80,6 +88,15 @@ class ScenarioPerturbation:
         if self.kind == "throttle_override" and self.pulse_duration_s > 0.0:
             if self.pulse_t_start_s <= t_s < self.pulse_t_start_s + self.pulse_duration_s:
                 return float(self.pulse_throttle)
+        return None
+
+    def visual_degradation_at(self, t_s: float) -> Optional[tuple]:
+        """``(mode, level)`` of the visual degradation active at episode time
+        ``t_s`` (onset semantics: active from ``visual_onset_s`` to episode
+        end), else ``None`` (clean frame)."""
+        if self.kind == "visual_degradation" and self.visual_mode:
+            if t_s >= self.visual_onset_s:
+                return self.visual_mode, float(self.visual_level)
         return None
 
 
@@ -131,6 +148,33 @@ def resolve_perturbation(
             pulse_duration_s=float(block.get("duration_s", 0.0)),
             pulse_throttle=float(block.get("throttle", 0.0)),
             level_label=f"pulse@{block.get('at_time_s', 0)}s",
+        )
+
+    if kind in ("visual_degradation", "perception_loss", "false_lane"):
+        # Track 'E' camera stressors (SC-PERT-04..08). The scenario `mode`
+        # maps onto a visual_degradation primitive; the YAML aliases used by
+        # the scenario library resolve here so the library prose can stay
+        # descriptive.
+        levels = [float(s) for s in (block.get("level_levels") or [1.0])]
+        level = levels[rep % len(levels)]
+        mode = str(block.get("mode", "")).strip()
+        mode = {
+            "misleading_markings": "false_lane",
+            "occlusion_or_dropout": "occlusion",
+        }.get(mode, mode)
+        if kind == "perception_loss" and not mode:
+            mode = "occlusion"
+        if kind == "false_lane":
+            mode = "false_lane"
+        if not mode:
+            return NONE
+        onset = float(block.get("at_time_s", 0.0))
+        return ScenarioPerturbation(
+            kind="visual_degradation",
+            visual_mode=mode,
+            visual_level=level,
+            visual_onset_s=onset,
+            level_label=f"{mode}={level:g}@{onset:g}s",
         )
 
     return NONE

@@ -31,6 +31,25 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [10.06.2026] — E2: E-eval executor wiring + Training Spec §7.7 (manuscript) — visual stressors reach the campaign path
+
+**Document(s) affected:** `src/cobraflex_rl/cobraflex_rl/scenario_perturbations.py` (visual channel: `visual_degradation`/`perception_loss`/`false_lane` blocks → onset-timed mode/level), `gazebo_lane_env.py` (scenario visual injector with episode-clock onset), `eval_policy.py` (camera obs mode: VecFrameStack-equivalent stacking + `cv_*` perception trace in `cage_status.csv`), `train_ppo.py` (Monitor wrap in the camera path — ep_rew_mean was NaN without it), `policy/tests/test_scenario_perturbations.py` (+6); `manuscript/chapters/chapter_07` (**§7.7** Track-'E' Training Spec, in Spanish; the §7.2.1 track-E note updated D-39 → D-40), `docs/07` (E-track note: chain live, verdicts TBD until E-eval).
+**Phase:** E2 (track 'E').
+**Gate context:** prepares GE3 (training) and GE4 (eval campaign). F-track unaffected.
+**Author:** Samuel.
+
+### Change
+
+- The SC-PERT-04..08 `perturbations:` blocks now resolve through `resolve_perturbation` like every F4 runtime stressor: level round-robin by rep, onset (`at_time_s`) honoured via the episode clock so SC-PERT-07/08 keep their nominal lead-in; scenario-library aliases (`misleading_markings`, `occlusion_or_dropout`) map to the degradation primitives. The env applies the stressor in the shared camera pipeline (one degradation point, both consumers — D-40).
+- `eval_policy` runs camera policies (frame-stack mirror of training) and logs the per-step perception trace (`cv_ok`, `cv_state_available`, `cv_perception_invalid`, `cv_ey/epsi/confidence`) that the SC-PERT-07/08 verdicts and the Trigger-8 latency analysis need.
+- Manuscript ch.7 gains **§7.7** (Spanish): observation/pipeline (84×84 gray, k=4, pitched ZEDm source), NatureCNN policy, H-10 DR envelope (eval-only modes excluded, with rationale), cage-in-enforcement with the D-40 state source and aligned budgets, hyperparameters/seeds (main seed 2024, D-36 precedent; N=5 if compute allows), logging; §7.7.7 reserved for pilot/main results.
+
+### Rationale / Impact / Verification
+
+Executor + eval are now scenario-complete for the E-track campaign (Stage E-eval can drive SC-PERT-04..08 through `run_campaign` unchanged). `pytest` → 431 passed; `check_traceability` PASS; `check_scenario_yaml` PASS.
+
+---
+
 ## [10.06.2026] — E2: live-loop integration of the cage-on-CV-state (cage 0.6.1) — four defects found and fixed by driving the actual loop
 
 **Document(s) affected:** `cage/cage.yaml` (**0.6.0 → 0.6.1**: explicit `c05_emergency.staleness_max_s: 0.5`), `src/cobraflex_rl/cobraflex_rl/cage_perception.py` (supervisor defaults), `gazebo_lane_env.py` (reset-time perception priming; cage samples the freshest frame), `policy/tests/test_cage_perception.py`, `cage/tests/` (version pins).

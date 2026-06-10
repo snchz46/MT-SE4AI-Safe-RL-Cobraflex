@@ -31,6 +31,36 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [10.06.2026] — E2: camera evidence baseline — pitched front camera, matte road materials, lane-line visibility verified in-sim
+
+**Document(s) affected:** `src/cobraflex/urdf/my_robot_gazebo.urdf` + `my_robot_gazebo_mesh.urdf` (camera pitch), `scripts/compose_lane_circuit.py` (matte PBR material), `src/cobraflex/worlds/lane_following_oval{,_wet,_worn}.world` (regenerated), `tools/capture_camera_frames.py` + `tools/cam_evidence_session.sh` + `tools/reap_sim.sh` (new evidence tools), `experiments/sim/e_cam_visibility/` (frame evidence).
+**Phase:** E2 (track 'E'; branch `e2e-camera`).
+**Gate context:** GE2 prerequisite — the camera+world visual baseline every later E-artefact (CNN obs, CV lane-estimator) consumes. F-track unaffected (the F-policy is state-vector-based; world visuals do not enter its evidence).
+**Author:** Samuel.
+
+### Change
+
+- **Front camera verified live** on the Ubuntu host: the existing `ZEDm Cam` sensor (640×480 RGB, 20 Hz, `camera/image_raw`, bridged in `gz_bridge.yaml`) publishes headless (`gui:=false`); frames captured at four canonical poses (spawn, curve entry s=1.5, mid-curve, back straight) and stored under `experiments/sim/e_cam_visibility/`.
+- **Camera pitched down 0.25 rad** (both gazebo URDFs): flat-mounted, the R=0.80 m curve swept out of the FOV at curve entry (frames kept as evidence); pitched, the near road fills the lower frame at all four poses.
+- **Matte road materials**: the composer's tile material gained `roughness 0.9 / metalness 0.0` — ogre2's PBR defaults rendered the tiles glossy, with bright specular lobes a white-line detector (or the CNN) would read as lane features. All three oval worlds regenerated from the composer (content-identical otherwise; the wet/worn files also lost their accidental CRLF endings). With matte asphalt the dashed separator and the white edge lines are crisply visible at every pose — the visibility precondition of docs/09 §10 is met and evidenced.
+- New host tools: `tools/capture_camera_frames.py` (frame grabber), `tools/cam_evidence_session.sh` (launch + teleport + capture), `tools/reap_sim.sh` (orphan reaper).
+
+### Rationale
+
+docs/09 §10 ("verify the lane lines are actually visible to the camera") is the entry condition for the camera observation bridge and the D-40 CV lane-estimator; both the pitch and the matte fix came out of looking at actual frames rather than assuming the texture work sufficed.
+
+### Impact
+
+- The world files' hashes change; E-track runs record the new hashes. Frozen F-track run metadata is untouched (their recorded hashes remain valid for the commits they cite).
+- `oval_centerline.yaml` regeneration verified byte-identical — no geometry change, no ODD impact (ROAD_LENGTH / KAPPA_MAX unchanged).
+- Camera intrinsics baseline for the E-obs design: 640×480 @ 20 Hz, HFOV 1.396 rad, pitch 0.25 rad.
+
+### Verification
+
+`pytest` → 366 passed. `python tools/check_traceability.py` → All checks PASSED, 0 warnings. Evidence frames reviewed at the four poses for the flat (`spawn/...`), pitched (`pitch025_*`) and pitched+matte (`matte_*`) configurations.
+
+---
+
 ## [09.06.2026] — E2: D-40 — cage on a dedicated vision lane-estimator (supersedes D-39); H-12 / SR-014 / SC-PERT-08
 
 **Document(s) affected:** `docs/DECISIONS.md` (D-40; D-39 → SUPERSEDED), `docs/02` (H-10/H-11 reframe + new H-12), `docs/03` (SR-012/SR-013 reframe + new SR-014), `docs/04`, `docs/05` (SC-PERT-08 + reframe), `docs/07`, `docs/09` §10 (v0.4), `docs/10` §10; `docs/data/*.csv` (regenerated); `tools/traceability_matrix.csv`; `manuscript/chapters/chapter_04`, `chapter_05`; `scenarios/perturbed/sc_pert_08.yaml` (new stub); `policy/tests/test_verdict_aggregation.py` (count); `src/cobraflex_rl/cobraflex_rl/visual_domain_randomization.py` + test (new).  

@@ -489,6 +489,11 @@ def emit_world_sdf(
             <pbr>
               <metal>
                 <albedo_map>{tex}</albedo_map>
+                <!-- Matte asphalt (track E): ogre2 defaults render the tiles
+                     glossy, putting bright specular lobes on the road that a
+                     white-line detector / CNN would read as lane features. -->
+                <roughness>0.9</roughness>
+                <metalness>0.0</metalness>
               </metal>
             </pbr>
           </material>

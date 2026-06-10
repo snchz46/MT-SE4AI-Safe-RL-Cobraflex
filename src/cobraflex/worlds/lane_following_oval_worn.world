@@ -73,6 +73,11 @@
             <pbr>
               <metal>
                 <albedo_map>../materials/road_assets/road_variants/two_same_02_patched.png</albedo_map>
+                <!-- Matte asphalt (track E): ogre2 defaults render the tiles
+                     glossy, putting bright specular lobes on the road that a
+                     white-line detector / CNN would read as lane features. -->
+                <roughness>0.9</roughness>
+                <metalness>0.0</metalness>
               </metal>
             </pbr>
           </material>
@@ -95,6 +100,11 @@
             <pbr>
               <metal>
                 <albedo_map>../materials/road_assets/road_curves/curve_R080cm_A180deg.png</albedo_map>
+                <!-- Matte asphalt (track E): ogre2 defaults render the tiles
+                     glossy, putting bright specular lobes on the road that a
+                     white-line detector / CNN would read as lane features. -->
+                <roughness>0.9</roughness>
+                <metalness>0.0</metalness>
               </metal>
             </pbr>
           </material>
@@ -117,6 +127,11 @@
             <pbr>
               <metal>
                 <albedo_map>../materials/road_assets/road_variants/two_same_02_patched.png</albedo_map>
+                <!-- Matte asphalt (track E): ogre2 defaults render the tiles
+                     glossy, putting bright specular lobes on the road that a
+                     white-line detector / CNN would read as lane features. -->
+                <roughness>0.9</roughness>
+                <metalness>0.0</metalness>
               </metal>
             </pbr>
           </material>
@@ -139,6 +154,11 @@
             <pbr>
               <metal>
                 <albedo_map>../materials/road_assets/road_curves/curve_R080cm_A180deg.png</albedo_map>
+                <!-- Matte asphalt (track E): ogre2 defaults render the tiles
+                     glossy, putting bright specular lobes on the road that a
+                     white-line detector / CNN would read as lane features. -->
+                <roughness>0.9</roughness>
+                <metalness>0.0</metalness>
               </metal>
             </pbr>
           </material>

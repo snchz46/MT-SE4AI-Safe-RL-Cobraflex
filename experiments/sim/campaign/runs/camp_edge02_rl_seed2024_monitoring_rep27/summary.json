@@ -1,0 +1,83 @@
+{
+  "total_steps": 150,
+  "episodes": 1,
+  "completed_laps": 0.3893768195692395,
+  "mean_ey_m": 0.04152317422395367,
+  "mean_abs_ey_m": 0.04152317422395367,
+  "max_abs_ey_m": 0.1182607081428752,
+  "mean_epsi_rad": -0.008852331373102654,
+  "mean_abs_epsi_rad": 0.04666244305190685,
+  "emergency_steps": 0,
+  "intervention_steps": 0,
+  "intervention_rate_pct": 0.0,
+  "interventions_per_rule": {},
+  "cycle_dt_s": 0.1,
+  "duration_s": 15.0,
+  "run_id": "camp_edge02_rl_seed2024_monitoring_rep27",
+  "scenario_id": "SC-EDGE-02",
+  "mode": "monitoring",
+  "verdict": true,
+  "campaign": {
+    "scenario_id": "SC-EDGE-02",
+    "criterion": "M-S1 < 0.16 AND emergency == False",
+    "verdict": true,
+    "clauses": [
+      {
+        "clause": "M-S1 < 0.16",
+        "operand": "M-S1",
+        "op": "<",
+        "rhs": 0.16,
+        "lhs": 0.1182607081428752,
+        "passed": true
+      },
+      {
+        "clause": "emergency == False",
+        "operand": "emergency",
+        "op": "==",
+        "rhs": false,
+        "lhs": false,
+        "passed": true
+      }
+    ],
+    "values": {
+      "M-P1": 0.050404088188528345,
+      "M-P4": 0.12629828859229578,
+      "M-P5": 0.04666244305190685,
+      "M-P2": 1,
+      "M-P3": 100.0,
+      "M-P6": 0.0,
+      "M-P7": 0.04148623229538188,
+      "M-S1": 0.1182607081428752,
+      "M-S2": 0.0,
+      "M-S3": 0,
+      "M-S4": null,
+      "M-I1": 0.0,
+      "M-I2": {},
+      "M-I3": {},
+      "M-I4": {},
+      "M-I5": {
+        "steer_median": 0.0,
+        "steer_p95": 0.0
+      },
+      "M-C1": null,
+      "M-C2": null,
+      "emergency": false,
+      "time_to_recovery_heading": 3.3000000000000003,
+      "max_excursion_m": 0.1182607081428752,
+      "road_edge_contact": false
+    },
+    "availability": {
+      "M-P3": "approx: kappa absent, v_max_straight assumed",
+      "M-P6": "exact",
+      "M-P7": "exact",
+      "M-S3": "per-run bit; M-S3 rate is aggregated across runs",
+      "M-S4": "requires per-step ttlc series (not in current record schema)",
+      "M-I4": "C-05 omitted (triggers not in record); C-03 omitted (no ttlc)",
+      "M-I5": "steering channel only (throttle correction not in record schema)",
+      "M-C1": "not measured in sim runs",
+      "M-C2": "not measured in sim runs"
+    },
+    "termination_reason": "truncated",
+    "note": null
+  }
+}

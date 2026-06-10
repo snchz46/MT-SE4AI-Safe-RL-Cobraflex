@@ -54,6 +54,12 @@ def generate_launch_description():
                               description="Output run id (empty = timestamp)."),
         DeclareLaunchArgument("output_root", default_value="",
                               description="Directory holding run subdirs."),
+        # Track 'E': the camera campaign passes train_ppo_camera.yaml so
+        # eval_policy builds the camera env + frame stack; empty keeps the
+        # F-track default (train_ppo.yaml).
+        DeclareLaunchArgument("train_config", default_value="",
+                              description="Training config YAML for the eval env "
+                                          "(empty = package default train_ppo.yaml)."),
     ]
 
     gazebo = IncludeLaunchDescription(
@@ -79,6 +85,8 @@ def generate_launch_description():
             "--max-steps", LaunchConfiguration("max_steps"),
             "--run-id", LaunchConfiguration("run_id"),
             "--output-root", LaunchConfiguration("output_root"),
+            # Empty string falls back to the package default inside eval_policy.
+            "--train-config", LaunchConfiguration("train_config"),
         ],
     )
 

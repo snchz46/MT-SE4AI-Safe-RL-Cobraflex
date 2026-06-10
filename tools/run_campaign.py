@@ -339,9 +339,16 @@ def plan_feasibility(
 CHECKPOINT_DIR = REPO / "experiments" / "sim"
 
 
-def checkpoint_for_seed(seed: Optional[int]) -> Path:
-    """The trained PPO checkpoint for a policy seed (the F3 multi-seed set)."""
-    return CHECKPOINT_DIR / f"cobraflex_ppo_lane_{seed}_200k.zip"
+DEFAULT_CHECKPOINT_TEMPLATE = "cobraflex_ppo_lane_{seed}_200k.zip"
+
+
+def checkpoint_for_seed(
+    seed: Optional[int], template: str = DEFAULT_CHECKPOINT_TEMPLATE
+) -> Path:
+    """The trained PPO checkpoint for a policy seed. The default template is
+    the F3 multi-seed set; the track-'E' camera campaign passes its own
+    (e.g. ``cobraflex_ppo_cam_lane_{seed}_200k.zip``)."""
+    return CHECKPOINT_DIR / template.format(seed=seed)
 
 
 def run_id_for(run_spec: RunSpec) -> str:
@@ -390,6 +397,8 @@ def execute_run(
     timeout_s: int = 900,
     resume: bool = False,
     retries: int = 2,
+    train_config: str = "",
+    checkpoint_template: str = DEFAULT_CHECKPOINT_TEMPLATE,
 ) -> Dict[str, object]:  # pragma: no cover - drives Gazebo, host-only
     """Drive one scenario run in Gazebo (headless) and return its ``summary.json``.
 
@@ -420,7 +429,10 @@ def execute_run(
         )
     if scenario.path is None:
         raise ValueError(f"{scenario.id}: scenario has no source path to run")
-    checkpoint = Path(model_path) if model_path else checkpoint_for_seed(run_spec.seed)
+    checkpoint = (
+        Path(model_path) if model_path
+        else checkpoint_for_seed(run_spec.seed, checkpoint_template)
+    )
     if not checkpoint.is_file():
         raise FileNotFoundError(f"checkpoint not found for seed {run_spec.seed}: {checkpoint}")
 
@@ -435,6 +447,7 @@ def execute_run(
         f"output_root:={output_root}",
         f"gui:={'true' if gui else 'false'}",
         f"rviz:={'true' if rviz else 'false'}",
+        f"train_config:={train_config}",
     ]
     # Isolate this run's Gazebo transport in its own partition, so a lingering
     # gz server from the previous run (the EmitEvent(Shutdown) teardown can lag
@@ -624,6 +637,13 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     p.set_defaults(frontier_plots=True)
     p.add_argument("--dry-run", action="store_true",
                    help="build the matrix + D-29 feasibility and stop (no Gazebo).")
+    # Track-'E' camera campaign knobs (F-track defaults preserved).
+    p.add_argument("--train-config", default="",
+                   help="training config YAML for the eval env (empty = package "
+                        "default; pass train_ppo_camera.yaml for the E-track).")
+    p.add_argument("--checkpoint-template", default=DEFAULT_CHECKPOINT_TEMPLATE,
+                   help="checkpoint filename template with {seed} "
+                        "(E-track: cobraflex_ppo_cam_lane_{seed}_200k.zip).")
     return p.parse_args(argv)
 
 
@@ -702,7 +722,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     executor: Executor = (
         lambda rs, sc, **kw: execute_run(
             rs, sc, gui=args.gui, rviz=args.rviz, resume=args.resume,
-            retries=args.retries, **kw)
+            retries=args.retries, train_config=args.train_config,
+            checkpoint_template=args.checkpoint_template, **kw)
     )
     outcomes = run_matrix(
         matrix, scenarios, runs_root, executor=executor,

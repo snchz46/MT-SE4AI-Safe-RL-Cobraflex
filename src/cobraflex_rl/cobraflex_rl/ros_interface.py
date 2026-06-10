@@ -10,6 +10,10 @@ import rclpy
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
+from sensor_msgs.msg import Image
+
+from .camera_pipeline import decode_image
 
 
 class RosGazeboInterface(Node):
@@ -20,9 +24,23 @@ class RosGazeboInterface(Node):
         spawn_z: float = 0.05,
         service_timeout_ms: int = 2000,
         odom_topic: str = "/odom_truth",
+        camera_topic: str = "",
     ) -> None:
         super().__init__("cobraflex_rl_interface")
         self._odom_msg: Optional[Odometry] = None
+        # Track 'E' (D-38/D-40): optional camera subscription. Empty topic =
+        # F-track behaviour, no image traffic. The latest raw msg is kept and
+        # decoded lazily in get_camera_frame() so 20 Hz × 0.9 MB frames cost
+        # nothing when the consumer only samples at the 10 Hz control rate.
+        self._image_msg: Optional[Image] = None
+        self.camera_topic = str(camera_topic)
+        if self.camera_topic:
+            self._image_sub = self.create_subscription(
+                Image,
+                self.camera_topic,
+                self._image_callback,
+                qos_profile_sensor_data,
+            )
         self.world_name = world_name
         self.model_name = model_name
         self.spawn_z = float(spawn_z)
@@ -51,6 +69,28 @@ class RosGazeboInterface(Node):
     def _odom_callback(self, msg: Odometry) -> None:
         self._odom_msg = msg
 
+    def _image_callback(self, msg: Image) -> None:
+        self._image_msg = msg
+
+    def get_camera_frame(self):
+        """Latest camera frame as ``(bgr_array, stamp_s)`` or ``None``.
+
+        Decodes the most recent retained message on demand. Returns None when
+        no frame has arrived yet (or no camera topic configured).
+        """
+        msg = self._image_msg
+        if msg is None:
+            return None
+        frame = decode_image(
+            msg.data, int(msg.height), int(msg.width), msg.encoding, int(msg.step)
+        )
+        stamp = float(msg.header.stamp.sec) + float(msg.header.stamp.nanosec) * 1e-9
+        return frame, stamp
+
+    def clear_camera_frame(self) -> None:
+        """Drop the retained frame (episode reset: don't reuse a pre-teleport view)."""
+        self._image_msg = None
+
     @staticmethod
     def quaternion_to_yaw(x: float, y: float, z: float, w: float) -> float:
         siny_cosp = 2.0 * (w * z + x * y)
@@ -68,6 +108,11 @@ class RosGazeboInterface(Node):
         msg.linear.x = float(speed)
         msg.angular.z = float(steer)
         self._cmd_pub.publish(msg)
+
+    def sim_now(self) -> Optional[float]:
+        """Public alias for the current sim time (latest odom stamp), the
+        shared time base for camera-frame freshness in the E-track pipeline."""
+        return self._odom_sim_time()
 
     def _odom_sim_time(self) -> Optional[float]:
         """Latest odom header stamp in seconds (simulation time), or None.

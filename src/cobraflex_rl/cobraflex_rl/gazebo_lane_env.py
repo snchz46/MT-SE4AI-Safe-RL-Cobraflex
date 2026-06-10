@@ -14,11 +14,18 @@ from .cage_bridge import (
     resolve_cage_yaml,
     safe_action_to_cmd,
 )
+from .cage_perception import CagePerceptionSupervisor
+from .camera_pipeline import CameraPipeline
 from .polyline_tracker import PolylineTracker, TrackState
 from .rewards import compute_reward
 from .ros_interface import RosGazeboInterface
 from .scenario_perturbations import NONE as NO_PERTURBATION
 from .scenario_perturbations import ScenarioPerturbation
+from .visual_degradation import degrade
+from .visual_domain_randomization import (
+    DomainRandomizationConfig,
+    VisualDomainRandomizer,
+)
 
 
 class GazeboLaneEnv(gym.Env):
@@ -71,12 +78,69 @@ class GazeboLaneEnv(gym.Env):
             high=np.array([1.0], dtype=np.float32),
             dtype=np.float32,
         )
-        # [ey, epsi, speed, prev_steer, kappa_near, kappa_far]
-        self.observation_space = spaces.Box(
-            low=np.array([-np.inf, -math.pi, 0.0, -1.0, -np.inf, -np.inf], dtype=np.float32),
-            high=np.array([np.inf, math.pi, np.inf, 1.0, np.inf, np.inf], dtype=np.float32),
-            dtype=np.float32,
-        )
+        # Track 'E' (D-38/D-40): observation.type "camera" switches the policy
+        # obs to the front-camera image (84×84 grayscale, docs/09 §10; frame
+        # stacking k=4 is applied by the trainer via VecFrameStack). The cage's
+        # state then comes from the deterministic CV lane-estimator behind the
+        # CagePerceptionSupervisor — never from ground truth, which stays the
+        # reward/termination/metrics oracle only.
+        self.obs_type = str(obs_cfg.get("type", "state"))
+        if self.obs_type == "camera":
+            cam_cfg = dict(obs_cfg.get("camera", {}))
+            grayscale = bool(cam_cfg.get("grayscale", True))
+            obs_w = int(cam_cfg.get("width", 84))
+            obs_h = int(cam_cfg.get("height", 84))
+            self.camera_pipeline = CameraPipeline(
+                obs_width=obs_w, obs_height=obs_h, grayscale=grayscale
+            )
+            self.cage_perception = CagePerceptionSupervisor()
+            self.observation_space = spaces.Box(
+                low=0,
+                high=255,
+                shape=(obs_h, obs_w, 1 if grayscale else 3),
+                dtype=np.uint8,
+            )
+            # Last processed (possibly degraded) native frame + sim stamp:
+            # captured at the end of each cycle, consumed by the cage at the
+            # start of the next (same cadence as last_track_state).
+            self._cam_frame: Optional[np.ndarray] = None
+            self._cam_stamp: float = 0.0
+            self._last_obs_img: Optional[np.ndarray] = None
+            # Training-side visual domain randomisation (H-10 mitigation,
+            # SR-012): one degradation spec drawn per episode from the H-10
+            # envelope, reproducible via self.np_random (seeded by reset).
+            # Disabled for deterministic evaluation; scenario injectors
+            # passed via reset options take precedence.
+            dr_cfg = dict(self.cfg.get("domain_randomization", {}))
+            self.dr_enabled = bool(dr_cfg.get("enabled", False))
+            self.domain_randomizer: Optional[VisualDomainRandomizer] = None
+            self._dr_spec = None
+            if self.dr_enabled:
+                self.domain_randomizer = VisualDomainRandomizer(
+                    DomainRandomizationConfig(
+                        p_degrade=float(dr_cfg.get("p_degrade", 0.5)),
+                        modes=tuple(
+                            dr_cfg.get(
+                                "modes",
+                                DomainRandomizationConfig().modes,
+                            )
+                        ),
+                        level_range=tuple(
+                            dr_cfg.get("level_range", (0.2, 1.0))
+                        ),
+                    )
+                )
+        else:
+            # [ey, epsi, speed, prev_steer, kappa_near, kappa_far]
+            self.observation_space = spaces.Box(
+                low=np.array(
+                    [-np.inf, -math.pi, 0.0, -1.0, -np.inf, -np.inf], dtype=np.float32
+                ),
+                high=np.array(
+                    [np.inf, math.pi, np.inf, 1.0, np.inf, np.inf], dtype=np.float32
+                ),
+                dtype=np.float32,
+            )
 
         # Safety cage in the training loop (D-34, TS-01). The cage is invoked
         # in-process via the same SafetyCageNode/cage.yaml that cage_ros_node
@@ -181,12 +245,71 @@ class GazeboLaneEnv(gym.Env):
         self.last_track_state = track_state
         self.prev_s = float(track_state.s)
 
-        kappa_near, kappa_far = self._curvature_preview(track_state.segment_index)
-        observation = self._make_observation(
-            self._perceived_ey, track_state.epsi, speed, self.prev_steer, kappa_near, kappa_far
-        )
+        if self.obs_type == "camera":
+            self.cage_perception.reset()
+            self.camera_pipeline.set_injector(self._resolve_visual_injector(opts))
+            # Drop any pre-teleport frame and wait for a fresh post-teleport one.
+            self.ros_interface.clear_camera_frame()
+            observation = self._capture_camera_obs(wait_timeout_s=5.0)
+            if observation is None:
+                raise RuntimeError(
+                    "Timed out waiting for a camera frame after episode reset "
+                    "(is the camera bridged on this world?)."
+                )
+        else:
+            kappa_near, kappa_far = self._curvature_preview(track_state.segment_index)
+            observation = self._make_observation(
+                self._perceived_ey, track_state.epsi, speed, self.prev_steer,
+                kappa_near, kappa_far,
+            )
         info = self._make_info(track_state, speed)
         return observation, info
+
+    def _resolve_visual_injector(self, opts: Dict[str, Any]):
+        """Per-episode camera degradation (applied once, before both consumers
+        — the policy obs and the cage CV estimator; D-40 common cause).
+
+        Three sources, in precedence order:
+        ``options["visual_injector"]`` (any frame→frame callable, e.g. a bound
+        ``VisualDomainRandomizer.apply`` for training DR),
+        ``options["visual_degradation"]`` ({"mode", "level"} from an SC-PERT
+        scenario), or None (clean).
+        """
+        injector = opts.get("visual_injector")
+        if injector is not None:
+            return injector
+        vd = opts.get("visual_degradation")
+        if vd:
+            mode = str(vd["mode"])
+            level = float(vd["level"])
+            return lambda frame: degrade(frame, mode, level)
+        if self.dr_enabled and self.domain_randomizer is not None:
+            spec = self.domain_randomizer.sample(self.np_random)
+            self._dr_spec = spec
+            if not spec.is_clean:
+                return lambda frame: self.domain_randomizer.apply(frame, spec)
+        return None
+
+    def _capture_camera_obs(self, wait_timeout_s: float = 0.0):
+        """Fetch the latest camera frame, run the shared pipeline, retain the
+        degraded native frame for the cage's next cycle, and return the policy
+        observation. Returns the previous observation when no new frame exists
+        (20 Hz camera vs 10 Hz control: normally there is always one)."""
+        import time as _time
+
+        deadline = _time.monotonic() + max(0.0, float(wait_timeout_s))
+        result = self.ros_interface.get_camera_frame()
+        while result is None and _time.monotonic() < deadline:
+            self.ros_interface.spin_wall(0.05)
+            result = self.ros_interface.get_camera_frame()
+        if result is None:
+            return self._last_obs_img
+        frame, stamp = result
+        consumer, obs_img = self.camera_pipeline.process(frame)
+        self._cam_frame = consumer
+        self._cam_stamp = float(stamp)
+        self._last_obs_img = obs_img
+        return obs_img
 
     def _curvature_preview(self, segment_index: int):
         """Signed curvature (rad/m, + = left) at a near and a far look-ahead, for
@@ -323,10 +446,14 @@ class GazeboLaneEnv(gym.Env):
 
         self.prev_steer = applied_steer
         self.prev_policy_steer = policy_steer
-        kappa_near, kappa_far = self._curvature_preview(track_state.segment_index)
-        observation = self._make_observation(
-            self._perceived_ey, track_state.epsi, speed, self.prev_steer, kappa_near, kappa_far
-        )
+        if self.obs_type == "camera":
+            observation = self._capture_camera_obs()
+        else:
+            kappa_near, kappa_far = self._curvature_preview(track_state.segment_index)
+            observation = self._make_observation(
+                self._perceived_ey, track_state.epsi, speed, self.prev_steer,
+                kappa_near, kappa_far,
+            )
         info = self._make_info(track_state, speed)
         info.update(cage_info)
         if terminated:
@@ -371,19 +498,24 @@ class GazeboLaneEnv(gym.Env):
         override = self._perturbation.throttle_override(timestamp)
         raw_throttle = self.throttle_nominal if override is None else float(override)
         raw_action = (policy_steer, raw_throttle)
-        state = build_cage_state(
-            lateral_offset=self._perceived_ey,
-            heading_error=self.last_track_state.epsi,
-            speed=self.ros_interface.get_speed(),
-            road_width=self.road_width,
-            curvature_ahead=self.tracker.curvature_ahead(
-                self.last_track_state.segment_index, self.lookahead_segments
-            ),
-            timestamp=timestamp,
-        )
-        result = self.cage.step(
-            state, raw_action, {"current_time": timestamp, "external_stop": False}
-        )
+        if self.obs_type == "camera":
+            state, ctx, perception_info = self._camera_cage_state(timestamp)
+            result = self.cage.step(state, raw_action, ctx)
+        else:
+            perception_info = {}
+            state = build_cage_state(
+                lateral_offset=self._perceived_ey,
+                heading_error=self.last_track_state.epsi,
+                speed=self.ros_interface.get_speed(),
+                road_width=self.road_width,
+                curvature_ahead=self.tracker.curvature_ahead(
+                    self.last_track_state.segment_index, self.lookahead_segments
+                ),
+                timestamp=timestamp,
+            )
+            result = self.cage.step(
+                state, raw_action, {"current_time": timestamp, "external_stop": False}
+            )
         safe_steer, safe_throttle = result["safe_action"]
         emergency = bool(result["emergency"])
         # In monitoring the cage observes only: the raw action is applied and a
@@ -409,7 +541,59 @@ class GazeboLaneEnv(gym.Env):
             "safe_steer": float(safe_steer),
             "steer_correction": float(safe_steer) - policy_steer,
         }
+        info.update(perception_info)
         return float(safe_steer), cmd_linear, cmd_angular, info
+
+    def _camera_cage_state(self, timestamp: float):
+        """Cage state from the CV lane-estimator (D-40) for the current cycle.
+
+        Runs the perception supervisor on the last cycle's (degraded) native
+        frame. A trustworthy estimate yields a cage `State` stamped with the
+        frame's age (so C-05's staleness trigger keeps working in episode
+        time); otherwise the cage gets ``state=None`` (its missing-state path)
+        plus the ``perception_invalid`` flag for Trigger 8 once the supervisor's
+        persistence elapses.
+        """
+        speed = self.ros_interface.get_speed()
+        now_sim = self.ros_interface.sim_now()
+        if now_sim is None:
+            now_sim = self._cam_stamp
+        result = self.cage_perception.update(
+            self._cam_frame,
+            frame_timestamp_s=self._cam_stamp,
+            now_s=float(now_sim),
+            speed_mps=speed,
+        )
+        ctx = {
+            "current_time": timestamp,
+            "external_stop": False,
+            "perception_invalid": result.perception_invalid,
+        }
+        est = result.estimate
+        perception_info = {
+            "cv_ok": bool(est.ok),
+            "cv_ey": float(est.ey),
+            "cv_epsi": float(est.epsi),
+            "cv_lane_width": float(est.lane_width),
+            "cv_curvature": float(est.curvature),
+            "cv_confidence": float(est.confidence),
+            "cv_state_available": bool(result.state_available),
+            "cv_perception_invalid": bool(result.perception_invalid),
+            "cv_health_reason": result.health_reason,
+            "cv_plausibility_reason": result.plausibility_reason,
+        }
+        if not result.state_available:
+            return None, ctx, perception_info
+        frame_age = max(0.0, float(now_sim) - float(self._cam_stamp))
+        state = build_cage_state(
+            lateral_offset=est.ey,
+            heading_error=est.epsi,
+            speed=speed,
+            road_width=self.road_width,
+            curvature_ahead=est.curvature,
+            timestamp=timestamp - frame_age,
+        )
+        return state, ctx, perception_info
 
     def _delayed_command(self, cmd_linear: float, cmd_angular: float):
         """Actuation latency (SC-PERT-02): return the command issued

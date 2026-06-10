@@ -76,7 +76,7 @@ def test_pd_cage_logger_pipeline(tmp_path):
     # Logger CSV well-formed
     rows = list(csv.DictReader((log_dir / "cage_status.csv").open()))
     assert len(rows) == n_cycles
-    assert rows[0]["cage_version"] == "0.6.0"
+    assert rows[0]["cage_version"] == "0.6.1"
     assert all(r["mode"] == "enforcement" for r in rows)
 
     # At least one row records a non-empty rules_fired

@@ -64,8 +64,40 @@ class CagePerceptionSupervisor:
         plausibility: Optional[LanePlausibilityCheck] = None,
     ) -> None:
         self.estimator = estimator or CvLaneEstimator()
-        self.health = health or PerceptionHealthMonitor()
-        self.plausibility = plausibility or LanePlausibilityCheck()
+        if health is None:
+            # min_confidence must admit the estimator's single-line fallback
+            # (confidence = 0.5 × row coverage, floor ≈ 0.08 at the minimum
+            # cluster size): it is a *degraded-but-valid* mode, not a loss.
+            # Genuine loss still gates — a failed estimate carries
+            # confidence 0.0. min_invalid_cycles=4 (0.4 s at 10 Hz) bridges
+            # the ~2-cycle dash-gap blind stretches measured live at the oval
+            # curve apex while staying inside the cage's own 5-cycle
+            # missing-state budget (n_missing_max_cycles, C-05 Trigger 5) —
+            # a real loss still stops within ~0.5 s.
+            health = PerceptionHealthMonitor(
+                min_confidence=0.10, min_invalid_cycles=4
+            )
+        self.health = health
+        if plausibility is None:
+            # The SR-014 lane-width window must equal the estimator's own
+            # pair-acceptance window. With the checker's generic default
+            # (0.20–0.80 m) every pair the estimator accepts in
+            # [nominal−tol, 0.20) was permanently rejected — a dead zone that
+            # deadlocked the cage into its no-state path (found live at E2).
+            cfg = self.estimator.config
+            plausibility = LanePlausibilityCheck(
+                lane_width_range=(
+                    cfg.lane_width_nominal_m - cfg.lane_width_tol_m,
+                    cfg.lane_width_nominal_m + cfg.lane_width_tol_m,
+                ),
+                # ODD KAPPA_MAX is 1.25 1/m (the oval's U-turns); the
+                # estimator's quadratic-fit curvature carries noise on top, so
+                # the generic 1.5 default rejected real curve entries (found
+                # live at E2). 3.0 still rejects absurd geometry while
+                # admitting KAPPA_MAX plus the measured estimator noise.
+                curvature_max=3.0,
+            )
+        self.plausibility = plausibility
 
     def reset(self) -> None:
         """Per-episode reset (fresh persistence counters, no stale reference)."""

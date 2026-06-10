@@ -13,7 +13,7 @@
 # =============================================================
 
 cage:
-  version: "0.6.0"   # bump on any parameter change; semantic versioning
+  version: "0.6.1"   # bump on any parameter change; semantic versioning
 
   # Version of docs/03_safety_requirements.md against which this YAML's
   # parameter set was authored. SafetyCageNode.__init__ refuses to load
@@ -23,6 +23,19 @@ cage:
   # the bump in docs/CHANGELOG.md.
   compatible_sr_spec_version: "1.0"
   description: |
+    0.6.1 (2026-06-10, track 'E'): make C-05 Trigger 3's state-age
+    budget explicit and consistent with Trigger 5's missing-state
+    budget at the 10 Hz training/eval control rate:
+    staleness_max_s = n_missing_max_cycles x control_dt = 5 x 0.1 =
+    0.5 s (the code default 0.2 s assumed the 20 Hz deployment loop,
+    where 0.2 s ~ 4-5 cycles — the SAME tolerance). Found live at E2:
+    with the CV lane-estimator the state legitimately skips 2-3
+    cycles at the oval curve apex (dash gaps); Trigger 3 at 0.2 s
+    undercut the documented 5-cycle hold and stopped every lap
+    mid-curve. SR-007's staleness-detection mandate is unchanged —
+    only the budget is parameterised to the actual control rate.
+    At 0.2 m/s, 0.5 s = 10 cm of travel, inside the d_warning margin.
+
     0.6.0 (2026-06-10, track 'E'): add C-05 Trigger 8 (perception
     invalid; SR-013 loss / SR-014 misdetection; H-11/H-12; D-40).
     The external perception supervisor — CV lane-estimator health
@@ -203,6 +216,11 @@ cage:
 
     # Reset policy
     require_explicit_reset: true   # must receive reset signal AND condition cleared
+
+    # Trigger 3 — stale-state budget (SR-007). Aligned with Trigger 5's
+    # missing-state budget at the 10 Hz sim control rate:
+    # n_missing_max_cycles (5) × control_dt (0.1 s). See 0.6.1 note above.
+    staleness_max_s: 0.5
 
     # Trigger 8 — perception invalid (track 'E'; SR-013/SR-014; D-40).
     # When true, ctx["perception_invalid"] (set by the external CV

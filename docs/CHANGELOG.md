@@ -31,6 +31,36 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [10.06.2026] — E2: live-loop integration of the cage-on-CV-state (cage 0.6.1) — four defects found and fixed by driving the actual loop
+
+**Document(s) affected:** `cage/cage.yaml` (**0.6.0 → 0.6.1**: explicit `c05_emergency.staleness_max_s: 0.5`), `src/cobraflex_rl/cobraflex_rl/cage_perception.py` (supervisor defaults), `gazebo_lane_env.py` (reset-time perception priming; cage samples the freshest frame), `policy/tests/test_cage_perception.py`, `cage/tests/` (version pins).
+**Phase:** E2 (track 'E').
+**Gate context:** GE2 — closes the loop "cage drives on the CV estimate, live". F-track unaffected (state always fresh on the F-track, so the staleness budget never bound; Trigger 8 unchanged).
+**Author:** Samuel.
+
+### Change
+
+Driving the camera env live (scripted controller, oval) exposed four integration defects invisible to both the unit tests and the static oracle grid:
+
+1. **Lane-width dead zone:** the estimator accepts pairs in `nominal ± 0.10 m` (≥ 0.145), the SR-014 checker's generic default rejected `< 0.20` — estimates in `[0.145, 0.20)` were permanently rejected and the cage deadlocked into its no-state path (1-step episodes). Fix: the supervisor builds the checker from the estimator's own pair window.
+2. **One-cycle-stale cage frame:** the cage consumed the frame retained at the end of the *previous* control cycle; at real-time rates its sim-age tripped both the supervisor staleness budget and C-05 Trigger 3. Fix: the cage samples the freshest frame at its own cycle start (same degradation pipeline — the D-40 common-cause property holds).
+3. **Budget inconsistency at 10 Hz:** Trigger 3's code default (0.2 s) assumed the 20 Hz deployment loop, where it equals the documented 5-cycle missing-state tolerance; at the env's 10 Hz it undercut Trigger 5 (2 cycles vs 5) and stopped every lap at the curve apex, where the CV state legitimately skips 2–4 cycles (dash gaps). Fix: `staleness_max_s: 0.5 = n_missing_max_cycles × control_dt`, budgets aligned; SR-007's detection mandate unchanged (0.5 s at 0.2 m/s = 10 cm, inside the d_warning margin). Supervisor persistence likewise 2 → 4 cycles, and its `min_confidence` 0.3 → 0.10 so the single-line fallback (a degraded-but-valid mode; loss still carries confidence 0) is not misread as loss. Curvature plausibility 1.5 → 3.0 (ODD KAPPA_MAX 1.25 + measured estimator noise rejected real curve entries).
+4. **Brittle first cycle:** one bad spawn frame put the cage on its no-state-ever path (instant emergency). Fix: reset-time priming — the supervisor must accept a settled spawn view (2 s budget) before the episode starts; a scenario injector active from t=0 may legitimately never prime, and then the controlled stop is the specified outcome.
+
+### Rationale
+
+Exactly the CLAUDE.md rule: typecheck/pytest ≠ feature works. Each fix is a *consistency* repair (estimator↔checker window, budget↔budget, frame↔cycle), not a loosening of the safety concept; every relaxation is bounded by an already-documented tolerance.
+
+### Impact
+
+Live loop now: perception available 699/700 cycles over repeated curve transits; a scripted controller with curvature feedforward drives the full curve (death at curve exit is the *controller's* lag, with the cage stopping it — correct behaviour). CV-vs-truth live: ey corr 0.87–0.89, MAE ≈ 15 mm. E-training pilot unblocked.
+
+### Verification
+
+`pytest` → 426 passed. `check_traceability` PASS. Live rollouts logged in the session (300–700-step batches; reason histograms drove each fix).
+
+---
+
 ## [10.06.2026] — E2: track-'E' perception stack — CV lane-estimator (D-40) validated vs oracle, C-05 Trigger 8 live (cage 0.6.0), camera obs mode in the env, SC-PERT-04..08 un-stubbed
 
 **Document(s) affected:** `cage/cage.yaml` (**0.5.1 → 0.6.0**), `cage/rules/c05_emergency.py` (Trigger 8), `cage/tests/test_c05_perception_trigger.py` (new) + 3 version-assert updates; `src/cobraflex_rl/cobraflex_rl/`: `camera_geometry.py`, `cv_lane_estimator.py`, `cage_perception.py`, `camera_pipeline.py` (new), `visual_degradation.py` (+occlusion, +false_lane), `gazebo_lane_env.py` (camera obs mode + in-env H-10 DR), `ros_interface.py` (camera subscription), `train_ppo.py` (CnnPolicy + VecFrameStack), `config/train_ppo_camera.yaml` (new); `policy/tests/` (+5 test files); `tools/validate_cv_estimator.py` (new); `docs/04` (Trigger 8 un-deferred, cage state source implemented), `docs/05` (SC-PERT-04..08 un-stubbed), `docs/09` §10 (v0.5); `scenarios/perturbed/sc_pert_04..08.yaml` (full schema-valid YAMLs); `experiments/sim/runs/cv_estimator_val_*` (oracle-validation evidence).

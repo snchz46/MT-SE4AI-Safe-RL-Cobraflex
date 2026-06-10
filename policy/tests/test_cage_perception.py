@@ -67,19 +67,22 @@ def test_nominal_frames_give_state_no_trigger():
 def test_lost_lane_raises_trigger_after_persistence():
     sup = make_supervisor()
     run_cycles(sup, [good_frame()] * 3)
-    results = run_cycles(sup, [blank_frame()] * 3, t0=0.3)
+    # Supervisor persistence is 4 cycles (0.4 s at 10 Hz — bridges the
+    # measured ~2-cycle dash-gap blind stretches at the oval curve apex,
+    # inside the cage's 5-cycle missing-state budget).
+    results = run_cycles(sup, [blank_frame()] * 5, t0=0.3)
     assert not results[0].state_available
-    # min_invalid_cycles=2 default: by the second blank cycle the trigger fires.
-    assert results[1].perception_invalid
-    assert "features" in results[1].health_reason or "confidence" in results[1].health_reason
+    assert not results[2].perception_invalid  # 3 bad cycles: not yet
+    assert results[3].perception_invalid      # 4th consecutive: trigger
+    assert "features" in results[3].health_reason or "confidence" in results[3].health_reason
 
 
 def test_dropped_frames_raise_trigger():
     sup = make_supervisor()
     run_cycles(sup, [good_frame()] * 2)
-    # No frame for 3 cycles: staleness (default 0.2 s) → emergency.
+    # No frame for 5 cycles: staleness (default 0.2 s) + 4-cycle persistence.
     results = []
-    for i in range(3):
+    for i in range(5):
         results.append(
             sup.update(
                 None,

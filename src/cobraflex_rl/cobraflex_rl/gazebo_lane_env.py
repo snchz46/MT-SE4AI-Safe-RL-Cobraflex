@@ -256,6 +256,15 @@ class GazeboLaneEnv(gym.Env):
                     "Timed out waiting for a camera frame after episode reset "
                     "(is the camera bridged on this world?)."
                 )
+            # Prime the perception supervisor on the settled spawn view so the
+            # cage's first cycle starts from an accepted state (and a temporal
+            # reference for SR-014). Without priming, one bad first frame put
+            # the cage on its no-state-ever path → instant emergency → 1-step
+            # episodes. A scenario injector active from t=0 (e.g. SC-PERT-05
+            # high) may legitimately never prime — proceed after the deadline;
+            # the cage then answers with the controlled stop, as specified.
+            self._prime_cage_perception(timeout_s=2.0)
+            observation = self._last_obs_img  # freshest frame after priming
         else:
             kappa_near, kappa_far = self._curvature_preview(track_state.segment_index)
             observation = self._make_observation(
@@ -289,6 +298,27 @@ class GazeboLaneEnv(gym.Env):
             if not spec.is_clean:
                 return lambda frame: self.domain_randomizer.apply(frame, spec)
         return None
+
+    def _prime_cage_perception(self, timeout_s: float = 2.0) -> bool:
+        """Run the supervisor on fresh spawn frames until it accepts one (or
+        the deadline passes). Returns True when primed."""
+        import time as _time
+
+        deadline = _time.monotonic() + max(0.0, float(timeout_s))
+        while True:
+            now_sim = self.ros_interface.sim_now()
+            result = self.cage_perception.update(
+                self._cam_frame,
+                frame_timestamp_s=self._cam_stamp,
+                now_s=float(now_sim) if now_sim is not None else self._cam_stamp,
+                speed_mps=self.ros_interface.get_speed(),
+            )
+            if result.state_available:
+                return True
+            if _time.monotonic() >= deadline:
+                return False
+            self.ros_interface.spin_wall(0.1)
+            self._capture_camera_obs()
 
     def _capture_camera_obs(self, wait_timeout_s: float = 0.0):
         """Fetch the latest camera frame, run the shared pipeline, retain the
@@ -554,6 +584,12 @@ class GazeboLaneEnv(gym.Env):
         plus the ``perception_invalid`` flag for Trigger 8 once the supervisor's
         persistence elapses.
         """
+        # Sample the freshest frame for the cage's cycle (through the same
+        # degradation pipeline as the policy obs). Using the frame retained at
+        # the end of the previous step left the cage ~1 control cycle behind,
+        # which tripped both the supervisor's staleness budget and C-05
+        # Trigger 3 at real-time frame rates (found live at E2).
+        self._capture_camera_obs()
         speed = self.ros_interface.get_speed()
         now_sim = self.ros_interface.sim_now()
         if now_sim is None:

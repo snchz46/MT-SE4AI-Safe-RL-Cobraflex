@@ -841,10 +841,16 @@ disparó el Trigger 8 (SR-014) cuando el estimador CV produjo picos de
 heading (`cv_epsi` ≈ −0,38 rad) en los huecos de línea discontinua del
 ápice y el supervisor agotó su presupuesto de plausibilidad — una **parada
 controlada correcta** (excursión máxima 37 mm, sin contacto con el borde),
-no una pérdida de control. La cuantificación de esa tasa de paradas por
-percepción (≈ una cada ~5 vueltas en nominal) y su mitigación (suavizado
-EMA determinista del canal `epsi` del estimador) quedan para la campaña
-E-eval y trabajo futuro, respectivamente.
+no una pérdida de control. La tasa de esas paradas por percepción es
+**variable entre repeticiones**: la repetición oficial paró a las 4,7
+vueltas, mientras una repetición headless de control (arranque frío,
+11.06) completó 8,2 vueltas sin ninguna activación de C-05 — y una
+repetición con la GUI de Gazebo activa paró ya en la entrada de la curva
+(la carga de render degrada la frescura de frames: el modo de observación
+altera el experimento; toda evaluación con veredicto corre headless). La
+cuantificación (20 reps por escenario, campaña E-eval) y la mitigación
+(suavizado EMA determinista del canal `epsi` del estimador) quedan para
+la campaña y trabajo futuro, respectivamente.
 
 **Multi-seed (N=5).** Pendiente de decisión correr-vs-deferral: el coste
 es ~7 h/semilla a RTF 1 (restricción §7.7.6) en una máquina dedicada; si

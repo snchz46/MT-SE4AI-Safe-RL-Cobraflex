@@ -8,6 +8,7 @@
 <p align="center">
   <img alt="Phase" src="https://img.shields.io/badge/phase-F4%20·%20Sim%20eval-1f6feb">
   <img alt="Gate" src="https://img.shields.io/badge/gate%20G3-passed-2da44e">
+  <img alt="Track E" src="https://img.shields.io/badge/track%20E%20·%20camera-GE3%20closed-2da44e">
   <img alt="Methodology" src="https://img.shields.io/badge/methodology-SE4AI-8957e5">
   <img alt="ROS 2" src="https://img.shields.io/badge/ROS%202-Jazzy-22314E?logo=ros&logoColor=white">
   <img alt="Simulator" src="https://img.shields.io/badge/simulator-Gazebo-FB6C2C">
@@ -45,8 +46,8 @@ Everything is exercised in **Gazebo** simulation and is being carried toward the
 
 | Pillar | What it means here |
 | --- | --- |
-| **Hazard analysis** | 9 hazards (`H-01…H-09`) systematically identified and rated |
-| **Safety requirements** | 11 requirements (`SR-001…SR-011`) derived from those hazards |
+| **Hazard analysis** | 12 hazards (`H-01…H-12`) systematically identified and rated (incl. 3 camera-perception hazards from track 'E') |
+| **Safety requirements** | 14 requirements (`SR-001…SR-014`) derived from those hazards |
 | **Runtime safety cage** | 6 rules (`C-01…C-06`) that filter the RL policy's action *before* it reaches the car |
 | **RL policy** | A PPO lane-follower trained and evaluated under cage supervision |
 | **Validation scenarios** | Nominal, edge-case and perturbed scenarios for systematic testing |
@@ -136,9 +137,11 @@ The work advances through gated phases. Each Gate is blocked until traceability 
 | **F1** | Hazard analysis + safety requirements (9 H / 11 SR) | G1 | complete |
 | **F2** | Safety cage (`C-01…C-06`) + ROS 2 pipeline | G2 | complete — passed 2026-05-23 |
 | **F3** | PPO training & policy | G3 | complete — passed 2026-06-03 |
-| **F4** | Simulation-based scenario evaluation | G4 | **in progress** |
+| **F4** | Simulation-based scenario evaluation | G4 | campaign closed — global verdict `SATISFIED`; G4 pending (2 SR-CL-B TBD) |
 | F5 | Physical CobraFlex platform | G5 | planned |
 | F6 | Closure & defence | G6 | planned |
+
+> **Parallel track 'E' (end-to-end front camera):** merged into the trunk after **GE3 (training) closed** — camera-PPO peak checkpoint selected; **GE4 (eval campaign) in preparation**. The F-track results above are frozen as the ground-truth baseline (the control arm for "what does camera perception cost").
 
 ---
 
@@ -245,8 +248,8 @@ Suggested order for a newcomer:
 
 1. [`docs/00_v_model_adapted.md`](docs/00_v_model_adapted.md) — the methodological framework that organises everything else.
 2. [`docs/01_id_conventions.md`](docs/01_id_conventions.md) — the naming conventions for every identifier above.
-3. [`docs/02_hazard_register.md`](docs/02_hazard_register.md) — the nine hazards and their analysis.
-4. [`docs/03_safety_requirements.md`](docs/03_safety_requirements.md) — the eleven safety requirements.
+3. [`docs/02_hazard_register.md`](docs/02_hazard_register.md) — the twelve hazards and their analysis.
+4. [`docs/03_safety_requirements.md`](docs/03_safety_requirements.md) — the fourteen safety requirements.
 5. [`docs/04_cage_specification.md`](docs/04_cage_specification.md) — the design of the runtime cage.
 6. [`docs/05_scenario_library.md`](docs/05_scenario_library.md) — the validation scenarios.
 7. [`docs/06_metrics_catalogue.md`](docs/06_metrics_catalogue.md) — the metrics computed on every run.

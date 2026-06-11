@@ -1,0 +1,133 @@
+{
+ "_meta": {
+  "date": "2026-06-11",
+  "camera": "Lane Cam = IMX219-160 as used by lane_keeper_node.py on HW (proc 640x360, hfov 90 deg, 20 Hz)",
+  "sensor_sim": {
+   "horizontal_fov_rad": 1.5707963,
+   "width": 640,
+   "height": 360,
+   "update_rate_hz": 20
+  },
+  "mount": "camera_link_lane xyz=(body_length/2+0.01, 0, -0.03) rel body_link, pitch swept",
+  "world": "lane_following_oval.world",
+  "poses": {
+   "straight": [
+    0.5,
+    -0.1225,
+    0
+   ],
+   "curve_entry": [
+    1.5,
+    -0.1225,
+    0
+   ],
+   "mid_curve": [
+    2.4225,
+    0.8,
+    90
+   ]
+  },
+  "note": "first sweep (superseded) used the provisional 80deg/640x480 sensor; images overwritten 2026-06-11",
+  "metrics": "road_pct gray<60; line_pct gray>=200 below horizon; bottom_road_pct road+line on last row; horizon_row first row with >50 dark px"
+ },
+ "0.15": {
+  "straight": {
+   "road_pct": 37.7,
+   "line_pct": 2.15,
+   "bottom_road_pct": 95.5,
+   "horizon_row": 150
+  },
+  "curve_entry": {
+   "road_pct": 31.3,
+   "line_pct": 1.86,
+   "bottom_road_pct": 85.9,
+   "horizon_row": 170
+  },
+  "mid_curve": {
+   "road_pct": 31.0,
+   "line_pct": 2.21,
+   "bottom_road_pct": 86.2,
+   "horizon_row": 170
+  }
+ },
+ "0.20": {
+  "straight": {
+   "road_pct": 41.8,
+   "line_pct": 2.18,
+   "bottom_road_pct": 98.3,
+   "horizon_row": 134
+  },
+  "curve_entry": {
+   "road_pct": 35.1,
+   "line_pct": 2.0,
+   "bottom_road_pct": 89.7,
+   "horizon_row": 154
+  },
+  "mid_curve": {
+   "road_pct": 34.8,
+   "line_pct": 2.26,
+   "bottom_road_pct": 89.8,
+   "horizon_row": 154
+  }
+ },
+ "0.25": {
+  "straight": {
+   "road_pct": 46.2,
+   "line_pct": 2.2,
+   "bottom_road_pct": 99.4,
+   "horizon_row": 117
+  },
+  "curve_entry": {
+   "road_pct": 38.9,
+   "line_pct": 2.14,
+   "bottom_road_pct": 92.8,
+   "horizon_row": 138
+  },
+  "mid_curve": {
+   "road_pct": 38.7,
+   "line_pct": 2.33,
+   "bottom_road_pct": 93.0,
+   "horizon_row": 138
+  }
+ },
+ "0.30": {
+  "straight": {
+   "road_pct": 50.6,
+   "line_pct": 2.1,
+   "bottom_road_pct": 100.0,
+   "horizon_row": 101
+  },
+  "curve_entry": {
+   "road_pct": 42.9,
+   "line_pct": 2.24,
+   "bottom_road_pct": 95.6,
+   "horizon_row": 121
+  },
+  "mid_curve": {
+   "road_pct": 42.8,
+   "line_pct": 2.39,
+   "bottom_road_pct": 95.8,
+   "horizon_row": 121
+  }
+ },
+ "0.35": {
+  "straight": {
+   "road_pct": 55.1,
+   "line_pct": 1.99,
+   "bottom_road_pct": 100.0,
+   "horizon_row": 83
+  },
+  "curve_entry": {
+   "road_pct": 47.0,
+   "line_pct": 2.36,
+   "bottom_road_pct": 98.8,
+   "horizon_row": 105
+  },
+  "mid_curve": {
+   "road_pct": 47.0,
+   "line_pct": 2.47,
+   "bottom_road_pct": 98.8,
+   "horizon_row": 105
+  }
+ }
+}

@@ -791,13 +791,27 @@ registrada: con cámara el simulador queda ligado a tiempo real (la
 renderización a RTF > 1 deja sin atender los servicios de gz — medido en
 E2), de modo que el coste de pared es ≈ control_dt por paso (~8 FPS).
 
-### 7.7.7 Resultados del piloto y del run principal  [PENDIENTE]
+### 7.7.7 Resultados del piloto y del run principal  [run principal PENDIENTE]
 
-Esta subsección se completará con las curvas y métricas del piloto
-(`ppo_cam_pilot_2024_20k`) y del run principal del track 'E', con el mismo
-aparato de §7.4: `ep_rew_mean`, `ep_len_mean`, `explained_variance`, tasa
-de intervención de la cage y disponibilidad de percepción
-(`cv_state_available`).
+**Piloto** (`ppo_cam_pilot_2024_20k`, semilla 2024, 20 480 pasos, DR activa,
+cage 0.6.1 en *enforcement*): el lazo de entrenamiento con cámara queda
+demostrado. `ep_rew_mean` sube de 17,9 (1k) a 137,7 (20k) y `ep_len_mean`
+de 31,7 a 160,7 pasos, con `explained_variance` positiva durante todo el
+run (pico 0,79). La tasa de emergencias cae de 3,1 % a ~0,3 %; las
+intervenciones quedan dominadas por C-06 (limitador de tasa, ~89 % — el
+comportamiento esperado de una CNN temprana con acciones bruscas),
+mientras C-01/C-03/C-05 son casi nulas al final del piloto. El throughput
+confirmó la restricción de §7.7.6: ~8 FPS a RTF 1.
+
+Criterio de continuación del piloto (lazo cerrado con observación de
+cámara, intervenciones de la cage registradas, recompensa creciente, FPS
+viable): **cumplido** → se lanzó el run principal.
+
+**Run principal** (`ppo_cam_train_2024_200k`, 200k pasos, semilla 2024,
+checkpoint `cobraflex_ppo_cam_lane_2024_200k.zip`): en curso; esta parte
+se completará con el mismo aparato de §7.4 (`ep_rew_mean`, `ep_len_mean`,
+`explained_variance`, desglose de intervenciones y disponibilidad de
+percepción `cv_state_available`).
 
 ---
 

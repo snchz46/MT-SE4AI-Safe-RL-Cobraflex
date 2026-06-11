@@ -31,6 +31,33 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [11.06.2026] — E2: camera-PPO pilot green (20k) → E-main 200k launched; `cv_lane_estimator_node` deployment wrapper (D-40 outside the gym)
+
+**Document(s) affected:** `src/cobraflex_rl/cobraflex_rl/cv_lane_estimator_node.py` (new node), `src/cobraflex_rl/setup.py` (console script), `src/safety_cage/safety_cage/cage_ros_node.py` (`/perception_invalid` → ctx, C-05 Trigger 8), `manuscript/chapters/chapter_07` (§7.7.7 pilot result). Training evidence under `experiments/sim/training/`.
+**Phase:** E2 (track 'E').
+**Gate context:** GE3 (training). F-track unaffected (`/perception_invalid` defaults False in ctx; Trigger 8 stays inert unless cage.yaml enables it — 0.5.x precedent).
+**Author:** Samuel.
+
+### Change
+
+- **Pilot** `ppo_cam_pilot_2024_20k` (seed 2024, DR on, cage 0.6.1 enforcement) completed: ep_rew_mean 17.9 → 137.7, ep_len_mean 31.7 → 160.7, emergency_rate 3.1% → 0.3%, explained_variance positive throughout; interventions dominated by C-06 rate-limiting (~89%), C-01/C-05 near zero by 20k. The loop criteria of the pilot (camera obs flowing, cage interventions logged, reward sane, ~8 FPS viable) all hold.
+- **E-main launched:** `ppo_cam_train_2024_200k` (200k steps, seed 2024, `train_ppo_camera.yaml`, checkpoint `policy/checkpoints/cobraflex_ppo_cam_lane_2024_200k.zip` — matches the campaign's `--checkpoint-template`).
+- **`cv_lane_estimator_node`** — deployment analogue of the in-process D-40 path: camera → `CagePerceptionSupervisor` → `/state_obs` (lane_perception_node ordering; publish suppressed when no acceptable estimate, F2 missing-state precedent) + `/perception_invalid` every tick. `cage_ros_node` latches `/perception_invalid` into ctx like `/external_stop`. Found live: the node must run with `use_sim_time:=true` — wall-clock vs sim-stamped frames latches perception_invalid permanently (documented in the node docstring).
+
+### Rationale
+
+The pilot's job was to prove the E-training loop before spending ~7 h at RTF 1 on the main run; it did. The deployment node closes the D-40 architecture outside the gym: the same supervisor logic now feeds the F2-style five-node loop, which is what the physical platform will use.
+
+### Impact
+
+E-main run in progress (GE3 evidence). The F2 launch files can later swap `lane_perception_node` → `cv_lane_estimator_node` without touching the cage wrapper.
+
+### Verification
+
+`pytest` → 431 passed; `check_traceability` PASS. Node smoke-tested against the live sim: `/state_obs` at 10.0 Hz with plausible values, `/perception_invalid` False on nominal frames (True before the `use_sim_time` fix — caught by launching, not by tests).
+
+---
+
 ## [10.06.2026] — E2: E-eval executor wiring + Training Spec §7.7 (manuscript) — visual stressors reach the campaign path
 
 **Document(s) affected:** `src/cobraflex_rl/cobraflex_rl/scenario_perturbations.py` (visual channel: `visual_degradation`/`perception_loss`/`false_lane` blocks → onset-timed mode/level), `gazebo_lane_env.py` (scenario visual injector with episode-clock onset), `eval_policy.py` (camera obs mode: VecFrameStack-equivalent stacking + `cv_*` perception trace in `cage_status.csv`), `train_ppo.py` (Monitor wrap in the camera path — ep_rew_mean was NaN without it), `policy/tests/test_scenario_perturbations.py` (+6); `manuscript/chapters/chapter_07` (**§7.7** Track-'E' Training Spec, in Spanish; the §7.2.1 track-E note updated D-39 → D-40), `docs/07` (E-track note: chain live, verdicts TBD until E-eval).

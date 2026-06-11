@@ -26,6 +26,11 @@ The estimator, health monitor and plausibility check are the host-tested pure
 modules (`cv_lane_estimator`, `perception_health`, `lane_plausibility`)
 composed by `cage_perception.CagePerceptionSupervisor` — identical logic to
 training/eval, only the transport differs.
+
+Clock domain — run with ``use_sim_time:=true`` in simulation. The gz bridge
+stamps camera frames with sim time; the supervisor's staleness check compares
+those stamps against this node's clock, so a wall-clock node sees every frame
+as ancient and latches perception_invalid permanently.
 """
 from __future__ import annotations
 
@@ -34,6 +39,7 @@ from typing import Optional
 
 import rclpy
 from nav_msgs.msg import Odometry
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import QoSPresetProfiles, qos_profile_sensor_data
 from sensor_msgs.msg import Image
@@ -136,11 +142,11 @@ def main(args=None) -> None:
     node = CvLaneEstimatorNode()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        rclpy.try_shutdown()
 
 
 if __name__ == "__main__":

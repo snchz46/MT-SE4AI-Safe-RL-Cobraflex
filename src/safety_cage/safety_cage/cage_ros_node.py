@@ -15,6 +15,9 @@ Topic contract (hybrid F2 strategy):
                             distance_right_m,
                             state_valid (1.0/0.0)]
         /external_stop   std_msgs/Bool        latched into ctx for next cycle
+        /perception_invalid  std_msgs/Bool    latched into ctx (C-05 Trigger 8,
+                           track 'E': published by cv_lane_estimator_node; inert
+                           unless cage.yaml enables perception_trigger_enabled)
         /cage_reset      std_msgs/Empty       calls cage.reset_emergency()
 
     Publications
@@ -106,6 +109,7 @@ class CageRosNode(Node):
         self.declare_parameter("cage_status_topic", "/cage_status")
         self.declare_parameter("emergency_topic", "/emergency")
         self.declare_parameter("external_stop_topic", "/external_stop")
+        self.declare_parameter("perception_invalid_topic", "/perception_invalid")
         self.declare_parameter("reset_topic", "/cage_reset")
 
         cage_yaml = self._resolve_cage_yaml()
@@ -120,6 +124,7 @@ class CageRosNode(Node):
 
         self._latest_state: Optional[State] = None
         self._external_stop = False
+        self._perception_invalid = False
 
         self.create_subscription(
             Float64MultiArray,
@@ -137,6 +142,12 @@ class CageRosNode(Node):
             Bool,
             self.get_parameter("external_stop_topic").value,
             self._on_external_stop,
+            reliable_qos,
+        )
+        self.create_subscription(
+            Bool,
+            self.get_parameter("perception_invalid_topic").value,
+            self._on_perception_invalid,
             reliable_qos,
         )
         self.create_subscription(
@@ -214,6 +225,14 @@ class CageRosNode(Node):
         if msg.data:
             self.get_logger().warning("External stop signal received.")
 
+    def _on_perception_invalid(self, msg: Bool) -> None:
+        # cv_lane_estimator_node publishes every tick, so the latest value is
+        # the current supervisor verdict (no sticky latch needed here — C-05
+        # itself latches the emergency once Trigger 8 fires).
+        if bool(msg.data) and not self._perception_invalid:
+            self.get_logger().warning("Perception invalid signal received (C-05 Trigger 8).")
+        self._perception_invalid = bool(msg.data)
+
     def _on_reset(self, _msg: Empty) -> None:
         # Direct call already flips C-05's _reset_requested for the next
         # step(); no need to also pass ctx["reset"]=True (would just set the
@@ -230,6 +249,7 @@ class CageRosNode(Node):
         ctx = {
             "current_time": sim_time_s,
             "external_stop": self._external_stop,
+            "perception_invalid": self._perception_invalid,
         }
 
         result = self.cage.step(self._latest_state, raw_action, ctx=ctx)

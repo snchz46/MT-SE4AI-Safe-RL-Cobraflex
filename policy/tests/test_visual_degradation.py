@@ -1,6 +1,6 @@
 """
 Unit tests for cobraflex_rl.visual_degradation — the track-'E' front-camera
-visual-degradation primitives (D-38/D-39; H-10, SR-012, SC-PERT-04..06).
+visual-degradation primitives (D-41/D-42; H-10, SR-012, SC-PERT-04..06).
 
 Pure numpy, host-testable: the module degrades the *observation* only, never the
 cage's independent ground-truth state. ``cobraflex_rl/__init__`` is lazy (no rclpy),

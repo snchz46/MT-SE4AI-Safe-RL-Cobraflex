@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validate the cage's CV lane-estimator against the sim ground-truth oracle.
 
-D-40's stated verification plan: in simulation, ground truth (the
+D-43's stated verification plan: in simulation, ground truth (the
 PolylineTracker over /odom_truth) is the *oracle* that measures the CV
 estimator's error before the cage is allowed to rely on it. This tool:
 
@@ -11,7 +11,7 @@ estimator's error before the cage is allowed to rely on it. This tool:
    (ey, epsi) against the oracle's true values,
 3. repeats a reduced grid under each visual degradation mode/level
    (applied to the frame exactly as the runtime injector would, before the
-   estimator — the D-40 common-cause path),
+   estimator — the D-43 common-cause path),
 4. writes per-sample rows (CSV) + a summary (JSON) + full repro metadata into
    an `experiments/sim/runs/<run_id>/` directory.
 
@@ -221,7 +221,7 @@ def main() -> int:
 
     metadata = dict(
         run_id=run_id,
-        purpose="D-40 CV lane-estimator validation vs ground-truth oracle (GE2 evidence)",
+        purpose="D-43 CV lane-estimator validation vs ground-truth oracle (GE2 evidence)",
         git_commit=git_commit(),
         world=str(WORLD.relative_to(REPO)),
         world_sha256=sha256_file(WORLD),

@@ -41,7 +41,7 @@ def _oc(sid, fam, n_runs, passed):
 def test_sr_criticality_counts_from_csv():
     reg = load_sr_registry(_CSV)
     crit = [info.criticality for info in reg.values()]
-    # 7 F-track SR-CL-A + 3 track-'E' camera SRs (SR-012, SR-013, SR-014, all SR-CL-A); cf. D-38/D-40.
+    # 7 F-track SR-CL-A + 3 track-'E' camera SRs (SR-012, SR-013, SR-014, all SR-CL-A); cf. D-41/D-43.
     assert crit.count("SR-CL-A") == 10
     assert crit.count("SR-CL-B") == 4
 

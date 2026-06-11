@@ -103,7 +103,7 @@ Range: E0 through E6; GE0 through GE6.
 
 Examples: E0, E2, E5; GE0, GE2, GE5.
 
-The **'E' track** is a parallel development cycle (branch `e2e-camera`, commit prefix `E2:`) for the end-to-end front-camera variant of the lane-following function (decision D-38). It re-traverses the V-Model's left arm independently of the main F-track (F0–F6), but the artefact identifiers it produces — `H-XX`, `SR-XXX`, `C-XX`, `SC-*`, `M-*` — remain in the **single global namespace** defined above and follow the same assigned-once, never-reused rule. Only phases and gates carry the track-distinct numbering. Commit messages on the track use the `E2:` prefix (the analogue of the F-phase commit prefixes).
+The **'E' track** is a parallel development cycle (branch `e2e-camera`, commit prefix `E2:`) for the end-to-end front-camera variant of the lane-following function (decision D-41). It re-traverses the V-Model's left arm independently of the main F-track (F0–F6), but the artefact identifiers it produces — `H-XX`, `SR-XXX`, `C-XX`, `SC-*`, `M-*` — remain in the **single global namespace** defined above and follow the same assigned-once, never-reused rule. Only phases and gates carry the track-distinct numbering. Commit messages on the track use the `E2:` prefix (the analogue of the F-phase commit prefixes).
 
 ## Milestones: M-N
 

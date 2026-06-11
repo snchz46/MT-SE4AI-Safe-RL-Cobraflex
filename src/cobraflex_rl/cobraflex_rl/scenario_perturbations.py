@@ -57,7 +57,7 @@ class ScenarioPerturbation:
     pulse_throttle: float = 0.0
     # visual_degradation (track 'E', SC-PERT-04..08): a visual_degradation
     # primitive applied to the camera frame from ``visual_onset_s`` on, before
-    # BOTH consumers (policy CNN + cage CV estimator — D-40 common cause).
+    # BOTH consumers (policy CNN + cage CV estimator — D-43 common cause).
     # ``visual_mode`` is a cobraflex_rl.visual_degradation mode string; this
     # module stays string-only (the env binds the primitive).
     visual_mode: str = ""

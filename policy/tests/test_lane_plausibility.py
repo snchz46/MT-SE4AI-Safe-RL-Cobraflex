@@ -1,6 +1,6 @@
 """
 Unit tests for cobraflex_rl.lane_plausibility — the cage CV lane-estimate plausibility /
-temporal-consistency check (track 'E'; SR-014, H-12, D-40).
+temporal-consistency check (track 'E'; SR-014, H-12, D-43).
 
 Pure logic, host-testable; `cobraflex_rl/__init__` is lazy (no rclpy).
 """

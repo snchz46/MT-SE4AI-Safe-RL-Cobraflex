@@ -1,6 +1,6 @@
 """
 Unit tests for cobraflex_rl.perception_health — the track-'E' perception-health
-monitor (D-38/D-39; H-11, SR-013, SC-PERT-07).
+monitor (D-41/D-42; H-11, SR-013, SC-PERT-07).
 
 The monitor is the external supervisor's pure decision logic: when camera
 perception is invalid it raises the cage's C-05 perception-health trigger. Pure

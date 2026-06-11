@@ -1,9 +1,9 @@
 """
 visual_degradation — pure-numpy front-camera image degradations for track 'E'.
 
-Track 'E' (end-to-end front-camera, decisions D-38/D-40) stresses the camera
+Track 'E' (end-to-end front-camera, decisions D-41/D-43) stresses the camera
 with visual degradations (hazard H-10, verified by SR-012 over the scenarios
-SC-PERT-04..06; plus the H-11/H-12 stressors of SC-PERT-07/08). Per D-40 the
+SC-PERT-04..06; plus the H-11/H-12 stressors of SC-PERT-07/08). Per D-43 the
 degraded frame reaches **both consumers** — the policy's CNN and the cage's CV
 lane-estimator — the accepted common-cause trade-off: a camera fault can blind
 both at once, and the designed answer is the open-loop controlled stop

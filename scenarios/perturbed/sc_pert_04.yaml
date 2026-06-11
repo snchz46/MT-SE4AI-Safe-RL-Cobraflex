@@ -11,7 +11,7 @@ commanded_speed_mps: 0.2
 description: |
   Camera glare / over-exposure (Track 'E', end-to-end front-camera). The camera frame is
   degraded by glare / over-exposure (visual_degradation.apply_glare) throughout the run,
-  BEFORE both consumers — the policy CNN and the cage's CV lane-estimator (D-40 common
+  BEFORE both consumers — the policy CNN and the cage's CV lane-estimator (D-43 common
   cause). Run at two intensity levels inside the H-10 training-randomisation envelope.
   The policy must keep the lane; the cage, on its CV estimate, bounds the trajectory.
   Verifies SR-012 against hazard H-10. Levels grounded in the GE2 oracle validation

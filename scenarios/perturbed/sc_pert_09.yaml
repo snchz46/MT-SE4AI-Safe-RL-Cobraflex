@@ -16,7 +16,7 @@ description: |
   rendered with the worn-asphalt variant texture (patched surface, aged markings)
   instead of the clean texture the policy was trained on — a static appearance
   shift hitting both consumers (policy CNN and the cage's CV lane-estimator,
-  D-40 common cause) for the whole run. Geometry and centerline are identical to
+  D-43 common cause) for the whole run. Geometry and centerline are identical to
   SC-NOM-01 (D-37 Option A preserved), so any behaviour change is attributable to
   appearance alone. Verifies SR-012 against H-10 and SR-014's plausibility check
   under texture clutter. Offline mask-compatibility evidence:

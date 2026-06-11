@@ -15,7 +15,7 @@ description: |
   Wet / darkened road surface (Track 'E', end-to-end front-camera). The oval is
   rendered with the wet-asphalt variant texture (darker surface, brighter sheen
   patches) instead of the clean training texture — a static appearance shift
-  hitting both consumers (policy CNN and the cage's CV lane-estimator, D-40
+  hitting both consumers (policy CNN and the cage's CV lane-estimator, D-43
   common cause) for the whole run. Geometry and centerline are identical to
   SC-NOM-01 (D-37 Option A preserved). The wet texture is the harder mask case:
   1.65% of road pixels pass the estimator's white mask (sheen clutter) vs 0.32%

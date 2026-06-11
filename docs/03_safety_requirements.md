@@ -307,10 +307,10 @@ The emergency mode is characterised by:
 
 ## SR-012 — Lane-keeping under degraded visual input
 
-> **Track 'E' (end-to-end front-camera), decisions D-38 / D-40.** Mitigates the
+> **Track 'E' (end-to-end front-camera), decisions D-41 / D-43.** Mitigates the
 > camera-perception hazard H-10. Realised by the cage over its **own deterministic CV lane
 > estimate** plus a training constraint, with a controlled-stop fall-back when the lane is
-> undetectable. (Common-cause, D-40: a camera fault degrades the policy and the cage alike.)
+> undetectable. (Common-cause, D-43: a camera fault degrades the policy and the cage alike.)
 
 **Statement.** Under the operational ODD, when the front-camera image is degraded within the specified visual-degradation envelope (glare / exposure, motion blur, low contrast, shadow), the vehicle's lateral offset and heading error shall remain within the SR-001 / SR-002 envelopes (`|d| ≤ d_max` and `|θ| ≤ θ_max`) at every time step during autonomous operation. A degraded percept shall not produce a lane- or heading-limit breach.
 
@@ -323,7 +323,7 @@ The emergency mode is characterised by:
 
 **References hazard.** H-10.
 
-**Implemented by.** C-01 (lane boundary hard limit), C-02 (heading error limit), C-03 (predictive TTLC) evaluated over the cage's **own CV lane estimate** (D-40) — **and** a *training constraint* (visual-domain augmentation / randomisation so the camera policy is robust across the degradation envelope) — with the SR-013 controlled-stop fall-back when the lane becomes undetectable for the cage's detector.
+**Implemented by.** C-01 (lane boundary hard limit), C-02 (heading error limit), C-03 (predictive TTLC) evaluated over the cage's **own CV lane estimate** (D-43) — **and** a *training constraint* (visual-domain augmentation / randomisation so the camera policy is robust across the degradation envelope) — with the SR-013 controlled-stop fall-back when the lane becomes undetectable for the cage's detector.
 
 **Verified by scenarios.** SC-PERT-04, SC-PERT-05, SC-PERT-06; SC-PERT-09, SC-PERT-10 (world-variant appearance shift — worn / wet oval textures, added 11.06.2026 per docs/09 §10 "oval-first" after the GE3 pilot).
 
@@ -335,7 +335,7 @@ The emergency mode is characterised by:
 
 ## SR-013 — Safe degradation on loss of valid perception
 
-> **Track 'E' (end-to-end front-camera), decisions D-38 / D-40.** Mitigates H-11. The cage's
+> **Track 'E' (end-to-end front-camera), decisions D-41 / D-43.** Mitigates H-11. The cage's
 > own CV lane-estimator health check raises a C-05 controlled-stop trigger; the stop is
 > **open-loop** (needs no perception), so it holds even when policy and cage are both blind
 > (common-cause). The camera-side analogue of SR-007's state-validity triggers.
@@ -352,7 +352,7 @@ The emergency mode is characterised by:
 
 **References hazard.** H-11.
 
-**Implemented by.** Part of C-05 (controlled stop) — triggered by the cage's **CV lane-estimator health check** (D-40, Trigger 8); the stop is open-loop, exactly as SR-007 / SR-008 extend C-05's trigger set.
+**Implemented by.** Part of C-05 (controlled stop) — triggered by the cage's **CV lane-estimator health check** (D-43, Trigger 8); the stop is open-loop, exactly as SR-007 / SR-008 extend C-05's trigger set.
 
 **Verified by scenarios.** SC-PERT-07.
 
@@ -364,9 +364,9 @@ The emergency mode is characterised by:
 
 ## SR-014 — Cage lane-estimator plausibility (no enforcement on a suspect estimate)
 
-> **Track 'E' (end-to-end front-camera), decision D-40.** Mitigates H-12 — a confidently
-> *wrong* CV lane estimate. New because under D-40 the cage's state is camera-derived (it was
-> ground truth under the superseded D-39, where this failure could not occur).
+> **Track 'E' (end-to-end front-camera), decision D-43.** Mitigates H-12 — a confidently
+> *wrong* CV lane estimate. New because under D-43 the cage's state is camera-derived (it was
+> ground truth under the superseded D-42, where this failure could not occur).
 
 **Statement.** The cage shall not enforce its rules on a lane estimate that fails a plausibility / temporal-consistency check. When the cage's CV lane-estimator yields an estimate that is geometrically implausible (lane width / curvature outside the ODD ranges) or temporally inconsistent (an inter-frame jump incompatible with the vehicle's motion) beyond `plaus_tol` for more than `Δt_plaus`, the cage shall treat the lane as not valid and enter the controlled stop (C-05) rather than steer toward the suspect lane.
 
@@ -374,7 +374,7 @@ The emergency mode is characterised by:
 
 **Parameters.**
 
-- `plaus_tol`, `Δt_plaus` — **provisional**, fixed at E-integration against the ground-truth oracle (D-40): the geometric plausibility bounds (lane width, curvature within the ODD) and the maximum inter-frame lane jump consistent with the vehicle's speed.
+- `plaus_tol`, `Δt_plaus` — **provisional**, fixed at E-integration against the ground-truth oracle (D-43): the geometric plausibility bounds (lane width, curvature within the ODD) and the maximum inter-frame lane jump consistent with the vehicle's speed.
 - Geometric plausibility rejects forks, shadow lines and reflections that fall outside the ODD lane geometry.
 
 **References hazard.** H-12.
@@ -406,9 +406,9 @@ The **Criticality** column carries the SR criticality class (SR-CL-A/B/C) define
 | SR-009 | Minimum forward progress (liveness) | Liveness | H-08 | training | SR-CL-B | SC-NOM-01, SC-NOM-02, SC-NOM-03, SC-PERT-03 | M-P6, M-S2 (monitoring) | Open | Δs_min = 0.10 m / t_window = 2.0 s / Δt_settle = 1.0 s |
 | SR-010 | Cage rule composition consistency | Operational envelope + bounded oscillation | H-09 | arbiter | SR-CL-B | SC-EDGE-04, SC-EDGE-05 | M-S2, M-I3 | Open | Joint-envelope assertion + f_osc_max = 5 Hz |
 | SR-011 | Heading stability without sustained oscillation | Bounded variance | H-02 | C-06 + training | SR-CL-B | SC-EDGE-01, SC-EDGE-04 | M-P7 | Open | σ_θ_max = 5°, t_psd = 1.0 s |
-| SR-012 | Lane-keeping under degraded visual input | Direct threshold (visual-degradation stressor) | H-10 | C-01, C-02, C-03 (over CV state) + training | SR-CL-A | SC-PERT-04, SC-PERT-05, SC-PERT-06, SC-PERT-09, SC-PERT-10 | M-S1, M-S2 | Open | Track 'E'; cage on CV (D-40); common-cause; cf. D-38 |
-| SR-013 | Safe degradation on loss of valid perception | Availability + emergency mode | H-11 | C-05 (CV-estimator health → controlled stop) | SR-CL-A | SC-PERT-07 | M-S3 | Open | Track 'E'; open-loop stop; cf. D-40 |
-| SR-014 | Cage lane-estimator plausibility (no enforcement on a suspect estimate) | Operational envelope + emergency mode | H-12 | C-05 (plausibility check → controlled stop) | SR-CL-A | SC-PERT-08, SC-PERT-04, SC-PERT-05, SC-PERT-06, SC-PERT-09, SC-PERT-10 | M-S1, M-S3 | Open | Track 'E'; new under D-40; plaus_tol provisional |
+| SR-012 | Lane-keeping under degraded visual input | Direct threshold (visual-degradation stressor) | H-10 | C-01, C-02, C-03 (over CV state) + training | SR-CL-A | SC-PERT-04, SC-PERT-05, SC-PERT-06, SC-PERT-09, SC-PERT-10 | M-S1, M-S2 | Open | Track 'E'; cage on CV (D-43); common-cause; cf. D-41 |
+| SR-013 | Safe degradation on loss of valid perception | Availability + emergency mode | H-11 | C-05 (CV-estimator health → controlled stop) | SR-CL-A | SC-PERT-07 | M-S3 | Open | Track 'E'; open-loop stop; cf. D-43 |
+| SR-014 | Cage lane-estimator plausibility (no enforcement on a suspect estimate) | Operational envelope + emergency mode | H-12 | C-05 (plausibility check → controlled stop) | SR-CL-A | SC-PERT-08, SC-PERT-04, SC-PERT-05, SC-PERT-06, SC-PERT-09, SC-PERT-10 | M-S1, M-S3 | Open | Track 'E'; new under D-43; plaus_tol provisional |
 
 ---
 

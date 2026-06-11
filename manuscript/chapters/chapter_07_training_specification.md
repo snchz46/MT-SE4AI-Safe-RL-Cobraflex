@@ -88,13 +88,13 @@ le permite anticipar la curva. Con el preview, el agente pasó a completar
 vueltas y terminar por truncación. Decisión (ED-7) en
 `docs/09_environment_design.md`.
 
-**Track paralelo 'E' (D-38 / D-40).** En el track end-to-end con cámara frontal la
+**Track paralelo 'E' (D-41 / D-43).** En el track end-to-end con cámara frontal la
 observación deja de ser este vector de 6 dimensiones y pasa a ser la **imagen de la
 cámara frontal** (política CNN): la *policy* aprende la percepción en lugar de
 consumir el estado construido a mano (supersede a D-01 / ED-1 para este track). El
 **espacio de acción y la recompensa no cambian** (la recompensa se computa sobre
-estado ground-truth + progreso, agnóstica a la observación). La cage, por **D-40**
-(que supersede a D-39), evalúa C-01..C-06 sobre el estado producido por un
+estado ground-truth + progreso, agnóstica a la observación). La cage, por **D-43**
+(que supersede a D-42), evalúa C-01..C-06 sobre el estado producido por un
 **estimador de carril CV determinista propio** — ni ground truth ni la CNN de la
 política — de modo que cage y política generalizan a cualquier vía con líneas
 visibles; el ground truth queda confinado en simulación a la recompensa y al
@@ -697,11 +697,11 @@ de la tesis.
 ## 7.7 Track 'E' — Especificación de entrenamiento end-to-end con cámara  [E2]
 
 Esta sección extiende la Training Specification al track paralelo 'E'
-(D-38): la política pasa de consumir el vector de estado de 6 dimensiones
+(D-41): la política pasa de consumir el vector de estado de 6 dimensiones
 (§7.2.1) a consumir directamente la **imagen de la cámara frontal**. Todo lo
 que no se redefine aquí — acción (§7.2.2), recompensa (§7.2.3), terminación
 (§7.2.4), hiperparámetros PPO (§7.2.6), checkpoints y registro (§7.2.8) —
-**se hereda sin cambios**: ése es el delta mínimo que D-38/D-40 persiguen.
+**se hereda sin cambios**: ése es el delta mínimo que D-41/D-43 persiguen.
 
 ### 7.7.1 Observación: imagen de cámara y pipeline compartido
 
@@ -727,7 +727,7 @@ en `experiments/sim/e_cam_visibility/`). Cada fotograma nativo atraviesa el
 **pipeline compartido** (`camera_pipeline.CameraPipeline`): un único punto
 de degradación (estresor de escenario o *domain randomisation*) **antes de
 ambos consumidores** — la CNN de la política y el estimador CV de la cage —
-que es exactamente la causa común que D-40 acepta y documenta.
+que es exactamente la causa común que D-43 acepta y documenta.
 
 ### 7.7.2 Arquitectura de la política
 
@@ -736,7 +736,7 @@ que es exactamente la causa común que D-40 acepta y documenta.
 observación apilada (84×84×4 tras `VecFrameStack` + `VecTransposeImage`).
 Los escalares de *curvature preview* (`kappa_near/far`, ED-7) **no** están
 en la observación: la política debe inferir la geometría de la curva desde
-la imagen — el problema de percepción más difícil que D-38 asume, con su
+la imagen — el problema de percepción más difícil que D-41 asume, con su
 coste presupuestado en datos (Shalev-Shwartz & Shashua 2016).
 
 ### 7.7.3 Domain randomisation visual (H-10 / SR-012)
@@ -755,7 +755,7 @@ SR-014.
 
 D-34 se mantiene: la cage opera **en enforcement** dentro del bucle de
 entrenamiento, con la misma `cage.yaml` que despliegue (v0.6.1). Lo que
-cambia es la **fuente de su estado** (D-40): el supervisor de percepción
+cambia es la **fuente de su estado** (D-43): el supervisor de percepción
 (`cage_perception.CagePerceptionSupervisor`) compone el estimador CV
 determinista con el monitor de salud (SR-013) y el chequeo de
 plausibilidad/consistencia temporal (SR-014); cuando el estimado es
@@ -771,7 +771,7 @@ antes del primer ciclo de la cage.
 ### 7.7.5 Hiperparámetros, presupuesto y semillas
 
 Idénticos a §7.2.6 salvo: `policy: CnnPolicy`, `device: auto` (CUDA si
-existe). Presupuesto principal **≥200k pasos** — D-38 acepta explícitamente
+existe). Presupuesto principal **≥200k pasos** — D-41 acepta explícitamente
 la mayor demanda de datos del extremo a extremo; el piloto de ~20k pasos
 valida el bucle (obs fluyendo, cage interviniendo, recompensa sana, FPS
 viable) antes de comprometer el presupuesto. Semilla principal **2024**

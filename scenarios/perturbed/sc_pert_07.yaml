@@ -12,7 +12,7 @@ description: |
   Lane occlusion / perception loss (Track 'E', end-to-end front-camera). After a nominal
   lead-in, the near-field lane features are occluded (visual_degradation.apply_occlusion —
   an opaque patch growing from the bottom of the frame, modelling debris / deep shadow
-  swallowing the markings), before both consumers (D-40 common cause). Level 1.0 covers
+  swallowing the markings), before both consumers (D-43 common cause). Level 1.0 covers
   the full ground-view band (GE2 oracle validation: at 0.5 the far field still yields
   single-line estimates, so full coverage is required for a guaranteed loss); the cage's
   CV lane-estimator loses the lane and the perception supervisor must raise C-05 Trigger 8 within

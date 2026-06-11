@@ -1,7 +1,7 @@
 """
 Unit tests for C-05 Trigger 8 — perception invalid (track 'E').
 
-SR-013 (loss of valid perception) / SR-014 (suspect estimate) — D-40.
+SR-013 (loss of valid perception) / SR-014 (suspect estimate) — D-43.
 The external supervisor sets ctx["perception_invalid"]; C-05 answers with
 the open-loop controlled stop. Gated by `perception_trigger_enabled`
 (default False in code → inert for pre-0.6.0 YAMLs).

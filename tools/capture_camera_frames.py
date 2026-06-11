@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Capture N frames from the bridged Gazebo camera topic and save them as PNGs.
 
-Evidence tool for track 'E' (D-38/D-40): verifies the front camera publishes and
+Evidence tool for track 'E' (D-41/D-43): verifies the front camera publishes and
 that the lane lines are visible in the rendered frame. Optionally teleports the
 robot to a set of poses (via the gz set_pose service, like the RL env does) so
 the saved frames cover straights and curve entries.

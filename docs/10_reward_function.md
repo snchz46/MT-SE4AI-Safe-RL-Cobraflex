@@ -235,7 +235,7 @@ lane-following and makes attributing effects harder. The "reward = quality, cage
 
 ---
 --->
-## 10. Track E — reward unchanged (D-38 / D-40)
+## 10. Track E — reward unchanged (D-41 / D-43)
 
 The end-to-end front-camera variant (track 'E', `docs/09` §10) leaves this reward
 **unchanged**. The reward is a function of the resulting **ground-truth state**
@@ -244,7 +244,7 @@ depend on the observation modality. The camera changes what the *policy sees*, n
 what the *environment measures* to score it. The reward's `ey/epsi/progress` come from the
 simulator's **ground truth** — a training-time signal available in sim exactly as in F3,
 and independent of whether the *cage* uses ground truth (F-track) or its own CV estimate
-(track 'E', D-40). There is **no reward at evaluation**: the trained policy drives from the
+(track 'E', D-43). There is **no reward at evaluation**: the trained policy drives from the
 camera alone. Consequently the §1 formula, the §3 weights and the §7 unit tests all carry
 over, and **no new reward term is introduced for the camera track**. (If E-training
 reveals a camera-specific pathology — e.g. the policy exploiting a visual artefact to
@@ -273,6 +273,6 @@ gain reward — a revision would be recorded here as v2.x; none is assumed at E-
   training cycle** (Ubuntu+Jazzy host) and the Ch.8 sensitivity analysis; weights
   remain `[provisional, M-P4]`.
 - **track E note (2026-06-09):** added §10 — the reward is **unchanged** for the
-  end-to-end camera variant (D-38/D-40); it is observation-agnostic (computed on
+  end-to-end camera variant (D-41/D-43); it is observation-agnostic (computed on
   ground-truth state + progress + raw steering delta, a sim training signal). No
   formula/weight change.

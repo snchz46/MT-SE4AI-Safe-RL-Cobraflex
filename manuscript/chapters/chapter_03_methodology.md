@@ -578,15 +578,15 @@ entrenamiento exponencialmente mayores que las arquitecturas modulares
 para alcanzar prestaciones equivalentes. Esta decisión se documenta en
 `DECISIONS.md` como decisión D-01 del proyecto.
 
-**Actualización — track paralelo 'E' (D-38, que supersede a D-01).** Con la
+**Actualización — track paralelo 'E' (D-41, que supersede a D-01).** Con la
 campaña F4 en curso se abrió un track de desarrollo **paralelo** (rama
 `e2e-camera`) que reconsidera esta decisión para una variante **end-to-end con
 cámara frontal**: la *policy* aprende la percepción mapeando la imagen de la
 cámara directamente a la acción, en lugar de consumir el vector de estado
-construido a mano. D-38 supersede formalmente a D-01 en este punto. La
+construido a mano. D-41 supersede formalmente a D-01 en este punto. La
 supersesión es **segura** porque no se reemplaza la arquitectura de seguridad: el
 **cage modular se conserva** y opera sobre un estimador de estado **independiente
-de la cámara** (D-39), de modo que los píxeles entran a la *policy* pero **nunca a
+de la cámara** (D-42), de modo que los píxeles entran a la *policy* pero **nunca a
 la envolvente de seguridad** —la actuación sigue mediada por el cage—. Las
 adaptaciones del framework que motivaban D-01 siguen siendo viables: A1 (Cage Spec
 ≠ Training Spec), porque cage y *policy* siguen siendo módulos distintos; A2 (cage

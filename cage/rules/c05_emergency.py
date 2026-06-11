@@ -30,7 +30,7 @@ Triggers implemented (cage YAML 0.6.0):
        ctx["joint_envelope_violated"] is True (cage_node evaluates the
        per-rule state-only `safe_envelope_predicate_holds` before the
        chain).
-    8. Perception invalid (track 'E', SR-013/SR-014, D-40):
+    8. Perception invalid (track 'E', SR-013/SR-014, D-43):
        ctx["perception_invalid"] is truthy. The external perception
        supervisor (CV lane-estimator health per
        cobraflex_rl.perception_health + plausibility per

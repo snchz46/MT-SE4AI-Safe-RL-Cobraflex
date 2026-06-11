@@ -357,7 +357,7 @@ es D13 PM con la SRS que se deriva en D14.
 -->
 
 El Hazard Register consolida nueve hazards de nivel sistema (del F-track) identificados
-mediante el procedimiento de §4.4.1; el track 'E' (D-38) añade dos hazards de percepción de cámara, H-10 y H-11, marcados abajo. La numeración es estable: una vez
+mediante el procedimiento de §4.4.1; el track 'E' (D-41) añade dos hazards de percepción de cámara, H-10 y H-11, marcados abajo. La numeración es estable: una vez
 asignado un identificador H-XX, no se reutiliza ni se renombra incluso si
 el hazard se descarta en revisiones posteriores. La tabla siguiente
 presenta el registro en su forma compacta; la versión extendida con
@@ -376,7 +376,7 @@ como artefacto autónomo en `docs/02_hazard_register.md`.
 | H-08 | Stall por explotación del reward: la policy converge a inacción o a una dirección adversa que acumula más reward que el lane-following nominal. | S2 | E3 | C2 | Medium-High | 1, 2, 3, 4 | Vehículo detenido o derivando sistemáticamente fuera de la trayectoria segura; episodio no progresa. | Especificación de reward desalineada durante entrenamiento; horizonte o factor de descuento que premia inacción. |
 | H-09 | Conflicto entre cage rules: dos o más reglas activas en el mismo ciclo producen un comando combinado fuera de la envolvente segura, o una oscilación entre correcciones contradictorias. | S3 (hereda del hazard más severo cuya envolvente se rompa) | E1 | C2 | Medium | 1, 2, 3, 4 | La cage deja de ser garantía y se vuelve fuente de mandos inseguros. | Reglas diseñadas en aislamiento sin arbitraje explícito; acoplamiento de estado entre C-04/C-06/C-03; emergencia activándose durante cascada. |
 | H-10 | (Track 'E') Mala percepción de carril por entrada visual degradada (glare, exposición, motion blur, bajo contraste, sombras). | S3 | E3 | C2 | High | 1, 2, 3, 4 | Acción sobre un carril mal leído; deriva lateral / error de heading que escala a H-01/H-02. | Iluminación fuera de la distribución de entrenamiento; blur de movimiento; reflejos/sombras. |
-| H-11 | (Track 'E') Pérdida de percepción de carril válida (oclusión, ausencia de features, caída/latencia de cámara); ciega a policy y cage (causa común, D-40). | S3 | E2 | C2 | High | 1, 2, 3, 4 | Comandos arbitrarios sobre percepción ciega; sin fallback, trayectoria indefinida. | Oclusión; features ausentes; dropout/freeze de cámara; wash-out extremo. |
+| H-11 | (Track 'E') Pérdida de percepción de carril válida (oclusión, ausencia de features, caída/latencia de cámara); ciega a policy y cage (causa común, D-43). | S3 | E2 | C2 | High | 1, 2, 3, 4 | Comandos arbitrarios sobre percepción ciega; sin fallback, trayectoria indefinida. | Oclusión; features ausentes; dropout/freeze de cámara; wash-out extremo. |
 | H-12 | (Track 'E') Mala detección del cage: el detector CV del cage produce un carril falso plausible y la cage impone una envolvente errónea. | S3 | E2 | C2 | High | 1, 2, 3, 4 | La cage deja de ser garantía y puede sacar al vehículo del carril verdadero. | Marcas engañosas (bifurcaciones, pintura antigua); sombras/reflejos como bordes; visión degradada que corrompe la detección. |
 
 La tabla anterior es la versión compacta del Hazard Register
@@ -407,13 +407,13 @@ autónomo. Cualquier modificación al registro debe propagarse a esta
 tabla en el mismo commit para que `tools/check_traceability.py`
 mantenga consistencia.
 
-**Extensión del track 'E' (D-38 / D-40).** El track paralelo end-to-end con
-cámara frontal (§3.5.1; D-38, que supersede a D-01) añade tres hazards de
+**Extensión del track 'E' (D-41 / D-43).** El track paralelo end-to-end con
+cámara frontal (§3.5.1; D-41, que supersede a D-01) añade tres hazards de
 percepción de cámara en el espacio de IDs compartido: **H-10** (mala percepción
 por entrada visual degradada), **H-11** (pérdida de percepción válida) y **H-12**
 (mala detección del cage: carril falso). Son **fallos funcionales de percepción**
 —de sensor y entorno—, más estrechos que las familias no-funcionales que D-31
-mantiene fuera de alcance. Por **D-40** el cage toma su estado de un **detector de
+mantiene fuera de alcance. Por **D-43** el cage toma su estado de un **detector de
 líneas por visión propio** (clásico/determinista, distinto de la CNN de la policy),
 no de ground-truth: esto generaliza a cualquier carretera con líneas, pero acepta un
 **fallo de causa común** (una avería de cámara puede cegar policy y cage a la vez)
@@ -686,7 +686,7 @@ construcción de la matriz en D17.
 -->
 
 La SRS consolida once Safety Requirements (del F-track) derivados del Hazard Register
-y refinados por la pasada STPA ligera; el track 'E' (D-38) añade SR-012 y SR-013, marcados abajo. La numeración es estable: una vez
+y refinados por la pasada STPA ligera; el track 'E' (D-41) añade SR-012 y SR-013, marcados abajo. La numeración es estable: una vez
 asignado SR-XXX, no se reutiliza ni se renombra. La tabla siguiente
 presenta la SRS en su forma compacta; la versión extendida con
 rationale completo, parámetros, hazards cubiertos, cage rule
@@ -744,13 +744,13 @@ SR-CL-A, cf. D-29) instancia la rama L4b' de la adaptación A2
 caracterización estadística del comportamiento de la policy
 complementaria a los Cage Unit Tests deterministas.
 
-**Extensión del track 'E' (D-38 / D-40).** El track end-to-end con cámara frontal
+**Extensión del track 'E' (D-41 / D-43).** El track end-to-end con cámara frontal
 añade tres Safety Requirements en el espacio de IDs compartido: **SR-012**
 (lane-keeping bajo degradación visual, cubre H-10), **SR-013** (degradación segura
 ante pérdida de percepción, cubre H-11) y **SR-014** (plausibilidad del estimador del
 cage: no enforcement sobre una detección sospechosa, cubre H-12). Los tres son
 **SR-CL-A** y, conforme a D-28, se apoyan en reglas deterministas existentes
-(C-01/C-02/C-03 y C-05). Las **reglas del cage no se modifican**; lo que cambia (D-40)
+(C-01/C-02/C-03 y C-05). Las **reglas del cage no se modifican**; lo que cambia (D-43)
 es la **fuente** de su estado: un detector de líneas por visión propio (determinista),
 no ground-truth — el ground-truth queda solo como señal de reward y oráculo de
 validación en sim. Sus escenarios verificadores SC-PERT-04..08 están aún como *stubs*

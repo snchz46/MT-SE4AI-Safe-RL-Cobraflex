@@ -1,9 +1,9 @@
 """
-cv_lane_estimator — the cage's deterministic classical-CV lane estimator (D-40).
+cv_lane_estimator — the cage's deterministic classical-CV lane estimator (D-43).
 
 Track 'E': the safety cage's state (`ey`/`epsi`/lane width/curvature) comes from
 this dedicated, *deterministic* vision pipeline — not from privileged ground
-truth (impossible on a real road, D-40 supersedes D-39) and not from the
+truth (impossible on a real road, D-43 supersedes D-42) and not from the
 policy's CNN (would couple the safety monitor to the learned controller, A2).
 Every stage is classical and inspectable:
 
@@ -24,7 +24,7 @@ Every stage is classical and inspectable:
    the :class:`~cobraflex_rl.lane_plausibility.LanePlausibilityCheck` (SR-014).
 
 Sign conventions match `PolylineTracker` (the sim oracle that validates this
-estimator, D-40): ``ey`` + = vehicle left of lane centre; ``epsi`` + = vehicle
+estimator, D-43): ``ey`` + = vehicle left of lane centre; ``epsi`` + = vehicle
 yawed left of the lane direction; curvature + = left bend.
 
 Pure numpy + OpenCV (`cv2`) — host-testable without ROS; the synthetic-frame

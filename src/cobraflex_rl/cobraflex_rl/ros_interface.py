@@ -28,7 +28,7 @@ class RosGazeboInterface(Node):
     ) -> None:
         super().__init__("cobraflex_rl_interface")
         self._odom_msg: Optional[Odometry] = None
-        # Track 'E' (D-38/D-40): optional camera subscription. Empty topic =
+        # Track 'E' (D-41/D-43): optional camera subscription. Empty topic =
         # F-track behaviour, no image traffic. The latest raw msg is kept and
         # decoded lazily in get_camera_frame() so 20 Hz × 0.9 MB frames cost
         # nothing when the consumer only samples at the 10 Hz control rate.

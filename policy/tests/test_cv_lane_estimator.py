@@ -1,4 +1,4 @@
-"""Unit tests for cobraflex_rl.cv_lane_estimator (track 'E', D-40).
+"""Unit tests for cobraflex_rl.cv_lane_estimator (track 'E', D-43).
 
 Synthetic frames are rendered through the *same* camera model the estimator
 uses: for a pitch-only mount each image row v sees one ground distance X(v)

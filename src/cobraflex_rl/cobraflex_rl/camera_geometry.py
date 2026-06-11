@@ -1,7 +1,7 @@
 """
 camera_geometry — deterministic pinhole ground-plane projection for track 'E'.
 
-The cage's CV lane-estimator (D-40) converts detected lane-line pixels into
+The cage's CV lane-estimator (D-43) converts detected lane-line pixels into
 metric lateral offsets, so it needs the camera's pixel↔ground mapping. The
 camera is pitch-only (no roll, no yaw relative to the vehicle), which makes the
 mapping closed-form and auditable:

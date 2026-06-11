@@ -31,6 +31,23 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [11.06.2026] — E2: pre-merge renumber of E-track decisions D-38/D-39/D-40 → D-41/D-42/D-43 (ID collision with main's F4 decisions)
+
+**Document(s) affected:** every living document, scenario YAML, code comment and manuscript chapter citing the E-track decisions (sed sweep, ~50 files); `docs/DECISIONS.md` (renumbered rows + mapping note).
+**Phase:** E2 (track 'E'), integration prep.
+**Gate context:** precondition for merging `main` (which independently allocated D-38 = indeterminate-verdict aggregation, D-39 = SR-006 own-metric during its F4 campaign close) into `e2e-camera`. No semantic change anywhere — pure ID renumber.
+**Author:** Samuel.
+
+### Change / Rationale
+
+D-38/D-39 were allocated twice, once per branch. IDs are load-bearing in this repo (traceability commitment), so the side not yet merged renumbers: **D-38→D-41 (Track 'E' architecture), D-39→D-42 (GT-state interim, superseded), D-40→D-43 (CV lane-estimator as cage state source)**. Git history and frozen evidence artifacts (`experiments/sim/runs/cv_estimator_val_*`) keep the old numbers — the mapping note in DECISIONS.md is the bridge.
+
+### Impact / Verification
+
+No behaviour change (comments/docs only; `cage/cage.yaml` hash changes — comment text — without a version bump, consistent with "no functional delta"). `pytest` green, `check_traceability` PASS, `check_scenario_yaml` PASS after the sweep.
+
+---
+
 ## [11.06.2026] — E2: eval-side world diversity — SC-PERT-09/10 (worn / wet oval textures) + campaign world selection
 
 **Document(s) affected:** `scenarios/perturbed/sc_pert_09.yaml` + `sc_pert_10.yaml` (new), `docs/05` (two scenario sections, count 22 → 24, E-budget 320 → 400 runs, Option-A world-variant note), `docs/03` + `manuscript/chapters/chapter_04` (SR-012 / SR-014 scenario lists) → `docs/data/safety_requirements.csv` regenerated, `tools/run_campaign.py` (`resolve_world_path`; executor passes a non-default `track.world` to the launch), `experiments/sim/e_cam_visibility/world_variant_mask_check.json` (evidence).
@@ -56,7 +73,7 @@ E-eval budget 320 → 400 runs. SR-012/SR-014 gain an appearance-shift verifying
 
 ---
 
-## [11.06.2026] — E2: camera-PPO pilot green (20k) → E-main 200k launched; `cv_lane_estimator_node` deployment wrapper (D-40 outside the gym)
+## [11.06.2026] — E2: camera-PPO pilot green (20k) → E-main 200k launched; `cv_lane_estimator_node` deployment wrapper (D-43 outside the gym)
 
 **Document(s) affected:** `src/cobraflex_rl/cobraflex_rl/cv_lane_estimator_node.py` (new node), `src/cobraflex_rl/setup.py` (console script), `src/safety_cage/safety_cage/cage_ros_node.py` (`/perception_invalid` → ctx, C-05 Trigger 8), `manuscript/chapters/chapter_07` (§7.7.7 pilot result). Training evidence under `experiments/sim/training/`.
 **Phase:** E2 (track 'E').
@@ -67,11 +84,11 @@ E-eval budget 320 → 400 runs. SR-012/SR-014 gain an appearance-shift verifying
 
 - **Pilot** `ppo_cam_pilot_2024_20k` (seed 2024, DR on, cage 0.6.1 enforcement) completed: ep_rew_mean 17.9 → 137.7, ep_len_mean 31.7 → 160.7, emergency_rate 3.1% → 0.3%, explained_variance positive throughout; interventions dominated by C-06 rate-limiting (~89%), C-01/C-05 near zero by 20k. The loop criteria of the pilot (camera obs flowing, cage interventions logged, reward sane, ~8 FPS viable) all hold.
 - **E-main launched:** `ppo_cam_train_2024_200k` (200k steps, seed 2024, `train_ppo_camera.yaml`, checkpoint `policy/checkpoints/cobraflex_ppo_cam_lane_2024_200k.zip` — matches the campaign's `--checkpoint-template`).
-- **`cv_lane_estimator_node`** — deployment analogue of the in-process D-40 path: camera → `CagePerceptionSupervisor` → `/state_obs` (lane_perception_node ordering; publish suppressed when no acceptable estimate, F2 missing-state precedent) + `/perception_invalid` every tick. `cage_ros_node` latches `/perception_invalid` into ctx like `/external_stop`. Found live: the node must run with `use_sim_time:=true` — wall-clock vs sim-stamped frames latches perception_invalid permanently (documented in the node docstring).
+- **`cv_lane_estimator_node`** — deployment analogue of the in-process D-43 path: camera → `CagePerceptionSupervisor` → `/state_obs` (lane_perception_node ordering; publish suppressed when no acceptable estimate, F2 missing-state precedent) + `/perception_invalid` every tick. `cage_ros_node` latches `/perception_invalid` into ctx like `/external_stop`. Found live: the node must run with `use_sim_time:=true` — wall-clock vs sim-stamped frames latches perception_invalid permanently (documented in the node docstring).
 
 ### Rationale
 
-The pilot's job was to prove the E-training loop before spending ~7 h at RTF 1 on the main run; it did. The deployment node closes the D-40 architecture outside the gym: the same supervisor logic now feeds the F2-style five-node loop, which is what the physical platform will use.
+The pilot's job was to prove the E-training loop before spending ~7 h at RTF 1 on the main run; it did. The deployment node closes the D-43 architecture outside the gym: the same supervisor logic now feeds the F2-style five-node loop, which is what the physical platform will use.
 
 ### Impact
 
@@ -85,16 +102,16 @@ E-main run in progress (GE3 evidence). The F2 launch files can later swap `lane_
 
 ## [10.06.2026] — E2: E-eval executor wiring + Training Spec §7.7 (manuscript) — visual stressors reach the campaign path
 
-**Document(s) affected:** `src/cobraflex_rl/cobraflex_rl/scenario_perturbations.py` (visual channel: `visual_degradation`/`perception_loss`/`false_lane` blocks → onset-timed mode/level), `gazebo_lane_env.py` (scenario visual injector with episode-clock onset), `eval_policy.py` (camera obs mode: VecFrameStack-equivalent stacking + `cv_*` perception trace in `cage_status.csv`), `train_ppo.py` (Monitor wrap in the camera path — ep_rew_mean was NaN without it), `policy/tests/test_scenario_perturbations.py` (+6); `manuscript/chapters/chapter_07` (**§7.7** Track-'E' Training Spec, in Spanish; the §7.2.1 track-E note updated D-39 → D-40), `docs/07` (E-track note: chain live, verdicts TBD until E-eval).
+**Document(s) affected:** `src/cobraflex_rl/cobraflex_rl/scenario_perturbations.py` (visual channel: `visual_degradation`/`perception_loss`/`false_lane` blocks → onset-timed mode/level), `gazebo_lane_env.py` (scenario visual injector with episode-clock onset), `eval_policy.py` (camera obs mode: VecFrameStack-equivalent stacking + `cv_*` perception trace in `cage_status.csv`), `train_ppo.py` (Monitor wrap in the camera path — ep_rew_mean was NaN without it), `policy/tests/test_scenario_perturbations.py` (+6); `manuscript/chapters/chapter_07` (**§7.7** Track-'E' Training Spec, in Spanish; the §7.2.1 track-E note updated D-42 → D-43), `docs/07` (E-track note: chain live, verdicts TBD until E-eval).
 **Phase:** E2 (track 'E').
 **Gate context:** prepares GE3 (training) and GE4 (eval campaign). F-track unaffected.
 **Author:** Samuel.
 
 ### Change
 
-- The SC-PERT-04..08 `perturbations:` blocks now resolve through `resolve_perturbation` like every F4 runtime stressor: level round-robin by rep, onset (`at_time_s`) honoured via the episode clock so SC-PERT-07/08 keep their nominal lead-in; scenario-library aliases (`misleading_markings`, `occlusion_or_dropout`) map to the degradation primitives. The env applies the stressor in the shared camera pipeline (one degradation point, both consumers — D-40).
+- The SC-PERT-04..08 `perturbations:` blocks now resolve through `resolve_perturbation` like every F4 runtime stressor: level round-robin by rep, onset (`at_time_s`) honoured via the episode clock so SC-PERT-07/08 keep their nominal lead-in; scenario-library aliases (`misleading_markings`, `occlusion_or_dropout`) map to the degradation primitives. The env applies the stressor in the shared camera pipeline (one degradation point, both consumers — D-43).
 - `eval_policy` runs camera policies (frame-stack mirror of training) and logs the per-step perception trace (`cv_ok`, `cv_state_available`, `cv_perception_invalid`, `cv_ey/epsi/confidence`) that the SC-PERT-07/08 verdicts and the Trigger-8 latency analysis need.
-- Manuscript ch.7 gains **§7.7** (Spanish): observation/pipeline (84×84 gray, k=4, pitched ZEDm source), NatureCNN policy, H-10 DR envelope (eval-only modes excluded, with rationale), cage-in-enforcement with the D-40 state source and aligned budgets, hyperparameters/seeds (main seed 2024, D-36 precedent; N=5 if compute allows), logging; §7.7.7 reserved for pilot/main results.
+- Manuscript ch.7 gains **§7.7** (Spanish): observation/pipeline (84×84 gray, k=4, pitched ZEDm source), NatureCNN policy, H-10 DR envelope (eval-only modes excluded, with rationale), cage-in-enforcement with the D-43 state source and aligned budgets, hyperparameters/seeds (main seed 2024, D-36 precedent; N=5 if compute allows), logging; §7.7.7 reserved for pilot/main results.
 
 ### Rationale / Impact / Verification
 
@@ -114,7 +131,7 @@ Executor + eval are now scenario-complete for the E-track campaign (Stage E-eval
 Driving the camera env live (scripted controller, oval) exposed four integration defects invisible to both the unit tests and the static oracle grid:
 
 1. **Lane-width dead zone:** the estimator accepts pairs in `nominal ± 0.10 m` (≥ 0.145), the SR-014 checker's generic default rejected `< 0.20` — estimates in `[0.145, 0.20)` were permanently rejected and the cage deadlocked into its no-state path (1-step episodes). Fix: the supervisor builds the checker from the estimator's own pair window.
-2. **One-cycle-stale cage frame:** the cage consumed the frame retained at the end of the *previous* control cycle; at real-time rates its sim-age tripped both the supervisor staleness budget and C-05 Trigger 3. Fix: the cage samples the freshest frame at its own cycle start (same degradation pipeline — the D-40 common-cause property holds).
+2. **One-cycle-stale cage frame:** the cage consumed the frame retained at the end of the *previous* control cycle; at real-time rates its sim-age tripped both the supervisor staleness budget and C-05 Trigger 3. Fix: the cage samples the freshest frame at its own cycle start (same degradation pipeline — the D-43 common-cause property holds).
 3. **Budget inconsistency at 10 Hz:** Trigger 3's code default (0.2 s) assumed the 20 Hz deployment loop, where it equals the documented 5-cycle missing-state tolerance; at the env's 10 Hz it undercut Trigger 5 (2 cycles vs 5) and stopped every lap at the curve apex, where the CV state legitimately skips 2–4 cycles (dash gaps). Fix: `staleness_max_s: 0.5 = n_missing_max_cycles × control_dt`, budgets aligned; SR-007's detection mandate unchanged (0.5 s at 0.2 m/s = 10 cm, inside the d_warning margin). Supervisor persistence likewise 2 → 4 cycles, and its `min_confidence` 0.3 → 0.10 so the single-line fallback (a degraded-but-valid mode; loss still carries confidence 0) is not misread as loss. Curvature plausibility 1.5 → 3.0 (ODD KAPPA_MAX 1.25 + measured estimator noise rejected real curve entries).
 4. **Brittle first cycle:** one bad spawn frame put the cage on its no-state-ever path (instant emergency). Fix: reset-time priming — the supervisor must accept a settled spawn view (2 s budget) before the episode starts; a scenario injector active from t=0 may legitimately never prime, and then the controlled stop is the specified outcome.
 
@@ -132,7 +149,7 @@ Live loop now: perception available 699/700 cycles over repeated curve transits;
 
 ---
 
-## [10.06.2026] — E2: track-'E' perception stack — CV lane-estimator (D-40) validated vs oracle, C-05 Trigger 8 live (cage 0.6.0), camera obs mode in the env, SC-PERT-04..08 un-stubbed
+## [10.06.2026] — E2: track-'E' perception stack — CV lane-estimator (D-43) validated vs oracle, C-05 Trigger 8 live (cage 0.6.0), camera obs mode in the env, SC-PERT-04..08 un-stubbed
 
 **Document(s) affected:** `cage/cage.yaml` (**0.5.1 → 0.6.0**), `cage/rules/c05_emergency.py` (Trigger 8), `cage/tests/test_c05_perception_trigger.py` (new) + 3 version-assert updates; `src/cobraflex_rl/cobraflex_rl/`: `camera_geometry.py`, `cv_lane_estimator.py`, `cage_perception.py`, `camera_pipeline.py` (new), `visual_degradation.py` (+occlusion, +false_lane), `gazebo_lane_env.py` (camera obs mode + in-env H-10 DR), `ros_interface.py` (camera subscription), `train_ppo.py` (CnnPolicy + VecFrameStack), `config/train_ppo_camera.yaml` (new); `policy/tests/` (+5 test files); `tools/validate_cv_estimator.py` (new); `docs/04` (Trigger 8 un-deferred, cage state source implemented), `docs/05` (SC-PERT-04..08 un-stubbed), `docs/09` §10 (v0.5); `scenarios/perturbed/sc_pert_04..08.yaml` (full schema-valid YAMLs); `experiments/sim/runs/cv_estimator_val_*` (oracle-validation evidence).
 **Phase:** E2 (track 'E'; branch `e2e-camera`).
@@ -142,15 +159,15 @@ Live loop now: perception available 699/700 cycles over repeated curve transits;
 ### Change
 
 - **C-05 Trigger 8 implemented** (SR-013 loss / SR-014 misdetection; H-11/H-12): `ctx["perception_invalid"]`, raised by the external supervisor, fires the open-loop controlled stop. Gated by `c05_emergency.perception_trigger_enabled` (code default false → back-compat per the 0.4.0→0.5.0 precedent; the 0.6.0 YAML ships true). `compatible_sr_spec_version` stays "1.0" (SR-012..014 are additive).
-- **Deterministic CV lane-estimator** (D-40): closed-form pitch-only ground-plane projection (`camera_geometry.py`, constants from the URDF/sensor); HSV white mask with **vegetation-hue exclusion**; per-row run candidates → polynomial line clustering → driven-lane pair selection → `ey/epsi/lane-width/curvature`; **single-line fallback** (lane_keeper precedent) for the dash-gap stretches in the tight curves. Composed with the SR-013 health monitor + SR-014 plausibility check in `cage_perception.CagePerceptionSupervisor`.
-- **Oracle validation per D-40's plan** (`tools/validate_cv_estimator.py`; 4 iterations recorded under `experiments/sim/runs/cv_estimator_val_*`): the first run exposed two real defects — the proven lane-keeper mask thresholds let the **pale grass (S≈48) pass as "white"**, merging the road-edge line with the grass and biasing ey (gain 0.70, −20 mm offset) and epsi (+0.175 rad); and the linear cluster fits could not follow the KAPPA_MAX=1.25 curvature. Final state (run `cv_estimator_val_20260610T181634Z`): **clean detection 100%, ey bias −9 mm, MAE 23 mm, p95 58 mm; epsi MAE 0.16 rad**; glare 0.3/0.6 detected 100% (ey bias −13/−32 mm); motion blur 0.5 detected 100% (MAE 10 mm); low-light 0.3 → 67% detection, 0.6 → 0% (→ designed SR-013 stop); occlusion: far-field single-line persists at 0.5, full loss at 1.0; false-lane 0.8: ey stays accurate but **epsi pulled ~0.5 rad — the exact H-12 "confidently wrong" signature** the SR-014 check exists for.
-- **Shared camera path** (`camera_pipeline.py`): one degradation point before **both** consumers (policy CNN + cage CV — the D-40 common cause); obs fixed at **84×84 grayscale, frame stack k=4** (docs/09 §10 v0.5, inside the documented envelope — no new D-NN). `GazeboLaneEnv` camera mode: image obs, cage on the supervisor's state/Trigger-8 flag, ground truth confined to reward/termination/metrics; in-env per-episode **H-10 domain randomisation** (seeded via `np_random`; eval-only modes occlusion/false-lane excluded from the training envelope by design). `train_ppo.py` gains CnnPolicy + VecFrameStack; E-config `train_ppo_camera.yaml`.
+- **Deterministic CV lane-estimator** (D-43): closed-form pitch-only ground-plane projection (`camera_geometry.py`, constants from the URDF/sensor); HSV white mask with **vegetation-hue exclusion**; per-row run candidates → polynomial line clustering → driven-lane pair selection → `ey/epsi/lane-width/curvature`; **single-line fallback** (lane_keeper precedent) for the dash-gap stretches in the tight curves. Composed with the SR-013 health monitor + SR-014 plausibility check in `cage_perception.CagePerceptionSupervisor`.
+- **Oracle validation per D-43's plan** (`tools/validate_cv_estimator.py`; 4 iterations recorded under `experiments/sim/runs/cv_estimator_val_*`): the first run exposed two real defects — the proven lane-keeper mask thresholds let the **pale grass (S≈48) pass as "white"**, merging the road-edge line with the grass and biasing ey (gain 0.70, −20 mm offset) and epsi (+0.175 rad); and the linear cluster fits could not follow the KAPPA_MAX=1.25 curvature. Final state (run `cv_estimator_val_20260610T181634Z`): **clean detection 100%, ey bias −9 mm, MAE 23 mm, p95 58 mm; epsi MAE 0.16 rad**; glare 0.3/0.6 detected 100% (ey bias −13/−32 mm); motion blur 0.5 detected 100% (MAE 10 mm); low-light 0.3 → 67% detection, 0.6 → 0% (→ designed SR-013 stop); occlusion: far-field single-line persists at 0.5, full loss at 1.0; false-lane 0.8: ey stays accurate but **epsi pulled ~0.5 rad — the exact H-12 "confidently wrong" signature** the SR-014 check exists for.
+- **Shared camera path** (`camera_pipeline.py`): one degradation point before **both** consumers (policy CNN + cage CV — the D-43 common cause); obs fixed at **84×84 grayscale, frame stack k=4** (docs/09 §10 v0.5, inside the documented envelope — no new D-NN). `GazeboLaneEnv` camera mode: image obs, cage on the supervisor's state/Trigger-8 flag, ground truth confined to reward/termination/metrics; in-env per-episode **H-10 domain randomisation** (seeded via `np_random`; eval-only modes occlusion/false-lane excluded from the training envelope by design). `train_ppo.py` gains CnnPolicy + VecFrameStack; E-config `train_ppo_camera.yaml`.
 - **`visual_degradation.py`**: +`apply_occlusion` (SC-PERT-07) and `apply_false_lane` (SC-PERT-08) as `EVAL_ONLY_MODES`; `MODES` (the DR envelope) unchanged.
 - **SC-PERT-04..08 un-stubbed** into full schema-valid YAMLs (`check_scenario_yaml.py`: 0 errors, 0 warnings) with levels grounded in the oracle validation; docs/05 sections updated (incl. the SC-PERT-05 labelled two-arm criterion and SC-PERT-07's level-1.0 rationale); run budget 320 across both modes.
 
 ### Rationale
 
-D-40 made the estimator-vs-oracle evidence the precondition for the cage relying on camera perception; building the estimator exposed two genuine perception defects that pure host tests could not have caught (grass-as-white, curvature-blind linear fits) — exactly the kind of finding the oracle-validation step exists for.
+D-43 made the estimator-vs-oracle evidence the precondition for the cage relying on camera perception; building the estimator exposed two genuine perception defects that pure host tests could not have caught (grass-as-white, curvature-blind linear fits) — exactly the kind of finding the oracle-validation step exists for.
 
 ### Impact
 
@@ -179,7 +196,7 @@ D-40 made the estimator-vs-oracle evidence the precondition for the cage relying
 
 ### Rationale
 
-docs/09 §10 ("verify the lane lines are actually visible to the camera") is the entry condition for the camera observation bridge and the D-40 CV lane-estimator; both the pitch and the matte fix came out of looking at actual frames rather than assuming the texture work sufficed.
+docs/09 §10 ("verify the lane lines are actually visible to the camera") is the entry condition for the camera observation bridge and the D-43 CV lane-estimator; both the pitch and the matte fix came out of looking at actual frames rather than assuming the texture work sufficed.
 
 ### Impact
 
@@ -193,9 +210,9 @@ docs/09 §10 ("verify the lane lines are actually visible to the camera") is the
 
 ---
 
-## [09.06.2026] — E2: D-40 — cage on a dedicated vision lane-estimator (supersedes D-39); H-12 / SR-014 / SC-PERT-08
+## [09.06.2026] — E2: D-43 — cage on a dedicated vision lane-estimator (supersedes D-42); H-12 / SR-014 / SC-PERT-08
 
-**Document(s) affected:** `docs/DECISIONS.md` (D-40; D-39 → SUPERSEDED), `docs/02` (H-10/H-11 reframe + new H-12), `docs/03` (SR-012/SR-013 reframe + new SR-014), `docs/04`, `docs/05` (SC-PERT-08 + reframe), `docs/07`, `docs/09` §10 (v0.4), `docs/10` §10; `docs/data/*.csv` (regenerated); `tools/traceability_matrix.csv`; `manuscript/chapters/chapter_04`, `chapter_05`; `scenarios/perturbed/sc_pert_08.yaml` (new stub); `policy/tests/test_verdict_aggregation.py` (count); `src/cobraflex_rl/cobraflex_rl/visual_domain_randomization.py` + test (new).  
+**Document(s) affected:** `docs/DECISIONS.md` (D-43; D-42 → SUPERSEDED), `docs/02` (H-10/H-11 reframe + new H-12), `docs/03` (SR-012/SR-013 reframe + new SR-014), `docs/04`, `docs/05` (SC-PERT-08 + reframe), `docs/07`, `docs/09` §10 (v0.4), `docs/10` §10; `docs/data/*.csv` (regenerated); `tools/traceability_matrix.csv`; `manuscript/chapters/chapter_04`, `chapter_05`; `scenarios/perturbed/sc_pert_08.yaml` (new stub); `policy/tests/test_verdict_aggregation.py` (count); `src/cobraflex_rl/cobraflex_rl/visual_domain_randomization.py` + test (new).  
 **Phase:** E1 (track 'E'; branch `e2e-camera`).  
 **Gate context:** E-design, before GE2. F-track unaffected.  
 **Author:** Samuel.  
@@ -204,15 +221,15 @@ docs/09 §10 ("verify the lane lines are actually visible to the camera") is the
 
 Re-architected the track-'E' cage perception after the design clarification that the system must drive on **any road with visible lane lines** from the camera (policy *and* cage), without an authored centerline:
 
-- **D-40 (supersedes D-39).** The cage's `state` now comes from a **dedicated, deterministic CV lane-estimator** (separate from the policy's CNN), not from privileged ground truth. Ground truth is kept **in sim only** as the training reward and an oracle to validate the estimator. C-01..C-06 unchanged — only the state *source* changes. D-39 → SUPERSEDED by D-40.
+- **D-43 (supersedes D-42).** The cage's `state` now comes from a **dedicated, deterministic CV lane-estimator** (separate from the policy's CNN), not from privileged ground truth. Ground truth is kept **in sim only** as the training reward and an oracle to validate the estimator. C-01..C-06 unchanged — only the state *source* changes. D-42 → SUPERSEDED by D-43.
 - **Reframed H-10 / H-11 and SR-012 / SR-013** (`docs/02`, `docs/03`, `docs/04`, `docs/05`, `docs/07`, chapters 04/05): the cage now reads the camera (its own CV detector), so a camera fault is **common-cause** (blinds policy and cage alike); the residual safety is the **open-loop controlled stop** (SR-013/C-05, "no lines ⇒ stop").
-- **New hazard H-12** (cage lane-misdetection: a confidently-wrong CV estimate → false envelope) + **SR-014** (estimator plausibility / temporal-consistency check + conservative fall-back to C-05) + **SC-PERT-08** stub (misleading-markings / false-lane test). Registers the failure mode the CV estimator introduces (impossible under D-39).
+- **New hazard H-12** (cage lane-misdetection: a confidently-wrong CV estimate → false envelope) + **SR-014** (estimator plausibility / temporal-consistency check + conservative fall-back to C-05) + **SC-PERT-08** stub (misleading-markings / false-lane test). Registers the failure mode the CV estimator introduces (impossible under D-42).
 - **Training-world diversity decided: oval-first** (`docs/09` §10): first camera-policy prototype on the current oval with visible lines; world diversity added afterwards.
 - Added the host-testable **visual domain-randomization sampler** (`visual_domain_randomization.py` + test) — the training-side mitigation of H-10 referenced by `docs/09` §10.
 
 ### Rationale
 
-The generalisation goal requires the *whole* system to key on visible lines, so the cage cannot rely on an authored centerline. A separate **deterministic CV** estimator keeps the cage independent of the *learned policy* and auditable (a classical algorithm is inspectable). The honest cost — common-cause blindness and a new misdetection hazard — is registered explicitly (D-40 consequences, H-12) rather than hidden; the open-loop stop is the residual safeguard.
+The generalisation goal requires the *whole* system to key on visible lines, so the cage cannot rely on an authored centerline. A separate **deterministic CV** estimator keeps the cage independent of the *learned policy* and auditable (a classical algorithm is inspectable). The honest cost — common-cause blindness and a new misdetection hazard — is registered explicitly (D-43 consequences, H-12) rather than hidden; the open-loop stop is the residual safeguard.
 
 ### Impact
 
@@ -235,13 +252,13 @@ The generalisation goal requires the *whole* system to key on visible lines, so 
 
 ### Change
 
-- **§3.5.1** records that **D-01 ("no end-to-end") is superseded by D-38** for track 'E', with the retained-modular-cage argument (A1/A2/A4 stay viable; D-39). Closes the §3.5.1 follow-up flagged in the scaffolding entry.
-- **§5.2.3** ("Lo que la cage no es") adds the property *the cage does not depend on the policy's perception* — it runs on an independent state estimate (D-39), which keeps H-06 (cage state) distinct from H-11 (camera perception).
+- **§3.5.1** records that **D-01 ("no end-to-end") is superseded by D-41** for track 'E', with the retained-modular-cage argument (A1/A2/A4 stay viable; D-42). Closes the §3.5.1 follow-up flagged in the scaffolding entry.
+- **§5.2.3** ("Lo que la cage no es") adds the property *the cage does not depend on the policy's perception* — it runs on an independent state estimate (D-42), which keeps H-06 (cage state) distinct from H-11 (camera perception).
 - **§7.2.1** notes the camera-observation variant (CNN; action and reward unchanged; cage on independent state; PPO/camera training deferred to Ubuntu), pointing to `docs/09` §10.
 
 ### Rationale
 
-Keep the manuscript consistent with the E-track architectural decisions (D-38/D-39) recorded under `docs/`.
+Keep the manuscript consistent with the E-track architectural decisions (D-41/D-42) recorded under `docs/`.
 
 ### Verification
 
@@ -258,14 +275,14 @@ Prose only; `tools/check_traceability.py` parses `docs/`, not the manuscript, so
 
 ### Change
 
-- **docs/09 §10** (v0.3): the E-track environment changes **only the observation** — the front-camera image (CNN policy) replaces the 6-dim state vector. Action, reward, cage (on the independent ground-truth state, D-39) and episode logic are unchanged; supersedes ED-1's image-obs rejection for track 'E'. Visual degradations act on the observation; perception loss raises C-05 Trigger 8.
+- **docs/09 §10** (v0.3): the E-track environment changes **only the observation** — the front-camera image (CNN policy) replaces the 6-dim state vector. Action, reward, cage (on the independent ground-truth state, D-42) and episode logic are unchanged; supersedes ED-1's image-obs rejection for track 'E'. Visual degradations act on the observation; perception loss raises C-05 Trigger 8.
 - **docs/10 §10:** the reward is **unchanged** for track 'E' — it is observation-agnostic (computed on ground-truth state + progress + raw steering delta).
 - **New host-testable pure modules** (numpy / stdlib only, no ROS): `visual_degradation.py` (glare / low-light / motion-blur primitives → SC-PERT-04..06 / SR-012 / H-10) and `perception_health.py` (`PerceptionHealthMonitor` raising the C-05 perception-health trigger → SC-PERT-07 / SR-013 / H-11), each with a unit-test file under `policy/tests/`.
 - **`tools/traceability_matrix.csv` reconciled** (the hand-maintained granular matrix flagged as stale in the scaffolding entry): it now covers every `H→SR→C→SC→M` chain, adding the previously-missing H-08/H-09/SR-011 rows and the new track-'E' H-10/H-11 rows. Aligns the CSV with `docs/07`.
 
 ### Rationale
 
-The E-track changes only the policy's input; the reward and cage are observation-agnostic / on the independent state, so they carry over (the minimal-delta point of D-39). The two pure modules are the host-doable, unit-testable kernels of the camera stressors; the Gazebo camera sensor, the observation bridge, the runtime injectors and the ROS perception-health node are the Ubuntu part.
+The E-track changes only the policy's input; the reward and cage are observation-agnostic / on the independent state, so they carry over (the minimal-delta point of D-42). The two pure modules are the host-doable, unit-testable kernels of the camera stressors; the Gazebo camera sensor, the observation bridge, the runtime injectors and the ROS perception-health node are the Ubuntu part.
 
 ### Impact
 
@@ -279,7 +296,7 @@ The E-track changes only the policy's input; the reward and cage are observation
 
 ---
 
-## [09.06.2026] — E2: Track 'E' scaffolding (end-to-end front-camera) — D-38/D-39, H-10/H-11, SR-012/013, SC-PERT-04..07
+## [09.06.2026] — E2: Track 'E' scaffolding (end-to-end front-camera) — D-41/D-42, H-10/H-11, SR-012/013, SC-PERT-04..07
 
 **Document(s) affected:** `docs/00`, `docs/01`, `docs/02`, `docs/03`, `docs/04`, `docs/05`, `docs/07`, `docs/DECISIONS.md`; `docs/data/hazard_register.csv` + `docs/data/safety_requirements.csv` (regenerated); `manuscript/chapters/chapter_04_*`; `scenarios/perturbed/sc_pert_04..07.yaml` (new stubs); `policy/tests/test_verdict_aggregation.py` (count).  
 **Phase:** E0 (parallel track; branch `e2e-camera`).  
@@ -290,17 +307,17 @@ The E-track changes only the policy's input; the reward and cage are observation
 
 Opened the parallel **track 'E'** for an end-to-end front-camera lane-following variant and scaffolded its left-arm artefacts (HARA → SRS → Cage → scenarios):
 
-- **Decisions:** D-38 (open track 'E'; phases `E0..E6` / gates `GE0..GE6`; commit prefix `E2:`; **supersedes D-01**) and D-39 (the cage stays on an *independent* state estimate, not the camera). D-01 status → SUPERSEDED by D-38.
+- **Decisions:** D-41 (open track 'E'; phases `E0..E6` / gates `GE0..GE6`; commit prefix `E2:`; **supersedes D-01**) and D-42 (the cage stays on an *independent* state estimate, not the camera). D-01 status → SUPERSEDED by D-41.
 - **Numbering:** E-phase/gate scheme added to `docs/01`; "Parallel track E" section added to `docs/00`.
 - **Hazards:** H-10 (lane misperception under degraded visual input) and H-11 (loss of valid lane perception) in `docs/02` + machine-readable table + STPA scope addendum.
 - **SRs:** SR-012 (lane-keeping under degraded visual input → C-01/C-02/C-03 + training) and SR-013 (safe degradation on loss of valid perception → C-05 via a perception-health supervisor) in `docs/03` + table.
-- **Cage:** `docs/04` cage-independence note (D-39) and C-05 Trigger 8 (perception-health, deferred). C-01..C-06 reused unchanged — **no new cage rule**.
+- **Cage:** `docs/04` cage-independence note (D-42) and C-05 Trigger 8 (perception-health, deferred). C-01..C-06 reused unchanged — **no new cage rule**.
 - **Scenarios:** SC-PERT-04..07 (glare, low-light, motion-blur, occlusion/perception-loss) documented in `docs/05` + **stub** YAMLs under `scenarios/perturbed/` (reuse the PERT family — no schema/`RX_SC` change).
 - **Matrix / manuscript:** H-10/H-11 rows added to `docs/07`; `chapter_04` hazard/SR tables mirrored.
 
 ### Rationale
 
-The camera→action variant is a second instantiation of the SE4AI method on a harder perception problem and a full new left-arm cycle, so it is isolated on its own branch + phase numbering with the F-track evidence frozen. The supersession of D-01 is safe because the **modular cage is retained** (D-39): pixels enter the policy, never the safety envelope, so framework adaptations A1/A2/A4 stay viable. The new hazards are functional sensor/environment perception failures — narrower than D-31's still-excluded non-functional AI families — and the cage's independence keeps H-06 (cage state) distinct from H-11 (camera perception).
+The camera→action variant is a second instantiation of the SE4AI method on a harder perception problem and a full new left-arm cycle, so it is isolated on its own branch + phase numbering with the F-track evidence frozen. The supersession of D-01 is safe because the **modular cage is retained** (D-42): pixels enter the policy, never the safety envelope, so framework adaptations A1/A2/A4 stay viable. The new hazards are functional sensor/environment perception failures — narrower than D-31's still-excluded non-functional AI families — and the cage's independence keeps H-06 (cage state) distinct from H-11 (camera perception).
 
 ### Impact
 

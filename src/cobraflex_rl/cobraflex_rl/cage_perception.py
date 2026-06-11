@@ -1,5 +1,5 @@
 """
-cage_perception — the cage's perception supervisor for track 'E' (D-40).
+cage_perception — the cage's perception supervisor for track 'E' (D-43).
 
 Composes, per control cycle, the three host-tested kernels around the CV
 lane-estimator into the cage-facing contract:

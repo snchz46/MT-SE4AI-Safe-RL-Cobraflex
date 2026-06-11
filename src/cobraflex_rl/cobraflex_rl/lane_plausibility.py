@@ -1,8 +1,8 @@
 """
 lane_plausibility — pure-logic plausibility / temporal-consistency check for the cage's
-CV lane estimate (track 'E'; SR-014, hazard H-12, decision D-40).
+CV lane estimate (track 'E'; SR-014, hazard H-12, decision D-43).
 
-Under D-40 the cage's state comes from a deterministic CV lane-estimator that can be
+Under D-43 the cage's state comes from a deterministic CV lane-estimator that can be
 confidently *wrong* (a false but plausible-looking lane — a fork, an old marking, a
 shadow read as an edge). SR-014 requires the cage to **not** enforce C-01..C-06 on a
 suspect estimate: when the estimate is geometrically implausible (outside the ODD ranges)
@@ -13,7 +13,7 @@ to the C-05 controlled stop rather than steer toward the suspect lane.
 This module is the **pure decision logic** (stdlib only, no ROS, host-testable). The CV
 estimator itself and the wiring of the ``reject`` flag to the cage's C-05 trigger live on
 the Ubuntu host; in simulation the estimator's error is validated against the ground-truth
-oracle (D-40). Parameters are **provisional**, aligned with the ODD / cage state-validity
+oracle (D-43). Parameters are **provisional**, aligned with the ODD / cage state-validity
 ranges at E-integration. Mirrors the persistence pattern of :mod:`cobraflex_rl.perception_health`.
 """
 from __future__ import annotations

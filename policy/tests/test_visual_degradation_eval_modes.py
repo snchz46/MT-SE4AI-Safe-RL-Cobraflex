@@ -1,7 +1,7 @@
 """
 Unit tests for the eval-only degradation modes of cobraflex_rl.visual_degradation:
 occlusion (SC-PERT-07, H-11) and false_lane (SC-PERT-08, H-12), added for the
-track-'E' camera pipeline under D-40 (the degraded frame reaches both the policy
+track-'E' camera pipeline under D-43 (the degraded frame reaches both the policy
 CNN and the cage's CV lane-estimator).
 """
 import sys

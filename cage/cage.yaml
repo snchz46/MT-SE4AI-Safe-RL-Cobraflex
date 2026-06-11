@@ -37,7 +37,7 @@ cage:
     At 0.2 m/s, 0.5 s = 10 cm of travel, inside the d_warning margin.
 
     0.6.0 (2026-06-10, track 'E'): add C-05 Trigger 8 (perception
-    invalid; SR-013 loss / SR-014 misdetection; H-11/H-12; D-40).
+    invalid; SR-013 loss / SR-014 misdetection; H-11/H-12; D-43).
     The external perception supervisor — CV lane-estimator health
     (cobraflex_rl.perception_health) + plausibility / temporal
     consistency (cobraflex_rl.lane_plausibility) — sets
@@ -222,7 +222,7 @@ cage:
     # n_missing_max_cycles (5) × control_dt (0.1 s). See 0.6.1 note above.
     staleness_max_s: 0.5
 
-    # Trigger 8 — perception invalid (track 'E'; SR-013/SR-014; D-40).
+    # Trigger 8 — perception invalid (track 'E'; SR-013/SR-014; D-43).
     # When true, ctx["perception_invalid"] (set by the external CV
     # lane-estimator supervisor) fires the C-05 controlled stop. The
     # supervisor's thresholds live with the supervisor; the cage only

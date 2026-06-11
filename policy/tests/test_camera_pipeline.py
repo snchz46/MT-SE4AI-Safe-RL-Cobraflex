@@ -1,6 +1,6 @@
 """
 Unit tests for cobraflex_rl.camera_pipeline — the shared track-'E' frame path
-(decode → single degradation point → cage CV frame + policy observation; D-40).
+(decode → single degradation point → cage CV frame + policy observation; D-43).
 """
 import sys
 from pathlib import Path
@@ -96,7 +96,7 @@ def test_clean_pipeline_passthrough():
 
 
 def test_degradation_applied_before_both_consumers():
-    # D-40 common cause: the injected degradation must show in the cage's
+    # D-43 common cause: the injected degradation must show in the cage's
     # frame AND the policy obs, identically derived from one degraded frame.
     frame = _frame(6)
     pipe = CameraPipeline(injector=lambda f: degrade(f, GLARE, 1.0))

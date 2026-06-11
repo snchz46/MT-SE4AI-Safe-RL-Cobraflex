@@ -1,7 +1,7 @@
 """
 visual_domain_randomization — per-episode visual-degradation sampler for E-training.
 
-Track 'E' (D-38/D-39): SR-012 mitigates H-10 partly through a *training constraint* —
+Track 'E' (D-41/D-42): SR-012 mitigates H-10 partly through a *training constraint* —
 the camera policy is trained under randomised visual degradations so it is robust
 across the SC-PERT-04..06 envelope (glare, low-light, motion blur). This module is
 the **sampler**: given a numpy ``Generator`` it draws a per-episode degradation spec

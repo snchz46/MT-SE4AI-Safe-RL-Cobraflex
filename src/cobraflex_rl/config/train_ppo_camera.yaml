@@ -1,4 +1,4 @@
-# Track 'E' (D-38/D-40) — end-to-end front-camera PPO training config.
+# Track 'E' (D-41/D-43) — end-to-end front-camera PPO training config.
 # Deltas vs train_ppo.yaml (the F3 state-vector config): the observation block
 # (camera image, CnnPolicy, frame stack) and the H-10 visual domain
 # randomisation. Reward, cage wiring, actuation mapping, episode logic and the
@@ -20,7 +20,7 @@ policy: CnnPolicy
 
 # E-observation (docs/09 §10, fixed at E2): 84×84 grayscale frames, stack k=4
 # applied by the trainer (VecFrameStack). The cage's state comes from the
-# deterministic CV lane-estimator on the same (possibly degraded) frame (D-40).
+# deterministic CV lane-estimator on the same (possibly degraded) frame (D-43).
 observation:
   type: camera
   camera:

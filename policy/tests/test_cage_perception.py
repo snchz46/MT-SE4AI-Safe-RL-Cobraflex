@@ -1,7 +1,7 @@
 """
 Unit tests for cobraflex_rl.cage_perception — the track-'E' supervisor that
 composes the CV lane-estimator with the SR-013 health monitor and the SR-014
-plausibility check into the cage's state + C-05 Trigger 8 contract (D-40).
+plausibility check into the cage's state + C-05 Trigger 8 contract (D-43).
 
 Uses the same synthetic ground-truth rendering as test_cv_lane_estimator.
 """

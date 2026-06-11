@@ -78,7 +78,7 @@ class GazeboLaneEnv(gym.Env):
             high=np.array([1.0], dtype=np.float32),
             dtype=np.float32,
         )
-        # Track 'E' (D-38/D-40): observation.type "camera" switches the policy
+        # Track 'E' (D-41/D-43): observation.type "camera" switches the policy
         # obs to the front-camera image (84×84 grayscale, docs/09 §10; frame
         # stacking k=4 is applied by the trainer via VecFrameStack). The cage's
         # state then comes from the deterministic CV lane-estimator behind the
@@ -276,7 +276,7 @@ class GazeboLaneEnv(gym.Env):
 
     def _resolve_visual_injector(self, opts: Dict[str, Any]):
         """Per-episode camera degradation (applied once, before both consumers
-        — the policy obs and the cage CV estimator; D-40 common cause).
+        — the policy obs and the cage CV estimator; D-43 common cause).
 
         Three sources, in precedence order:
         ``options["visual_injector"]`` (any frame→frame callable, e.g. a bound
@@ -590,7 +590,7 @@ class GazeboLaneEnv(gym.Env):
         return float(safe_steer), cmd_linear, cmd_angular, info
 
     def _camera_cage_state(self, timestamp: float):
-        """Cage state from the CV lane-estimator (D-40) for the current cycle.
+        """Cage state from the CV lane-estimator (D-43) for the current cycle.
 
         Runs the perception supervisor on the last cycle's (degraded) native
         frame. A trustworthy estimate yields a cage `State` stamped with the

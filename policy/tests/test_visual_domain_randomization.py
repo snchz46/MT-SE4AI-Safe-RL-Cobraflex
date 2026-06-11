@@ -1,6 +1,6 @@
 """
 Unit tests for cobraflex_rl.visual_domain_randomization — the track-'E' per-episode
-visual-degradation sampler (training-side mitigation of H-10 / SR-012; D-38/D-39).
+visual-degradation sampler (training-side mitigation of H-10 / SR-012; D-41/D-42).
 
 Pure logic over a numpy Generator, host-testable. ``cobraflex_rl/__init__`` is lazy
 (no rclpy), so the submodule imports without the ROS toolchain.

@@ -1,15 +1,15 @@
 """
-camera_pipeline — the shared per-frame camera path for track 'E' (D-38/D-40).
+camera_pipeline — the shared per-frame camera path for track 'E' (D-41/D-43).
 
 One native camera frame per control cycle flows through exactly one place:
 
     raw frame ──► [runtime degradation injector] ──► degraded native frame
-                                                       ├──► cage CV lane-estimator (D-40)
+                                                       ├──► cage CV lane-estimator (D-43)
                                                        └──► downsample → policy observation
 
 The degradation (scenario stressor SC-PERT-04..08, or the training-time domain
 randomisation draw) is applied **once, to the native frame, before both
-consumers** — the D-40 common-cause design: the policy CNN and the cage's CV
+consumers** — the D-43 common-cause design: the policy CNN and the cage's CV
 detector see the same (possibly degraded) world. Ground truth never enters
 this path; it remains the sim-only reward/oracle channel.
 

@@ -1,4 +1,4 @@
-"""Unit tests for cobraflex_rl.camera_geometry (track 'E', D-40).
+"""Unit tests for cobraflex_rl.camera_geometry (track 'E', D-43).
 
 The pitch-only ground-plane mapping is closed-form; these tests pin the
 analytic invariants the CV lane-estimator relies on.

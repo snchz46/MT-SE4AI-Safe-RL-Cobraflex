@@ -1,5 +1,5 @@
 """
-cv_lane_estimator_node — ROS2 wrapper for the cage's CV lane-estimator (D-40).
+cv_lane_estimator_node — ROS2 wrapper for the cage's CV lane-estimator (D-43).
 
 Deployment analogue of the in-process path used by `gazebo_lane_env`: replaces
 `lane_perception_node` (odom + authored centerline) as the source of the
@@ -85,7 +85,7 @@ class CvLaneEstimatorNode(Node):
         rate = float(self.get_parameter("publish_rate_hz").value or 10.0)
         self.create_timer(1.0 / rate, self._tick)
         self.get_logger().info(
-            "cv_lane_estimator_node up (D-40 cage perception source)"
+            "cv_lane_estimator_node up (D-43 cage perception source)"
         )
 
     def _on_image(self, msg: Image) -> None:

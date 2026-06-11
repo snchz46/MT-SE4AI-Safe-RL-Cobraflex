@@ -1,12 +1,12 @@
 """
 perception_health — pure-logic perception-health monitor for track 'E'.
 
-Track 'E' (end-to-end front-camera, decisions D-38/D-39): the camera *policy* can
+Track 'E' (end-to-end front-camera, decisions D-41/D-42): the camera *policy* can
 lose a valid lane percept (hazard H-11) through occlusion, absent lane features, or
 a stale/dropped camera frame. SR-013 requires the system to degrade to a controlled
 safe state in that case.
 
-Per D-39 the cage stays **camera-agnostic**, so this monitor is an *external
+Per D-42 the cage stays **camera-agnostic**, so this monitor is an *external
 supervisor*: it consumes the perception signal and, when perception is invalid,
 raises the cage's C-05 perception-health trigger (Trigger 8, ``docs/04`` §C-05),
 exactly as ``/external_stop`` raises C-05's Trigger 6. The cage never reads the
@@ -14,7 +14,7 @@ camera; it only receives this boolean trigger.
 
 This module is the supervisor's **pure decision logic** — no ROS, host-testable. The
 ROS node that subscribes to the camera / health topic and forwards the trigger to
-the cage lives on the Ubuntu+Jazzy host (deferred, cf. D-39 GE2).
+the cage lives on the Ubuntu+Jazzy host (deferred, cf. D-42 GE2).
 """
 from __future__ import annotations
 

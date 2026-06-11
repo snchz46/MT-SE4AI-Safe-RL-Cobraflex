@@ -1,0 +1,19 @@
+{
+  "run_id": "camp_edge05_rl_seed2024_enforcement_rep95",
+  "scenario_id": "SC-EDGE-05",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-06-11T14:54:35.326440+00:00",
+  "duration_s": 10.0,
+  "git_commit": "64bfc2a10c462a3b3776098ff0e88b3214d8b5e0",
+  "cage_yaml": "/home/admit/Samuel/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "policy_checkpoint": "/home/admit/Samuel/thesis_repo/experiments/sim/cobraflex_ppo_cam_lane_2024_139k_peak.zip",
+  "policy_checkpoint_hash": "263926903c9cb99a1dde307de9b718b283cc5fcc20f886b05a175be0cc6f2858",
+  "centerline_yaml_hash": "a70c7379c4e49af554140ca6ee4ac94f27ec13ca1d554ea72bdb88d7faf5305d",
+  "scenario_yaml": "/home/admit/Samuel/thesis_repo/scenarios/edge/sc_edge_05.yaml",
+  "scenario_yaml_hash": "96254c56cb6078f810ec50b8218a7f6500af2065f8ec4dd890e01238f8e3d33d",
+  "rep": 95,
+  "seed": 2024,
+  "platform": "sim",
+  "status": "completed"
+}

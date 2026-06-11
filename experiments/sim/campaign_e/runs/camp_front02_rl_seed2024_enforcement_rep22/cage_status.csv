@@ -1,0 +1,2 @@
+episode,step,x,y,yaw,ey,epsi,s,speed,raw_steer,safe_steer,steer_correction,interventions,emergency,cv_ok,cv_state_available,cv_perception_invalid,cv_ey,cv_epsi,cv_confidence
+0,1,-0.003908,-0.131096,0.531338,-0.008696,0.581982,0.000000,0.000000,-1.000000,0.208689,1.208689,C-02;C-01;C-05,1,1,1,0,-0.259126,0.524541,0.5208

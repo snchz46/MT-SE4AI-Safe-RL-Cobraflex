@@ -31,6 +31,29 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [11.06.2026] — E2/GE3: E-main 200k completed — late collapse, peak-checkpoint selection by closing eval; eval-side DR bug fixed
+
+**Document(s) affected:** `experiments/sim/training/ppo_cam_train_2024_200k/` (learning curve, metadata, `fig_convergence.png`, `checkpoints_peak/` README + SHA256SUMS; binaries gitignored), `experiments/sim/runs/rl_cam_eval_2024_{139k,200k}_4k/` (closing evals), `src/cobraflex_rl/cobraflex_rl/eval_policy.py` (DR off in eval), `manuscript/chapters/chapter_07` §7.7.7 (full results, in Spanish), `.gitignore`.
+**Phase:** E2 (track 'E').
+**Gate context:** **GE3 (training) closes** with the peak-checkpoint selection; the perception-availability finding feeds GE4.
+**Author:** Samuel.
+
+### Change
+
+- **Training:** `ppo_cam_train_2024_200k` ran to 200,704 steps. ep_rew_mean peaked at **288.5 @ 139,264**; a destructive update at 156k (approx_kl 0.227, >10× regime) collapsed the policy with no recovery (final: 56 / ep_len 76). Emergencies stayed ≤1–2% throughout — progress was lost, not safety. Peak + pre-fall step-checkpoints were rescued from the rotating shared-prefix scratch into the run dir (hashes in SHA256SUMS).
+- **Closing eval** (SC-NOM-01, enforcement, max 4096 steps, DR off): peak-139k → **4.69 laps, mean |ey| 10.1 mm** (parity with F3's 9.9 mm on perfect state), one correct SR-014/Trigger-8 controlled stop at 181 s (cv_epsi spikes ≈ −0.38 rad in the curve-apex dash gaps; max excursion 37 mm, no edge contact). Final-200k → 0.23 laps, |ey| 102 mm (collapse confirmed). **Selected: 139k peak** (`experiments/sim/cobraflex_ppo_cam_lane_2024_139k_peak.zip`, honest name — campaign uses `--checkpoint-template 'cobraflex_ppo_cam_lane_{seed}_139k_peak.zip'`).
+- **Eval-determinism fix:** `eval_policy` now disables `domain_randomization` from the train config — a nominal eval episode could otherwise draw a random training-envelope degradation; a harsh draw blinded the CV estimator at spawn → instant no-state-ever emergency (both first eval attempts died at step 1). The only visual stressor in eval is the scenario's own block. This also protected the whole E-campaign path.
+
+### Rationale / Impact
+
+D-36 precedent: checkpoint merit is measured by eval, not assumed from the curve. The CNN+DR instability vs F3's monotone convergence is a reportable track finding (§7.7.7). Open items → GE4: perception-stop rate (~1 per 5 laps nominal) quantified by the campaign; deterministic EMA smoothing of the estimator's epsi channel as future mitigation; multi-seed N=5 run-vs-deferral pending (host now restricted to ≤1 h jobs — long runs move to the second machine).
+
+### Verification
+
+pytest 440 passed; check_traceability PASS. Both evals re-run after the DR fix: peak drives (4.69 laps); the step-1 emergency is gone.
+
+---
+
 ## [11.06.2026] — E2: integration merge — `main` (F4 campaign closed, G4 verdicts) merged into `e2e-camera`
 
 **Document(s) affected:** merge of 8 `main` commits (F4 campaign close: 1260 runs, global verdict `SATISFIED`, D-38/D-39 aggregation decisions, docs/07 verdicts, ch.8) into the E-track branch. Conflict resolutions: `docs/05` (count section + executed-campaign note + Q6, both sides), `docs/07` (main's verdicts + E-track rows/note), `docs/DECISIONS.md` (both decision sets, numeric order), `docs/CHANGELOG.md` (entries interleaved by date; restored the "Anticipated defense questions" entry header that `main` had accidentally dropped), `tools/run_campaign.py` + `campaign_metrics.py` + 3 test files (main's D-38 verdict spine + branch's E-campaign knobs/`resolve_world_path`; branch-side CRLF pollution normalized to LF), `tools/traceability_matrix.csv` (main's verdict-bearing rows + 11 E-track rows, D-43 refs, un-stubbed notes), evidence reports taken from `main`.

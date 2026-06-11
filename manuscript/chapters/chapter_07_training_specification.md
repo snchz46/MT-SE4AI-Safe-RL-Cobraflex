@@ -791,7 +791,7 @@ registrada: con cámara el simulador queda ligado a tiempo real (la
 renderización a RTF > 1 deja sin atender los servicios de gz — medido en
 E2), de modo que el coste de pared es ≈ control_dt por paso (~8 FPS).
 
-### 7.7.7 Resultados del piloto y del run principal  [run principal PENDIENTE]
+### 7.7.7 Resultados del piloto y del run principal
 
 **Piloto** (`ppo_cam_pilot_2024_20k`, semilla 2024, 20 480 pasos, DR activa,
 cage 0.6.1 en *enforcement*): el lazo de entrenamiento con cámara queda
@@ -807,11 +807,48 @@ Criterio de continuación del piloto (lazo cerrado con observación de
 cámara, intervenciones de la cage registradas, recompensa creciente, FPS
 viable): **cumplido** → se lanzó el run principal.
 
-**Run principal** (`ppo_cam_train_2024_200k`, 200k pasos, semilla 2024,
-checkpoint `cobraflex_ppo_cam_lane_2024_200k.zip`): en curso; esta parte
-se completará con el mismo aparato de §7.4 (`ep_rew_mean`, `ep_len_mean`,
-`explained_variance`, desglose de intervenciones y disponibilidad de
-percepción `cv_state_available`).
+**Run principal** (`ppo_cam_train_2024_200k`, 200 704 pasos, semilla 2024,
+~6,5 h a RTF 1; figura `fig_convergence.png` del run). La curva muestra
+tres regímenes: un ascenso limpio hasta `ep_rew_mean` ≈ 270 en 55k; un
+episodio de *churn* (270 → 160 en 55k–75k) del que el agente se recupera
+solo hasta el **máximo de 288,5 en el paso 139 264** (`ep_len_mean` 327);
+y un **colapso tardío sin recuperación** a partir de 156k —
+`approx_kl` salta a 0,227 (>10× su valor de régimen) en la fila de inicio,
+la firma de una actualización destructiva — que deja el checkpoint final
+en `ep_rew_mean` 56 / `ep_len_mean` 76. La tasa de emergencias se mantiene
+≤1–2 % incluso durante el colapso (el agente pierde progreso, no
+seguridad). Este contraste con la convergencia monótona del run F3
+(§7.4, vector de estado) es un hallazgo del track: **PPO sobre CNN con
+randomización visual es marcadamente menos estable** que sobre el estado
+de 6 dimensiones, y la política de checkpoints periódicos (cada 1024
+pasos) pasa de conveniencia a necesidad.
+
+**Selección de checkpoint por evaluación de cierre** (precedente D-36: el
+mérito se mide, no se asume; DR desactivada en eval — el único estresor
+visual legítimo en evaluación es el del escenario). Sobre SC-NOM-01,
+enforcement, tope 4096 pasos:
+
+| Candidato | Vueltas | media |ey| | Intervenciones | Terminación |
+| --- | --- | --- | --- | --- |
+| **139k (pico)** — `cobraflex_ppo_cam_lane_2024_139k_peak.zip` | **4,69** | **10,1 mm** | 63 % (C-06 dominante) | 1 parada C-05 a los 181 s |
+| 200k (final) | 0,23 | 102 mm | 42 % (C-02/C-03 activas) | parada C-05 a los 9 s |
+
+Se selecciona el **checkpoint del pico (139k)** como política E-main. Su
+|ey| medio (10,1 mm) está en paridad con el eval F3 de estado perfecto
+(9,9 mm, `rl_eval_2024_200k_4k4`); la diferencia con F3 no es de precisión
+sino de **disponibilidad de percepción**: la única parada en 181 s la
+disparó el Trigger 8 (SR-014) cuando el estimador CV produjo picos de
+heading (`cv_epsi` ≈ −0,38 rad) en los huecos de línea discontinua del
+ápice y el supervisor agotó su presupuesto de plausibilidad — una **parada
+controlada correcta** (excursión máxima 37 mm, sin contacto con el borde),
+no una pérdida de control. La cuantificación de esa tasa de paradas por
+percepción (≈ una cada ~5 vueltas en nominal) y su mitigación (suavizado
+EMA determinista del canal `epsi` del estimador) quedan para la campaña
+E-eval y trabajo futuro, respectivamente.
+
+**Multi-seed (N=5).** Pendiente de decisión correr-vs-deferral: el coste
+es ~7 h/semilla a RTF 1 (restricción §7.7.6) en una máquina dedicada; si
+se difiere, aplica el formato de deferral documentado de §7.5.3.
 
 ---
 

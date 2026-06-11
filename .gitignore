@@ -108,3 +108,4 @@ docs/.temp_templates/
 tools/assets*
 tools/launch_gui*# Ad-hoc sim launch logs from manual evidence sessions (tools/*.sh, validation runs)
 /*.log
+experiments/sim/training/*/checkpoints_peak/*.zip

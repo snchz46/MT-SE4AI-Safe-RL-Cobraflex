@@ -213,6 +213,16 @@ def main(args: Optional[Sequence[str]] = None) -> None:
     # spawn perturbation off); the F4 scenario path injects its initial
     # conditions through reset(options=...) instead (§7.5, D-34).
     _disable_spawn_perturbation(train_cfg)
+    # Same determinism rule for the camera track: H-10 visual domain
+    # randomisation is a TRAINING-side mitigation (SR-012). In eval the only
+    # visual stressor is the scenario's own perturbations block — otherwise a
+    # nominal eval episode can draw a random degradation from the training
+    # envelope (and a harsh draw blinds the CV estimator at spawn → instant
+    # no-state-ever emergency, observed on rl_cam_eval_2024_*).
+    if isinstance(train_cfg.get("domain_randomization"), dict):
+        train_cfg["domain_randomization"] = {
+            **train_cfg["domain_randomization"], "enabled": False,
+        }
 
     # F4 scenario mode: derive the run config (initial conditions, commanded
     # speed, horizon) from the SC-* YAML for this repetition. Absent --scenario,

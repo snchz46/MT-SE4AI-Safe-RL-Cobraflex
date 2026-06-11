@@ -31,6 +31,19 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [11.06.2026] — E2/GE4-prep: E-campaign smoke 2/2 PASS on the selected checkpoint — full campaign handed off to the dedicated run machine
+
+**Document(s) affected:** `experiments/sim/campaign_e_smoke/` (2-cell smoke: SC-PERT-04 rep00 glare-runtime-injector PASS; SC-PERT-09 rep00 worn-world via `resolve_world_path` PASS — first live Gazebo validation of the world-variant path).
+**Phase:** E2 (track 'E').
+**Gate context:** GE4 prep. Host policy (11.06): this machine runs only jobs ≤30–60 min; the full 400-run E-campaign and any multi-seed training run on the dedicated machine via `git pull` + `--resume`.
+**Author:** Samuel.
+
+### Change / Verification
+
+`run_campaign --scenarios SC-PERT-04,SC-PERT-09 --modes enforcement --reps 1 --train-config train_ppo_camera.yaml --checkpoint-template 'cobraflex_ppo_cam_lane_{seed}_139k_peak.zip'` → 2/2 PASS, 0 errors; report `campaign_e_smoke/campaign_report.json` (global INCOMPLETE as expected at 2 runs). Every campaign knob exercised end-to-end: checkpoint template, camera train-config, runtime visual injector, per-scenario world selection, D-29/D-30 verdict spine.
+
+---
+
 ## [11.06.2026] — E2/GE3: E-main 200k completed — late collapse, peak-checkpoint selection by closing eval; eval-side DR bug fixed
 
 **Document(s) affected:** `experiments/sim/training/ppo_cam_train_2024_200k/` (learning curve, metadata, `fig_convergence.png`, `checkpoints_peak/` README + SHA256SUMS; binaries gitignored), `experiments/sim/runs/rl_cam_eval_2024_{139k,200k}_4k/` (closing evals), `src/cobraflex_rl/cobraflex_rl/eval_policy.py` (DR off in eval), `manuscript/chapters/chapter_07` §7.7.7 (full results, in Spanish), `.gitignore`.

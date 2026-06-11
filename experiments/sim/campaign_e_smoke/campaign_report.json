@@ -1,0 +1,208 @@
+{
+  "verdict_mode": "enforcement",
+  "global": {
+    "verdict": "INCOMPLETE",
+    "blocking_sr_cl_a": [],
+    "incomplete_sr_cl_a": [
+      "SR-001",
+      "SR-002",
+      "SR-003",
+      "SR-004",
+      "SR-005",
+      "SR-007",
+      "SR-008",
+      "SR-012",
+      "SR-013",
+      "SR-014"
+    ],
+    "n_sr_cl_a": 10
+  },
+  "per_scenario": [
+    {
+      "scenario": "SC-PERT-04",
+      "mode": "enforcement",
+      "n_runs": 1,
+      "n_pass": 1,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-09",
+      "mode": "enforcement",
+      "n_runs": 1,
+      "n_pass": 1,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    }
+  ],
+  "per_sr": [
+    {
+      "sr": "SR-001",
+      "criticality": "SR-CL-A",
+      "status": "not_run",
+      "verdict": null,
+      "run_count_ok": false,
+      "families": [],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": "no executable scenario yet (all stubs/missing)"
+    },
+    {
+      "sr": "SR-002",
+      "criticality": "SR-CL-A",
+      "status": "not_run",
+      "verdict": null,
+      "run_count_ok": false,
+      "families": [],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": "no executable scenario yet (all stubs/missing)"
+    },
+    {
+      "sr": "SR-003",
+      "criticality": "SR-CL-A",
+      "status": "not_run",
+      "verdict": null,
+      "run_count_ok": false,
+      "families": [],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": "no executable scenario yet (all stubs/missing)"
+    },
+    {
+      "sr": "SR-004",
+      "criticality": "SR-CL-A",
+      "status": "not_run",
+      "verdict": null,
+      "run_count_ok": false,
+      "families": [],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": "no executable scenario yet (all stubs/missing)"
+    },
+    {
+      "sr": "SR-005",
+      "criticality": "SR-CL-A",
+      "status": "not_run",
+      "verdict": null,
+      "run_count_ok": false,
+      "families": [],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": "no executable scenario yet (all stubs/missing)"
+    },
+    {
+      "sr": "SR-006",
+      "criticality": "SR-CL-B",
+      "status": "insufficient_evidence",
+      "verdict": null,
+      "run_count_ok": false,
+      "families": [
+        "adverse"
+      ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": "D-29 not met (insufficient runs or family coverage)"
+    },
+    {
+      "sr": "SR-007",
+      "criticality": "SR-CL-A",
+      "status": "not_run",
+      "verdict": null,
+      "run_count_ok": false,
+      "families": [],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": "no executable scenario yet (all stubs/missing)"
+    },
+    {
+      "sr": "SR-008",
+      "criticality": "SR-CL-A",
+      "status": "not_run",
+      "verdict": null,
+      "run_count_ok": false,
+      "families": [],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": "no executable scenario yet (all stubs/missing)"
+    },
+    {
+      "sr": "SR-009",
+      "criticality": "SR-CL-B",
+      "status": "not_run",
+      "verdict": null,
+      "run_count_ok": false,
+      "families": [],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": "no executable scenario yet (all stubs/missing)"
+    },
+    {
+      "sr": "SR-010",
+      "criticality": "SR-CL-B",
+      "status": "not_run",
+      "verdict": null,
+      "run_count_ok": false,
+      "families": [],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": "no executable scenario yet (all stubs/missing)"
+    },
+    {
+      "sr": "SR-011",
+      "criticality": "SR-CL-B",
+      "status": "not_run",
+      "verdict": null,
+      "run_count_ok": false,
+      "families": [],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": "no executable scenario yet (all stubs/missing)"
+    },
+    {
+      "sr": "SR-012",
+      "criticality": "SR-CL-A",
+      "status": "insufficient_evidence",
+      "verdict": null,
+      "run_count_ok": false,
+      "families": [
+        "adverse"
+      ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": "D-29 not met (insufficient runs or family coverage)"
+    },
+    {
+      "sr": "SR-013",
+      "criticality": "SR-CL-A",
+      "status": "not_run",
+      "verdict": null,
+      "run_count_ok": false,
+      "families": [],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": "no executable scenario yet (all stubs/missing)"
+    },
+    {
+      "sr": "SR-014",
+      "criticality": "SR-CL-A",
+      "status": "insufficient_evidence",
+      "verdict": null,
+      "run_count_ok": false,
+      "families": [
+        "adverse"
+      ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": "D-29 not met (insufficient runs or family coverage)"
+    }
+  ],
+  "n_runs": 2,
+  "n_error": 0
+}

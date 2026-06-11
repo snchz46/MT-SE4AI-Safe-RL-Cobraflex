@@ -158,6 +158,20 @@ y empíricas, no formales. Esta declaración de alcance es necesaria para
 no inducir lectores a confundir el alcance de la contribución (cf. §3.9
 sobre limitaciones del marco).
 
+La cage tampoco depende del *controlador aprendido*. Evalúa sus reglas sobre un
+estimador de estado **independiente de la policy**: en el F-track, el ground-truth
+proyectado al centerline; en el **track 'E'** (end-to-end con cámara, D-41), un
+**detector de líneas por visión propio, clásico y determinista** —distinto de la CNN
+de la policy— (decisión **D-43**, que supersede a D-42). Esto sostiene el argumento A2
+(cage verificable y auditable por separado: un algoritmo de visión clásico es
+inspeccionable, la CNN no) y permite que la cage **generalice a cualquier carretera con
+líneas visibles**, igual que la policy. El trade-off honesto de D-43: policy y cage
+comparten ahora la cámara, así que una avería de cámara puede cegar a **ambos** a la vez
+(causa común); la seguridad residual es la **parada controlada open-loop** (SR-013, sin
+percepción), y un estimador del cage que se equivoque con confianza es el nuevo hazard
+**H-12** (mitigado por SR-014). El detalle vive en `docs/04_cage_specification.md` (nota
+de percepción del cage y Trigger 8 de C-05).
+
 ---
 
 ## 5.3 Retos conceptuales del diseño  [BORRADOR D22]

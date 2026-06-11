@@ -14,6 +14,8 @@ from rclpy.utilities import remove_ros_args
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback
 from stable_baselines3.common.env_checker import check_env
+from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
 import yaml
 
 from .callbacks import (
@@ -114,6 +116,11 @@ def _write_training_metadata(
             "n_steps": int(train_cfg.get("n_steps", 1024)),
             "batch_size": int(train_cfg.get("batch_size", 64)),
         },
+        # Track 'E' provenance (inert for the state-vector track): policy
+        # class, observation type, frame stack and the H-10 DR envelope.
+        "policy": str(train_cfg.get("policy", "MlpPolicy")),
+        "observation": dict(train_cfg.get("observation", {})),
+        "domain_randomization": dict(train_cfg.get("domain_randomization", {})),
         "status": status,
     }
     with (run_dir / "metadata.json").open("w", encoding="utf-8") as handle:
@@ -170,8 +177,17 @@ def main(args: Optional[Sequence[str]] = None) -> None:
     env: Optional[GazeboLaneEnv] = None
     status = "failed"
 
+    obs_cfg = dict(train_cfg.get("observation", {}))
+    camera_obs = str(obs_cfg.get("type", "state")) == "camera"
+
     try:
-        interface = RosGazeboInterface()
+        interface = RosGazeboInterface(
+            camera_topic=(
+                str(obs_cfg.get("camera", {}).get("topic", "/camera/image_raw"))
+                if camera_obs
+                else ""
+            )
+        )
         if not interface.wait_for_initial_data(timeout_sec=10.0):
             raise RuntimeError("Timed out waiting for /odom data.")
 
@@ -206,9 +222,25 @@ def main(args: Optional[Sequence[str]] = None) -> None:
 
         check_env(env, warn=True, skip_render_check=True)
 
+        # Track 'E' (docs/09 §10): camera obs trains a CnnPolicy over a frame
+        # stack (k=4 fixed at E2; VecFrameStack recovers the velocity/rate
+        # cues a single frame loses). SB3 adds VecTransposeImage on top
+        # automatically. The state-vector track keeps the raw env + MlpPolicy.
+        policy_name = str(train_cfg.get("policy", "MlpPolicy"))
+        if camera_obs:
+            frame_stack = int(obs_cfg.get("camera", {}).get("frame_stack", 4))
+            # Monitor must wrap the raw env (SB3 only auto-wraps non-vec
+            # envs); without it ep_rew_mean/ep_len_mean stay NaN in the
+            # learning curve.
+            train_env = VecFrameStack(
+                DummyVecEnv([lambda: Monitor(env)]), n_stack=frame_stack
+            )
+        else:
+            train_env = env
+
         model = PPO(
-            policy="MlpPolicy",
-            env=env,
+            policy=policy_name,
+            env=train_env,
             learning_rate=float(train_cfg.get("learning_rate", 3.0e-4)),
             gamma=float(train_cfg.get("gamma", 0.99)),
             n_steps=int(train_cfg.get("n_steps", 1024)),

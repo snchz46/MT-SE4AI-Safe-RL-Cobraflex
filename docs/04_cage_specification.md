@@ -1,9 +1,9 @@
 # Cage Specification
 
 **Status:** Living document — Phase 2 deliverable  
-**Last update:** 18.05.2026  
+**Last update:** 10.06.2026 (track 'E': C-05 Trigger 8 implemented; cage state source = CV lane-estimator per D-43)  
 **Approved at Gate:** G2 (pending)  
-**Cage YAML version:** 0.5.1 (`cage/cage.yaml`).
+**Cage YAML version:** 0.6.0 (`cage/cage.yaml`).
 
 ## Purpose
 
@@ -48,6 +48,14 @@ The cage is a dedicated ROS2 node, distinct from the policy node. Its interface:
 - `monitoring` — corrections are computed and logged but not applied; `/safe_action` equals `/raw_action`. Used for the causal comparison in the experimental campaign.
 
 The mode is set by a launch parameter and recorded in the metadata of every run.
+
+### Track-E note — cage perception (D-42 superseded by D-43)
+
+On the parallel **track 'E'** (end-to-end front-camera policy, D-41) the cage's `state` (`/state_obs`) is produced by a **dedicated, deterministic computer-vision lane-detection pipeline** — separate from the policy's learned CNN, and **not** from privileged ground truth (decision **D-43**, which supersedes D-42's "cage on ground truth, never the camera"). The cage still evaluates C-01..C-06 **unchanged** over this `state`; only the *source* of the state changes (the CV-estimator node instead of `PolylineTracker(/odom_truth)`). Ground truth survives **in simulation only**, as the training reward and an **oracle** to measure the CV estimator's error — never as a runtime input.
+
+This keeps the cage independent of the **learned policy** and **auditable** (a classical CV algorithm is inspectable, unlike the CNN), so the A2 "independently-verifiable cage" property still holds; and it lets the cage generalise to **any road with visible lane lines**, like the policy. The honest trade-off (D-43): policy and cage now both rely on the camera, so a camera fault (H-10/H-11) can blind **both** at once (common-cause) — the residual safety is the open-loop **controlled stop** (SR-013 / C-05, which needs no perception: "no lines ⇒ stop"). A confidently *wrong* CV estimate is a new hazard, **H-12** (cage lane-misdetection), mitigated by **SR-014** (estimator plausibility / temporal-consistency check + conservative fall-back to C-05). Still **no new numbered cage rule**: SR-012 by C-01/C-02/C-03 over the CV state + a training constraint, and SR-013 / SR-014 by C-05 (Trigger 8 below).
+
+**Implemented (E2, cage YAML 0.6.0).** The CV estimator and its supervision are built and host-tested: `cobraflex_rl/cv_lane_estimator.py` (HSV white mask with vegetation-hue exclusion → per-row white-run candidates → metric ground-frame projection via the closed-form pitch-only camera model `camera_geometry.py` → polynomial line clustering → driven-lane pair selection → `ey/epsi/lane-width/curvature` at the vehicle), wrapped by `cage_perception.CagePerceptionSupervisor` (health per SR-013 + plausibility per SR-014 → cage `state` or `perception_invalid`). In the training/eval loop (`gazebo_lane_env`, camera mode) the cage consumes **only** this estimate; ground truth keeps driving reward, termination and metrics (the oracle role). Estimator-vs-oracle accuracy: `experiments/sim/runs/cv_estimator_val_*` (GE2 evidence).
 
 ## Rules
 
@@ -163,8 +171,8 @@ if v > v_ceiling:
 
 ### C-05 Emergency mode
 
-**Implements.** SR-005, SR-007, SR-008.
-**Mitigates.** H-04, H-06, H-07.
+**Implements.** SR-005, SR-007, SR-008, SR-013, SR-014 (SR-013/SR-014 on track 'E' only — see Trigger 8).
+**Mitigates.** H-04, H-06, H-07, H-11, H-12 (H-11/H-12 on track 'E').
 **Type.** Trigger-based (procedural safety).
 
 **Triggers (any of these activates emergency mode):**
@@ -176,8 +184,11 @@ if v > v_ceiling:
 5. Missing state: no `/state_obs` received for `N_missing_max` consecutive cycles.
 6. External stop: `/external_stop` signal received.
 7. Joint-envelope assertion failure (see §Joint-envelope assertion below).
+8. (Track 'E', D-43) Perception-health invalid: the cage's CV lane-estimator reports either **loss** of a valid lane (occlusion, absent features, frame stale / dropped beyond `perc_staleness_max`) **or** a failed **plausibility / temporal-consistency** check (a suspect, possibly false detection). Implements SR-013 (loss) and SR-014 (misdetection); mitigates H-11 and H-12. On this trigger the cage executes the open-loop controlled stop — which needs no perception ("no valid lines ⇒ stop").
 
-**Implementation status (cage YAML 0.5.1).** Triggers 1–6 are implemented in [cage/rules/c05_emergency.py](../cage/rules/c05_emergency.py); Triggers 1–4 and 6 are exercised by [test_c05_emergency.py](../cage/tests/test_c05_emergency.py) and Triggers 2 and 5 by [test_c05_triggers_extended.py](../cage/tests/test_c05_triggers_extended.py). Trigger 5 (missing state) is fed by the cage_node-level counter in [cage/cage_node.py](../cage/cage_node.py) (`_cycles_since_last_state`), verified by [test_cage_node_missing_state.py](../cage/tests/test_cage_node_missing_state.py). The inter-cycle oscillation check (SR-010 Part 2) is also implemented in `cage_node` (per-rule signed-correction history, sliding-window alternation rate, persistence timer) and surfaces as an additional `oscillation_detected` trigger of C-05; coverage in [test_oscillation.py](../cage/tests/test_oscillation.py). Version 0.5.1 fixes the oscillation-window reset bug observed when simulation time restarted between ROS launches. Trigger 7 (joint-envelope assertion, SR-010 Part 1) is **deferred**: it requires a per-rule `safe_envelope_predicate_holds(state, action) -> bool` method that does not yet exist on the rule contract.
+**Implementation status (cage YAML 0.6.0).** Triggers 1–7 are implemented in [cage/rules/c05_emergency.py](../cage/rules/c05_emergency.py) and [cage/cage_node.py](../cage/cage_node.py); Triggers 1–4 and 6 are exercised by [test_c05_emergency.py](../cage/tests/test_c05_emergency.py), Triggers 2 and 5 by [test_c05_triggers_extended.py](../cage/tests/test_c05_triggers_extended.py), Trigger 5's cage_node-level counter (`_cycles_since_last_state`) by [test_cage_node_missing_state.py](../cage/tests/test_cage_node_missing_state.py), Trigger 7 (joint-envelope assertion, SR-010 Part 1) by [test_joint_envelope.py](../cage/tests/test_joint_envelope.py), and the inter-cycle oscillation check (SR-010 Part 2, the `oscillation_detected` trigger) by [test_oscillation.py](../cage/tests/test_oscillation.py).
+
+**Trigger 8 is implemented (cage YAML 0.6.0, track 'E').** C-05 consumes a single boolean, `ctx["perception_invalid"]`, raised by the **external perception supervisor** ([cobraflex_rl/cage_perception.py](../src/cobraflex_rl/cobraflex_rl/cage_perception.py)) that composes the deterministic CV lane-estimator ([cv_lane_estimator.py](../src/cobraflex_rl/cobraflex_rl/cv_lane_estimator.py), classical CV over the closed-form pitch-only ground-plane mapping of [camera_geometry.py](../src/cobraflex_rl/cobraflex_rl/camera_geometry.py)) with the SR-013 health monitor (`perception_health.py`: stale/dropped frame, low confidence, missing features) and the SR-014 plausibility / temporal-consistency check (`lane_plausibility.py`). The trigger is gated by the YAML key `c05_emergency.perception_trigger_enabled` (code default **false**, so pre-0.6.0 YAMLs keep their exact behaviour; the 0.6.0 YAML ships it **true**). Coverage: [test_c05_perception_trigger.py](../cage/tests/test_c05_perception_trigger.py) for the rule, `policy/tests/test_cage_perception.py` for the supervisor composition. The supervisor's thresholds live with the supervisor, not in `cage.yaml` — the cage stays camera-agnostic. Per D-43's verification plan, the estimator's error is validated in sim against the ground-truth oracle (`tools/validate_cv_estimator.py` → `experiments/sim/runs/cv_estimator_val_*`).
 
 **On activation:**
 

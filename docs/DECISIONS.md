@@ -1,7 +1,7 @@
 # DECISIONS.md — Project decision log
 
 <!--
-Status: D9 (Phase 0 close) + F1 audit additions (D-25..D-33) + F3 (D-34) + F4 (D-35, D-36, D-37, D-38, D-39).
+Status: D9 (Phase 0 close) + F1 audit additions (D-25..D-33) + F3 (D-34) + F4 (D-35, D-36, D-37, D-38, D-39) + E-track (D-41 supersedes D-01; D-42 superseded by D-43; D-43).
 Last update: see Git commit date.
 -->
 
@@ -43,7 +43,7 @@ consistent with the chapters.
 
 | ID | Title | Chapter / Section | Status |
 | --- | --- | --- | --- |
-| D-01 | No *end-to-end* architecture for the integration of the RL *policy* | §3.5.1 (additional motivation in §3.4) | CONFIRMED |
+| D-01 | No *end-to-end* architecture for the integration of the RL *policy* | §3.5.1 (additional motivation in §3.4) | SUPERSEDED by D-41 |
 | D-02 | Three chained hypotheses (H1, H2, H3) | §1.3 | CONFIRMED |
 | D-03 | Seven specific objectives (OE1–OE7) with 1:1 mapping to chapters | §1.4 | CONFIRMED |
 | D-04 | Bounded scope: SAE Level 2, single *lane-following* case, controlled track | §1.6 | CONFIRMED |
@@ -77,6 +77,21 @@ consistent with the chapters.
 | D-37 | F4 realises ODD-1..4 on the single oval world at a fixed-speed (ACT_DIM=1) operating point; ODD-1/2 covered, ODD-3 partial (geometry yes, speed envelope no), ODD-4 deferred | `docs/08` §12; `docs/05` Track mapping; §8 | CONFIRMED |
 | D-38 | Indeterminate (None) per-run verdicts are excluded from the pass fraction and propagate as `insufficient_evidence`, not as a failure; `run_campaign.py` reconciled to the `verdict_aggregation.py` spine | §8.2 (sim-eval aggregation); `tools/run_campaign.py`; `docs/07` | CONFIRMED |
 | D-39 | SR-006 (actuator smoothness) verified directly on its committed-steer rate metric (non-safety-override steps), reported outside the D-30 per-scenario aggregation (precedent D-35); not by `ALL`-scenario inheritance | §8.5/§8.7; `tools/sr006_smoothness.py`; `docs/07` | CONFIRMED |
+| D-41 | Track 'E' (parallel, end-to-end front-camera): **supersedes D-01**; camera→action policy behind a retained modular cage; phases E0..E6 / gates GE0..GE6, commit prefix `E2:` | `docs/00`; `docs/01`; §3.5.1 | CONFIRMED |
+| D-42 | Track 'E' cage operates on an independent state estimate, not the camera (preserves cage independence; distinguishes H-06 cage-state from H-11 camera-perception) | `docs/04`; `docs/02` | SUPERSEDED by D-43 |
+| D-43 | Track 'E' cage state comes from a dedicated deterministic vision lane-estimator (separate from the policy CNN), not ground truth — for generalisation to any road with visible lines; accepts common-cause + new hazard H-12 | `docs/04`; `docs/09` §10; `docs/02` | CONFIRMED |
+
+> **Renumbering note (11.06.2026, pre-merge).** The E-track decisions above were
+> originally allocated **D-38 / D-39 / D-40** on the `e2e-camera` branch, while
+> `main` independently allocated **D-38 / D-39** to the F4 aggregation decisions
+> (indeterminate verdicts = insufficient evidence; SR-006 own-metric). To keep
+> IDs unique on the merged trunk, the E-track decisions were renumbered
+> **D-38→D-41, D-39→D-42, D-40→D-43** across all living documents, scenario
+> YAMLs, code comments and the manuscript. Git commits dated 09–11.06.2026 with
+> the `E2:`/`E3:` prefix and the frozen evidence artifacts under
+> `experiments/sim/runs/cv_estimator_val_*` cite the **old** numbers (history
+> and evidence are not rewritten); read them through this mapping. `main`'s
+> D-38/D-39 keep their meanings unchanged.
 
 ---
 
@@ -87,7 +102,7 @@ consistent with the chapters.
 | Field | Value |
 | --- | --- |
 | Section | §3.5.1 (additional motivation in §3.4) |
-| Status | CONFIRMED |
+| Status | SUPERSEDED by D-41 (camera track adopts a camera→action policy behind the retained modular cage) |
 | Date | D9 (Phase 0) |
 | Planned review | None (foundational architectural decision) |
 
@@ -1321,6 +1336,7 @@ inferred.
 
 ---
 
+
 ### D-38 — Indeterminate per-run verdicts are insufficient evidence, not failures (aggregator reconciliation)
 
 | Field | Value |
@@ -1490,3 +1506,184 @@ this file in their *justification* field via the reference `cf. D-NN`.
 **Adoption cost (criterion D-19).** Each new entry adds between ten and
 twenty minutes of adoption cost (drafting + review). This cost is
 explicitly considered when evaluating the framework in Chapter 11.
+
+
+---
+
+### D-41 — Track 'E': parallel end-to-end front-camera lane-following (supersedes D-01)
+
+| Field | Value |
+| --- | --- |
+| Section | `docs/00` (Parallel track E); `docs/01` (E-phase numbering); manuscript §3.5.1 (supersedes D-01) |
+| Status | CONFIRMED |
+| Date | F4 / E0 (09.06.2026) |
+| Planned review | GE0 (track-entry gate) |
+
+**Supersedes D-01.**
+
+**Decision.** A parallel development track — **track 'E'** — is opened on branch
+`e2e-camera` to re-develop the lane-following function with an **end-to-end
+front-camera policy**: the RL policy maps the front-camera image directly to the
+action, *learning* perception instead of consuming the hand-built state vector
+(`/state_obs`) of the F-track. This **supersedes D-01**'s prohibition on pixels
+entering the learned component. The **modular safety architecture is retained**: a
+rule-based **cage remains a distinct, independently-verifiable module** that mediates
+actuation (D-42), so the *system* is not end-to-end from pixels to actuators — only
+the *policy*'s perception is. The track carries its own phase/gate numbering —
+**E0..E6 / GE0..GE6**, commit prefix **`E2:`** — re-traverses the V's left arm
+(HARA → SRS → Cage → Training Spec) for the new front-end, and **shares the global,
+never-reused artefact ID space** (`docs/01`). The F-track continues independently on
+`main` (F4 → G4); its F2/F3/F4 evidence is frozen, not invalidated.
+
+**Alternatives considered and rejected.**
+- *Keep D-01 and reject the camera track.* Rejected: the camera variant is a second
+  instantiation of the SE4AI method on a harder perception problem and strengthens the
+  generality claim; foreclosing it on a Phase-0 decision taken before the cage was even
+  demonstrated would be premature.
+- *Full PilotNet-style end-to-end (pixels → actuation, no cage).* Rejected for exactly
+  D-01's original reasons (Salay et al. 2017; Shalev-Shwartz & Shashua 2016) **and**
+  because it would delete the cage — the thesis's contribution. D-41 supersedes only the
+  "no pixels into the policy" clause, never the modular-cage commitment.
+- *Scoped relaxation that leaves D-01 CONFIRMED for the F-track.* Considered; rejected in
+  favour of a clean formal supersession so the decision ledger carries a single current
+  architectural stance going forward rather than two conditionally-active ones. The
+  F-track evidence stands on its own run metadata regardless of D-01's status.
+
+**Rationale.** D-01 rejected end-to-end because it would make framework adaptations
+A1/A2/A4 unviable (D-07/D-08/D-10). That rationale is **answered, not ignored**: A1 (Cage
+Spec ≠ Training Spec) holds because cage and policy remain distinct modules; A2 (cage
+independently verifiable) holds because the cage runs on an **independent state estimate**
+(D-42), fully separable from the camera policy; A4 (traceability) holds because the
+H/SR/C/SC/M chain and the cage rules C-01..C-06 are unchanged. The policy was *already* a
+black box in the F-track; moving its *input* from a hand-built state vector to pixels does
+not reduce cage verifiability, because the cage never depended on the policy's internals or
+inputs. What the track accepts as a known cost is D-01's *other* concern — the larger
+training-set requirement of end-to-end perception (Shalev-Shwartz & Shashua 2016) —
+budgeted into the E-training phase.
+
+**Consequences.**
+- Branch `e2e-camera`, commit prefix `E2:`. `docs/01` gains the E-phase/gate scheme;
+  `docs/00` gains a "Parallel track E" section.
+- D-01 status → **SUPERSEDED by D-41**; manuscript §3.5.1 to be revised to record the
+  supersession and the retained-cage argument *(manuscript edit pending — follow-up)*.
+- Shared-register left-arm extensions: H-10/H-11 (`docs/02`), SR-012/SR-013 (`docs/03`),
+  SC-PERT-04..07 (`docs/05`); cage C-01..C-06 and metrics reused (D-42).
+- Deferred to later E-phases: camera-observation / CNN env design (`docs/09`), reward
+  (`docs/10`), Gazebo camera sensor + perception/`policy`, PPO retraining, un-stubbing
+  SC-PERT-04..07.
+- Cites D-31 (the new perception hazards are functional sensor/environment failure modes,
+  narrower than D-31's still-excluded non-functional AI families), D-42, D-07/D-08/D-10.
+
+---
+
+### D-42 — Track 'E' cage operates on an independent state estimate, not the camera
+
+| Field | Value |
+| --- | --- |
+| Section | `docs/04` (cage independence); `docs/02` (H-06 vs H-11) |
+| Status | SUPERSEDED by D-43 (cage state moves from privileged ground truth to a dedicated deterministic vision lane-estimator, for generalisation) |
+| Date | F4 / E0 (09.06.2026) |
+| Planned review | GE2 (cage integration on the camera track) |
+
+**Decision.** On track 'E' the safety cage continues to evaluate its rules C-01..C-06
+over an **independent state estimate** — its own state pipeline (and, in simulation,
+privileged ground-truth) — **not** over the camera image or the policy's learned
+perception. The camera-to-action policy and the cage therefore consume **disjoint
+inputs**: the policy sees pixels, the cage sees state. C-01..C-06 are reused unchanged.
+
+**Alternatives considered and rejected.**
+- *Cage derives its state from the same camera/perception as the policy.* Rejected: it
+  injects perception error into the safety monitor and couples the cage to the very
+  component it is meant to bound — destroying the A2 "independently-verifiable cage"
+  property and the central thesis argument that the cage is independent of the controller
+  *and its perception*. It would also turn a camera failure into a common-cause failure of
+  policy *and* cage at once.
+- *Hybrid (some rules on state, others on camera).* Rejected: partial coupling still
+  breaks independence for the camera-fed rules and complicates traceability for no benefit.
+
+**Rationale.** The thesis's safety claim rests on the cage being an *independent* runtime
+monitor. Keeping the cage on an independent state estimate is precisely what makes D-41's
+supersession of D-01 safe: pixels may enter the *policy*, but they never enter the *safety
+envelope*. This yields a clean hazard separation — **H-06** (operation under invalid /
+unobservable *cage* state: the cage's own pipeline failing) and **H-11** (loss of valid
+*camera* perception: the policy's input failing) become genuinely distinct hazards with
+distinct mitigations rather than one conflated failure. Under camera degradation the policy
+may command poorly, but the cage — seeing valid independent state — still bounds the
+trajectory (the core cage-value demonstration, now under a perception stressor).
+
+**Consequences.**
+- C-01..C-06 reused unchanged; **no new numbered cage rule** required for H-10 (mitigated
+  by the existing cage + training augmentation).
+- H-11's "safe degradation on loss of valid perception" (SR-013) is realised by a
+  **perception-health supervisor** that raises an existing C-05 emergency trigger, keeping
+  the cage itself camera-agnostic. The final mechanism is fixed in `docs/04` at GE2
+  (candidate mini-ADR if it warrants its own rule).
+- Requires an independent state source on the camera track (sim ground-truth initially; a
+  robust independent estimator for physical deployment — deferred to E-physical).
+- Cites D-41, D-01 (the superseded decision whose modular-safety intent D-42 preserves),
+  D-08 (A2).
+
+---
+
+### D-43 — Track 'E' cage state comes from a dedicated deterministic vision lane-estimator (supersedes D-42)
+
+| Field | Value |
+| --- | --- |
+| Section | `docs/04` (cage perception); `docs/09` §10; `docs/02` (H-10/H-11/H-12) |
+| Status | CONFIRMED |
+| Date | E1 (09.06.2026) |
+| Planned review | GE2 (CV-estimator integration + accuracy vs the ground-truth oracle) |
+
+**Supersedes D-42.**
+
+**Decision.** On track 'E' the cage's independent state (the `ey/epsi/…` that C-01..C-06
+consume) is produced by a **dedicated, deterministic (classical computer-vision)
+lane-detection pipeline**, separate from the policy's learned CNN — **not** by
+privileged ground truth and **not** by the policy's perception. This supersedes D-42's
+"cage on ground truth, never the camera". The goal is generalisation: the cage, like the
+policy, must work on **any road with visible lane lines** without an authored centerline.
+Ground truth remains available **in simulation only**, as (a) the training **reward**
+signal and (b) an **oracle** to measure the CV estimator's error; neither policy nor cage
+consumes ground truth at **runtime**. C-01..C-06 are reused unchanged — only the *source*
+of the `state` they receive changes (CV estimator instead of `PolylineTracker(/odom_truth)`).
+
+**Alternatives considered and rejected.**
+- *Keep D-42 (cage on privileged ground truth).* Rejected for the generalisation goal:
+  ground truth needs an authored centerline per world, so the cage could not protect on an
+  arbitrary / real road with no centerline — only the policy would generalise, not the
+  safety net.
+- *Cage shares the policy's CNN perception.* Rejected: it couples the safety monitor to the
+  learned, opaque controller and destroys the A2 "independently-verifiable cage" property.
+  A *separate, deterministic* CV pipeline keeps the cage independent of the **policy** and
+  auditable, even though it now uses vision.
+- *Hybrid (ground truth in sim now, CV interface later).* Considered; rejected as the
+  primary path because deferring the estimator would leave the generalisation claim
+  unverified and re-open the design at E-physical. The CV estimator is built now; ground
+  truth stays as the sim oracle that validates it.
+
+**Rationale.** "Any road, sees lines → drives" requires the *whole* system — policy and
+cage — to key on visible lane lines, not on an authored centerline. A deterministic CV
+lane detector for the cage preserves what D-42 actually protected (independence from the
+*learned policy* + auditability: a classical algorithm is inspectable, unlike the CNN)
+while extending it to ungrounded roads. It also yields a **cross-check**: divergence
+between the policy's behaviour and the cage's CV estimate is a safety signal (a CNN
+hallucinating a lane the CV does not see is bounded by C-01/C-02 on the CV state).
+
+**Consequences (including the honest trade-off).**
+- **Common-cause failure (accepted).** A camera fault (glare / occlusion / dropout —
+  H-10/H-11) can now blind **both** the policy and the cage at once — the isolation D-42
+  provided is given up. Mitigations: (i) the cage detector is *deterministic*, with failure
+  modes that differ from the CNN's, partially decorrelating the two; (ii) when valid lines
+  are absent for the cage detector, the safe action is an **open-loop controlled stop**
+  (SR-013 / C-05), which needs no perception — so "no lines ⇒ stop" is the designed
+  behaviour, matching the track's intent.
+- **New hazard.** A confidently *wrong* CV lane estimate (a *plausible but false* lane)
+  would make the cage enforce a wrong envelope — impossible under ground-truth D-42. To be
+  registered as **H-12 (cage lane-misdetection)** with **SR-014** (cage-estimator
+  plausibility / temporal-consistency check + conservative-on-uncertainty fall-back to C-05).
+- The cage's `state` source becomes the CV-estimator node (Ubuntu); C-01..C-06 and the
+  reward (`docs/10`) are unchanged. `docs/04`, `docs/09` §10 and the H-10/H-11/SR-012/SR-013
+  framing are revised from "cage on ground truth" to "cage on its own CV estimate".
+- D-42 status → **SUPERSEDED by D-43**.
+- Cites D-41, D-42 (superseded), D-08 (A2), D-01 (whose modular, auditable-cage spirit is
+  retained: the cage is still a distinct, deterministic, inspectable module).

@@ -1,0 +1,201 @@
+{
+  "metadata": {
+    "run_id": "cv_estimator_val_20260610T095912Z",
+    "purpose": "D-40 CV lane-estimator validation vs ground-truth oracle (GE2 evidence)",
+    "git_commit": "4a22e663157365e8a296c810b833e975b5ef2b2d",
+    "world": "src/cobraflex/worlds/lane_following_oval.world",
+    "world_sha256": "a148abe9994ad2f5f9ed3e7ad72a4512ce6f224c34c2700e5c6dfcfba12b23a5",
+    "centerline": "src/cobraflex_rl/config/oval_right_lane_centerline.yaml",
+    "centerline_sha256": "a70c7379c4e49af554140ca6ee4ac94f27ec13ca1d554ea72bdb88d7faf5305d",
+    "cage_yaml_sha256": "f5dea852cbaa1bfbf4210ddd7a16b8f1ab37a59869115319ab15ec45f6cf58b4",
+    "camera_model": {
+      "height_m": 0.13724999999999998,
+      "pitch_rad": 0.25,
+      "hfov_rad": 1.3962634,
+      "width_px": 640,
+      "height_px": 480
+    },
+    "estimator_config": {
+      "white_sat_max": 30,
+      "white_val_min": 170,
+      "near_distance_m": 0.15,
+      "far_distance_m": 1.0,
+      "n_scan_rows": 24,
+      "min_marking_width_m": 0.004,
+      "max_marking_width_m": 0.1,
+      "cluster_tol_m": 0.08,
+      "min_points_per_line": 4,
+      "lane_width_nominal_m": 0.245,
+      "lane_width_tol_m": 0.1,
+      "min_rows_for_curvature": 8,
+      "max_abs_y_m": 1.5
+    },
+    "grid": {
+      "n_s": 20,
+      "n_s_degraded": 6,
+      "offsets": [
+        -0.06,
+        0.0,
+        0.06
+      ],
+      "headings": [
+        -0.15,
+        0.0,
+        0.15
+      ]
+    },
+    "degradations": [
+      [
+        "glare_overexposure",
+        0.3
+      ],
+      [
+        "glare_overexposure",
+        0.6
+      ],
+      [
+        "low_light_underexposure",
+        0.3
+      ],
+      [
+        "low_light_underexposure",
+        0.6
+      ],
+      [
+        "motion_blur",
+        0.5
+      ],
+      [
+        "occlusion",
+        0.5
+      ],
+      [
+        "false_lane",
+        0.8
+      ]
+    ],
+    "timestamp_utc": "2026-06-10T10:01:35.393964+00:00"
+  },
+  "summary": {
+    "clean@0.0": {
+      "samples": 180,
+      "detection_rate": 0.8111111111111111,
+      "ey_err": {
+        "n": 146,
+        "bias": 0.0011724657534246574,
+        "mae": 0.01704712328767123,
+        "p95_abs": 0.0547425,
+        "max_abs": 0.06826
+      },
+      "epsi_err": {
+        "n": 146,
+        "bias": 0.016782945205479453,
+        "mae": 0.1250441780821918,
+        "p95_abs": 0.3278025,
+        "max_abs": 0.3598
+      }
+    },
+    "glare_overexposure@0.3": {
+      "samples": 6,
+      "detection_rate": 1.0,
+      "ey_err": {
+        "n": 6,
+        "bias": -0.012503333333333333,
+        "mae": 0.014436666666666667,
+        "p95_abs": 0.0227275,
+        "max_abs": 0.02281
+      },
+      "epsi_err": {
+        "n": 6,
+        "bias": 0.10294166666666667,
+        "mae": 0.157105,
+        "p95_abs": 0.2353225,
+        "max_abs": 0.23586
+      }
+    },
+    "glare_overexposure@0.6": {
+      "samples": 6,
+      "detection_rate": 1.0,
+      "ey_err": {
+        "n": 6,
+        "bias": -0.031236666666666673,
+        "mae": 0.031236666666666673,
+        "p95_abs": 0.037782500000000004,
+        "max_abs": 0.03785
+      },
+      "epsi_err": {
+        "n": 6,
+        "bias": 0.22658833333333336,
+        "mae": 0.22658833333333336,
+        "p95_abs": 0.32095,
+        "max_abs": 0.32134
+      }
+    },
+    "low_light_underexposure@0.3": {
+      "samples": 6,
+      "detection_rate": 0.0,
+      "ey_err": null,
+      "epsi_err": null
+    },
+    "low_light_underexposure@0.6": {
+      "samples": 6,
+      "detection_rate": 0.0,
+      "ey_err": null,
+      "epsi_err": null
+    },
+    "motion_blur@0.5": {
+      "samples": 6,
+      "detection_rate": 1.0,
+      "ey_err": {
+        "n": 6,
+        "bias": -0.007418333333333333,
+        "mae": 0.009564999999999999,
+        "p95_abs": 0.017505,
+        "max_abs": 0.0176
+      },
+      "epsi_err": {
+        "n": 6,
+        "bias": 0.07120166666666666,
+        "mae": 0.12426166666666666,
+        "p95_abs": 0.15690749999999998,
+        "max_abs": 0.15763
+      }
+    },
+    "occlusion@0.5": {
+      "samples": 6,
+      "detection_rate": 0.3333333333333333,
+      "ey_err": {
+        "n": 2,
+        "bias": 0.00184,
+        "mae": 0.00274,
+        "p95_abs": 0.004396,
+        "max_abs": 0.00458
+      },
+      "epsi_err": {
+        "n": 2,
+        "bias": -0.07692,
+        "mae": 0.07692,
+        "p95_abs": 0.10431599999999999,
+        "max_abs": 0.10736
+      }
+    },
+    "false_lane@0.8": {
+      "samples": 6,
+      "detection_rate": 1.0,
+      "ey_err": {
+        "n": 6,
+        "bias": 0.0033416666666666664,
+        "mae": 0.004158333333333333,
+        "p95_abs": 0.008185000000000001,
+        "max_abs": 0.00867
+      },
+      "epsi_err": {
+        "n": 6,
+        "bias": 0.48862999999999995,
+        "mae": 0.48862999999999995,
+        "p95_abs": 0.5465825,
+        "max_abs": 0.54695
+      }
+    }
+  }
+}

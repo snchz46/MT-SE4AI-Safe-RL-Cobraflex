@@ -47,6 +47,11 @@ The full matrix is in `tools/traceability_matrix.csv`. The summary below shows t
 | H-07 | SR-008 | C-05 (external-stop trigger) | SC-NOM-03, SC-EDGE-04 | M-S3 | **Satisfied** |
 | H-08 | SR-009 | training | SC-NOM-01, SC-NOM-02, SC-NOM-03, SC-PERT-03 | M-P6, M-S2 (monitoring) | TBD ² |
 | H-09 | SR-010 | arbiter | SC-EDGE-04, SC-EDGE-05 | M-S2, M-I3 | TBD ³ |
+| H-10 | SR-012 | C-01, C-02, C-03 (over CV state) + training | SC-PERT-04, SC-PERT-05, SC-PERT-06, SC-PERT-09, SC-PERT-10 | M-S1, M-S2 | TBD (track 'E') |
+| H-11 | SR-013 | C-05 (CV-estimator health → controlled stop) | SC-PERT-07 | M-S3 | TBD (track 'E') |
+| H-12 | SR-014 | C-05 (plausibility check → controlled stop) | SC-PERT-08, SC-PERT-04..06, SC-PERT-09..10 | M-S1, M-S3 | TBD (track 'E') |
+
+The last three rows (**H-10 / H-11 / H-12 → SR-012 / SR-013 / SR-014**) belong to the parallel **track 'E'** (end-to-end front-camera, **D-41 / D-43**): the cage's state comes from its **own deterministic CV lane-estimator** (D-43, supersedes D-42), separate from the policy's CNN, so it generalises to any road with visible lines and still reuses C-01..C-06 unchanged. H-12 (cage lane-misdetection) is the new failure mode that the CV estimator introduces. Since E2 (10.06.2026) the implementation chain is **live**: SC-PERT-04..10 are full schema-valid YAMLs (`docs/05`; 09/10 are the world-variant pair added 11.06.2026), the C-05 **Trigger 8** path is implemented (cage 0.6.1, `docs/04`) and the estimator is validated against the sim ground-truth oracle (`experiments/sim/runs/cv_estimator_val_*`). The per-SR verdicts remain **TBD** until the E-eval campaign runs; they are *not* part of the F-track G4 verdict above.
 
 **Sim evidence (10.06.2026).** The verdicts above come from the end-of-campaign
 roll-up `experiments/sim/campaign/campaign_report.json` (1260 runs, main seed

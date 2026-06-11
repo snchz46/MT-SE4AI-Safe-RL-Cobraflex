@@ -12,7 +12,7 @@ Evaluation position: last in the sequential chain
 (C-06 → C-04 → C-02 → C-03 → C-01 → C-05). When C-05 fires it overrides
 every upstream correction with the controlled-stop action.
 
-Triggers implemented (cage YAML 0.5.1):
+Triggers implemented (cage YAML 0.6.0):
     1. Compound state low-energy:
          |theta| > theta_warning AND |d| > d_warning sustained for
          delta_t_max_s.
@@ -26,15 +26,25 @@ Triggers implemented (cage YAML 0.5.1):
        when no /state_obs message has arrived for n_missing_max_cycles
        consecutive control cycles).
     6. External stop: ctx["external_stop"] is truthy.
+    7. Joint-envelope assertion failure (SR-010 Part 1):
+       ctx["joint_envelope_violated"] is True (cage_node evaluates the
+       per-rule state-only `safe_envelope_predicate_holds` before the
+       chain).
+    8. Perception invalid (track 'E', SR-013/SR-014, D-43):
+       ctx["perception_invalid"] is truthy. The external perception
+       supervisor (CV lane-estimator health per
+       cobraflex_rl.perception_health + plausibility per
+       cobraflex_rl.lane_plausibility) sets this flag when the cage's
+       CV lane estimate is lost (H-11) or suspect (H-12); the cage
+       itself stays camera-agnostic and answers with the open-loop
+       controlled stop, which needs no perception. Gated by the
+       `perception_trigger_enabled` YAML key (default false, so
+       pre-0.6.0 YAMLs keep their exact behaviour even if a caller
+       sets the ctx flag).
     Oscillation. Persistent inter-cycle oscillation: ctx[
        "oscillation_detected"] is True (cage_node sets this when a
        steering-affecting rule's alternation rate exceeds f_osc_max_hz
        for longer than t_osc_persist_s, per SR-010 Part 2).
-
-Not yet implemented (deferred to a later increment):
-    7. Joint-envelope assertion failure (SR-010 Part 1) — requires a
-       per-rule `safe_envelope_predicate_holds(state, action)` API that
-       does not yet exist on the rule contract.
 
 Exit: only via explicit reset (`reset()` method or `ctx["reset"]=True`)
 combined with the trigger condition having cleared. This implements the
@@ -60,6 +70,12 @@ class EmergencyRule:
         self.freeze_steering = params["freeze_steering"]
         self.require_explicit_reset = params["require_explicit_reset"]
         self.staleness_max = params.get("staleness_max_s", 0.2)
+        # Trigger 8 (track 'E', SR-013/SR-014). Default False keeps the
+        # trigger inert for YAMLs authored before 0.6.0 (back-compat
+        # precedent set at 0.4.0→0.5.0).
+        self.perception_trigger_enabled = params.get(
+            "perception_trigger_enabled", False
+        )
         # Internal state
         self._compound_state_start_t: Optional[float] = None
         self._active = False
@@ -86,11 +102,15 @@ class EmergencyRule:
         missing_state = bool(ctx.get("missing_state", False))
         oscillation = bool(ctx.get("oscillation_detected", False))
         joint_envelope = bool(ctx.get("joint_envelope_violated", False))
+        perception_invalid = self.perception_trigger_enabled and bool(
+            ctx.get("perception_invalid", False)
+        )
         if ctx.get("reset", False):
             self._reset_requested = True
 
         triggers = self._evaluate_triggers(
-            state, current_t, external_stop, missing_state, oscillation, joint_envelope
+            state, current_t, external_stop, missing_state, oscillation,
+            joint_envelope, perception_invalid,
         )
         meta["triggers"] = triggers
 
@@ -140,12 +160,17 @@ class EmergencyRule:
             meta["trigger"] = 7
             meta["failing_rules"] = list(ctx.get("joint_envelope_failing_rules", []))
             return self._emergency_action(meta, "triggered-joint-envelope")
+        if triggers["perception"]:
+            self._activate(raw_action)
+            meta["trigger"] = 8
+            return self._emergency_action(meta, "triggered-perception-invalid")
 
         meta["active"] = False
         return CageDecision(fire=False, reason="no-trigger", metadata=meta)
 
     def _evaluate_triggers(
-        self, state, current_t, external_stop, missing_state, oscillation, joint_envelope
+        self, state, current_t, external_stop, missing_state, oscillation,
+        joint_envelope, perception_invalid=False,
     ) -> dict:
         abs_theta = abs(state.heading_error)
         abs_d = abs(state.lateral_offset)
@@ -166,6 +191,7 @@ class EmergencyRule:
             "external": external_stop,
             "oscillation": oscillation,
             "joint_envelope": joint_envelope,
+            "perception": perception_invalid,
             "any": (
                 compound
                 or invalid
@@ -174,6 +200,7 @@ class EmergencyRule:
                 or external_stop
                 or oscillation
                 or joint_envelope
+                or perception_invalid
             ),
         }
 

@@ -1,0 +1,54 @@
+id: SC-PERT-08
+category: perturbed
+
+# Track mapping (Option A — oval; see docs/05). Camera-track scenario (track 'E').
+track:
+  world: lane_following_oval.world
+  centerline: oval_right_lane_centerline.yaml
+  start_s_m: 0.0
+commanded_speed_mps: 0.2
+
+description: |
+  Misleading lane markings / false-lane injection (Track 'E', end-to-end front-camera).
+  After a nominal lead-in, a plausible-but-wrong bright lane feature is painted into the
+  camera view (visual_degradation.apply_false_lane — a deterministic slanted line right of
+  the true lane, modelling a fork, old paint or a tar seam), before both consumers (D-43
+  common cause). The "wrong-belief" counterpart of SC-PERT-07's "no belief": the cage's CV
+  estimator can lock onto the false feature (GE2 oracle validation at level 0.8: detection
+  stays 100% and ey stays accurate, but the heading channel is pulled ~0.5 rad — a
+  confidently wrong estimate, exactly H-12). The SR-014 plausibility / temporal-consistency
+  check must reject the suspect estimate (onset jump / implausible geometry) and fall back
+  to the C-05 controlled stop rather than let the cage steer toward the false lane. The
+  run passes when the trajectory stays bounded with no road-edge contact — continued
+  correct lane-keeping and a conservative stop are both acceptable; steering off the road
+  after the injection is the failure mode. Verifies SR-014 against hazard H-12.
+
+initial_conditions:
+  pose: { x: 0.0, y: 0.0, theta_deg: 0.0 }
+  speed_mps: 0.0
+  randomisation:
+    lateral_offset_uniform_m: [-0.02, 0.02]
+    heading_uniform_deg: [-2.0, 2.0]
+
+perturbations:
+  type: false_lane
+  mode: misleading_markings
+  level_levels: [0.8]
+  at_time_s: 5.0           # nominal lead-in, false feature appears mid-run
+
+termination:
+  type: time_or_event
+  timeout_s: 15.0
+  events: [lane_exit, emergency_stop, straight_completed]
+
+metrics_primary: [M-S1, M-S2, M-I1]
+metrics_secondary: [M-S3, M-I5]
+
+pass_criterion_per_run: "M-S1 < 0.16 AND road_edge_contact == False"
+pass_criterion_per_scenario: "fraction_pass >= 0.90"
+
+references_SR: [SR-014]
+
+n_runs_recommended:
+  enforcement: 20
+  monitoring: 20

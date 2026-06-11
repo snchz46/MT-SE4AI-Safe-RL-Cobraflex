@@ -42,7 +42,7 @@ def _minimal_result(**overrides) -> dict:
         "interventions": [],
         "emergency": False,
         "mode": "enforcement",
-        "cage_version": "0.5.1",
+        "cage_version": "0.6.1",
         "current_time": 0.0,
         "cycles_since_last_state": 0,
         "oscillation_rates_hz": {},
@@ -143,7 +143,7 @@ def test_end_to_end_with_cage_node(out_dir):
             log.add_cycle(result)
     rows = _read_rows(out_dir)
     assert len(rows) == 5
-    assert rows[0]["cage_version"] == "0.5.1"
+    assert rows[0]["cage_version"] == "0.6.1"
     assert all(r["mode"] == "enforcement" for r in rows)
     meta = json.loads((out_dir / "metadata.json").read_text())
     assert meta["cycles_logged"] == 5

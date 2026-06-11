@@ -131,6 +131,14 @@ def _record_from_info(episode: int, step: int, info: Dict[str, Any]) -> Dict[str
         "steer_correction": float(info.get("steer_correction", 0.0)),
         "interventions": list(info.get("cage_interventions", [])),
         "emergency": bool(info.get("cage_emergency", False)),
+        # Track-'E' perception diagnostics (0/absent on the state-vector track):
+        # the SC-PERT-07/08 verdicts need the Trigger-8 / availability trace.
+        "cv_ok": bool(info.get("cv_ok", False)),
+        "cv_state_available": bool(info.get("cv_state_available", False)),
+        "cv_perception_invalid": bool(info.get("cv_perception_invalid", False)),
+        "cv_ey": float(info.get("cv_ey", 0.0)),
+        "cv_epsi": float(info.get("cv_epsi", 0.0)),
+        "cv_confidence": float(info.get("cv_confidence", 0.0)),
     }
 
 
@@ -139,6 +147,8 @@ def _write_cage_status_csv(path: Path, records: List[Dict[str, Any]]) -> None:
         "episode", "step", "x", "y", "yaw", "ey", "epsi", "s", "speed",
         "raw_steer", "safe_steer", "steer_correction",
         "interventions", "emergency",
+        "cv_ok", "cv_state_available", "cv_perception_invalid",
+        "cv_ey", "cv_epsi", "cv_confidence",
     ]
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
@@ -151,7 +161,29 @@ def _write_cage_status_csv(path: Path, records: List[Dict[str, Any]]) -> None:
                 f"{r['speed']:.6f}", f"{r['raw_steer']:.6f}",
                 f"{r['safe_steer']:.6f}", f"{r['steer_correction']:.6f}",
                 ";".join(r["interventions"]), int(r["emergency"]),
+                int(r.get("cv_ok", False)), int(r.get("cv_state_available", False)),
+                int(r.get("cv_perception_invalid", False)),
+                f"{r.get('cv_ey', 0.0):.6f}", f"{r.get('cv_epsi', 0.0):.6f}",
+                f"{r.get('cv_confidence', 0.0):.4f}",
             ])
+
+
+class _FrameStacker:
+    """Mirror of VecFrameStack for the single-env eval loop (camera mode):
+    keeps the last k frames and concatenates along the channel axis, newest
+    last — the same layout the policy saw in training."""
+
+    def __init__(self, k: int):
+        self.k = int(k)
+        self._frames: List[np.ndarray] = []
+
+    def reset(self, frame: np.ndarray) -> np.ndarray:
+        self._frames = [frame] * self.k
+        return np.concatenate(self._frames, axis=-1)
+
+    def step(self, frame: np.ndarray) -> np.ndarray:
+        self._frames = (self._frames + [frame])[-self.k:]
+        return np.concatenate(self._frames, axis=-1)
 
 
 def _print_summary(summary: Dict[str, Any]) -> None:
@@ -181,6 +213,16 @@ def main(args: Optional[Sequence[str]] = None) -> None:
     # spawn perturbation off); the F4 scenario path injects its initial
     # conditions through reset(options=...) instead (§7.5, D-34).
     _disable_spawn_perturbation(train_cfg)
+    # Same determinism rule for the camera track: H-10 visual domain
+    # randomisation is a TRAINING-side mitigation (SR-012). In eval the only
+    # visual stressor is the scenario's own perturbations block — otherwise a
+    # nominal eval episode can draw a random degradation from the training
+    # envelope (and a harsh draw blinds the CV estimator at spawn → instant
+    # no-state-ever emergency, observed on rl_cam_eval_2024_*).
+    if isinstance(train_cfg.get("domain_randomization"), dict):
+        train_cfg["domain_randomization"] = {
+            **train_cfg["domain_randomization"], "enabled": False,
+        }
 
     # F4 scenario mode: derive the run config (initial conditions, commanded
     # speed, horizon) from the SC-* YAML for this repetition. Absent --scenario,
@@ -222,8 +264,18 @@ def main(args: Optional[Sequence[str]] = None) -> None:
     env: Optional[GazeboLaneEnv] = None
     records: List[Dict[str, Any]] = []
 
+    # Track 'E': camera observation mode mirrors train_ppo — the interface
+    # subscribes to the image topic and the eval loop applies the same frame
+    # stack the policy was trained with (VecFrameStack equivalent).
+    obs_cfg = dict(train_cfg.get("observation", {}))
+    camera_obs = str(obs_cfg.get("type", "state")) == "camera"
+    cam_cfg = dict(obs_cfg.get("camera", {})) if camera_obs else {}
+    stacker = _FrameStacker(int(cam_cfg.get("frame_stack", 4))) if camera_obs else None
+
     try:
-        interface = RosGazeboInterface()
+        interface = RosGazeboInterface(
+            camera_topic=str(cam_cfg.get("topic", "/camera/image_raw")) if camera_obs else ""
+        )
         if not interface.wait_for_initial_data(timeout_sec=10.0):
             raise RuntimeError("Timed out waiting for /odom data.")
 
@@ -250,6 +302,8 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         last_info: Dict[str, Any] = {}
         for episode in range(cli_args.episodes):
             observation, info = env.reset(seed=reset_seed + episode, options=reset_options)
+            if stacker is not None:
+                observation = stacker.reset(observation)
             terminated = False
             truncated = False
             step_index = 0
@@ -258,6 +312,8 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             while not (terminated or truncated):
                 action, _ = model.predict(observation, deterministic=True)
                 observation, reward, terminated, truncated, info = env.step(action)
+                if stacker is not None:
+                    observation = stacker.step(observation)
                 step_index += 1
                 records.append(_record_from_info(episode, step_index, info))
                 print(

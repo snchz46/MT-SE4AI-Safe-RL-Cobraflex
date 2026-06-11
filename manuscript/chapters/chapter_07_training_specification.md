@@ -842,12 +842,15 @@ heading (`cv_epsi` ≈ −0,38 rad) en los huecos de línea discontinua del
 ápice y el supervisor agotó su presupuesto de plausibilidad — una **parada
 controlada correcta** (excursión máxima 37 mm, sin contacto con el borde),
 no una pérdida de control. La tasa de esas paradas por percepción es
-**variable entre repeticiones**: la repetición oficial paró a las 4,7
-vueltas, mientras una repetición headless de control (arranque frío,
-11.06) completó 8,2 vueltas sin ninguna activación de C-05 — y una
-repetición con la GUI de Gazebo activa paró ya en la entrada de la curva
-(la carga de render degrada la frescura de frames: el modo de observación
-altera el experimento; toda evaluación con veredicto corre headless). La
+**estocástica entre repeticiones**: la repetición oficial paró a las 4,7
+vueltas; una repetición headless de control (arranque frío, 11.06)
+completó 8,2 vueltas sin ninguna activación de C-05; y de dos
+repeticiones con la GUI de Gazebo activa, una paró ya en la entrada de la
+curva y otra completó su vuelta limpia (PASS). La carga de render de la
+GUI compite con el render de la cámara del servidor y **aumenta el
+riesgo** de agotar el presupuesto de percepción en el ápice, sin
+determinarlo; por política, toda evaluación con veredicto corre headless
+y la observación se hace por suscriptor pasivo (`rqt_image_view`). La
 cuantificación (20 reps por escenario, campaña E-eval) y la mitigación
 (suavizado EMA determinista del canal `epsi` del estimador) quedan para
 la campaña y trabajo futuro, respectivamente.

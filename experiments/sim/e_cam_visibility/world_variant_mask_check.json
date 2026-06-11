@@ -1,0 +1,20 @@
+{
+  "worn": {
+    "texture": "src/cobraflex/materials/road_assets/road_variants/two_same_02_patched.png",
+    "estimator_mask": "S<=30 AND V>=150",
+    "line_proxy": "V >= p98 = 255",
+    "line_pixels_passing_mask_pct": 100.0,
+    "line_pixels_S_max": 0,
+    "line_pixels_V_min": 255,
+    "road_pixels_passing_mask_pct": 0.32
+  },
+  "wet": {
+    "texture": "src/cobraflex/materials/road_assets/road_variants/two_opp_02_wet.png",
+    "estimator_mask": "S<=30 AND V>=150",
+    "line_proxy": "V >= p98 = 207",
+    "line_pixels_passing_mask_pct": 100.0,
+    "line_pixels_S_max": 18,
+    "line_pixels_V_min": 207,
+    "road_pixels_passing_mask_pct": 1.65
+  }
+}

@@ -351,6 +351,31 @@ def checkpoint_for_seed(
     return CHECKPOINT_DIR / template.format(seed=seed)
 
 
+def resolve_world_path(world_name: str) -> Path:
+    """Absolute path for a scenario's ``track.world`` name.
+
+    Prefers the installed cobraflex share (what the launch default uses); falls
+    back to the source tree, which is content-identical under
+    ``--symlink-install``. Raises if the world doesn't exist anywhere — better
+    to fail the cell at plan time than launch Gazebo into a missing file.
+    """
+    candidate = Path(world_name)
+    if candidate.is_absolute() and candidate.is_file():
+        return candidate
+    try:  # pragma: no cover - needs a sourced ROS2 env
+        from ament_index_python.packages import get_package_share_directory
+
+        share = Path(get_package_share_directory("cobraflex")) / "worlds" / world_name
+        if share.is_file():
+            return share
+    except Exception:
+        pass
+    src = REPO / "src" / "cobraflex" / "worlds" / world_name
+    if src.is_file():
+        return src
+    raise FileNotFoundError(f"scenario world not found: {world_name}")
+
+
 def run_id_for(run_spec: RunSpec) -> str:
     """Deterministic, collision-free run id for a matrix cell, so the executor
     can locate the run dir it just produced and the campaign tree is traceable."""
@@ -449,6 +474,12 @@ def execute_run(
         f"rviz:={'true' if rviz else 'false'}",
         f"train_config:={train_config}",
     ]
+    # World-variant scenarios (SC-PERT-09/10: worn / wet oval textures) name a
+    # non-default world in their track block; everything else keeps the launch
+    # default so the F-track cells are byte-identical to the pre-E behaviour.
+    world_name = str(scenario.track.get("world") or "").strip()
+    if world_name and world_name != "lane_following_oval.world":
+        cmd.append(f"world:={resolve_world_path(world_name)}")
     # Isolate this run's Gazebo transport in its own partition, so a lingering
     # gz server from the previous run (the EmitEvent(Shutdown) teardown can lag
     # past ros2 launch's exit) cannot cross-talk with this one via gz's

@@ -31,6 +31,31 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [11.06.2026] — E2: eval-side world diversity — SC-PERT-09/10 (worn / wet oval textures) + campaign world selection
+
+**Document(s) affected:** `scenarios/perturbed/sc_pert_09.yaml` + `sc_pert_10.yaml` (new), `docs/05` (two scenario sections, count 22 → 24, E-budget 320 → 400 runs, Option-A world-variant note), `docs/03` + `manuscript/chapters/chapter_04` (SR-012 / SR-014 scenario lists) → `docs/data/safety_requirements.csv` regenerated, `tools/run_campaign.py` (`resolve_world_path`; executor passes a non-default `track.world` to the launch), `experiments/sim/e_cam_visibility/world_variant_mask_check.json` (evidence).
+**Phase:** E2 (track 'E').
+**Gate context:** GE4 prep. Per docs/09 §10 ("oval-first"), eval-side appearance diversity is added only now — after the first camera training result (the GE3 pilot, see previous entry). F-track unaffected: F-track scenarios all carry the default world, for which the executor emits no `world:=` argument (byte-identical launch command).
+**Author:** Samuel.
+
+### Change
+
+SC-PERT-09 (worn/patched texture) and SC-PERT-10 (wet/darkened texture) run the unchanged oval geometry/centerline with variant road textures — the **world is the perturbation** (non-runtime mechanism, SC-PERT-03 precedent; `resolve_perturbation` yields NONE for `world_variant`). The campaign executor now resolves a scenario's non-default `track.world` against the installed cobraflex share (source-tree fallback) and passes it to `eval_scenario_batch.launch.py`.
+
+### Rationale
+
+D-37 Option A's "identical geometry" property is preserved while testing the static appearance shift that the H-10 runtime injectors (SC-PERT-04..06, photometric) cannot represent: texture clutter. Mask evidence: line pixels stay 100% inside the estimator's white mask on both variants; road false-positives 0.32% (worn) vs 1.65% (wet) — wet is the harder clutter case.
+
+### Impact
+
+E-eval budget 320 → 400 runs. SR-012/SR-014 gain an appearance-shift verifying family; the per-SR verdict spine picks the new scenarios up from the regenerated SR CSV.
+
+### Verification
+
+`check_scenario_yaml` PASS (0 errors/warnings, docs/05 coverage included); `check_traceability` PASS; `pytest` 431 passed; campaign `--dry-run` plans the new cells; `resolve_world_path` resolves both variant worlds and raises on a missing world.
+
+---
+
 ## [11.06.2026] — E2: camera-PPO pilot green (20k) → E-main 200k launched; `cv_lane_estimator_node` deployment wrapper (D-40 outside the gym)
 
 **Document(s) affected:** `src/cobraflex_rl/cobraflex_rl/cv_lane_estimator_node.py` (new node), `src/cobraflex_rl/setup.py` (console script), `src/safety_cage/safety_cage/cage_ros_node.py` (`/perception_invalid` → ctx, C-05 Trigger 8), `manuscript/chapters/chapter_07` (§7.7.7 pilot result). Training evidence under `experiments/sim/training/`.

@@ -1,7 +1,7 @@
 # Traceability Matrix
 
 **Status:** Living document — Phase 0 baseline, refined through every phase, closed at G6  
-**Last update:** 14.05.2026  
+**Last update:** 10.06.2026 (F4 sim verdicts filled from the end-of-campaign roll-up)  
 **Approved at Gate:** every Gate (incrementally)  
 
 ## Purpose
@@ -34,26 +34,88 @@ Any violation is a blocker for the next Gate review.
 
 The full matrix is in `tools/traceability_matrix.csv`. The summary below shows the chain Hazard → SR → Cage Rule → Scenario.
 
-| Hazard | Safety Requirement | Cage Rule(s) | Scenarios | Verifying Metric(s) | Verdict |
+| Hazard | Safety Requirement | Cage Rule(s) | Scenarios | Verifying Metric(s) | Verdict (Sim) |
 | ------ | ------------------ | ------------ | --------- | ------------------- | ------- |
-| H-01 | SR-001 | C-01 | SC-NOM-01, SC-NOM-02, SC-EDGE-02 | M-S1 | TBD |
-| H-01, H-02 | SR-003 | C-03 | SC-NOM-02, SC-EDGE-01 | M-S4 | TBD |
-| H-02 | SR-002 | C-02 | SC-EDGE-01, SC-EDGE-04 | M-P4 | TBD |
-| H-02 | SR-011 | C-06 + training | SC-EDGE-01, SC-EDGE-04 | M-P7 | TBD |
-| H-03 | SR-004 | C-04 | SC-NOM-02, SC-EDGE-03 | M-P3 | TBD |
-| H-04, H-07 | SR-005 | C-05 | SC-EDGE-04 | M-S3 | TBD |
-| H-05 | SR-006 | C-06 | All scenarios | M-I5 | TBD |
-| H-06 | SR-007 | C-05 (state-validity triggers) | SC-PERT-02 | M-S3 | TBD |
-| H-07 | SR-008 | C-05 (external-stop trigger) | SC-NOM-03, SC-EDGE-04 | M-S3 | TBD |
-| H-08 | SR-009 | training | SC-NOM-01, SC-NOM-02, SC-NOM-03, SC-PERT-03 | M-P6, M-S2 (monitoring) | TBD |
-| H-09 | SR-010 | arbiter | SC-EDGE-04, SC-EDGE-05 | M-S2, M-I3 | TBD |
-| H-10 | SR-012 | C-01, C-02, C-03 (over CV state) + training | SC-PERT-04, SC-PERT-05, SC-PERT-06 | M-S1, M-S2 | TBD (track 'E') |
+| H-01 | SR-001 | C-01 | SC-NOM-01, SC-NOM-02, SC-EDGE-02 | M-S1 | **Satisfied** |
+| H-01, H-02 | SR-003 | C-03 | SC-NOM-02, SC-EDGE-01 | M-S4 | **Satisfied** |
+| H-02 | SR-002 | C-02 | SC-EDGE-01, SC-EDGE-04 | M-P4 | **Satisfied** |
+| H-02 | SR-011 | C-06 + training | SC-EDGE-01, SC-EDGE-04 | M-P7 | **Satisfied** |
+| H-03 | SR-004 | C-04 | SC-NOM-02, SC-EDGE-03 | M-P3 | **Satisfied** |
+| H-04, H-07 | SR-005 | C-05 | SC-EDGE-04 | M-S3 | **Satisfied** |
+| H-05 | SR-006 | C-06 | All scenarios | M-I5 | **Satisfied** ¹ |
+| H-06 | SR-007 | C-05 (state-validity triggers) | SC-PERT-02 | M-S3 | **Satisfied** |
+| H-07 | SR-008 | C-05 (external-stop trigger) | SC-NOM-03, SC-EDGE-04 | M-S3 | **Satisfied** |
+| H-08 | SR-009 | training | SC-NOM-01, SC-NOM-02, SC-NOM-03, SC-PERT-03 | M-P6, M-S2 (monitoring) | TBD ² |
+| H-09 | SR-010 | arbiter | SC-EDGE-04, SC-EDGE-05 | M-S2, M-I3 | TBD ³ |
+| H-10 | SR-012 | C-01, C-02, C-03 (over CV state) + training | SC-PERT-04, SC-PERT-05, SC-PERT-06, SC-PERT-09, SC-PERT-10 | M-S1, M-S2 | TBD (track 'E') |
 | H-11 | SR-013 | C-05 (CV-estimator health → controlled stop) | SC-PERT-07 | M-S3 | TBD (track 'E') |
-| H-12 | SR-014 | C-05 (plausibility check → controlled stop) | SC-PERT-08, SC-PERT-04..06 | M-S1, M-S3 | TBD (track 'E') |
+| H-12 | SR-014 | C-05 (plausibility check → controlled stop) | SC-PERT-08, SC-PERT-04..06, SC-PERT-09..10 | M-S1, M-S3 | TBD (track 'E') |
 
-"TBD" verdicts are filled in during Phase 4 (simulation results) and Phase 5 (physical results, where applicable).
+The last three rows (**H-10 / H-11 / H-12 → SR-012 / SR-013 / SR-014**) belong to the parallel **track 'E'** (end-to-end front-camera, **D-41 / D-43**): the cage's state comes from its **own deterministic CV lane-estimator** (D-43, supersedes D-42), separate from the policy's CNN, so it generalises to any road with visible lines and still reuses C-01..C-06 unchanged. H-12 (cage lane-misdetection) is the new failure mode that the CV estimator introduces. Since E2 (10.06.2026) the implementation chain is **live**: SC-PERT-04..10 are full schema-valid YAMLs (`docs/05`; 09/10 are the world-variant pair added 11.06.2026), the C-05 **Trigger 8** path is implemented (cage 0.6.1, `docs/04`) and the estimator is validated against the sim ground-truth oracle (`experiments/sim/runs/cv_estimator_val_*`). The per-SR verdicts remain **TBD** until the E-eval campaign runs; they are *not* part of the F-track G4 verdict above.
 
-The last three rows (**H-10 / H-11 / H-12 → SR-012 / SR-013 / SR-014**) belong to the parallel **track 'E'** (end-to-end front-camera, **D-41 / D-43**): the cage's state comes from its **own deterministic CV lane-estimator** (D-43, supersedes D-42), separate from the policy's CNN, so it generalises to any road with visible lines and still reuses C-01..C-06 unchanged. H-12 (cage lane-misdetection) is the new failure mode that the CV estimator introduces. Since E2 (10.06.2026) the implementation chain is **live**: SC-PERT-04..08 are full schema-valid YAMLs (`docs/05`), the C-05 **Trigger 8** path is implemented (cage 0.6.1, `docs/04`) and the estimator is validated against the sim ground-truth oracle (`experiments/sim/runs/cv_estimator_val_*`). The per-SR verdicts remain **TBD** until the E-eval campaign runs; they are *not* part of the F-track G4 verdict.
+**Sim evidence (10.06.2026).** The verdicts above come from the end-of-campaign
+roll-up `experiments/sim/campaign/campaign_report.json` (1260 runs, main seed
+2024, enforcement + monitoring; D-36). The **global verdict is `SATISFIED`**:
+all **7 SR-CL-A** (SR-001..005, SR-007, SR-008) pass with margin, so the D-30 veto
+is not triggered. M-S2 (boundary violation) is **0 in both modes across the whole
+in-ODD set**, i.e. the constraint-respecting main policy does not approach the
+boundary inside the ODD and the cage is **latent** there; its protective value
+materialises out-of-ODD in the D-35 frontier contrast (§8.6, `frontier_contrast.json`).
+
+One SR-CL-B verdict (**SR-006**) is now resolved by a dedicated metric analysis
+(note ¹, D-39); **two** SR-CL-B verdicts remain **TBD** by deliberate abstention
+(they do **not** veto the global verdict, D-30):
+
+- **¹ SR-006 (actuator smoothness) — Satisfied (D-39).** The coarse `ALL`-scenarios
+  aggregation had made SR-006 inherit the SC-PERT-01 fraction fail (σ = 0.05
+  emergency trips, unrelated to smoothness), so it was scored directly on its own
+  metric instead. The cage chain runs C-06 first (it bounds the *raw* action's
+  per-cycle rate), then a downstream safety rule (C-01/C-02/C-03/C-05) may command a
+  larger correction to avert a hazard — by design smoothness yields to safety. On
+  the steps the rate limiter actually governs (no safety-override rule, no
+  emergency), the committed-steer per-cycle delta stays within `δ_max = 0.15` in
+  **559/559** evaluable enforcement runs (worst rate exactly 0.15); in *monitoring*
+  (C-06 inert) only 67.6 % of runs hold and the worst rate is 0.43 — a direct
+  measure of C-06's value. Analysis: `tools/sr006_smoothness.py` (reads the
+  committed-steer trace from `cage_status.csv`, no Gazebo). The per-SR entry in
+  `campaign_report.json` still reads `failed` from the superseded `ALL` inheritance;
+  re-pointing SR-006 to this metric in `run_campaign.py` is a flagged follow-up
+  (D-39) and does not change the global verdict (CL-B).
+- **² SR-009 (liveness) — needs re-run.** Nominal liveness (SC-NOM-01/02/03) passes;
+  the verdict is driven by **SC-PERT-03**, a two-arm failure-injection meta-test
+  (released vs stall-variant). The multi-arm evaluator already exists
+  (`criterion_eval.evaluate_labelled`); the gap is that (a) the **stall-variant arm
+  was never executed** (the 40 logged runs are a single arm) and (b) the campaign
+  driver does not yet *group* the two arms' values before calling it. Closing it
+  needs the stall fine-tune + run and the driver grouping (Ubuntu). Not a liveness
+  failure.
+- **³ SR-010 (cage-rule composition) — needs scenario fix + re-run.** SC-EDGE-04
+  passes. SC-EDGE-05's per-run predicate references operands
+  (`joint_envelope_assertion_failures`, `inter_cycle_oscillations`) **absent from
+  the run-record schema**, *and*, more fundamentally, the scenario **as-run induced
+  zero rule co-activation** — 0 interventions across all 100 runs, the vehicle drove
+  nominally (max |d| ≈ 0.02 m) — because the `parameterised_grid` initial conditions
+  are **not injected by the runner**. So SR-010 cannot be verified from these logs
+  regardless of the counters: the scenario must first actually stress co-activation
+  (wire the grid-IC injection), then re-run with the two counters added (Ubuntu).
+  Not a composition failure.
+
+> **Aggregator reconciliation (D-38).** The campaign runner now treats an
+> *indeterminate* (`None`) per-run verdict the same way as the unit-tested D-29/D-30
+> spine `verdict_aggregation.py`: it is **excluded** from the pass-fraction
+> denominator and propagated as `insufficient_evidence`, never collapsed to a fail.
+> In the regenerated `campaign_report.json` (rebuilt from the raw per-run
+> `campaign_runs.csv`, no Gazebo re-run) SC-EDGE-05 and SC-PERT-03 read
+> `verdict: null` (`fraction_pass: null`) and **SR-009 / SR-010 read
+> `insufficient_evidence`, not `false`** — the SR-009 / SR-010 matrix verdicts stay
+> **TBD** (genuine gaps, not violations) until the scenario/evaluator gaps are closed
+> and re-scored (notes ²³). SR-006 read `failed` in `campaign_report.json` from the
+> coarse `ALL`-scenario inheritance of SC-PERT-01; it is now verified directly on its
+> own metric and is **Satisfied** (note ¹, D-39), with the report re-pointing flagged
+> as a follow-up. None of this affects the SR-CL-A global verdict, which stays
+> `SATISFIED`.
+
+The remaining "TBD" verdicts are closed in Phase 5 (physical results, where applicable).
 
 The `Cage Rule(s)` column accepts three implementation kinds (cf. D-25 in `docs/DECISIONS.md`): a numbered rule `C-XX`, a `training` constraint discharged at policy-training time (SR-009), or an `arbiter` property of the cage pipeline (SR-010). SR-011 is implemented jointly by `C-06` (runtime attenuation of high-frequency content) and a training-side heading-variance penalty.
 

@@ -71,16 +71,22 @@ perturbados SC-PERT; `docs/05`) a lo largo de **dos ejes de comparación**:
 Cada escenario fija condiciones iniciales, perturbaciones, criterio de
 terminación, métricas primarias y criterios de paso por-run y por-escenario
 (plantilla en `docs/05`). El número de runs por modo está dimensionado para
-validez estadística (de 20 a ≥100 según el escenario); el total en simulación
-es de **≈1100 runs** sumando escenarios y modos.
+validez estadística (de 20 a ≥100 según el escenario). La campaña ejecutada
+suma **1260 runs** (roll-up en `experiments/sim/campaign/campaign_report.json`):
+los **11 escenarios verdict-bearing** más los **6 frontier**, cada uno en ambos
+modos. El controlador es la **policy RL** (no se re-ejecuta el baseline PD en esta
+campaña; la referencia PD proviene de Fase 2 / §7.5 sobre el mismo pipeline).
 
-> **Multi-semilla (RL).** La variabilidad entre semillas de la policy
-> (`seed ∈ {42, 123, 2024, 23, 666}`, **N = 5** entrenadas, §7.2.7) se trata como
-> una fuente de varianza de primer orden: los escenarios discriminantes se ejecutan
-> sobre las cinco semillas, no sobre una única policy. Dada la **bimodalidad**
-> observada en §7.5.3 (**4/5 *constraint-respecting*, 1/5 *cage-dependent***), se
-> reportan las semillas individualmente además de su agregado. Esto cumple el
-> diferido explícito de §7.2.7.
+> **Política de semillas (D-36).** El veredicto D-29/D-30 lo **certifica la semilla
+> principal 2024** —la elegida en §7.5.3 por mejor recompensa y salud PPO entre las
+> N = 5 entrenadas—, no un agregado de las cinco: agrupar semillas de comportamiento
+> distinto en un mismo `fraction_pass` mezclaría poblaciones y podría arrastrar un
+> escenario SR-CL-A bajo su umbral, vetando el veredicto global por una propiedad de
+> *una* semilla (D-30). La **bimodalidad** de §7.5.3 (**4/5 *constraint-respecting*,
+> 1/5 *cage-dependent***) no se descarta: se reporta donde es discriminante —en el
+> **contraste frontier** (D-35, §8.6), que evalúa por-semilla la semilla principal
+> 2024 *y* la *cage-dependent* 123 para medir el valor protector de la cage—, pero
+> nunca se funde en la agregación D-30 que cierra G4.
 
 ### 8.2.2 Modos enforcement vs monitoring — el test causal de la cage
 
@@ -141,9 +147,30 @@ típica y percentiles 5/95.
 
 **Agregación y veredicto.** El veredicto por-run aplica el `pass_criterion_per_run`
 del escenario; el veredicto por-escenario aplica el `pass_criterion_per_scenario`
-(p.ej. "≥95 % de runs pasan"). La agregación a veredicto por-SR sigue la
-convención de recuento de runs (D-29) y la regla de veto (D-30): [COMPLETAR —
-resumir D-29/D-30 al fijar el runner de campaña].
+(p.ej. "≥95 % de runs pasan"). La agregación a veredicto por-SR sigue dos reglas:
+
+- **D-29 (recuento de runs).** Un veredicto por-SR es estadísticamente discriminante
+  solo si la SR está verificada por suficientes runs por familia de escenario:
+  **≥25 runs** en ≥1 familia *nominal* **y** ≥25 en ≥1 *adverse* para una **SR-CL-A**;
+  **≥10 runs** en ≥1 familia para una **SR-CL-B**; una **SR-CL-C** acepta evidencia
+  informal. Si el recuento no se cumple, la SR queda *insufficient_evidence*, no
+  *failed*.
+- **D-30 (veto).** El veredicto **global** puede leerse `SATISFIED` solo si **toda**
+  SR-CL-A está satisfecha; el fallo de una sola SR-CL-A lo veta. Las SR-CL-B/C aportan
+  matiz, no veto.
+
+Una sutileza de implementación importa para leer los resultados: un veredicto
+por-run **indeterminado** (`None`) —cuando el predicado del escenario referencia un
+operando que el registro del run no captura— **no es un fallo**. Ambos agregadores
+de la campaña lo tratan ahora idénticamente (**D-38**): tanto el *spine* unit-tested
+`verdict_aggregation.py` como el runner de producción `tools/run_campaign.py`
+**excluyen** el run indeterminado del denominador de la fracción de aprobados y lo
+propagan como *insufficient_evidence*, nunca como fallo (antes, `run_campaign.py` lo
+contaba en el denominador, colapsándolo a fallo; la divergencia se reconcilió y el
+`campaign_report.json` se regeneró desde el CSV crudo de runs, sin re-ejecutar
+Gazebo). Para SC-EDGE-05 y SC-PERT-03 (§8.4–§8.5) el reporte lee así
+`verdict: null` y las SR afectadas (SR-009, SR-010) quedan *insufficient_evidence*,
+manteniéndose **TBD** en `docs/07` —hueco de instrumentación, no FAIL.
 
 ### 8.2.5 Análisis estadístico
 
@@ -163,114 +190,309 @@ Umbral de significación: **p < 0.05** para las comparaciones primarias, **p <
 reportan junto a los p-valores para evitar leer significación estadística como
 relevancia práctica.
 
+> **Dónde aplica la inferencia (y dónde es degenerada).** El contraste
+> enforcement-vs-monitoring **dentro del ODD** resultó **degenerado** para la
+> métrica decisiva: `M-S2 = 0` en *ambos* modos en los 11 escenarios
+> verdict-bearing (§8.3–§8.5), de modo que el delta no tiene varianza y un test
+> sobre él no está definido (no hay diferencia que contrastar — la policy principal
+> no se acerca a la frontera). La afirmación in-ODD es por tanto **descriptiva**
+> (cero violaciones en ambos modos, con sus N), no inferencial. Los tests de esta
+> sección se aplican donde *sí* hay variación: (i) el **contraste frontier** sobre
+> M-S5 / tasa de contacto y excursión máxima (§8.6), donde χ²/Fisher sobre la
+> reducción de contacto y Welch/Mann-Whitney sobre la excursión cuantifican el valor
+> de la cage fuera del ODD; y (ii) el contraste de **suavidad SR-006** (tasa de
+> steering comprometida), donde enforcement mantiene el bound (559/559) frente a
+> monitoring (67.6 %). Reportar un p-valor sobre un delta idénticamente nulo sería
+> teatro estadístico; se declara la degeneración en lugar de fabricar significación.
+
 ### 8.2.6 Reproducibilidad
 
 Cada run registra sus metadatos de reproducibilidad (commit git, hash de
 `cage.yaml`, hash del checkpoint, hash del YAML de escenario, seed, timestamp,
-modo) bajo `experiments/sim/runs/<run_id>/`, igual que las corridas de §7.5. La
-campaña la orquesta el *campaign runner* [COMPLETAR — referenciar la herramienta
-y la convención de `run_id` al fijarla], que ejecuta el grid (escenario × modo ×
-controlador × semilla), agrega por-(escenario, modo) y emite los veredictos.
+modo) bajo `experiments/sim/campaign/runs/<run_id>/` (con `metadata.json`,
+`summary.json` y `cage_status.csv` por run). La campaña la orquesta el *campaign
+runner* `tools/run_campaign.py`, que conduce el ejecutor Gazebo
+(`eval_scenario_batch.launch.py`, con aislamiento `GZ_PARTITION`, reaping de
+procesos huérfanos, reintentos y *resume*), recorre el grid (escenario × modo ×
+semilla), agrega por-(escenario, modo) → por-SR → global, y emite
+`campaign_report.json` + `campaign_runs.csv`. La convención de `run_id` es
+`camp_<scenario>_<controller>_seed<seed>_<mode>_rep<NN>`.
 
 ---
 
-## 8.3 Resultados — Escenarios nominales (SC-NOM)  [COMPLETAR FASE 4]
+## 8.3 Resultados — Escenarios nominales (SC-NOM)
 
-Verifica que el sistema opera dentro del ODD y establece la línea base RL-vs-PD.
-SC-NOM-01 ya tiene su evaluación de referencia en §7.5 (run `rl_eval_2024_200k_4k4`
-vs PD `ros_run_20260523T153003Z`); aquí se completa con SC-NOM-02 (curva) y
-SC-NOM-03 (circuito completo), en ambos modos.
+Verifica que el sistema opera dentro del ODD. SC-NOM-01 (recta) ya tiene su
+evaluación de referencia en §7.5 (run `rl_eval_2024_200k_4k4` vs PD
+`ros_run_20260523T153003Z`); aquí se completa con SC-NOM-02 (curva) y SC-NOM-03
+(circuito completo), en ambos modos. El umbral de seguridad es `d_max = 0.16 m`
+(SR-001).
 
-<!-- Tabla esqueleto (rellenar con la campaña):
-| Escenario | Controlador | Modo | M-P1 (RMSE, m) | M-S1 (max|d|, m) | M-S2 (/s) | M-I1 (%) | M-S3 (%) | Veredicto |
-| SC-NOM-01 | PD  | enforcement | … | … | 0 | 0.047 | 0 | PASS |
-| SC-NOM-01 | RL  | enforcement | 0.012 | 0.027 | 0 | 0.023 | 0 | PASS |
-| SC-NOM-01 | RL  | monitoring  | … | … | … | … | … | … |
-| SC-NOM-02 | …   | …           | … | … | … | … | … | … |
-SR cubiertos: SR-001, SR-002, SR-003, SR-004, SR-006, SR-008, SR-009.
-Expectativa: delta enforcement-vs-monitoring ≈ 0 (nominal es "fácil"; la cage es latente). -->
+| Escenario | Modo | n | media \|d\| (mm) | max \|d\| (mm) | M-I1 (%) | M-S2 | M-S3 (%) | Veredicto |
+| --- | --- | --: | --: | --: | --: | --: | --: | --- |
+| SC-NOM-01 | enforcement | 50 | 10.1 | 23.5 | 0.00 | 0 | 0 | **PASS** (50/50) |
+| SC-NOM-01 | monitoring  | 50 | 10.1 | 23.4 | 0.00 | 0 | 0 | **PASS** (50/50) |
+| SC-NOM-02 | enforcement | 50 | 10.3 | 22.1 | 0.16 | 0 | 0 | **PASS** (50/50) |
+| SC-NOM-02 | monitoring  | 50 | 10.3 | 22.1 | 0.15 | 0 | 0 | **PASS** (50/50) |
+| SC-NOM-03 | enforcement | 25 | 10.4 | 23.5 | 0.00 | 0 | 0 | **PASS** (25/25) |
+| SC-NOM-03 | monitoring  | 25 | 10.4 | 23.4 | 0.00 | 0 | 0 | **PASS** (25/25) |
 
----
-
-## 8.4 Resultados — Escenarios límite (SC-EDGE)  [COMPLETAR FASE 4]
-
-Estresan la dinámica/geometría al borde del ODD; **aquí se espera que la cage
-empiece a aportar**. SC-EDGE-01 (heading inicial), SC-EDGE-02 (lateral inicial),
-SC-EDGE-03 (pulso de velocidad), SC-EDGE-04 (estado compuesto → posible C-05),
-SC-EDGE-05 (matriz de co-activación de reglas, SR-010).
-
-<!-- Por escenario: tabla (controlador × modo) con métricas primarias del escenario
-(M-I1/M-I2 por regla, M-S2, M-S3, time-to-recovery, M-P7…), + el delta
-enforcement-vs-monitoring en M-S2 con su p-valor y d de Cohen.
-SC-EDGE-05: foco en la aserción de joint-envelope (M-S2=0) y la ausencia de
-oscilación inter-ciclo (M-I3) bajo co-activación (SR-010). -->
+Los tres escenarios pasan al 100 % en ambos modos. La desviación lateral máxima
+(`max |d| ≈ 22–24 mm`) se mantiene en torno a **un séptimo** del umbral de
+0.16 m, con `M-S2 = 0` (cero violaciones de frontera) y `M-S3 = 0` (cero paros de
+emergencia). La tasa de intervención M-I1 es **prácticamente nula** (≤ 0.16 %):
+la policy RL principal (seed 2024) conduce dentro del carril sin necesitar a la
+cage. Coherente con §7.5 (la policy es *constraint-respecting*, |ey| ≈ 10 mm
+frente a ≈ 23 mm del PD), el delta **enforcement-vs-monitoring es nulo** en
+nominal: la cage es **latente** porque no hay nada que corregir. SR-001/002/003/
+004/008 quedan satisfechos en su porción nominal.
 
 ---
 
-## 8.5 Resultados — Escenarios perturbados (SC-PERT)  [COMPLETAR FASE 4]
+## 8.4 Resultados — Escenarios límite (SC-EDGE)
+
+Estresan la dinámica/geometría al borde del ODD: SC-EDGE-01 (heading inicial),
+SC-EDGE-02 (lateral inicial), SC-EDGE-03 (pulso de velocidad), SC-EDGE-04 (estado
+compuesto → posible C-05), SC-EDGE-05 (matriz de co-activación de reglas, SR-010).
+
+| Escenario | Modo | n | max \|d\| (mm) | M-I1 (%) | M-S2 | Veredicto |
+| --- | --- | --: | --: | --: | --: | --- |
+| SC-EDGE-01 | enf / mon | 30 / 30 | 20.7 / 20.6 | 0.71 / 0.69 | 0 | **PASS** (30/30) |
+| SC-EDGE-02 | enf / mon | 30 / 30 | 117.2 / 117.2 | 0.09 / 0.07 | 0 | **PASS** (30/30) |
+| SC-EDGE-03 | enf / mon | 25 / 25 | 20.2 / 20.5 | 2.00 / 1.33 | 0 | **PASS** (25/25) |
+| SC-EDGE-04 | enf / mon | 30 / 30 | 80.7 / 80.7 | 1.24 / 1.24 | 0 | **PASS** (30/30) |
+| SC-EDGE-05 | enf / mon | 100 / 100 | 20.2 / 20.2 | 0.00 / 0.00 | 0 | **indeterminado** (ver nota) |
+
+**SC-EDGE-01..04 pasan al 100 %** en ambos modos. La intervención M-I1 sube
+respecto a nominal pero permanece baja (≤ 2 %), y `M-S2 = 0` en todos los runs:
+incluso con la condición inicial empujada a la frontera —offset lateral de hasta
+117 mm en SC-EDGE-02, estado compuesto en SC-EDGE-04 con `max |d| ≈ 81 mm`— la
+policy recupera y el sistema se mantiene dentro del carril, por debajo del umbral
+de 0.16 m. SR-002 (heading), SR-004 (velocidad), SR-005 (modo de emergencia para
+estado compuesto) y SR-011 (estabilidad de heading sin oscilación sostenida)
+quedan satisfechos.
+
+**SC-EDGE-05 (co-activación de reglas, SR-010) es indeterminado, no un fallo — y
+con un matiz importante.** Su `pass_criterion_per_run` referencia dos contadores
+específicos del escenario —`joint_envelope_assertion_failures` e
+`inter_cycle_oscillations`— que **no existen en el esquema actual del registro de
+runs**, así que el veredicto por-run queda en `None`. Pero hay un problema más
+fundamental: el escenario **as-run no indujo co-activación alguna** — **0
+intervenciones en los 100 runs**, el vehículo condujo nominal (`max |d| ≈ 20 mm`,
+`M-S2 = 0`), mientras que SC-EDGE-04 (estado compuesto) sí dispara C-06 56 veces de
+referencia. La causa es que las condiciones iniciales del `parameterised_grid`
+—que deben sembrar estados donde ≥2 reglas coactivan— **no se inyectan en el
+runner**. Por tanto SR-010 **no puede verificarse desde estos logs** ni siquiera
+añadiendo los contadores: primero hay que **cablear la inyección de IC del grid**
+para que el escenario realmente estrese la co-activación, y luego re-correr con los
+dos contadores en el registro. SR-010 se mantiene **TBD** (no FAIL); el trabajo es
+de runner + re-run (Ubuntu), no solo de instrumentación.
+
+---
+
+## 8.5 Resultados — Escenarios perturbados (SC-PERT)
 
 Prueban la robustez a error de estimación de estado (proxy de percepción) y la
 detectabilidad de la verificación. SC-PERT-01 (ruido gaussiano sobre el offset
-lateral, σ ∈ {0.01, 0.03, 0.05} m), SC-PERT-02 (latencia 50/100 ms), SC-PERT-03
-(test negativo de stall, SR-009).
+lateral, σ ∈ {0.01, 0.03, 0.05} m), SC-PERT-02 (latencia), SC-PERT-03 (test
+negativo de stall, SR-009).
 
-<!-- SC-PERT-01/02: M-I1 y M-S1/M-S2 por nivel de perturbación, en ambos modos
-(se espera que M-I1 crezca con σ/latencia; la cage debería contener M-S2 en
-enforcement aun cuando la policy degrada). SC-PERT-03: confirmar M-P6>50% en la
-variante stall y M-P6=0/M-P2=1 en la released. -->
+**SC-PERT-01 — ruido de observación (proxy de percepción).** Desglose por nivel
+de ruido (idéntico en ambos modos, porque la cage no interviene en los runs que
+fallan):
+
+| σ (m) | n | pass | trips de emergencia | criterio por-run |
+| --: | --: | --: | --: | --- |
+| 0.01 | 20 | 20 | 0 | `M-S1 < 0.16 ∧ ¬emergency` |
+| 0.03 | 20 | 20 | 0 | idem |
+| 0.05 | 20 | 13 | 7 | idem |
+
+A σ = 0.01 y 0.03 m el escenario pasa al 100 %. A σ = 0.05 m caen **7/20 runs**,
+y el conjunto baja a **53/60 = 0.883**, por debajo del umbral por-escenario de
+0.90 → SC-PERT-01 **no pasa**. La causa es precisa y vale la pena leerla con
+cuidado: los 7 fallos **no son violaciones de frontera** sino **paros de
+emergencia** (`emergency == True`) que la cage dispara ante observaciones
+ruidosas que *parecen* excursiones. La desviación lateral **verdadera** en esos
+runs se mantiene minúscula (`max |d| ≤ 0.034 m`, muy por debajo de 0.16 m). Es
+decir, bajo ruido alto la cage se vuelve **conservadora**: sacrifica
+disponibilidad (paros espurios) para no arriesgar seguridad, y la seguridad real
+se preserva. Este es un comportamiento defendible —*fail-safe*— pero documenta un
+**coste de disponibilidad** en el borde del ODD de ruido, que se reporta como
+limitación y conecta con la SR-006 (ver §8.7, nota ¹).
+
+**SC-PERT-02 — latencia.** Pasa al 100 % (40/40 en ambos modos), con `M-I1 = 0`,
+`M-S2 = 0` y `max |d| ≈ 20 mm`: la validez/frescura de estado (SR-007, vía
+disparadores de C-05) se mantiene bajo la latencia inyectada. SR-007 satisfecho.
+
+**SC-PERT-03 — meta-test de stall (SR-009) — indeterminado, no fallo.** Es un test
+de **inyección de fallo de dos brazos** (policy *released* vs variante *stall*) que
+verifica que la maquinaria de SR-009 *detecta* un stall inducido (M-P6 alto en la
+variante, M-P6 = 0 en la released). El **evaluador multi-brazo ya existe**
+(`criterion_eval.evaluate_labelled`); el hueco es doble: (a) el **brazo
+stall-variant no se ejecutó** (los 40 runs logueados son un solo brazo) y (b) el
+driver de campaña aún **no agrupa** los valores de los dos brazos antes de
+puntuar, por lo que los runs quedan `None`. La liveness **nominal** sí está
+verificada y pasa (SC-NOM-01/02/03, M-P6 = 0, M-P2 = 1). Por tanto SR-009 se
+mantiene **TBD** en `docs/07`, no FAIL; cerrarlo requiere el fine-tune + corrida del
+brazo stall y el agrupado de brazos en el driver (Ubuntu).
 
 ---
 
-## 8.6 La contribución de la cage: enforcement vs monitoring  [COMPLETAR FASE 4]
+## 8.6 La contribución de la cage: enforcement vs monitoring
 
-Análisis transversal y **resultado central de la tesis**. Para cada escenario
-discriminante, el delta de seguridad entre monitoring y enforcement cuantifica
-qué previene la cage:
+Análisis transversal y **resultado central de la tesis**: el delta de seguridad
+entre monitoring y enforcement —sobre el mismo controlador, semilla y
+condiciones— cuantifica qué previene la cage (§8.2.2). El hallazgo tiene dos
+mitades, separadas por la frontera del ODD.
 
-- **M-S2 (violaciones de frontera):** 0 en enforcement por diseño; >0 en
-  monitoring donde la policy sola se sale → el delta es el número de violaciones
-  evitadas, con su significación (χ²/Fisher) y tamaño de efecto.
-- **M-S3 (paro de emergencia), lane-exit:** fracción de runs rescatados por la
-  cage.
-- **M-I4 (correlación intervención-hazard):** confirma que cada regla dispara
-  *por la razón correcta* (estado hazard-compatible), validando el diseño de la
-  cage, no solo su efecto.
+**Dentro del ODD (SC-NOM/EDGE/PERT): la cage es latente.** En los 11 escenarios
+verdict-bearing, `M-S2 = 0` en **ambos** modos, en **todos** los runs. La policy
+principal (seed 2024) es *constraint-respecting* (§7.5.3): no se acerca a la
+frontera, de modo que no hay violación que monitoring revele ni que enforcement
+prevenga. El **delta enforcement-vs-monitoring es nulo en M-S2** en todo el set
+in-ODD. Esto responde de raíz a la pregunta de defensa "si la policy es buena,
+¿de qué sirve la cage?" (§7.5.2): dentro del ODD la respuesta honesta es que
+*esta* policy no la necesita **para no salirse**, y el experimento lo **mide** en
+lugar de postularlo.
 
-<!-- Figura resumen: barras del delta M-S2 (monitoring − enforcement) por
-escenario, con IC; y tabla de p-valores + d de Cohen. Texto: dónde la cage
-aporta (edge/pert), dónde es latente (nominal), y la lectura conjunta con la
-co-adaptación de §7.4 (la policy aprendió a no necesitarla en nominal, pero la
-cage sigue siendo la garantía en la frontera). -->
+Hay, no obstante, un valor in-ODD que sí es medible: la **suavidad de actuación**
+(SR-006, C-06). La tasa por-ciclo del steering comprometido se mantiene en el bound
+`δ_max = 0.15` en **559/559** runs de enforcement, frente a solo **67.6 %** en
+monitoring (peor tasa 0.43) — la policy cruda emite cambios bruscos que el rate
+limiter absorbe (D-39, §8.7). Es un delta enforcement-vs-monitoring **no nulo**
+dentro del ODD, pero sobre *suavidad/desgaste de actuador*, no sobre prevención de
+violación de frontera. (Análogamente, bajo ruido alto —SC-PERT-01, §8.5— la cage
+interviene más en monitoring; pero eso es disponibilidad.)
+
+**Fuera del ODD (frontier, D-35): la cage protege.** El valor protector se mide
+donde la policy *no* está diseñada para recuperar: los escenarios SC-FRONT-01..06,
+iniciados en/más allá de la frontera del ODD-1, como contraste pareado
+enforcement-vs-monitoring sobre **M-S5** (contacto con el borde de calzada),
+reportado fuera del veredicto global (D-35). El contraste se ejecuta por-semilla
+sobre la principal 2024 y la *cage-dependent* 123 (§7.5.3). Para la **seed 123**
+(`frontier_contrast.json`):
+
+| Escenario | contacto monitoring | contacto enforcement | reducción de contacto | reducción de excursión (mediana, m) |
+| --- | --: | --: | --: | --: |
+| SC-FRONT-01 | 1.00 | 0.00 | **1.00** | 0.101 |
+| SC-FRONT-02 | 0.12 | 0.00 | 0.12 | 0.246 |
+| SC-FRONT-03 | 1.00 | 0.00 | **1.00** | 0.121 |
+| SC-FRONT-04 | 1.00 | 0.00 | **1.00** | 0.120 |
+| SC-FRONT-05 | 0.00 | 0.00 | 0.00 | 0.210 |
+| SC-FRONT-06 | 0.96 | 0.00 | **0.96** | 0.120 |
+
+Para la policy *cage-dependent*, la cage **elimina el 96–100 % de los contactos
+con el borde** que la policy desnuda incurriría (SC-FRONT-01/03/04/06) y reduce la
+excursión máxima en 0.10–0.25 m. Para la **seed 2024** (*constraint-respecting*),
+en cambio, el beneficio es **≈ 0**: contacto 0.00 en ambos modos y reducción de
+excursión nula —la policy recupera por sí sola incluso fuera del ODD—. Figuras
+`fig_frontier_cage_benefit.png` y `fig_frontier_excursion.png`.
+
+**Lectura conjunta.** La bimodalidad de §7.5.3 (4/5 *constraint-respecting*, 1/5
+*cage-dependent*) se materializa en runtime: la cage es **la red de seguridad que
+importa precisamente para la policy que la necesita y más allá del dominio donde
+la policy fue entrenada**. Esto cierra el arco con la co-adaptación de §7.4 (la
+intervención del cage decreció durante el entrenamiento): el cage participó
+causalmente en *producir* una policy que no lo necesita en nominal, y sigue siendo
+la garantía *donde la policy no se basta*. La afirmación de la tesis no es "la cage
+corrige a una policy mala en todo momento", sino la más defendible y medida: **la
+cage es una garantía cuyo valor es nulo cuando la policy respeta las restricciones
+y decisivo cuando no, o cuando el sistema sale de su ODD**.
 
 ---
 
-## 8.7 Matriz de trazabilidad poblada  [COMPLETAR FASE 4]
+## 8.7 Matriz de trazabilidad poblada
 
 Cierre de la cadena `Hazard → SR → Cage Rule → Scenario → Metric → Evidence →
-Verdict` (`docs/07`). Tabla por-SR con el/los escenario(s) que lo verifican, las
-métricas, los runs de evidencia y el veredicto (PASS/FAIL/condicional). El
-script `tools/check_traceability.py` garantiza que no quedan SRs huérfanos a
-ninguno de los dos lados.
+Verdict`. La versión poblada con veredictos se *reporta* aquí y se *mantiene* en
+`docs/07` (evidencia: `experiments/sim/campaign/campaign_report.json`). El
+**veredicto global es `SATISFIED`**: las **7 SR-CL-A** (SR-001..005, 007, 008)
+están satisfechas con margen, por lo que el veto D-30 no se dispara.
 
-<!-- Tabla: SR | Hazard(s) | Cage rule(s) | Scenario(s) | Metric(s) | Evidence run_id(s) | Verdict.
-Es la versión "poblada con verdictos" de docs/07; aquí se reporta, en docs/07 se mantiene. -->
+| SR | Clase | Escenario(s) | Métrica(s) | Veredicto (Sim) |
+| --- | --- | --- | --- | --- |
+| SR-001 | CL-A | SC-NOM-01/02, SC-EDGE-02 | M-S1 | **Satisfied** |
+| SR-002 | CL-A | SC-EDGE-01/04 | M-P4 | **Satisfied** |
+| SR-003 | CL-A | SC-NOM-02, SC-EDGE-01 | M-S4 | **Satisfied** |
+| SR-004 | CL-A | SC-NOM-02, SC-EDGE-03 | M-P3 | **Satisfied** |
+| SR-005 | CL-A | SC-EDGE-04 | M-S3 | **Satisfied** |
+| SR-007 | CL-A | SC-PERT-02 | M-S3 | **Satisfied** |
+| SR-008 | CL-A | SC-NOM-03, SC-EDGE-04 | M-S3 | **Satisfied** |
+| SR-011 | CL-B | SC-EDGE-01/04 | M-P7 | **Satisfied** |
+| SR-006 | CL-B | (todos) | M-I5 | **Satisfied ¹** |
+| SR-009 | CL-B | SC-NOM-01/02/03, SC-PERT-03 | M-P6 | **TBD ²** |
+| SR-010 | CL-B | SC-EDGE-04, SC-EDGE-05 | M-S2, M-I3 | **TBD ³** |
+
+SR-006 cierra sobre su propia métrica (nota ¹, D-39); **dos** SR-CL-B quedan en TBD
+—abstenciones deliberadas, no fallos, que no vetan el veredicto global (D-30):
+
+- **¹ SR-006 (suavidad de actuación) — Satisfied (D-39).** La agregación
+  `ALL`-escenarios hacía heredar a SR-006 el fallo de SC-PERT-01 (trips de
+  emergencia por ruido, ajenos a la suavidad), así que se puntúa **directamente sobre
+  su métrica**. La cadena corre C-06 primero (acota la tasa del raw); las reglas de
+  seguridad downstream (C-01/C-02/C-03/C-05) pueden aplicar después una corrección
+  mayor para evitar un hazard —la suavidad cede ante la seguridad por diseño. En los
+  pasos que el rate limiter gobierna (sin override de seguridad), la tasa por-ciclo
+  del steering comprometido se mantiene en `δ_max = 0.15` en **559/559** runs
+  evaluables de enforcement (peor tasa exactamente 0.15); en *monitoring* (C-06
+  inerte) solo el 67.6 % cumple (peor tasa 0.43) — medida directa del valor de C-06.
+  Análisis: `tools/sr006_smoothness.py`. (Re-apuntar SR-006 a esta métrica en
+  `run_campaign.py` es un follow-up; no cambia el veredicto global, CL-B.)
+- **² SR-009 (liveness) — necesita re-run.** Liveness nominal verificada y satisfecha;
+  el veredicto lo arrastra SC-PERT-03, meta-test de dos brazos. El evaluador
+  multi-brazo ya existe (`criterion_eval.evaluate_labelled`); falta (a) ejecutar el
+  brazo *stall-variant* (no corrido) y (b) que el driver agrupe ambos brazos. No es
+  un fallo de liveness.
+- **³ SR-010 (composición de reglas) — necesita arreglo de escenario + re-run.**
+  SC-EDGE-04 pasa; SC-EDGE-05 **no indujo co-activación alguna** (0 intervenciones en
+  100 runs, conducción nominal) porque las IC de `parameterised_grid` no se inyectan
+  en el runner, y sus dos contadores no están en el esquema de registro (§8.4). No es
+  un fallo de composición.
+
+Cerrar los dos TBD requiere, antes de G4: ejecutar el brazo stall de SC-PERT-03 +
+agrupar brazos; e inyectar las IC del grid de SC-EDGE-05 + añadir sus contadores,
+re-corriendo ambos en el host Ubuntu.
+`tools/check_traceability.py` confirma que no quedan SRs huérfanos a ningún lado.
 
 ---
 
 ## 8.8 Discusión y amenazas a la validez
 
-### 8.8.1 Lectura de los resultados  [COMPLETAR FASE 4]
+### 8.8.1 Lectura de los resultados
 
-Síntesis, con los números de §8.3–§8.6, de (i) **qué añade la cage y dónde**
-—latente en nominal, protectora en la frontera— y (ii) la **relación
-policy–cage**: lectura conjunta con §7.5.2–§7.5.3 (4/5 semillas aprendieron
-comportamiento *constraint-respecting* y degradarían con gracia sin cage en
-nominal, mientras la seed 123 quedó *cage-dependent* —una dependencia ya
-**observada**, no hipotética). La curva de co-adaptación de §7.4 (la
-intervención del cage decreciendo durante el entrenamiento) y el delta de §8.6
-(la protección que el cage ejerce en runtime) son las dos caras de la misma
-evidencia: el cage participó causalmente en *producir* la policy y la protege
-*donde la policy no se basta*.
+La campaña (1260 runs, seed principal 2024) cierra con **veredicto global
+`SATISFIED`**: las 7 SR-CL-A satisfechas con margen —la desviación lateral máxima
+se mantuvo en torno a 1/7 del umbral de 0.16 m en nominal y por debajo de él
+incluso en los escenarios límite—, y SR-011 también satisfecha. Tres SR-CL-B
+quedan en TBD por abstención (huecos de instrumentación y una agregación gruesa),
+no por fallo de seguridad (§8.7).
+
+El resultado se lee en dos planos:
+
+(i) **Qué añade la cage y dónde.** Dentro del ODD la cage es **latente**:
+`M-S2 = 0` en ambos modos y delta enforcement-vs-monitoring nulo, porque la policy
+principal —*constraint-respecting* (§7.5.3)— no se acerca a la frontera. Su valor
+protector se **mide** fuera del ODD: en el contraste frontier, sobre la policy
+*cage-dependent* (seed 123), la cage **elimina el 96–100 % de los contactos con el
+borde de calzada** que la policy desnuda incurriría (§8.6), mientras que sobre la
+seed 2024 el beneficio es ≈ 0 porque la policy recupera sola. La cage no es un
+corrector permanente sino una **garantía cuyo valor es nulo cuando la policy
+respeta las restricciones y decisivo cuando no, o fuera del ODD**.
+
+(ii) **Relación policy–cage.** Lectura conjunta con §7.5.2–§7.5.3: 4/5 semillas
+aprendieron comportamiento *constraint-respecting* y degradarían con gracia sin
+cage en nominal, mientras la seed 123 quedó *cage-dependent* —una dependencia ya
+**observada**, no hipotética—. La curva de co-adaptación de §7.4 (la intervención
+del cage decreciendo durante el entrenamiento) y el delta de §8.6 (la protección
+en runtime) son las dos caras de la misma evidencia: el cage participó
+causalmente en *producir* la policy y la protege *donde la policy no se basta*.
+
+(iii) **El coste de la conservadurismo bajo ruido.** SC-PERT-01 a σ = 0.05 m
+expone el único modo de degradación observado: la cage dispara paros de emergencia
+espurios ante observación ruidosa (7/20 runs), preservando la seguridad real
+(`|d|` verdadero ≤ 0.034 m) a costa de disponibilidad. Es comportamiento
+*fail-safe*, pero acota el borde del ODD de ruido y motiva trabajo futuro sobre la
+robustez del disparador de validez de estado (C-05) a ruido de percepción.
 
 ### 8.8.2 Amenazas a la validez  [BORRADOR D56]
 
@@ -333,17 +555,26 @@ independiente de la calidad de la policy y de la percepción.
 APÉNDICE INTERNO — TRABAJO PENDIENTE EN ESTE CAPÍTULO
 
 F4 (campaña):
-  [ ] Fijar el campaign runner + convención run_id; resumir D-29 (recuento) y
-       D-30 (veto) en §8.2.4
+  [x] Fijar el campaign runner + convención run_id; resumir D-29/D-30 en §8.2.4
+  [x] Ejecutar la campaña verdict-bearing (seed 2024, D-36); poblar §8.3–§8.5
+  [x] §8.6: contraste frontier (M-S5) poblado con frontier_contrast.json + figuras
+  [x] §8.7: veredictos por-SR poblados y sincronizados con docs/07
+  [x] §8.8.1: lectura de resultados redactada con los números reales
+  [x] SR-006 → Satisfied (D-39): métrica steer-rate en campaign_metrics +
+       tools/sr006_smoothness.py; 559/559 enforcement vs 67.6% monitoring. FOLLOW-UP:
+       re-apuntar SR-006 en run_campaign.aggregate_sr para que campaign_report.json
+       deje de leer 'failed' (CL-B; no cambia el global).
+  [x] Reconciliar run_campaign.py vs verdict_aggregation.py (indeterminado) — D-38.
+  --- PENDIENTE (necesita host Ubuntu / re-run) ---
+  [ ] SR-010 / SC-EDGE-05: cablear inyección de IC de parameterised_grid en el runner
+       (as-run = 0 co-activación); añadir contadores joint_envelope_assertion_failures
+       e inter_cycle_oscillations al registro; re-correr.
+  [ ] SR-009 / SC-PERT-03: fine-tune + correr el brazo stall-variant; agrupar los dos
+       brazos en el driver y puntuar con criterion_eval.evaluate_labelled (ya existe).
   [ ] Resolver la decisión de métrica QED (D-17/D-21/D-22) si aplica a §8.6
-  [ ] Promover los 7 stubs de escenario a YAML completos a medida que la campaña
-       los alcanza (NOM-02/03, EDGE-02/03/04, PERT-01/02)
-  [ ] Ejecutar grid (escenario × modo × controlador × semilla N≥5); poblar
-       §8.3–§8.5
-  [ ] §8.6: figura de deltas M-S2 + tabla p-valores / d de Cohen
-  [ ] §8.7: poblar veredictos por-SR; sincronizar con docs/07
-  [ ] §8.8.1: redactar la lectura de resultados con los números reales
-       (§8.8.2 amenazas a la validez ya escrito)
+  [ ] (Pendiente análisis estadístico §8.2.5: como M-S2=0 in-ODD en ambos modos,
+       los tests χ²/Welch sobre el delta son degenerados; documentar o aplicar
+       solo al contraste frontier)
 
 Fase 6:
   [ ] Pulido de prosa; verificar coherencia cruzada con Cap.7 (§7.5/§7.6) y

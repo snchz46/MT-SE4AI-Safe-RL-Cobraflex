@@ -1,7 +1,7 @@
 # DECISIONS.md — Project decision log
 
 <!--
-Status: D9 (Phase 0 close) + F1 audit additions (D-25..D-33) + F3 (D-34) + F4 (D-35, D-36, D-37) + E-track (D-41 supersedes D-01; D-42 superseded by D-43; D-43).
+Status: D9 (Phase 0 close) + F1 audit additions (D-25..D-33) + F3 (D-34) + F4 (D-35, D-36, D-37, D-38, D-39) + E-track (D-41 supersedes D-01; D-42 superseded by D-43; D-43).
 Last update: see Git commit date.
 -->
 
@@ -75,6 +75,8 @@ consistent with the chapters.
 | D-35 | Frontier (out-of-ODD) scenario family as a non-verdict-bearing cage-efficacy contrast (M-S5) | `docs/05` (Frontier scenarios); §8.2.2–§8.2.3 | CONFIRMED |
 | D-36 | Seed policy for F4 campaigns: main seed 2024 certifies the D-29/D-30 verdict; cage-dependent seed 123 only in the D-35 frontier contrast, never pooled into the global verdict | §7.5.3 (seed selection); §8.2 (sim-eval campaign) | CONFIRMED |
 | D-37 | F4 realises ODD-1..4 on the single oval world at a fixed-speed (ACT_DIM=1) operating point; ODD-1/2 covered, ODD-3 partial (geometry yes, speed envelope no), ODD-4 deferred | `docs/08` §12; `docs/05` Track mapping; §8 | CONFIRMED |
+| D-38 | Indeterminate (None) per-run verdicts are excluded from the pass fraction and propagate as `insufficient_evidence`, not as a failure; `run_campaign.py` reconciled to the `verdict_aggregation.py` spine | §8.2 (sim-eval aggregation); `tools/run_campaign.py`; `docs/07` | CONFIRMED |
+| D-39 | SR-006 (actuator smoothness) verified directly on its committed-steer rate metric (non-safety-override steps), reported outside the D-30 per-scenario aggregation (precedent D-35); not by `ALL`-scenario inheritance | §8.5/§8.7; `tools/sr006_smoothness.py`; `docs/07` | CONFIRMED |
 | D-41 | Track 'E' (parallel, end-to-end front-camera): **supersedes D-01**; camera→action policy behind a retained modular cage; phases E0..E6 / gates GE0..GE6, commit prefix `E2:` | `docs/00`; `docs/01`; §3.5.1 | CONFIRMED |
 | D-42 | Track 'E' cage operates on an independent state estimate, not the camera (preserves cage independence; distinguishes H-06 cage-state from H-11 camera-perception) | `docs/04`; `docs/02` | SUPERSEDED by D-43 |
 | D-43 | Track 'E' cage state comes from a dedicated deterministic vision lane-estimator (separate from the policy CNN), not ground truth — for generalisation to any road with visible lines; accepts common-cause + new hazard H-12 | `docs/04`; `docs/09` §10; `docs/02` | CONFIRMED |
@@ -1334,6 +1336,180 @@ inferred.
 
 ---
 
+
+### D-38 — Indeterminate per-run verdicts are insufficient evidence, not failures (aggregator reconciliation)
+
+| Field | Value |
+| --- | --- |
+| Section | §8.2 (sim-eval aggregation); `tools/run_campaign.py`; `docs/07` |
+| Status | CONFIRMED |
+| Date | F4 (10.06.2026) |
+
+**Decision.** A per-run verdict of `None` (indeterminate — the run's pass-criterion
+referenced a metric absent from the run-record schema, the criterion is not scorable
+in the single-run evaluator, or the run errored) is **excluded from the denominator**
+of a scenario's pass fraction and **propagated as `insufficient_evidence`**, never
+collapsed into a failure. A scenario whose runs are *all* indeterminate has verdict
+`None` (not `False`); an SR verified only by such a scenario reads
+`insufficient_evidence`; and at the global level an under-evidenced **SR-CL-A** makes
+the verdict `INCOMPLETE` rather than `NOT SATISFIED`. A *genuine* scenario failure
+still dominates an indeterminate sibling (failed > insufficient). The two campaign
+aggregators are reconciled to this single semantics: `tools/run_campaign.py`'s
+`aggregate_scenario`/`aggregate_sr`/`global_verdict` now mirror the unit-tested
+D-29/D-30 spine `src/cobraflex_rl/cobraflex_rl/verdict_aggregation.py`.
+
+**Alternatives considered and rejected.**
+- *Keep the two aggregators as-is.* Rejected: `run_campaign.py` computed
+  `fraction_pass = n_pass / n_total`, counting `None` runs inside the denominator and
+  thus collapsing "no evidence" into "0 % pass → fail". This silently mis-reported two
+  instrumentation gaps (SC-EDGE-05, SC-PERT-03) as safety violations, dragging SR-009
+  and SR-010 to `false` — an honesty defect the spine already avoided.
+- *Make `run_campaign.py` import `verdict_aggregation.py` directly.* Rejected for now:
+  the spine lives inside the `cobraflex_rl` ROS package with package-relative imports
+  (`.criterion_eval`, `.scenario_loader`) and a different data shape (`ScenarioRuns`),
+  whereas `run_campaign.py` is deliberately ROS-free and importable by file path from
+  `tools/`. Replicating the *semantics* (with cross-references in code) keeps the tool
+  self-contained while removing the divergence; a later refactor to a shared module is
+  left open.
+- *Treat an errored run as a failure.* Rejected: an executor crash is missing evidence,
+  not a demonstrated unsafe behaviour; it is counted as indeterminate and surfaced
+  separately via `n_error`.
+
+**Rationale.** The traceability commitment requires that a verdict mean what it says: a
+`failed` SR is a demonstrated safety violation, an `insufficient_evidence` SR is a gap
+in instrumentation or coverage. Conflating the two would either fabricate a violation
+(as happened for SR-009/SR-010) or, symmetrically, risk laundering a gap into a pass.
+The D-29/D-30 spine was designed with three-valued logic precisely for this; the fix
+brings the campaign runner into line with it rather than inventing a third rule.
+
+**Consequences.**
+- `tools/run_campaign.py`: `ScenarioResult` gains `n_fail`/`n_indeterminate` and a
+  three-valued `verdict`/`fraction_pass` (over evaluable runs); `SRResult` carries a
+  `status` ∈ {satisfied, failed, insufficient_evidence, not_run} plus failing/
+  indeterminate scenario lists; `global_verdict` distinguishes `NOT SATISFIED` (an
+  SR-CL-A failed) from `INCOMPLETE` (an SR-CL-A under-evidenced). The per-scenario and
+  per-SR report schemas gain the corresponding fields.
+- `experiments/sim/campaign/campaign_report.json` **regenerated from the raw
+  `campaign_runs.csv` per-run verdicts — no Gazebo re-run** (the per-run `None`s were
+  already recorded). SC-EDGE-05 and SC-PERT-03 now read `verdict: null`
+  (`fraction_pass: null`); SR-009 and SR-010 move from `false` to
+  `insufficient_evidence`. SR-006 remains `failed` here (it inherits the SC-PERT-01
+  fraction fail, a separate per-metric-aggregation issue, not a `None`) — **resolved
+  to Satisfied by D-39**, which scores SR-006 on its own metric.
+- **The global verdict is unchanged: `SATISFIED`, all 7 SR-CL-A satisfied** (D-30 veto
+  clear). Only the classification of three non-blocking SR-CL-B verdicts is affected.
+- Tests added in `policy/tests/test_run_campaign.py` and
+  `policy/tests/test_verdict_aggregation.py` for the "all runs `None` →
+  insufficient_evidence, not failed" case and the failed-dominates-indeterminate
+  precedence.
+- The `docs/07` "Aggregator caveat" is removed (the divergence it documented is
+  resolved). No new H/SR/C/SC/M artefacts, no `traceability_matrix.csv` rows. Cites
+  D-29, D-30.
+
+---
+
+### D-39 — SR-006 (actuator smoothness) verified on its own metric, not by scenario inheritance
+
+| Field | Value |
+| --- | --- |
+| Section | §8.5/§8.7 (sim-eval); `tools/sr006_smoothness.py`; `src/cobraflex_rl/cobraflex_rl/campaign_metrics.py`; `docs/07` |
+| Status | CONFIRMED |
+| Date | F4 (10.06.2026) |
+
+**Decision.** SR-006 (actuator smoothness, C-06) is verified **directly on its own
+metric** — the per-cycle rate of the committed steering command — pooled across runs,
+**not** by inheriting the pass/fail of the scenarios it maps to. Because C-06 is
+"always active", SR-006 maps to *all* scenarios; the D-30 per-scenario aggregation
+therefore made it inherit *any* failing scenario, and it was dragged to `failed` by
+SC-PERT-01 (whose σ = 0.05 failures are emergency trips under observation noise,
+unrelated to actuator smoothness). The cage chain is C-06 → C-04 → C-02 → C-03 →
+C-01 → C-05: C-06 bounds the *raw* action's per-cycle rate first, then a downstream
+safety rule (C-01/C-02/C-03/C-05) may command a larger correction to avert an
+imminent hazard — **smoothness yields to safety by design**. SR-006 is therefore
+measured on the steps the rate limiter actually governs (no downstream safety-override
+rule, no emergency): it holds iff the committed-steer per-cycle delta stays within
+`δ_max_steering = 0.15` (`cage.yaml`) on those steps. The analysis is a dedicated tool
+`tools/sr006_smoothness.py` reporting **outside** the D-30 per-scenario aggregation,
+exactly as the frontier M-S5 contrast does (precedent **D-35**).
+
+**Evidence.** On the main-seed campaign logs (`cage_status.csv`): enforcement
+**559/559** evaluable runs hold (worst non-override rate exactly 0.15); monitoring
+(C-06 inert) only **67.6 %** hold (worst rate 0.43) — a direct measure of C-06's
+contribution. Verdict: **Satisfied** (enforcement).
+
+**Alternatives considered and rejected.**
+- *Keep SR-006 under the `ALL`-scenario inheritance.* Rejected: it conflates an
+  unrelated scenario failure (SC-PERT-01 noise-induced emergency trips) with a
+  smoothness verdict — the same honesty defect D-38 fixed for indeterminates, here for
+  a genuine-but-irrelevant failure.
+- *Measure SR-006 on the final committed steer over **all** steps.* Rejected: that
+  penalises the cage for the *correct* behaviour of a downstream safety rule overriding
+  C-06 to prevent lane/heading/TTLC hazards; it would report a safety success as a
+  smoothness failure (worst all-step rate 0.97, all on C-01/C-02/C-03 intervention
+  steps).
+- *Add a smoothness pass-criterion to every scenario YAML.* Rejected as redundant and
+  error-prone; one always-active metric is better verified once, pooled, like M-S5.
+
+**Consequences.**
+- `campaign_metrics.compute_run_metrics` M-I5 gains `steer_rate_max`,
+  `steer_rate_p95`, `steer_rate_max_smoothness`, `steer_rate_smoothness_ok`,
+  `delta_max_steer` (pure, unit-tested in `policy/tests/test_campaign_metrics.py`).
+- `tools/sr006_smoothness.py` added (reads `cage_status.csv`; no Gazebo).
+- `docs/07`: SR-006 verdict TBD → **Satisfied** (note ¹).
+- **Follow-up (open):** `tools/run_campaign.py` still scores SR-006 by `ALL`-scenario
+  inheritance, so `campaign_report.json` per-SR SR-006 reads `failed`; re-point SR-006
+  to this metric in `aggregate_sr` (a "metric-verified SR" path) so the report agrees.
+  SR-006 is **SR-CL-B**, so neither the current nor the corrected value changes the
+  **global verdict (`SATISFIED`, D-30)**. Cites D-30, D-35, D-38.
+
+---
+
+## Future and pending decisions
+
+The following decisions are explicitly deferred to later phases and will
+be documented here when taken.
+
+| Provisional ID | Subject | Decision phase |
+| --- | --- | --- |
+| D-20 (provisional) | Closing definitive IDs in the traceability matrix (SR-001..SR-00*k*, C-01..C-0*n*) | Phase 1 (D15–D19) |
+| D-21 (provisional) | Confirmation or replacement of QED as official metric (cf. D-17) | Phase 4 |
+| D-22 (provisional) | Adoption of Behavior Metrics as official auxiliary tool | Phase 4 |
+| D-23 (provisional) | Decision on merging `V-Model_Adaptado.md` with Chapter 3 or keeping it as annex | Phase 6 |
+| D-24 (provisional) | Definitive bibliographic style (numerical IEEE vs author-year APA) | Phase 6 |
+
+---
+
+## Conventions for using this file
+
+**How to add a decision.** Every new decision is added at the end of the
+"Decisions" section with the next available identifier (D-NN). A row is
+also added to the "Decision index" at the start of the file. The "Last
+update" in the HTML comment of the header is updated.
+
+**How to modify a decision.** Recorded decisions are not overwritten. If
+a decision changes, a new entry is added that **supersedes** the
+previous one, indicating explicitly "Supersedes D-NN". The previous
+decision changes its status to "SUPERSEDED by D-MM" but its content is
+preserved. This convention preserves the auditable history and allows
+reconstructing the trajectory of decisions a posteriori.
+
+**Possible statuses.** *CONFIRMED*: decision taken and current.
+*DEFERRED*: decision deferred to a later phase, with an estimated review
+date. *TENTATIVE*: preliminary decision in validation phase.
+*SUPERSEDED*: replaced by a later decision.
+
+**Relation to the traceability matrix.** Decisions in this file do NOT
+enter the `traceability_matrix.csv` matrix unless they generate H, SR,
+C, SC, or M artefacts. However, matrix artefacts may cite decisions in
+this file in their *justification* field via the reference `cf. D-NN`.
+
+**Adoption cost (criterion D-19).** Each new entry adds between ten and
+twenty minutes of adoption cost (drafting + review). This cost is
+explicitly considered when evaluating the framework in Chapter 11.
+
+
+---
+
 ### D-41 — Track 'E': parallel end-to-end front-camera lane-following (supersedes D-01)
 
 | Field | Value |
@@ -1511,48 +1687,3 @@ hallucinating a lane the CV does not see is bounded by C-01/C-02 on the CV state
 - D-42 status → **SUPERSEDED by D-43**.
 - Cites D-41, D-42 (superseded), D-08 (A2), D-01 (whose modular, auditable-cage spirit is
   retained: the cage is still a distinct, deterministic, inspectable module).
-
----
-
-## Future and pending decisions
-
-The following decisions are explicitly deferred to later phases and will
-be documented here when taken.
-
-| Provisional ID | Subject | Decision phase |
-| --- | --- | --- |
-| D-20 (provisional) | Closing definitive IDs in the traceability matrix (SR-001..SR-00*k*, C-01..C-0*n*) | Phase 1 (D15–D19) |
-| D-21 (provisional) | Confirmation or replacement of QED as official metric (cf. D-17) | Phase 4 |
-| D-22 (provisional) | Adoption of Behavior Metrics as official auxiliary tool | Phase 4 |
-| D-23 (provisional) | Decision on merging `V-Model_Adaptado.md` with Chapter 3 or keeping it as annex | Phase 6 |
-| D-24 (provisional) | Definitive bibliographic style (numerical IEEE vs author-year APA) | Phase 6 |
-
----
-
-## Conventions for using this file
-
-**How to add a decision.** Every new decision is added at the end of the
-"Decisions" section with the next available identifier (D-NN). A row is
-also added to the "Decision index" at the start of the file. The "Last
-update" in the HTML comment of the header is updated.
-
-**How to modify a decision.** Recorded decisions are not overwritten. If
-a decision changes, a new entry is added that **supersedes** the
-previous one, indicating explicitly "Supersedes D-NN". The previous
-decision changes its status to "SUPERSEDED by D-MM" but its content is
-preserved. This convention preserves the auditable history and allows
-reconstructing the trajectory of decisions a posteriori.
-
-**Possible statuses.** *CONFIRMED*: decision taken and current.
-*DEFERRED*: decision deferred to a later phase, with an estimated review
-date. *TENTATIVE*: preliminary decision in validation phase.
-*SUPERSEDED*: replaced by a later decision.
-
-**Relation to the traceability matrix.** Decisions in this file do NOT
-enter the `traceability_matrix.csv` matrix unless they generate H, SR,
-C, SC, or M artefacts. However, matrix artefacts may cite decisions in
-this file in their *justification* field via the reference `cf. D-NN`.
-
-**Adoption cost (criterion D-19).** Each new entry adds between ten and
-twenty minutes of adoption cost (drafting + review). This cost is
-explicitly considered when evaluating the framework in Chapter 11.

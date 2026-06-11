@@ -1,0 +1,19 @@
+{
+  "run_id": "camp_front01_rl_seed123_monitoring_rep11",
+  "scenario_id": "SC-FRONT-01",
+  "mode": "monitoring",
+  "timestamp_iso": "2026-06-09T15:29:46.052484+00:00",
+  "duration_s": 11.8,
+  "git_commit": "3a68374ea1b648d2d7e942dd94ceede345aba557",
+  "cage_yaml": "/home/admit/Samuel/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "7a08ea91d2ff70c1db1e49fd4742ab099b47647395aca4509289e226fa3f5346",
+  "policy_checkpoint": "/home/admit/Samuel/thesis_repo/experiments/sim/cobraflex_ppo_lane_123_200k.zip",
+  "policy_checkpoint_hash": "05a63cbf2269918cd1ab00706d5658c43cbf7256e5219fb0f67a5bc41a778e8f",
+  "centerline_yaml_hash": "54f5d47cdf4d8c6a107e0e107f107fbc9d56310ac16ad731c65281875f160e33",
+  "scenario_yaml": "/home/admit/Samuel/thesis_repo/scenarios/frontier/sc_front_01.yaml",
+  "scenario_yaml_hash": "29d9e3cff26550f464cfec36aaa0b7440fd592106a89223acae28d3ebd1897b7",
+  "rep": 11,
+  "seed": 23,
+  "platform": "sim",
+  "status": "completed"
+}

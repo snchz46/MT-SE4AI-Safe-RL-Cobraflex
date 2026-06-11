@@ -1,0 +1,87 @@
+{
+  "total_steps": 150,
+  "episodes": 1,
+  "completed_laps": 0.38642564341876523,
+  "mean_ey_m": 0.002399316245900915,
+  "mean_abs_ey_m": 0.011549559558919013,
+  "max_abs_ey_m": 0.019819944578933723,
+  "mean_epsi_rad": 0.030207363741249146,
+  "mean_abs_epsi_rad": 0.0350240197357288,
+  "emergency_steps": 0,
+  "intervention_steps": 0,
+  "intervention_rate_pct": 0.0,
+  "interventions_per_rule": {},
+  "cycle_dt_s": 0.1,
+  "duration_s": 15.0,
+  "perturbation": {
+    "kind": "observation_noise",
+    "level": "sigma=0.01m"
+  },
+  "run_id": "camp_pert01_rl_seed2024_monitoring_rep36",
+  "scenario_id": "SC-PERT-01",
+  "mode": "monitoring",
+  "verdict": true,
+  "campaign": {
+    "scenario_id": "SC-PERT-01",
+    "criterion": "M-S1 < 0.16 AND emergency == False",
+    "verdict": true,
+    "clauses": [
+      {
+        "clause": "M-S1 < 0.16",
+        "operand": "M-S1",
+        "op": "<",
+        "rhs": 0.16,
+        "lhs": 0.019819944578933723,
+        "passed": true
+      },
+      {
+        "clause": "emergency == False",
+        "operand": "emergency",
+        "op": "==",
+        "rhs": false,
+        "lhs": false,
+        "passed": true
+      }
+    ],
+    "values": {
+      "M-P1": 0.012791010694924545,
+      "M-P4": 0.11643845568948154,
+      "M-P5": 0.0350240197357288,
+      "M-P2": 1,
+      "M-P3": 100.0,
+      "M-P6": 0.0,
+      "M-P7": 0.0408707229956669,
+      "M-S1": 0.019819944578933723,
+      "M-S2": 0.0,
+      "M-S3": 0,
+      "M-S4": null,
+      "M-I1": 0.0,
+      "M-I2": {},
+      "M-I3": {},
+      "M-I4": {},
+      "M-I5": {
+        "steer_median": 0.0,
+        "steer_p95": 0.0
+      },
+      "M-C1": null,
+      "M-C2": null,
+      "emergency": false,
+      "time_to_recovery_heading": 0.5,
+      "max_excursion_m": 0.019819944578933723,
+      "road_edge_contact": false
+    },
+    "availability": {
+      "M-P3": "approx: kappa absent, v_max_straight assumed",
+      "M-P6": "exact",
+      "M-P7": "exact",
+      "M-S3": "per-run bit; M-S3 rate is aggregated across runs",
+      "M-S4": "requires per-step ttlc series (not in current record schema)",
+      "M-I4": "C-05 omitted (triggers not in record); C-03 omitted (no ttlc)",
+      "M-I5": "steering channel only (throttle correction not in record schema)",
+      "M-C1": "not measured in sim runs",
+      "M-C2": "not measured in sim runs"
+    },
+    "termination_reason": "truncated",
+    "note": null
+  }
+}

@@ -8,8 +8,14 @@ The tool has two layers:
   * **PURE core (no ROS).** Scenario/SR loading, run-matrix generation, per-run
     verdict evaluation from the scenarios' pass-criterion strings, and the
     aggregation that follows D-29 (run counts by SR criticality) and D-30
-    (an SR-CL-A failure vetoes the global verdict). Unit-tested in
-    `policy/tests/test_run_campaign.py`; runnable on any host.
+    (an SR-CL-A failure vetoes the global verdict). Per-run verdicts are
+    *three-valued* (True/False/None): an indeterminate (None) run — an
+    instrumentation gap or an errored run — is **excluded** from the pass
+    fraction rather than collapsed to a fail, so a scenario with no evaluable
+    runs is *indeterminate* and propagates as ``insufficient_evidence``, never as
+    a safety violation. This matches the unit-tested D-29/D-30 spine
+    `cobraflex_rl/verdict_aggregation.py` (reconciliation recorded as **D-38**).
+    Unit-tested in `policy/tests/test_run_campaign.py`; runnable on any host.
 
   * **EXECUTOR seam.** ``execute_run(run_spec) -> metrics`` actually drives one
     scenario run. The real executor invokes Gazebo via ``eval_policy`` with the
@@ -194,33 +200,69 @@ class ScenarioResult:
     mode: str
     n_runs: int
     n_pass: int
-    verdict: bool
+    n_fail: int
+    n_indeterminate: int
+    verdict: Optional[bool]   # True | False | None (None == indeterminate/insufficient)
 
     @property
-    def fraction_pass(self) -> float:
-        return self.n_pass / self.n_runs if self.n_runs else 0.0
+    def evaluable(self) -> int:
+        """Runs that produced a pass-or-fail verdict (indeterminate excluded)."""
+        return self.n_pass + self.n_fail
+
+    @property
+    def fraction_pass(self) -> Optional[float]:
+        """Pass fraction over *evaluable* runs; None if every run was indeterminate.
+
+        Indeterminate runs (a per-run verdict of ``None`` — the metric was not
+        computable, an instrumentation gap, or the run errored) are excluded from
+        the denominator, matching the D-29/D-30 spine
+        (`cobraflex_rl/verdict_aggregation.evaluate_scenario`). Counting them inside
+        the denominator would collapse "no evidence" into "failed" (cf. D-38)."""
+        return (self.n_pass / self.evaluable) if self.evaluable else None
 
 
 def aggregate_scenario(
-    scenario: Scenario, mode: str, run_pass_flags: Sequence[bool]
+    scenario: Scenario, mode: str, run_verdicts: Sequence[Optional[bool]]
 ) -> ScenarioResult:
-    n = len(run_pass_flags)
-    n_pass = sum(1 for f in run_pass_flags if f)
-    fraction_pass = n_pass / n if n else 0.0
-    verdict = evaluate_criterion(
-        scenario.pass_criterion_per_scenario, {"fraction_pass": fraction_pass}
-    )
-    return ScenarioResult(scenario.id, mode, n, n_pass, verdict)
+    """Reduce three-valued per-run verdicts (True/False/None) to a scenario result.
+
+    The pass fraction is taken over the *evaluable* (pass+fail) runs; if every run
+    was indeterminate the scenario verdict is ``None`` (insufficient evidence), not
+    a fail. This mirrors `verdict_aggregation.evaluate_scenario` (D-38)."""
+    n = len(run_verdicts)
+    n_pass = sum(1 for v in run_verdicts if v is True)
+    n_fail = sum(1 for v in run_verdicts if v is False)
+    n_indet = n - n_pass - n_fail
+    evaluable = n_pass + n_fail
+    if evaluable == 0:
+        verdict: Optional[bool] = None  # all indeterminate -> insufficient evidence
+    else:
+        verdict = evaluate_criterion(
+            scenario.pass_criterion_per_scenario, {"fraction_pass": n_pass / evaluable}
+        )
+    return ScenarioResult(scenario.id, mode, n, n_pass, n_fail, n_indet, verdict)
 
 
 @dataclass
 class SRResult:
     sr_id: str
     criticality: str
-    verdict: bool
+    status: str                 # satisfied | failed | insufficient_evidence | not_run
     run_count_ok: bool          # D-29 run-count + family coverage met
     families_covered: List[str]
+    failing_scenarios: List[str] = field(default_factory=list)
+    indeterminate_scenarios: List[str] = field(default_factory=list)
     notes: str = ""
+
+    @property
+    def verdict(self) -> Optional[bool]:
+        """Three-valued convenience view of ``status``: True (satisfied),
+        False (failed), None (insufficient_evidence / not_run)."""
+        if self.status == "satisfied":
+            return True
+        if self.status == "failed":
+            return False
+        return None
 
 
 def aggregate_sr(
@@ -232,16 +274,21 @@ def aggregate_sr(
     runs_per_scenario: Dict[str, int],
     verdict_mode: str = "enforcement",
 ) -> SRResult:
-    """Per-SR verdict + D-29 sufficiency.
+    """Per-SR status + D-29 sufficiency, following the verdict_aggregation spine.
 
-    The SR is *satisfied* iff every executed scenario that verifies it passes
-    (in ``verdict_mode``). ``run_count_ok`` is the D-29 sufficiency flag: each
-    contributing family must reach MIN_RUNS_BY_CRITICALITY, and an SR-CL-A must
-    additionally be covered in >=1 nominal AND >=1 adverse family.
+    Precedence (mirrors `verdict_aggregation.sr_verdict`, D-38): a real scenario
+    *failure* dominates; otherwise the D-29 run-count/coverage gate; otherwise an
+    *indeterminate* scenario (per-run verdicts all None — an instrumentation gap,
+    not a violation) yields ``insufficient_evidence``; otherwise ``satisfied``.
+    Crucially an indeterminate scenario is **never** scored as a failure.
+    ``run_count_ok`` is the D-29 sufficiency flag: each contributing family must
+    reach MIN_RUNS_BY_CRITICALITY, and an SR-CL-A must additionally be covered in
+    >=1 nominal AND >=1 adverse family.
     """
     min_runs = MIN_RUNS_BY_CRITICALITY.get(criticality, 0)
     families: set[str] = set()
-    all_pass = True
+    failing: List[str] = []
+    indeterminate: List[str] = []
     any_executed = False
     enough_runs = True
     for sid in sr_scenarios:
@@ -255,33 +302,59 @@ def aggregate_sr(
             continue
         any_executed = True
         families.add(scen.family)
-        if not res.verdict:
-            all_pass = False
+        if res.verdict is False:
+            failing.append(sid)
+        elif res.verdict is None:
+            indeterminate.append(sid)
         if runs_per_scenario.get(sid, 0) < min_runs:
             enough_runs = False
 
     coverage_ok = True
     if criticality == "SR-CL-A":
         coverage_ok = ("nominal" in families) and ("adverse" in families)
-
-    verdict = all_pass and any_executed
     run_count_ok = enough_runs and coverage_ok and any_executed
-    notes = ""
+
     if not any_executed:
+        status = "not_run"
         notes = "no executable scenario yet (all stubs/missing)"
+    elif failing:
+        status = "failed"
+        notes = f"failing scenario(s): {sorted(failing)}"
     elif not run_count_ok:
+        status = "insufficient_evidence"
         notes = "D-29 not met (insufficient runs or family coverage)"
-    return SRResult(sr_id, criticality, verdict, run_count_ok, sorted(families), notes)
+    elif indeterminate:
+        status = "insufficient_evidence"
+        notes = f"indeterminate scenario(s) - instrumentation gap, not a failure: {sorted(indeterminate)}"
+    else:
+        status = "satisfied"
+        notes = ""
+    return SRResult(sr_id, criticality, status, run_count_ok, sorted(families),
+                    sorted(failing), sorted(indeterminate), notes)
 
 
 def global_verdict(sr_results: Sequence[SRResult]) -> Dict[str, object]:
-    """D-30: the global verdict is 'satisfied' iff every SR-CL-A is satisfied
-    (and its run-count is sufficient). SR-CL-B/C contribute nuance, not vetoes."""
+    """D-30: the global verdict is 'SATISFIED' iff every SR-CL-A is satisfied
+    (and its run-count is sufficient). A failing SR-CL-A vetoes it ('NOT
+    SATISFIED'); an SR-CL-A whose evidence is merely *indeterminate* or
+    under-covered makes it 'INCOMPLETE' (not a safety violation). This three-way
+    distinction mirrors `verdict_aggregation.global_verdict` (failed → failed,
+    insufficient → incomplete; D-38). SR-CL-B/C contribute nuance, not vetoes."""
     cl_a = [r for r in sr_results if r.criticality == "SR-CL-A"]
-    blocking = [r for r in cl_a if not (r.verdict and r.run_count_ok)]
+    failed = [r.sr_id for r in cl_a if r.status == "failed"]
+    incomplete = [r.sr_id for r in cl_a
+                  if r.status in ("insufficient_evidence", "not_run")
+                  or (r.status == "satisfied" and not r.run_count_ok)]
+    if failed:
+        verdict = "NOT SATISFIED"
+    elif incomplete:
+        verdict = "INCOMPLETE"
+    else:
+        verdict = "SATISFIED"
     return {
-        "verdict": "SATISFIED" if not blocking else "NOT SATISFIED",
-        "blocking_sr_cl_a": [r.sr_id for r in blocking],
+        "verdict": verdict,
+        "blocking_sr_cl_a": failed,
+        "incomplete_sr_cl_a": incomplete,
         "n_sr_cl_a": len(cl_a),
     }
 
@@ -573,7 +646,9 @@ def aggregate_campaign(
 ) -> Dict[str, object]:
     """Aggregate per-run outcomes into per-scenario, per-SR (D-29) and global
     (D-30) verdicts. A per-run ``verdict`` of None (indeterminate or errored) is
-    counted as a non-pass for the scenario fraction, and surfaced in ``n_error``."""
+    *excluded* from the scenario pass fraction (not counted as a fail), matching
+    the verdict_aggregation spine (D-38); its count is surfaced in
+    ``n_indeterminate`` and, when it came from an executor error, ``n_error``."""
     # Group per (scenario, mode).
     groups: Dict[tuple, List[RunOutcome]] = {}
     for o in outcomes:
@@ -586,12 +661,15 @@ def aggregate_campaign(
         scen = scenarios.get(sid)
         if scen is None:
             continue
-        flags = [o.verdict is True for o in group]
-        result = aggregate_scenario(scen, mode, flags)
+        verdicts = [o.verdict for o in group]  # three-valued: True | False | None
+        result = aggregate_scenario(scen, mode, verdicts)
         n_error = sum(1 for o in group if o.error is not None)
         per_scenario_report.append({
             "scenario": sid, "mode": mode, "n_runs": result.n_runs,
-            "n_pass": result.n_pass, "fraction_pass": round(result.fraction_pass, 4),
+            "n_pass": result.n_pass, "n_fail": result.n_fail,
+            "n_indeterminate": result.n_indeterminate,
+            "fraction_pass": (round(result.fraction_pass, 4)
+                              if result.fraction_pass is not None else None),
             "verdict": result.verdict, "n_error": n_error,
         })
         if mode == verdict_mode:
@@ -613,8 +691,11 @@ def aggregate_campaign(
         "global": gv,
         "per_scenario": per_scenario_report,
         "per_sr": [
-            {"sr": r.sr_id, "criticality": r.criticality, "verdict": r.verdict,
-             "run_count_ok": r.run_count_ok, "families": r.families_covered, "notes": r.notes}
+            {"sr": r.sr_id, "criticality": r.criticality, "status": r.status,
+             "verdict": r.verdict, "run_count_ok": r.run_count_ok,
+             "families": r.families_covered,
+             "failing_scenarios": r.failing_scenarios,
+             "indeterminate_scenarios": r.indeterminate_scenarios, "notes": r.notes}
             for r in sr_results
         ],
         "n_runs": len(outcomes),
@@ -768,7 +849,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     gv = report["global"]
     print("\n" + "=" * 56)
     print(f"Campaign global verdict ({report['verdict_mode']}): {gv['verdict']}")
-    print(f"  SR-CL-A: {gv['n_sr_cl_a']}  blocking: {gv['blocking_sr_cl_a']}")
+    print(f"  SR-CL-A: {gv['n_sr_cl_a']}  failing: {gv['blocking_sr_cl_a']}"
+          f"  incomplete: {gv['incomplete_sr_cl_a']}")
     print(f"  runs: {report['n_runs']}  errors: {report['n_error']}")
     print(f"  report: {args.out / 'campaign_report.json'}")
 

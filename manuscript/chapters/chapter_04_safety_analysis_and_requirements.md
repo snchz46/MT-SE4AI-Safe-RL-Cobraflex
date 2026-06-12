@@ -357,7 +357,7 @@ es D13 PM con la SRS que se deriva en D14.
 -->
 
 El Hazard Register consolida nueve hazards de nivel sistema (del F-track) identificados
-mediante el procedimiento de §4.4.1; el track 'E' (D-41) añade dos hazards de percepción de cámara, H-10 y H-11, marcados abajo. La numeración es estable: una vez
+mediante el procedimiento de §4.4.1; el track 'E' (D-41) añade tres hazards de percepción de cámara, H-10, H-11 y H-12, marcados abajo. La numeración es estable: una vez
 asignado un identificador H-XX, no se reutiliza ni se renombra incluso si
 el hazard se descarta en revisiones posteriores. La tabla siguiente
 presenta el registro en su forma compacta; la versión extendida con
@@ -424,9 +424,12 @@ al verdict F-track.
 
 ### 4.4.4 Cobertura de los hazards respecto al espacio del problema
 
-Esta subsección argumenta que los nueve hazards identificados constituyen
-una *cobertura razonable* del espacio de hazards relevante para la función
-pretendida acotada en §4.2.1. La argumentación se construye en tres ejes
+Esta subsección argumenta que los nueve hazards del núcleo F-track
+identificados en F1 constituyen una *cobertura razonable* del espacio de
+hazards relevante para la función pretendida acotada en §4.2.1; el track
+'E' (D-41) extiende después esta cobertura sobre la función de percepción
+con los tres hazards de cámara H-10..H-12 (mitigación por entrenamiento y
+por la parada controlada determinista, D-43). La argumentación se construye en tres ejes
 que se aplican consecutivamente.
 
 **Cobertura por función del sistema.** El procedimiento HARA de §4.4.1
@@ -686,7 +689,7 @@ construcción de la matriz en D17.
 -->
 
 La SRS consolida once Safety Requirements (del F-track) derivados del Hazard Register
-y refinados por la pasada STPA ligera; el track 'E' (D-41) añade SR-012 y SR-013, marcados abajo. La numeración es estable: una vez
+y refinados por la pasada STPA ligera; el track 'E' (D-41) añade SR-012, SR-013 y SR-014, marcados abajo. La numeración es estable: una vez
 asignado SR-XXX, no se reutiliza ni se renombra. La tabla siguiente
 presenta la SRS en su forma compacta; la versión extendida con
 rationale completo, parámetros, hazards cubiertos, cage rule
@@ -903,10 +906,15 @@ relativa al Hazard Register cerrado en D13.
 
 El argumento se construye en tres pasos. **Primero**, sobre la
 cobertura observada en la matriz H↔SR de §4.8.2: los nueve hazards
-H-01..H-09 están cubiertos por al menos uno de los once SRs
-SR-001..SR-011, y los once SRs cubren al menos uno de los nueve
-hazards; no hay huérfanos en ninguno de los dos sentidos. La
-verificación es automatizada por `tools/check_traceability.py` y se
+del núcleo F-track H-01..H-09 están cubiertos por al menos uno de los
+once SRs SR-001..SR-011, y los once SRs cubren al menos uno de los
+nueve hazards; no hay huérfanos en ninguno de los dos sentidos. La
+extensión del track 'E' (H-10..H-12 × SR-012..SR-014, §4.8.2) preserva
+la misma propiedad —cobertura diagonal, cada hazard nuevo cubierto por
+exactamente un SR nuevo, sin huérfanos—, de modo que el conjunto
+consolidado de doce hazards y catorce SRs que verifica
+`tools/check_traceability.py` mantiene la completitud relativa aquí
+argumentada. La verificación es automatizada por dicho script y se
 revisa en cada commit; la salida del validador en el cierre de F1
 queda anotada en `docs/CHANGELOG.md` como evidencia. **Segundo**,
 sobre la justificación de las coberturas parciales (H-02 por
@@ -1006,6 +1014,26 @@ training-side de SR-011, arbiter para SR-010) están registradas como
 decisión D-25. Todas las relaciones están declaradas en
 `docs/07_traceability_matrix.md` y son verificadas por
 `tools/check_traceability.py`.
+
+**Extensión track 'E' (D-41 / D-43).** Los tres hazards de percepción
+de cámara y sus tres Safety Requirements se incorporan al mismo espacio
+de IDs y a la matriz canónica `docs/07_traceability_matrix.md`. Su
+cobertura es diagonal —cada hazard nuevo lo cubre exactamente un SR
+nuevo— y no introduce huérfanos en ninguno de los dos sentidos:
+
+|        | SR-012 | SR-013 | SR-014 |
+|--------|--------|--------|--------|
+| H-10   | ●      |        |        |
+| H-11   |        | ●      |        |
+| H-12   |        |        | ●      |
+
+H-10 (mala percepción bajo entrada visual degradada) queda cubierto por
+SR-012 (lane-keeping bajo degradación, evaluado sobre el estimado CV
+propio del cage más una restricción de entrenamiento); H-11 (pérdida de
+percepción válida) por SR-013 (parada controlada open-loop vía la salud
+del estimador); y H-12 (mala detección del propio cage) por SR-014
+(check de plausibilidad → parada). El validador verifica el conjunto
+completo de doce hazards × catorce SRs en cada commit.
 
 ### 4.8.3 Verificación automatizada por `check_traceability.py`
 
@@ -1112,9 +1140,11 @@ no observable, imposibilidad de parada controlada, stall por
 explotación del reward, y conflicto de composición entre cage rules)
 derivados mediante un procedimiento HARA simplificado y una pasada
 STPA ligera complementaria sobre H-01, H-02 y H-04, quedó consolidado
-en §4.4 y §4.5. La SRS, con once Safety Requirements SR-001 a SR-011
+en §4.4 y §4.5; el track 'E' (D-41) lo amplía con tres hazards de
+percepción de cámara, H-10 a H-12. La SRS, con once Safety Requirements SR-001 a SR-011
 falsablemente redactados y asignados a niveles de criticidad SR-CL-A o
-SR-CL-B, quedó consolidada en §4.6 y §4.7. La matriz de trazabilidad
+SR-CL-B, quedó consolidada en §4.6 y §4.7; el track 'E' añade SR-012 a
+SR-014. La matriz de trazabilidad
 bidireccional, en su versión H ↔ SR, quedó presentada en §4.8 con
 remisión al script `tools/check_traceability.py` para su verificación
 automatizada. Las limitaciones del análisis quedaron declaradas en §4.9.

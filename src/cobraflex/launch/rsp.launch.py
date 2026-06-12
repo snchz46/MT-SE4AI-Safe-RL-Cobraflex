@@ -11,7 +11,7 @@ def generate_launch_description():
     """Build the robot_state_publisher launch description."""
     package_share = FindPackageShare("cobraflex")
     default_urdf = PathJoinSubstitution(
-        [package_share, "urdf", "my_robot_gazebo.urdf"]
+        [package_share, "urdf", "my_robot_gazebo_mesh.urdf"]
     )
 
     use_sim_time = LaunchConfiguration("use_sim_time")

@@ -75,6 +75,14 @@ def parse_args(args: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument("--train-config", type=str, default=None)
     parser.add_argument("--model-path", type=str, default=None)
     parser.add_argument("--run-id", type=str, default=None)
+    parser.add_argument(
+        "--resume-from",
+        type=str,
+        default=None,
+        help="Saved PPO .zip to continue from; the run then adds the config's "
+        "total_timesteps on top of the checkpoint's step count "
+        "(SB3 reset_num_timesteps=False).",
+    )
     cleaned_args = remove_ros_args(args=args)
     if cleaned_args and not cleaned_args[0].startswith("-"):
         cleaned_args = cleaned_args[1:]
@@ -183,7 +191,7 @@ def main(args: Optional[Sequence[str]] = None) -> None:
     try:
         interface = RosGazeboInterface(
             camera_topic=(
-                str(obs_cfg.get("camera", {}).get("topic", "/camera/image_raw"))
+                str(obs_cfg.get("camera", {}).get("topic", "/camera/image_raw_lane"))
                 if camera_obs
                 else ""
             )
@@ -238,19 +246,29 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         else:
             train_env = env
 
-        model = PPO(
-            policy=policy_name,
-            env=train_env,
-            learning_rate=float(train_cfg.get("learning_rate", 3.0e-4)),
-            gamma=float(train_cfg.get("gamma", 0.99)),
-            n_steps=int(train_cfg.get("n_steps", 1024)),
-            batch_size=int(train_cfg.get("batch_size", 64)),
-            device=str(train_cfg.get("device", "cpu")),
-            # §7.2.7: seeds python/numpy/torch + action space, and propagates to
-            # env.reset(seed=...) so the spawn perturbation is reproducible too.
-            seed=seed,
-            verbose=1,
-        )
+        resume_from = getattr(cli_args, "resume_from", None)
+        if resume_from:
+            model = PPO.load(
+                resume_from,
+                env=train_env,
+                device=str(train_cfg.get("device", "cpu")),
+                verbose=1,
+            )
+            print(f"Resumed PPO from {resume_from} at {model.num_timesteps} steps")
+        else:
+            model = PPO(
+                policy=policy_name,
+                env=train_env,
+                learning_rate=float(train_cfg.get("learning_rate", 3.0e-4)),
+                gamma=float(train_cfg.get("gamma", 0.99)),
+                n_steps=int(train_cfg.get("n_steps", 1024)),
+                batch_size=int(train_cfg.get("batch_size", 64)),
+                device=str(train_cfg.get("device", "cpu")),
+                # §7.2.7: seeds python/numpy/torch + action space, and propagates to
+                # env.reset(seed=...) so the spawn perturbation is reproducible too.
+                seed=seed,
+                verbose=1,
+            )
 
         # §7.2.8: persist the learning curve + periodic checkpoints so the run
         # produces its §7.4 evidence automatically.
@@ -269,7 +287,13 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             ),
         ])
 
-        model.learn(total_timesteps=total_timesteps, callback=callback)
+        model.learn(
+            total_timesteps=total_timesteps,
+            callback=callback,
+            # On resume, keep the checkpoint's step count so SB3 runs
+            # total_timesteps *additional* steps on top of it.
+            reset_num_timesteps=not resume_from,
+        )
         model.save(str(model_path))
         status = "completed"
         print(f"Saved PPO model to {resolve_save_path(model_path)}")

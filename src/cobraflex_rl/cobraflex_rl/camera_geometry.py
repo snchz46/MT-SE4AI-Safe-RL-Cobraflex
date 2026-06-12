@@ -16,7 +16,8 @@ vertical ground projection; the optical frame is the usual x-right / y-down /
 z-forward. All parameters mirror the Gazebo sensor + URDF mount (the single
 source of truth for the physical numbers):
 
-* intrinsics from the ``ZEDm Cam`` sensor (640x480, HFOV 1.3962634 rad),
+* intrinsics from the ``Lane Cam`` sensor (640x360, HFOV 1.5707963 rad —
+  mirroring the real IMX219-160 as configured in ``lane_keeper_node.py``),
 * extrinsics from the URDF chain (camera height above ground, pitch-down).
 
 Pure numpy/stdlib — host-testable without ROS.
@@ -27,14 +28,18 @@ import math
 from dataclasses import dataclass
 from typing import Tuple
 
-# URDF-derived defaults (my_robot_gazebo*.urdf, see chain in camera_joint):
-# base_link at wheel_radius 0.03725, body_link at +body_height/2+chassis_height/2
-# (0.05+0.03), camera_link at +0.02 → 0.13725 m above ground; pitched 0.25 rad.
-DEFAULT_CAMERA_HEIGHT_M = 0.03725 + 0.05 + 0.03 + 0.02
+# URDF-derived defaults (my_robot_gazebo_mesh.urdf — the variant every
+# train/eval launch includes via gazebo_mesh.launch.py): base_link at
+# wheel_radius 0.03725, body_link at +body_height/2+chassis_height/2-0.01
+# (0.05+0.03-0.01, mesh-variant body offset), camera_link_lane at -0.03
+# → 0.07725 m above ground; pitch 0.25 rad (mount angle still under review —
+# re-run tools/validate_cv_estimator.py if it changes). NOTE the non-mesh
+# URDF variants currently lack the -0.01 body offset (camera 1 cm higher).
+DEFAULT_CAMERA_HEIGHT_M = 0.03725 + 0.05 + 0.03 - 0.01 - 0.03
 DEFAULT_CAMERA_PITCH_RAD = 0.25
-DEFAULT_HFOV_RAD = 1.3962634
+DEFAULT_HFOV_RAD = 1.5707963
 DEFAULT_WIDTH_PX = 640
-DEFAULT_HEIGHT_PX = 480
+DEFAULT_HEIGHT_PX = 360
 
 
 @dataclass(frozen=True)

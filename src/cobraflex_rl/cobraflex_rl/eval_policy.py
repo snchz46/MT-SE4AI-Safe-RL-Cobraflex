@@ -274,7 +274,7 @@ def main(args: Optional[Sequence[str]] = None) -> None:
 
     try:
         interface = RosGazeboInterface(
-            camera_topic=str(cam_cfg.get("topic", "/camera/image_raw")) if camera_obs else ""
+            camera_topic=str(cam_cfg.get("topic", "/camera/image_raw_lane")) if camera_obs else ""
         )
         if not interface.wait_for_initial_data(timeout_sec=10.0):
             raise RuntimeError("Timed out waiting for /odom data.")

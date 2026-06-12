@@ -24,7 +24,9 @@ policy: CnnPolicy
 observation:
   type: camera
   camera:
-    topic: /camera/image_raw
+    # Dedicated front lane camera (IMX219-160 mirror, 640x360 hfov 90 deg);
+    # shared by policy obs and the cage CV estimator since 2026-06-11.
+    topic: /camera/image_raw_lane
     width: 84
     height: 84
     grayscale: true

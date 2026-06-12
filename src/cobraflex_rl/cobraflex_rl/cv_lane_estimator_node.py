@@ -7,7 +7,7 @@ cage's `/state_obs` on track 'E', so the cage generalises to any road with
 visible lane lines.
 
 Subscribes:
-    camera/image_raw   sensor_msgs/Image      (the same frames the policy sees)
+    camera/image_raw_lane  sensor_msgs/Image  (the same frames the policy sees)
     /odom              nav_msgs/Odometry      (speed only — plausibility + cage state)
 
 Publishes (at ``publish_rate_hz``):
@@ -52,7 +52,7 @@ from .camera_pipeline import decode_image
 class CvLaneEstimatorNode(Node):
     def __init__(self) -> None:
         super().__init__("cv_lane_estimator_node")
-        self.declare_parameter("image_topic", "camera/image_raw")
+        self.declare_parameter("image_topic", "camera/image_raw_lane")
         self.declare_parameter("odom_topic", "/odom")
         self.declare_parameter("state_obs_topic", "/state_obs")
         self.declare_parameter("perception_invalid_topic", "/perception_invalid")

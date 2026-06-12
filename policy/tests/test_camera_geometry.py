@@ -20,9 +20,12 @@ def cam():
 
 
 def test_defaults_mirror_urdf(cam):
-    assert cam.height_m == pytest.approx(0.13725)
+    # camera_link_lane mount (IMX219-160 mirror): 5 cm below the body-front
+    # reference, 640x360 @ 90 deg hfov per lane_keeper_node.py proc stream.
+    assert cam.height_m == pytest.approx(0.07725)
     assert cam.pitch_rad == pytest.approx(0.25)
-    assert cam.width_px == 640 and cam.height_px == 480
+    assert cam.hfov_rad == pytest.approx(1.5707963)
+    assert cam.width_px == 640 and cam.height_px == 360
 
 
 def test_optical_axis_hits_expected_distance(cam):

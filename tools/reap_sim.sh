@@ -8,12 +8,15 @@ ALLOWED_COMM="ruby|gz|python3|parameter_bridge|ekf_node|robot_state_publisher|rv
 reap() {
   local sig="$1"
   for pat in "gz sim" "ros2 launch" "parameter_bridge" "ekf_node" \
-             "robot_state_publisher" "ruby /usr/bin/gz"; do
+             "robot_state_publisher" "ruby /usr/bin/gz" \
+             "cv_lane_estimator_node"; do
     for p in $(pgrep -f "$pat" 2>/dev/null); do
       [ "$p" = "$$" ] && continue
       comm=$(ps -o comm= -p "$p" 2>/dev/null)
+      # ps truncates comm to 15 chars (parameter_bridg, robot_state_pub),
+      # so match by prefix glob, not full name.
       case "$comm" in
-        ruby|gz|python3|parameter_bridge|ekf_node|robot_state_publisher|rviz2)
+        ruby|gz|python3|parameter_bridg*|ekf_node|robot_state_pub*|rviz2)
           kill "$sig" "$p" 2>/dev/null ;;
       esac
     done

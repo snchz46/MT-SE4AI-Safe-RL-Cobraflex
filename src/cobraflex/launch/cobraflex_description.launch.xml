@@ -4,7 +4,7 @@
     <!-- Arguments                                    -->
     <!-- =========================================== -->
     <arg name="use_rviz" default="true"/>
-    <arg name="urdf_file" default="$(find-pkg-share cobraflex)/urdf/my_robot_basic.urdf"/>
+    <arg name="urdf_file" default="$(find-pkg-share cobraflex)/urdf/my_robot_gazebo_mesh.urdf"/>
     <arg name="use_sim_time" default="false"/>
     
     <!-- =========================================== -->

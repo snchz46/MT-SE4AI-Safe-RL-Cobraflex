@@ -51,13 +51,22 @@ script reports orphans on either side.
   Follow-up (here): re-point SR-006 in `run_campaign.aggregate_sr` so `campaign_report.json`
   stops reading `failed` (CL-B; global unaffected). Plus the QED-metric decision
   (D-17/D-21/D-22); G4 is **not yet formally passed** pending the two TBDs. See CHANGELOG 03.06–10.06 "F4".
-- **Track 'E' (camera) — GE3 (training) closed 2026-06-11; GE4 (eval) in prep.** D-41 architecture;
-  the cage reads a **dedicated deterministic CV lane-estimator** (D-43), not the camera. Camera PPO
-  `ppo_cam_train_2024_200k` peaked at 139k then collapsed at 156k → **139k peak checkpoint selected**
-  by closing eval (4.69 laps, |ey| 10.1 mm, one correct SR-014/Trigger-8 controlled stop); eval-side
-  DR-determinism fixed. E-campaign smoke 2/2 PASS; the full **400-run E-campaign + multi-seed N=5**
-  run on the dedicated machine (host now limited to ≤1 h jobs) via `git pull` + `--resume`. Scenarios
-  SC-PERT-04..10 (visual stressors + worn/wet worlds); cage v0.6.1.
+- **Track 'E' (camera) — GE4 (eval) campaign closed 2026-06-12; global `NOT SATISFIED` (availability cost, not a safety breach).**
+  D-41 architecture; the cage reads a **dedicated deterministic CV lane-estimator** (D-43), not the camera.
+  139k-peak checkpoint (`cobraflex_ppo_cam_lane_2024_139k_peak`, §7.7.7). **E-campaign: 1660 runs**
+  (seed 2024, 24 scenarios × {enforcement, monitoring}, cage v0.6.1, 0 errors;
+  `experiments/sim/campaign_e/campaign_report.json`). **`NOT SATISFIED`** but the cage's core safety
+  holds: across all 830 enforcement runs **0 road-edge contacts**, M-S1 < d_max in-ODD (the 9 exceptions
+  are SC-FRONT-01 out-of-ODD spawns *at* d_max). The 3 SR-CL-A vetoes (SR-001/SC-EDGE-02, SR-012+SR-014/SC-PERT-04)
+  are **safe controlled stops** scored as fails by the scenarios' `emergency == False` clause (13/13 + 20/20
+  enforcement fails are emergency-only). **Central finding: the cage flips latent→active under the camera** —
+  the SR-013/Trigger-8 stop becomes the in-ODD safety mechanism (cleanest contrast SC-PERT-07: enf 20/20 vs
+  mon 0/20, real M-S1 breaches prevented). Breakdown `failure_mode_breakdown.json` (`tools/campaign_e_failure_modes.py`).
+  Indeterminate (D-38 class): SC-EDGE-05 (schema), SC-PERT-03/05 (labelled `low:/high:` criterion unwired);
+  SR-006 'failed' = same D-39 aggregator artifact (CL-B). **GE4 not formally passed** pending: (a) own-criterion
+  reconciliation à la D-39 (re-score SR-012/SR-001-camera on M-S1≤d_max ∧ M-S2=0 — **flagged decision, NOT applied**);
+  (b) wire `evaluate_labelled`; (c) SC-EDGE-05 grid; (d) multi-seed N=5 (host-deferred). See CHANGELOG 12.06
+  'E4/GE4' + docs/07 E-track evidence + ch.8 §8.9.
 - **F2 evidence:** `ros_run_20260523T153003Z` — 9.91 laps, 845 s,
   0 emergencies, cage v0.5.1, PD v0.8.0.
 - **F3 evidence (closed):** main run `ppo_train_2024_200k` (seed 2024, 200k, reward v1.2,
@@ -66,7 +75,7 @@ script reports orphans on either side.
   **Multi-seed (N=5):** seeds {42,123,2024,23,666} trained — 4/5 constraint-respecting,
   1/5 cage-dependent (seed 123, 58.8% cage) per §7.5.3 + Fig 7.8.
 - **Authoritative status sources:** [docs/CHANGELOG.md](docs/CHANGELOG.md)
-  and `git log --oneline` (`F4:` = F-track ground state; `E2:` = current track-'E' work).
+  and `git log --oneline` (`F4:` = F-track ground state; `E4:` = current track-'E' eval work).
 
 ## Repo map
 

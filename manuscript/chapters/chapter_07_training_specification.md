@@ -853,7 +853,11 @@ determinarlo; por política, toda evaluación con veredicto corre headless
 y la observación se hace por suscriptor pasivo (`rqt_image_view`). La
 cuantificación (20 reps por escenario, campaña E-eval) y la mitigación
 (suavizado EMA determinista del canal `epsi` del estimador) quedan para
-la campaña y trabajo futuro, respectivamente.
+la campaña y trabajo futuro, respectivamente. **La campaña GE4 ya se
+ejecutó** (§8.9, Cap. 8: 1660 runs, seed 2024): confirma que la parada por
+percepción es el comportamiento operativo bajo cámara —la cage pasa de
+*latente* (F4) a *activa*— y que el sistema no incurre en brecha de carril
+en enforcement (0 contactos de borde), degradando a parada controlada.
 
 **Multi-seed (N=5).** Pendiente de decisión correr-vs-deferral: el coste
 es ~7 h/semilla a RTF 1 (restricción §7.7.6) en una máquina dedicada; si
@@ -868,8 +872,10 @@ Fase 4–5:
   [ ] Re-entrenar con el logger extendido (callbacks.py / training_metrics.py) y
       generar las figuras 7.4 (intervención + desglose), 7.5 (value loss +
       entropía) y 7.6 (distribución de acciones); descomentar el bloque de §7.4
-  [ ] Evaluar sobre todos los escenarios SC-NOM, SC-EDGE, SC-PERT
-  [ ] Añadir análisis multi-semilla (N≥5)
+  [x] Evaluar sobre todos los escenarios SC-NOM, SC-EDGE, SC-PERT — campaña
+      GE4 (§8.9, Cap. 8): 1660 runs, global NOT SATISFIED = coste de
+      disponibilidad (paradas controladas seguras), no brecha de seguridad
+  [ ] Añadir análisis multi-semilla (N≥5) — diferido (restricción de host ≤1 h)
 
 Fase 6 (consolidación):
   [ ] Pulido de prosa

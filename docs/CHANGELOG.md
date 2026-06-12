@@ -31,6 +31,46 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [12.06.2026] — E4/GE4: track-'E' camera evaluation campaign closed — global `NOT SATISFIED`, dominated by safe controlled stops; the cage flips latent → active under the camera
+
+**Document(s) affected:** `experiments/sim/campaign_e/` (verdict-bearing roll-up `campaign_report.json` + `campaign_runs.csv`, **1660 runs**; committed E4 "Cam eval part 1/2"). New `tools/campaign_e_failure_modes.py` + `experiments/sim/campaign_e/failure_mode_breakdown.json` (pure-Python clause-level failure classification + cage core-safety invariants + F4↔E contrast). `docs/07_traceability_matrix.md` (E-track SR-012/013/014 verdicts + an "E-track sim evidence" block). `manuscript/chapters/chapter_08` §8.9 (camera-campaign results, Spanish; synthesis renumbered → §8.10) + §7.7.7 forward-ref + appendix ticks. `CLAUDE.md` (phase snapshot).
+**Phase:** E4 (track 'E').
+**Gate context:** GE4 (sim evaluation of the camera track). The F-track G4 verdict (`SATISFIED`, §8.1–§8.9) stays **frozen** as the ground-truth-state baseline; this is the parallel camera arm ("what does camera perception cost").
+**Author:** Samuel.
+
+### Change
+
+E-campaign executed on the dedicated machine (commit `ae8b7c6b`, seed 2024, checkpoint `cobraflex_ppo_cam_lane_2024_139k_peak.zip` @ `263926…`, cage 0.6.1 @ `4287fe…`): **1660 runs**, 24 scenarios × {enforcement, monitoring}, every E-track scenario (SC-PERT-04..10, SC-FRONT-01..06) plus the full F-track library re-run through the camera stack; **0 executor errors**.
+
+**Global verdict `NOT SATISFIED`** (D-30): three SR-CL-A vetoes — **SR-001, SR-012, SR-014** — plus **SR-013** held INCOMPLETE by D-29 under-coverage. The breakdown (`failure_mode_breakdown.json`) shows the vetoes are concentrated in **two** scenarios and are **safe controlled stops, not lane breaches**:
+
+- **SC-EDGE-02** (near-edge recovery, F-track): enforcement 17/30 (**0.567**), down from **1.0 in F4**. All **13/13** enforcement fails are *emergency-only* — M-S1 < d_max, no road-edge contact, the only failing clause is `emergency == False`. The camera-derived state at the spawn offset (|ey| = 0.12 m, at d_warning) trips the cage's controlled stop where the F4 ground-truth policy recovered smoothly. → vetoes **SR-001**.
+- **SC-PERT-04** (camera glare, E-track): enforcement 20/40 (**0.500**). All **20/20** fails are *emergency-only* (the glare-0.6 arm: percept degrades enough to raise the Trigger-8 / compound-state stop). → vetoes **SR-012** and, as a secondary scenario, **SR-014**.
+
+**Cage core-safety invariant held under the camera** (all 830 enforcement runs): **0 road-edge contacts**; M-S1 < d_max everywhere except the **9** SC-FRONT-01 cells that *spawn the vehicle exactly at d_max = 0.16 m* (deliberate out-of-ODD start, scored on road-edge contact — max M-S1 there 0.168 m, no contact); M-S2 > 0 only at those same starts. The camera never drove the system into a lane breach in enforcement — it degraded to safe stops.
+
+**Cage flips latent → active.** In F4 the cage was *latent* in-ODD (M-S2 = 0 both modes, §8.6). Under the camera it is *active*: the noisier percept makes the SR-013 / Trigger-8 controlled stop the operative mechanism. Cleanest cage-value contrast: **SC-PERT-07** (perception loss) — enforcement **20/20 PASS** (open-loop stop fires) vs monitoring **0/20**, all 20 monitoring fails being **genuine M-S1 breaches** (without the cage the occluded policy departs). SC-PERT-10 (wet world) flips enf 0.90 / mon 0.10 on the same stop mechanism.
+
+**Passes.** SC-PERT-06 (blur) 0.975, SC-PERT-08 (false-lane, SR-014 primary) 20/20, SC-PERT-09 (worn) 1.0, SC-PERT-10 (wet) 0.90, SC-FRONT-01..06 1.0, SC-NOM-01/02/03 ≥ 0.96, SC-EDGE-03/04 ≥ 0.96; SC-PERT-01 even flips **FAIL→PASS** F4→E (0.88 → 0.98).
+
+**Instrumentation gaps (indeterminate, not failures; D-38 class).** SC-EDGE-05 (100) — predicate operands `joint_envelope_assertion_failures` / `inter_cycle_oscillations` absent from the record schema → SR-010 insufficient_evidence. SC-PERT-03 (40) and **SC-PERT-05** (40, NEW) — the two-arm `low:/high:` labelled criterion is not yet grouped/evaluated by the runner (`criterion_eval.evaluate_labelled` exists, unwired) → SR-009 / SR-012-coverage insufficient_evidence. **SR-006** again reads `failed` purely from the coarse `ALL`-scenario inheritance of SC-EDGE-02/SC-PERT-04 (D-39 artifact; `steer_rate_smoothness_ok` holds per-run) — CL-B, global unaffected, same flagged re-pointing follow-up as F4.
+
+### Rationale
+
+The campaign measures the cost of replacing the 6-D ground-truth state with an end-to-end front camera, cage and scenario library held fixed (single-trunk control arm, D-41/D-43). Honest reading: the camera does **not** breach the safety envelope in enforcement (0 edge contacts, M-S1 < d_max in-ODD) — it trades **availability** for safety, bailing to a controlled stop in the near-edge (SC-EDGE-02) and high-glare (SC-PERT-04 L0.6) cases. So `NOT SATISFIED` is a **capability/criterion verdict, not a safety breach**: the two vetoing scenarios carry an `emergency == False` clause that scores the cage's safe stop — the exact SR-013 behaviour — as a fail, even though SR-012's own stated criterion (M-S1 ≤ d_max ∧ M-S2 = 0 in enforcement) is met.
+
+### Impact
+
+- **SR-001 stays frozen at F4 `Satisfied`** (ground-truth state); the camera regression is reported as a *contrast*, not an overwrite. SR-012 / SR-014 → camera-track verdict `Not satisfied (track 'E', see E-evidence)`; SR-013 → scenario criterion met 20/20 in enforcement but held `INCOMPLETE` by D-29 (single scenario/family).
+- **Open follow-ups** (GE4 not formally passed until ≥ a–c close): **(a)** candidate own-criterion reconciliation à la D-39 — re-score SR-012 / SR-001-camera on M-S1 ≤ d_max ∧ M-S2 = 0, treating the controlled stops as SR-013 behaviour — **flagged for decision, not applied**; **(b)** wire `evaluate_labelled` so SC-PERT-03/05 score (both look like latent passes); **(c)** inject SC-EDGE-05 grid ICs + add the two co-activation counters; **(d)** multi-seed N=5 (host-deferred).
+- The §8.6 "cage contribution" thesis result gains its **in-ODD active-cage half** from the camera arm (frontier-only under F4).
+
+### Verification
+
+`python tools/campaign_e_failure_modes.py` regenerates `failure_mode_breakdown.json` from the per-run records (pure-Python, runs on the Windows figure host). `check_traceability.py` PASS (verdicts + prose only, no structural change).
+
+---
+
 ## [11.06.2026] — E2/GE4-prep: E-campaign smoke 2/2 PASS on the selected checkpoint — full campaign handed off to the dedicated run machine
 
 **Document(s) affected:** `experiments/sim/campaign_e_smoke/` (2-cell smoke: SC-PERT-04 rep00 glare-runtime-injector PASS; SC-PERT-09 rep00 worn-world via `resolve_world_path` PASS — first live Gazebo validation of the world-variant path).

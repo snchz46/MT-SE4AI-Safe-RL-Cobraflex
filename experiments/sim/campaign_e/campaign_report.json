@@ -1,0 +1,761 @@
+{
+  "verdict_mode": "enforcement",
+  "global": {
+    "verdict": "NOT SATISFIED",
+    "blocking_sr_cl_a": [
+      "SR-001",
+      "SR-012",
+      "SR-014"
+    ],
+    "incomplete_sr_cl_a": [
+      "SR-013"
+    ],
+    "n_sr_cl_a": 10
+  },
+  "per_scenario": [
+    {
+      "scenario": "SC-EDGE-01",
+      "mode": "enforcement",
+      "n_runs": 30,
+      "n_pass": 28,
+      "n_fail": 2,
+      "n_indeterminate": 0,
+      "fraction_pass": 0.9333,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-EDGE-01",
+      "mode": "monitoring",
+      "n_runs": 30,
+      "n_pass": 30,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-EDGE-02",
+      "mode": "enforcement",
+      "n_runs": 30,
+      "n_pass": 17,
+      "n_fail": 13,
+      "n_indeterminate": 0,
+      "fraction_pass": 0.5667,
+      "verdict": false,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-EDGE-02",
+      "mode": "monitoring",
+      "n_runs": 30,
+      "n_pass": 12,
+      "n_fail": 18,
+      "n_indeterminate": 0,
+      "fraction_pass": 0.4,
+      "verdict": false,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-EDGE-03",
+      "mode": "enforcement",
+      "n_runs": 25,
+      "n_pass": 24,
+      "n_fail": 1,
+      "n_indeterminate": 0,
+      "fraction_pass": 0.96,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-EDGE-03",
+      "mode": "monitoring",
+      "n_runs": 25,
+      "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-EDGE-04",
+      "mode": "enforcement",
+      "n_runs": 30,
+      "n_pass": 30,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-EDGE-04",
+      "mode": "monitoring",
+      "n_runs": 30,
+      "n_pass": 30,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-EDGE-05",
+      "mode": "enforcement",
+      "n_runs": 100,
+      "n_pass": 0,
+      "n_fail": 0,
+      "n_indeterminate": 100,
+      "fraction_pass": null,
+      "verdict": null,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-EDGE-05",
+      "mode": "monitoring",
+      "n_runs": 100,
+      "n_pass": 0,
+      "n_fail": 0,
+      "n_indeterminate": 100,
+      "fraction_pass": null,
+      "verdict": null,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-FRONT-01",
+      "mode": "enforcement",
+      "n_runs": 25,
+      "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-FRONT-01",
+      "mode": "monitoring",
+      "n_runs": 25,
+      "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-FRONT-02",
+      "mode": "enforcement",
+      "n_runs": 25,
+      "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-FRONT-02",
+      "mode": "monitoring",
+      "n_runs": 25,
+      "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-FRONT-03",
+      "mode": "enforcement",
+      "n_runs": 25,
+      "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-FRONT-03",
+      "mode": "monitoring",
+      "n_runs": 25,
+      "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-FRONT-04",
+      "mode": "enforcement",
+      "n_runs": 25,
+      "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-FRONT-04",
+      "mode": "monitoring",
+      "n_runs": 25,
+      "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-FRONT-05",
+      "mode": "enforcement",
+      "n_runs": 25,
+      "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-FRONT-05",
+      "mode": "monitoring",
+      "n_runs": 25,
+      "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-FRONT-06",
+      "mode": "enforcement",
+      "n_runs": 25,
+      "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-FRONT-06",
+      "mode": "monitoring",
+      "n_runs": 25,
+      "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-NOM-01",
+      "mode": "enforcement",
+      "n_runs": 50,
+      "n_pass": 50,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-NOM-01",
+      "mode": "monitoring",
+      "n_runs": 50,
+      "n_pass": 50,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-NOM-02",
+      "mode": "enforcement",
+      "n_runs": 50,
+      "n_pass": 49,
+      "n_fail": 1,
+      "n_indeterminate": 0,
+      "fraction_pass": 0.98,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-NOM-02",
+      "mode": "monitoring",
+      "n_runs": 50,
+      "n_pass": 50,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-NOM-03",
+      "mode": "enforcement",
+      "n_runs": 25,
+      "n_pass": 24,
+      "n_fail": 1,
+      "n_indeterminate": 0,
+      "fraction_pass": 0.96,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-NOM-03",
+      "mode": "monitoring",
+      "n_runs": 25,
+      "n_pass": 25,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-01",
+      "mode": "enforcement",
+      "n_runs": 60,
+      "n_pass": 59,
+      "n_fail": 1,
+      "n_indeterminate": 0,
+      "fraction_pass": 0.9833,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-01",
+      "mode": "monitoring",
+      "n_runs": 60,
+      "n_pass": 60,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-02",
+      "mode": "enforcement",
+      "n_runs": 40,
+      "n_pass": 36,
+      "n_fail": 4,
+      "n_indeterminate": 0,
+      "fraction_pass": 0.9,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-02",
+      "mode": "monitoring",
+      "n_runs": 40,
+      "n_pass": 40,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-03",
+      "mode": "enforcement",
+      "n_runs": 40,
+      "n_pass": 0,
+      "n_fail": 0,
+      "n_indeterminate": 40,
+      "fraction_pass": null,
+      "verdict": null,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-03",
+      "mode": "monitoring",
+      "n_runs": 40,
+      "n_pass": 0,
+      "n_fail": 0,
+      "n_indeterminate": 40,
+      "fraction_pass": null,
+      "verdict": null,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-04",
+      "mode": "enforcement",
+      "n_runs": 40,
+      "n_pass": 20,
+      "n_fail": 20,
+      "n_indeterminate": 0,
+      "fraction_pass": 0.5,
+      "verdict": false,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-04",
+      "mode": "monitoring",
+      "n_runs": 40,
+      "n_pass": 28,
+      "n_fail": 12,
+      "n_indeterminate": 0,
+      "fraction_pass": 0.7,
+      "verdict": false,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-05",
+      "mode": "enforcement",
+      "n_runs": 40,
+      "n_pass": 0,
+      "n_fail": 0,
+      "n_indeterminate": 40,
+      "fraction_pass": null,
+      "verdict": null,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-05",
+      "mode": "monitoring",
+      "n_runs": 40,
+      "n_pass": 0,
+      "n_fail": 0,
+      "n_indeterminate": 40,
+      "fraction_pass": null,
+      "verdict": null,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-06",
+      "mode": "enforcement",
+      "n_runs": 40,
+      "n_pass": 39,
+      "n_fail": 1,
+      "n_indeterminate": 0,
+      "fraction_pass": 0.975,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-06",
+      "mode": "monitoring",
+      "n_runs": 40,
+      "n_pass": 40,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-07",
+      "mode": "enforcement",
+      "n_runs": 20,
+      "n_pass": 20,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-07",
+      "mode": "monitoring",
+      "n_runs": 20,
+      "n_pass": 0,
+      "n_fail": 20,
+      "n_indeterminate": 0,
+      "fraction_pass": 0.0,
+      "verdict": false,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-08",
+      "mode": "enforcement",
+      "n_runs": 20,
+      "n_pass": 20,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-08",
+      "mode": "monitoring",
+      "n_runs": 20,
+      "n_pass": 20,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-09",
+      "mode": "enforcement",
+      "n_runs": 20,
+      "n_pass": 20,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-09",
+      "mode": "monitoring",
+      "n_runs": 20,
+      "n_pass": 20,
+      "n_fail": 0,
+      "n_indeterminate": 0,
+      "fraction_pass": 1.0,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-10",
+      "mode": "enforcement",
+      "n_runs": 20,
+      "n_pass": 18,
+      "n_fail": 2,
+      "n_indeterminate": 0,
+      "fraction_pass": 0.9,
+      "verdict": true,
+      "n_error": 0
+    },
+    {
+      "scenario": "SC-PERT-10",
+      "mode": "monitoring",
+      "n_runs": 20,
+      "n_pass": 2,
+      "n_fail": 18,
+      "n_indeterminate": 0,
+      "fraction_pass": 0.1,
+      "verdict": false,
+      "n_error": 0
+    }
+  ],
+  "per_sr": [
+    {
+      "sr": "SR-001",
+      "criticality": "SR-CL-A",
+      "status": "failed",
+      "verdict": false,
+      "run_count_ok": true,
+      "families": [
+        "adverse",
+        "nominal"
+      ],
+      "failing_scenarios": [
+        "SC-EDGE-02"
+      ],
+      "indeterminate_scenarios": [],
+      "notes": "failing scenario(s): ['SC-EDGE-02']"
+    },
+    {
+      "sr": "SR-002",
+      "criticality": "SR-CL-A",
+      "status": "satisfied",
+      "verdict": true,
+      "run_count_ok": true,
+      "families": [
+        "adverse",
+        "nominal"
+      ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": ""
+    },
+    {
+      "sr": "SR-003",
+      "criticality": "SR-CL-A",
+      "status": "satisfied",
+      "verdict": true,
+      "run_count_ok": true,
+      "families": [
+        "adverse",
+        "nominal"
+      ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": ""
+    },
+    {
+      "sr": "SR-004",
+      "criticality": "SR-CL-A",
+      "status": "satisfied",
+      "verdict": true,
+      "run_count_ok": true,
+      "families": [
+        "adverse",
+        "nominal"
+      ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": ""
+    },
+    {
+      "sr": "SR-005",
+      "criticality": "SR-CL-A",
+      "status": "satisfied",
+      "verdict": true,
+      "run_count_ok": true,
+      "families": [
+        "adverse",
+        "nominal"
+      ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": ""
+    },
+    {
+      "sr": "SR-006",
+      "criticality": "SR-CL-B",
+      "status": "failed",
+      "verdict": false,
+      "run_count_ok": true,
+      "families": [
+        "adverse",
+        "nominal"
+      ],
+      "failing_scenarios": [
+        "SC-EDGE-02",
+        "SC-PERT-04"
+      ],
+      "indeterminate_scenarios": [
+        "SC-EDGE-05",
+        "SC-PERT-03",
+        "SC-PERT-05"
+      ],
+      "notes": "failing scenario(s): ['SC-EDGE-02', 'SC-PERT-04']"
+    },
+    {
+      "sr": "SR-007",
+      "criticality": "SR-CL-A",
+      "status": "satisfied",
+      "verdict": true,
+      "run_count_ok": true,
+      "families": [
+        "adverse",
+        "nominal"
+      ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": ""
+    },
+    {
+      "sr": "SR-008",
+      "criticality": "SR-CL-A",
+      "status": "satisfied",
+      "verdict": true,
+      "run_count_ok": true,
+      "families": [
+        "adverse",
+        "nominal"
+      ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": ""
+    },
+    {
+      "sr": "SR-009",
+      "criticality": "SR-CL-B",
+      "status": "insufficient_evidence",
+      "verdict": null,
+      "run_count_ok": true,
+      "families": [
+        "adverse",
+        "nominal"
+      ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [
+        "SC-PERT-03"
+      ],
+      "notes": "indeterminate scenario(s) - instrumentation gap, not a failure: ['SC-PERT-03']"
+    },
+    {
+      "sr": "SR-010",
+      "criticality": "SR-CL-B",
+      "status": "insufficient_evidence",
+      "verdict": null,
+      "run_count_ok": true,
+      "families": [
+        "adverse"
+      ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [
+        "SC-EDGE-05"
+      ],
+      "notes": "indeterminate scenario(s) - instrumentation gap, not a failure: ['SC-EDGE-05']"
+    },
+    {
+      "sr": "SR-011",
+      "criticality": "SR-CL-B",
+      "status": "satisfied",
+      "verdict": true,
+      "run_count_ok": true,
+      "families": [
+        "adverse"
+      ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": ""
+    },
+    {
+      "sr": "SR-012",
+      "criticality": "SR-CL-A",
+      "status": "failed",
+      "verdict": false,
+      "run_count_ok": false,
+      "families": [
+        "adverse"
+      ],
+      "failing_scenarios": [
+        "SC-PERT-04"
+      ],
+      "indeterminate_scenarios": [
+        "SC-PERT-05"
+      ],
+      "notes": "failing scenario(s): ['SC-PERT-04']"
+    },
+    {
+      "sr": "SR-013",
+      "criticality": "SR-CL-A",
+      "status": "insufficient_evidence",
+      "verdict": null,
+      "run_count_ok": false,
+      "families": [
+        "adverse"
+      ],
+      "failing_scenarios": [],
+      "indeterminate_scenarios": [],
+      "notes": "D-29 not met (insufficient runs or family coverage)"
+    },
+    {
+      "sr": "SR-014",
+      "criticality": "SR-CL-A",
+      "status": "failed",
+      "verdict": false,
+      "run_count_ok": false,
+      "families": [
+        "adverse"
+      ],
+      "failing_scenarios": [
+        "SC-PERT-04"
+      ],
+      "indeterminate_scenarios": [
+        "SC-PERT-05"
+      ],
+      "notes": "failing scenario(s): ['SC-PERT-04']"
+    }
+  ],
+  "n_runs": 1660,
+  "n_error": 0
+}

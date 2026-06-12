@@ -1,0 +1,123 @@
+{
+  "total_steps": 150,
+  "episodes": 1,
+  "completed_laps": 0.3846958762137326,
+  "mean_ey_m": 0.01650738069422052,
+  "mean_abs_ey_m": 0.018655450695441403,
+  "max_abs_ey_m": 0.04070091928959139,
+  "mean_epsi_rad": 0.013879595170093658,
+  "mean_abs_epsi_rad": 0.037451130445401354,
+  "emergency_steps": 100,
+  "intervention_steps": 117,
+  "intervention_rate_pct": 78.0,
+  "interventions_per_rule": {
+    "C-06": 46,
+    "C-02": 94,
+    "C-05": 100
+  },
+  "cycle_dt_s": 0.1,
+  "duration_s": 15.0,
+  "perturbation": {
+    "kind": "visual_degradation",
+    "level": "false_lane=0.8@5s"
+  },
+  "run_id": "camp_pert08_rl_seed2024_monitoring_rep11",
+  "scenario_id": "SC-PERT-08",
+  "mode": "monitoring",
+  "verdict": true,
+  "campaign": {
+    "scenario_id": "SC-PERT-08",
+    "criterion": "M-S1 < 0.16 AND road_edge_contact == False",
+    "verdict": true,
+    "clauses": [
+      {
+        "clause": "M-S1 < 0.16",
+        "operand": "M-S1",
+        "op": "<",
+        "rhs": 0.16,
+        "lhs": 0.04070091928959139,
+        "passed": true
+      },
+      {
+        "clause": "road_edge_contact == False",
+        "operand": "road_edge_contact",
+        "op": "==",
+        "rhs": false,
+        "lhs": false,
+        "passed": true
+      }
+    ],
+    "values": {
+      "M-P1": 0.022561875387013593,
+      "M-P4": 0.13641444486077187,
+      "M-P5": 0.037451130445401354,
+      "M-P2": 1,
+      "M-P3": 100.0,
+      "M-P6": 0.0,
+      "M-P7": 0.01780137585154075,
+      "M-S1": 0.04070091928959139,
+      "M-S2": 0.0,
+      "M-S3": 1,
+      "M-S4": null,
+      "M-I1": 78.0,
+      "M-I2": {
+        "C-02": 62.666666666666664,
+        "C-05": 66.66666666666667,
+        "C-06": 30.666666666666668
+      },
+      "M-I3": {
+        "C-02": {
+          "count": 5,
+          "median": 19.0,
+          "p95": 33.8,
+          "max": 35.0
+        },
+        "C-05": {
+          "count": 1,
+          "median": 100.0,
+          "p95": 100.0,
+          "max": 100.0
+        },
+        "C-06": {
+          "count": 19,
+          "median": 1.0,
+          "p95": 6.199999999999996,
+          "max": 8.0
+        }
+      },
+      "M-I4": {
+        "C-02": 0.0,
+        "C-05": null,
+        "C-06": 100.0
+      },
+      "M-I5": {
+        "steer_median": 0.0,
+        "steer_p95": 0.0,
+        "steer_rate_max": 1.5173693895339966,
+        "steer_rate_p95": 0.5472575370222328,
+        "steer_rate_max_smoothness": 0.5158716589212418,
+        "delta_max_steer": 0.15,
+        "steer_rate_smoothness_ok": false
+      },
+      "M-C1": null,
+      "M-C2": null,
+      "emergency": true,
+      "time_to_recovery_heading": 0.5,
+      "max_excursion_m": 0.04070091928959139,
+      "road_edge_contact": false
+    },
+    "availability": {
+      "M-P3": "approx: kappa absent, v_max_straight assumed",
+      "M-P6": "exact",
+      "M-P7": "exact",
+      "M-S3": "per-run bit; M-S3 rate is aggregated across runs",
+      "M-S4": "requires per-step ttlc series (not in current record schema)",
+      "M-I4": "C-05 omitted (triggers not in record); C-03 omitted (no ttlc)",
+      "M-I5": "steering channel only (throttle correction not in record schema); steer_rate_* = per-cycle |\u0394 committed steer|, 'smoothness' arm excludes steps with a downstream safety-override rule (C-01/C-02/C-03/C-05) \u2014 see SR-006",
+      "M-C1": "not measured in sim runs",
+      "M-C2": "not measured in sim runs"
+    },
+    "termination_reason": "truncated",
+    "note": null
+  }
+}

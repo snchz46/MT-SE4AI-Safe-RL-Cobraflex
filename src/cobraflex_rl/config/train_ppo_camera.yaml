@@ -3,7 +3,7 @@
 # (camera image, CnnPolicy, frame stack) and the H-10 visual domain
 # randomisation. Reward, cage wiring, actuation mapping, episode logic and the
 # spawn perturbation are IDENTICAL — the minimal-delta point of docs/09 §10.
-total_timesteps: 200000
+total_timesteps: 750000
 learning_rate: 0.0003
 gamma: 0.99
 n_steps: 1024

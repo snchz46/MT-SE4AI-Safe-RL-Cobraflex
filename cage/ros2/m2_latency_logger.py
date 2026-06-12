@@ -126,6 +126,7 @@ class M2LatencyLogger(Node):
     # ------------------------------------------------------------------
 
     def state_cb(self, msg) -> None:  # type: ignore[no-untyped-def]
+        """Record the arrival time of each /state_obs sample (cycle start)."""
         try:
             self._last_state_stamp_s = stamp_to_seconds(msg.header.stamp)
         except AttributeError:
@@ -135,6 +136,7 @@ class M2LatencyLogger(Node):
             )
 
     def safe_action_cb(self, msg) -> None:  # type: ignore[no-untyped-def]
+        """Record each /safe_action and log the state→action latency pair."""
         if self._last_state_stamp_s is None:
             self._missing_obs += 1
             return
@@ -160,6 +162,7 @@ class M2LatencyLogger(Node):
             self._fp.flush()
 
     def _maybe_shutdown(self) -> None:
+        """Stop spinning once the configured sample count/duration is reached."""
         elapsed = time.monotonic() - self._start_s
         if elapsed < self.duration_s:
             return
@@ -173,6 +176,7 @@ class M2LatencyLogger(Node):
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Spin the M-2 latency logger node until its capture window completes."""
     rclpy.init(args=argv)
     node = M2LatencyLogger()
     try:

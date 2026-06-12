@@ -40,6 +40,8 @@ def family(scenario_id: str) -> str:
 
 @dataclass
 class RunSpec:
+    """A validated scenario YAML (one SC-* file) in object form."""
+
     id: str
     category: str
     description: str
@@ -58,6 +60,7 @@ class RunSpec:
         return family(self.id)
 
     def runs_for_mode(self, mode: str) -> int:
+        """Recommended repetition count for a cage mode (0 when unspecified)."""
         return int(self.n_runs_recommended.get(mode, 0))
 
 

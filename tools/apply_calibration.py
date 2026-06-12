@@ -56,6 +56,7 @@ UNFILLED_DATE = "YYYY-MM-DD"
 
 @dataclass
 class Outcome:
+    """Decision-rule output for one measurement: status, targets and YAML updates."""
     measurement_id: str
     status: str  # "ready" | "not_executed" | "invalid" | "platform_underperforms"
     decision: str = ""
@@ -73,6 +74,7 @@ class Outcome:
 # =============================================================
 
 def load_json(path: Path) -> Optional[dict]:
+    """Parse a JSON file (None when missing/unreadable)."""
     if not path.exists():
         return None
     try:
@@ -82,6 +84,7 @@ def load_json(path: Path) -> Optional[dict]:
 
 
 def load_cage_yaml() -> dict:
+    """Load cage.yaml preserving its full structure."""
     return yaml.safe_load(CAGE_YAML.read_text(encoding="utf-8"))
 
 
@@ -95,6 +98,7 @@ def is_stub(data: dict) -> bool:
 
 
 def get_nested(d: dict, dotted: str) -> Any:
+    """Read a dotted key path out of nested dicts (None when absent)."""
     cur: Any = d
     for part in dotted.split("."):
         if cur is None:
@@ -116,6 +120,7 @@ def require(data: dict, key_path: str, kind: type, errors: List[str]) -> Any:
 
 
 def round_to_step(x: float, step: float = 0.01) -> float:
+    """Round to the nearest multiple of ``step`` (threshold granularity)."""
     return round(x / step) * step
 
 
@@ -418,6 +423,7 @@ DISPATCH = {
 
 
 def process_one(mid: str, cage_data: dict) -> Outcome:
+    """Run the decision rule for one measurement id against its calibration JSON."""
     fn, filename = DISPATCH[mid]
     path = CALIB_DIR / filename
     data = load_json(path)
@@ -431,6 +437,7 @@ def process_one(mid: str, cage_data: dict) -> Outcome:
 
 
 def set_nested(d: dict, dotted: str, value: Any) -> None:
+    """Write a value at a dotted key path inside nested dicts."""
     parts = dotted.split(".")
     cur = d
     for part in parts[:-1]:
@@ -453,6 +460,7 @@ def apply_yaml_updates(updates: Dict[str, float]) -> None:
 
 
 def print_outcome(o: Outcome) -> None:
+    """Console rendering of one measurement's outcome."""
     bar = "-" * 70
     print(f"\n{bar}\n{o.measurement_id}  [{o.status}]\n{bar}")
     if o.status == "not_executed":
@@ -490,6 +498,7 @@ def print_outcome(o: Outcome) -> None:
 
 
 def main() -> int:
+    """CLI entry: evaluate all calibration measurements and optionally patch cage.yaml."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--apply-yaml",

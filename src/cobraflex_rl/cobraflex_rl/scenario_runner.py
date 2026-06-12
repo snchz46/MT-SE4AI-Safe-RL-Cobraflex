@@ -26,6 +26,10 @@ from .scenario_perturbations import ScenarioPerturbation, resolve_perturbation
 
 @dataclass
 class RunConfig:
+    """Everything the executor needs for one (scenario, rep) run: the env
+    reset options (jittered initial conditions), the commanded speed, the
+    step horizon and the per-run pass criterion."""
+
     scenario_id: str
     reset_options: Dict[str, float]
     fixed_speed: float

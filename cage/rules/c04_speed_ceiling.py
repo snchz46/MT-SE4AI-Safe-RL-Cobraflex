@@ -19,6 +19,14 @@ from .base import CageDecision
 
 
 class SpeedCeilingRule:
+    """
+    Reactive rule on forward speed with a curvature-dependent ceiling.
+
+    The ceiling drops linearly with the upcoming curvature (floor at
+    ``v_max_curve``); when the observed speed exceeds it, throttle is
+    attenuated proportionally to the excess. Stateless — no hysteresis.
+    """
+
     def __init__(self, params: dict):
         self.enabled = params.get("enabled", True)
         self.v_max_straight = params["v_max_straight_mps"]
@@ -29,6 +37,7 @@ class SpeedCeilingRule:
         self.k_throttle = params["k_throttle_per_mps"]
 
     def compute_v_max(self, kappa: float) -> float:
+        """Speed ceiling (m/s) for the given curvature ahead."""
         return max(self.v_max_curve, self.v_max_straight - self.k_kappa * abs(kappa))
 
     def safe_envelope_predicate_holds(
@@ -43,6 +52,7 @@ class SpeedCeilingRule:
         return abs(state.speed) <= self.compute_v_max(state.curvature_ahead)
 
     def evaluate(self, state: Any, raw_action: tuple, prev_action=None, ctx=None) -> CageDecision:
+        """One cycle: attenuate throttle in proportion to the speed excess."""
         meta = {"rule": "C-04"}
         if not self.enabled:
             return CageDecision(fire=False, reason="disabled", metadata=meta)

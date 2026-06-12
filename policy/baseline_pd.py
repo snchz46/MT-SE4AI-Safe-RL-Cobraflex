@@ -44,6 +44,8 @@ def _wrap_angle(angle: float) -> float:
 
 
 class BaselinePD:
+    """Stateful PD + curvature-feedforward controller (gains from baseline_pd.yaml)."""
+
     def __init__(self, params: dict):
         self.kp_y = params["kp_y"]
         self.kd_y = params["kd_y"]
@@ -61,16 +63,19 @@ class BaselinePD:
 
     @classmethod
     def from_yaml(cls, path) -> "BaselinePD":
+        """Build from the ``baseline_pd:`` section of a YAML config file."""
         with Path(path).open() as f:
             cfg = yaml.safe_load(f)["baseline_pd"]
         return cls(cfg)
 
     def reset(self) -> None:
+        """Clear the finite-difference history (call on lap/episode reset)."""
         self._prev_y = None
         self._prev_psi = None
         self._prev_t = None
 
     def step(self, state: State, current_t: Optional[float] = None) -> Action:
+        """One control cycle: ``(steering, throttle)`` per the module-docstring law."""
         y = state.lateral_offset
         psi = state.heading_error
         kappa = state.curvature_ahead

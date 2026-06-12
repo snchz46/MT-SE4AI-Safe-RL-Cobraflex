@@ -27,6 +27,7 @@ OUT_PNG = HERE / "fig_3_6_normative_pyramid.png"
 
 
 def main() -> None:
+    """Render the normative-pyramid figure (manuscript Fig. 3.6)."""
     fig, ax = plt.subplots(figsize=(13, 8))
     ax.set_xlim(0, 13)
     ax.set_ylim(0, 8)

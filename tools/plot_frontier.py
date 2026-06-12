@@ -244,6 +244,7 @@ def render(campaign_dir: Path = DEFAULT_CAMPAIGN_DIR, out_dir: Optional[Path] = 
 
 
 def main(argv: Optional[List[str]] = None) -> int:
+    """Render the frontier cage-efficacy figures."""
     ap = argparse.ArgumentParser(description="Cage-efficacy figures for a frontier campaign.")
     ap.add_argument("--campaign-dir", type=Path, default=DEFAULT_CAMPAIGN_DIR,
                     help="campaign root containing runs/<run_id>/summary.json (default: the pilot).")

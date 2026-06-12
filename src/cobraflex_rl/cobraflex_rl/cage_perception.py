@@ -57,6 +57,12 @@ class CagePerceptionResult:
 
 
 class CagePerceptionSupervisor:
+    """Estimator + health (SR-013) + plausibility (SR-014) composed per cycle.
+
+    Defaults are the live-tuned E2 values (see inline rationale); pass explicit
+    kernels to override in tests.
+    """
+
     def __init__(
         self,
         estimator: Optional[CvLaneEstimator] = None,

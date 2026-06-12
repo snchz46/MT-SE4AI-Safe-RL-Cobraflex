@@ -25,6 +25,7 @@ from sensor_msgs.msg import Image
 
 
 def image_to_array(msg: Image) -> np.ndarray:
+    """Decode a sensor_msgs/Image into an HxWxC uint8 array."""
     channels = {"mono8": 1, "rgb8": 3, "bgr8": 3, "rgba8": 4, "bgra8": 4}.get(
         msg.encoding.lower()
     )
@@ -42,6 +43,7 @@ def image_to_array(msg: Image) -> np.ndarray:
 
 
 class FrameGrabber(Node):
+    """Minimal node that buffers incoming camera frames with timestamps."""
     def __init__(self, topic: str):
         super().__init__("camera_frame_grabber")
         self.frames: list[tuple[float, np.ndarray]] = []
@@ -60,6 +62,7 @@ class FrameGrabber(Node):
 
 
 def main() -> int:
+    """CLI entry: capture N frames from a camera topic into PNG files."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--topic", default="/camera/image_raw")
     parser.add_argument("--out", required=True)

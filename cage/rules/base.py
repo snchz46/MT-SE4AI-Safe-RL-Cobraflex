@@ -20,6 +20,14 @@ Action = Tuple[float, float]
 
 @dataclass
 class CageDecision:
+    """Outcome of evaluating one cage rule for one cycle.
+
+    ``fire=True`` means the rule intervenes: ``safe_action`` (steer, throttle)
+    replaces the incoming action for the rest of the chain, ``reason`` is the
+    human-readable justification logged as evidence, and ``metadata`` carries
+    rule-specific diagnostics (thresholds, measured values).
+    """
+
     fire: bool
     safe_action: Optional[Action] = None
     reason: str = ""
@@ -28,6 +36,8 @@ class CageDecision:
 
 @dataclass
 class State:
+    """One Perception sample as seen by the cage (units in field comments)."""
+
     # Defaults keep test fixtures and partial-state construction ergonomic;
     # production code instantiates with all fields populated by Perception.
     lateral_offset: float = 0.0     # m, positive to the left of centreline

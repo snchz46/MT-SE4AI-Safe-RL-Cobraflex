@@ -413,6 +413,7 @@ def fig_multiseed(train_runs: List[Path], out: Path) -> None:
 
 
 def main() -> None:
+    """Render the §7.4/§7.5 training-evidence figures for the pinned runs."""
     ap = argparse.ArgumentParser(description="Generate F3 (Chapter 7) figures.")
     ap.add_argument("--train-run", type=Path, default=None)
     ap.add_argument("--rl-run", type=Path, default=None)

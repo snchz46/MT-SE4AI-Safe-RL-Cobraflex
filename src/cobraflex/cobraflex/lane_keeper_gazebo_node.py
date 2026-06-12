@@ -129,6 +129,7 @@ class LaneKeeperGazeboNode(Node):
         )
 
     def _build_image_msg(self, image, stamp, frame_id):
+        """Wrap a numpy image as a sensor_msgs/Image."""
         if not image.flags["C_CONTIGUOUS"]:
             image = np.ascontiguousarray(image)
 
@@ -144,9 +145,11 @@ class LaneKeeperGazeboNode(Node):
         return msg
 
     def _publish_zero(self):
+        """Publish a zero Twist (stop)."""
         self.cmd_pub.publish(Twist())
 
     def _watchdog_callback(self):
+        """Stop the robot when no camera frame arrived within the watchdog window."""
         timeout = float(self.get_parameter("watchdog_timeout_sec").value)
         if timeout <= 0.0 or self.last_frame_time <= 0.0:
             return
@@ -159,6 +162,7 @@ class LaneKeeperGazeboNode(Node):
                 self.last_warn_time = now
 
     def _image_callback(self, msg: Image):
+        """Cache the latest camera frame for the control tick."""
         try:
             frame_bgr = _ros_image_to_bgr(msg)
         except ValueError as exc:
@@ -180,6 +184,7 @@ class LaneKeeperGazeboNode(Node):
             cv2.waitKey(1)
 
     def _process_frame(self, frame_bgr):
+        """Per-frame CV pipeline (Gazebo variant): threshold, line peaks, steering error."""
         proc_width = int(self.get_parameter("proc_width").value)
         proc_height = int(self.get_parameter("proc_height").value)
         roi_start_pct = float(self.get_parameter("roi_start_pct").value)
@@ -305,6 +310,7 @@ class LaneKeeperGazeboNode(Node):
         return cmd, debug
 
     def destroy_node(self):
+        """Stop the robot before tearing the node down."""
         try:
             self._publish_zero()
         except Exception:
@@ -317,6 +323,7 @@ class LaneKeeperGazeboNode(Node):
 
 
 def main(args=None):
+    """Spin the Gazebo lane-keeper node."""
     rclpy.init(args=args)
     node = LaneKeeperGazeboNode()
     try:

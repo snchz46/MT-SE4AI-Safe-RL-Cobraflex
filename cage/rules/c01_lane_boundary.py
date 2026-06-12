@@ -58,6 +58,7 @@ class LaneBoundaryRule:
         return abs(state.lateral_offset) <= self.d_max
 
     def evaluate(self, state: Any, raw_action: tuple, prev_action=None, ctx=None) -> CageDecision:
+        """One cycle: update the hysteresis state, fire the correction if active."""
         meta = {"rule": "C-01"}
         if not self.enabled:
             return CageDecision(fire=False, reason="disabled", metadata=meta)

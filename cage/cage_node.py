@@ -1,25 +1,20 @@
 """
 cage_node.py
 ------------
-ROS2 node implementing the safety cage.
+Pure-Python safety cage: the composition of the six rules C-01..C-06.
 
-Subscribes to:
-    /raw_action     (from policy node)
-    /state_obs      (from perception node)
-    /external_stop  (external trigger)
-    /cage_reset     (to clear emergency mode)
+`SafetyCageNode` has NO ROS2 dependency — it is called per control cycle via
+`step(state, raw_action, ctx)` by every consumer:
 
-Publishes:
-    /safe_action    (corrected or substituted command)
-    /cage_status    (per-cycle log entry)
-    /emergency      (signal when emergency mode active)
+  - the ROS2 wrapper `src/safety_cage/safety_cage/cage_ros_node.py`
+    (which wires /raw_action + /state_obs → /safe_action + /cage_status),
+  - the RL training/eval loop (`cobraflex_rl.gazebo_lane_env` via
+    `cage_bridge`, D-34/TS-01),
+  - the unit/integration tests under `cage/tests/`.
 
-Configuration: cage/cage.yaml (loaded at launch).
-
-Phase status: F2 second cut. The ROS2 wiring is not yet implemented in this
-file (it will live under `cage/ros2/`); for now `SafetyCageNode` is the pure
-Python composition of the six rules, callable from tests and from the future
-ROS2 wrapper alike.
+Configuration: cage/cage.yaml (versioned; must declare a
+`compatible_sr_spec_version` accepted by this module, see
+`IncompatibleCageConfigError`).
 """
 
 from __future__ import annotations
@@ -136,10 +131,12 @@ class SafetyCageNode:
 
     @property
     def prev_action(self) -> Optional[Action]:
+        """Action emitted last cycle (the baseline for C-06's rate computation)."""
         return self._prev_action
 
     @property
     def cycles_since_last_state(self) -> int:
+        """Consecutive step() calls served without a fresh state observation."""
         return self._cycles_since_last_state
 
     def step(self, state, raw_action: Action, ctx: Optional[dict] = None) -> dict:
@@ -259,6 +256,7 @@ class SafetyCageNode:
         }
 
     def _update_oscillation_history(self, current_t: float, interventions: list) -> None:
+        """Record the sign of each steering correction for SR-010 Part 2 tracking."""
         for iv in interventions:
             rule_id = iv["rule"]
             if rule_id not in self._osc_history:
@@ -308,6 +306,9 @@ class SafetyCageNode:
         return any_persistent, rates
 
     def _no_state_ever_result(self, raw_action: Action) -> dict:
+        """Short-circuit result when step(None) arrives before any state ever did:
+        neutral safe stop, emergency flagged, but C-05 NOT latched (no state to
+        evaluate triggers on)."""
         self._prev_action = _NEUTRAL_SAFE_STOP
         return {
             "safe_action": _NEUTRAL_SAFE_STOP,
@@ -336,6 +337,7 @@ class SafetyCageNode:
 
     @staticmethod
     def _check_compatible_sr_spec_version(cfg: dict) -> None:
+        """Reject cage.yaml files authored against an unknown SRS revision (strict)."""
         declared = cfg.get("compatible_sr_spec_version")
         if declared is None:
             raise IncompatibleCageConfigError(

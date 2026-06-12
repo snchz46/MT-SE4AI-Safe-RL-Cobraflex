@@ -1,3 +1,12 @@
+"""SB3 training callbacks: progress feedback + evidence CSVs.
+
+Three callbacks composed by ``train_ppo``: a TTY/launch-aware progress bar,
+the learning-curve recorder (reward, PPO health scalars and cage activity per
+rollout — Training Spec §7.2.8) and a raw-steering subsampler for the
+action-distribution figure. The CSV column schemas live in
+``training_metrics``.
+"""
+
 from __future__ import annotations
 
 import csv

@@ -1,3 +1,21 @@
+"""Gymnasium environment wrapping the Gazebo lane-following loop.
+
+:class:`GazeboLaneEnv` is the single training/eval environment for both tracks:
+
+- **State obs** (F-track): ``[ey, epsi, speed, prev_steer, kappa_near, kappa_far]``
+  from the ground-truth pose projected onto the centerline.
+- **Camera obs** (track 'E', D-41): 84×84 grayscale front-camera frames; the
+  safety cage then reads the deterministic CV lane-estimator (D-43), never the
+  ground truth, which remains the reward/termination/metrics oracle only.
+
+The safety cage runs *in-process* inside :meth:`step` (D-34/TS-01) using the
+same ``SafetyCageNode``/``cage.yaml`` as deployment, in ``enforcement`` (safe
+action actuated) or ``monitoring`` (raw action actuated, cage shadow-logged)
+mode. F4 scenario execution hooks in through ``reset(options=...)``: spawn
+arc-length/offsets, runtime perturbations (SC-PERT-*) and visual degradations.
+Design spec: docs/09_environment_design.md; reward: docs/10_reward_function.md.
+"""
+
 from __future__ import annotations
 
 import math
@@ -29,6 +47,13 @@ from .visual_domain_randomization import (
 
 
 class GazeboLaneEnv(gym.Env):
+    """Lane-following env over a live Gazebo instance (see module docstring).
+
+    The policy controls steering only ([-1, 1]); throttle is a fixed cruise
+    nominal so the cage's speed rules see a realistic throttle stream
+    (Training Spec §7.2.2). All Gazebo I/O goes through ``ros_interface``.
+    """
+
     metadata = {"render_modes": []}
 
     def __init__(
@@ -182,6 +207,14 @@ class GazeboLaneEnv(gym.Env):
         seed: Optional[int] = None,
         options: Optional[Dict[str, Any]] = None,
     ):
+        """Start a fresh episode: teleport to the spawn pose and re-arm the cage.
+
+        ``options`` carries the F4 scenario hooks — ``start_s_m`` /
+        ``lateral_offset_m`` / ``heading_error_rad`` for deterministic initial
+        conditions, ``perturbation`` (a :class:`ScenarioPerturbation`) for
+        runtime stressors, and ``visual_injector`` / ``visual_degradation``
+        for camera-frame corruption. All are optional; training passes none.
+        """
         super().reset(seed=seed)
         self.step_count = 0
         # prev_steer tracks the steering actually applied (post-cage) last cycle
@@ -421,6 +454,15 @@ class GazeboLaneEnv(gym.Env):
         )
 
     def step(self, action):
+        """One control cycle: cage the action, actuate, advance sim, score.
+
+        Pipeline: clip the policy steering → route through the cage
+        (:meth:`_apply_cage`) → apply actuation latency if perturbed → publish
+        the command and step Gazebo by ``control_dt`` → recompute the track
+        state and reward. Terminates on off-road (true pose beyond the road
+        half-width) or on an *enforced* C-05 emergency stop; truncates at
+        ``max_episode_steps``.
+        """
         policy_steer = float(np.clip(np.asarray(action).reshape(-1)[0], -1.0, 1.0))
         prev_policy_steer = self.prev_policy_steer
 
@@ -660,6 +702,7 @@ class GazeboLaneEnv(gym.Env):
         return 0.0, 0.0
 
     def close(self) -> None:
+        """Best-effort stop command; the ROS interface itself is owned by the caller."""
         try:
             self.ros_interface.send_action(0.0, 0.0)
             self.ros_interface.step_ros(0.05)
@@ -667,6 +710,7 @@ class GazeboLaneEnv(gym.Env):
             pass
 
     def _compute_track_state(self) -> TrackState:
+        """Project the current ground-truth pose onto the centerline."""
         x, y, yaw = self.ros_interface.get_pose()
         # Cache the world pose so _make_info can expose it (x, y for the §7.5
         # trajectory plots; the cage/Frenet state is in ey/epsi/s).

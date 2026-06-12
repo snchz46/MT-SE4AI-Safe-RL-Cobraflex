@@ -43,12 +43,15 @@ from .polyline_tracker import PolylineTracker
 
 
 def _yaw_from_quat(x: float, y: float, z: float, w: float) -> float:
+    """Yaw (rad) from a quaternion (planar robot: roll/pitch ignored)."""
     siny_cosp = 2.0 * (w * z + x * y)
     cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
     return math.atan2(siny_cosp, cosy_cosp)
 
 
 class LanePerceptionNode(Node):
+    """Odometry → /state_obs publisher with EMA smoothing and spike/warp guards."""
+
     def __init__(self) -> None:
         super().__init__("lane_perception")
 
@@ -124,6 +127,7 @@ class LanePerceptionNode(Node):
         )
 
     def _resolve_centerline_path(self) -> str:
+        """Centerline YAML: the ``centerline_yaml`` param or the package config default."""
         param = self.get_parameter("centerline_yaml").get_parameter_value().string_value
         if param:
             return param
@@ -143,6 +147,11 @@ class LanePerceptionNode(Node):
         self._got_odom_once = True
 
     def _tick(self) -> None:
+        """Publish one /state_obs sample from the latest odom (see module docstring).
+
+        Pipeline: validity checks → warp detection → centerline projection →
+        speed-spike rejection → EMA smoothing → boundary distances.
+        """
         msg = Float64MultiArray()
         if not self._got_odom_once or self._odom_msg is None:
             # Publishing state_valid=0.0 before odom arrives activates C-05

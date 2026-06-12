@@ -289,6 +289,7 @@ def compute_run_metrics(
 
 
 def _vmax_series(n: int, kappa: Optional[Sequence[float]], p: Dict[str, float]) -> List[float]:
+    """Per-step speed ceiling: curve value where |kappa| exceeds the threshold."""
     if kappa is not None and len(kappa) == n:
         thr = p["kappa_curve_threshold"]
         return [p["v_max_curve"] if abs(float(k)) > thr else p["v_max_straight"] for k in kappa]
@@ -296,6 +297,7 @@ def _vmax_series(n: int, kappa: Optional[Sequence[float]], p: Dict[str, float]) 
 
 
 def _stall_rate(speed, emergency_flags, p):
+    """% of settled-nominal steps whose trailing window advanced < delta_s_min (M-A2)."""
     dt = float(p["control_dt"])
     win = max(1, int(round(p["t_window_s"] / dt)))
     settle_steps = int(round(p["delta_t_settle_s"] / dt))
@@ -316,6 +318,7 @@ def _stall_rate(speed, emergency_flags, p):
 
 
 def _heading_variability(epsi, emergency_flags, p):
+    """p95 of the rolling heading-error std over settled-nominal windows."""
     dt = float(p["control_dt"])
     win = max(2, int(round(p["t_psd_s"] / dt)))
     settle_steps = int(round(p["delta_t_settle_s"] / dt))
@@ -332,6 +335,7 @@ def _heading_variability(epsi, emergency_flags, p):
 
 
 def _hazard_correlation(interventions, ey, epsi, speed, raw_steer, vmax_series, ttlc, p):
+    """Fraction of interventions whose state was compatible with the rule's hazard."""
     n = len(interventions)
     have_ttlc = ttlc is not None and len(ttlc) == n
 

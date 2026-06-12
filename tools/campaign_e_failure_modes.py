@@ -47,6 +47,7 @@ D_MAX_M = 0.16  # SR-001 lane-boundary hard limit (docs/03)
 
 
 def _load_runs(runs_dir: Path) -> List[dict]:
+    """Read every run dir's summary.json into a flat record list."""
     out: List[dict] = []
     for d in sorted(runs_dir.iterdir()):
         sj = d / "summary.json"
@@ -73,6 +74,7 @@ def _classify_fail(vals: dict) -> str:
 
 
 def analyse(runs: List[dict]) -> dict:
+    """Group runs by (scenario, mode) and classify each failure's mode."""
     groups: Dict[tuple, dict] = defaultdict(lambda: {
         "n": 0, "pass": 0, "fail": 0, "indet": 0,
         "fail_emergency_only": 0, "fail_ms1_breach": 0,
@@ -162,6 +164,7 @@ def baseline_contrast(e_runs: List[dict], base_dir: Path) -> Optional[dict]:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
+    """CLI entry: analyse a campaign runs/ dir and write the breakdown JSON."""
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--campaign-dir", type=Path,

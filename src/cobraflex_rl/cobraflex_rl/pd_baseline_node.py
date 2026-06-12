@@ -22,6 +22,12 @@ from pathlib import Path
 
 
 def _bootstrap_policy_import() -> None:
+    """Make ``policy``/``cage`` importable when the repo isn't pip-installed.
+
+    Colcon installs this node without the repo root on sys.path; walking up
+    to the directory containing ``policy/baseline_pd.py`` recovers it. A
+    prior ``pip install -e .`` makes this a no-op (the preferred setup).
+    """
     try:
         import policy.baseline_pd  # noqa: F401
         return
@@ -49,6 +55,8 @@ from policy.baseline_pd import BaselinePD  # noqa: E402
 
 
 class PdBaselineNode(Node):
+    """ROS2 wrapper around the pure-Python PD baseline (see module docstring)."""
+
     def __init__(self) -> None:
         super().__init__("pd_baseline")
 
@@ -74,6 +82,7 @@ class PdBaselineNode(Node):
         )
 
     def _resolve_baseline_yaml(self) -> str:
+        """PD config path: the ``baseline_yaml`` param or the repo's policy/baseline_pd.yaml."""
         param = self.get_parameter("baseline_yaml").get_parameter_value().string_value
         if param:
             return param
@@ -88,6 +97,7 @@ class PdBaselineNode(Node):
         )
 
     def _on_state_obs(self, msg: Float64MultiArray) -> None:
+        """Run one PD step on each /state_obs sample and publish /raw_action."""
         if len(msg.data) < 7:
             self.get_logger().warning(
                 f"/state_obs has {len(msg.data)} fields, expected 7; ignoring."

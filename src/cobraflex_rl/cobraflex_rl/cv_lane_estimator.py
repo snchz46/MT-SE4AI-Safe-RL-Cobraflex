@@ -107,6 +107,14 @@ class CvLaneEstimate:
 
 
 class CvLaneEstimator:
+    """Deterministic CV lane estimator (D-43): camera frame → CvLaneEstimate.
+
+    Classical pipeline, no learning: white-marking mask → per-scan-row line
+    candidates projected to the ground plane → greedy polynomial clustering →
+    plausible lane-pair selection (single-line fallback). Stateful only in the
+    running lane-width EMA used by the fallback.
+    """
+
     def __init__(
         self,
         camera: Optional[CameraModel] = None,
@@ -194,7 +202,9 @@ class CvLaneEstimator:
         """
         xs = np.array([p[0] for p in pts])
         ys = np.array([p[1] for p in pts])
-        span = float(xs.ptp()) if len(xs) > 1 else 0.0
+        # np.ptp(xs), not xs.ptp(): the ndarray method was removed in NumPy 2.0
+        # and this module must run on both the Ubuntu host (1.x) and newer envs.
+        span = float(np.ptp(xs)) if len(xs) > 1 else 0.0
         if len(pts) >= 5 and span > 0.25:
             c2, c1, c0 = np.polyfit(xs, ys, 2)
             return float(c0), float(c1), float(c2)
@@ -232,6 +242,7 @@ class CvLaneEstimator:
 
     # ------------------------------------------------------------------ main
     def estimate(self, frame_bgr: np.ndarray) -> CvLaneEstimate:
+        """One frame → lane estimate (``ok=False`` with a reason when no lane found)."""
         cfg = self.config
         mask = self.white_mask(frame_bgr)
         points = self._row_candidates(mask)
@@ -279,7 +290,7 @@ class CvLaneEstimator:
         pair_pts = right["pts"] + left["pts"]
         xs = np.array([p[0] for p in pair_pts])
         n_rows_spanned = len(np.unique(np.round(xs, 3)))
-        if n_rows_spanned >= cfg.min_rows_for_curvature and float(xs.ptp()) > 0.2:
+        if n_rows_spanned >= cfg.min_rows_for_curvature and float(np.ptp(xs)) > 0.2:
             curvature = float(2.0 * c2)
         else:
             curvature = 0.0  # not enough span to trust a curvature estimate
@@ -332,7 +343,7 @@ class CvLaneEstimator:
         xs = np.array([p[0] for p in best["pts"]])
         curvature = (
             float(2.0 * best["c2"])
-            if len(xs) >= cfg.min_rows_for_curvature and float(xs.ptp()) > 0.2
+            if len(xs) >= cfg.min_rows_for_curvature and float(np.ptp(xs)) > 0.2
             else 0.0
         )
         confidence = cfg.single_line_confidence_scale * min(

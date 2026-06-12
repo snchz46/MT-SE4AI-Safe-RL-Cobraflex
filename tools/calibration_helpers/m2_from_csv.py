@@ -40,6 +40,7 @@ DEFAULT_RESULTS = REPO_ROOT / "experiments" / "calibration" / "M2_results.json"
 
 
 def load_latencies_ms(csv_path: Path) -> List[float]:
+    """Read the latency_ms column of an M-2 logger CSV."""
     lat: List[float] = []
     with csv_path.open("r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -69,6 +70,7 @@ def percentile(sorted_vals: List[float], q: float) -> float:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """CLI entry: compute the M-2 latency statistics from a logged CSV."""
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--input-csv", required=True, type=Path,

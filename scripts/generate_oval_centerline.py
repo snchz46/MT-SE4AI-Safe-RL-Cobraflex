@@ -23,6 +23,7 @@ def generate_oval(
     radius: float = 0.75,
     segment_length: float = 0.1,
 ) -> List[Tuple[float, float]]:
+    """Oval centerline polyline: two straights joined by two semicircular arcs."""
     half_l = straight_length / 2.0
 
     n_straight = max(2, int(round(straight_length / segment_length)))
@@ -61,6 +62,7 @@ def to_yaml_dict(
     straight_length: float,
     radius: float,
 ) -> dict:
+    """Wrap the points + lane/road widths in the centerline YAML schema."""
     perimeter = 2.0 * straight_length + 2.0 * math.pi * radius
     return {
         "centerline": {
@@ -77,6 +79,7 @@ def to_yaml_dict(
 
 
 def main() -> None:
+    """CLI entry: generate the oval centerline YAML."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--output",

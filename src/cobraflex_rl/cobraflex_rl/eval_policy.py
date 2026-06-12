@@ -45,6 +45,7 @@ SCENARIO_ID = "SC-NOM-01"
 
 
 def resolve_share_directory() -> Path:
+    """Installed package share dir, or the source tree when not colcon-built."""
     try:
         return Path(get_package_share_directory(PACKAGE_NAME))
     except PackageNotFoundError:
@@ -52,6 +53,7 @@ def resolve_share_directory() -> Path:
 
 
 def resolve_runs_dir(explicit: Optional[str]) -> Path:
+    """Run-output root: explicit override or the repo's experiments/sim/runs."""
     if explicit:
         return Path(explicit)
     here = Path(__file__).resolve()
@@ -62,11 +64,13 @@ def resolve_runs_dir(explicit: Optional[str]) -> Path:
 
 
 def load_yaml(path: Path) -> Dict[str, Any]:
+    """Parse a YAML file into a dict."""
     with path.open("r", encoding="utf-8") as handle:
         return yaml.safe_load(handle)
 
 
 def parse_args(args: Optional[Sequence[str]] = None) -> argparse.Namespace:
+    """Parse CLI args, dropping the ROS-specific ones ros2 launch appends."""
     parser = argparse.ArgumentParser(description="Evaluate PPO lane-following policy.")
     parser.add_argument("--centerline-config", type=str, default=None)
     parser.add_argument("--train-config", type=str, default=None)
@@ -102,18 +106,21 @@ def parse_args(args: Optional[Sequence[str]] = None) -> argparse.Namespace:
 
 
 def resolve_load_path(path: Path) -> Path:
+    """The checkpoint file to load (append .zip if the bare path doesn't exist)."""
     if path.exists():
         return path
     return path if path.suffix == ".zip" else path.with_suffix(".zip")
 
 
 def _disable_spawn_perturbation(train_cfg: Dict[str, Any]) -> None:
+    """Force a deterministic spawn for eval (random spawn is training-only)."""
     spawn_cfg = dict(train_cfg.get("spawn_perturbation", {}))
     spawn_cfg["enabled"] = False
     train_cfg["spawn_perturbation"] = spawn_cfg
 
 
 def _record_from_info(episode: int, step: int, info: Dict[str, Any]) -> Dict[str, Any]:
+    """Flatten one env-step info dict into the per-step run record."""
     return {
         "episode": episode,
         "step": step,
@@ -143,6 +150,7 @@ def _record_from_info(episode: int, step: int, info: Dict[str, Any]) -> Dict[str
 
 
 def _write_cage_status_csv(path: Path, records: List[Dict[str, Any]]) -> None:
+    """Write the per-step trace CSV (one row per control cycle)."""
     fields = [
         "episode", "step", "x", "y", "yaw", "ey", "epsi", "s", "speed",
         "raw_steer", "safe_steer", "steer_correction",
@@ -187,6 +195,7 @@ class _FrameStacker:
 
 
 def _print_summary(summary: Dict[str, Any]) -> None:
+    """Console summary of the §7.5 evaluation metrics."""
     print("\n===== §7.5 evaluation summary (RL + cage) =====")
     print(f"  episodes / steps    : {summary['episodes']} / {summary['total_steps']}")
     print(f"  completed laps      : {summary['completed_laps']:.2f}")
@@ -200,6 +209,7 @@ def _print_summary(summary: Dict[str, Any]) -> None:
 
 
 def main(args: Optional[Sequence[str]] = None) -> None:
+    """Run one evaluation (legacy §7.5 or F4 scenario mode) and write the run dir."""
     cli_args = parse_args(args)
     rclpy.init(args=args)
 
@@ -420,6 +430,7 @@ def _evaluate_scenario(
 
 
 def _print_verdict(scenario_id: str, campaign: Dict[str, Any]) -> None:
+    """Console rendering of the per-run scenario verdict and its clauses."""
     label = {True: "PASS", False: "FAIL", None: "INDETERMINATE"}[campaign["verdict"]]
     print(f"\n===== {scenario_id} per-run verdict: {label} =====")
     print(f"  criterion: {campaign['criterion']}")
@@ -447,6 +458,7 @@ def _write_run(
     scenario_id: str = SCENARIO_ID,
     campaign: Optional[Dict[str, Any]] = None,
 ) -> None:
+    """Persist the run dir: trace CSV, summary.json and reproducibility metadata."""
     runs_dir = resolve_runs_dir(cli_args.output_root)
     run_id = cli_args.run_id or "rl_eval_" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     out_dir = runs_dir / run_id

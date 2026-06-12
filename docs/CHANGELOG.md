@@ -31,6 +31,33 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [12.06.2026] — Repo-wide English documentation pass + NumPy 2.0 compatibility fix
+
+**Document(s) affected:** No living `docs/` content. Code only: `cage/` (cage_node, logger, rules C-01..C-06, base types), `src/cobraflex_rl/` (env, ROS interface, trainer, eval, perception/criterion/campaign modules, ROS2 nodes), `src/safety_cage/cage_ros_node.py`, `src/cobraflex/` legacy nodes, `policy/baseline_pd.py`, `tools/` (campaign/traceability/calibration/plot scripts), `scripts/`, `cage/ros2/` loggers, `policy/tests/test_camera_pipeline.py`.
+**Phase:** E4 (chore; F-track artifacts untouched in behaviour).
+**Gate context:** after GE4 campaign close; no verdict-bearing artifact re-run required.
+**Author:** Samuel.
+
+### Change
+
+1. **English docstrings/comments where missing** (~150 docstrings): module docstrings for `gazebo_lane_env`, `ros_interface`, `train_ppo`, `callbacks`, `rewards`, `polyline_tracker`, `cobraflex_rl/__init__` (lazy-import rationale); class/function docstrings across the cage rules, ROS2 nodes, campaign tooling and scripts. Stale `cage/cage_node.py` module docstring corrected (the ROS2 wrapper lives in `src/safety_cage/`, not a future `cage/ros2/`). Spanish figure labels in `tools/plot_*` kept — they are manuscript-facing text (thesis in Spanish).
+2. **NumPy 2.0 compatibility:** `cv_lane_estimator.py` used `ndarray.ptp()` (removed in NumPy 2.0) in three places → `np.ptp(...)`; identical numerics on NumPy 1.x.
+3. **Host-portable tests:** the five `camera_pipeline` tests that need OpenCV now `skipif` when `cv2` is absent (Windows manuscript host) instead of failing; they still run on the Ubuntu sim host.
+
+### Rationale
+
+Reviewer-facing readability: the safety argument leans on the code being auditable; several core modules (RL env, ROS interface, PPO trainer) had no module docstring and many public APIs were undocumented. The `.ptp()` failures masked the real suite signal on NumPy ≥ 2 hosts (24 spurious failures).
+
+### Impact
+
+No behavioural change (docstrings/comments only, plus the equivalent `np.ptp` call). No re-runs required; F4/E4 campaign artifacts remain valid.
+
+### Verification
+
+`pytest` (cage/tests + policy/tests + tools/tests): **435 passed, 5 skipped** (cv2-gated on this host). `python tools/check_traceability.py`: **PASS, 0 warnings**.
+
+---
+
 ## [12.06.2026] — E4/GE4: track-'E' camera evaluation campaign closed — global `NOT SATISFIED`, dominated by safe controlled stops; the cage flips latent → active under the camera
 
 **Document(s) affected:** `experiments/sim/campaign_e/` (verdict-bearing roll-up `campaign_report.json` + `campaign_runs.csv`, **1660 runs**; committed E4 "Cam eval part 1/2"). New `tools/campaign_e_failure_modes.py` + `experiments/sim/campaign_e/failure_mode_breakdown.json` (pure-Python clause-level failure classification + cage core-safety invariants + F4↔E contrast). `docs/07_traceability_matrix.md` (E-track SR-012/013/014 verdicts + an "E-track sim evidence" block). `manuscript/chapters/chapter_08` §8.9 (camera-campaign results, Spanish; synthesis renumbered → §8.10) + §7.7.7 forward-ref + appendix ticks. `CLAUDE.md` (phase snapshot).

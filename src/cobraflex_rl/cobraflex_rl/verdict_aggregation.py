@@ -36,6 +36,8 @@ RUN_COUNT_THRESHOLD: Dict[str, int] = {"SR-CL-A": 25, "SR-CL-B": 10, "SR-CL-C": 
 
 @dataclass
 class SRInfo:
+    """One safety requirement as the aggregator sees it (id, CL, verifying scenarios)."""
+
     id: str
     criticality: str
     scenarios: List[str]  # verifying scenario ids, or ["ALL"]
@@ -56,6 +58,8 @@ class ScenarioRuns:
 
 @dataclass
 class ScenarioOutcome:
+    """Per-scenario reduction of the raw run verdicts (counts + scenario verdict)."""
+
     scenario_id: str
     family: str
     n_runs: int

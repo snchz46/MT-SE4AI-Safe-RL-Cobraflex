@@ -1,3 +1,11 @@
+"""Reward function for the lane-following RL task (reward v1.2).
+
+Single entry point :func:`compute_reward`; the weights come from the
+``reward:`` section of the training config so reward shaping is recorded in
+the run's reproducibility metadata. Authoritative spec: docs/10_reward_function.md
+and Training Spec Ch.7 §7.2.3.
+"""
+
 from __future__ import annotations
 
 from typing import Any, Mapping

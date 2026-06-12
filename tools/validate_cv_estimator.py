@@ -65,10 +65,12 @@ DEGRADATIONS = [
 
 
 def sha256_file(path: Path) -> str:
+    """SHA-256 of a file (reproducibility metadata)."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def git_commit() -> str:
+    """Current git commit hash (best-effort)."""
     return subprocess.run(
         ["git", "rev-parse", "HEAD"], cwd=REPO, capture_output=True, text=True
     ).stdout.strip()
@@ -88,6 +90,7 @@ def pose_grid(tracker: PolylineTracker, n_s: int, offsets, headings):
 
 
 def settle_at(iface: RosGazeboInterface, x, y, yaw, tol=0.05, attempts=10):
+    """Teleport and re-calibrate until the reported pose settles at the target."""
     iface.set_vehicle_pose(x, y, yaw)
     for _ in range(attempts):
         iface.spin_wall(0.15)
@@ -106,6 +109,7 @@ def settle_at(iface: RosGazeboInterface, x, y, yaw, tol=0.05, attempts=10):
 
 
 def fresh_frame(iface: RosGazeboInterface, timeout=3.0):
+    """Drop any stale frame and wait for a fresh post-teleport one."""
     iface.clear_camera_frame()
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -117,6 +121,7 @@ def fresh_frame(iface: RosGazeboInterface, timeout=3.0):
 
 
 def main() -> int:
+    """Drive the validation sweep: poses x degradations, CV estimate vs ground truth."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-root", default=str(REPO / "experiments" / "sim" / "runs"))
     parser.add_argument("--n-s", type=int, default=20, help="arc-length samples (clean grid)")

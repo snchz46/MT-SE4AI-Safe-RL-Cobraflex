@@ -150,6 +150,7 @@ def write_results(results_json: Path, positions: List[Dict[str, float]],
 
 
 def main(argv: list[str] | None = None) -> int:
+    """CLI entry: compute the M-1 noise statistics from a logged CSV."""
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--input-dir", required=True, type=Path,

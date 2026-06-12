@@ -24,6 +24,8 @@ from std_msgs.msg import Bool
 
 
 class VehicleControlNode(Node):
+    """Actuation relay /safe_action → /cmd_vel with emergency + watchdog logic."""
+
     def __init__(self) -> None:
         super().__init__("vehicle_control")
 
@@ -138,6 +140,7 @@ class VehicleControlNode(Node):
         return float(self._wall_clock.now().nanoseconds) * 1e-9
 
     def _on_watchdog_tick(self) -> None:
+        """Command a zero Twist whenever /safe_action has gone stale (see init)."""
         if self._last_safe_wall_t is None:
             # No /safe_action ever — no actuator command yet. Nothing to
             # override; cage_logger watchdog already surfaces this case.
@@ -159,6 +162,7 @@ class VehicleControlNode(Node):
             self._watchdog_warned = False
 
     def _on_safe(self, msg: Twist) -> None:
+        """Map each /safe_action to /cmd_vel (or a full stop while emergency is latched)."""
         self._last_safe = msg
         self._last_safe_wall_t = self._wall_now_s()
         cmd = Twist()
@@ -176,6 +180,7 @@ class VehicleControlNode(Node):
         self._pub.publish(cmd)
 
     def _target_speed_from_throttle(self, safe_throttle: float) -> float:
+        """Scale the cruise speed by safe_throttle/nominal, clamped to [min_scale, 1]."""
         if not self._use_safe_throttle:
             return self._fixed_speed
 

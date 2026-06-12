@@ -1,3 +1,13 @@
+"""Centerline tracking: project a world pose onto a 2D polyline.
+
+Given the lane centerline as an ``(N, 2)`` polyline, :class:`PolylineTracker`
+computes the Frenet-style quantities the controllers and the RL env consume:
+lateral error ``ey`` (signed, + = left of travel direction), heading error
+``epsi``, arc-length ``s``, and a smoothed track heading. Closed polylines
+(the F2 oval) are detected automatically and wrap indices/arc-length modulo
+the perimeter. Pure NumPy — no ROS2 dependency.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -37,11 +47,21 @@ _HYSTERESIS_M2 = 1e-5
 
 
 def wrap_angle(angle: float) -> float:
+    """Wrap an angle (rad) to (-pi, pi]."""
     return math.atan2(math.sin(angle), math.cos(angle))
 
 
 @dataclass
 class TrackState:
+    """Result of projecting a pose onto the centerline (one track() call).
+
+    ``ey``: signed lateral error (m), + = left of travel direction.
+    ``epsi``: heading error vs the smoothed track heading (rad).
+    ``s``: arc-length along the polyline at the projection point (m).
+    ``segment_index`` / ``segment_fraction``: where on the polyline the
+    projection landed; ``closest_point`` is that point in world coords.
+    """
+
     ey: float
     epsi: float
     s: float
@@ -52,6 +72,14 @@ class TrackState:
 
 
 class PolylineTracker:
+    """Stateful nearest-segment tracker along a fixed centerline polyline.
+
+    Stateful because, after the first global search, subsequent ``track()``
+    calls only search a small neighbourhood of the previous best segment
+    (continuity + hysteresis, see module constants). Call
+    :meth:`reset_tracking` whenever the tracked entity teleports.
+    """
+
     def __init__(self, polyline: np.ndarray):
         points = np.asarray(polyline, dtype=float)
         if points.ndim != 2 or points.shape[1] != 2:
@@ -119,6 +147,12 @@ class PolylineTracker:
         return float(point[0]), float(point[1]), heading
 
     def track(self, x: float, y: float, yaw: float) -> TrackState:
+        """Project pose ``(x, y, yaw)`` onto the polyline and return errors.
+
+        Searches globally on the first call (or after :meth:`reset_tracking`),
+        otherwise only the ±`_LOCAL_SEARCH_RADIUS` segments around the previous
+        best index, with `_HYSTERESIS_M2` favouring the incumbent segment.
+        """
         position = np.array([x, y], dtype=float)
         n_segments = len(self.segment_vectors)
 
@@ -189,6 +223,11 @@ class PolylineTracker:
         )
 
     def curvature_ahead(self, segment_index: int, lookahead_segments: int = 5) -> float:
+        """Mean signed curvature (1/m) over the next ``lookahead_segments``.
+
+        Computed as heading change divided by arc length from ``segment_index``
+        forward; + = left turn. Returns 0.0 when the window degenerates.
+        """
         n = len(self.segment_headings)
         if n < 2 or lookahead_segments <= 0:
             return 0.0
@@ -215,6 +254,7 @@ class PolylineTracker:
         return dpsi / arc
 
     def _smoothed_heading(self, segment_index: int) -> float:
+        """Circular mean of segment headings within `_HEADING_SMOOTHING_RADIUS`."""
         n = len(self.segment_headings)
         if self._closed:
             indices = [

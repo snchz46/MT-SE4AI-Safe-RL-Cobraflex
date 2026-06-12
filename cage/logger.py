@@ -88,6 +88,7 @@ class CageLogger:
         self._closed = False
 
     def add_cycle(self, result: dict) -> None:
+        """Append one ``SafetyCageNode.step()`` result dict as a CSV row."""
         rules_fired = ";".join(iv["rule"] for iv in result.get("interventions", []))
         rates = result.get("oscillation_rates_hz") or {}
         raw_s, raw_t = result["raw_action"]
@@ -117,6 +118,7 @@ class CageLogger:
         self._cycle_count += 1
 
     def close(self) -> None:
+        """Close the CSV and write metadata.json (idempotent)."""
         if self._closed:
             return
         self._file.close()
@@ -127,6 +129,7 @@ class CageLogger:
 
     @property
     def cycle_count(self) -> int:
+        """Number of rows written so far."""
         return self._cycle_count
 
     def __enter__(self) -> "CageLogger":
@@ -137,6 +140,7 @@ class CageLogger:
 
 
 def _format_timestamp(value) -> str:
+    """Fixed 6-decimal timestamp string (empty when no time was provided)."""
     if value is None:
         return ""
     return f"{value:.6f}"

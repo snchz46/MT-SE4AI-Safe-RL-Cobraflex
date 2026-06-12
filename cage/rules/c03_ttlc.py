@@ -21,6 +21,16 @@ from .base import CageDecision
 
 
 class TTLCRule:
+    """
+    Predictive rule on time-to-lane-crossing (TTLC).
+
+    Projects the current lateral velocity (v·sin(psi)) forward: if the
+    boundary ``d_max`` would be crossed within ``t_min_s``, steering is
+    overridden with a correction whose magnitude scales with urgency
+    (how close TTLC is to zero). No hysteresis — the prediction itself
+    is the activation signal. Throttle is left unchanged.
+    """
+
     def __init__(self, params: dict):
         self.enabled = params.get("enabled", True)
         self.t_min = params["t_min_s"]
@@ -62,6 +72,7 @@ class TTLCRule:
         return True
 
     def evaluate(self, state: Any, raw_action: tuple, prev_action=None, ctx=None) -> CageDecision:
+        """One cycle: fire an urgency-scaled correction when TTLC < t_min."""
         meta = {"rule": "C-03"}
         if not self.enabled:
             return CageDecision(fire=False, reason="disabled", metadata=meta)

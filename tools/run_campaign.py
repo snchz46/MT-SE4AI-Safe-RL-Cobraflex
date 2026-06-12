@@ -66,6 +66,7 @@ ADVERSE_PREFIXES = ("SC-EDGE", "SC-PERT", "SC-FRONT")
 # --------------------------------------------------------------------------- #
 @dataclass
 class Scenario:
+    """One scenario YAML as the campaign driver consumes it."""
     id: str
     category: str
     is_stub: bool
@@ -86,6 +87,7 @@ class Scenario:
 
 
 def load_scenarios(scenario_dir: Path = SCENARIO_DIR) -> Dict[str, Scenario]:
+    """Load every scenario YAML under scenarios/, keyed by scenario id."""
     out: Dict[str, Scenario] = {}
     for path in sorted(scenario_dir.glob("*/*.yaml")):
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -132,6 +134,7 @@ def expand_sr_scenarios(sr_scenarios: Sequence[str], all_scenario_ids: Sequence[
 # --------------------------------------------------------------------------- #
 @dataclass(frozen=True)
 class RunSpec:
+    """One executable (scenario, mode, rep) cell of the campaign matrix."""
     scenario_id: str
     mode: str          # enforcement | monitoring
     controller: str    # rl | pd
@@ -196,6 +199,7 @@ def evaluate_criterion(expr: str, values: Dict[str, object]) -> bool:
 # --------------------------------------------------------------------------- #
 @dataclass
 class ScenarioResult:
+    """Aggregated per-(scenario, mode) verdict counts and scenario verdict."""
     scenario_id: str
     mode: str
     n_runs: int
@@ -245,6 +249,7 @@ def aggregate_scenario(
 
 @dataclass
 class SRResult:
+    """Per-SR roll-up across its verifying scenarios (the docs/07 verdict input)."""
     sr_id: str
     criticality: str
     status: str                 # satisfied | failed | insufficient_evidence | not_run
@@ -458,6 +463,7 @@ def run_id_for(run_spec: RunSpec) -> str:
 
 
 def _read_summary(output_root: Path, run_id: str) -> Optional[Dict[str, object]]:
+    """Load a run's summary.json (None when missing/unreadable)."""
     summary_path = Path(output_root) / run_id / "summary.json"
     if summary_path.is_file():
         with summary_path.open(encoding="utf-8") as handle:
@@ -591,6 +597,7 @@ def execute_run(
 # --------------------------------------------------------------------------- #
 @dataclass
 class RunOutcome:
+    """Result of executing one RunSpec: the per-run verdict or the error."""
     run_spec: RunSpec
     verdict: Optional[bool]            # per-run pass (eval_policy's 3-valued result)
     summary: Dict[str, object] = field(default_factory=dict)
@@ -722,6 +729,7 @@ def write_report(report: Dict[str, object], outcomes: Sequence[RunOutcome], out_
 # CLI
 # --------------------------------------------------------------------------- #
 def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
+    """CLI for the campaign driver."""
     p = argparse.ArgumentParser(description="Phase-4 scenario validation campaign.")
     p.add_argument("--controllers", default="rl",
                    help="rl | pd | rl,pd (PD arm not wired yet — use rl).")
@@ -782,6 +790,7 @@ def render_frontier_plots(out_dir: Path) -> None:
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
+    """Drive the campaign: plan the matrix, execute (resume-aware), aggregate, report."""
     args = _parse_args(argv)
     scenarios = load_scenarios()
     srs = load_srs()

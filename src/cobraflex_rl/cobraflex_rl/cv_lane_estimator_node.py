@@ -50,6 +50,8 @@ from .camera_pipeline import decode_image
 
 
 class CvLaneEstimatorNode(Node):
+    """Camera → /state_obs + /perception_invalid via the perception supervisor."""
+
     def __init__(self) -> None:
         super().__init__("cv_lane_estimator_node")
         self.declare_parameter("image_topic", "camera/image_raw_lane")
@@ -92,12 +94,14 @@ class CvLaneEstimatorNode(Node):
         self._image_msg = msg
 
     def _on_odom(self, msg: Odometry) -> None:
+        """Track planar speed only (the estimator never sees the odom pose)."""
         lin = msg.twist.twist.linear
         speed = math.sqrt(float(lin.x) ** 2 + float(lin.y) ** 2)
         if math.isfinite(speed):
             self._speed = speed
 
     def _tick(self) -> None:
+        """One supervisor cycle: decode the latest frame, publish invalid flag + state."""
         now = self.get_clock().now().nanoseconds * 1e-9
         frame = None
         stamp = 0.0

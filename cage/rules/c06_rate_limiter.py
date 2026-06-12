@@ -23,6 +23,8 @@ from .base import CageDecision
 
 
 class RateLimiterRule:
+    """Bounded-derivative rule: clips per-cycle steering/throttle deltas (stateless)."""
+
     def __init__(self, params: dict):
         self.enabled = params.get("enabled", True)
         self.delta_max_steering = params["delta_max_steering_per_cycle"]

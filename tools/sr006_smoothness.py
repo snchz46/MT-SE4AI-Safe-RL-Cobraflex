@@ -113,6 +113,7 @@ def analyse(runs_dir: Path, mode: str = "enforcement",
 
 
 def _parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+    """CLI for the SR-006 analysis."""
     p = argparse.ArgumentParser(description="SR-006 committed-steer smoothness analysis (D-39).")
     p.add_argument("--runs", type=Path, default=DEFAULT_CAMPAIGN,
                    help="campaign runs/ directory (default: experiments/sim/campaign/runs).")
@@ -123,6 +124,7 @@ def _parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
+    """Score the SR-006 committed-steer-rate criterion (D-39) across campaign runs."""
     args = _parse_args(argv)
     if not args.runs.is_dir():
         print(f"runs directory not found: {args.runs}", file=sys.stderr)

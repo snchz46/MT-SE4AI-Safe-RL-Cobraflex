@@ -1,3 +1,15 @@
+"""PPO training entry point (``ros2 launch cobraflex_rl train.launch.py``).
+
+Wires the full F3/E-track training loop: loads the centerline + training
+config YAMLs, builds :class:`GazeboLaneEnv` over a live Gazebo instance,
+unthrottles the sim clock for headless runs, trains SB3 PPO (MlpPolicy on the
+state obs, CnnPolicy + VecFrameStack on the camera obs), and writes the
+reproducibility evidence — ``metadata.json`` (git commit, config/cage/policy
+hashes, seed), the learning-curve/action CSVs and periodic checkpoints —
+under ``experiments/sim/training/<run_id>/``. Supports ``--resume-from`` to
+continue a saved checkpoint. Spec: Training Spec Ch.7 §7.2.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -33,6 +45,7 @@ SCENARIO_ID = "SC-NOM-01"
 
 
 def resolve_share_directory() -> Path:
+    """Installed package share dir, or the source tree when not colcon-built."""
     try:
         return Path(get_package_share_directory(PACKAGE_NAME))
     except PackageNotFoundError:
@@ -54,6 +67,7 @@ def _resolve_repo_subdir(*parts: str) -> Path:
 
 
 def _resolve_cage_yaml(train_cfg: Dict[str, Any]) -> Path:
+    """Cage config path: explicit ``cage.yaml_path`` or the repo's cage/cage.yaml."""
     explicit = train_cfg.get("cage", {}).get("yaml_path", "") or ""
     if explicit and Path(explicit).is_file():
         return Path(explicit)
@@ -65,11 +79,13 @@ def _resolve_cage_yaml(train_cfg: Dict[str, Any]) -> Path:
 
 
 def load_yaml(path: Path) -> Dict[str, Any]:
+    """Parse a YAML file into a dict."""
     with path.open("r", encoding="utf-8") as handle:
         return yaml.safe_load(handle)
 
 
 def parse_args(args: Optional[Sequence[str]] = None) -> argparse.Namespace:
+    """Parse CLI args, dropping the ROS-specific ones ros2 launch appends."""
     parser = argparse.ArgumentParser(description="Train PPO lane-following policy.")
     parser.add_argument("--centerline-config", type=str, default=None)
     parser.add_argument("--train-config", type=str, default=None)
@@ -90,6 +106,7 @@ def parse_args(args: Optional[Sequence[str]] = None) -> argparse.Namespace:
 
 
 def resolve_save_path(path: Path) -> Path:
+    """The .zip path SB3 actually writes for a given model path."""
     return path if path.suffix == ".zip" else path.with_suffix(".zip")
 
 
@@ -104,6 +121,7 @@ def _write_training_metadata(
     total_timesteps: int,
     status: str,
 ) -> None:
+    """Write the run's reproducibility metadata.json (also on failure)."""
     metadata = {
         "run_id": run_id,
         "scenario_id": SCENARIO_ID,
@@ -138,6 +156,7 @@ def _write_training_metadata(
 def _append_checkpoint_registry(
     seed: int, total_timesteps: int, cage_yaml: Path, run_id: str
 ) -> None:
+    """Append the completed run to policy/checkpoints/checkpoint_registry.csv."""
     registry = _resolve_repo_subdir("policy", "checkpoints") / "checkpoint_registry.csv"
     write_header = not registry.exists()
     with registry.open("a", newline="", encoding="utf-8") as handle:
@@ -160,6 +179,7 @@ def _append_checkpoint_registry(
 
 
 def main(args: Optional[Sequence[str]] = None) -> None:
+    """Run one PPO training session end-to-end (see module docstring)."""
     cli_args = parse_args(args)
     rclpy.init(args=args)
 

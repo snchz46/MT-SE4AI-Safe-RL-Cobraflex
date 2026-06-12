@@ -12,6 +12,7 @@ _PKG_PARENT = Path(__file__).resolve().parents[2] / "src" / "cobraflex_rl"
 if str(_PKG_PARENT) not in sys.path:
     sys.path.insert(0, str(_PKG_PARENT))
 
+from cobraflex_rl import camera_pipeline  # noqa: E402
 from cobraflex_rl.camera_pipeline import (  # noqa: E402
     FRAME_STACK,
     OBS_HEIGHT,
@@ -21,6 +22,13 @@ from cobraflex_rl.camera_pipeline import (  # noqa: E402
     to_observation,
 )
 from cobraflex_rl.visual_degradation import GLARE, degrade  # noqa: E402
+
+# The decode tests are pure numpy; only downsampling needs OpenCV. Skip the
+# latter (instead of failing) on hosts without cv2, e.g. the Windows
+# manuscript host — the Ubuntu sim host always has it.
+requires_cv2 = pytest.mark.skipif(
+    camera_pipeline.cv2 is None, reason="opencv (cv2) not installed on this host"
+)
 
 
 def _frame(seed=0, h=48, w=64):
@@ -75,18 +83,21 @@ def test_decode_rejects_short_buffer():
 
 
 # --------------------------------------------------------------- observation
+@requires_cv2
 def test_observation_shape_dtype():
     obs = to_observation(_frame())
     assert obs.shape == (OBS_HEIGHT, OBS_WIDTH, 1)
     assert obs.dtype == np.uint8
 
 
+@requires_cv2
 def test_observation_rgb_kept_when_not_grayscale():
     obs = to_observation(_frame(), grayscale=False)
     assert obs.shape == (OBS_HEIGHT, OBS_WIDTH, 3)
 
 
 # ------------------------------------------------------------------ pipeline
+@requires_cv2
 def test_clean_pipeline_passthrough():
     frame = _frame(5)
     pipe = CameraPipeline()
@@ -95,6 +106,7 @@ def test_clean_pipeline_passthrough():
     assert obs.shape == (OBS_HEIGHT, OBS_WIDTH, 1)
 
 
+@requires_cv2
 def test_degradation_applied_before_both_consumers():
     # D-43 common cause: the injected degradation must show in the cage's
     # frame AND the policy obs, identically derived from one degraded frame.
@@ -107,6 +119,7 @@ def test_degradation_applied_before_both_consumers():
     np.testing.assert_array_equal(obs, to_observation(consumer))
 
 
+@requires_cv2
 def test_injector_swap_per_episode():
     frame = _frame(7)
     pipe = CameraPipeline(injector=lambda f: degrade(f, GLARE, 1.0))

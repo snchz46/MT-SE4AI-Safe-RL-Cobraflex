@@ -198,6 +198,7 @@ def write_sr_register_csv(srs: List[Dict[str, str]], output_path: str) -> None:
 
 
 def main():
+    """CLI entry: regenerate the SR CSV from the manuscript source table."""
     parser = argparse.ArgumentParser(
         description='Sync safety requirements register from Markdown to CSV'
     )

@@ -40,6 +40,7 @@ _RUN_ID_RE = re.compile(
 
 @dataclass
 class RunRecord:
+    """One frontier run's outcome (max excursion + road-edge contact)."""
     scenario: str
     seed: str          # "2024" / "123" / "pd"
     mode: str          # enforcement | monitoring
@@ -112,6 +113,7 @@ def _mean(xs: Sequence[float]) -> Optional[float]:
 
 
 def _cell_stats(runs: Sequence[RunRecord]) -> Dict[str, object]:
+    """Aggregate one (scenario, seed, mode) cell: excursion stats + contact rate."""
     excursions = [r.max_excursion_m for r in runs if r.max_excursion_m is not None]
     contacts = [r.road_edge_contact for r in runs if r.road_edge_contact is not None]
     emergencies = [r.emergency for r in runs if r.emergency is not None]
@@ -160,6 +162,7 @@ def _fmt_m(x: Optional[float]) -> str:
 
 
 def print_report(report: Sequence[Dict[str, object]]) -> None:
+    """Console table of the enforcement-vs-monitoring contrast."""
     print("Frontier cage-efficacy contrast (monitoring = no-cage counterfactual)")
     print("=" * 72)
     for row in report:
@@ -181,6 +184,7 @@ def print_report(report: Sequence[Dict[str, object]]) -> None:
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
+    """CLI entry: read frontier runs, build the paired contrast, write JSON."""
     p = argparse.ArgumentParser(description="Frontier cage-efficacy paired contrast.")
     p.add_argument("runs_dir", type=Path, help="campaign frontier runs/ dir (subdirs with summary.json).")
     p.add_argument("--json", type=Path, default=None, help="also write the report as JSON here.")

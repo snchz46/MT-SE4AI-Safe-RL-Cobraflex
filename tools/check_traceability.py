@@ -66,6 +66,7 @@ RX_M_DEF = re.compile(r"^###\s+(M-[PSIC]\d)\s*[—-]", re.MULTILINE)
 
 @dataclass
 class CheckResult:
+    """Collected errors/warnings/info for the gate; errors make the run fail."""
     errors: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
     info: List[str] = field(default_factory=list)
@@ -100,6 +101,7 @@ class CheckResult:
 # ---------- Loaders ---------------------------------------------------------
 
 def load_text(path: Path) -> str:
+    """File contents, or the empty string when the file is missing."""
     if not path.exists():
         return ""
     return path.read_text(encoding="utf-8")
@@ -258,6 +260,7 @@ def check_metrics_definitions(result: CheckResult, defined_m: Set[str], srs_text
 # ---------- Main ------------------------------------------------------------
 
 def main() -> int:
+    """Run all traceability checks; non-zero exit on errors (or warnings with --strict)."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--strict", action="store_true", help="exit non-zero on warnings")
     args = parser.parse_args()

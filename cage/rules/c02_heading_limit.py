@@ -21,6 +21,17 @@ _CYCLES_TO_DEACTIVATE = 2
 
 
 class HeadingLimitRule:
+    """
+    Reactive rule on heading error `theta`.
+
+    Hysteresis state machine (same pattern as C-01):
+        activate   when |theta| > theta_max - h_theta
+        deactivate after |theta| < theta_max - 2*h_theta for `_CYCLES_TO_DEACTIVATE` cycles
+
+    Once active, steering is overridden with a proportional correction
+    against the heading error. Throttle is left unchanged.
+    """
+
     def __init__(self, params: dict):
         self.enabled = params.get("enabled", True)
         self.theta_max = params["theta_max_rad"]
@@ -43,6 +54,7 @@ class HeadingLimitRule:
         return abs(state.heading_error) <= self.theta_max
 
     def evaluate(self, state: Any, raw_action: tuple, prev_action=None, ctx=None) -> CageDecision:
+        """One cycle: update the hysteresis state, fire the correction if active."""
         meta = {"rule": "C-02"}
         if not self.enabled:
             return CageDecision(fire=False, reason="disabled", metadata=meta)

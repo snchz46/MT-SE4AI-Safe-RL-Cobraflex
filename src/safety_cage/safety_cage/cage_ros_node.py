@@ -98,6 +98,8 @@ _STATE_OBS_LAYOUT = (
 
 
 class CageRosNode(Node):
+    """ROS2 transport for SafetyCageNode (topic contract in the module docstring)."""
+
     def __init__(self) -> None:
         super().__init__("safety_cage")
 
@@ -186,6 +188,7 @@ class CageRosNode(Node):
         )
 
     def _resolve_cage_yaml(self) -> str:
+        """Cage config path: the ``cage_yaml`` param or the repo's cage/cage.yaml."""
         param_value = self.get_parameter("cage_yaml").get_parameter_value().string_value
         if param_value:
             return param_value
@@ -201,6 +204,7 @@ class CageRosNode(Node):
         )
 
     def _on_state_obs(self, msg: Float64MultiArray) -> None:
+        """Buffer the latest state sample, stamped with the node clock."""
         if len(msg.data) < len(_STATE_OBS_LAYOUT):
             self.get_logger().warning(
                 f"/state_obs has {len(msg.data)} fields, expected "
@@ -241,6 +245,7 @@ class CageRosNode(Node):
         self.get_logger().info("/cage_reset received -> cage.reset_emergency() called.")
 
     def _on_raw_action(self, msg: Twist) -> None:
+        """Cycle trigger: run one cage step on the buffered state and publish."""
         raw_steering = float(msg.angular.z)
         raw_throttle = float(msg.linear.x)
         raw_action = (raw_steering, raw_throttle)
@@ -256,6 +261,7 @@ class CageRosNode(Node):
         self._publish(result, header_stamp_s=sim_time_s)
 
     def _publish(self, result: dict, header_stamp_s: float) -> None:
+        """Fan one step() result out to /safe_action, /cage_status and /emergency."""
         safe_steering, safe_throttle = result["safe_action"]
         safe = Twist()
         safe.angular.z = float(safe_steering)

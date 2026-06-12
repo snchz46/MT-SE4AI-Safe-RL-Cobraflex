@@ -1,3 +1,12 @@
+"""cobraflex_rl — RL training/eval package for the CobraFlex lane-following task.
+
+Top-level names are imported lazily (PEP 562 ``__getattr__``): importing
+``cobraflex_rl`` itself must stay cheap and ROS2-free so that pure-Python
+consumers (pytest, the campaign runner) can use submodules like ``rewards``
+or ``polyline_tracker`` without pulling in ``rclpy``/Gazebo, which only the
+``GazeboLaneEnv``/``RosGazeboInterface`` path needs.
+"""
+
 from __future__ import annotations
 
 from importlib import import_module

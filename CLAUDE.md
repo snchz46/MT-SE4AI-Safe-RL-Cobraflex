@@ -2,8 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> Keep lean (<200 lines). Move detail into linked docs rather than inflating this file.
-> Last reviewed: 2026-06-11.
+> Keep lean (<250 lines). Move detail into linked docs rather than inflating this file.
+> Last reviewed: 2026-06-12.
 
 ## What this repo is
 
@@ -239,3 +239,7 @@ Full loop: `ros2 launch cobraflex lane_keeper_gazebo.launch.py`. The ROS2 nodes 
 - Don't introduce abstractions or backward-compat shims preemptively.
 - This file is maintained by the `daily-update` scheduled task; if it
   starts drifting >200 lines, split into `CLAUDE_*.md` linked from here.
+
+## Git commits
+
+Do not add agent attribution to commit messages. No `Co-Authored-By: Claude ...`, no "Generated with Claude Code" trailers, no tool/model signatures. Write the commit message as the human author.

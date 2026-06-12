@@ -1,3 +1,13 @@
+"""ROS2/Gazebo I/O layer for the RL environment.
+
+:class:`RosGazeboInterface` is the only place the env touches ROS2 or the gz
+CLI: it subscribes to ground-truth odometry (and optionally the front camera),
+publishes ``/cmd_vel``, paces the control cycle on *simulation* time, and
+drives Gazebo services (teleport, physics RTF) via ``gz service`` subprocesses.
+Everything above it (:class:`~cobraflex_rl.gazebo_lane_env.GazeboLaneEnv`) is
+transport-agnostic.
+"""
+
 from __future__ import annotations
 
 import math
@@ -17,6 +27,14 @@ from .camera_pipeline import decode_image
 
 
 class RosGazeboInterface(Node):
+    """ROS2 node bridging the RL env to a running Gazebo world.
+
+    Pose source is the OdometryPublisher ground truth (``/odom_truth`` by
+    default), corrected by a per-episode constant odom→world offset set via
+    :meth:`calibrate_pose_offset`. ``camera_topic=""`` (F-track) skips the
+    image subscription entirely.
+    """
+
     def __init__(
         self,
         world_name: str = "lane_following_oval",
@@ -93,17 +111,20 @@ class RosGazeboInterface(Node):
 
     @staticmethod
     def quaternion_to_yaw(x: float, y: float, z: float, w: float) -> float:
+        """Yaw (rad) from a quaternion (planar robot: roll/pitch ignored)."""
         siny_cosp = 2.0 * (w * z + x * y)
         cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
         return math.atan2(siny_cosp, cosy_cosp)
 
     def wait_for_initial_data(self, timeout_sec: float = 10.0) -> bool:
+        """Block until the first odometry message arrives (True) or timeout (False)."""
         deadline = time.monotonic() + float(timeout_sec)
         while rclpy.ok() and self._odom_msg is None and time.monotonic() < deadline:
             rclpy.spin_once(self, timeout_sec=0.1)
         return self._odom_msg is not None
 
     def send_action(self, steer: float, speed: float) -> None:
+        """Publish a Twist command: ``angular.z = steer``, ``linear.x = speed``."""
         msg = Twist()
         msg.linear.x = float(speed)
         msg.angular.z = float(steer)
@@ -218,6 +239,7 @@ class RosGazeboInterface(Node):
         )
 
     def _get_raw_pose(self) -> Tuple[float, float, float]:
+        """Uncorrected ``(x, y, yaw)`` straight from the latest odom message."""
         if self._odom_msg is None:
             raise RuntimeError("No odometry data received yet.")
         pose = self._odom_msg.pose.pose
@@ -228,6 +250,7 @@ class RosGazeboInterface(Node):
         return float(pose.position.x), float(pose.position.y), float(yaw)
 
     def get_pose(self) -> Tuple[float, float, float]:
+        """World-frame ``(x, y, yaw)``: raw odom plus the calibrated offset."""
         raw_x, raw_y, raw_yaw = self._get_raw_pose()
         corrected_yaw = math.atan2(
             math.sin(raw_yaw + self._odom_dyaw),
@@ -252,6 +275,7 @@ class RosGazeboInterface(Node):
         )
 
     def get_speed(self) -> float:
+        """Magnitude of the latest odom linear velocity (m/s)."""
         if self._odom_msg is None:
             raise RuntimeError("No odometry data received yet.")
 
@@ -259,9 +283,11 @@ class RosGazeboInterface(Node):
         return float(math.sqrt(linear.x**2 + linear.y**2 + linear.z**2))
 
     def reset_world(self) -> None:
+        """Soft reset: just command zero motion (the world itself is not reloaded)."""
         self.send_action(0.0, 0.0)
 
     def set_vehicle_pose(self, x: float, y: float, yaw: float) -> None:
+        """Teleport the model via the gz ``set_pose`` service (one retry)."""
         # Resolve entity ID once and cache it for the rest of the training run
         # to avoid a subprocess timeout on every episode reset.
         if self._model_entity_id is None:
@@ -297,6 +323,7 @@ class RosGazeboInterface(Node):
         response_type: str,
         request: str,
     ) -> bool:
+        """Invoke a gz service via the CLI; True iff it answered ``data: true``."""
         cmd = [
             "gz",
             "service",
@@ -336,6 +363,7 @@ class RosGazeboInterface(Node):
         )
 
     def _lookup_model_entity_id(self) -> Optional[int]:
+        """Resolve the model's gz entity id from one pose/info sample (cached)."""
         cmd = [
             "gz",
             "topic",

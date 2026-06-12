@@ -80,10 +80,12 @@ class LanePlausibilityCheck:
         self._prev: Optional[LaneEstimate] = None
 
     def reset(self) -> None:
+        """Clear the persistence counter and the temporal reference (episode reset)."""
         self._consecutive_bad = 0
         self._prev = None
 
     def update(self, est: LaneEstimate, speed_mps: float, now_s: float) -> PlausibilityResult:
+        """Judge one estimate: geometric ranges + temporal jump vs the last trusted one."""
         reasons: List[str] = []
 
         # Geometric plausibility (ODD ranges).

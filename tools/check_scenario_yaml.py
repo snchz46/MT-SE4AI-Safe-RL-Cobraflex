@@ -62,6 +62,7 @@ F2_REQUIRED_FULL = {"SC-NOM-01", "SC-EDGE-01"}
 
 
 class Result:
+    """Accumulator for validation errors and warnings across all checked files."""
     def __init__(self) -> None:
         self.errors: list[str] = []
         self.warnings: list[str] = []
@@ -74,6 +75,7 @@ class Result:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """CLI entry: validate every scenario YAML and cross-check ids against docs/05."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--strict",
@@ -106,6 +108,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def validate_yaml_file(path: Path, result: Result, yaml_by_id: dict[str, Path]) -> None:
+    """Validate one YAML file (parse, id checks, stub handling, duplicates)."""
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
     except yaml.YAMLError as exc:
@@ -157,6 +160,7 @@ def validate_yaml_file(path: Path, result: Result, yaml_by_id: dict[str, Path]) 
 
 
 def validate_full_scenario(path: Path, data: dict, result: Result) -> None:
+    """Field-level checks for a full (non-stub) scenario definition."""
     scenario_id = data["id"]
 
     if not isinstance(data["metrics_primary"], list) or not data["metrics_primary"]:
@@ -198,12 +202,14 @@ def validate_full_scenario(path: Path, data: dict, result: Result) -> None:
 
 
 def extract_doc_scenario_ids() -> list[str]:
+    """Scenario ids declared in docs/05_scenario_library.md."""
     if not SCENARIO_DOC.exists():
         return []
     return DOC_SCENARIO_RE.findall(SCENARIO_DOC.read_text(encoding="utf-8"))
 
 
 def print_report(result: Result, strict: bool) -> None:
+    """Console report of collected errors and warnings."""
     print("\nScenario YAML check")
     print("=" * 40)
     for message in result.errors:

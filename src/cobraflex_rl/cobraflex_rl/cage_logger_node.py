@@ -21,6 +21,7 @@ from typing import Optional
 
 
 def _bootstrap_cage_import() -> None:
+    """Make ``cage`` importable when the repo isn't pip-installed (path walk-up)."""
     try:
         import cage.logger  # noqa: F401
         return
@@ -48,6 +49,8 @@ from cobraflex_safety_msgs.msg import CageStatus  # noqa: E402
 
 
 class CageLoggerNode(Node):
+    """/cage_status → CSV adapter around the pure-Python CageLogger."""
+
     def __init__(self) -> None:
         super().__init__("cage_logger")
 
@@ -108,6 +111,7 @@ class CageLoggerNode(Node):
         self.create_timer(5.0, self._on_watchdog_tick, clock=Clock())
 
     def _on_state_obs(self, msg: Float64MultiArray) -> None:
+        """Cache the latest state sample so each CSV row carries ey/epsi/speed."""
         if len(msg.data) < 7:
             return
         self._last_state = {
@@ -118,6 +122,7 @@ class CageLoggerNode(Node):
         }
 
     def _on_status(self, msg: CageStatus) -> None:
+        """Convert one CageStatus message into CageLogger's result-dict shape."""
         if self._cage_logger is None:
             return
 
@@ -162,6 +167,7 @@ class CageLoggerNode(Node):
             )
 
     def destroy_node(self) -> bool:
+        """Flush and close the CSV before tearing the node down."""
         if self._cage_logger is not None:
             self._cage_logger.close()
             self.get_logger().info(

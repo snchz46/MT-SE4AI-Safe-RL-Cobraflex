@@ -35,6 +35,7 @@ Vec2 = Tuple[float, float]
 
 
 def _wrap_index(i: int, n: int, closed: bool) -> int:
+    """Neighbour index with modulo wrap for closed polylines."""
     if closed:
         return i % n
     return max(0, min(n - 1, i))
@@ -45,6 +46,7 @@ def offset_polyline(
     distance: float,
     side: str,
 ) -> List[Vec2]:
+    """Offset each vertex along its local normal by ``distance``."""
     if side not in ("left", "right"):
         raise ValueError(f"side must be 'left' or 'right', got {side!r}")
     # Right of motion is obtained by rotating the unit tangent by -90 deg:
@@ -85,6 +87,7 @@ def offset_polyline(
 
 
 def main() -> None:
+    """CLI entry: derive an offset lane centerline YAML from a source centerline."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--input",

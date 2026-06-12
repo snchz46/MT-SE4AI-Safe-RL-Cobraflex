@@ -59,6 +59,15 @@ _EMERGENCY_BRAKE_THROTTLE = -0.5  # placeholder until M-3 calibrates a_min → t
 
 
 class EmergencyRule:
+    """
+    Latched controlled-stop rule (triggers 1–8, see module docstring).
+
+    Once active it overrides every upstream correction with the
+    controlled-stop action (brake throttle + frozen/zero steering) until
+    the trigger condition clears AND an explicit reset is requested
+    (asymmetric exit, ``require_explicit_reset``).
+    """
+
     def __init__(self, params: dict):
         self.enabled = params.get("enabled", True)
         self.theta_warning = params["theta_warning_rad"]
@@ -92,6 +101,7 @@ class EmergencyRule:
         return True
 
     def evaluate(self, state: Any, raw_action: tuple, prev_action=None, ctx=None) -> CageDecision:
+        """One cycle: handle exit-if-cleared, else check triggers in priority order."""
         meta = {"rule": "C-05"}
         if not self.enabled:
             return CageDecision(fire=False, reason="disabled", metadata=meta)
@@ -172,6 +182,7 @@ class EmergencyRule:
         self, state, current_t, external_stop, missing_state, oscillation,
         joint_envelope, perception_invalid=False,
     ) -> dict:
+        """Evaluate all trigger conditions; ``any`` is their disjunction (used for exit)."""
         abs_theta = abs(state.heading_error)
         abs_d = abs(state.lateral_offset)
         abs_v = abs(state.speed)
@@ -205,11 +216,13 @@ class EmergencyRule:
         }
 
     def _activate(self, raw_action) -> None:
+        """Latch the emergency, remembering the steering for the freeze option."""
         self._active = True
         self._steering_at_activation = raw_action[0]
         self._reset_requested = False
 
     def _emergency_action(self, meta: dict, reason: str) -> CageDecision:
+        """The controlled-stop decision: brake throttle, frozen or zero steering."""
         if self.freeze_steering and self._steering_at_activation is not None:
             steering_safe = self._steering_at_activation
         else:

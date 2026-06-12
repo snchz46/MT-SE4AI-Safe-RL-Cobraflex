@@ -110,6 +110,7 @@ class M1LidarNoiseLogger(Node):
         # Adaptation point: extract the lateral offset from the message.
         # Replace this block with the real field access in your project.
         # ------------------------------------------------------------------
+        """Append one /state_obs sample to the M-1 noise CSV."""
         if _USING_STATE_OBS:
             lateral_offset_m = float(msg.lateral_offset_m)
             stamp = msg.header.stamp
@@ -128,6 +129,7 @@ class M1LidarNoiseLogger(Node):
             self._fp.flush()
 
     def _maybe_shutdown(self) -> None:
+        """Stop spinning once the configured sample count/duration is reached."""
         elapsed = time.monotonic() - self._start_s
         if elapsed < self.duration_s:
             return
@@ -140,6 +142,7 @@ class M1LidarNoiseLogger(Node):
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Spin the M-1 logger node until its capture window completes."""
     rclpy.init(args=argv)
     node = M1LidarNoiseLogger()
     try:

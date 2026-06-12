@@ -78,12 +78,14 @@ _BLANK_RESOLUTION_TOKENS = {"", "-", "–", "—", "tbd", "pending", "(pending)"
 # =============================================================
 
 def load_yaml(path: Path) -> dict:
+    """Parse a YAML file."""
     if not path.exists():
         raise FileNotFoundError(f"YAML not found at {path}")
     return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
 
 
 def load_text(path: Path) -> str:
+    """Read a text file."""
     return path.read_text(encoding="utf-8")
 
 
@@ -203,6 +205,7 @@ def update_resolution_table(section_11: str, resolved: Dict[str, dict],
 
 
 def patch_odd_spec(text: str, resolved: Dict[str, dict], today: str) -> str:
+    """Apply the resolved TBD values to docs/08_odd_specification.md text."""
     body, section_11 = split_at_section_11(text)
     new_body = substitute_in_body(body, resolved)
     if section_11:
@@ -216,6 +219,7 @@ def patch_odd_spec(text: str, resolved: Dict[str, dict], today: str) -> str:
 # =============================================================
 
 def print_diff(original: str, patched: str, label_a: str, label_b: str) -> None:
+    """Console diff of the TBD resolutions."""
     diff = difflib.unified_diff(
         original.splitlines(keepends=True),
         patched.splitlines(keepends=True),
@@ -238,6 +242,7 @@ def print_diff(original: str, patched: str, label_a: str, label_b: str) -> None:
 
 
 def print_summary(resolved: Dict[str, dict], skipped: List[str]) -> None:
+    """Console summary of resolved/unresolved TBDs."""
     bar = "-" * 70
     print(f"\n{bar}\nSummary\n{bar}")
     print(f"  resolved: {len(resolved)} TBD(s) ({', '.join(sorted(resolved.keys())) or '<none>'})")
@@ -246,6 +251,7 @@ def print_summary(resolved: Dict[str, dict], skipped: List[str]) -> None:
 
 
 def print_changelog_snippet(resolved: Dict[str, dict], today: str) -> None:
+    """Print a paste-ready CHANGELOG block for the resolution."""
     if not resolved:
         return
     bar = "=" * 70
@@ -271,6 +277,7 @@ def print_changelog_snippet(resolved: Dict[str, dict], today: str) -> None:
 # =============================================================
 
 def main(argv: list[str] | None = None) -> int:
+    """CLI entry: resolve ODD TBDs from calibration evidence (dry-run by default)."""
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,

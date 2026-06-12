@@ -58,11 +58,13 @@ class CobraFlexROSDriver(Node):
         self._enable_feedback_stream()
 
     def _turn_lights(self, left=True, right=True):
+        """Toggle the indicator LEDs via the serial JSON protocol."""
         left_value = 255 if left else 0
         right_value = 255 if right else 0
         self._send_json({"T": 132, "IO1": left_value, "IO2": right_value})
 
     def _update_lights(self, wz):
+        """Drive the indicators from the commanded yaw rate."""
         if wz > self.turn_threshold:
             self._turn_lights(True, False)
         elif wz < -self.turn_threshold:
@@ -71,6 +73,7 @@ class CobraFlexROSDriver(Node):
             self._turn_lights(True, True)
 
     def _cmd_callback(self, msg):
+        """Translate an incoming /cmd_vel into the serial JSON drive command."""
         vx = max(-self.max_linear, min(self.max_linear, msg.linear.x))
         wz = max(-self.max_angular, min(self.max_angular, msg.angular.z))
 
@@ -79,14 +82,17 @@ class CobraFlexROSDriver(Node):
         self._update_lights(wz)
 
     def _resend_last_cmd(self):
+        """Re-send the last drive command (keep-alive against the firmware timeout)."""
         self._send_json({"T": 13, "X": self.last_vx, "Z": self.last_wz})
 
     def _stop_robot(self):
+        """Send the stop command and turn the lights off."""
         self.last_vx = 0.0
         self.last_wz = 0.0
         self._send_json({"T": 13, "X": 0.0, "Z": 0.0})
 
     def _send_json(self, data):
+        """Serialise one JSON command over the serial port."""
         if self.ser is None:
             return
 
@@ -97,10 +103,12 @@ class CobraFlexROSDriver(Node):
             self.get_logger().error(f"Serial write failed: {exc}")
 
     def _enable_feedback_stream(self):
+        """Ask the firmware to stream feedback (battery, encoders)."""
         self._send_json({"T": 131, "cmd": 1})
         self.get_logger().info("Requested feedback stream (T=131)")
 
     def _read_serial(self):
+        """Drain and parse incoming serial feedback lines."""
         if self.ser is None:
             return
 

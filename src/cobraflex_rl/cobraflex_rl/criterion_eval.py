@@ -37,6 +37,7 @@ _LABEL_SEG_RE = re.compile(r"^\s*[A-Za-z_]\w*\s*:\s*.+$")
 
 
 def _coerce(token: str) -> Any:
+    """Parse an RHS token into bool/int/float, falling back to the bare string."""
     s = token.strip()
     low = s.lower()
     if low == "true":
@@ -52,6 +53,7 @@ def _coerce(token: str) -> Any:
 
 
 def _compare(lhs: Any, op: str, rhs: Any) -> bool:
+    """Apply one comparison operator (== on floats uses an absolute tolerance)."""
     if op in ("==", "!="):
         if isinstance(lhs, bool) or isinstance(rhs, bool):
             eq = bool(lhs) == bool(rhs)
@@ -125,6 +127,7 @@ def is_labelled(expression: str) -> bool:
 
 
 def _split_labelled(expression: str) -> Dict[str, str]:
+    """Split `label: expr; label: expr` into {label: expr}."""
     arms: Dict[str, str] = {}
     for seg in expression.split(";"):
         seg = seg.strip()

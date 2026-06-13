@@ -1,0 +1,41 @@
+{
+  "run_id": "ppo_newcam_train_2024_750k",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-06-13T08:32:55.228910+00:00",
+  "git_commit": "d6d2a76b614c1a1f9ea21a5927bb68591dd54d9d",
+  "cage_yaml": "/home/admit/Samuel/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "scenario_yaml_hash": "a70c7379c4e49af554140ca6ee4ac94f27ec13ca1d554ea72bdb88d7faf5305d",
+  "policy_checkpoint": "policy/checkpoints/cobraflex_ppo_newcam_lane_2024_750k.zip",
+  "policy_checkpoint_hash": "ff79c0b3616de3f2ec839dccb652c2fb7ae668c5ee578f05b4410dd4e7f82dd9",
+  "seed": 2024,
+  "platform": "sim",
+  "total_timesteps": 750000,
+  "hyperparameters": {
+    "learning_rate": 0.0003,
+    "gamma": 0.99,
+    "n_steps": 1024,
+    "batch_size": 64
+  },
+  "policy": "CnnPolicy",
+  "observation": {
+    "type": "camera",
+    "camera": {
+      "topic": "/camera/image_raw_lane",
+      "width": 84,
+      "height": 84,
+      "grayscale": true,
+      "frame_stack": 4
+    }
+  },
+  "domain_randomization": {
+    "enabled": true,
+    "p_degrade": 0.5,
+    "level_range": [
+      0.2,
+      0.8
+    ]
+  },
+  "status": "completed"
+}

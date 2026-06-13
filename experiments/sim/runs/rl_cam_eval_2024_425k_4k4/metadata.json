@@ -1,0 +1,19 @@
+{
+  "run_id": "rl_cam_eval_2024_425k_4k4",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-06-13T09:13:02.690190+00:00",
+  "duration_s": 440.0,
+  "git_commit": "03f69d2b314de76ea18da609048c9dbb1c0ed694",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "policy_checkpoint": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/experiments/sim/cobraflex_ppo_newcam_lane_2024_425k_peak.zip",
+  "policy_checkpoint_hash": "953ba9301381d20d048418e7f05f38b29cfe0d5045414d6f2f71325cd27071a6",
+  "centerline_yaml_hash": "a70c7379c4e49af554140ca6ee4ac94f27ec13ca1d554ea72bdb88d7faf5305d",
+  "scenario_yaml": "",
+  "scenario_yaml_hash": "a70c7379c4e49af554140ca6ee4ac94f27ec13ca1d554ea72bdb88d7faf5305d",
+  "rep": 0,
+  "seed": 2024,
+  "platform": "sim",
+  "status": "completed"
+}

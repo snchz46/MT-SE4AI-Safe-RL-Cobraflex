@@ -67,6 +67,17 @@ script reports orphans on either side.
   reconciliation à la D-39 (re-score SR-012/SR-001-camera on M-S1≤d_max ∧ M-S2=0 — **flagged decision, NOT applied**);
   (b) wire `evaluate_labelled`; (c) SC-EDGE-05 grid; (d) multi-seed N=5 (host-deferred). See CHANGELOG 12.06
   'E4/GE4' + docs/07 E-track evidence + ch.8 §8.9.
+- **Track 'E' camera switch + 425k retrain (2026-06-15, supersedes 139k as E-main; §7.7.8).** Perception
+  re-pointed to a dedicated **Lane Cam** (IMX219-160 mirror, 640×360, HFOV ≈90°, mounted 5 cm lower at body
+  front: `camera_geometry` h≈0.077 m, pitch 0.25 rad) → 139k obs distribution stale → retrain from scratch.
+  New main run `ppo_newcam_train_2024_750k` (seed 2024, CnnPolicy, DR p=0.5 level 0.2–0.8): `ep_rew_mean`
+  peaks **335.6 @ ≈425k** (>288.5 old `cam` peak), degrades to ~256 by 750k (checkpoint-on-peak). New E-main
+  checkpoint `cobraflex_ppo_newcam_lane_2024_425k_peak.zip` (hash `953ba930…`, **gitignored**, sync manually).
+  Nominal eval (SC-NOM-01, seed 2024, 4400 steps, DR off): enforcement `rl_cam_eval_2024_425k_4k4` = **11.16 laps,
+  mean |ey| 12.4 mm, 0 emergencies** (C-06 + 5× C-02); monitoring `…_4k4_mon` = 11.17 laps, 0 emergencies.
+  **Big win: the 139k curve-apex SR-014/Trigger-8 controlled stop is GONE** (4.69→11+ laps); cage latent in-ODD
+  both modes (M-S2=0), F-track signature. **GE4 re-run with 425k prepared+dry-run-validated, NOT launched**
+  (≈220 h → dedicated host); §8.9 + docs/07 + `campaign_e/` still report the 139k campaign until re-run lands.
 - **F2 evidence:** `ros_run_20260523T153003Z` — 9.91 laps, 845 s,
   0 emergencies, cage v0.5.1, PD v0.8.0.
 - **F3 evidence (closed):** main run `ppo_train_2024_200k` (seed 2024, 200k, reward v1.2,

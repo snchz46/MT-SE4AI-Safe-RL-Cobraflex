@@ -31,6 +31,36 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [15.06.2026] — Track 'E' camera switch + 750k retrain: new 425k_peak checkpoint, nominal eval
+
+**Document(s) affected:** `manuscript/chapters/chapter_07_training_specification.md` (new §7.7.8); `CLAUDE.md` (Track 'E' phase status). No hazard/SR/scenario/metric tables touched.
+**Phase:** E4 (post-GE4; new training arm, pre-campaign).
+**Gate context:** before G4-cámara (GE4 already documented with the 139k checkpoint; this is the superseding training arm).
+**Author:** Samuel.
+
+### Change
+
+Documented the camera switch and extended retrain on track 'E':
+
+1. **Camera switch** (code already committed, commits `226cf129`/`5a3fd790`/`d6d2a76b`): policy and cage CV estimator re-pointed to a dedicated *Lane Cam* (IMX219-160 mirror, 640×360, HFOV ≈ 90°) mounted 5 cm lower at the body front (`camera_geometry` defaults h ≈ 0.077 m, pitch 0.25 rad). The 139k checkpoint's observation distribution no longer matches → retrain from scratch.
+2. **New main run** `ppo_newcam_train_2024_750k` (seed 2024, `CnnPolicy`, DR p=0.5 level 0.2–0.8, 750k steps): `ep_rew_mean` peaks at **335.6 @ ≈424,960** (`ep_len_mean` 347), above the old `cam` 200k peak of 288.5; degrades to ~256 by 750k without recovery (same late-instability signature → checkpoint-on-peak).
+3. **New E-main checkpoint** selected: `cobraflex_ppo_newcam_lane_2024_425k_peak.zip` (hash `953ba930…`).
+4. **Nominal closing eval** (SC-NOM-01, seed 2024, 4400 steps, DR off): enforcement `rl_cam_eval_2024_425k_4k4` = 11.16 laps, mean |ey| 12.4 mm, **0 emergencies**, interventions C-06 (+5× C-02); monitoring `…_4k4_mon` = 11.17 laps, 12.7 mm, 0 emergencies, C-06 only.
+
+### Rationale
+
+The 139k checkpoint (§7.7.7, GE4 §8.9) carried a real availability cost — a stochastic SR-014/Trigger-8 controlled stop at the curve apex (4.69 laps in the official rep). The lower, dedicated Lane Cam plus a longer training budget **removes that stop**: 11+ laps and 0 emergencies in both modes, |ey| at F3 state-parity, cage latent in-ODD (M-S2 = 0 nominal) like the F-track. The 425k checkpoint supersedes 139k as E-main.
+
+### Impact
+
+§8.9 (GE4 campaign) **still reports the 139k campaign** — the 1660-run E-campaign with the 425k checkpoint is prepared and dry-run-validated but **not yet re-executed** (≈220 h wall → dedicated host only). `docs/07` E-track verdicts and the `campaign_e/` artifacts remain those of the 139k run until the re-run lands. New checkpoint binary is gitignored (not tracked); sync manually. No traceability-graph change.
+
+### Verification
+
+Docs-only change (manuscript + CLAUDE.md). `python tools/check_traceability.py`: **PASS** (no ID graph change).
+
+---
+
 ## [12.06.2026] — Repo-wide English documentation pass + NumPy 2.0 compatibility fix
 
 **Document(s) affected:** No living `docs/` content. Code only: `cage/` (cage_node, logger, rules C-01..C-06, base types), `src/cobraflex_rl/` (env, ROS interface, trainer, eval, perception/criterion/campaign modules, ROS2 nodes), `src/safety_cage/cage_ros_node.py`, `src/cobraflex/` legacy nodes, `policy/baseline_pd.py`, `tools/` (campaign/traceability/calibration/plot scripts), `scripts/`, `cage/ros2/` loggers, `policy/tests/test_camera_pipeline.py`.

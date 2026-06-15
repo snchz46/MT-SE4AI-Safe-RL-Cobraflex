@@ -863,6 +863,47 @@ en enforcement (0 contactos de borde), degradando a parada controlada.
 es ~7 h/semilla a RTF 1 (restricción §7.7.6) en una máquina dedicada; si
 se difiere, aplica el formato de deferral documentado de §7.5.3.
 
+### 7.7.8 Cambio de cámara y re-entrenamiento extendido (newcam, 750k)
+
+El piloto y el run principal de §7.7.7 usaban la cámara frontal original. La
+percepción se re-orientó a una **cámara dedicada de carril** (*Lane Cam* —
+espejo IMX219-160, 640×360, HFOV 1,5708 rad ≈ 90°) montada **5 cm más abajo en
+el frente del chasis** (h ≈ 0,077 m sobre el suelo, pitch 0,25 rad), tanto para
+la policy como para el estimador CV de la cage. Con la nueva geometría la
+**distribución de observación del checkpoint 139k deja de coincidir** y la policy
+se re-entrena desde cero. El run principal con cámara nueva
+(`ppo_newcam_train_2024_750k`, semilla 2024, `CnnPolicy`, DR p=0,5 nivel 0,2–0,8,
+**750k pasos**) confirma el régimen de inestabilidad tardía ya observado en
+§7.7.7: `ep_rew_mean` asciende hasta un **pico de 335,6 en el paso ≈ 424 960**
+(`ep_len_mean` 347) —marca de agua claramente superior al pico de 288,5 del run
+`cam` de 200k— y luego **degrada sin recuperación** hasta ~256 al cierre (750k).
+La política de *checkpoint en el pico* se reafirma como necesidad, no
+conveniencia.
+
+**Selección de checkpoint** (mismo precedente D-36, DR desactivada en eval). Se
+selecciona el **checkpoint del pico (425k)**, `cobraflex_ppo_newcam_lane_2024_425k_peak.zip`
+(hash `953ba930…`), como nueva política E-main. Evaluación nominal de cierre
+sobre SC-NOM-01, semilla 2024, tope 4 400 pasos, en ambos modos:
+
+| Modo | Vueltas | media \|ey\| | máx \|ey\| | Emergencias | Intervenciones |
+| --- | --- | --- | --- | --- | --- |
+| enforcement (`rl_cam_eval_2024_425k_4k4`) | **11,16** | 12,4 mm | 56,7 mm | **0** | 85,9 % (C-06 limitador; 5 × C-02) |
+| monitoring (`…_4k4_mon`) | 11,17 | 12,7 mm | 27,4 mm | 0 | 82,5 % (C-06 sólo) |
+
+El **hallazgo central**: la parada controlada SR-014/Trigger-8 en el ápice de la
+curva que limitaba al checkpoint 139k (4,69 vueltas, una parada C-05) **desaparece**.
+La nueva cámara recupera la **disponibilidad de percepción** que faltaba: 11+
+vueltas y **0 emergencias en ambos modos**, en paridad de precisión con el eval F3
+de estado perfecto (|ey| ~10 mm) y sin la parada por percepción. Las intervenciones
+quedan dominadas por C-06 (limitador de tasa — comportamiento benigno esperado de
+una CNN), con C-01/C-03/C-05 nulas. La cage queda **latente** in-ODD en ambos modos
+(M-S2 = 0 nominal), recuperando la firma del F-track.
+
+**Estado.** El checkpoint 425k es campaign-ready y la campaña GE4 con él está
+**preparada (1660 runs, dry-run validado) pero aún no re-ejecutada**; el §8.9 del
+Cap. 8 reporta todavía la campaña con el checkpoint 139k. La re-ejecución y el
+multi-seed quedan para la máquina dedicada (restricción de host §7.7.6).
+
 ---
 
 <!--

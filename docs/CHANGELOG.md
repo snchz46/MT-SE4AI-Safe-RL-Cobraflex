@@ -31,6 +31,31 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [15.06.2026] — Track 'E' fair baseline: logical CV+PD camera controller vs RL agent (§8.9.5)
+
+**Document(s) affected:** `manuscript/chapters/chapter_08_experimental_evaluation.md` (new §8.9.5). Code: new `cobraflex_rl/cv_lane_controller.py` (shared), `cobraflex_rl/eval_cv_controller.py` + `eval_cv_controller.launch.py` (+ entry point), rewrite of `cobraflex/lane_keeper_gazebo_node.py` to use it (+ `cobraflex`→`cobraflex_rl` exec_depend). Evidence: `experiments/sim/runs/cv_ctrl_eval_2024_4k4{,_mon}`, `baseline_cv_vs_rl_nominal.json`.
+**Phase:** E4 (evaluation baseline).
+**Gate context:** before G4-cámara; supports the RL-vs-classical comparison.
+**Author:** Samuel.
+
+### Change
+
+Added a **logical (non-learned) camera lane-keeper** as the fair baseline for the RL camera agent — the F-track PD reads ground truth, so it can't fairly oppose a real-perception policy. The new controller reuses the cage's calibrated CV lane estimator (D-43; metric ey/epsi/curvature) with a PD + curvature-feedforward law (`steer = -(kp·ey + kd·epsi) + kff·v·κ`), shared by the deployment node and the scored eval (run through the same `GazeboLaneEnv` as `eval_policy`). The original histogram pure-P node is superseded: its uncalibrated "lane centre = image centre" set-point could not hold the lane above ~0.1 m/s.
+
+### Rationale
+
+A meaningful RL claim needs a same-input, same-scoring classical reference. Result on SC-NOM-01 (seed 2024, 0.2 m/s, 4400 steps): CV+PD M-P1 RMSE **10.5 mm** vs RL **14.2 mm**, max|ey| 20.5 vs 56.7 mm, both 0 emergencies, ~11 laps. Cage intervention **0.6–0.9 %** (CV+PD) vs **82–86 %** (RL, C-06 rate-limiting the CNN's jerky steering). Conclusion: nominal accuracy does **not** favour the RL agent — both pass the requirement; the RL value must show up under perturbation/appearance-shift (robustness-world study).
+
+### Impact
+
+No safety-artifact change. New code only; `cobraflex` now exec-depends on `cobraflex_rl` (no cycle — cobraflex_rl does not import cobraflex). The GE4 campaign (§8.9, 139k) is unaffected. Next: run the baseline on the robustness worlds + perturbed scenarios.
+
+### Verification
+
+Both eval arms completed (exit 0), 4400 steps, run dirs + metadata written. `python tools/check_traceability.py`: PASS (no ID graph change).
+
+---
+
 ## [15.06.2026] — Track 'E' camera switch + 750k retrain: new 425k_peak checkpoint, nominal eval
 
 **Document(s) affected:** `manuscript/chapters/chapter_07_training_specification.md` (new §7.7.8); `CLAUDE.md` (Track 'E' phase status). No hazard/SR/scenario/metric tables touched.

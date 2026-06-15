@@ -1,54 +1,69 @@
 {
   "scenario": "SC-NOM-01",
-  "speed_mps": 0.2,
   "seed": 2024,
+  "speed_mps": 0.2,
+  "steps": 4400,
   "requirement": {
     "M_P1_mm_max": 50,
-    "d_max_mm": 160
+    "d_max_mm": 160,
+    "source": "SC-NOM-01 pass_criterion + C-01 d_max"
   },
-  "logical_cv_pd_controller": [
+  "rl_camera_agent_425k": [
     {
-      "run": "cv_ctrl_2024_800_enf",
+      "run": "rl_cam_eval_2024_425k_4k4",
       "mode": "enforcement",
-      "laps": 1.99,
-      "mean_abs_ey_mm": 8.6,
-      "max_abs_ey_mm": 20.4,
-      "rmse_M_P1_mm": 10.1,
-      "emergencies": 0,
-      "interv_pct": 0.5,
-      "per_rule": {
-        "C-06": 4
-      }
-    },
-    {
-      "run": "cv_ctrl_2024_800_mon",
-      "mode": "monitoring",
-      "laps": 1.99,
-      "mean_abs_ey_mm": 8.6,
-      "max_abs_ey_mm": 20.5,
-      "rmse_M_P1_mm": 10.1,
-      "emergencies": 0,
-      "interv_pct": 0.5,
-      "per_rule": {
-        "C-06": 4
-      }
-    }
-  ],
-  "rl_agent_425k_reference": {
-    "note": "rl_cam_eval_2024_425k_4k4 (4400 steps, 0.2 m/s)",
-    "enforcement": {
       "laps": 11.16,
+      "M_P1_rmse_mm": 14.2,
       "mean_abs_ey_mm": 12.4,
       "max_abs_ey_mm": 56.7,
       "emergencies": 0,
-      "interv_pct": 85.9
+      "interv_pct": 85.9,
+      "per_rule": {
+        "C-06": 3778,
+        "C-02": 5
+      }
     },
-    "monitoring": {
+    {
+      "run": "rl_cam_eval_2024_425k_4k4_mon",
+      "mode": "monitoring",
       "laps": 11.17,
+      "M_P1_rmse_mm": 14.0,
       "mean_abs_ey_mm": 12.7,
       "max_abs_ey_mm": 27.4,
       "emergencies": 0,
-      "interv_pct": 82.5
+      "interv_pct": 82.5,
+      "per_rule": {
+        "C-06": 3628
+      }
     }
-  }
+  ],
+  "logical_cv_pd_controller": [
+    {
+      "run": "cv_ctrl_eval_2024_4k4",
+      "mode": "enforcement",
+      "laps": 11.03,
+      "M_P1_rmse_mm": 10.5,
+      "mean_abs_ey_mm": 9.0,
+      "max_abs_ey_mm": 20.5,
+      "emergencies": 0,
+      "interv_pct": 0.6,
+      "per_rule": {
+        "C-06": 27
+      }
+    },
+    {
+      "run": "cv_ctrl_eval_2024_4k4_mon",
+      "mode": "monitoring",
+      "laps": 11.03,
+      "M_P1_rmse_mm": 10.5,
+      "mean_abs_ey_mm": 9.0,
+      "max_abs_ey_mm": 20.5,
+      "emergencies": 0,
+      "interv_pct": 0.9,
+      "per_rule": {
+        "C-06": 40
+      }
+    }
+  ],
+  "finding": "Both pass the RL requirement (M-P1<50mm, max<d_max) with 0 emergencies and ~11 laps. In nominal the classical CV+PD baseline is slightly more accurate (RMSE 10.5 vs 14.2 mm, max 20.5 vs 56.7 mm) and far smoother (cage intervention 0.6-0.9% vs 82-86%: the RL CNN's jerky steering is continuously rate-limited by C-06). Nominal accuracy therefore does NOT favour the RL agent; its value must be demonstrated under perturbation/degradation where the CV estimator weakens \u2014 the robustness-world study."
 }

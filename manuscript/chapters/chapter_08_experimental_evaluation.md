@@ -649,6 +649,45 @@ sistema del carril (0 contactos, M-S1 < d_max in-ODD) — convierte la degradaci
 percepción en **parada controlada**, no en excursión, y su valor in-ODD —nulo en
 F4— se vuelve **medible y decisivo** (SC-PERT-07: 20/20 vs 0/20).
 
+### 8.9.5 Línea base de control clásico con percepción real (CV + PD)  [E4]
+
+El baseline del F-track (Cap. 7 §7.5) es un PD que lee el **estado ground-truth**;
+contrastar contra él una policy de **percepción real** sobrevalora a la RL (compite
+contra un controlador con estado perfecto). Para una comparación justa se introduce
+un **controlador lógico de cámara**: el mismo estimador CV determinista que usa la
+cage (D-43) —proyección de las marcas al plano de tierra con el modelo de cámara
+calibrado, `ey`/`epsi`/curvatura métricos— cerrando un lazo **PD + feed-forward de
+curvatura** (`steer = −(kp·ey + kd·epsi) + kff·v·κ`). Es el equivalente *no aprendido*
+del agente RL sobre la **misma** entrada de cámara, evaluado por el mismo
+`GazeboLaneEnv` y la misma métrica. Implementación compartida por el nodo de
+despliegue (`lane_keeper_gazebo_node`) y el eval (`eval_cv_controller`).
+
+Sobre SC-NOM-01 (semilla 2024, 0,2 m/s, 4 400 pasos ≈ 11 vueltas), idéntica
+configuración que el eval del agente RL de pico 425k (§7.7.8):
+
+| Métrica | RL 425k (enf / mon) | CV+PD (enf / mon) | Requisito |
+| --- | --- | --- | --- |
+| Vueltas | 11,16 / 11,17 | 11,03 / 11,03 | — |
+| **M-P1 (RMSE)** | 14,2 / 14,0 mm | **10,5 / 10,5 mm** | < 50 mm |
+| media \|ey\| | 12,4 / 12,7 mm | **9,0 / 9,0 mm** | — |
+| máx \|ey\| | 56,7 / 27,4 mm | **20,5 / 20,5 mm** | < 160 (d_max) |
+| emergencias | 0 / 0 | 0 / 0 | — |
+| intervención cage | 85,9 % / 82,5 % | **0,6 % / 0,9 %** | — |
+
+**Lectura.** Ambos cumplen el requisito (M-P1 < 50 mm, máx < d_max) con 0
+emergencias y ~11 vueltas, de modo que **la comparación es legítima** (ninguno
+queda fuera de norma por mala descripción). En nominal el controlador clásico es
+incluso **algo más preciso** (RMSE 10,5 vs 14,2 mm; máx 20,5 vs 56,7 mm) y
+**mucho más suave**: la cage interviene 0,6–0,9 % de los pasos frente al 82–86 %
+del RL —el steering a tirones de la CNN lo limita continuamente C-06 (limitador de
+tasa), mientras que el PD es suave por construcción. La precisión nominal, por
+tanto, **no** justifica al agente RL; su valor debe demostrarse **fuera de lo
+nominal** —degradación de percepción y *appearance shift*— donde el estimador CV
+se debilita y una política aprendida puede generalizar mejor. Eso es precisamente lo
+que mide la familia de mundos de robustez (líneas ausentes, marcas, manchas, agua;
+ver `src/cobraflex/worlds/README_robustness_worlds.md`), trabajo en curso. Evidencia:
+`experiments/sim/runs/cv_ctrl_eval_2024_4k4{,_mon}` y `baseline_cv_vs_rl_nominal.json`.
+
 ---
 
 ## 8.10 Síntesis y transición al Capítulo 9  [BORRADOR D56]

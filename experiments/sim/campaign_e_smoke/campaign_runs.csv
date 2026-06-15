@@ -1,3 +1,0 @@
-scenario,mode,controller,seed,rep,verdict,error
-SC-PERT-04,enforcement,rl,2024,0,True,
-SC-PERT-09,enforcement,rl,2024,0,True,

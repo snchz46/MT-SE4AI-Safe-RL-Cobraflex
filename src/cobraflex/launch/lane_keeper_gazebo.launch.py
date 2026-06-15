@@ -27,7 +27,7 @@ def generate_launch_description():
     gazebo_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
-                [FindPackageShare("cobraflex"), "launch", "gazebo.launch.py"]
+                [FindPackageShare("cobraflex"), "launch", "gazebo_mesh.launch.py"]
             )
         ),
         condition=IfCondition(launch_sim),
@@ -62,20 +62,13 @@ def generate_launch_description():
                 ),
             },
             {"image_topic": image_topic},
-            {"proc_width": 480},
-            {"proc_height": 360},
-            {"roi_start_pct": 55},
-            {"white_sat_max": 70},
-            {"white_val_min": 150},
-            {"morph_k": 3},
-            {"peak_threshold": 6.0},
-            {"min_lane_width_px": 60.0},
-            {"lane_width_px": 110.0},
-            {"linear_speed": 0.10},
-            {"angular_gain": 1.25},
+            # CV-estimator + PD/feedforward controller (see cv_lane_controller).
+            {"linear_speed": 0.20},
+            {"kp_ey": 6.0},
+            {"kd_epsi": 1.6},
+            {"kff_curv": 1.0},
             {"max_angular_z": 0.90},
-            {"min_linear_scale": 0.35},
-            {"single_side_scale": 0.65},
+            {"stop_on_no_lane": True},
             {"watchdog_timeout_sec": 1.5},
         ],
     )
@@ -135,7 +128,7 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "image_topic",
-                default_value="camera/image_raw",
+                default_value="camera/image_raw_lane",
                 description="Bridged Gazebo image topic.",
             ),
             DeclareLaunchArgument(
@@ -145,12 +138,12 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "spawn_y",
-                default_value="0",
+                default_value="-0.1225",
                 description="Robot spawn Y position.",
             ),
             DeclareLaunchArgument(
                 "spawn_z",
-                default_value="0.2",
+                default_value="0.05",
                 description="Robot spawn Z position.",
             ),
             DeclareLaunchArgument(

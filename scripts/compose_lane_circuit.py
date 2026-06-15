@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import math
 import os
+import sys
 from pathlib import Path
 from typing import Iterable, List, Tuple
 
@@ -40,6 +41,13 @@ except ImportError:
     _PIL_AVAILABLE = False
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+# The length-parametric tile factory lives next to the road assets so it
+# installs with the package; import it by path so this script stays runnable
+# from a bare checkout.
+_TILES_DIR = REPO_ROOT / "src" / "cobraflex" / "materials" / "road_assets" / "road_tiles"
+sys.path.insert(0, str(_TILES_DIR))
+import make_road_tiles  # noqa: E402  (path-based import)
 
 ROAD_WIDTH_M = 0.52
 HALF_ROAD_M = ROAD_WIDTH_M / 2
@@ -339,6 +347,62 @@ def oval_preset(
     ]
 
 
+def oval_themed_preset(
+    radius_m: float, straight_length_m: float, straight_uris: List[str]
+) -> List[dict]:
+    """Oval whose two straights can carry independent textures (themes).
+
+    Geometry is identical to ``oval_preset`` (so every themed world in the
+    family shares one centreline); only the straight albedo maps differ.
+    """
+    return [
+        _straight_tile(straight_length_m, "themed", straight_uris[0]),
+        _curve_tile(radius_m, 180.0, mirror_right=False),
+        _straight_tile(straight_length_m, "themed", straight_uris[1]),
+        _curve_tile(radius_m, 180.0, mirror_right=False),
+    ]
+
+
+# Circuit catalogue: one compact R=0.80 m oval per robustness stressor.
+# `straights` = (theme_side_A, theme_side_B); all share the L=4 m geometry,
+# so a single centreline YAML serves the whole family. Themes resolve to
+# road_tiles PNGs generated on demand at the exact tile length.
+#
+# NOTE: the 'wet' and 'worn' stressors are intentionally NOT in this 4 m
+# family — they already exist as frozen scenario worlds
+# (lane_following_oval_wet/worn.world, 1.5 m, identical-geometry to SC-NOM-01,
+# wired into SC-PERT-09/10 + adverse_profiles.yaml + closed campaign evidence
+# incl. world_variant_mask_check.json). Regenerating them at 4 m would break
+# that frozen contract; degraded-paint here is represented by 'faded'.
+CIRCUITS = {
+    # --- baseline ---
+    "oval_clean":        {"straights": ("clean", "clean"),        "stressor": "baseline (control)"},
+    # --- degraded paint ---
+    "oval_faded":        {"straights": ("faded", "faded"),        "stressor": "heavily faded (low-contrast) markings"},
+    # --- missing lines ---
+    "oval_no_centreline": {"straights": ("no_centreline", "no_centreline"), "stressor": "dashed centreline absent"},
+    "oval_no_edges":     {"straights": ("no_edges", "no_edges"),  "stressor": "edge lines absent (CV keys on edges)"},
+    "oval_edge_gap":     {"straights": ("edge_gap", "clean"),     "stressor": "1.2 m gap in one edge line"},
+    "oval_no_lines":     {"straights": ("no_lines", "no_lines"),  "stressor": "no paint at all (total dropout)"},
+    # --- painted distractors ---
+    "oval_zebra":        {"straights": ("zebra", "clean"),        "stressor": "zebra crossing + stop line"},
+    "oval_double_solid": {"straights": ("double_solid", "double_solid"), "stressor": "double solid centre (benign regression)"},
+    "oval_arrows":       {"straights": ("arrows", "clean"),       "stressor": "painted lane arrows (white distractors)"},
+}
+
+
+def resolve_straight_textures(
+    themes: Tuple[str, str], length_m: float, texture_base: Path
+) -> List[str]:
+    """Generate the per-straight tile PNGs and return paths relative to texture_base."""
+    tiles_dir = texture_base / "road_assets" / "road_tiles"
+    uris = []
+    for theme in themes:
+        path = make_road_tiles.make_tile(theme, length_m, tiles_dir)
+        uris.append(str(path.relative_to(texture_base)).replace(os.sep, "/"))
+    return uris
+
+
 def _rotate(v: Tuple[float, float], theta: float) -> Tuple[float, float]:
     c, s = math.cos(theta), math.sin(theta)
     return (c * v[0] - s * v[1], s * v[0] + c * v[1])
@@ -540,10 +604,141 @@ def emit_centerline_yaml(
     }
 
 
+def render_preview(placements: List[dict], title: str, out_path: Path) -> None:
+    """Top-down schematic PNG of a circuit: tile footprints + centreline.
+
+    Validation artefact for hosts that cannot open the Gazebo GUI — confirms
+    tile placement, seam continuity and which straight carries which theme.
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Rectangle
+
+    theme_colors = {
+        "clean": "#444444", "worn": "#7a5a2a", "wet": "#2a4a7a", "faded": "#666666",
+        "no_lines": "#111111", "no_centreline": "#553355", "no_edges": "#335555",
+        "edge_gap": "#7a3a3a", "zebra": "#777777", "double_solid": "#555533",
+        "arrows": "#3a6a3a", "themed": "#444444",
+    }
+
+    fig, ax = plt.subplots(figsize=(7, 6))
+    # centreline
+    pts = []
+    for pl in placements:
+        pts.extend(pl["polyline"])
+    pts.append(pts[0])
+    ax.plot([p[0] for p in pts], [p[1] for p in pts], "-", color="#e0c020", lw=1.0, zorder=3)
+
+    for pl in placements:
+        tile = pl["tile"]
+        bx, by = pl["bbox_center"]
+        yaw = pl["yaw"]
+        sx, sy = tile["bbox_h"], tile["bbox_w"]  # SDF size swap (see emit_world_sdf)
+        theme = "clean"
+        if tile["kind"] == "straight":
+            stem = Path(tile["texture_uri"]).stem
+            if stem.startswith("tile_"):
+                theme = stem[len("tile_"):].split("_0p")[0]
+        color = theme_colors.get(theme, "#444444")
+        rect = Rectangle((-sx / 2, -sy / 2), sx, sy, angle=0, color=color, alpha=0.85, zorder=2)
+        from matplotlib.transforms import Affine2D
+        rect.set_transform(Affine2D().rotate(yaw + math.pi / 2).translate(bx, by) + ax.transData)
+        ax.add_patch(rect)
+        if tile["kind"] == "straight":
+            ax.text(bx, by, theme, ha="center", va="center", fontsize=8,
+                    color="white", zorder=4, rotation=math.degrees(yaw))
+
+    # start marker + heading
+    x0, y0, th0 = placements[0]["entry_world"]
+    ax.plot([x0], [y0], "o", color="lime", ms=9, zorder=5)
+    ax.annotate("", xy=(x0 + 0.25 * math.cos(th0), y0 + 0.25 * math.sin(th0)),
+                xytext=(x0, y0), arrowprops=dict(arrowstyle="->", color="lime", lw=2), zorder=5)
+
+    ax.set_aspect("equal")
+    ax.grid(True, alpha=0.2)
+    ax.set_xlabel("x [m]")
+    ax.set_ylabel("y [m]")
+    ax.set_title(title, fontsize=10)
+    fig.tight_layout()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=110)
+    plt.close(fig)
+
+
+def build_circuit(
+    name: str,
+    radius_m: float,
+    straight_length_m: float,
+    texture_base: Path,
+    worlds_dir: Path,
+    preview_dir: Path,
+) -> List[dict]:
+    """Emit one themed-oval .world (+ preview) and return its placements."""
+    spec = CIRCUITS[name]
+    straight_uris = resolve_straight_textures(spec["straights"], straight_length_m, texture_base)
+    tiles = oval_themed_preset(radius_m, straight_length_m, straight_uris)
+    placements = walk_sequence(tiles)
+
+    world_out = worlds_dir / f"lane_following_{name}.world"
+    world_dir = world_out.resolve().parent
+    world_sdf = emit_world_sdf(f"lane_following_{name}", placements, texture_base, world_dir)
+    world_out.parent.mkdir(parents=True, exist_ok=True)
+    world_out.write_text(world_sdf, encoding="utf-8")
+
+    if _PIL_AVAILABLE:
+        try:
+            render_preview(placements, f"{name}  —  {spec['stressor']}",
+                           preview_dir / f"preview_{name}.png")
+        except Exception as exc:  # pragma: no cover - preview is best-effort
+            print(f"  (preview skipped for {name}: {exc})")
+    print(f"  {name:<20s} -> {world_out.name:<34s} [{spec['stressor']}]")
+    return placements
+
+
+def build_all_circuits(args) -> None:
+    radius_map = {"oval_R080": 0.80, "oval_R050": 0.50, "oval_R120": 1.20}
+    radius_m = radius_map[args.preset]
+    texture_base = args.texture_base.resolve()
+    worlds_dir = REPO_ROOT / "src" / "cobraflex" / "worlds"
+    preview_dir = REPO_ROOT / "experiments" / "sim" / "world_previews"
+    names = [args.circuit] if args.circuit else list(CIRCUITS)
+
+    print(f"Building {len(names)} themed oval(s): {args.preset} R={radius_m} m, "
+          f"straights L={args.straight_length} m")
+    placements = None
+    for name in names:
+        placements = build_circuit(name, radius_m, args.straight_length,
+                                   texture_base, worlds_dir, preview_dir)
+
+    # All circuits in the family share one geometry -> one centreline.
+    centerline_yaml = emit_centerline_yaml(
+        placements, lane_width=args.lane_width, road_width=ROAD_WIDTH_M,
+        preset=args.preset, straight_length=args.straight_length, radius_m=radius_m,
+    )
+    cl_out = args.centerline_out
+    cl_out.parent.mkdir(parents=True, exist_ok=True)
+    with cl_out.open("w", encoding="utf-8") as handle:
+        handle.write(
+            "# Generated by scripts/compose_lane_circuit.py --build-all.\n"
+            "# Shared centreline for the lane_following_oval_* themed family\n"
+            "# (identical geometry; only the straight textures differ).\n\n"
+        )
+        yaml.safe_dump(centerline_yaml, handle, sort_keys=False)
+    print(f"Centerline -> {cl_out}  (perimeter {centerline_yaml['centerline']['perimeter_m']:.4f} m)")
+    print(f"Previews   -> {preview_dir}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--build-all", action="store_true",
+                        help="Emit the whole CIRCUITS catalogue (themed ovals) + shared centreline.")
+    parser.add_argument("--circuit", choices=list(CIRCUITS),
+                        help="Emit a single named circuit from the catalogue.")
     parser.add_argument("--preset", default="oval_R080", choices=["oval_R080", "oval_R050", "oval_R120"])
-    parser.add_argument("--straight-length", type=float, default=1.5)
+    parser.add_argument("--straight-length", type=float, default=None,
+                        help="Straight tile length (default 1.5 m legacy, 4.0 m for --build-all).")
     parser.add_argument("--theme", default="clean", choices=list(STRAIGHT_THEME_TEXTURES.keys()))
     parser.add_argument("--world-name", default="lane_following_oval")
     parser.add_argument(
@@ -554,7 +749,7 @@ def main() -> None:
     parser.add_argument(
         "--centerline-out",
         type=Path,
-        default=REPO_ROOT / "src" / "cobraflex_rl" / "config" / "oval_centerline.yaml",
+        default=None,
     )
     parser.add_argument(
         "--texture-base",
@@ -568,6 +763,23 @@ def main() -> None:
     )
     parser.add_argument("--lane-width", type=float, default=0.245)
     args = parser.parse_args()
+
+    if args.build_all or args.circuit:
+        if args.straight_length is None:
+            args.straight_length = 4.0
+        if args.centerline_out is None:
+            label = f"{args.straight_length:.2f}".rstrip("0").rstrip(".").replace(".", "p")
+            args.centerline_out = (
+                REPO_ROOT / "src" / "cobraflex_rl" / "config"
+                / f"oval_themed_L{label}_centerline.yaml"
+            )
+        build_all_circuits(args)
+        return
+
+    if args.straight_length is None:
+        args.straight_length = 1.5
+    if args.centerline_out is None:
+        args.centerline_out = REPO_ROOT / "src" / "cobraflex_rl" / "config" / "oval_centerline.yaml"
 
     radius_map = {"oval_R080": 0.80, "oval_R050": 0.50, "oval_R120": 1.20}
     radius_m = radius_map[args.preset]

@@ -32,6 +32,7 @@ setup(
         "console_scripts": [
             "train_ppo = cobraflex_rl.train_ppo:main",
             "eval_policy = cobraflex_rl.eval_policy:main",
+            "eval_cv_controller = cobraflex_rl.eval_cv_controller:main",
             "gazebo_lane_env = cobraflex_rl.gazebo_lane_env:main",
             "lane_perception_node = cobraflex_rl.lane_perception_node:main",
             "cv_lane_estimator_node = cobraflex_rl.cv_lane_estimator_node:main",

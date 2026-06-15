@@ -828,7 +828,7 @@ mérito se mide, no se asume; DR desactivada en eval — el único estresor
 visual legítimo en evaluación es el del escenario). Sobre SC-NOM-01,
 enforcement, tope 4096 pasos:
 
-| Candidato | Vueltas | media |ey| | Intervenciones | Terminación |
+| Candidato | Vueltas | media \|ey\| | Intervenciones | Terminación |
 | --- | --- | --- | --- | --- |
 | **139k (pico)** — `cobraflex_ppo_cam_lane_2024_139k_peak.zip` | **4,69** | **10,1 mm** | 63 % (C-06 dominante) | 1 parada C-05 a los 181 s |
 | 200k (final) | 0,23 | 102 mm | 42 % (C-02/C-03 activas) | parada C-05 a los 9 s |

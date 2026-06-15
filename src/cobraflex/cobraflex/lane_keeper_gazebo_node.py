@@ -1,5 +1,16 @@
 #!/usr/bin/env python3
-"""Minimal lane keeper for Gazebo using the bridged camera."""
+"""Camera lane keeper for Gazebo.
+
+Logical (non-learned) lane-keeping controller, the fair baseline for the RL
+camera agent. It uses the shared :class:`cobraflex_rl.cv_lane_controller.CVLaneController`
+— the deterministic CV lane estimator (D-43, the same the safety cage reads)
+plus a PD + curvature-feedforward law — so this deployment node and the scored
+evaluation (``cobraflex_rl.eval_cv_controller``) drive identically.
+
+It supersedes the previous histogram pure-P controller, whose uncalibrated
+"lane centre = image centre" set-point could not hold the lane above ~0.1 m/s.
+The CV+PD law tracks the nominal oval to RMSE ~10 mm at 0.2 m/s (req < 50 mm).
+"""
 
 import time
 
@@ -19,16 +30,7 @@ from rclpy.qos import (
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Image
 
-
-def _clamp(value, low, high):
-    return max(low, min(value, high))
-
-
-def _odd(value):
-    value = max(1, int(value))
-    if value % 2 == 0:
-        value += 1
-    return value
+from cobraflex_rl.cv_lane_controller import CVLaneController
 
 
 def _ros_image_to_bgr(msg: Image) -> np.ndarray:
@@ -78,26 +80,19 @@ def _ros_image_to_bgr(msg: Image) -> np.ndarray:
 
 
 class LaneKeeperGazeboNode(Node):
-    """Minimal Gazebo lane keeper."""
+    """Camera lane keeper: calibrated CV lane estimate + PD/feedforward steering."""
 
     def __init__(self):
         super().__init__("lane_keeper_gazebo_node")
 
-        self.declare_parameter("image_topic", "camera/image_raw")
-        self.declare_parameter("proc_width", 480)
-        self.declare_parameter("proc_height", 360)
-        self.declare_parameter("roi_start_pct", 55)
-        self.declare_parameter("white_sat_max", 70)
-        self.declare_parameter("white_val_min", 150)
-        self.declare_parameter("morph_k", 3)
-        self.declare_parameter("peak_threshold", 6.0)
-        self.declare_parameter("min_lane_width_px", 60.0)
-        self.declare_parameter("lane_width_px", 110.0)
-        self.declare_parameter("linear_speed", 0.10)
-        self.declare_parameter("angular_gain", 1.25)
+        self.declare_parameter("image_topic", "camera/image_raw_lane")
+        self.declare_parameter("linear_speed", 0.20)
+        self.declare_parameter("kp_ey", 6.0)
+        self.declare_parameter("kd_epsi", 1.6)
+        self.declare_parameter("kff_curv", 1.0)
         self.declare_parameter("max_angular_z", 0.9)
-        self.declare_parameter("min_linear_scale", 0.35)
-        self.declare_parameter("single_side_scale", 0.65)
+        # Stop (vs coast straight) when the estimator finds no usable lane.
+        self.declare_parameter("stop_on_no_lane", True)
         self.declare_parameter("publish_debug_image", False)
         self.declare_parameter("show_debug_windows", False)
         self.declare_parameter("watchdog_timeout_sec", 1.5)
@@ -109,30 +104,33 @@ class LaneKeeperGazeboNode(Node):
             durability=QoSDurabilityPolicy.VOLATILE,
         )
 
+        self.controller = CVLaneController(
+            speed=float(self.get_parameter("linear_speed").value),
+            kp_ey=float(self.get_parameter("kp_ey").value),
+            kd_epsi=float(self.get_parameter("kd_epsi").value),
+            kff_curv=float(self.get_parameter("kff_curv").value),
+            max_angular_z=float(self.get_parameter("max_angular_z").value),
+        )
+
         image_topic = str(self.get_parameter("image_topic").value)
         self.image_sub = self.create_subscription(
-            Image,
-            image_topic,
-            self._image_callback,
-            qos_profile_sensor_data,
+            Image, image_topic, self._image_callback, qos_profile_sensor_data
         )
         self.cmd_pub = self.create_publisher(Twist, "/cmd_vel", 10)
         self.debug_pub = self.create_publisher(Image, "/lane/image_overlay", debug_qos)
 
         self.last_frame_time = 0.0
         self.last_warn_time = 0.0
-        self.lane_width_est = float(self.get_parameter("lane_width_px").value)
         self.timer = self.create_timer(0.2, self._watchdog_callback)
 
         self.get_logger().info(
-            f"lane_keeper_gazebo_node listening on '{image_topic}'"
+            f"lane_keeper_gazebo_node (CV+PD) listening on '{image_topic}'"
         )
 
     def _build_image_msg(self, image, stamp, frame_id):
         """Wrap a numpy image as a sensor_msgs/Image."""
         if not image.flags["C_CONTIGUOUS"]:
             image = np.ascontiguousarray(image)
-
         msg = Image()
         msg.header.stamp = stamp
         msg.header.frame_id = frame_id
@@ -153,7 +151,6 @@ class LaneKeeperGazeboNode(Node):
         timeout = float(self.get_parameter("watchdog_timeout_sec").value)
         if timeout <= 0.0 or self.last_frame_time <= 0.0:
             return
-
         now = time.time()
         if now - self.last_frame_time > timeout:
             self._publish_zero()
@@ -162,7 +159,7 @@ class LaneKeeperGazeboNode(Node):
                 self.last_warn_time = now
 
     def _image_callback(self, msg: Image):
-        """Cache the latest camera frame for the control tick."""
+        """Per-frame control tick: CV estimate → PD/feedforward steering → /cmd_vel."""
         try:
             frame_bgr = _ros_image_to_bgr(msg)
         except ValueError as exc:
@@ -170,160 +167,49 @@ class LaneKeeperGazeboNode(Node):
             return
 
         self.last_frame_time = time.time()
-
-        cmd, debug_image = self._process_frame(frame_bgr)
-        self.cmd_pub.publish(cmd)
-
-        if bool(self.get_parameter("publish_debug_image").value):
-            self.debug_pub.publish(
-                self._build_image_msg(debug_image, msg.header.stamp, msg.header.frame_id)
-            )
-
-        if bool(self.get_parameter("show_debug_windows").value):
-            cv2.imshow("Lane Keeper Gazebo", debug_image)
-            cv2.waitKey(1)
-
-    def _process_frame(self, frame_bgr):
-        """Per-frame CV pipeline (Gazebo variant): threshold, line peaks, steering error."""
-        proc_width = int(self.get_parameter("proc_width").value)
-        proc_height = int(self.get_parameter("proc_height").value)
-        roi_start_pct = float(self.get_parameter("roi_start_pct").value)
-        white_sat_max = int(self.get_parameter("white_sat_max").value)
-        white_val_min = int(self.get_parameter("white_val_min").value)
-        morph_k = _odd(self.get_parameter("morph_k").value)
-        peak_threshold = float(self.get_parameter("peak_threshold").value)
-        min_lane_width_px = float(self.get_parameter("min_lane_width_px").value)
-        linear_speed = float(self.get_parameter("linear_speed").value)
-        angular_gain = float(self.get_parameter("angular_gain").value)
-        max_angular_z = float(self.get_parameter("max_angular_z").value)
-        min_linear_scale = float(self.get_parameter("min_linear_scale").value)
-        single_side_scale = float(self.get_parameter("single_side_scale").value)
-
-        frame = cv2.resize(
-            frame_bgr,
-            (proc_width, proc_height),
-            interpolation=cv2.INTER_AREA,
-        )
-
-        roi_y = int(proc_height * roi_start_pct / 100.0)
-        roi_y = _clamp(roi_y, 0, proc_height - 1)
-        roi = frame[roi_y:, :]
-
-        hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-        mask = cv2.inRange(
-            hsv,
-            np.array([0, 0, white_val_min], dtype=np.uint8),
-            np.array([179, white_sat_max, 255], dtype=np.uint8),
-        )
-
-        kernel = np.ones((morph_k, morph_k), dtype=np.uint8)
-        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-        mask = cv2.dilate(mask, kernel, iterations=1)
-
-        histogram = mask.sum(axis=0).astype(np.float32) / 255.0
-        histogram = np.convolve(histogram, np.ones(9, dtype=np.float32) / 9.0, mode="same")
-
-        half = proc_width // 2
-        left_hist = histogram[:half]
-        right_hist = histogram[half:]
-
-        left_x = None
-        right_x = None
-
-        if left_hist.size > 0 and float(left_hist.max()) >= peak_threshold:
-            left_x = int(np.argmax(left_hist))
-
-        if right_hist.size > 0 and float(right_hist.max()) >= peak_threshold:
-            right_x = int(np.argmax(right_hist) + half)
-
-        lane_center_x = None
-        speed_scale = 1.0
-
-        if (
-            left_x is not None
-            and right_x is not None
-            and (right_x - left_x) >= min_lane_width_px
-        ):
-            measured_width = float(right_x - left_x)
-            self.lane_width_est = 0.8 * self.lane_width_est + 0.2 * measured_width
-            lane_center_x = 0.5 * (left_x + right_x)
-        elif left_x is not None:
-            lane_center_x = float(left_x) + self.lane_width_est * 0.5
-            speed_scale = single_side_scale
-        elif right_x is not None:
-            lane_center_x = float(right_x) - self.lane_width_est * 0.5
-            speed_scale = single_side_scale
+        angular, detected = self.controller.compute(frame_bgr)
 
         cmd = Twist()
-        image_center_x = proc_width / 2.0
+        if detected:
+            cmd.linear.x = float(self.get_parameter("linear_speed").value)
+            cmd.angular.z = float(angular)
+        elif not bool(self.get_parameter("stop_on_no_lane").value):
+            cmd.linear.x = float(self.get_parameter("linear_speed").value)
+        self.cmd_pub.publish(cmd)
 
-        if lane_center_x is not None:
-            error_norm = (lane_center_x - image_center_x) / image_center_x
-            angular_z = _clamp(
-                -angular_gain * error_norm,
-                -max_angular_z,
-                max_angular_z,
-            )
-            linear_x = linear_speed * max(min_linear_scale, 1.0 - abs(error_norm))
-            linear_x *= speed_scale
+        if bool(self.get_parameter("publish_debug_image").value) or bool(
+            self.get_parameter("show_debug_windows").value
+        ):
+            debug_image = self._render_debug(frame_bgr, cmd)
+            if bool(self.get_parameter("publish_debug_image").value):
+                self.debug_pub.publish(
+                    self._build_image_msg(debug_image, msg.header.stamp, msg.header.frame_id)
+                )
+            if bool(self.get_parameter("show_debug_windows").value):
+                cv2.imshow("Lane Keeper Gazebo (CV+PD)", debug_image)
+                cv2.waitKey(1)
 
-            cmd.linear.x = float(linear_x)
-            cmd.angular.z = float(angular_z)
-
-        debug = frame.copy()
-        mask_bgr = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-        debug[roi_y:, :] = cv2.addWeighted(roi, 0.6, mask_bgr, 0.4, 0.0)
-
-        cv2.line(debug, (half, 0), (half, proc_height), (0, 255, 0), 2)
-        cv2.line(debug, (0, roi_y), (proc_width, roi_y), (255, 255, 0), 2)
-
-        if left_x is not None:
-            cv2.line(debug, (left_x, roi_y), (left_x, proc_height - 1), (255, 0, 0), 2)
-
-        if right_x is not None:
-            cv2.line(debug, (right_x, roi_y), (right_x, proc_height - 1), (0, 0, 255), 2)
-
-        if lane_center_x is not None:
-            cx = int(round(lane_center_x))
-            cv2.line(debug, (cx, roi_y), (cx, proc_height - 1), (0, 255, 255), 2)
-            cv2.putText(
-                debug,
-                f"cmd=({cmd.linear.x:.2f}, {cmd.angular.z:.2f})",
-                (12, 28),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.7,
-                (255, 255, 255),
-                2,
-            )
+    def _render_debug(self, frame_bgr, cmd):
+        """White-mask overlay + the CV estimate / command, for the watch window."""
+        debug = frame_bgr.copy()
+        try:
+            mask = self.controller.estimator.white_mask(frame_bgr)
+            mask_bgr = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+            debug = cv2.addWeighted(debug, 0.6, mask_bgr, 0.4, 0.0)
+        except Exception:  # pragma: no cover - overlay is best-effort
+            pass
+        d = self.controller.dbg
+        if d.get("ok"):
+            txt = (f"ey={d['ey']:+.3f} epsi={d['epsi']:+.3f} k={d['kappa']:+.2f} "
+                   f"cmd=({cmd.linear.x:.2f},{cmd.angular.z:+.2f})")
         else:
-            cv2.putText(
-                debug,
-                "NO LANE",
-                (12, 28),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.8,
-                (0, 0, 255),
-                2,
-            )
-
-        return cmd, debug
-
-    def destroy_node(self):
-        """Stop the robot before tearing the node down."""
-        try:
-            self._publish_zero()
-        except Exception:
-            pass
-        try:
-            cv2.destroyAllWindows()
-        except Exception:
-            pass
-        super().destroy_node()
+            txt = f"NO LANE ({d.get('reason', '')})  cmd=({cmd.linear.x:.2f},{cmd.angular.z:+.2f})"
+        cv2.putText(debug, txt, (10, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.6,
+                    (0, 255, 255), 2)
+        return debug
 
 
 def main(args=None):
-    """Spin the Gazebo lane-keeper node."""
     rclpy.init(args=args)
     node = LaneKeeperGazeboNode()
     try:
@@ -332,7 +218,8 @@ def main(args=None):
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

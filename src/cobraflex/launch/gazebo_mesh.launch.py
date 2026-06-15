@@ -4,11 +4,36 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription
+from launch.actions import (
+    DeclareLaunchArgument,
+    GroupAction,
+    IncludeLaunchDescription,
+    OpaqueFunction,
+    SetLaunchConfiguration,
+)
 from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
+
+
+def _resolve_world(context):
+    """Let `world:=` take a short map name as well as a full path.
+
+    A bare token like ``oval_zebra`` resolves to
+    ``<cobraflex_share>/worlds/lane_following_oval_zebra.world`` (and a token
+    that already starts with ``lane_following_`` is used verbatim under
+    worlds/). Anything that looks like a path (contains a separator) or ends
+    in .world/.sdf is passed through unchanged, so existing callers and the
+    campaign orchestrator keep working. Lets you switch maps with
+    ``world:=oval_no_lines`` instead of editing the launch file.
+    """
+    raw = LaunchConfiguration("world").perform(context)
+    if os.sep in raw or raw.endswith((".world", ".sdf")):
+        return []  # already a path; leave it
+    share = get_package_share_directory("cobraflex")
+    stem = raw if raw.startswith("lane_following_") else f"lane_following_{raw}"
+    return [SetLaunchConfiguration("world", os.path.join(share, "worlds", f"{stem}.world"))]
 
 
 def generate_launch_description():
@@ -148,8 +173,10 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "world",
                 default_value=world_path,
-                description="Full path to the world file to load.",
+                description="World to load: full path, or a short map name "
+                            "(e.g. world:=oval_zebra -> worlds/lane_following_oval_zebra.world).",
             ),
+            OpaqueFunction(function=_resolve_world),
             DeclareLaunchArgument(
                 "rviz",
                 default_value="true",

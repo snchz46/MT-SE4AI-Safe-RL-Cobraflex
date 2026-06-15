@@ -1,0 +1,54 @@
+{
+  "scenario": "SC-NOM-01",
+  "speed_mps": 0.2,
+  "seed": 2024,
+  "requirement": {
+    "M_P1_mm_max": 50,
+    "d_max_mm": 160
+  },
+  "logical_cv_pd_controller": [
+    {
+      "run": "cv_ctrl_2024_800_enf",
+      "mode": "enforcement",
+      "laps": 1.99,
+      "mean_abs_ey_mm": 8.6,
+      "max_abs_ey_mm": 20.4,
+      "rmse_M_P1_mm": 10.1,
+      "emergencies": 0,
+      "interv_pct": 0.5,
+      "per_rule": {
+        "C-06": 4
+      }
+    },
+    {
+      "run": "cv_ctrl_2024_800_mon",
+      "mode": "monitoring",
+      "laps": 1.99,
+      "mean_abs_ey_mm": 8.6,
+      "max_abs_ey_mm": 20.5,
+      "rmse_M_P1_mm": 10.1,
+      "emergencies": 0,
+      "interv_pct": 0.5,
+      "per_rule": {
+        "C-06": 4
+      }
+    }
+  ],
+  "rl_agent_425k_reference": {
+    "note": "rl_cam_eval_2024_425k_4k4 (4400 steps, 0.2 m/s)",
+    "enforcement": {
+      "laps": 11.16,
+      "mean_abs_ey_mm": 12.4,
+      "max_abs_ey_mm": 56.7,
+      "emergencies": 0,
+      "interv_pct": 85.9
+    },
+    "monitoring": {
+      "laps": 11.17,
+      "mean_abs_ey_mm": 12.7,
+      "max_abs_ey_mm": 27.4,
+      "emergencies": 0,
+      "interv_pct": 82.5
+    }
+  }
+}

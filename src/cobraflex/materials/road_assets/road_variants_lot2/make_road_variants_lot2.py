@@ -28,7 +28,10 @@ LANE_USEFUL_M = 0.245
 SINGLE_TOTAL_M = LANE_USEFUL_M + 2 * LINE_WIDTH_M
 TWO_LANE_TOTAL_M = 2 * LANE_USEFUL_M + 3 * LINE_WIDTH_M
 
-OUT_DIR = "/mnt/user-data/outputs/road_variants_lot2"
+# Fixed-length 3-5 m source PNGs. For tiles sized to a specific Gazebo box
+# length (no UV compression) and named with the real size in metres, use the
+# length-parametric factory ../road_tiles/make_road_tiles.py instead.
+OUT_DIR = os.path.dirname(os.path.abspath(__file__))
 os.makedirs(OUT_DIR, exist_ok=True)
 
 

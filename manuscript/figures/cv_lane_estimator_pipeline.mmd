@@ -1,0 +1,28 @@
+%% Deterministic CV lane estimator — five-stage classical pipeline (D-43).
+%% Canonical figure source. Render to PNG (Phase 6 / POLISH):
+%%   mmdc -i cv_lane_estimator_pipeline.mmd -o cv_lane_estimator_pipeline.png -b transparent -w 1400
+%% (mmdc = mermaid-cli, https://github.com/mermaid-js/mermaid-cli)
+%%
+%% A native camera frame → HSV white mask → row scan projecting pixels to metric
+%% ground points → greedy polynomial line clustering → lane-pair selection (with
+%% single-line fallback) → state readout (ey, epsi, curvature, confidence). The
+%% output CvLaneEstimate feeds the safety cage and the classical CV controller.
+%% Every stage is classical and inspectable — no learning.
+
+flowchart TD
+    IN["Native BGR frame<br/>640&times;360, may be degraded"]
+    S1["1 &middot; White mask (HSV)<br/>S &le; 30, V &ge; 150 &middot; &minus; vegetation 35&ndash;85&deg;"]
+    S2["2 &middot; Row scan &rarr; ground<br/>24 rows &middot; 0.15&rarr;1.0 m &middot; pixel&rarr;ground"]
+    S3["3 &middot; Line clustering<br/>greedy near&rarr;far &middot; Y = c₀+c₁X+c₂X&sup2;"]
+    S4["4 &middot; Lane-pair selection<br/>pair 0.245&plusmn;0.10 m &middot; + single-line fallback"]
+    S5["5 &middot; State readout<br/>ey=&minus;c₀ &middot; epsi=&minus;atan c₁ &middot; &kappa;=2c₂"]
+    OUT["CvLaneEstimate<br/>ok, ey, epsi, width, &kappa;, confidence"]
+
+    IN --> S1 --> S2 --> S3 --> S4 --> S5 --> OUT
+
+    classDef io  fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A,stroke-width:1.2px;
+    classDef cv  fill:#E1F5EE,stroke:#0F6E56,color:#04342C,stroke-width:1.2px;
+    classDef out fill:#FAECE7,stroke:#993C1D,color:#4A1B0C,stroke-width:1.2px;
+    class IN io;
+    class S1,S2,S3,S4,S5 cv;
+    class OUT out;

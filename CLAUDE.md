@@ -206,6 +206,8 @@ Full loop: `ros2 launch cobraflex lane_keeper_gazebo.launch.py`. The ROS2 nodes 
 | ODD spec | [docs/08_odd_specification.md](docs/08_odd_specification.md) |
 | RL environment design (F3) | [docs/09_environment_design.md](docs/09_environment_design.md) |
 | RL reward function (F3) | [docs/10_reward_function.md](docs/10_reward_function.md) |
+| Camera RL training (track 'E') | [docs/11_camera_rl_training.md](docs/11_camera_rl_training.md) |
+| Classical CV lane-keeper (track 'E' baseline) | [docs/12_cv_lane_keeper.md](docs/12_cv_lane_keeper.md) |
 | Decisions (D-NN) | [docs/DECISIONS.md](docs/DECISIONS.md) |
 | What changed when | [docs/CHANGELOG.md](docs/CHANGELOG.md) |
 | Manuscript-to-CSV generation | [TRACEABILITY.md](TRACEABILITY.md) |

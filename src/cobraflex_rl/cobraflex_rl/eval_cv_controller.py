@@ -1,19 +1,23 @@
 """
-eval_cv_controller — evaluate the **logical camera lane-keeper** (the hand-coded
-CV + proportional controller of cobraflex/lane_keeper_gazebo_node), through the
-exact same `GazeboLaneEnv` + scoring as `eval_policy`.
+eval_cv_controller — evaluate the **logical camera lane-keeper** (the shared
+:class:`cobraflex_rl.cv_lane_controller.CVLaneController` that also drives
+cobraflex/lane_keeper_gazebo_node), through the exact same `GazeboLaneEnv` +
+scoring as `eval_policy`.
 
 Why: the RL camera agent (track 'E') must be compared against a *camera*
 baseline, not the ground-truth PD (comparing a real-perception policy to a
 PD that reads perfect state is meaningless). This driver runs the same CV
-front-end the deployment node uses (HSV white mask → histogram lane peaks →
-normalised lane-centre error → proportional steering) and feeds its steering
-to the env as the action. Since the env publishes ``angular.z = action`` and
-runs at a fixed cruise speed, this is exactly what the node would command —
-but scored identically to the RL/PD runs (ey/epsi vs the right-lane centreline,
-completed laps, cage interventions) for a like-for-like table.
+front-end the deployment node uses — the deterministic CV lane estimator
+(CvLaneEstimator, D-43: HSV white mask → ground-plane row scan → line
+clustering → lane-pair selection) plus a PD + curvature-feedforward law
+(steer = -(kp·ey + kd·epsi) + kff·v·κ) — and feeds its steering to the env
+as the action. Since the env publishes ``angular.z = action`` and runs at a
+fixed cruise speed, this is exactly what the node would command — but scored
+identically to the RL/PD runs (ey/epsi vs the right-lane centreline, completed
+laps, cage interventions) for a like-for-like table.
 
-The controller never sees ground truth: its only input is the env's raw camera
+It supersedes the previous histogram pure-P front-end (docs/12 §7). The
+controller never sees ground truth: its only input is the env's raw camera
 frame (`ros_interface.get_camera_frame()`), the same image stream the RL CNN
 and the cage's CV estimator consume.
 """

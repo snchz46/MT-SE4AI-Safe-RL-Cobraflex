@@ -1,0 +1,37 @@
+%% Camera policy CNN (NatureCNN) + PPO actor-critic (track 'E').
+%% Canonical figure source. Render to PNG (Phase 6 / POLISH):
+%%   mmdc -i camera_cnn_ppo_architecture.mmd -o camera_cnn_ppo_architecture.png -b transparent -w 1600
+%% (mmdc = mermaid-cli, https://github.com/mermaid-js/mermaid-cli)
+%%
+%% The 84x84x4 frame stack passes through three conv layers and a 512-unit FC
+%% (the shared NatureCNN trunk, purple), then splits into a policy head
+%% (Gaussian steering action in [-1,1], the deployed output to the cage, coral)
+%% and a value head V(s) (training only). The sim-only reward + V(s) drive the
+%% PPO gradient step on theta; there is no reward at deployment.
+
+flowchart LR
+    OBS["Camera obs<br/>84&times;84&times;4"]
+    subgraph TRUNK ["NatureCNN feature extractor (shared trunk)"]
+        direction LR
+        C1["Conv 8&times;8 s4<br/>32 &rarr; 20&sup2;"]
+        C2["Conv 4&times;4 s2<br/>64 &rarr; 9&sup2;"]
+        C3["Conv 3&times;3 s1<br/>64 &rarr; 7&sup2;"]
+        FC["Flatten &middot; FC<br/>&rarr; 512 ReLU"]
+        C1 --> C2 --> C3 --> FC
+    end
+    OBS --> C1
+    FC --> PH["Policy head<br/>mean &mu; &amp; log &sigma;"]
+    FC --> VH["Value head<br/>V(s) baseline"]
+    PH --> ACT["Action: steer<br/>[&minus;1,1] &rarr; cage"]
+    REW["Reward (sim oracle)<br/>ey, epsi, progress &middot; train only"]
+    PPO["PPO clipped-surrogate update<br/>advantage = r + &gamma;V(s&prime;) &minus; V(s)"]
+    VH -. "V(s)" .-> PPO
+    REW -. .-> PPO
+    PPO -. "&nabla;&theta;" .-> TRUNK
+
+    classDef policy fill:#EEEDFE,stroke:#534AB7,color:#26215C,stroke-width:1.2px;
+    classDef cage   fill:#FAECE7,stroke:#993C1D,color:#4A1B0C,stroke-width:1.2px;
+    classDef sim    fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A,stroke-width:1.2px;
+    class OBS,C1,C2,C3,FC,PH policy;
+    class ACT cage;
+    class VH,REW,PPO sim;

@@ -92,13 +92,3 @@ Only the Lane Cam is on the RL path; the rest are optional (not required for §6
 
 Real Lane Cam: Jetson CSI, capture 1280×720 @ 60 fps, processed 640×360, HFOV 90°.
 Sim simulates the processed 640×360 @ 20 Hz stream only.
-
-### 2.5 Lane-cam extrinsics (must match CV model)
-
-| Quantity | CV model |
-| --- | --- |
-| Height | 0.07725 m |
-| Pitch-down | 0.25 rad |
-| Roll / yaw | 0 / 0 |
-| HFOV | 1.5707963 rad |
-| Resolution | 640×360 |

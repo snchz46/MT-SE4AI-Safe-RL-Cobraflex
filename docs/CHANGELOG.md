@@ -90,6 +90,16 @@ material). Measured yaw vs a 2.9 rad/s test command: f=0.5→0.09, 0.1→0.26,
 Genuine trade-off (lower friction turns better, slips more on straights). See
 docs/13 §"Physics tuning".
 
+**Sensors:** `add_sensors()` creates the two cameras + an RTX 2D lidar in-engine
+and publishes them on the Gazebo topics (`camera/image_raw`(+`_lane`) + camera_info,
+`scan`) so perception nodes consume them unchanged. USD Camera per optical frame
+(180°-about-X, focal from hfov → matching intrinsics); `IsaacSensorCreateRtxLidar`
+(`Example_Rotary_2D`). Sensors render off-screen so the run loop renders each frame
+(skipped in `--test`/`--turn`; `BRINGUP_SENSORS=0` to disable). **Verified**:
+`ros2 topic list` shows all five sensor topics; `/camera/image_raw_lane` echoes
+640×360. Lidar near-range/rate ≠ RPLiDAR (stock config) — custom JSON via
+`LIDAR_CONFIG` for fidelity; IMU still unwired. See docs/13 §"Sensors".
+
 ---
 
 ## [15.06.2026] — Track 'E' fair baseline: logical CV+PD camera controller vs RL agent (§8.9.5)

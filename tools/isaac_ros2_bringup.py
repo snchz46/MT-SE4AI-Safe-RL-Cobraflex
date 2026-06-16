@@ -51,10 +51,13 @@ from isaacsim.core.utils.extensions import enable_extension  # noqa: E402
 enable_extension("isaacsim.ros2.bridge")
 simulation_app.update()
 
+import math  # noqa: E402
+
 import omni.kit.app  # noqa: E402
+import omni.kit.commands  # noqa: E402
 from isaacsim.asset.importer.urdf import URDFImporter, URDFImporterConfig  # noqa: E402
 from isaacsim.core.utils.stage import add_reference_to_stage  # noqa: E402
-from pxr import UsdPhysics  # noqa: E402
+from pxr import Gf, UsdGeom, UsdPhysics  # noqa: E402
 
 # PhysX velocity control needs a drive with damping on each wheel joint. The URDF
 # `continuous` joints import without gains ("Stiffness and damping not available"),
@@ -63,12 +66,6 @@ from pxr import UsdPhysics  # noqa: E402
 WHEEL_DRIVE_DAMPING = 1.0e4
 WHEEL_DRIVE_MAX_FORCE = 1.0e3
 
-# Skid-steer turning: the robot yaws by scrubbing its 4 wheels sideways. The
-# Gazebo URDF set mu1=mu2=0.8 on the wheels, but those were <gazebo> tags dropped
-# for Isaac, so the wheels fall back to the default (grippy) physics material and
-# the robot barely turns. Re-apply a wheel friction material; combine mode "min"
-# makes the lower of wheel/ground friction win so lateral scrub stays low enough
-# to yaw. Tunable via env WHEEL_FRICTION (lower = turns more easily).
 # A 4-wheel skid-steer yaws by scrubbing all four wheels sideways. PhysX grips
 # harder than Gazebo's ODE, so with the wheels' default (high) friction the turn
 # that worked in Gazebo barely responds here. Lowering the wheel+ground friction
@@ -80,6 +77,24 @@ WHEEL_FRICTION = float(os.environ.get("WHEEL_FRICTION", "0.05"))
 GROUND_FRICTION = float(os.environ.get("GROUND_FRICTION", "0.05"))
 WHEEL_LINKS = ["front_left_wheel", "rear_left_wheel",
                "front_right_wheel", "rear_right_wheel"]
+
+# Sensors (off in --test/--turn; they need rendering). Each entry mirrors the
+# Gazebo <sensor> on that link: same ROS2 topics + frame ids so existing nodes
+# (lane_keeper, etc.) consume them unchanged. hfov from robot.gazebo.
+SENSORS = os.environ.get("BRINGUP_SENSORS", "1") != "0"
+# Robot TF tree: off by default -> let robot_state_publisher (URDF + Isaac's
+# /joint_states) own it, exactly like the Gazebo setup. See build_ros2_graph.
+PUBLISH_ROBOT_TF = os.environ.get("BRINGUP_ROBOT_TF", "0") != "0"
+CAMERAS = [
+    # (link frame for the camera prim, hfov rad, width, height, image topic, info topic)
+    ("camera_link_optical", 1.3962634, 640, 480,
+     "camera/image_raw", "camera/camera_info"),
+    ("camera_link_optical_lane", 1.5707963, 640, 360,
+     "camera/image_raw_lane", "camera/camera_info_lane"),
+]
+LIDAR_LINK = "lidar_link"
+LIDAR_TOPIC = "scan"
+LIDAR_CONFIG = os.environ.get("LIDAR_CONFIG", "Example_Rotary_2D")  # 360 deg 2D scan
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 URDF = os.path.join(REPO, "src/cobraflex/urdf/cobraflex_isaac.urdf")
@@ -173,6 +188,118 @@ def configure_wheel_material(stage, friction: float) -> int:
     return n
 
 
+def _find_prim(stage, name: str) -> str:
+    for prim in stage.Traverse():
+        if prim.GetName() == name:
+            return prim.GetPath().pathString
+    return ""
+
+
+def _make_camera_prim(stage, parent_path, hfov, width, height):
+    """Define a USD Camera under the ROS optical frame with matching intrinsics."""
+    cam_path = parent_path + "/Camera"
+    cam = UsdGeom.Camera.Define(stage, cam_path)
+    # USD cameras look down local -Z; the ROS optical frame has +Z forward, so
+    # rotate 180 deg about X to point the camera along the optical viewing axis.
+    UsdGeom.Xformable(cam.GetPrim()).AddOrientOp().Set(Gf.Quatf(0, 1, 0, 0))
+    aperture = 20.955
+    cam.GetHorizontalApertureAttr().Set(aperture)
+    cam.GetVerticalApertureAttr().Set(aperture * height / width)
+    cam.GetFocalLengthAttr().Set(aperture / (2.0 * math.tan(hfov / 2.0)))
+    cam.GetClippingRangeAttr().Set(Gf.Vec2f(0.1, 15.0))
+    return cam_path
+
+
+def _add_camera_graph(idx, camera_path, frame_id, width, height, img_topic, info_topic):
+    keys = og.Controller.Keys
+    g = f"/World/SensorGraphs/Camera_{idx}"
+    og.Controller.edit(
+        {"graph_path": g, "evaluator_name": "execution"},
+        {
+            keys.CREATE_NODES: [
+                ("Tick", "omni.graph.action.OnPlaybackTick"),
+                ("Context", "isaacsim.ros2.bridge.ROS2Context"),
+                ("RunOnce", "isaacsim.core.nodes.OgnIsaacRunOneSimulationFrame"),
+                ("RenderProduct", "isaacsim.core.nodes.IsaacCreateRenderProduct"),
+                ("RGB", "isaacsim.ros2.bridge.ROS2CameraHelper"),
+                ("Info", "isaacsim.ros2.bridge.ROS2CameraInfoHelper"),
+            ],
+            keys.SET_VALUES: [
+                ("RenderProduct.inputs:cameraPrim", camera_path),
+                ("RenderProduct.inputs:width", width),
+                ("RenderProduct.inputs:height", height),
+                ("RGB.inputs:topicName", img_topic),
+                ("RGB.inputs:type", "rgb"),
+                ("RGB.inputs:frameId", frame_id),
+                ("Info.inputs:topicName", info_topic),
+                ("Info.inputs:frameId", frame_id),
+            ],
+            keys.CONNECT: [
+                ("Tick.outputs:tick", "RunOnce.inputs:execIn"),
+                ("RunOnce.outputs:step", "RenderProduct.inputs:execIn"),
+                ("RenderProduct.outputs:execOut", "RGB.inputs:execIn"),
+                ("RenderProduct.outputs:renderProductPath", "RGB.inputs:renderProductPath"),
+                ("RenderProduct.outputs:execOut", "Info.inputs:execIn"),
+                ("RenderProduct.outputs:renderProductPath", "Info.inputs:renderProductPath"),
+                ("Context.outputs:context", "RGB.inputs:context"),
+                ("Context.outputs:context", "Info.inputs:context"),
+            ],
+        },
+    )
+
+
+def _add_lidar_graph(lidar_path, frame_id, topic):
+    keys = og.Controller.Keys
+    g = "/World/SensorGraphs/Lidar"
+    og.Controller.edit(
+        {"graph_path": g, "evaluator_name": "execution"},
+        {
+            keys.CREATE_NODES: [
+                ("Tick", "omni.graph.action.OnPlaybackTick"),
+                ("Context", "isaacsim.ros2.bridge.ROS2Context"),
+                ("RunOnce", "isaacsim.core.nodes.OgnIsaacRunOneSimulationFrame"),
+                ("RenderProduct", "isaacsim.core.nodes.IsaacCreateRenderProduct"),
+                ("LaserScan", "isaacsim.ros2.bridge.ROS2RtxLidarHelper"),
+            ],
+            keys.SET_VALUES: [
+                ("RenderProduct.inputs:cameraPrim", lidar_path),
+                ("LaserScan.inputs:topicName", topic),
+                ("LaserScan.inputs:type", "laser_scan"),
+                ("LaserScan.inputs:frameId", frame_id),
+            ],
+            keys.CONNECT: [
+                ("Tick.outputs:tick", "RunOnce.inputs:execIn"),
+                ("RunOnce.outputs:step", "RenderProduct.inputs:execIn"),
+                ("RenderProduct.outputs:execOut", "LaserScan.inputs:execIn"),
+                ("RenderProduct.outputs:renderProductPath", "LaserScan.inputs:renderProductPath"),
+                ("Context.outputs:context", "LaserScan.inputs:context"),
+            ],
+        },
+    )
+
+
+def add_sensors(stage) -> None:
+    """Create the two cameras + RTX lidar and wire their ROS2 publish graphs."""
+    for idx, (frame, hfov, w, h, img_topic, info_topic) in enumerate(CAMERAS):
+        frame_path = _find_prim(stage, frame)
+        if not frame_path:
+            print(f"[bringup] WARN camera frame {frame} not found, skipping")
+            continue
+        cam_path = _make_camera_prim(stage, frame_path, hfov, w, h)
+        _add_camera_graph(idx, cam_path, frame, w, h, img_topic, info_topic)
+        print(f"[bringup] camera on {frame} -> /{img_topic} ({w}x{h})")
+
+    lidar_parent = _find_prim(stage, LIDAR_LINK)
+    if lidar_parent:
+        _, lidar_prim = omni.kit.commands.execute(
+            "IsaacSensorCreateRtxLidar", path="/RtxLidar",
+            parent=lidar_parent, config=LIDAR_CONFIG)
+        _add_lidar_graph(lidar_prim.GetPath().pathString, LIDAR_LINK, LIDAR_TOPIC)
+        print(f"[bringup] RTX lidar ({LIDAR_CONFIG}) on {LIDAR_LINK} -> /{LIDAR_TOPIC}")
+    else:
+        print(f"[bringup] WARN {LIDAR_LINK} not found, lidar skipped")
+
+
 def build_scene():
     from isaacsim.core.api import World
     from isaacsim.core.api.objects.ground_plane import GroundPlane
@@ -208,76 +335,86 @@ def build_scene():
     print(f"[bringup] velocity drives on {nd} wheel joints; friction "
           f"{WHEEL_FRICTION} (combine=min) on {nm} wheel colliders, "
           f"ground {GROUND_FRICTION}")
+    # Sensors render off-screen; skip them in the physics-only --test/--turn paths.
+    if SENSORS and not args.test:
+        add_sensors(stage)
     return world
 
 
-def build_ros2_graph(art_root: str):
+def build_ros2_graph(art_root: str, tf_root: str):
     keys = og.Controller.Keys
+    nodes = [
+        ("Tick", "omni.graph.action.OnPlaybackTick"),
+        ("Context", "isaacsim.ros2.bridge.ROS2Context"),
+        ("SimTime", "isaacsim.core.nodes.IsaacReadSimulationTime"),
+        ("PublishClock", "isaacsim.ros2.bridge.ROS2PublishClock"),
+        ("SubscribeTwist", "isaacsim.ros2.bridge.ROS2SubscribeTwist"),
+        ("WheelScript", "omni.graph.scriptnode.ScriptNode"),
+        ("Articulation", "isaacsim.core.nodes.IsaacArticulationController"),
+        ("ComputeOdom", "isaacsim.core.nodes.IsaacComputeOdometry"),
+        ("PublishOdom", "isaacsim.ros2.bridge.ROS2PublishOdometry"),
+        ("PublishJointState", "isaacsim.ros2.bridge.ROS2PublishJointState"),
+    ]
+    values = [
+        ("SubscribeTwist.inputs:topicName", "cmd_vel"),
+        ("WheelScript.inputs:script", WHEEL_SCRIPT),
+        ("Articulation.inputs:robotPath", art_root),
+        ("Articulation.inputs:jointNames", WHEEL_JOINTS),
+        ("ComputeOdom.inputs:chassisPrim", [art_root]),
+        ("PublishOdom.inputs:topicName", "odom"),
+        ("PublishOdom.inputs:odomFrameId", "odom"),
+        ("PublishOdom.inputs:chassisFrameId", "base_footprint"),
+        ("PublishJointState.inputs:topicName", "joint_states"),
+        ("PublishJointState.inputs:targetPrim", [art_root]),
+    ]
+    connect = [
+        ("Tick.outputs:tick", "PublishClock.inputs:execIn"),
+        ("Context.outputs:context", "PublishClock.inputs:context"),
+        ("SimTime.outputs:simulationTime", "PublishClock.inputs:timeStamp"),
+        ("Tick.outputs:tick", "SubscribeTwist.inputs:execIn"),
+        ("Context.outputs:context", "SubscribeTwist.inputs:context"),
+        ("SubscribeTwist.outputs:execOut", "WheelScript.inputs:execIn"),
+        ("SubscribeTwist.outputs:linearVelocity", "WheelScript.inputs:linVel"),
+        ("SubscribeTwist.outputs:angularVelocity", "WheelScript.inputs:angVel"),
+        ("WheelScript.outputs:execOut", "Articulation.inputs:execIn"),
+        ("WheelScript.outputs:velCmd", "Articulation.inputs:velocityCommand"),
+        ("Tick.outputs:tick", "ComputeOdom.inputs:execIn"),
+        ("ComputeOdom.outputs:execOut", "PublishOdom.inputs:execIn"),
+        ("Context.outputs:context", "PublishOdom.inputs:context"),
+        ("SimTime.outputs:simulationTime", "PublishOdom.inputs:timeStamp"),
+        ("ComputeOdom.outputs:position", "PublishOdom.inputs:position"),
+        ("ComputeOdom.outputs:orientation", "PublishOdom.inputs:orientation"),
+        ("ComputeOdom.outputs:linearVelocity", "PublishOdom.inputs:linearVelocity"),
+        ("ComputeOdom.outputs:angularVelocity", "PublishOdom.inputs:angularVelocity"),
+        ("Tick.outputs:tick", "PublishJointState.inputs:execIn"),
+        ("Context.outputs:context", "PublishJointState.inputs:context"),
+        ("SimTime.outputs:simulationTime", "PublishJointState.inputs:timeStamp"),
+    ]
+    # Robot TF tree: off by default. Isaac's ROS2PublishTransformTree rejects the
+    # massless base_footprint frame and skips the empty optical frames (the camera
+    # image frame_ids), so it yields an incomplete, disconnected tree. The Gazebo-
+    # style robot_state_publisher (reads the URDF + Isaac's /joint_states) publishes
+    # the full tree incl. base_footprint + *_optical. Isaac keeps odom->base_footprint
+    # + joint_states + sensors. Enable this only for a quick standalone partial tree.
+    if PUBLISH_ROBOT_TF:
+        nodes.append(("PublishTF", "isaacsim.ros2.bridge.ROS2PublishTransformTree"))
+        values += [("PublishTF.inputs:topicName", "tf"),
+                   ("PublishTF.inputs:targetPrims", [tf_root])]
+        connect += [("Tick.outputs:tick", "PublishTF.inputs:execIn"),
+                    ("Context.outputs:context", "PublishTF.inputs:context"),
+                    ("SimTime.outputs:simulationTime", "PublishTF.inputs:timeStamp")]
+
     og.Controller.edit(
         {"graph_path": GRAPH_PATH, "evaluator_name": "execution"},
         {
-            keys.CREATE_NODES: [
-                ("Tick", "omni.graph.action.OnPlaybackTick"),
-                ("Context", "isaacsim.ros2.bridge.ROS2Context"),
-                ("SimTime", "isaacsim.core.nodes.IsaacReadSimulationTime"),
-                ("PublishClock", "isaacsim.ros2.bridge.ROS2PublishClock"),
-                ("SubscribeTwist", "isaacsim.ros2.bridge.ROS2SubscribeTwist"),
-                ("WheelScript", "omni.graph.scriptnode.ScriptNode"),
-                ("Articulation", "isaacsim.core.nodes.IsaacArticulationController"),
-                ("ComputeOdom", "isaacsim.core.nodes.IsaacComputeOdometry"),
-                ("PublishOdom", "isaacsim.ros2.bridge.ROS2PublishOdometry"),
-                ("PublishJointState", "isaacsim.ros2.bridge.ROS2PublishJointState"),
-                ("PublishTF", "isaacsim.ros2.bridge.ROS2PublishTransformTree"),
-            ],
+            keys.CREATE_NODES: nodes,
             keys.CREATE_ATTRIBUTES: [
                 ("WheelScript.inputs:linVel", "double[3]"),
                 ("WheelScript.inputs:angVel", "double[3]"),
                 ("WheelScript.outputs:velCmd", "double[]"),
             ],
-            keys.SET_VALUES: [
-                ("SubscribeTwist.inputs:topicName", "cmd_vel"),
-                ("WheelScript.inputs:script", WHEEL_SCRIPT),
-                ("Articulation.inputs:robotPath", art_root),
-                ("Articulation.inputs:jointNames", WHEEL_JOINTS),
-                ("ComputeOdom.inputs:chassisPrim", [art_root]),
-                ("PublishOdom.inputs:topicName", "odom"),
-                ("PublishOdom.inputs:odomFrameId", "odom"),
-                ("PublishOdom.inputs:chassisFrameId", "base_footprint"),
-                ("PublishJointState.inputs:topicName", "joint_states"),
-                ("PublishJointState.inputs:targetPrim", [art_root]),
-                ("PublishTF.inputs:topicName", "tf"),
-                ("PublishTF.inputs:targetPrims", [art_root]),
-            ],
-            keys.CONNECT: [
-                # clock
-                ("Tick.outputs:tick", "PublishClock.inputs:execIn"),
-                ("Context.outputs:context", "PublishClock.inputs:context"),
-                ("SimTime.outputs:simulationTime", "PublishClock.inputs:timeStamp"),
-                # cmd_vel -> kinematics -> wheels
-                ("Tick.outputs:tick", "SubscribeTwist.inputs:execIn"),
-                ("Context.outputs:context", "SubscribeTwist.inputs:context"),
-                ("SubscribeTwist.outputs:execOut", "WheelScript.inputs:execIn"),
-                ("SubscribeTwist.outputs:linearVelocity", "WheelScript.inputs:linVel"),
-                ("SubscribeTwist.outputs:angularVelocity", "WheelScript.inputs:angVel"),
-                ("WheelScript.outputs:execOut", "Articulation.inputs:execIn"),
-                ("WheelScript.outputs:velCmd", "Articulation.inputs:velocityCommand"),
-                # odom
-                ("Tick.outputs:tick", "ComputeOdom.inputs:execIn"),
-                ("ComputeOdom.outputs:execOut", "PublishOdom.inputs:execIn"),
-                ("Context.outputs:context", "PublishOdom.inputs:context"),
-                ("SimTime.outputs:simulationTime", "PublishOdom.inputs:timeStamp"),
-                ("ComputeOdom.outputs:position", "PublishOdom.inputs:position"),
-                ("ComputeOdom.outputs:orientation", "PublishOdom.inputs:orientation"),
-                ("ComputeOdom.outputs:linearVelocity", "PublishOdom.inputs:linearVelocity"),
-                ("ComputeOdom.outputs:angularVelocity", "PublishOdom.inputs:angularVelocity"),
-                # joint states + tf
-                ("Tick.outputs:tick", "PublishJointState.inputs:execIn"),
-                ("Context.outputs:context", "PublishJointState.inputs:context"),
-                ("SimTime.outputs:simulationTime", "PublishJointState.inputs:timeStamp"),
-                ("Tick.outputs:tick", "PublishTF.inputs:execIn"),
-                ("Context.outputs:context", "PublishTF.inputs:context"),
-                ("SimTime.outputs:simulationTime", "PublishTF.inputs:timeStamp"),
-            ],
+            keys.SET_VALUES: values,
+            keys.CONNECT: connect,
         },
     )
 
@@ -286,8 +423,9 @@ def main() -> int:
     world = build_scene()
     stage = omni.usd.get_context().get_stage()
     art_root = articulation_root(stage)
-    print(f"[bringup] articulation root: {art_root}")
-    build_ros2_graph(art_root)
+    tf_root = _find_prim(stage, "base_footprint") or art_root
+    print(f"[bringup] articulation root: {art_root}; tf root: {tf_root}")
+    build_ros2_graph(art_root, tf_root)
     print("[bringup] ROS2 action graph built at", GRAPH_PATH)
 
     world.reset()
@@ -297,8 +435,11 @@ def main() -> int:
     if not args.test:
         print("[bringup] running. Drive with: ros2 run teleop_twist_keyboard "
               "teleop_twist_keyboard")
+        # Always render when sensors are on (cameras/lidar publish from the render
+        # pipeline) even in --headless; otherwise render only for the GUI.
+        render = SENSORS or not args.headless
         while simulation_app.is_running():
-            world.step(render=not args.headless)
+            world.step(render=render)
         return 0
 
     # --test: command the wheels directly through the articulation (no ROS needed)

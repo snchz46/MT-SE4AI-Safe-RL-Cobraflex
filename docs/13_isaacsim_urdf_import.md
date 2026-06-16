@@ -208,9 +208,35 @@ differential drive + passive casters.
   `ros2 topic info /cmd_vel` → **Subscription count: 1** (Isaac subscribes), and the
   bridge loads the system `rclpy` ("system rclpy loaded"). So a `teleop_twist_keyboard`
   publisher reaches the robot.
-- Not yet wired in the script: IMU, lidar and the two cameras (sensors are added
-  in-engine in Isaac, not via the URDF). Add the helper nodes from the table above
-  when track-E perception needs them. Two deprecation warnings
-  (`ROS2PublishTransformTree` targetPrims / `ROS2PublishJointState` targetPrim) are
-  non-fatal; switch to the `IsaacComputeTransformTree` / `IsaacReadJointState`
-  feeders to silence them.
+- Two deprecation warnings (`ROS2PublishTransformTree` targetPrims /
+  `ROS2PublishJointState` targetPrim) are non-fatal; switch to the
+  `IsaacComputeTransformTree` / `IsaacReadJointState` feeders to silence them.
+
+### Sensors (lidar + two cameras)
+
+Isaac sensors are created **in-engine** (not in the URDF) and published over the
+bridge with helper OG nodes. `add_sensors()` mirrors the Gazebo `<sensor>` blocks,
+on the same ROS2 topics + frame ids so existing perception nodes (e.g.
+`lane_keeper_node`) consume them unchanged:
+
+| Gazebo sensor | link | ROS2 topic(s) | Isaac graph |
+| --- | --- | --- | --- |
+| ZED Cam (640×480, hfov 80°) | `camera_link_optical` | `camera/image_raw` + `camera/camera_info` | `IsaacCreateRenderProduct` → `ROS2CameraHelper` (rgb) + `ROS2CameraInfoHelper` |
+| Lane Cam (640×360, hfov 90°) | `camera_link_optical_lane` | `camera/image_raw_lane` + `camera/camera_info_lane` | same, second graph |
+| RPLiDAR (360°, 2D) | `lidar_link` | `scan` | `IsaacSensorCreateRtxLidar` → `IsaacCreateRenderProduct` → `ROS2RtxLidarHelper` (laser_scan) |
+
+A USD `Camera` is created under each ROS optical frame with a 180°-about-X offset
+(USD looks down −Z, ROS optical is +Z forward) and focal length set from the
+Gazebo hfov, so `camera_info` intrinsics match (verified fx≈381 px for the ZED cam,
+320 px for the lane cam). The cameras/lidar render off-screen, so the run loop
+renders every frame (even `--headless`); they are skipped in the physics-only
+`--test`/`--turn` paths. Toggle with `BRINGUP_SENSORS=0`.
+
+**Verified** (sourced host terminal vs `--headless`): `ros2 topic list` shows
+`/scan /camera/image_raw /camera/camera_info /camera/image_raw_lane
+/camera/camera_info_lane`; `/camera/image_raw_lane` echoes height 360 × width 640.
+
+The lidar uses the stock `Example_Rotary_2D` config (360° 2D, but near-range 1 m /
+30 Hz — not the RPLiDAR's 0.015–8 m / 10 Hz). For a faithful scan write a custom
+lidar config JSON and pass it via `LIDAR_CONFIG=<name_or_path>`. IMU is still
+unwired (add `ROS2PublishImu` on `imu_link` if needed).

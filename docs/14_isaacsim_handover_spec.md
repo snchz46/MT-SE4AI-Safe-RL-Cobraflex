@@ -1,9 +1,5 @@
 # 14 — Isaac Sim Environment: RL Training Requirements
 
-Serve the same ROS2 interface the RL stack consumes from Gazebo. Only existing
-asset: [`cobraflex_isaac.urdf`](../src/cobraflex/urdf/cobraflex_isaac.urdf).
-Acceptance: §6.
-
 ## 1. ROS2 interface
 
 Sim time on every message; publish `/clock`; consumers run `use_sim_time:=true`.

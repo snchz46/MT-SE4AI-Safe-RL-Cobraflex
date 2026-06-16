@@ -81,7 +81,7 @@ Links and frames can be found in [`cobraflex_isaac.urdf`](../src/cobraflex/urdf/
 
 ### 2.4 Sensor suite
 
-Only the Lane Cam is on the RL path; the rest are optional (not required for §6).
+Only the Lane Cam is on the RL path; the rest are optional.
 
 | Sensor | Frame | Topic(s) | Resolution / FOV / range | Rate | Noise | RL |
 | --- | --- | --- | --- | --- | --- | --- |

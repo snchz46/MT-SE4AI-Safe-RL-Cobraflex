@@ -55,6 +55,10 @@ setup(
             os.path.join("share", package_name, "materials", "road_assets", "road_tiles"),
             glob("materials/road_assets/road_tiles/*.png"),
         ),
+        (
+            os.path.join("share", package_name, "materials", "road_assets", "tracks"),
+            glob("materials/road_assets/tracks/*.png"),
+        ),
     ],
     install_requires=[
         "setuptools",

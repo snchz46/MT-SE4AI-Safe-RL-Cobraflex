@@ -97,8 +97,39 @@ and publishes them on the Gazebo topics (`camera/image_raw`(+`_lane`) + camera_i
 (`Example_Rotary_2D`). Sensors render off-screen so the run loop renders each frame
 (skipped in `--test`/`--turn`; `BRINGUP_SENSORS=0` to disable). **Verified**:
 `ros2 topic list` shows all five sensor topics; `/camera/image_raw_lane` echoes
-640×360. Lidar near-range/rate ≠ RPLiDAR (stock config) — custom JSON via
-`LIDAR_CONFIG` for fidelity; IMU still unwired. See docs/13 §"Sensors".
+640×360. Lidar uses the shipped SLAMTEC **`RPLIDAR_S2E`** profile (near 0.05 m,
+10 Hz, 360° 2D) — the initial `Example_Rotary_2D` only detected from 1 m. Override
+via `LIDAR_CONFIG`. See docs/13 §"Sensors". (RTX lidar /scan only streams with the
+GUI viewport rendering — not in `--headless` probes.)
+
+**Complex track:** `scripts/generate_complex_track.py` builds a closed
+Catmull-Rom circuit (both turn handednesses, radii ~0.4–5 m) as a top-down road
+texture matching the Gazebo road look (black asphalt, 1 cm white solid edges,
+10/10 cm dashed centre, 0.52 m wide) + a `_centerline.yaml` (cage/perception schema)
++ `_meta.yaml`. The bring-up `add_track()` loads it as a textured ground quad
+(`TRACK=complex_a`, default) and spawns the robot at the start line; `--shot <png>`
+renders a headless top-down check. **Verified**: texture binds + renders in Isaac
+(green off-road, dark asphalt, white markings). See docs/13 §"Track".
+`scripts/track_to_gazebo_world.py` also emits a Gazebo `.world`
+(`src/cobraflex/worlds/lane_following_complex_a.world`, one textured box reusing the
+oval-world plugin/ground/sun template + box-UV convention) to test the camera-CV PD
+lane keeper on the complex curves. PD is kinematically capable (min track radius
+0.40 m > PD min 0.22 m at v=0.20, ω_max=0.90).
+
+**IMU + ground-truth odometry:** `imu_link` now carries an `IsaacImuSensor`
+(`IMU.create`) → `IsaacReadIMU` → `ROS2PublishImu` on `/imu`; and a second
+`ROS2PublishOdometry` off the same (truth-reading) `IsaacComputeOdometry` publishes
+`/odom_truth` — mirroring the Gazebo OdometryPublisher RL training used. **Verified**
+(rclpy sensor-QoS): `/imu` lin-acc.z ≈ 9.81 at rest, `/odom_truth` reports pose.
+
+**RViz (Gazebo-style):** Isaac's `ROS2PublishTransformTree` is now **off by default**
+(`BRINGUP_ROBOT_TF=1` to re-enable) — it rejects the massless `base_footprint` and
+skips the empty `*_optical` frames (the image `frame_id`s), giving a broken tree.
+Instead `robot_state_publisher` owns the robot TF (URDF + Isaac `/joint_states`,
+incl. `base_footprint` + optical frames) and Isaac publishes only
+`odom → base_footprint`. `/clock` verified monotonic (single publisher, 60 Hz).
+RViz works exactly as with Gazebo: rsp + rviz + `use_sim_time:=true`, Fixed Frame
+`odom`. See docs/13 §"RViz".
 
 ---
 

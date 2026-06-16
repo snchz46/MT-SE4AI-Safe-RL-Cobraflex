@@ -117,13 +117,13 @@ node works unchanged.
 | `robot.gazebo` element | Topic | Isaac OmniGraph node(s) |
 | --- | --- | --- |
 | DiffDrive plugin | sub `cmd_vel` | `ROS2SubscribeTwist` → ScriptNode (diff-drive kinematics) → `IsaacArticulationController` driving the 4 wheel joints |
-| OdometryPublisher | pub `odom` | `IsaacComputeOdometry` → `ROS2PublishOdometry` |
-| (TF) | pub `tf` | `ROS2PublishTransformTree` |
+| OdometryPublisher | pub `odom` (encoder), `odom_truth` (ground truth) + `odom→base_footprint` TF | `IsaacComputeOdometry` → `ROS2PublishOdometry` ×2 + `ROS2PublishRawTransformTree` |
+| (TF) | pub `tf` | `robot_state_publisher` (URDF + `/joint_states`); Isaac `ROS2PublishTransformTree` off by default |
 | JointStatePublisher | pub `joint_states` | `ROS2PublishJointState` |
 | (sim time) | pub `clock` | `IsaacReadSimulationTime` → `ROS2PublishClock` |
-| IMU sensor | pub `imu` | IMU prim + `ROS2PublishImu` *(not wired in the bring-up script yet)* |
-| gpu_lidar | pub `scan` | RTX/PhysX lidar + `ROS2RtxLidarHelper` / `ROS2PublishLaserScan` *(not wired yet)* |
-| camera / lane camera | pub `camera/image_raw[_lane]` | `Camera` prim + `ROS2CameraHelper` *(not wired yet)* |
+| IMU sensor | pub `imu` | `IsaacImuSensor` prim → `IsaacReadIMU` → `ROS2PublishImu` |
+| gpu_lidar | pub `scan` | RTX lidar (`RPLIDAR_S2E`) + `IsaacCreateRenderProduct` → `ROS2RtxLidarHelper` |
+| camera / lane camera | pub `camera/image_raw[_lane]` (+ `camera_info`) | `Camera` prim + `ROS2CameraHelper` + `ROS2CameraInfoHelper` |
 
 The drive train is the only non-trivial mapping: the Gazebo DiffDrive drove
 `left = front_left+rear_left`, `right = front_right+rear_right`. A ScriptNode runs
@@ -224,6 +224,11 @@ on the same ROS2 topics + frame ids so existing perception nodes (e.g.
 | ZED Cam (640×480, hfov 80°) | `camera_link_optical` | `camera/image_raw` + `camera/camera_info` | `IsaacCreateRenderProduct` → `ROS2CameraHelper` (rgb) + `ROS2CameraInfoHelper` |
 | Lane Cam (640×360, hfov 90°) | `camera_link_optical_lane` | `camera/image_raw_lane` + `camera/camera_info_lane` | same, second graph |
 | RPLiDAR (360°, 2D) | `lidar_link` | `scan` | `IsaacSensorCreateRtxLidar` → `IsaacCreateRenderProduct` → `ROS2RtxLidarHelper` (laser_scan) |
+| IMU (200 Hz) | `imu_link` | `imu` | `IsaacImuSensor` prim (`IMU.create`) → `IsaacReadIMU` → `ROS2PublishImu` |
+
+Plus ground-truth odometry on **`/odom_truth`** (a second `ROS2PublishOdometry` off
+the same `IsaacComputeOdometry`, which already reads the true sim pose) mirroring the
+Gazebo OdometryPublisher that RL training consumed.
 
 A USD `Camera` is created under each ROS optical frame with a 180°-about-X offset
 (USD looks down −Z, ROS optical is +Z forward) and focal length set from the
@@ -236,7 +241,95 @@ renders every frame (even `--headless`); they are skipped in the physics-only
 `/scan /camera/image_raw /camera/camera_info /camera/image_raw_lane
 /camera/camera_info_lane`; `/camera/image_raw_lane` echoes height 360 × width 640.
 
-The lidar uses the stock `Example_Rotary_2D` config (360° 2D, but near-range 1 m /
-30 Hz — not the RPLiDAR's 0.015–8 m / 10 Hz). For a faithful scan write a custom
-lidar config JSON and pass it via `LIDAR_CONFIG=<name_or_path>`. IMU is still
-unwired (add `ROS2PublishImu` on `imu_link` if needed).
+The lidar uses the shipped **`RPLIDAR_S2E`** config (SLAMTEC, the RPLiDAR maker;
+already on Isaac's default profile search path): 360° 2D rotary, **near-range
+0.05 m, 10 Hz** — close-range like the Gazebo RPLiDAR (`Example_Rotary_2D`, the
+first choice, only detected from 1 m). Override with `LIDAR_CONFIG=<name>` (any
+profile under `app.sensors.nv.lidar.profileBaseFolder`; a *custom* JSON must sit in
+one of those default folders, since the Python create-command's config list is
+built at extension load and ignores folders added at runtime).
+
+**Verified** IMU + ground-truth odometry (`--headless`, rclpy sensor-QoS subscribers):
+`/imu` reports `linear_acceleration.z ≈ 9.81` (gravity, at rest) and zero angular
+velocity; `/odom_truth` reports the chassis pose. Both on the Gazebo topic names.
+
+### RViz (same as Gazebo)
+
+RViz is simulator-agnostic — it just reads ROS2 topics, so the **same workflow as
+Gazebo** applies. The bring-up publishes `/scan`, `/camera/image_raw[_lane]`,
+`/odom`, `/joint_states` and `/clock` (verified monotonic, single publisher, 60 Hz).
+
+TF ownership mirrors the Gazebo stack: **`robot_state_publisher`** publishes the
+robot tree (it reads the URDF, so it includes `base_footprint` and the empty
+`*_optical` frames — which the image `frame_id`s reference), driven by Isaac's
+`/joint_states`; Isaac publishes only `odom → base_footprint`. Isaac's own
+`ROS2PublishTransformTree` is **off by default** (`BRINGUP_ROBOT_TF=1` to enable a
+partial standalone tree) because it rejects the massless `base_footprint` and skips
+the `*_optical` frames, giving a broken tree.
+
+Run it (each terminal sourced, **`use_sim_time:=true`** everywhere because Isaac
+drives `/clock`):
+
+```bash
+# 1) Isaac bring-up (publishes odom, joint_states, sensors, clock)
+~/isaacsim/python.sh tools/isaac_ros2_bringup.py
+
+# 2) robot_state_publisher = robot TF tree + RobotModel (/robot_description)
+ros2 launch cobraflex cobraflex_description.launch.xml   # your existing launch, add use_sim_time
+#   or directly:
+ros2 run robot_state_publisher robot_state_publisher --ros-args -p use_sim_time:=true \
+    -p robot_description:="$(xacro src/cobraflex/urdf/my_robot_gazebo_mesh.urdf)"
+
+# 3) RViz with your existing config
+ros2 run rviz2 rviz2 -d src/cobraflex/rviz/<your_config>.rviz --ros-args -p use_sim_time:=true
+```
+
+In RViz set **Fixed Frame = `odom`** and add LaserScan (`/scan`), Image
+(`/camera/image_raw_lane`), TF and Odometry displays — exactly as before. Use the
+xacro (not `cobraflex_isaac.urdf`) for `robot_description` so the RobotModel mesh
+paths (`package://`/absolute) resolve; the flat URDF's `../meshes` paths won't.
+
+> A burst of `robot_state_publisher: Moved backwards in time` warnings at startup is
+> the sim-clock settling as Isaac begins playing — benign; TF resolves once running.
+
+### Track (lane-following circuit)
+
+The Gazebo lane worlds (`src/cobraflex/worlds/lane_following_oval_*`) were tile-based
+ovals. For Isaac, `scripts/generate_complex_track.py` builds a **complex closed
+circuit** as a single top-down road texture, so the camera sees the same road look
+the perception was trained on (black asphalt, 1 cm white solid edges, 10/10 cm dashed
+white centreline, 0.52 m road width — mirrors `road_tiles/make_road_tiles.py`).
+
+The centreline is a closed Catmull-Rom spline through hand-placed waypoints (the
+`TRACKS` presets), giving curves of **both handedness** and a range of radii (tight
+~0.4 m + open ~5 m) so an agent can't overfit one turn. The texture is rendered at
+500 px/m with 2× supersampling (LANCZOS downsample) so lane lines aren't jagged.
+Outputs (under `experiments/sim/tracks/<name>/`): `<name>.png` (texture),
+`<name>_centerline.yaml` (cage / lane_perception schema), `<name>_meta.yaml`
+(size/centre/start-pose for placement). Presets:
+
+- `complex_a` — kidney loop with a bottom right-hand S (min radius 0.40 m).
+- `complex_b` — a ~2.8 m **pure straight** along the bottom + a tight, scalloped
+  technical run of closed left/right curves on the opposite side (min radius 0.26 m).
+  Built **single-lane** (`--lanes 1`: two edges, no centre line, 0.30 m wide) so the
+  camera-CV PD lane keeper has no adjacent lane to confuse on the tight curves; the
+  two-lane confusion (centre + opposite-lane markings) made the PD pick the wrong
+  pair and stop. `--lanes 2` (default) keeps the two-lane road.
+- `complex_c` — top sweep + right-hander + a gentle bottom chicane (0.54 m).
+
+```bash
+python scripts/generate_complex_track.py --name all   # build all presets
+python scripts/track_to_gazebo_world.py --name complex_b   # + a Gazebo .world
+```
+
+The bring-up loads it as a textured ground quad (visual only; the GroundPlane keeps
+physics) and spawns the robot at the start line:
+
+```bash
+TRACK=complex_a ~/isaacsim/python.sh tools/isaac_ros2_bringup.py   # default
+TRACK= ...                                                          # empty ground
+~/isaacsim/python.sh tools/isaac_ros2_bringup.py --shot /tmp/t.png  # headless top-down render
+```
+
+**Verified**: `--shot` renders the textured circuit (green off-road, dark asphalt,
+white dashed centre + solid edges) — the material binds correctly in Isaac.

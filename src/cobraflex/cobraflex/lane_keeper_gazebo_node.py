@@ -180,33 +180,78 @@ class LaneKeeperGazeboNode(Node):
         if bool(self.get_parameter("publish_debug_image").value) or bool(
             self.get_parameter("show_debug_windows").value
         ):
-            debug_image = self._render_debug(frame_bgr, cmd)
+            try:
+                mask = self.controller.estimator.white_mask(frame_bgr)
+            except Exception:  # pragma: no cover - best effort
+                mask = np.zeros(frame_bgr.shape[:2], dtype=np.uint8)
+            overlay = self._render_overlay(frame_bgr, mask, cmd)
             if bool(self.get_parameter("publish_debug_image").value):
                 self.debug_pub.publish(
-                    self._build_image_msg(debug_image, msg.header.stamp, msg.header.frame_id)
+                    self._build_image_msg(overlay, msg.header.stamp, msg.header.frame_id)
                 )
             if bool(self.get_parameter("show_debug_windows").value):
-                cv2.imshow("Lane Keeper Gazebo (CV+PD)", debug_image)
-                cv2.waitKey(1)
+                self._show_windows(frame_bgr, mask, overlay)
 
-    def _render_debug(self, frame_bgr, cmd):
-        """White-mask overlay + the CV estimate / command, for the watch window."""
-        debug = frame_bgr.copy()
-        try:
-            mask = self.controller.estimator.white_mask(frame_bgr)
-            mask_bgr = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-            debug = cv2.addWeighted(debug, 0.6, mask_bgr, 0.4, 0.0)
-        except Exception:  # pragma: no cover - overlay is best-effort
-            pass
+    def _render_overlay(self, frame_bgr, mask, cmd):
+        """Camera frame + green mask tint + detected white-run points + error bars."""
+        overlay = frame_bgr.copy()
+        mask_bgr = np.zeros_like(overlay)
+        mask_bgr[mask > 0] = (0, 255, 0)                       # detections in green
+        overlay = cv2.addWeighted(overlay, 1.0, mask_bgr, 0.45, 0.0)
+        # The per-row white-run centres the estimator actually used (red dots).
+        for u, v in getattr(self.controller.estimator, "debug_candidates_px", []):
+            cv2.circle(overlay, (int(u), int(v)), 3, (0, 0, 255), -1)
         d = self.controller.dbg
         if d.get("ok"):
-            txt = (f"ey={d['ey']:+.3f} epsi={d['epsi']:+.3f} k={d['kappa']:+.2f} "
-                   f"cmd=({cmd.linear.x:.2f},{cmd.angular.z:+.2f})")
+            txt = (f"ey={d['ey']:+.3f}m  epsi={d['epsi']:+.3f}rad  "
+                   f"k={d['kappa']:+.2f}  cmd=(v{cmd.linear.x:.2f}, w{cmd.angular.z:+.2f})")
+            color = (0, 255, 255)
         else:
-            txt = f"NO LANE ({d.get('reason', '')})  cmd=({cmd.linear.x:.2f},{cmd.angular.z:+.2f})"
-        cv2.putText(debug, txt, (10, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.6,
-                    (0, 255, 255), 2)
-        return debug
+            txt = (f"NO LANE [{d.get('reason', '')}]  "
+                   f"cmd=(v{cmd.linear.x:.2f}, w{cmd.angular.z:+.2f})")
+            color = (0, 165, 255)
+        cv2.putText(overlay, txt, (8, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1,
+                    cv2.LINE_AA)
+        self._draw_error_bars(overlay, d, cmd)
+        return overlay
+
+    @staticmethod
+    def _draw_error_bars(img, d, cmd):
+        """Bottom panel of signed bars for the errors driving the command."""
+        h, w = img.shape[:2]
+        rows = [("ey (m)", d.get("ey", 0.0), 0.15),
+                ("epsi (rad)", d.get("epsi", 0.0), 0.5),
+                ("kappa (1/m)", d.get("kappa", 0.0), 3.0),
+                ("cmd w", cmd.angular.z, 1.0)]
+        panel_h = 16 * len(rows) + 8
+        y0 = h - panel_h
+        cv2.rectangle(img, (0, y0), (w, h), (40, 40, 40), -1)
+        cx = w // 2
+        cv2.line(img, (cx, y0), (cx, h), (90, 90, 90), 1)
+        for i, (label, val, full) in enumerate(rows):
+            yc = y0 + 12 + i * 16
+            frac = max(-1.0, min(1.0, val / full if full else 0.0))
+            x_end = int(cx + frac * (w // 2 - 70))
+            col = (0, 255, 255) if abs(frac) < 0.9 else (0, 0, 255)
+            cv2.rectangle(img, (cx, yc - 5), (x_end, yc + 4), col, -1)
+            cv2.putText(img, f"{label}:{val:+.3f}", (4, yc + 4),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.35, (220, 220, 220), 1, cv2.LINE_AA)
+
+    def _show_windows(self, frame_bgr, mask, overlay):
+        """Three OpenCV windows: raw camera, white-mask filter, detections+errors."""
+        try:
+            cv2.imshow("1 camera", frame_bgr)
+            cv2.imshow("2 white mask (filter)", mask)
+            cv2.imshow("3 detections + errors", overlay)
+            cv2.waitKey(1)
+        except cv2.error:
+            if not getattr(self, "_warned_no_gui", False):
+                self._warned_no_gui = True
+                self.get_logger().warning(
+                    "OpenCV has no GUI (headless build): cannot show debug windows. "
+                    "Install GUI OpenCV (pip install opencv-python, not "
+                    "opencv-python-headless) or view the published overlay with "
+                    "`ros2 run rqt_image_view rqt_image_view /lane/image_overlay`.")
 
 
 def main(args=None):

@@ -134,6 +134,10 @@ class CvLaneEstimator:
         # Running lane-width estimate for the single-line fallback, updated
         # whenever a full pair is found (EMA, lane_keeper precedent).
         self._lane_width_ema = float(self.config.lane_width_nominal_m)
+        # Debug-only: pixel (u, v) of the per-row white-run centres accepted as
+        # candidates this frame. Populated by _row_candidates, read by the lane
+        # keeper's debug overlay; does not affect the estimate.
+        self.debug_candidates_px: List[Tuple[int, int]] = []
 
     # ------------------------------------------------------------------ mask
     def white_mask(self, frame_bgr: np.ndarray) -> np.ndarray:
@@ -166,6 +170,7 @@ class CvLaneEstimator:
         cfg = self.config
         cam = self.camera
         points: List[Tuple[float, float, int]] = []
+        self.debug_candidates_px = []
         h, w = mask.shape[:2]
         for v in self._scan_rows:
             if not 0 <= v < h:
@@ -187,6 +192,7 @@ class CvLaneEstimator:
                 if abs(y) > cfg.max_abs_y_m:
                     continue
                 points.append((x, y, int(v)))
+                self.debug_candidates_px.append((int(round(u_center)), int(v)))
         return points
 
     # ------------------------------------------------------------- clustering

@@ -36,12 +36,15 @@ parser.add_argument("--test", action="store_true",
                     help="headless: build graph, play a few seconds, report, exit")
 parser.add_argument("--turn", action="store_true",
                     help="headless: command a differential turn and report yaw rate")
+parser.add_argument("--shot", default="",
+                    help="headless: render a top-down snapshot to this PNG and exit")
 args, _ = parser.parse_known_args()
 args.test = args.test or args.turn
 
 from isaacsim import SimulationApp  # noqa: E402
 
-simulation_app = SimulationApp({"headless": args.headless or args.test})
+simulation_app = SimulationApp(
+    {"headless": args.headless or args.test or bool(args.shot)})
 
 import omni.graph.core as og  # noqa: E402
 import omni.timeline  # noqa: E402
@@ -92,9 +95,14 @@ CAMERAS = [
     ("camera_link_optical_lane", 1.5707963, 640, 360,
      "camera/image_raw_lane", "camera/camera_info_lane"),
 ]
+IMU_LINK = "imu_link"
+IMU_TOPIC = "imu"
 LIDAR_LINK = "lidar_link"
 LIDAR_TOPIC = "scan"
-LIDAR_CONFIG = os.environ.get("LIDAR_CONFIG", "Example_Rotary_2D")  # 360 deg 2D scan
+# SLAMTEC RPLIDAR S2E config ships with Isaac (in the default profile search path):
+# 360 deg 2D rotary, nearRange 0.05 m, 10 Hz -- matches the Gazebo RPLiDAR's close
+# detection. The stock Example_Rotary_2D only detected from 1 m. Override via env.
+LIDAR_CONFIG = os.environ.get("LIDAR_CONFIG", "RPLIDAR_S2E")
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 URDF = os.path.join(REPO, "src/cobraflex/urdf/cobraflex_isaac.urdf")
@@ -188,6 +196,60 @@ def configure_wheel_material(stage, friction: float) -> int:
     return n
 
 
+def add_track(stage):
+    """Load a generated track (scripts/generate_complex_track.py) as a textured
+    ground quad. Returns its meta dict (start pose etc.) or None."""
+    import yaml
+    from pxr import Gf, Sdf, UsdShade
+
+    track = os.environ.get("TRACK", "complex_a")
+    if not track:
+        return None
+    tdir = os.path.join(REPO, "experiments/sim/tracks", track)
+    meta_path = os.path.join(tdir, f"{track}_meta.yaml")
+    if not os.path.exists(meta_path):
+        print(f"[bringup] no track '{track}' at {meta_path}, skipping")
+        return None
+    meta = yaml.safe_load(open(meta_path))
+    png = os.path.join(tdir, meta["texture"])
+    cx, cy = meta["center_m"]
+    w, h = meta["size_m"]
+    hw, hh = w / 2.0, h / 2.0
+
+    quad = UsdGeom.Mesh.Define(stage, "/World/Track")
+    quad.CreatePointsAttr([(-hw, -hh, 0), (hw, -hh, 0), (hw, hh, 0), (-hw, hh, 0)])
+    quad.CreateFaceVertexCountsAttr([4])
+    quad.CreateFaceVertexIndicesAttr([0, 1, 2, 3])
+    quad.CreateExtentAttr([(-hw, -hh, 0), (hw, hh, 0)])
+    st = UsdGeom.PrimvarsAPI(quad.GetPrim()).CreatePrimvar(
+        "st", Sdf.ValueTypeNames.TexCoord2fArray, UsdGeom.Tokens.varying)
+    st.Set([(0, 0), (1, 0), (1, 1), (0, 1)])
+    UsdGeom.Xformable(quad.GetPrim()).AddTranslateOp().Set(Gf.Vec3d(cx, cy, 0.0015))
+
+    mtl = UsdShade.Material.Define(stage, "/World/Track/Mat")
+    surf = UsdShade.Shader.Define(stage, "/World/Track/Mat/Surface")
+    surf.CreateIdAttr("UsdPreviewSurface")
+    surf.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.9)
+    surf.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(0.0)
+    streader = UsdShade.Shader.Define(stage, "/World/Track/Mat/St")
+    streader.CreateIdAttr("UsdPrimvarReader_float2")
+    streader.CreateInput("varname", Sdf.ValueTypeNames.Token).Set("st")
+    tex = UsdShade.Shader.Define(stage, "/World/Track/Mat/Tex")
+    tex.CreateIdAttr("UsdUVTexture")
+    tex.CreateInput("file", Sdf.ValueTypeNames.Asset).Set(png)
+    tex.CreateInput("sourceColorSpace", Sdf.ValueTypeNames.Token).Set("sRGB")
+    tex.CreateInput("st", Sdf.ValueTypeNames.Float2).ConnectToSource(
+        streader.ConnectableAPI(), "result")
+    surf.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).ConnectToSource(
+        tex.ConnectableAPI(), "rgb")
+    mtl.CreateSurfaceOutput().ConnectToSource(surf.ConnectableAPI(), "surface")
+    UsdShade.MaterialBindingAPI(quad.GetPrim()).Apply(quad.GetPrim())
+    UsdShade.MaterialBindingAPI(quad.GetPrim()).Bind(mtl)
+    print(f"[bringup] track '{track}' loaded ({w:.1f}x{h:.1f} m, perimeter "
+          f"in {meta['name']}_centerline.yaml)")
+    return meta
+
+
 def _find_prim(stage, name: str) -> str:
     for prim in stage.Traverse():
         if prim.GetName() == name:
@@ -278,8 +340,39 @@ def _add_lidar_graph(lidar_path, frame_id, topic):
     )
 
 
+def _add_imu_graph(imu_path, frame_id, topic):
+    keys = og.Controller.Keys
+    g = "/World/SensorGraphs/Imu"
+    og.Controller.edit(
+        {"graph_path": g, "evaluator_name": "execution"},
+        {
+            keys.CREATE_NODES: [
+                ("Tick", "omni.graph.action.OnPlaybackTick"),
+                ("Context", "isaacsim.ros2.bridge.ROS2Context"),
+                ("SimTime", "isaacsim.core.nodes.IsaacReadSimulationTime"),
+                ("ReadIMU", "isaacsim.sensors.physics.IsaacReadIMU"),
+                ("PublishImu", "isaacsim.ros2.bridge.ROS2PublishImu"),
+            ],
+            keys.SET_VALUES: [
+                ("ReadIMU.inputs:imuPrim", [imu_path]),
+                ("PublishImu.inputs:topicName", topic),
+                ("PublishImu.inputs:frameId", frame_id),
+            ],
+            keys.CONNECT: [
+                ("Tick.outputs:tick", "ReadIMU.inputs:execIn"),
+                ("ReadIMU.outputs:execOut", "PublishImu.inputs:execIn"),
+                ("ReadIMU.outputs:orientation", "PublishImu.inputs:orientation"),
+                ("ReadIMU.outputs:linAcc", "PublishImu.inputs:linearAcceleration"),
+                ("ReadIMU.outputs:angVel", "PublishImu.inputs:angularVelocity"),
+                ("Context.outputs:context", "PublishImu.inputs:context"),
+                ("SimTime.outputs:simulationTime", "PublishImu.inputs:timeStamp"),
+            ],
+        },
+    )
+
+
 def add_sensors(stage) -> None:
-    """Create the two cameras + RTX lidar and wire their ROS2 publish graphs."""
+    """Create the two cameras + RTX lidar + IMU and wire their ROS2 publish graphs."""
     for idx, (frame, hfov, w, h, img_topic, info_topic) in enumerate(CAMERAS):
         frame_path = _find_prim(stage, frame)
         if not frame_path:
@@ -298,6 +391,16 @@ def add_sensors(stage) -> None:
         print(f"[bringup] RTX lidar ({LIDAR_CONFIG}) on {LIDAR_LINK} -> /{LIDAR_TOPIC}")
     else:
         print(f"[bringup] WARN {LIDAR_LINK} not found, lidar skipped")
+
+    imu_parent = _find_prim(stage, IMU_LINK)
+    if imu_parent:
+        from isaacsim.sensors.experimental.physics import IMU
+        imu_path = imu_parent + "/Imu_Sensor"
+        IMU.create(imu_path, translations=[[0.0, 0.0, 0.0]])
+        _add_imu_graph(imu_path, IMU_LINK, IMU_TOPIC)
+        print(f"[bringup] IMU on {IMU_LINK} -> /{IMU_TOPIC}")
+    else:
+        print(f"[bringup] WARN {IMU_LINK} not found, IMU skipped")
 
 
 def build_scene():
@@ -325,11 +428,22 @@ def build_scene():
                            dynamic_friction=GROUND_FRICTION, restitution=0.0)
     GroundPlane("/World/groundPlane", z_position=0.0, physics_material=gmat)
 
+    # Track: textured ground quad (off by setting TRACK="").
+    track_meta = add_track(stage)
+
     usd_path = ensure_robot_usd()
     add_reference_to_stage(usd_path, ROBOT_PATH)
-    # Spawn slightly above the ground so wheels settle onto it.
+    # Spawn at the track start line (on the centreline), else at the origin.
     from isaacsim.core.prims import SingleXFormPrim
-    SingleXFormPrim(ROBOT_PATH, position=(0.0, 0.0, 0.06))
+    from pxr import Gf
+    if track_meta:
+        sx, sy = track_meta["start_xy"]
+        yaw = float(track_meta["start_yaw"])
+        quat = Gf.Rotation(Gf.Vec3d(0, 0, 1), math.degrees(yaw)).GetQuat()
+        SingleXFormPrim(ROBOT_PATH, position=(sx, sy, 0.06),
+                        orientation=(quat.GetReal(), *quat.GetImaginary()))
+    else:
+        SingleXFormPrim(ROBOT_PATH, position=(0.0, 0.0, 0.06))
     nd = configure_wheel_drives(stage)
     nm = configure_wheel_material(stage, WHEEL_FRICTION)
     print(f"[bringup] velocity drives on {nd} wheel joints; friction "
@@ -353,6 +467,10 @@ def build_ros2_graph(art_root: str, tf_root: str):
         ("Articulation", "isaacsim.core.nodes.IsaacArticulationController"),
         ("ComputeOdom", "isaacsim.core.nodes.IsaacComputeOdometry"),
         ("PublishOdom", "isaacsim.ros2.bridge.ROS2PublishOdometry"),
+        ("PublishOdomTF", "isaacsim.ros2.bridge.ROS2PublishRawTransformTree"),
+        # Ground-truth odometry: IsaacComputeOdometry reads the actual sim pose, so
+        # this mirrors the Gazebo OdometryPublisher /odom_truth that RL training uses.
+        ("PublishOdomTruth", "isaacsim.ros2.bridge.ROS2PublishOdometry"),
         ("PublishJointState", "isaacsim.ros2.bridge.ROS2PublishJointState"),
     ]
     values = [
@@ -364,6 +482,15 @@ def build_ros2_graph(art_root: str, tf_root: str):
         ("PublishOdom.inputs:topicName", "odom"),
         ("PublishOdom.inputs:odomFrameId", "odom"),
         ("PublishOdom.inputs:chassisFrameId", "base_footprint"),
+        # odom -> base_footprint TF (PublishOdometry only emits the /odom message,
+        # not the transform). robot_state_publisher then hangs base_footprint->links
+        # off this, so RViz can resolve odom -> any link.
+        ("PublishOdomTF.inputs:parentFrameId", "odom"),
+        ("PublishOdomTF.inputs:childFrameId", "base_footprint"),
+        ("PublishOdomTF.inputs:topicName", "tf"),
+        ("PublishOdomTruth.inputs:topicName", "odom_truth"),
+        ("PublishOdomTruth.inputs:odomFrameId", "odom"),
+        ("PublishOdomTruth.inputs:chassisFrameId", "base_footprint"),
         ("PublishJointState.inputs:topicName", "joint_states"),
         ("PublishJointState.inputs:targetPrim", [art_root]),
     ]
@@ -386,6 +513,18 @@ def build_ros2_graph(art_root: str, tf_root: str):
         ("ComputeOdom.outputs:orientation", "PublishOdom.inputs:orientation"),
         ("ComputeOdom.outputs:linearVelocity", "PublishOdom.inputs:linearVelocity"),
         ("ComputeOdom.outputs:angularVelocity", "PublishOdom.inputs:angularVelocity"),
+        ("ComputeOdom.outputs:execOut", "PublishOdomTruth.inputs:execIn"),
+        ("Context.outputs:context", "PublishOdomTruth.inputs:context"),
+        ("SimTime.outputs:simulationTime", "PublishOdomTruth.inputs:timeStamp"),
+        ("ComputeOdom.outputs:position", "PublishOdomTruth.inputs:position"),
+        ("ComputeOdom.outputs:orientation", "PublishOdomTruth.inputs:orientation"),
+        ("ComputeOdom.outputs:linearVelocity", "PublishOdomTruth.inputs:linearVelocity"),
+        ("ComputeOdom.outputs:angularVelocity", "PublishOdomTruth.inputs:angularVelocity"),
+        ("Tick.outputs:tick", "PublishOdomTF.inputs:execIn"),
+        ("Context.outputs:context", "PublishOdomTF.inputs:context"),
+        ("SimTime.outputs:simulationTime", "PublishOdomTF.inputs:timeStamp"),
+        ("ComputeOdom.outputs:position", "PublishOdomTF.inputs:translation"),
+        ("ComputeOdom.outputs:orientation", "PublishOdomTF.inputs:rotation"),
         ("Tick.outputs:tick", "PublishJointState.inputs:execIn"),
         ("Context.outputs:context", "PublishJointState.inputs:context"),
         ("SimTime.outputs:simulationTime", "PublishJointState.inputs:timeStamp"),
@@ -431,6 +570,29 @@ def main() -> int:
     world.reset()
     timeline = omni.timeline.get_timeline_interface()
     timeline.play()
+
+    if args.shot:
+        # Top-down snapshot to verify the track/scene visually (headless).
+        import numpy as np
+        import omni.replicator.core as rep
+        from PIL import Image
+        cx, cy = 0.0, 0.0
+        meta_path = os.path.join(REPO, "experiments/sim/tracks",
+                                 os.environ.get("TRACK", "complex_a"),
+                                 f"{os.environ.get('TRACK', 'complex_a')}_meta.yaml")
+        if os.path.exists(meta_path):
+            import yaml
+            cx, cy = yaml.safe_load(open(meta_path))["center_m"]
+        cam = rep.create.camera(position=(cx, cy, 13.0), look_at=(cx, cy, 0.0))
+        rp = rep.create.render_product(cam, (1600, 1000))
+        annot = rep.AnnotatorRegistry.get_annotator("rgb")
+        annot.attach(rp)
+        for _ in range(60):
+            world.step(render=True)
+        data = annot.get_data()
+        Image.fromarray(data[..., :3]).save(args.shot)
+        print(f"[bringup] snapshot saved to {args.shot}")
+        return 0
 
     if not args.test:
         print("[bringup] running. Drive with: ros2 run teleop_twist_keyboard "

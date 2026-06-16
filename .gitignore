@@ -99,6 +99,11 @@ local_config.yaml
 htmlcov/
 .pytest_cache/
 
+# Isaac Sim URDF->USD conversion output (build artifact, re-derivable via
+# tools/isaac_import_check.py / tools/build_isaac_urdf.py). The flat
+# cobraflex_isaac.urdf is tracked; the heavy USD package is not.
+src/cobraflex/urdf/isaac_usd/
+
 # Misc
 # Transient backups (e.g. check_traceability writes docs/08_..md.bak while it
 # patches the ODD-Spec, then removes it). Ignored so they never show in status.

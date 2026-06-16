@@ -197,10 +197,7 @@
     <joint name="camera_joint" type="fixed">
         <parent link="body_link"/>
         <child link="camera_link"/>
-        <!-- Track E (D-38/D-40) - pitched down 0.25 rad so the near road fills
-             the frame on the R=0.8 m oval curves; flat-mounted, the curve swept
-             out of the FOV (see experiments/sim/e_cam_visibility) -->
-        <origin xyz="${body_length/2} 0 0.02" rpy="0 0.25 0"/>
+        <origin xyz="${body_length/2} 0 0.02" rpy="0 0 0"/>
     </joint>
 
     <link name="camera_link_optical"></link>

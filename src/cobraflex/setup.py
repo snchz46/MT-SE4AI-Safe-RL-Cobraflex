@@ -27,12 +27,14 @@ setup(
             os.path.join("share", package_name, "launch"),
             glob("launch/*.launch.py"),
         ),
-        (os.path.join("share", package_name, "urdf"), glob("urdf/*")),
+
+        (os.path.join("share", package_name, "urdf"), [f for f in glob("urdf/*") if os.path.isfile(f)]),
         (os.path.join("share", package_name, "rviz"), glob("rviz/*")),
         (os.path.join("share", package_name, "config"), glob("config/*")),
         (os.path.join("share", package_name, "worlds"), glob("worlds/*.world") + glob("worlds/*.sdf")),
         (os.path.join("share", package_name, "worlds", "materials"), glob("worlds/materials/*")),
         (os.path.join("share", package_name, "meshes"), glob("meshes/*")),
+        
         (
             os.path.join("share", package_name, "materials", "road_assets", "road_textures"),
             glob("materials/road_assets/road_textures/*.png"),

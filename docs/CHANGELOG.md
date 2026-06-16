@@ -31,6 +31,67 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [16.06.2026] — Isaac Sim import + ROS2 bring-up of cobraflex (docs/13)
+
+**Document(s) affected:** `docs/13_isaacsim_urdf_import.md` (new), `tools/build_isaac_urdf.py` (new), `tools/isaac_import_check.py` (new), `tools/isaac_ros2_bringup.py` (new), `src/cobraflex/urdf/cobraflex_isaac.urdf` (new, generated)
+**Phase:** track 'E' tooling
+**Gate context:** none (auxiliary platform tooling)
+**Author:** Samuel Sanchez
+
+### Change
+
+Added a one-shot path to import the cobraflex robot into Isaac Sim. The sim robot
+(`my_robot_gazebo_mesh.urdf`) is a xacro depending on two external files
+(`inertial_macros.xacro`, kept; `robot.gazebo`, Gazebo plugins/sensors, dropped)
+plus `$(find …)` substitutions Isaac cannot resolve. `tools/build_isaac_urdf.py`
+expands the xacro, strips every `<gazebo>` block, rewrites mesh paths to relative
+`../meshes/*.stl`, and removes the schema-invalid empty visual/collision on
+`base_footprint`, emitting the flat `cobraflex_isaac.urdf`.
+
+### Rationale
+
+Isaac's URDF importer ignores Gazebo tags but rejects ROS substitutions, xacro
+macros and geometry-less visual/collision elements; a single self-contained URDF
+makes the import deterministic and ROS-independent.
+
+### Impact
+
+No effect on the Gazebo stack or any F-/E-track evidence — the source xacro is
+untouched and the F2 ROS2 launch still uses it. New artifact is re-derivable
+(do not hand-edit). The generated `isaac_usd/` USD package is build output.
+
+### Verification
+
+`check_urdf` parses the flat URDF (13 links, 12 joints). Headless import on
+Isaac Sim 6.0.0-rc.59 (`tools/isaac_import_check.py`) → **PASS**: articulation
+root present, all 13 link frames present (9 rigid bodies + 4 massless Xform
+frames), 8 mesh prims, 4 wheel joints as `RevoluteJoint`.
+
+### Follow-on — ROS2 bring-up (Gazebo → Isaac transition)
+
+`tools/isaac_ros2_bringup.py` reproduces the Gazebo topic contract via the Isaac
+ROS2 Bridge + an OmniGraph Action Graph, so the existing ROS2 nodes (lane
+perception, PD baseline, safety cage, vehicle control, `teleop_twist_keyboard`)
+run unchanged. Subscribes `/cmd_vel`; publishes `/clock`, `/odom`, `/tf`,
+`/joint_states`. Drive train: ScriptNode diff-drive kinematics → 4-wheel
+`IsaacArticulationController`; the script also adds stiffness-0/high-damping
+velocity drives to the wheel joints (PhysX needs them — the imported `continuous`
+joints have no gains). IMU/lidar/cameras are left for later (added in-engine, not
+via URDF). **Verified**: `--test` commands the wheels → base translates 3.33 m
+(`[RESULT] PASS`); live `ros2 topic info /cmd_vel` shows Subscription count 1 with
+`/clock /odom /tf /joint_states` advertised. See docs/13 §"Driving it over ROS2".
+
+**Physics calibration (skid-steer turning):** the 4-wheel skid-steer barely
+turned because PhysX grips laterally harder than Gazebo's ODE (the URDF's
+`mu1=mu2=0.8` were `<gazebo>` tags, dropped for Isaac). Fix: lower wheel+ground
+friction (`combine="min"`, bound to the wheel collider prims + explicit ground
+material). Measured yaw vs a 2.9 rad/s test command: f=0.5→0.09, 0.1→0.26,
+0.05→0.53 rad/s; default `WHEEL_FRICTION=GROUND_FRICTION=0.05` (env-tunable).
+Genuine trade-off (lower friction turns better, slips more on straights). See
+docs/13 §"Physics tuning".
+
+---
+
 ## [15.06.2026] — Track 'E' fair baseline: logical CV+PD camera controller vs RL agent (§8.9.5)
 
 **Document(s) affected:** `manuscript/chapters/chapter_08_experimental_evaluation.md` (new §8.9.5). Code: new `cobraflex_rl/cv_lane_controller.py` (shared), `cobraflex_rl/eval_cv_controller.py` + `eval_cv_controller.launch.py` (+ entry point), rewrite of `cobraflex/lane_keeper_gazebo_node.py` to use it (+ `cobraflex`→`cobraflex_rl` exec_depend). Evidence: `experiments/sim/runs/cv_ctrl_eval_2024_4k4{,_mon}`, `baseline_cv_vs_rl_nominal.json`.

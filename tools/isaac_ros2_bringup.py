@@ -58,6 +58,39 @@ from isaacsim.core.utils.extensions import enable_extension  # noqa: E402
 enable_extension("isaacsim.ros2.bridge")
 simulation_app.update()
 
+
+def _check_ros2_bridge() -> bool:
+    """True if the ROS2 bridge loaded (its OG node types are registered)."""
+    try:
+        og.Controller.edit(
+            {"graph_path": "/_ros2_probe", "evaluator_name": "execution"},
+            {og.Controller.Keys.CREATE_NODES: [
+                ("c", "isaacsim.ros2.bridge.ROS2Context")]},
+        )
+        st = omni.usd.get_context().get_stage()
+        if st and st.GetPrimAtPath("/_ros2_probe"):
+            st.RemovePrim("/_ros2_probe")
+        return True
+    except Exception:
+        return False
+
+
+if not _check_ros2_bridge():
+    print(
+        "\n[bringup] ERROR: the Isaac ROS2 bridge failed to load (its OG nodes are\n"
+        "  not registered), so the bring-up cannot build the ROS2 graph.\n"
+        "  Cause: ROS2 libraries not on the path (e.g. 'libament_index_cpp.so: cannot\n"
+        "  open shared object file' / 'ROS2 Bridge startup failed' above).\n\n"
+        "  Fix — before launching Isaac, EITHER source your system ROS2:\n"
+        "      source /opt/ros/jazzy/setup.bash\n"
+        "  OR use Isaac's bundled ROS2 libs:\n"
+        "      export ROS_DISTRO=jazzy RMW_IMPLEMENTATION=rmw_fastrtps_cpp\n"
+        "      export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:"
+        "<isaac_root>/exts/isaacsim.ros2.core/jazzy/lib\n"
+        "  then relaunch. (See the bridge error printed above for the exact path.)\n")
+    simulation_app.close()
+    raise SystemExit(2)
+
 import math  # noqa: E402
 
 import omni.kit.app  # noqa: E402

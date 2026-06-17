@@ -2,6 +2,9 @@
 
 Status: working (verified headless on Isaac Sim 6.0, RTX 5060 host, 2026-06-16).
 
+> Running it on a fresh machine? See **[docs/SETUP_ISAAC.md](SETUP_ISAAC.md)** for the
+> step-by-step recipe (deps, `download_meshes.sh`, **source ROS2 first**, smoke tests).
+
 ## Why a dedicated URDF
 
 The simulation robot used by the `cobraflex` package

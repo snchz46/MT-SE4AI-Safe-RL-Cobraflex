@@ -5,10 +5,20 @@
   engineered, traced and validated end-to-end, from hazard to logged evidence.</i>
 </p>
 
+<table>
+<tr>
+<td width="32%" valign="middle">
+<img src="manuscript/figures/fig_3_5_vehicle_cad.png" alt="CobraFlex 1:14 CAD render" width="100%">
+</td>
+<td width="68%" valign="middle">
+
+**CobraFlex 1:14** is a scale ground vehicle with a 360° lidar, a stereo camera and a differential / skid-steer drive (four fixed wheels, no steering angle — the sim's DiffDrive plugin is faithful to this). The thesis develops and validates the safety cage in Gazebo first, on an oval lane-following circuit, then transfers it to the physical car. The URDF/SDF, Gazebo worlds, road assets and perception/control nodes all live in [`src/cobraflex`](src/cobraflex/).
+
+</td>
+</tr>
+</table>
+
 <p align="center">
-  <img alt="Phase" src="https://img.shields.io/badge/phase-F4%20·%20Sim%20eval-1f6feb">
-  <img alt="Gate" src="https://img.shields.io/badge/gate%20G3-passed-2da44e">
-  <img alt="Track E" src="https://img.shields.io/badge/track%20E%20·%20camera-GE3%20closed-2da44e">
   <img alt="Methodology" src="https://img.shields.io/badge/methodology-SE4AI-8957e5">
   <img alt="ROS 2" src="https://img.shields.io/badge/ROS%202-Jazzy-22314E?logo=ros&logoColor=white">
   <img alt="Simulator" src="https://img.shields.io/badge/simulator-Gazebo-FB6C2C">
@@ -142,28 +152,6 @@ The work advances through gated phases. Each Gate is blocked until traceability 
 | F6 | Closure & defence | G6 | planned |
 
 > **Parallel track 'E' (end-to-end front camera):** merged into the trunk after **GE3 (training) closed** — camera-PPO peak checkpoint selected; **GE4 (eval campaign) in preparation**. The F-track results above are frozen as the ground-truth baseline (the control arm for "what does camera perception cost").
-
----
-
-## The platform
-
-<table>
-<tr>
-<td width="32%" valign="middle">
-<img src="manuscript/figures/fig_3_5_vehicle_cad.png" alt="CobraFlex 1:14 CAD render" width="100%">
-</td>
-<td width="68%" valign="middle">
-
-**CobraFlex 1:14** is a scale ground vehicle with a 360° lidar, a stereo camera and a differential / skid-steer drive (four fixed wheels, no steering angle — the sim's DiffDrive plugin is faithful to this). The thesis develops and validates the safety cage in Gazebo first, on an oval lane-following circuit, then transfers it to the physical car. The URDF/SDF, Gazebo worlds, road assets and perception/control nodes all live in [`src/cobraflex`](src/cobraflex/).
-
-</td>
-</tr>
-</table>
-
-<p align="center">
-  <img src="manuscript/figures/fig_6_1_oval_gazebo_env.png" alt="Oval lane-following circuit in Gazebo" width="500">
-  <br><sub>The oval lane-following circuit used for training and evaluation in Gazebo.</sub>
-</p>
 
 ---
 

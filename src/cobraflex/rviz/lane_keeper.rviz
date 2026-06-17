@@ -6,7 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
       Splitter Ratio: 0.5
-    Tree Height: 451
+    Tree Height: 742
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Views
@@ -193,27 +193,20 @@ Visualization Manager:
       Update Interval: 0
       Value: true
       Visual Enabled: true
-    - Class: rviz_default_plugins/Camera
-      Enabled: false
-      Far Plane Distance: 100
-      Image Rendering: background and overlay
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
       Name: Lane Camera
-      Overlay Alpha: 0.5
+      Normalize Range: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /camera/image_raw
-      Value: false
-      Visibility:
-        Grid: false
-        Lane Markers: true
-        Lane Overlay: true
-        RobotModel: true
-        TF: true
-        Value: false
-      Zoom Factor: 1
+        Value: /camera/image_raw_lane
+      Value: true
     - Class: rviz_default_plugins/Image
       Enabled: true
       Max Value: 1
@@ -228,17 +221,19 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /lane/image_overlay
       Value: true
-    - Class: rviz_default_plugins/MarkerArray
+    - Class: rviz_default_plugins/Image
       Enabled: true
-      Name: Lane Markers
-      Namespaces:
-        {}
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Lane Mask (filter)
+      Normalize Range: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /lane/markers
+        Value: /lane/mask
       Value: true
   Enabled: true
   Global Options:
@@ -287,9 +282,11 @@ Window Geometry:
   Hide Right Dock: false
   Lane Camera:
     collapsed: false
+  Lane Mask (filter):
+    collapsed: false
   Lane Overlay:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd00000001000000000000027c00000326fc0200000008fb0000001c004c0061006e006500200048006900730074006f006700720061006d000000003f000000a50000000000000000fb00000012004c0061006e00650020004d00610073006b000000003f000000840000000000000000fb000000100044006900730070006c006100790073010000003f00000203000000cc00fffffffb00000016004c0061006e0065002000430061006d00650072006100000001b9000000d80000001700fffffffb00000018004c0061006e00650020004f007600650072006c0061007901000002480000011d0000001700fffffffb0000001200530065006c0065006300740069006f006e00000002df000000860000005d00fffffffb0000000a005600690065007700730000000233000000e0000000a900fffffffb0000000800540069006d006500000002d6000000910000003c00ffffff000003be0000032600000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000002000000000000027c00000326fc0200000008fb0000001c004c0061006e006500200048006900730074006f006700720061006d000000003f000000a50000000000000000fb00000012004c0061006e00650020004d00610073006b000000003f000000840000000000000000fb00000016004c0061006e0065002000430061006d006500720061010000003f000001130000001700fffffffb00000018004c0061006e00650020004f007600650072006c0061007901000001580000010e0000001700fffffffb0000001200530065006c0065006300740069006f006e00000002df000000860000005d00fffffffb0000000a005600690065007700730000000233000000e0000000a900fffffffb0000000800540069006d006500000002d6000000910000003c00fffffffb00000024004c0061006e00650020004d00610073006b0020002800660069006c0074006500720029010000026c000000f90000001700ffffff000000010000015600000326fc0200000001fb000000100044006900730070006c006100790073010000003f00000326000000cc00ffffff000002620000032600000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:

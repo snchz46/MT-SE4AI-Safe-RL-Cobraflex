@@ -38,13 +38,17 @@ parser.add_argument("--turn", action="store_true",
                     help="headless: command a differential turn and report yaw rate")
 parser.add_argument("--shot", default="",
                     help="headless: render a top-down snapshot to this PNG and exit")
+parser.add_argument("--cam-shot", default="",
+                    help="headless: render the lane camera view (at CAM_POSE) to "
+                    "this PNG and exit")
 args, _ = parser.parse_known_args()
 args.test = args.test or args.turn
 
 from isaacsim import SimulationApp  # noqa: E402
 
 simulation_app = SimulationApp(
-    {"headless": args.headless or args.test or bool(args.shot)})
+    {"headless": args.headless or args.test or bool(args.shot)
+     or bool(args.cam_shot)})
 
 import omni.graph.core as og  # noqa: E402
 import omni.timeline  # noqa: E402
@@ -433,10 +437,17 @@ def build_scene():
 
     usd_path = ensure_robot_usd()
     add_reference_to_stage(usd_path, ROBOT_PATH)
-    # Spawn at the track start line (on the centreline), else at the origin.
+    # Spawn at CAM_POSE="x,y,yaw" if set (camera-visibility checks), else the track
+    # start line (on the centreline), else the origin.
     from isaacsim.core.prims import SingleXFormPrim
     from pxr import Gf
-    if track_meta:
+    cam_pose = os.environ.get("CAM_POSE", "")
+    if cam_pose:
+        sx, sy, yaw = (float(v) for v in cam_pose.split(","))
+        quat = Gf.Rotation(Gf.Vec3d(0, 0, 1), math.degrees(yaw)).GetQuat()
+        SingleXFormPrim(ROBOT_PATH, position=(sx, sy, 0.06),
+                        orientation=(quat.GetReal(), *quat.GetImaginary()))
+    elif track_meta:
         sx, sy = track_meta["start_xy"]
         yaw = float(track_meta["start_yaw"])
         quat = Gf.Rotation(Gf.Vec3d(0, 0, 1), math.degrees(yaw)).GetQuat()
@@ -592,6 +603,27 @@ def main() -> int:
         data = annot.get_data()
         Image.fromarray(data[..., :3]).save(args.shot)
         print(f"[bringup] snapshot saved to {args.shot}")
+        return 0
+
+    if args.cam_shot:
+        # Render exactly what the Lane Cam sees from the current robot pose, to
+        # check the lane stays in frame on tight curves.
+        import omni.replicator.core as rep
+        from PIL import Image
+        cam_path = _find_prim(stage, "camera_link_optical_lane")
+        cam_path = cam_path + "/Camera" if cam_path else None
+        if not cam_path or not stage.GetPrimAtPath(cam_path):
+            print("[bringup] lane camera prim not found")
+            return 1
+        rp = rep.create.render_product(cam_path, (640, 360))   # lane cam resolution
+        annot = rep.AnnotatorRegistry.get_annotator("rgb")
+        annot.attach(rp)
+        for _ in range(60):
+            world.step(render=True)
+        data = annot.get_data()
+        Image.fromarray(data[..., :3]).save(args.cam_shot)
+        print(f"[bringup] lane camera view saved to {args.cam_shot} "
+              f"(CAM_POSE={os.environ.get('CAM_POSE', '')})")
         return 0
 
     if not args.test:

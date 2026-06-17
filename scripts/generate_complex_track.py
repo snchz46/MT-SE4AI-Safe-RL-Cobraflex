@@ -52,11 +52,11 @@ TRACKS = {
     # (top) side is a tighter, more technical run with a chicane.
     "complex_b": [
         (-2.8, -1.5), (-1.4, -1.5), (0.0, -1.5), (1.4, -1.5), (2.8, -1.5),
-        (3.4, -0.5), (3.1, 0.9),                 # right end -> up (tight)
-        (2.2, 1.6), (1.2, 1.1),                  # tight right-top
-        (0.3, 1.6), (-0.6, 1.0),                 # tight chicane (up-down)
-        (-1.6, 1.6), (-2.6, 1.0),                # tight left-top
-        (-3.3, 0.0), (-3.2, -0.8),               # left end -> down to the straight
+        (3.4, -0.5), (3.1, 0.9),                 # right end -> up
+        (2.1, 1.55), (1.2, 1.3),                 # right-top (softened)
+        (0.3, 1.55), (-0.6, 1.3),                # chicane (shallower up-down)
+        (-1.6, 1.55), (-2.6, 1.15),              # left-top (softened)
+        (-3.3, 0.1), (-3.2, -0.8),               # left end -> down to the straight
     ],
     # Technical: full top sweep, right-hander down, gentle bottom chicane (S).
     "complex_c": [

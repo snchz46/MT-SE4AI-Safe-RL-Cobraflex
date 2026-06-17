@@ -117,7 +117,11 @@ class LaneKeeperGazeboNode(Node):
             Image, image_topic, self._image_callback, qos_profile_sensor_data
         )
         self.cmd_pub = self.create_publisher(Twist, "/cmd_vel", 10)
+        # Debug image topics (view in RViz Image displays instead of cv2 windows):
+        #   /lane/image_overlay — camera + detections + error bars
+        #   /lane/mask          — the white-mask filter (mono8)
         self.debug_pub = self.create_publisher(Image, "/lane/image_overlay", debug_qos)
+        self.mask_pub = self.create_publisher(Image, "/lane/mask", debug_qos)
 
         self.last_frame_time = 0.0
         self.last_warn_time = 0.0
@@ -128,7 +132,7 @@ class LaneKeeperGazeboNode(Node):
         )
 
     def _build_image_msg(self, image, stamp, frame_id):
-        """Wrap a numpy image as a sensor_msgs/Image."""
+        """Wrap a numpy image as a sensor_msgs/Image (bgr8 for 3-ch, mono8 for 2-D)."""
         if not image.flags["C_CONTIGUOUS"]:
             image = np.ascontiguousarray(image)
         msg = Image()
@@ -136,7 +140,7 @@ class LaneKeeperGazeboNode(Node):
         msg.header.frame_id = frame_id
         msg.height = int(image.shape[0])
         msg.width = int(image.shape[1])
-        msg.encoding = "bgr8"
+        msg.encoding = "mono8" if image.ndim == 2 else "bgr8"
         msg.is_bigendian = False
         msg.step = int(image.strides[0])
         msg.data = image.tobytes()
@@ -188,6 +192,9 @@ class LaneKeeperGazeboNode(Node):
             if bool(self.get_parameter("publish_debug_image").value):
                 self.debug_pub.publish(
                     self._build_image_msg(overlay, msg.header.stamp, msg.header.frame_id)
+                )
+                self.mask_pub.publish(
+                    self._build_image_msg(mask, msg.header.stamp, msg.header.frame_id)
                 )
             if bool(self.get_parameter("show_debug_windows").value):
                 self._show_windows(frame_bgr, mask, overlay)

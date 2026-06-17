@@ -59,12 +59,12 @@
     </model>
     <model name='track_complex_b'>
       <static>true</static>
-      <pose>0.0358 0.0136 0.0010  0 0 1.570796</pose>
+      <pose>0.0359 -0.0075 0.0010  0 0 1.570796</pose>
       <link name='link'>
         <visual name='visual'>
           <geometry>
             <box>
-              <size>4.6752 8.2477 0.0020</size>
+              <size>4.8530 8.4689 0.0020</size>
             </box>
           </geometry>
           <material>

@@ -111,18 +111,20 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "show_debug_windows",
-                default_value="true",
-                description="Show an OpenCV debug window.",
+                default_value="false",
+                description="Show native OpenCV debug windows (off by default; "
+                "use the /lane/* image topics in RViz instead).",
             ),
             DeclareLaunchArgument(
                 "publish_debug_image",
                 default_value="true",
-                description="Publish one debug image on /lane/image_overlay.",
+                description="Publish debug images: /lane/image_overlay "
+                "(detections+errors) and /lane/mask (filter).",
             ),
             DeclareLaunchArgument(
                 "world",
                 default_value=PathJoinSubstitution(
-                    [FindPackageShare("cobraflex"), "worlds", "lane_following_complex_b.world"]
+                    [FindPackageShare("cobraflex"), "worlds", "lane_following_oval_complex.world"]
                 ),
                 description="World file to load in Gazebo.",
             ),
@@ -133,12 +135,12 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "spawn_x",
-                default_value="-2.8", #oval: 0.0 a: -3.111 b: -2.8
+                default_value="-2.841", #oval: 0.0 a: -3.111 b: -2.8
                 description="Robot spawn X position.",
             ),
             DeclareLaunchArgument(
                 "spawn_y",
-                default_value="-1.5", #oval: -0.1225 a: 1.105 b: -1.5
+                default_value="-1.623", #oval: -0.1225 a: 1.105 b: -1.5
                 description="Robot spawn Y position.",
             ),
             DeclareLaunchArgument(

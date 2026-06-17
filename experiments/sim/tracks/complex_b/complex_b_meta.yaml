@@ -1,0 +1,20 @@
+name: complex_b
+texture: complex_b.png
+px_per_m: 500
+lanes: 2
+road_width: 0.52
+size_m:
+- 8.4689
+- 4.853
+center_m:
+- 0.0359
+- -0.0075
+world_bbox:
+- -4.1985
+- -2.434
+- 4.2704
+- 2.419
+start_xy:
+- -2.8
+- -1.5
+start_yaw: -0.3214

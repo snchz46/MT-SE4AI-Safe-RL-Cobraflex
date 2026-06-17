@@ -200,41 +200,130 @@ def configure_wheel_material(stage, friction: float) -> int:
     return n
 
 
-def add_track(stage):
-    """Load a generated track (scripts/generate_complex_track.py) as a textured
-    ground quad. Returns its meta dict (start pose etc.) or None."""
-    import yaml
+def _flat_material(stage, path, rgb):
     from pxr import Gf, Sdf, UsdShade
+    mtl = UsdShade.Material.Define(stage, path)
+    s = UsdShade.Shader.Define(stage, path + "/S")
+    s.CreateIdAttr("UsdPreviewSurface")
+    s.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(*rgb))
+    s.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.9)
+    s.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(0.0)
+    mtl.CreateSurfaceOutput().ConnectToSource(s.ConnectableAPI(), "surface")
+    return mtl
 
-    track = os.environ.get("TRACK", "complex_a")
-    if not track:
-        return None
-    tdir = os.path.join(REPO, "experiments/sim/tracks", track)
-    meta_path = os.path.join(tdir, f"{track}_meta.yaml")
-    if not os.path.exists(meta_path):
-        print(f"[bringup] no track '{track}' at {meta_path}, skipping")
-        return None
-    meta = yaml.safe_load(open(meta_path))
+
+def _bind(prim, mtl):
+    from pxr import UsdShade
+    UsdShade.MaterialBindingAPI(prim).Apply(prim)
+    UsdShade.MaterialBindingAPI(prim).Bind(mtl)
+
+
+def _ribbon_mesh(stage, path, inner, outer, z, mtl):
+    """Closed quad ribbon between two parallel polylines at height z."""
+    from pxr import UsdGeom
+    n = len(inner)
+    pts, counts, idx = [], [], []
+    for i in range(n):
+        pts.append((float(inner[i][0]), float(inner[i][1]), z))
+        pts.append((float(outer[i][0]), float(outer[i][1]), z))
+    for i in range(n):
+        a, b = 2 * i, 2 * i + 1
+        c, d = 2 * ((i + 1) % n) + 1, 2 * ((i + 1) % n)
+        idx += [a, b, c, d]
+        counts.append(4)
+    m = UsdGeom.Mesh.Define(stage, path)
+    m.CreatePointsAttr(pts)
+    m.CreateFaceVertexCountsAttr(counts)
+    m.CreateFaceVertexIndicesAttr(idx)
+    _bind(m.GetPrim(), mtl)
+    return m
+
+
+def _add_track_geometry(stage, meta, tdir):
+    """Build the road + lane lines as USD geometry (crisp at any zoom, no texture
+    aliasing) from the centreline. Better than a baked texture for Isaac."""
+    import numpy as np
+    import yaml
+    from pxr import UsdGeom
+
+    cl = yaml.safe_load(open(os.path.join(tdir, f"{meta['name']}_centerline.yaml")))
+    P = np.array(cl["centerline"]["points"], dtype=float)
+    rw = float(meta.get("road_width", 0.52))
+    two_lane = int(meta.get("lanes", 2)) == 2
+    lw = 0.01                                  # line width (m)
+
+    t = np.roll(P, -1, 0) - np.roll(P, 1, 0)
+    t /= (np.linalg.norm(t, axis=1, keepdims=True) + 1e-9)
+    nrm = np.stack([-t[:, 1], t[:, 0]], axis=1)
+    left = P + (rw / 2.0) * nrm
+    right = P - (rw / 2.0) * nrm
+
+    asphalt = _flat_material(stage, "/World/Track/MatAsphalt", (0.0, 0.0, 0.0))
+    white = _flat_material(stage, "/World/Track/MatLine", (0.9, 0.9, 0.9))
+    grass = _flat_material(stage, "/World/Track/MatGrass", (0.32, 0.42, 0.24))
+
+    # Off-road backdrop (one big quad just under the asphalt).
+    x0, y0, x1, y1 = meta["world_bbox"]
+    g = UsdGeom.Mesh.Define(stage, "/World/Track/Offroad")
+    g.CreatePointsAttr([(x0, y0, 0.0006), (x1, y0, 0.0006),
+                        (x1, y1, 0.0006), (x0, y1, 0.0006)])
+    g.CreateFaceVertexCountsAttr([4])
+    g.CreateFaceVertexIndicesAttr([0, 1, 2, 3])
+    _bind(g.GetPrim(), grass)
+
+    _ribbon_mesh(stage, "/World/Track/Asphalt", left, right, 0.0010, asphalt)
+    _ribbon_mesh(stage, "/World/Track/EdgeL",
+                 left + (lw / 2) * nrm, left - (lw / 2) * nrm, 0.0030, white)
+    _ribbon_mesh(stage, "/World/Track/EdgeR",
+                 right + (lw / 2) * nrm, right - (lw / 2) * nrm, 0.0030, white)
+
+    if two_lane:                               # dashed centre line, one mesh of quads
+        seg = np.linalg.norm(np.diff(np.vstack([P, P[:1]]), axis=0), axis=1)
+        s = np.concatenate([[0.0], np.cumsum(seg)])
+        dash, gap = 0.10, 0.10
+        pts, counts, idx, k = [], [], [], 0
+        pos = 0.0
+        while pos < s[-1]:
+            a0, a1 = pos, min(pos + dash, s[-1])
+            ia = int(np.searchsorted(s, a0)) % len(P)
+            ib = int(np.searchsorted(s, a1)) % len(P)
+            pa, pb, na = P[ia], P[ib], nrm[ia]
+            quad = [pa + (lw / 2) * na, pa - (lw / 2) * na,
+                    pb - (lw / 2) * na, pb + (lw / 2) * na]
+            for q in quad:
+                pts.append((float(q[0]), float(q[1]), 0.0030))
+            idx += [k, k + 1, k + 2, k + 3]
+            counts.append(4)
+            k += 4
+            pos += dash + gap
+        m = UsdGeom.Mesh.Define(stage, "/World/Track/Centre")
+        m.CreatePointsAttr(pts)
+        m.CreateFaceVertexCountsAttr(counts)
+        m.CreateFaceVertexIndicesAttr(idx)
+        _bind(m.GetPrim(), white)
+    print(f"[bringup] track '{meta['name']}' built as geometry "
+          f"({meta['size_m'][0]:.1f}x{meta['size_m'][1]:.1f} m, "
+          f"{'2-lane' if two_lane else '1-lane'})")
+
+
+def _add_track_texture(stage, meta, tdir):
+    from pxr import Gf, Sdf, UsdShade
     png = os.path.join(tdir, meta["texture"])
     cx, cy = meta["center_m"]
     w, h = meta["size_m"]
     hw, hh = w / 2.0, h / 2.0
-
     quad = UsdGeom.Mesh.Define(stage, "/World/Track")
     quad.CreatePointsAttr([(-hw, -hh, 0), (hw, -hh, 0), (hw, hh, 0), (-hw, hh, 0)])
     quad.CreateFaceVertexCountsAttr([4])
     quad.CreateFaceVertexIndicesAttr([0, 1, 2, 3])
-    quad.CreateExtentAttr([(-hw, -hh, 0), (hw, hh, 0)])
     st = UsdGeom.PrimvarsAPI(quad.GetPrim()).CreatePrimvar(
         "st", Sdf.ValueTypeNames.TexCoord2fArray, UsdGeom.Tokens.varying)
     st.Set([(0, 0), (1, 0), (1, 1), (0, 1)])
     UsdGeom.Xformable(quad.GetPrim()).AddTranslateOp().Set(Gf.Vec3d(cx, cy, 0.0015))
-
     mtl = UsdShade.Material.Define(stage, "/World/Track/Mat")
     surf = UsdShade.Shader.Define(stage, "/World/Track/Mat/Surface")
     surf.CreateIdAttr("UsdPreviewSurface")
     surf.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.9)
-    surf.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(0.0)
     streader = UsdShade.Shader.Define(stage, "/World/Track/Mat/St")
     streader.CreateIdAttr("UsdPrimvarReader_float2")
     streader.CreateInput("varname", Sdf.ValueTypeNames.Token).Set("st")
@@ -247,10 +336,30 @@ def add_track(stage):
     surf.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).ConnectToSource(
         tex.ConnectableAPI(), "rgb")
     mtl.CreateSurfaceOutput().ConnectToSource(surf.ConnectableAPI(), "surface")
-    UsdShade.MaterialBindingAPI(quad.GetPrim()).Apply(quad.GetPrim())
-    UsdShade.MaterialBindingAPI(quad.GetPrim()).Bind(mtl)
-    print(f"[bringup] track '{track}' loaded ({w:.1f}x{h:.1f} m, perimeter "
-          f"in {meta['name']}_centerline.yaml)")
+    _bind(quad.GetPrim(), mtl)
+    print(f"[bringup] track '{meta['name']}' loaded as texture "
+          f"({w:.1f}x{h:.1f} m)")
+
+
+def add_track(stage):
+    """Build a generated track (scripts/generate_complex_track.py). Geometry by
+    default (crisp vector lines); TRACK_MODE=texture for the baked PNG. Returns the
+    track meta dict (start pose etc.) or None."""
+    import yaml
+
+    track = os.environ.get("TRACK", "complex_a")
+    if not track:
+        return None
+    tdir = os.path.join(REPO, "experiments/sim/tracks", track)
+    meta_path = os.path.join(tdir, f"{track}_meta.yaml")
+    if not os.path.exists(meta_path):
+        print(f"[bringup] no track '{track}' at {meta_path}, skipping")
+        return None
+    meta = yaml.safe_load(open(meta_path))
+    if os.environ.get("TRACK_MODE", "geom") == "texture":
+        _add_track_texture(stage, meta, tdir)
+    else:
+        _add_track_geometry(stage, meta, tdir)
     return meta
 
 

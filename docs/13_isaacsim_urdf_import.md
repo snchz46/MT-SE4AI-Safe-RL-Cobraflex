@@ -331,5 +331,7 @@ TRACK= ...                                                          # empty grou
 ~/isaacsim/python.sh tools/isaac_ros2_bringup.py --shot /tmp/t.png  # headless top-down render
 ```
 
+The bring-up builds the track as **USD geometry by default** (`TRACK_MODE=geom`): asphalt ribbon + white edge/centre-line meshes from the centreline — crisp at any camera distance, no texture aliasing or resolution ceiling (the better choice for Isaac vs a baked PNG). `TRACK_MODE=texture` falls back to the PNG quad (what the Gazebo `.world` uses). Camera-visibility of any pose: `CAM_POSE=x,y,yaw ... --cam-shot out.png`.
+
 **Verified**: `--shot` renders the textured circuit (green off-road, dark asphalt,
 white dashed centre + solid edges) — the material binds correctly in Isaac.

@@ -26,12 +26,38 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     cobraflex_share = get_package_share_directory("cobraflex")
+    cobraflex_rl_share = get_package_share_directory("cobraflex_rl")
 
     args = [
         DeclareLaunchArgument(
             "world",
-            default_value=os.path.join(cobraflex_share, "worlds", "lane_following_oval.world"),
-            description="World file or short map name (see gazebo_mesh resolver).",
+            default_value=os.path.join(
+                cobraflex_share, "worlds", "lane_following_oval_complex.world"
+            ),
+            description="World file or short map name (default: complex_b circuit).",
+        ),
+        # The three must agree with `world` (see docs/11 §3.5, §9): reward target
+        # (right lane), off-road geometry (road centre), and the SDF world name the
+        # gz teleport services are namespaced by. Override all four together to
+        # evaluate on the oval.
+        DeclareLaunchArgument(
+            "centerline",
+            default_value=os.path.join(
+                cobraflex_rl_share, "config", "complex_b_right_lane_centerline.yaml"
+            ),
+            description="Reward/lane-target centerline YAML.",
+        ),
+        DeclareLaunchArgument(
+            "road_centerline",
+            default_value=os.path.join(
+                cobraflex_rl_share, "config", "complex_b_centerline.yaml"
+            ),
+            description="Road-centre centerline for off-road termination geometry.",
+        ),
+        DeclareLaunchArgument(
+            "world_name",
+            default_value="lane_following_complex_b",
+            description="SDF world name for gz teleport services; must match `world`.",
         ),
         DeclareLaunchArgument("gui", default_value="true", description="Gazebo GUI."),
         DeclareLaunchArgument("rviz", default_value="true", description="RViz."),
@@ -67,6 +93,9 @@ def generate_launch_description():
         executable="eval_cv_controller",
         output="screen",
         arguments=[
+            "--centerline-config", LaunchConfiguration("centerline"),
+            "--road-centerline-config", LaunchConfiguration("road_centerline"),
+            "--world-name", LaunchConfiguration("world_name"),
             "--scenario", LaunchConfiguration("scenario"),
             "--mode", LaunchConfiguration("mode"),
             "--rep", LaunchConfiguration("rep"),

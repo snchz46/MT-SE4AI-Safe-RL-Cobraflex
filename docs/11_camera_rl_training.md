@@ -3,10 +3,10 @@
 | Field | Value |
 | --- | --- |
 | Artifact | Track 'E' training implementation (the camera counterpart of `docs/09`) |
-| Version | **0.1** (2026-06-15 — first freeze, post-newcam 425k retrain §7.7.8) |
+| Version | **0.2** (2026-06-18 — complex_b training + self-approach off-road fix + RViz viz) |
 | Phase / Gate | F3 training infrastructure, reused by track 'E' (GE3 train, GE4 eval) |
 | Author | Samuel Sanchez |
-| Date | 2026-06-15 |
+| Date | 2026-06-18 |
 | Status | CONFIRMED — implemented in `cobraflex_rl/train_ppo.py` + the camera branch of `cobraflex_rl/gazebo_lane_env.py` |
 | Normative spec | Training Specification Ch.7 §7.2 (loop) + §7.7 (camera track). **This document is supporting rationale, not the normative source**: on any numeric discrepancy, §7.2/§7.7 prevails. |
 | Decisions cited | D-41 (end-to-end camera architecture), D-43 (cage reads its own CV estimator), D-34 (cage in the training loop / TS-01), D-36 (main seed 2024), D-32 (external drivers) |
@@ -184,10 +184,43 @@ The action space (`Box([-1,1]`, steering only), the fixed cruise speed
 (`fixed_speed = 0.20`), the in-process cage wiring (`_apply_cage`,
 `safe_action_to_cmd`, enforcement vs monitoring), the reward (`compute_reward`,
 `docs/10` — unchanged for the camera track, it scores the **ground-truth** state),
-the off-road/emergency termination logic, the random spawn perturbation, and the
-F4 scenario hooks (`reset(options=...)`) are byte-for-byte the F-track code. The
-camera branch only swaps *what the policy sees* and *where the cage's state comes
-from*.
+the emergency termination, the random spawn perturbation, and the F4 scenario
+hooks (`reset(options=...)`) are byte-for-byte the F-track code. The camera branch
+only swaps *what the policy sees* and *where the cage's state comes from*. The one
+piece that is **no longer** identical is the off-road termination geometry on
+self-approaching circuits — see §3.5.
+
+### 3.5 Off-road termination on self-approaching circuits (complex_b)
+
+The F-track oval terminates an episode on `abs(track_state.ey) > road_width/2`:
+the **perpendicular** cross-track error to the (stateful) nearest centerline
+segment. That is sound on a convex loop, but it **fails on a circuit that
+approaches itself** — the complex_b kidney/scalloped track, where two parts of
+the road pass within a road-width of each other. When the agent leaves its lane
+there (typically driving straight off a curve), the nearest centerline point can
+*leap to a different track section* and the cross-track error collapses, so the
+episode never terminates even as the vehicle crosses the painted edge. Verified
+in `policy/tests` and live: a global nearest-point search exhibits the same
+collapse, so it is geometric, not a tracking-radius artefact.
+
+The fix is **opt-in and gated** so the convex F-track oval is untouched:
+
+- **Off-road by road-centre distance.** When a *road-centre* centerline is
+  supplied (`--road-centerline-config`, env arg `road_centerline`), off-road is
+  judged by the **global** distance from the vehicle to that centerline vs
+  `road_width/2` (the painted edge) — `PolylineTracker.distance_to`, a stateless
+  full sweep immune to the fold-back. The reward centerline stays the **right
+  lane** (offset, `docs/09`); "left the road" is a property of the *road*, which
+  is centred on the road centre, so the two centerlines play different roles
+  (reward target vs containment edge). Verified: catches 28/28 straight-off
+  departures to the grass on complex_b, 0 false positives in-lane.
+- **Progress-bounded projection** (`PolylineTracker(max_advance_m=…)`, env flag
+  `progress_bounded_tracking`) is a complementary, weaker mitigation that caps how
+  far the projection's arc-length may advance per step to the real along-track
+  travel; left **off** now that the road-centre check supersedes it.
+
+Both default to legacy behaviour (no road centerline → perpendicular `ey`; flag
+off → unbounded projection), so F-track runs are byte-for-byte unchanged.
 
 ---
 
@@ -365,7 +398,7 @@ The training implementation above produced the current E-main checkpoint
 - **Run** `ppo_newcam_train_2024_750k` — seed 2024, `CnnPolicy`, the DR envelope
   above (`p_degrade = 0.5`, level 0.2–0.8), over the **dedicated Lane Cam**
   (IMX219-160 mirror, 640×360, HFOV ≈ 90°, mounted 5 cm lower at the body front;
-  `camera_geometry` h ≈ 0.077 m, pitch 0.25 rad — see `docs/12` §5).
+  `camera_geometry` h ≈ 0.077 m, pitch 0.30 rad — see `docs/12` §5).
 - **Learning curve:** `ep_rew_mean` peaks **≈ 335.6 at ≈ 425k** steps (above the
   old `cam` peak of 288.5), then degrades to ~256 by 750k — hence
   **checkpoint-on-peak** selection.
@@ -388,35 +421,67 @@ The training implementation above produced the current E-main checkpoint
 
 ## 9. How to run
 
+`train_lane.launch.py` now defaults to the **complex_b** circuit and wires the
+three things that must agree (world, reward centerline + road centre, and the SDF
+`world_name` the gz teleport services are namespaced by):
+
 ```bash
-# headless Gazebo + the train node (state-vector config by default, no --train-config):
-ros2 launch cobraflex_rl train_lane.launch.py gui:=false
-
-# Camera run: train_lane.launch.py does not forward --train-config (it always
-# runs the node bare → state config), so the camera invocation runs the train
-# node against an already-running Gazebo with the camera config explicitly:
-ros2 launch cobraflex gazebo_mesh.launch.py world:=lane_following_oval.world gui:=false  # sim + Lane Cam
+# Headless Gazebo (complex_b) + the train node, all wired by the launch defaults:
+#   world=lane_following_oval_complex.world, world_name=lane_following_complex_b,
+#   centerline=complex_b_right_lane_centerline.yaml (reward target),
+#   road_centerline=complex_b_centerline.yaml (off-road geometry, §3.5).
+# Note: the launch runs train_ppo bare → STATE config; for the CAMERA policy run
+# the node explicitly against an already-running Gazebo (two-step, as before):
+ros2 launch cobraflex gazebo_mesh.launch.py world:=lane_following_oval_complex gui:=false
+CFG=$(ros2 pkg prefix cobraflex_rl)/share/cobraflex_rl/config
 ros2 run cobraflex_rl train_ppo \
-  --train-config $(ros2 pkg prefix cobraflex_rl)/share/cobraflex_rl/config/train_ppo_camera.yaml \
-  --run-id ppo_newcam_train_2024_750k
+  --train-config        $CFG/train_ppo_camera.yaml \
+  --centerline-config   $CFG/complex_b_right_lane_centerline.yaml \
+  --road-centerline-config $CFG/complex_b_centerline.yaml \
+  --world-name lane_following_complex_b \
+  --run-id ppo_newcam_complex_b_2024
 
-# resume a checkpoint for more steps (Gazebo already up):
-ros2 run cobraflex_rl train_ppo --train-config <...>/train_ppo_camera.yaml \
-  --resume-from policy/checkpoints/cobraflex_ppo_lane_400000_steps.zip
+# Revert to the oval: world:=lane_following_oval, centerline/road-centerline:=
+#   oval_right_lane_centerline.yaml, --world-name lane_following_oval.
 ```
 
-> The exact camera-world launch wiring is host-side (Ubuntu+Jazzy) and not
-> reproduced verbatim here; the load-bearing fact is that **`train_ppo` selects
-> the camera path purely from `--train-config train_ppo_camera.yaml`** — the same
-> binary that trains the state-vector policy. The commands above are not claimed to
-> have been executed on this Windows host (no ROS2/Gazebo here, per CLAUDE.md).
+**Live RViz view (`viz: true` in `train_ppo_camera.yaml`).** The env can publish
+what the cage and agent see — off by default so headless campaigns pay nothing;
+see §9.1.
 
-Host constraint: this is the **Ubuntu 24.04 + ROS2 Jazzy** path (Gazebo + the
-camera bridge). The pure-Python pieces (`camera_pipeline`, `camera_geometry`,
-`visual_degradation`, `visual_domain_randomization`, `cv_lane_estimator`) are
-host-testable without ROS — `policy/tests/test_camera_pipeline.py`,
-`…/test_visual_domain_randomization.py`, `…/test_camera_geometry.py`,
-`…/test_cv_lane_estimator.py`.
+> Host: **Ubuntu 24.04 + ROS2 Jazzy**. The commands above **were executed on this
+> host** — a full 20k-step camera smoke run on complex_b completed clean
+> (`ep_rew_mean` 34→90, `ep_len_mean` 72→141, 0 errors), exercising the §3.5
+> off-road fix. Two operational notes: launch Gazebo **headless** (`gui:=false`)
+> and detach long-lived processes with `setsid` — closing the Gazebo GUI window
+> tears down the launch's bridge/`robot_state_publisher`, leaving an orphan
+> `gz sim -s` and starving the env's `/odom_truth` wait. The pure-Python pieces
+> (`camera_pipeline`, `camera_geometry`, `visual_degradation`,
+> `visual_domain_randomization`, `cv_lane_estimator`, `polyline_tracker`) are
+> host-testable without ROS (`policy/tests/`).
+
+### 9.1 RViz visualisation of the cage + agent (`cage_viz.py`)
+
+When `viz: true`, each control step the env publishes (via `CageViz`):
+
+- **`/cage/markers`** (`visualization_msgs/MarkerArray`) — the road-centre line,
+  the painted **road edges** (the §3.5 off-road boundary, centre ± road_width/2),
+  the reward (right-lane) target line, and the vehicle marker + status text,
+  colour-coded **green** = on-road / **orange** = cage intervention / **red** =
+  emergency or off-road.
+- **`/agent/obs_image`** (`sensor_msgs/Image`, mono8) — the exact 84×84 grayscale
+  frame the CNN policy sees this step.
+
+```bash
+ros2 run rviz2 rviz2 -d src/cobraflex/rviz/cage_viz.rviz --ros-args -p use_sim_time:=true
+```
+
+Markers are stamped with **time 0** on purpose: the train node runs on the wall
+clock (it is not launched with `use_sim_time`) while RViz runs on sim time, so a
+real stamp is decades in RViz's future and the frame transform fails (the markers
+streak); a zero stamp makes RViz resolve against the latest transform. Fixed Frame
+= `odom`. The per-episode teleport back to the spawn (a `reset()`) makes the
+vehicle marker "jump" — that is the episode boundary, not a fault.
 
 <!---
 
@@ -471,6 +536,16 @@ multi-seed N=5 confirmation is the planned robustness check).
 
 ## Version log
 
+- **v0.2 (2026-06-18):** training moved to the **complex_b** circuit. Added: the
+  self-approaching-circuit **off-road fix** (§3.5 — off-road by global distance to
+  the road-centre centerline via `PolylineTracker.distance_to`; reward stays on the
+  right lane; opt-in progress-bounded projection as a weaker complement, left off);
+  the `world_name` wiring for gz teleport services on the renamed world; the
+  **camera pitch 0.25 → 0.30 rad** alignment to the URDF mount (§8, `camera_geometry`);
+  and the **RViz cage/agent view** (§9.1 — `cage_viz.CageViz`, `/cage/markers` +
+  `/agent/obs_image`, `viz` flag). §9 rewritten for the complex_b two-step run and
+  confirmed executed on the Ubuntu host (20k smoke completed clean). F-track oval
+  behaviour is unchanged (all new paths are opt-in / gated).
 - **v0.1 (2026-06-15):** first freeze. Documents the camera-training
   implementation as it stands after the Lane-Cam switch + 425k retrain
   (§7.7.8): `train_ppo.py` entry point, the `GazeboLaneEnv` camera branch,

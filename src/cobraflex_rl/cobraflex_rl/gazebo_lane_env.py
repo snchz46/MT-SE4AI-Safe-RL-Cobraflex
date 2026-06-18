@@ -33,6 +33,7 @@ from .cage_bridge import (
     safe_action_to_cmd,
 )
 from .cage_perception import CagePerceptionSupervisor
+from .cage_viz import CageViz
 from .camera_pipeline import CameraPipeline
 from .polyline_tracker import PolylineTracker, TrackState
 from .rewards import compute_reward
@@ -63,10 +64,10 @@ class GazeboLaneEnv(gym.Env):
         lane_width: float,
         cfg: Mapping[str, Any],
         road_width: Optional[float] = None,
+        road_centerline: Optional[np.ndarray] = None,
     ) -> None:
         super().__init__()
         self.ros_interface = ros_interface
-        self.tracker = PolylineTracker(centerline)
         self.lane_width = float(lane_width)
         # Termination at road boundary (not lane boundary) so random-policy
         # episodes don't terminate in 1–2 steps; the cage handles lane
@@ -76,6 +77,56 @@ class GazeboLaneEnv(gym.Env):
         self.fixed_speed = float(self.cfg.get("fixed_speed", 0.2))
         self.control_dt = float(self.cfg.get("control_dt", 0.1))
         self.max_episode_steps = int(self.cfg.get("max_episode_steps", 500))
+        # Progress-bounded tracking (opt-in): cap how far the centerline
+        # projection may advance per control step so the ground-truth ey (and
+        # thus the off-road termination) stays valid on a self-approaching
+        # circuit such as complex_b — where leaving the lane otherwise lands the
+        # agent near a *different* track section and collapses |ey|. Default off
+        # => the convex F-track oval is unchanged. Auto cap = max along-track
+        # travel per step (fixed_speed * control_dt, the speed ceiling) with a
+        # 1.5x margin for projection discretisation; max_track_advance_m overrides.
+        max_advance: Optional[float] = None
+        if bool(self.cfg.get("progress_bounded_tracking", False)):
+            max_advance = float(
+                self.cfg.get(
+                    "max_track_advance_m", 1.5 * self.fixed_speed * self.control_dt
+                )
+            )
+        self.tracker = PolylineTracker(centerline, max_advance_m=max_advance)
+        # With progress-bounded tracking the projection deliberately *lags* when
+        # the agent races off the lane, so off-road is judged on the Euclidean
+        # distance to the (lagging) closest point — which captures both the
+        # lateral departure and the longitudinal lag — rather than the perpendicular
+        # ey alone, which collapses when the lane folds back near the agent.
+        self.progress_bounded = max_advance is not None
+        # Off-road geometry tracker. The reward centerline is the *right lane*
+        # (offset), but "left the painted road" is a property of the road, which
+        # is centred on the road centreline — so off-road is judged by the global
+        # distance to the road centreline vs road_width/2 (the edge). This is
+        # robust to the complex_b circuit approaching itself, where the stateful
+        # cross-track ey (and even a progress-bounded variant) collapses when the
+        # vehicle drifts near a different track section. Falls back to the reward
+        # tracker's ey when no road centreline is supplied (the F-track oval).
+        self._road_tracker = (
+            PolylineTracker(np.asarray(road_centerline, dtype=float))
+            if road_centerline is not None
+            else None
+        )
+        # Optional RViz view of the cage/agent runtime state (off by default so
+        # headless campaigns pay nothing). Publishes /cage/markers (road edges,
+        # vehicle state) and /agent/obs_image each step. See cage_viz.CageViz.
+        self._viz = None
+        if bool(self.cfg.get("viz", False)):
+            self._viz = CageViz(
+                self.ros_interface,
+                reward_centerline=np.asarray(centerline, dtype=float),
+                road_centerline=(
+                    np.asarray(road_centerline, dtype=float)
+                    if road_centerline is not None
+                    else None
+                ),
+                road_width=self.road_width,
+            )
         self.prev_steer = 0.0
         # Raw (pre-cage) policy steering of the previous cycle. The smoothness
         # reward term penalises the *raw* delta, not the post-cage applied delta,
@@ -499,7 +550,15 @@ class GazeboLaneEnv(gym.Env):
         # carry no learning signal — they just burn wall-clock. Both conditions
         # set `terminated` (value target bootstraps from 0); they differ only in
         # the reward, see below. (Requested extension to D-34 / TS-01.)
-        off_road = abs(track_state.ey) > (self.road_width * 0.5)
+        if self._road_tracker is not None:
+            px, py, _ = self._last_pose
+            off_road = self._road_tracker.distance_to(px, py) > (self.road_width * 0.5)
+        elif self.progress_bounded:
+            px, py, _ = self._last_pose
+            cxp, cyp = track_state.closest_point
+            off_road = math.hypot(px - cxp, py - cyp) > (self.road_width * 0.5)
+        else:
+            off_road = abs(track_state.ey) > (self.road_width * 0.5)
         cage_emergency = bool(cage_info.get("cage_emergency", False))
         # A cage emergency only ENDS the episode when the cage is actually
         # enforcing (the emergency stop is real). In monitoring the cage observes
@@ -547,6 +606,14 @@ class GazeboLaneEnv(gym.Env):
             info["termination_reason"] = "cage_emergency" if cage_stop else "off_road"
         elif truncated:
             info["termination_reason"] = "truncated"
+        if self._viz is not None:
+            self._viz.publish(
+                self._last_pose,
+                off_road=off_road,
+                emergency=cage_emergency,
+                interventions=cage_info.get("cage_interventions", []),
+                obs=observation if self.obs_type == "camera" else None,
+            )
         return observation, reward, terminated, truncated, info
 
     def _apply_cage(self, policy_steer: float):

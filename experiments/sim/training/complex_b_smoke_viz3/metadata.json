@@ -1,0 +1,41 @@
+{
+  "run_id": "complex_b_smoke_viz3",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-06-18T09:45:45.965080+00:00",
+  "git_commit": "50c219e1597e009d37aec8e6d9e95d18533efa25",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "scenario_yaml_hash": "b0631d2072f56fb08f80c101955ece4a6e57f79ffa64bf40bed0433d2d32acee",
+  "policy_checkpoint": "/tmp/complex_b_smoke_viz3.zip",
+  "policy_checkpoint_hash": "43318abd500256b7aa426a57764950d05f15ef1abbd5a740f1a688acdf06b096",
+  "seed": 2024,
+  "platform": "sim",
+  "total_timesteps": 20000,
+  "hyperparameters": {
+    "learning_rate": 0.0003,
+    "gamma": 0.99,
+    "n_steps": 1024,
+    "batch_size": 64
+  },
+  "policy": "CnnPolicy",
+  "observation": {
+    "type": "camera",
+    "camera": {
+      "topic": "/camera/image_raw_lane",
+      "width": 84,
+      "height": 84,
+      "grayscale": true,
+      "frame_stack": 4
+    }
+  },
+  "domain_randomization": {
+    "enabled": true,
+    "p_degrade": 0.25,
+    "level_range": [
+      0.2,
+      0.5
+    ]
+  },
+  "status": "completed"
+}

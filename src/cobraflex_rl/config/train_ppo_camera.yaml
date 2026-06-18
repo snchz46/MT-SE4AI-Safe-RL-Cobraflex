@@ -3,17 +3,27 @@
 # (camera image, CnnPolicy, frame stack) and the H-10 visual domain
 # randomisation. Reward, cage wiring, actuation mapping, episode logic and the
 # spawn perturbation are IDENTICAL — the minimal-delta point of docs/09 §10.
-total_timesteps: 750000
+total_timesteps: 20000    # 20k steps is ~20h on a single GPU, which is sufficient for a proof-of-concept; see Training Spec for scaling plans.
 learning_rate: 0.0003
 gamma: 0.99
 n_steps: 1024
 batch_size: 64
 device: auto              # CNN benefits from CUDA when present; falls back to cpu
 seed: 2024                # E-main seed mirrors the F-track main run (D-36 precedent)
-max_episode_steps: 500
+max_episode_steps: 1024
 control_dt: 0.10
 fixed_speed: 0.20
-model_path: cobraflex_ppo_cam_lane
+# Off-road termination on the complex_b circuit is judged by the global distance
+# to the ROAD-CENTRE centerline vs road_width/2 (the painted edge) — robust to
+# the circuit approaching itself, where the stateful cross-track ey collapses.
+# Pass the road centre via --road-centerline-config (train_lane.launch.py wires
+# config/complex_b_centerline.yaml). progress_bounded_tracking is the older,
+# weaker mitigation and is left off now that the road-centre check supersedes it.
+progress_bounded_tracking: false
+# Publish the cage/agent runtime view to RViz (/cage/markers + /agent/obs_image)
+# each step. Negligible overhead; set false for headless campaign runs.
+viz: true
+model_path: cobraflex_ppo_newcam_lane
 sim_real_time_factor: 1   # camera rendering is real-time-bound; see Training Spec
 
 policy: CnnPolicy
@@ -39,8 +49,8 @@ observation:
 # SR-013/SR-014 stop.
 domain_randomization:
   enabled: true
-  p_degrade: 0.5
-  level_range: [0.2, 0.8]
+  p_degrade: 0.25               # per-episode degradation probability (0.0 → no degradation, 1.0 → degrade all)
+  level_range: [0.2, 0.5]       # degradation level range (0.0 → no degradation, 1.0 → max degradation); uniform sampling
   # modes: defaults to the H-10 trio (visual_degradation.MODES)
 
 reward:

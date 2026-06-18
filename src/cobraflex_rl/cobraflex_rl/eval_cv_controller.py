@@ -57,6 +57,15 @@ from .scenario_runner import derive_run_config
 def parse_args(args: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate the logical CV camera lane-keeper.")
     parser.add_argument("--centerline-config", type=str, default=None)
+    parser.add_argument("--road-centerline-config", type=str, default=None,
+                        help="Road-centre centerline YAML for off-road geometry "
+                             "(off_road = global distance > road_width/2). Required "
+                             "on self-approaching circuits like complex_b; see "
+                             "docs/11 §3.5.")
+    parser.add_argument("--world-name", type=str, default=None,
+                        help="Gazebo SDF world name for gz teleport services "
+                             "(e.g. lane_following_complex_b). Defaults to the "
+                             "RosGazeboInterface default (lane_following_oval).")
     parser.add_argument("--train-config", type=str, default=None,
                         help="Env config (default train_ppo_camera.yaml — camera mode).")
     parser.add_argument("--episodes", type=int, default=1)
@@ -87,6 +96,11 @@ def main(args: Optional[Sequence[str]] = None) -> None:
 
     centerline_cfg = load_yaml(centerline_path)
     train_cfg = load_yaml(train_cfg_path)
+    road_centerline_points = None
+    if cli.road_centerline_config:
+        road_centerline_points = np.asarray(
+            load_yaml(Path(cli.road_centerline_config))["centerline"]["points"], dtype=float
+        )
     _disable_spawn_perturbation(train_cfg)
     # Eval determinism: no training-side visual domain randomisation (a harsh
     # draw blinds perception at spawn). Same rule as eval_policy.
@@ -132,7 +146,10 @@ def main(args: Optional[Sequence[str]] = None) -> None:
     no_lane_steps = 0
 
     try:
-        interface = RosGazeboInterface(camera_topic=str(cam_cfg.get("topic", "/camera/image_raw_lane")))
+        interface_kwargs = {"camera_topic": str(cam_cfg.get("topic", "/camera/image_raw_lane"))}
+        if cli.world_name:
+            interface_kwargs["world_name"] = cli.world_name
+        interface = RosGazeboInterface(**interface_kwargs)
         if not interface.wait_for_initial_data(timeout_sec=10.0):
             raise RuntimeError("Timed out waiting for /odom data.")
 
@@ -143,6 +160,7 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         env = GazeboLaneEnv(
             ros_interface=interface, centerline=centerline_points,
             lane_width=lane_width, road_width=road_width, cfg=train_cfg,
+            road_centerline=road_centerline_points,
         )
         perimeter = float(env.tracker.cumulative_lengths[-1])
         controller = CVLaneController(speed=float(train_cfg.get("fixed_speed", 0.2)))

@@ -215,3 +215,26 @@ def test_grayscale_input_supported(estimator, cam):
     est = estimator.estimate(gray)
     assert est.ok
     assert est.ey == pytest.approx(0.0, abs=0.015)
+
+
+def test_near_field_slope_ignores_far_curve():
+    # A lane bending right across the scan band: the slope at the vehicle (near
+    # field, locally straight) is small, but a fit over the whole 0.15–1.0 m band
+    # is biased toward the curve. _near_field_slope must report the near tangent.
+    est = CvLaneEstimator(config=CvLaneEstimatorConfig())
+    xs = np.linspace(0.15, 1.0, 24)
+    yc = 0.3 * xs ** 2  # lane-centre y bends with X (right-hand curve)
+    right = {"pts": list(zip(xs, yc - LANE_W / 2)), "c0": 0.0, "c1": 0.0, "c2": 0.0}
+    left = {"pts": list(zip(xs, yc + LANE_W / 2)), "c0": 0.0, "c1": 0.0, "c2": 0.0}
+    full_band = 0.345  # ~ secant slope over the whole band (the biased value)
+    near = est._near_field_slope(right, left, full_band)
+    assert near < 0.25                      # ~ local tangent 2*0.3*0.3 ≈ 0.18
+    assert near < full_band - 0.1           # clearly below the full-band slope
+
+
+def test_near_field_slope_disabled_falls_back_to_full_band():
+    est = CvLaneEstimator(config=CvLaneEstimatorConfig(heading_window_m=0.0))
+    xs = np.linspace(0.15, 1.0, 24)
+    right = {"pts": list(zip(xs, 0.3 * xs ** 2)), "c0": 0.0, "c1": 0.0, "c2": 0.0}
+    left = {"pts": list(zip(xs, 0.3 * xs ** 2)), "c0": 0.0, "c1": 0.0, "c2": 0.0}
+    assert est._near_field_slope(right, left, 0.345) == 0.345

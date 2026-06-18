@@ -88,9 +88,26 @@ def parse_args(args: Optional[Sequence[str]] = None) -> argparse.Namespace:
     """Parse CLI args, dropping the ROS-specific ones ros2 launch appends."""
     parser = argparse.ArgumentParser(description="Train PPO lane-following policy.")
     parser.add_argument("--centerline-config", type=str, default=None)
+    parser.add_argument(
+        "--road-centerline-config",
+        type=str,
+        default=None,
+        help="Road-centre centerline YAML for off-road geometry (off_road = "
+        "global distance to it > road_width/2). Use when the reward centerline "
+        "is a lane offset and the circuit approaches itself (e.g. complex_b).",
+    )
     parser.add_argument("--train-config", type=str, default=None)
     parser.add_argument("--model-path", type=str, default=None)
     parser.add_argument("--run-id", type=str, default=None)
+    parser.add_argument(
+        "--world-name",
+        type=str,
+        default=None,
+        help="Gazebo SDF world name for gz service calls (set_pose/set_physics). "
+        "Must match the <world name=...> of the launched .world "
+        "(e.g. lane_following_complex_b for lane_following_oval_complex.world). "
+        "Falls back to the config's world_name, then 'lane_following_oval'.",
+    )
     parser.add_argument(
         "--resume-from",
         type=str,
@@ -190,6 +207,18 @@ def main(args: Optional[Sequence[str]] = None) -> None:
     centerline_cfg = load_yaml(centerline_path)
     train_cfg = load_yaml(train_cfg_path)
 
+    # Optional road-centreline for off-road geometry (see GazeboLaneEnv): the
+    # reward centreline can be a lane offset, but "left the road" is judged
+    # against the road centre. Needed on self-approaching circuits (complex_b).
+    road_centerline_path = (
+        Path(cli_args.road_centerline_config) if cli_args.road_centerline_config else None
+    )
+    road_centerline_points = None
+    if road_centerline_path is not None:
+        road_centerline_points = np.asarray(
+            load_yaml(road_centerline_path)["centerline"]["points"], dtype=float
+        )
+
     model_path = Path(cli_args.model_path or train_cfg.get("model_path", "cobraflex_ppo_lane"))
     model_path = model_path.expanduser()
     model_path.parent.mkdir(parents=True, exist_ok=True)
@@ -208,13 +237,19 @@ def main(args: Optional[Sequence[str]] = None) -> None:
     obs_cfg = dict(train_cfg.get("observation", {}))
     camera_obs = str(obs_cfg.get("type", "state")) == "camera"
 
+    world_name = (
+        cli_args.world_name
+        or str(train_cfg.get("world_name", "lane_following_oval"))
+    )
+
     try:
         interface = RosGazeboInterface(
+            world_name=world_name,
             camera_topic=(
                 str(obs_cfg.get("camera", {}).get("topic", "/camera/image_raw_lane"))
                 if camera_obs
                 else ""
-            )
+            ),
         )
         if not interface.wait_for_initial_data(timeout_sec=10.0):
             raise RuntimeError("Timed out waiting for /odom data.")
@@ -246,6 +281,7 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             lane_width=lane_width,
             road_width=road_width,
             cfg=train_cfg,
+            road_centerline=road_centerline_points,
         )
 
         check_env(env, warn=True, skip_render_check=True)

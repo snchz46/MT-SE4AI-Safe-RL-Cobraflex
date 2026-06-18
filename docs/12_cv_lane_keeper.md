@@ -3,10 +3,10 @@
 | Field | Value |
 | --- | --- |
 | Artifact | The logical (non-learned) camera lane-keeper: deployment node + shared control law + CV estimator |
-| Version | **0.1** (2026-06-15 — first freeze; CV+PD law, supersedes the histogram pure-P controller) |
+| Version | **0.2** (2026-06-18 — camera pitch aligned to the URDF mount, 0.25 → 0.30 rad) |
 | Phase / Gate | Track 'E' (camera) — the fair baseline for the RL camera agent (GE4 eval) |
 | Author | Samuel Sanchez |
-| Date | 2026-06-15 |
+| Date | 2026-06-18 |
 | Status | CONFIRMED — implemented in `cobraflex/lane_keeper_gazebo_node.py`, `cobraflex_rl/cv_lane_controller.py`, `cobraflex_rl/cv_lane_estimator.py`, `cobraflex_rl/camera_geometry.py` |
 | Normative spec | Training Specification Ch.7 §7.7 (track 'E'); ODD-1 lane geometry (`docs/08`) |
 | Decisions cited | D-43 (cage/baseline read a dedicated deterministic CV estimator), D-41 (end-to-end camera architecture) |
@@ -246,7 +246,8 @@ roll and no yaw relative to the vehicle:
 Parameters mirror the Gazebo sensor + URDF mount (the single source of truth for
 the physical numbers): the **dedicated Lane Cam** — IMX219-160 mirror, 640×360,
 HFOV ≈ 90° (1.5708 rad) — at height **h ≈ 0.077 m** above ground with pitch
-**0.25 rad** down (the URDF camera chain of the mesh variant). The intrinsics are
+**0.30 rad** down (the `camera_link_lane` joint `rpy="0 0.30 0"` of the mesh
+variant). The intrinsics are
 derived from HFOV and width (`fx = (W/2)/tan(HFOV/2)`, square pixels). The mount
 geometry is the same one `docs/11` §8 describes for the newcam retrain — the
 estimator and the policy share one camera.
@@ -298,23 +299,73 @@ with the RL agent, a genuine like-for-like reference rather than a strawman.
 
 ## 8. How to run
 
+`eval_cv_controller.launch.py` now **defaults to the complex_b circuit** and wires
+the three artefacts that must agree (reward/lane-target `centerline`, road-centre
+`road_centerline` for off-road geometry, and the SDF `world_name` the gz teleport
+services are namespaced by — see `docs/11` §3.5/§9). The launch is a single
+blocking run that shuts down on node exit, so its output sits alongside the RL
+runs for a like-for-like comparison.
+
 ```bash
 # Live deployment node (Gazebo + RViz + the lane keeper):
 ros2 launch cobraflex lane_keeper_gazebo.launch.py
-
-# Scored single-run baseline (nominal SC-NOM-01, enforcement, native 0.10 m/s):
-ros2 launch cobraflex_rl eval_cv_controller.launch.py \
-  gui:=false mode:=enforcement fixed_speed:=0.10 max_steps:=4400
-
-# A perturbed scenario run, scored into a campaign verdict:
-ros2 launch cobraflex_rl eval_cv_controller.launch.py \
-  scenario:=scenarios/perturbed/sc_pert_04.yaml mode:=enforcement rep:=0
 ```
 
+### 8.1 CV baseline on complex_b (the baseline for the RL camera agent)
+
+```bash
+# Speed-matched to the RL camera eval (cruise 0.20 m/s) — the apples-to-apples
+# baseline: same track, same speed, same metrics, no learning. Watch it in RViz.
+ros2 launch cobraflex_rl eval_cv_controller.launch.py \
+  gui:=true rviz:=true mode:=enforcement fixed_speed:=0.20 max_steps:=4400 \
+  run_id:=cv_baseline_complex_b_v020 output_root:=experiments/sim/eval_cv
+
+# Controller's native speed (0.10 m/s) — its best-case lateral accuracy:
+ros2 launch cobraflex_rl eval_cv_controller.launch.py \
+  gui:=false mode:=enforcement fixed_speed:=0.10 max_steps:=4400 \
+  run_id:=cv_baseline_complex_b_v010 output_root:=experiments/sim/eval_cv
+
+# A perturbed scenario run, scored into a campaign verdict (complex_b defaults):
+ros2 launch cobraflex_rl eval_cv_controller.launch.py \
+  scenario:=scenarios/perturbed/sc_pert_04.yaml mode:=enforcement rep:=0
+
+# Revert to the oval — override all four together:
+RL=$(ros2 pkg prefix cobraflex_rl)/share/cobraflex_rl/config
+ros2 launch cobraflex_rl eval_cv_controller.launch.py \
+  world:=lane_following_oval world_name:=lane_following_oval \
+  centerline:=$RL/oval_right_lane_centerline.yaml \
+  road_centerline:=$RL/oval_right_lane_centerline.yaml
+```
+
+### 8.2 Baseline vs the trained RL policy (later)
+
+When the RL camera policy is trained, score it on the **same** track / speed /
+metrics with `eval_policy`, so the CV run above is the non-learned control arm:
+
+```bash
+RL=$(ros2 pkg prefix cobraflex_rl)/share/cobraflex_rl/config
+# 1) sim (headless + setsid for stability — closing the Gazebo GUI tears down the
+#    bridge and starves /odom_truth; see docs/11 §9):
+setsid ros2 launch cobraflex gazebo_mesh.launch.py \
+  world:=lane_following_oval_complex gui:=false < /dev/null &
+# 2) the RL eval, same wiring as training:
+ros2 run cobraflex_rl eval_policy \
+  --train-config $RL/train_ppo_camera.yaml \
+  --centerline-config $RL/complex_b_right_lane_centerline.yaml \
+  --road-centerline-config $RL/complex_b_centerline.yaml \
+  --world-name lane_following_complex_b \
+  --model-path policy/checkpoints/<your_rl_camera_checkpoint>.zip \
+  --run-id rl_eval_complex_b --output-root experiments/sim/eval_cv
+```
+
+Both write a run dir under `output_root/<run_id>` with the same scored metrics
+(laps, mean |ey|, emergencies, off-road, per-rule cage activity) and reproducibility
+hashes — **compare the RL run against `cv_baseline_complex_b_v020`** (the speed-matched
+CV arm). The fair accuracy metric is **mean |ey|** (laps depend on cruise speed).
+
 Host: the **Ubuntu 24.04 + ROS2 Jazzy** path (Gazebo + camera bridge). The pure
-pieces — `cv_lane_estimator`, `cv_lane_controller`, `camera_geometry` — are
-host-testable without ROS (`policy/tests/test_cv_lane_estimator.py`,
-`…/test_camera_geometry.py`).
+pieces — `cv_lane_estimator`, `cv_lane_controller`, `camera_geometry`,
+`polyline_tracker` — are host-testable without ROS (`policy/tests/`).
 
 ---
 
@@ -360,6 +411,18 @@ CV+PD law actually drove it.
 
 ## Version log
 
+- **v0.2 (2026-06-18):** §5 camera geometry **pitch corrected 0.25 → 0.30 rad** to
+  match the `camera_link_lane` joint `rpy="0 0.30 0"` in the mesh URDF (the value
+  Gazebo actually renders). The CV estimator's ground-plane projection was
+  systematically biased while pinned at 0.25 (it under-/over-stated metric `ey`);
+  the cage reads this estimate (D-43), so the bias shifted its trigger timing.
+  `DEFAULT_CAMERA_PITCH_RAD` in `camera_geometry.py` and `test_camera_geometry.py`
+  updated; re-run `tools/validate_cv_estimator.py` on the host to re-confirm
+  accuracy at 0.30. §8 (How to run) rewritten: `eval_cv_controller` (and
+  `eval_policy`) gained `--road-centerline-config` and `--world-name`, and
+  `eval_cv_controller.launch.py` now **defaults to complex_b** (world + both
+  centerlines + `world_name`); added the speed-matched (0.20 m/s) CV baseline
+  command and the matching `eval_policy` command for the RL-vs-baseline comparison.
 - **v0.1 (2026-06-15):** first freeze. Documents the logical camera lane-keeper as
   the track-'E' baseline: the `lane_keeper_gazebo_node` ROS2 node, the shared
   `CVLaneController` (PD + curvature feedforward), the deterministic

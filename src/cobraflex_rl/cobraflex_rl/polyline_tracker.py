@@ -80,7 +80,7 @@ class PolylineTracker:
     :meth:`reset_tracking` whenever the tracked entity teleports.
     """
 
-    def __init__(self, polyline: np.ndarray):
+    def __init__(self, polyline: np.ndarray, max_advance_m: Optional[float] = None):
         points = np.asarray(polyline, dtype=float)
         if points.ndim != 2 or points.shape[1] != 2:
             raise ValueError("Polyline must have shape (N, 2).")
@@ -106,6 +106,15 @@ class PolylineTracker:
             np.allclose(self.points[0], self.points[-1], atol=1e-6)
         )
         self._prev_best_index: Optional[int] = None
+        # Progress-bounded projection (opt-in). When set, the projection's
+        # arc-length may advance at most this many metres per ``track`` call, so
+        # the nearest-point search cannot leap onto a different, self-approaching
+        # section of the circuit when the agent leaves its lane (see ``track``).
+        # ``None`` => legacy unbounded behaviour (the convex F-track oval).
+        self.max_advance_m: Optional[float] = (
+            float(max_advance_m) if max_advance_m is not None else None
+        )
+        self._prev_s: Optional[float] = None
 
     @property
     def closed(self) -> bool:
@@ -117,6 +126,26 @@ class PolylineTracker:
         reset) so we do not constrain the search to a stale neighbourhood.
         """
         self._prev_best_index = None
+        self._prev_s = None
+
+    def distance_to(self, x: float, y: float) -> float:
+        """Global minimum distance (m) from ``(x, y)`` to the polyline.
+
+        Stateless full sweep with per-segment projection (clipped to the
+        segment). Unlike the stateful :meth:`track` cross-track error, this is
+        immune to a self-approaching circuit folding back near the query point
+        — it answers "how far is the vehicle from the *nearest* road point",
+        which is the right primitive for an off-road (left the painted road)
+        containment test (verified: catches 28/28 straight-off departures to
+        the grass on complex_b, 0 false positives in-lane).
+        """
+        position = np.array([x, y], dtype=float)
+        starts = self.points[:-1]
+        rel = position - starts
+        ll = np.maximum(self.segment_lengths ** 2, 1e-12)
+        t = np.clip((rel * self.segment_vectors).sum(axis=1) / ll, 0.0, 1.0)
+        projections = starts + t[:, None] * self.segment_vectors
+        return float(np.linalg.norm(position - projections, axis=1).min())
 
     def pose_at_arclength(
         self, s: float, lateral_offset: float = 0.0
@@ -169,6 +198,20 @@ class PolylineTracker:
             hi = min(n_segments, self._prev_best_index + _LOCAL_SEARCH_RADIUS + 1)
             indices = range(lo, hi)
 
+        # Progress-bounded forward cap (opt-in via ``max_advance_m``). On a
+        # circuit that approaches itself (the complex_b kidney loop), the nearest
+        # centerline point can leap to a *different* track section when the agent
+        # leaves its lane, collapsing |ey| and defeating the off-road
+        # termination (verified: even a global nearest-point search does this).
+        # Limiting how far the projection's arc-length may advance per call to
+        # the real along-track travel keeps the projection on the lane the agent
+        # abandoned, so ey reflects the true departure and off-road fires.
+        if self.max_advance_m is not None and self._prev_s is not None:
+            s_limit = self._prev_s + self.max_advance_m
+            bounded = [i for i in indices if self.cumulative_lengths[i] <= s_limit]
+            if bounded:
+                indices = bounded
+
         best_index = 0
         best_fraction = 0.0
         best_projection = self.points[0]
@@ -211,6 +254,7 @@ class PolylineTracker:
         ey = float(cross_z / segment_length)
         epsi = wrap_angle(yaw - track_heading)
         s = float(self.cumulative_lengths[best_index] + best_fraction * segment_length)
+        self._prev_s = s
 
         return TrackState(
             ey=ey,

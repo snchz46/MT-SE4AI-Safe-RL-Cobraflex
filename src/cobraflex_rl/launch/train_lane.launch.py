@@ -10,11 +10,45 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     cobraflex_share = get_package_share_directory("cobraflex")
+    cobraflex_rl_share = get_package_share_directory("cobraflex_rl")
 
     world_arg = DeclareLaunchArgument(
         "world",
-        default_value=os.path.join(cobraflex_share, "worlds", "lane_following_oval.world"),
-        description="Path to the Gazebo .world file for RL training.",
+        default_value=os.path.join(
+            cobraflex_share, "worlds", "lane_following_oval_complex.world"
+        ),
+        description="Path to the Gazebo .world file for RL training "
+        "(default: complex_b circuit).",
+    )
+    # The centerline must match the world: complex_b world -> complex_b
+    # right-lane centerline (reward/cage ground-truth lane geometry). Override
+    # both together to train on a different track (e.g. world:=lane_following_oval
+    # centerline:=.../oval_right_lane_centerline.yaml).
+    centerline_arg = DeclareLaunchArgument(
+        "centerline",
+        default_value=os.path.join(
+            cobraflex_rl_share, "config", "complex_b_right_lane_centerline.yaml"
+        ),
+        description="Centerline YAML matching the world (reward/cage geometry).",
+    )
+    # gz set_pose/set_physics services are namespaced by the SDF <world name=...>,
+    # which differs per world (lane_following_complex_b vs lane_following_oval).
+    # Keep this in sync with `world` or episode-reset teleports silently no-op.
+    world_name_arg = DeclareLaunchArgument(
+        "world_name",
+        default_value="lane_following_complex_b",
+        description="SDF world name for gz service calls; must match `world`.",
+    )
+    # Road-centre centerline for off-road geometry: the reward `centerline` is
+    # the right lane (offset), but "left the painted road" is judged against the
+    # road centre (off_road = global distance > road_width/2). Robust to the
+    # complex_b circuit approaching itself, unlike the stateful cross-track ey.
+    road_centerline_arg = DeclareLaunchArgument(
+        "road_centerline",
+        default_value=os.path.join(
+            cobraflex_rl_share, "config", "complex_b_centerline.yaml"
+        ),
+        description="Road-centre centerline YAML for off-road termination geometry.",
     )
     # gui:=false disables the Gazebo client window for headless training.
     # gazebo_mesh.launch.py exposes "gui" (not "headless").
@@ -38,10 +72,18 @@ def generate_launch_description():
         package="cobraflex_rl",
         executable="train_ppo",
         output="screen",
+        arguments=[
+            "--centerline-config", LaunchConfiguration("centerline"),
+            "--road-centerline-config", LaunchConfiguration("road_centerline"),
+            "--world-name", LaunchConfiguration("world_name"),
+        ],
     )
 
     return LaunchDescription([
         world_arg,
+        centerline_arg,
+        road_centerline_arg,
+        world_name_arg,
         gui_arg,
         gazebo,
         train_node,

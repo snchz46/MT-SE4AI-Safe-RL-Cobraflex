@@ -73,6 +73,12 @@ def parse_args(args: Optional[Sequence[str]] = None) -> argparse.Namespace:
     """Parse CLI args, dropping the ROS-specific ones ros2 launch appends."""
     parser = argparse.ArgumentParser(description="Evaluate PPO lane-following policy.")
     parser.add_argument("--centerline-config", type=str, default=None)
+    parser.add_argument("--road-centerline-config", type=str, default=None,
+                        help="Road-centre centerline YAML for off-road geometry "
+                             "(complex_b; see docs/11 §3.5).")
+    parser.add_argument("--world-name", type=str, default=None,
+                        help="Gazebo SDF world name for gz teleport services "
+                             "(e.g. lane_following_complex_b).")
     parser.add_argument("--train-config", type=str, default=None)
     parser.add_argument("--model-path", type=str, default=None)
     parser.add_argument("--episodes", type=int, default=1)
@@ -219,6 +225,12 @@ def main(args: Optional[Sequence[str]] = None) -> None:
 
     centerline_cfg = load_yaml(centerline_path)
     train_cfg = load_yaml(train_cfg_path)
+    road_centerline_points = None
+    if cli_args.road_centerline_config:
+        road_centerline_points = np.asarray(
+            load_yaml(Path(cli_args.road_centerline_config))["centerline"]["points"],
+            dtype=float,
+        )
     # Evaluation starts from the deterministic scenario/nominal spawn (random
     # spawn perturbation off); the F4 scenario path injects its initial
     # conditions through reset(options=...) instead (§7.5, D-34).
@@ -283,9 +295,12 @@ def main(args: Optional[Sequence[str]] = None) -> None:
     stacker = _FrameStacker(int(cam_cfg.get("frame_stack", 4))) if camera_obs else None
 
     try:
-        interface = RosGazeboInterface(
-            camera_topic=str(cam_cfg.get("topic", "/camera/image_raw_lane")) if camera_obs else ""
-        )
+        interface_kwargs = {
+            "camera_topic": str(cam_cfg.get("topic", "/camera/image_raw_lane")) if camera_obs else ""
+        }
+        if cli_args.world_name:
+            interface_kwargs["world_name"] = cli_args.world_name
+        interface = RosGazeboInterface(**interface_kwargs)
         if not interface.wait_for_initial_data(timeout_sec=10.0):
             raise RuntimeError("Timed out waiting for /odom data.")
 
@@ -299,6 +314,7 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             lane_width=lane_width,
             road_width=road_width,
             cfg=train_cfg,
+            road_centerline=road_centerline_points,
         )
         perimeter = float(env.tracker.cumulative_lengths[-1])
 

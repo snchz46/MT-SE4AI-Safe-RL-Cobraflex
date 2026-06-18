@@ -1,0 +1,25 @@
+{
+  "run_id": "cv_ctrl_eval_20260618T124640Z",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-06-18T12:46:40.995060+00:00",
+  "duration_s": 46.0,
+  "git_commit": "50c219e1597e009d37aec8e6d9e95d18533efa25",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "controller": "cv_lane_controller (CvLaneEstimator D-43 + PD + curvature FF)",
+  "controller_params": {
+    "kp_ey": 6.0,
+    "kd_epsi": 1.6,
+    "kff_curv": 1.0,
+    "max_angular_z": 0.9
+  },
+  "controller_source_hash": "b55d1aa35292aa70855305fd0fb3e82bfff62dc56a18714277556c953862b182",
+  "centerline_yaml_hash": "b0631d2072f56fb08f80c101955ece4a6e57f79ffa64bf40bed0433d2d32acee",
+  "scenario_yaml": "",
+  "scenario_yaml_hash": "b0631d2072f56fb08f80c101955ece4a6e57f79ffa64bf40bed0433d2d32acee",
+  "rep": 0,
+  "seed": 2024,
+  "platform": "sim",
+  "status": "completed"
+}

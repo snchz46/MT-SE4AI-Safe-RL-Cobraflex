@@ -32,11 +32,12 @@ from typing import Tuple
 # train/eval launch includes via gazebo_mesh.launch.py): base_link at
 # wheel_radius 0.03725, body_link at +body_height/2+chassis_height/2-0.01
 # (0.05+0.03-0.01, mesh-variant body offset), camera_link_lane at -0.03
-# → 0.07725 m above ground; pitch 0.25 rad (mount angle still under review —
-# re-run tools/validate_cv_estimator.py if it changes). NOTE the non-mesh
-# URDF variants currently lack the -0.01 body offset (camera 1 cm higher).
+# → 0.07725 m above ground; pitch 0.30 rad (matches the camera_link_lane joint
+# rpy="0 0.30 0" in my_robot_gazebo_mesh.urdf — re-run
+# tools/validate_cv_estimator.py if it changes). NOTE the non-mesh URDF
+# variants currently lack the -0.01 body offset (camera 1 cm higher).
 DEFAULT_CAMERA_HEIGHT_M = 0.03725 + 0.05 + 0.03 - 0.01 - 0.03
-DEFAULT_CAMERA_PITCH_RAD = 0.25
+DEFAULT_CAMERA_PITCH_RAD = 0.30
 DEFAULT_HFOV_RAD = 1.5707963
 DEFAULT_WIDTH_PX = 640
 DEFAULT_HEIGHT_PX = 360

@@ -15,9 +15,15 @@
             <min_linear_acceleration>-10</min_linear_acceleration>
             
             <topic>cmd_vel</topic>
-            
+
             <odom_topic>odom</odom_topic>
-            <tf_topic>tf</tf_topic>
+            <!-- Dead-reckoning TF kept off ROS tf. The DiffDrive, the ground
+                 truth OdometryPublisher below and the ekf_node all emit the
+                 odom to base_footprint transform, so all three reached ROS tf
+                 and RViz alternated between them so the robot model jumped every
+                 cycle. The ground truth OdometryPublisher is the sole tf owner
+                 now. This plugin still drives the wheels and publishes encoder odom. -->
+            <tf_topic>tf_diffdrive</tf_topic>
             <frame_id>odom</frame_id>
             <child_frame_id>base_footprint</child_frame_id>
         </plugin>
@@ -37,7 +43,11 @@
                  episode reset. RL training reads /odom_truth; the F2 stack
                  keeps the encoder /odom. -->
             <odom_topic>/odom_truth</odom_topic>
-            <tf_topic>/tf</tf_topic>
+            <!-- Sole owner of the odom to base_footprint transform on ROS tf
+                 (the bridge maps the gz tf topic to ROS tf). Ground truth so RViz
+                 shows the true pose and follows set_pose teleports. The DiffDrive
+                 encoder and the ekf no longer publish this transform. -->
+            <tf_topic>tf</tf_topic>
             <dimensions>2</dimensions>
         </plugin>
 <!--

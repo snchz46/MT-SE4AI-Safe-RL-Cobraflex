@@ -26,9 +26,10 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Deque, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 import rclpy
@@ -167,6 +168,11 @@ def main(args: Optional[Sequence[str]] = None) -> None:
 
         last_terminated = False
         last_info: Dict[str, Any] = {}
+        # Ring buffer of the most recent (step, BGR frame) so a cage-emergency
+        # stop can be debugged offline: the frames that drove the misread are
+        # dumped next to the run (re-run the estimator on them to localise the
+        # curve failure without re-launching Gazebo).
+        frame_buffer: Deque[Tuple[int, np.ndarray]] = deque(maxlen=15)
         for episode in range(cli.episodes):
             _obs, info = env.reset(seed=reset_seed + episode, options=reset_options)
             terminated = truncated = False
@@ -180,6 +186,8 @@ def main(args: Optional[Sequence[str]] = None) -> None:
                     no_lane_steps += 1
                 _obs, reward, terminated, truncated, info = env.step(np.array([angular], dtype=np.float32))
                 step_index += 1
+                if frame is not None:
+                    frame_buffer.append((step_index, np.asarray(frame).copy()))
                 records.append(_record_from_info(episode, step_index, info))
                 print(f"step={step_index:04d} ey={info['ey']:.4f} epsi={info['epsi']:.4f} "
                       f"act={angular:+.3f} lane={'Y' if detected else 'n'} "
@@ -206,8 +214,13 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             )
             _print_verdict(scenario_id, campaign)
 
+        dump_frames = (
+            frame_buffer
+            if str(last_info.get("termination_reason", "")) == "cage_emergency"
+            else None
+        )
         _write_run(cli, train_cfg, centerline_path, controller, seed,
-                   records, summary, scenario_id, campaign)
+                   records, summary, scenario_id, campaign, dump_frames)
     finally:
         if env is not None:
             env.close()
@@ -217,12 +230,35 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             rclpy.shutdown()
 
 
+def _dump_failure_frames(out_dir: Path, frames: Sequence[Tuple[int, np.ndarray]]) -> None:
+    """Save the last buffered camera frames that preceded a cage-emergency stop.
+
+    PNG via cv2 when available (frames are BGR, matching the estimator's input),
+    else a single compressed .npz. Lets the estimator be replayed offline on the
+    exact pixels that produced the misread — no Gazebo re-launch needed."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        import cv2  # noqa: PLC0415 — optional, only for the debug dump
+        for step, frame in frames:
+            cv2.imwrite(str(out_dir / f"frame_{step:04d}.png"), frame)
+    except ImportError:
+        np.savez_compressed(
+            out_dir / "frames.npz",
+            steps=np.array([s for s, _ in frames]),
+            frames=np.stack([f for _, f in frames]),
+        )
+    print(f"Dumped {len(frames)} pre-emergency frames to {out_dir}")
+
+
 def _write_run(cli, train_cfg, centerline_path, controller, seed,
-               records, summary, scenario_id, campaign) -> None:
+               records, summary, scenario_id, campaign, dump_frames=None) -> None:
     runs_dir = resolve_runs_dir(cli.output_root)
     run_id = cli.run_id or "cv_ctrl_eval_" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     out_dir = runs_dir / run_id
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    if dump_frames:
+        _dump_failure_frames(out_dir / "failure_frames", dump_frames)
 
     mode = str(train_cfg.get("cage", {}).get("mode", "enforcement"))
     cage_yaml = Path(train_cfg.get("cage", {}).get("yaml_path", "") or "")
@@ -253,8 +289,8 @@ def _write_run(cli, train_cfg, centerline_path, controller, seed,
         "cage_yaml": str(cage_yaml),
         "cage_yaml_hash": sha256_file(cage_yaml),
         # No learned checkpoint: the "policy" is the deterministic CV controller
-        # (D-43 CV lane estimator + PD + curvature feedforward).
-        "controller": "cv_lane_controller (CvLaneEstimator D-43 + PD + curvature FF)",
+        # (D-43 CV lane estimator + pure-pursuit look-ahead law).
+        "controller": "cv_lane_controller (CvLaneEstimator D-43 + pure-pursuit look-ahead)",
         "controller_params": controller.p,
         "controller_source_hash": sha256_file(Path(__file__)),
         "centerline_yaml_hash": sha256_file(centerline_path),

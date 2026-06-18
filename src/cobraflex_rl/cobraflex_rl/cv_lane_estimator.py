@@ -74,15 +74,22 @@ class CvLaneEstimatorConfig:
     lane_width_tol_m: float = 0.10   # accepted pair separation = nominal ± tol
     min_rows_for_curvature: int = 8  # quadratic fit needs enough X span
     max_abs_y_m: float = 1.5         # discard candidates far off to the side
-    # Heading (epsi) is read from a *near-field* linear refit over X in
-    # [near_distance_m, near_distance_m + heading_window_m], where the lane is
-    # locally straight, instead of the full-band fit's slope-at-vehicle. On a
-    # tight circuit (complex_b, r≈0.26 m) the lane bends ~190° across the full
-    # 0.15–1.0 m band, so the full-band slope is biased toward the curve and
-    # produces a spurious large epsi (a perfectly-centred car read as ~26° off,
-    # tripping a false C-02/C-05 cage stop). Curvature (the feedforward term)
-    # still uses the full-band quadratic c2. 0.0 disables → legacy full-band slope.
-    heading_window_m: float = 0.30
+    # Heading (epsi) is read from a *near-field* secant over X in
+    # [near_distance_m, near_distance_m + heading_window_m], curvature-corrected
+    # to the slope at the vehicle (see CvLaneEstimator._near_field_slope). The
+    # full-band fit's slope-at-vehicle is unusable on a tight circuit (complex_b,
+    # r≈0.26 m) where the lane bends ~190° across the 0.15–1.0 m band; the near
+    # secant alone still over-reads by curvature × window-centroid (a centred car
+    # on the oval curve read ~26° off, tripping a false C-02/C-05 stop), so the
+    # 2·c2 curvature term is subtracted. Curvature (also the feedforward term)
+    # uses the full-band quadratic c2. 0.0 disables → legacy full-band slope.
+    # 0.15 (short): the heading secant must see only the locally-straight stretch
+    # in front of the vehicle. At the oval-curve apex the lane is flat for
+    # X < ~0.35 m and bends hard only beyond; a longer window folds that bend in
+    # and pushed |cv_epsi| past C-02's theta_max (a false emergency while the car
+    # tracked to mm). Swept on the cv_ctrl_eval_20260618T182017Z apex frames:
+    # 0.15 keeps |cv_epsi| ≤ 0.31, i.e. 0.13 rad under theta_max (0.4363).
+    heading_window_m: float = 0.15
     # Single-line fallback (mirrors the proven lane_keeper_gazebo_node
     # single-side mode): when no plausible pair exists, infer the lane centre
     # from the nearest single line + the running lane-width estimate, at
@@ -111,6 +118,13 @@ class CvLaneEstimate:
     feature_count: int = 0
     n_lines: int = 0
     reason: str = ""
+    # Lane-centre polynomial (c0, c1, c2) of Y(X) = c0 + c1·X + c2·X² in the
+    # ground frame (+left). Evaluated *within* the observed look-ahead band it is
+    # robust even when the individual coefficients are unstable on a tight curve
+    # (they are correlated; the fitted curve stays put, only X=0 extrapolation
+    # and the bare c2 swing). The pure-pursuit controller reads it to aim at the
+    # lane centre at a look-ahead distance. ey = -c0.
+    center_coeffs: Tuple[float, float, float] = (0.0, 0.0, 0.0)
     # Per-line ground-frame fits (a, b) of Y = a + b·X, for debugging/overlay.
     line_fits: Tuple[Tuple[float, float], ...] = field(default_factory=tuple)
 
@@ -256,13 +270,27 @@ class CvLaneEstimator:
         return [cl for cl in clusters if len(cl["pts"]) >= cfg.min_points_per_line]
 
     def _near_field_slope(self, right: dict, left: dict, full_band_slope: float) -> float:
-        """Lane-centre slope at the vehicle from a near-field linear refit.
+        """Lane-centre heading slope *at the vehicle* from a short near-window
+        **linear** secant.
 
-        Refits each line over X in ``[near_distance_m, near_distance_m +
-        heading_window_m]`` — the locally-straight near band — and averages the
-        two slopes, so a tight curve bending the far end of the scan band cannot
-        bias the heading. Falls back to the full-band ``c1`` when the window is
-        disabled (``heading_window_m <= 0``) or has too few near points.
+        Each line is refit linearly over X in ``[near_distance_m,
+        near_distance_m + heading_window_m]`` (a short 0.15 m band) and the two
+        slopes are averaged. The window is deliberately short — shorter than the
+        distance at which the oval-curve lane starts to bend in view — so the fit
+        sees only the locally-straight stretch right in front of the vehicle and
+        reports its true heading. This was tuned on the dumped failure frames
+        (``cv_ctrl_eval_20260618T182017Z``), where at the curve apex both lines
+        are flat for X < ~0.35 m and bend hard only beyond it: a longer window
+        (or a quadratic over it) folds that far bend into the slope and drove
+        ``cv_epsi`` past C-02's theta_max (true heading ≈ 0), latching a false
+        emergency. A quadratic over the long scan is worse still — the far points
+        whipsaw c0/c1/c2 together.
+
+        On a *uniformly* curved lane the short secant carries a small, bounded
+        arc bias (≈ curvature × window-centroid, well under theta_max); on the
+        real circuit the near band is locally straight so even that is negligible.
+        Falls back to the full-band slope when the window is disabled
+        (``heading_window_m <= 0``) or no line has enough near points.
         """
         cfg = self.config
         if cfg.heading_window_m <= 0.0:
@@ -271,11 +299,13 @@ class CvLaneEstimator:
         slopes: List[float] = []
         for line in (right, left):
             near = [(x, y) for (x, y) in line["pts"] if x <= x_max]
-            if len(near) >= 2:
-                xs = np.array([p[0] for p in near])
-                ys = np.array([p[1] for p in near])
-                if float(np.ptp(xs)) > 1e-6:
-                    slopes.append(float(np.polyfit(xs, ys, 1)[0]))
+            if len(near) < 2:
+                continue
+            xs = np.array([p[0] for p in near])
+            ys = np.array([p[1] for p in near])
+            if float(np.ptp(xs)) <= 1e-6:
+                continue
+            slopes.append(float(np.polyfit(xs, ys, 1)[0]))
         if not slopes:
             return full_band_slope
         return float(np.mean(slopes))
@@ -322,8 +352,9 @@ class CvLaneEstimator:
         c0 = 0.5 * (left["c0"] + right["c0"])
         c1 = 0.5 * (left["c1"] + right["c1"])
         c2 = 0.5 * (left["c2"] + right["c2"])
-        # Heading from a near-field linear refit (locally straight) rather than the
-        # full-band slope c1, which a tight curve biases toward the curve direction.
+        # Heading from a curvature-corrected near-field refit (slope at the
+        # vehicle) rather than the full-band slope c1, which a tight curve fit
+        # biases toward the curve direction.
         c1_heading = self._near_field_slope(right, left, c1)
         heading = float(np.arctan(c1_heading))
         ey = -float(c0)
@@ -352,6 +383,7 @@ class CvLaneEstimator:
             feature_count=n_pair_points,
             n_lines=len(lines),
             reason="ok",
+            center_coeffs=(float(c0), float(c1), float(c2)),
             line_fits=tuple((cl["c0"], cl["c1"]) for cl in lines),
         )
 
@@ -402,5 +434,6 @@ class CvLaneEstimator:
             feature_count=len(best["pts"]),
             n_lines=len(lines),
             reason="single_line",
+            center_coeffs=(float(center0), float(best["c1"]), float(best["c2"])),
             line_fits=tuple((cl["c0"], cl["c1"]) for cl in lines),
         )

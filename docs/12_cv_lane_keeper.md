@@ -318,12 +318,12 @@ ros2 launch cobraflex lane_keeper_gazebo.launch.py
 # baseline: same track, same speed, same metrics, no learning. Watch it in RViz.
 ros2 launch cobraflex_rl eval_cv_controller.launch.py \
   gui:=true rviz:=true mode:=enforcement fixed_speed:=0.20 max_steps:=4400 \
-  run_id:=cv_baseline_complex_b_v020 output_root:=experiments/sim/eval_cv
+   output_root:=experiments/sim/runs
 
 # Controller's native speed (0.10 m/s) — its best-case lateral accuracy:
 ros2 launch cobraflex_rl eval_cv_controller.launch.py \
   gui:=false mode:=enforcement fixed_speed:=0.10 max_steps:=4400 \
-  run_id:=cv_baseline_complex_b_v010 output_root:=experiments/sim/eval_cv
+   output_root:=experiments/sim/runs
 
 # A perturbed scenario run, scored into a campaign verdict (complex_b defaults):
 ros2 launch cobraflex_rl eval_cv_controller.launch.py \

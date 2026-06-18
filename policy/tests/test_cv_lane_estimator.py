@@ -130,6 +130,23 @@ def test_curvature_sign_right_bend(estimator, cam):
     assert est.curvature < -0.2
 
 
+def test_centred_on_curve_heading_stays_under_cage_threshold(estimator, cam):
+    """A vehicle centred on a curved lane must keep the *reported* heading under
+    C-02's theta_max so the cage stays latent on a benign in-ODD curve. Heading
+    comes from a short near-field secant: on a *uniformly* curved synthetic
+    parabola it carries a small bounded arc bias (≈ κ × window-centroid ≈ 0.27
+    at the oval's KAPPA_MAX 1.25); on the real circuit the near band is locally
+    straight so it reads even smaller. Either way it must stay under theta_warning
+    (0.349) — the apex over-read *past* theta_max was the false emergency
+    (cv_ctrl_eval_20260618T182017Z)."""
+    for kappa in (0.6, -0.6, 1.25, -1.25):
+        img = render_lane(cam, centered_lane(yaw=0.0, kappa=kappa))
+        est = estimator.estimate(img)
+        assert est.ok, f"kappa={kappa}: {est.reason}"
+        assert abs(est.epsi) < 0.349, f"kappa={kappa}: epsi={est.epsi:.3f}"  # < theta_warning
+        assert abs(est.ey) < 0.02, f"kappa={kappa}: ey={est.ey:.3f}"
+
+
 def test_no_lane_on_blank_frame(estimator, cam):
     img = np.full((cam.height_px, cam.width_px, 3), ROAD_GRAY, dtype=np.uint8)
     est = estimator.estimate(img)
@@ -218,18 +235,18 @@ def test_grayscale_input_supported(estimator, cam):
 
 
 def test_near_field_slope_ignores_far_curve():
-    # A lane bending right across the scan band: the slope at the vehicle (near
-    # field, locally straight) is small, but a fit over the whole 0.15–1.0 m band
-    # is biased toward the curve. _near_field_slope must report the near tangent.
+    # A lane bending across the scan band (yc = 0.3·X²): the short near-window
+    # secant sees only the locally-flat start, so it reports a slope far below
+    # the full-band secant (which is dominated by the far bend).
     est = CvLaneEstimator(config=CvLaneEstimatorConfig())
     xs = np.linspace(0.15, 1.0, 24)
     yc = 0.3 * xs ** 2  # lane-centre y bends with X (right-hand curve)
-    right = {"pts": list(zip(xs, yc - LANE_W / 2)), "c0": 0.0, "c1": 0.0, "c2": 0.0}
-    left = {"pts": list(zip(xs, yc + LANE_W / 2)), "c0": 0.0, "c1": 0.0, "c2": 0.0}
+    right = {"pts": list(zip(xs, yc - LANE_W / 2)), "c0": 0.0, "c1": 0.0, "c2": 0.3}
+    left = {"pts": list(zip(xs, yc + LANE_W / 2)), "c0": 0.0, "c1": 0.0, "c2": 0.3}
     full_band = 0.345  # ~ secant slope over the whole band (the biased value)
     near = est._near_field_slope(right, left, full_band)
-    assert near < 0.25                      # ~ local tangent 2*0.3*0.3 ≈ 0.18
-    assert near < full_band - 0.1           # clearly below the full-band slope
+    assert near < 0.20                       # near band ≪ far-curve secant
+    assert near < full_band - 0.1            # clearly below the full-band slope
 
 
 def test_near_field_slope_disabled_falls_back_to_full_band():
@@ -238,3 +255,63 @@ def test_near_field_slope_disabled_falls_back_to_full_band():
     right = {"pts": list(zip(xs, 0.3 * xs ** 2)), "c0": 0.0, "c1": 0.0, "c2": 0.0}
     left = {"pts": list(zip(xs, 0.3 * xs ** 2)), "c0": 0.0, "c1": 0.0, "c2": 0.0}
     assert est._near_field_slope(right, left, 0.345) == 0.345
+
+
+# --------------------------------------------------------------------------
+# Pure-pursuit controller (cobraflex_rl.cv_lane_controller). Shares this file's
+# synthetic-frame fixtures; verifies the look-ahead law turns the right way and
+# by the right amount where the PD law under-steered (the curve regression).
+# --------------------------------------------------------------------------
+from cobraflex_rl.cv_lane_controller import CVLaneController  # noqa: E402
+
+
+def test_controller_centred_straight_goes_straight(cam):
+    ctrl = CVLaneController(speed=0.2)
+    angular, detected = ctrl.compute(render_lane(cam, centered_lane()))
+    assert detected
+    assert abs(angular) < 0.03
+
+
+def test_controller_offset_steers_back_to_centre(cam):
+    ctrl = CVLaneController(speed=0.2)
+    # Car to the LEFT of centre (ey>0) on a straight ⇒ steer right (negative).
+    ang_left, _ = ctrl.compute(render_lane(cam, centered_lane(ey=0.08)))
+    assert ang_left < -0.02
+    # Mirror.
+    ang_right, _ = ctrl.compute(render_lane(cam, centered_lane(ey=-0.08)))
+    assert ang_right > 0.02
+
+
+def test_controller_follows_curve_with_feedforward(cam):
+    """On a centred curve the law must command ≈ v·κ in the bend direction —
+    the turn the PD+curvature law lost on tight arcs (cv_ctrl_eval regression).
+    angular = v·κ within tolerance, correct sign, never under-steering to ~0."""
+    v = 0.2
+    for kappa in (0.6, 1.25):
+        ctrl = CVLaneController(speed=v)
+        angular, detected = ctrl.compute(render_lane(cam, centered_lane(kappa=kappa)))
+        assert detected
+        assert angular > 0.05, f"kappa={kappa}: under-steer angular={angular:.3f}"
+        # Pure pursuit ≈ v·κ near the vehicle; allow generous tolerance.
+        assert abs(angular - v * kappa) < 0.5 * v * kappa + 0.05, \
+            f"kappa={kappa}: angular={angular:.3f} vs v*k={v*kappa:.3f}"
+    # Right bend ⇒ negative command.
+    ctrl = CVLaneController(speed=v)
+    ang_r, _ = ctrl.compute(render_lane(cam, centered_lane(kappa=-1.0)))
+    assert ang_r < -0.05
+
+
+def test_controller_no_lane_returns_zero(cam):
+    ctrl = CVLaneController(speed=0.2)
+    blank = np.full((cam.height_px, cam.width_px, 3), ROAD_GRAY, dtype=np.uint8)
+    angular, detected = ctrl.compute(blank)
+    assert not detected
+    assert angular == 0.0
+
+
+def test_controller_accepts_legacy_gain_kwargs(cam):
+    # The deployment node still passes kp_ey/kd_epsi/kff_curv; must not raise.
+    ctrl = CVLaneController(speed=0.2, kp_ey=6.0, kd_epsi=1.6, kff_curv=1.0,
+                           max_angular_z=0.9)
+    angular, detected = ctrl.compute(render_lane(cam, centered_lane(kappa=0.6)))
+    assert detected and angular > 0.05

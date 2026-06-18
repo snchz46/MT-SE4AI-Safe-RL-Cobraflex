@@ -737,6 +737,8 @@ class GazeboLaneEnv(gym.Env):
             "cv_lane_width": float(est.lane_width),
             "cv_curvature": float(est.curvature),
             "cv_confidence": float(est.confidence),
+            "cv_n_lines": int(est.n_lines),
+            "cv_reason": str(est.reason),
             "cv_state_available": bool(result.state_available),
             "cv_perception_invalid": bool(result.perception_invalid),
             "cv_health_reason": result.health_reason,

@@ -152,6 +152,13 @@ def _record_from_info(episode: int, step: int, info: Dict[str, Any]) -> Dict[str
         "cv_ey": float(info.get("cv_ey", 0.0)),
         "cv_epsi": float(info.get("cv_epsi", 0.0)),
         "cv_confidence": float(info.get("cv_confidence", 0.0)),
+        # Curve diagnostics: curvature (0 ⇒ no quadratic fit, cluster span too
+        # short), lane width, line count, and the estimate's reason
+        # ("ok" full pair vs "single_line" fallback) to localise curve misreads.
+        "cv_curvature": float(info.get("cv_curvature", 0.0)),
+        "cv_lane_width": float(info.get("cv_lane_width", 0.0)),
+        "cv_n_lines": int(info.get("cv_n_lines", 0)),
+        "cv_reason": str(info.get("cv_reason", "")),
     }
 
 
@@ -163,6 +170,7 @@ def _write_cage_status_csv(path: Path, records: List[Dict[str, Any]]) -> None:
         "interventions", "emergency",
         "cv_ok", "cv_state_available", "cv_perception_invalid",
         "cv_ey", "cv_epsi", "cv_confidence",
+        "cv_curvature", "cv_lane_width", "cv_n_lines", "cv_reason",
     ]
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
@@ -179,6 +187,8 @@ def _write_cage_status_csv(path: Path, records: List[Dict[str, Any]]) -> None:
                 int(r.get("cv_perception_invalid", False)),
                 f"{r.get('cv_ey', 0.0):.6f}", f"{r.get('cv_epsi', 0.0):.6f}",
                 f"{r.get('cv_confidence', 0.0):.4f}",
+                f"{r.get('cv_curvature', 0.0):.4f}", f"{r.get('cv_lane_width', 0.0):.4f}",
+                int(r.get("cv_n_lines", 0)), r.get("cv_reason", ""),
             ])
 
 

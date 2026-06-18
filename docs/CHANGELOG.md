@@ -31,6 +31,33 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [18.06.2026] — CV baseline: pure-pursuit control + monocular curvature boundary; complex_b softened to an "M"
+
+**Document(s) affected:** docs/12 (§3, §4.5, §4.7 new, version log); `scripts/generate_complex_track.py`; `src/cobraflex_rl/config/complex_b_centerline.yaml` + `complex_b_right_lane_centerline.yaml`; `experiments/sim/tracks/complex_b/*`; `cv_lane_controller.py`, `cv_lane_estimator.py`, `gazebo_lane_env.py`, `eval_*`; `policy/tests/test_cv_lane_estimator.py`.
+**Phase:** E (track 'E', GE4 prep)
+**Gate context:** before GE4 re-run
+**Author:** Samuel Sanchez
+
+### Change
+
+Two coupled changes from debugging the CV baseline's false cage emergencies on curves:
+1. **Control law → pure-pursuit** (`CVLaneController`): aim at the lane-centre point at look-ahead `L=0.40 m`, command `v·2·y_L/(L²+y_L²)`. Replaces PD + curvature-feedforward, whose FF relied on an unrecoverable monocular curvature estimate and under-steered tight curves. Estimator now exposes `center_coeffs`; cage heading is a short near-field secant (`heading_window_m=0.15`).
+2. **Curvature boundary documented** (docs/12 §4.7) as a scenario-design frontier, and **`complex_b` softened**: top 3-curve serpentine → 2-hump "M" (middle hump removed), `R_min 0.43 → 0.86 m` (driven right-lane 0.97 m). Regenerated centerline, right-lane offset, and road texture.
+
+### Rationale
+
+The cage reads `epsi` from the monocular CV estimator (D-43); on a curve the near-field heading over-reads `≈ κ·0.225`, exceeding C-02's `theta_max` (0.4363) and latching false emergencies while the car tracked to mm. Curve-induced apparent heading and a real heading fault are indistinguishable in the near field, so it cannot be corrected without blinding the cage to genuine faults (verified). The limit is therefore a perception cost (the central track-'E' finding vs the F-track) and a frontier: keep driven-lane `R ≳ 0.9 m`. complex_b at `R_min≈0.43 m` was far past it.
+
+### Impact
+
+complex_b geometry changed → any prior complex_b runs are superseded; re-run the CV baseline (and the RL camera eval, which shares the track) on the new geometry. No H/SR/C/M identifiers added or changed. The RL camera checkpoint was trained on the old complex_b distribution — a retrain/eval check on the softened track is advisable.
+
+### Verification
+
+`pytest` green (454). `tools/check_traceability.py` unaffected (no ID changes); to be re-run before the gate.
+
+---
+
 ## [16.06.2026] — Isaac Sim import + ROS2 bring-up of cobraflex (docs/13)
 
 **Document(s) affected:** `docs/13_isaacsim_urdf_import.md` (new), `tools/build_isaac_urdf.py` (new), `tools/isaac_import_check.py` (new), `tools/isaac_ros2_bringup.py` (new), `src/cobraflex/urdf/cobraflex_isaac.urdf` (new, generated)

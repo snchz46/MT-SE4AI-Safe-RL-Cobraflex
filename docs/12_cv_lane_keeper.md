@@ -3,7 +3,7 @@
 | Field | Value |
 | --- | --- |
 | Artifact | The logical (non-learned) camera lane-keeper: deployment node + shared control law + CV estimator |
-| Version | **0.2** (2026-06-18 — camera pitch aligned to the URDF mount, 0.25 → 0.30 rad) |
+| Version | **0.3** (2026-06-18 — pure-pursuit control law + curvature boundary §4.7; complex_b softened to an "M") |
 | Phase / Gate | Track 'E' (camera) — the fair baseline for the RL camera agent (GE4 eval) |
 | Author | Samuel Sanchez |
 | Date | 2026-06-18 |
@@ -14,7 +14,7 @@
 
 > Purpose: document *how* the classical, hand-coded camera lane-keeper works — the
 > ROS2 deployment node `lane_keeper_gazebo_node.py`, the deterministic CV lane
-> estimator it reads, and the PD + curvature-feedforward control law it closes —
+> estimator it reads, and the pure-pursuit look-ahead control law it closes —
 > and *why* it is built this way. This is the **fair baseline** against which the
 > RL camera agent of `docs/11` is measured: same camera, same perception front-end
 > as the safety cage (D-43), no learning. It complements the thesis prose (Ch.7
@@ -34,7 +34,7 @@ classical lane-keeper is that camera baseline:
 - its perception front-end is the **same deterministic CV lane-estimator the
   safety cage reads** (`CvLaneEstimator`, D-43), so "what the classical controller
   can perceive" equals "what the cage can perceive";
-- it closes a transparent, inspectable control law (PD + curvature feedforward),
+- it closes a transparent, inspectable control law (pure-pursuit look-ahead),
   so any performance gap with the RL agent is attributable to *control*, not to a
   perception asymmetry.
 
@@ -67,9 +67,9 @@ A thin ROS2 node (`rclpy`) that wires the camera to `/cmd_vel`:
 | Publish | `/cmd_vel` (`geometry_msgs/Twist`) | the drive command |
 | Publish | `/lane/image_overlay` (`Image`, reliable depth-1) | optional debug overlay |
 | `linear_speed` | **0.20** m/s | cruise speed; the native baseline speed is 0.10, 0.20 is the RL-comparison speed |
-| `kp_ey` | **6.0** | proportional gain on lateral offset |
-| `kd_epsi` | **1.6** | derivative-like gain on heading error |
-| `kff_curv` | **1.0** | curvature feedforward gain |
+| `look_ahead_m` | **0.40** m | pure-pursuit aim-point distance (§3) |
+| `pursuit_gain` | **1.0** | pure-pursuit yaw-rate scale |
+| `kp_ey` / `kd_epsi` / `kff_curv` | 6.0 / 1.6 / 1.0 | legacy PD/FF gains — declared for back-compat, **ignored** by the controller |
 | `max_angular_z` | **0.90** rad/s | yaw-rate saturation |
 | `stop_on_no_lane` | **True** | stop (vs coast straight) when no lane is found |
 | `watchdog_timeout_sec` | **1.5** s | publish zero `cmd_vel` if no frame arrives |
@@ -107,34 +107,37 @@ scored eval. Given a frame it returns `(angular_z, detected)`:
 est = CvLaneEstimator.estimate(frame)          # the D-43 CV front-end (§4)
 if not est.ok:  return (0.0, False)            # no usable lane this frame
 
-ff      = kff_curv · speed · est.curvature                       # curvature feedforward
-angular = −(kp_ey · est.ey + kd_epsi · est.epsi) + ff            # PD + FF
-angular = clip(angular, −max_angular_z, +max_angular_z)
+c0,c1,c2 = est.center_coeffs                    # lane-centre polynomial Y(X)
+y_L      = c0 + c1·L + c2·L²                     # lane centre at look-ahead X=L
+angular  = pursuit_gain · speed · 2·y_L / (L² + y_L²)   # pure-pursuit yaw rate
+angular  = clip(angular, −max_angular_z, +max_angular_z)
 return (angular, True)
 ```
 
-So the law is a **PD on the lane-relative error with a curvature feedforward**:
+So the law is **pure pursuit**: aim at the lane-centre point a fixed look-ahead
+distance `L` ahead and command the yaw rate that arcs to it.
 
-- the **proportional** term `kp_ey·ey` steers back toward the lane centre;
-- the **`kd_epsi·epsi`** term damps the approach by reacting to the heading error
-  (it plays the role a derivative-of-`ey` term would, but read directly from the
-  estimator's heading rather than differentiated numerically);
-- the **feedforward** `kff_curv·v·κ` injects the steady-state yaw rate a curve of
-  curvature `κ` demands at speed `v` (`yaw_rate = v·κ` for a path-following
-  kinematic model), so the PD terms are left to correct the *residual* error
-  rather than to generate the whole turn — this is what lets the controller hold
-  the tight oval apex instead of understeering it.
+- `y_L` (+left) is read from the estimator's **lane-centre polynomial** evaluated
+  *within* the observed band (`L = 0.40 m`), so it is an interpolation — robust
+  even when the polynomial's bare coefficients are noisy on a tight curve.
+- On a bend `y_L` grows naturally and commands exactly the turn the curve needs:
+  **no curvature estimate is required** — which matters because monocular curvature
+  on a short arc is irrecoverably noisy (§4.7).
+- The single aim point regulates lateral offset *and* heading together.
+
+This **supersedes the earlier PD + curvature-feedforward law** (`kff·v·κ`), which
+under-steered tight curves: its feedforward depended on that unusable curvature
+estimate, so the car ran wide (dumped frames, `cv_ctrl_eval_20260618T175028Z`).
 
 **Sign conventions** (shared with `PolylineTracker`, the sim oracle that validates
 the estimator): `ey > 0` = vehicle left of lane centre; `epsi > 0` = yawed left;
-`κ > 0` = left bend; `Twist.angular.z > 0` = turn left. The leading minus on the
-PD term is the negative feedback (positive `ey`/`epsi` → steer right, i.e.
-negative `angular.z`); the feedforward adds with `κ`'s sign because a left bend
-needs a left yaw rate.
+`κ > 0` = left bend; `y_L > 0` = lane centre to the left; `Twist.angular.z > 0` =
+turn left (so `y_L > 0` → positive yaw rate, turn left).
 
-The gains (`kp_ey=6.0, kd_epsi=1.6, kff_curv=1.0, max_angular_z=0.90`) are recorded
+Parameters (`look_ahead_m=0.40, pursuit_gain=1.0, max_angular_z=0.90`) are recorded
 in each run's `metadata.json` (`controller_params`) so the exact law that drove a
-run is reproducible.
+run is reproducible. The legacy gain kwargs (`kp_ey/kd_epsi/kff_curv`) are still
+accepted by the constructor (the node passes them) but ignored.
 
 ---
 
@@ -229,6 +232,61 @@ node's original single-side precedent.
 > or the cage. Synthetic-frame unit tests (`policy/tests/test_cv_lane_estimator.py`)
 > render known lane geometries through the same camera model and verify recovery.
 
+### 4.7 Curvature boundary — the monocular heading limit (scenario-design frontier)
+
+**Finding (2026-06-18).** The cage's heading reading (`epsi`, feeding C-02 and
+C-05 Trigger-7) has an **irreducible curvature bias** with this monocular front
+camera, which bounds how tight a curve a track may contain before the cage
+emits *false* emergencies. This is the central perception-cost result of the
+camera track against the F-track ground-truth baseline (where the cage stayed
+latent), and it must be respected when authoring harder scenarios.
+
+*Mechanism.* `epsi` is the lane tangent at the vehicle, but the camera only sees
+the lane from `near_distance_m` (≈ 0.15 m) outward, so the heading is read from a
+short near-field secant centred at `X_c ≈ 0.225 m`. On a curve of curvature `κ`
+the lane has already turned by `≈ κ·X_c` there, so the *reported* heading carries
+a bias
+
+```text
+epsi_bias ≈ κ · X_c        (X_c ≈ 0.225 m, the near-window centroid)
+```
+
+At the old `complex_b` radii (`R_min ≈ 0.43 m`, `κ ≈ 2.3`) this is ≈ 0.52 rad —
+**past C-02's `theta_max` = 0.4363 rad (25°)** — so the cage latched an emergency
+*while the car tracked the lane to millimetres* (true `epsi ≈ 0`; runs
+`experiments/sim/runs/cv_ctrl_eval_20260618T18*`).
+
+*Why it cannot simply be "corrected".* The curve's apparent heading and a **real**
+heading fault are indistinguishable in the near-field lane slope. Subtracting an
+estimated curvature removes the false positives **and** blinds the cage to genuine
+heading excursions on curves (validated: a curvature-corrected `epsi` masked a real
+end-of-lap loss-of-control, true `epsi → 0.56`, reading it as 0.17 — a false
+negative, unacceptable for a safety monitor). So the heading estimate is kept as a
+short near-field secant (`heading_window_m = 0.15`, §4.5), which is the least-biased
+form that does **not** hide real faults — and the residual bias is a hard limit, not
+a bug to remove. (The *controller* sidesteps this entirely: its pure-pursuit law,
+§3, reads the lane-centre point at a look-ahead — an interpolation that needs no
+curvature estimate — so it tracks curves the cage cannot certify.)
+
+*Design rule (frontier for new scenarios).* Keep the **driven-lane** curve radius
+above the bound that holds the perceived heading under `theta_max` with margin:
+
+```text
+R_min ≳ X_c / (theta_max − margin)      ⇒  R_min ≳ ~0.9 m  (κ ≲ 1.1)
+```
+
+at which `epsi_bias ≲ 0.25 rad` — comfortably below `theta_max`. Tracks tighter
+than this are *outside* the camera ODD for the heading rule: either soften them, or
+treat the resulting emergencies as the documented cost (not a defect) and gate the
+scenario accordingly. **`complex_b` was reshaped to honour this** (2026-06-18): its
+3-curve top serpentine became a 2-hump **"M"** (middle hump removed) with a
+**pronounced central valley** (the loop's main counter-steer — the only opposite-
+handed turn, kept deep enough to exercise it: ~40 driven-lane steps), and all
+curves were opened to `R_min ≈ 0.86 m` (driven right-lane `R_min ≈ 0.97 m`,
+`epsi_bias ≲ 0.23`). Generator: `scripts/generate_complex_track.py` (`complex_b`
+waypoints); regenerate the right lane with `scripts/offset_lane_centerline.py` and
+the Isaac mesh with `scripts/export_track_mesh.py`.
+
 ---
 
 ## 5. Camera geometry (`camera_geometry.py`)
@@ -268,9 +326,9 @@ estimator and the policy share one camera.
   the baseline lands in the **same results table** as the RL agent for a
   like-for-like comparison;
 - it writes the run with full reproducibility metadata, recording the controller
-  as `"cv_lane_controller (CvLaneEstimator D-43 + PD + curvature FF)"` with its
-  gains and a source hash — there is no learned checkpoint, the "policy" is the
-  deterministic law.
+  as `"cv_lane_controller (CvLaneEstimator D-43 + pure-pursuit look-ahead)"` with
+  its parameters and a source hash — there is no learned checkpoint, the "policy"
+  is the deterministic law.
 
 **Speed-fairness.** The controller's native cruise is 0.10 m/s; the RL camera eval
 ran at 0.20 m/s. The eval driver exposes `--fixed-speed` so the baseline can be
@@ -280,14 +338,15 @@ run at either, and **mean |ey| is the speed-fair comparison** across the two.
 
 ## 7. History: what this replaced
 
-The current CV+PD law **supersedes the original histogram pure-P controller**,
-whose set-point was "lane centre = image centre" in *pixels*. That set-point
-carried an uncalibrated, perspective-dependent steady-state offset and understeered
-the curves, so it could not hold the lane above ~0.1 m/s. Replacing the
+The current CV pure-pursuit law **supersedes the original histogram pure-P
+controller**, whose set-point was "lane centre = image centre" in *pixels*. That
+set-point carried an uncalibrated, perspective-dependent steady-state offset and
+understeered the curves, so it could not hold the lane above ~0.1 m/s. Replacing the
 histogram-peak heuristic with the calibrated ground-plane CV estimator (metric
-`ey`/`epsi`/`κ`) and adding the curvature feedforward is what lets the CV+PD law
-track the nominal oval to **RMSE ~10 mm at 0.2 m/s** (requirement < 50 mm) — on par
-with the RL agent, a genuine like-for-like reference rather than a strawman.
+lane-centre polynomial) and a look-ahead pursuit law is what lets it track the
+nominal oval to **RMSE ~10 mm at 0.2 m/s** (requirement < 50 mm) and hold tight
+curves the earlier PD + curvature-feedforward law ran wide on (§3) — on par with the
+RL agent, a genuine like-for-like reference rather than a strawman.
 
 > **Doc-string note.** The module docstring of `eval_cv_controller.py` still
 > describes the *old* "histogram lane peaks → proportional steering" front-end;
@@ -374,9 +433,9 @@ pieces — `cv_lane_estimator`, `cv_lane_controller`, `camera_geometry`,
 **Q1. Why is the classical controller a fair baseline and not a strawman?**
 Because it shares the RL agent's *perception ceiling*: same camera, same
 deterministic CV estimator the cage trusts. The only difference is the control
-policy (a transparent PD+FF vs a learned CNN), so the comparison isolates the
-contribution of learning. And it is *competent* — RMSE ~10 mm at 0.2 m/s, the same
-order as the RL agent — not a deliberately weak reference.
+policy (a transparent pure-pursuit law vs a learned CNN), so the comparison isolates
+the contribution of learning. And it is *competent* — RMSE ~10 mm at 0.2 m/s, the
+same order as the RL agent — not a deliberately weak reference.
 
 **Q2. Why does the cage read this CV estimator instead of the policy's CNN, or
 ground truth?** Ground truth is impossible on a real road (D-43 supersedes the
@@ -386,12 +445,14 @@ component). A dedicated *deterministic, inspectable* estimator gives the cage an
 independent, auditable view — the same one this baseline uses, which is why the
 baseline doubles as a sanity check on the cage's perception.
 
-**Q3. Why PD + feedforward and not just a high-gain P controller?**
-A high-gain P alone oscillates and still understeers curves (the feedforward error
-is a function of curvature, which a P term only sees *after* it has produced
-lateral error). The `epsi` damping term and the `v·κ` feedforward let the
-controller anticipate the bend and hold a small steady-state error — exactly the
-deficiency that sank the histogram pure-P predecessor (§7).
+**Q3. Why pure pursuit and not a PD on `ey`/`epsi` (with a curvature feedforward)?**
+The PD form was tried and **ran wide on tight curves**: its feedforward needs an
+explicit curvature estimate, and monocular curvature on a short arc is irrecoverably
+noisy (it swung sign frame-to-frame), so the car under-steered (§3, §4.7). Pure
+pursuit aims at the lane-centre point a look-ahead ahead — read by interpolation
+*within* the observed band, so it needs **no** curvature estimate and turns exactly
+as much as the visible bend demands, regulating offset and heading through one aim
+point.
 
 **Q4. What happens when the camera momentarily loses the lane?**
 `compute` returns `(0.0, False)`; the node stops (`stop_on_no_lane=True`) and the
@@ -402,15 +463,27 @@ counting as loss, with the SR-014 temporal check guarding against a wrong-side
 lock.
 
 **Q5. The eval driver's docstring mentions a histogram controller — which is
-real?** The CV+PD law in this document. The driver imports `CVLaneController`
-(CV estimator + PD + feedforward); the docstring is stale from the histogram era
-(§7). The recorded `controller` field in every run's `metadata.json` confirms the
-CV+PD law actually drove it.
+real?** The CV pure-pursuit law in this document. The driver imports
+`CVLaneController` (CV estimator + pure-pursuit look-ahead); the docstring is stale
+from the histogram era (§7). The recorded `controller` field in every run's
+`metadata.json` confirms the law that actually drove it.
 
 ---
 
 ## Version log
 
+- **v0.3 (2026-06-18):** §3 control law **switched PD + curvature-feedforward →
+  pure-pursuit look-ahead** (the FF needed an unrecoverable monocular curvature
+  estimate and under-steered tight curves; pure pursuit reads the lane-centre
+  point at `L=0.40 m`, no curvature needed). §4.5 heading now a short near-field
+  secant (`heading_window_m=0.15`); §4.7 added — the **curvature boundary**
+  finding: the cage's monocular `epsi` over-reads `≈ κ·0.225` and exceeds
+  `theta_max` on curves tighter than `R ≈ 0.9 m`, a frontier for scenario design
+  (curve-induced apparent heading and a real heading fault are indistinguishable,
+  so it cannot be corrected without blinding the cage). **`complex_b` softened**
+  accordingly: top serpentine 3 curves → 2-hump "M", `R_min 0.43 → 0.86 m`
+  (driven lane 0.97 m). Estimator gains `center_coeffs`; controller + estimator
+  unit tests updated.
 - **v0.2 (2026-06-18):** §5 camera geometry **pitch corrected 0.25 → 0.30 rad** to
   match the `camera_link_lane` joint `rpy="0 0.30 0"` in the mesh URDF (the value
   Gazebo actually renders). The CV estimator's ground-plane projection was

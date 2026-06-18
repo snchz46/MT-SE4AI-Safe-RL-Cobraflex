@@ -87,6 +87,12 @@ class LaneKeeperGazeboNode(Node):
 
         self.declare_parameter("image_topic", "camera/image_raw_lane")
         self.declare_parameter("linear_speed", 0.20)
+        # Pure-pursuit law (CVLaneController): aim at the lane centre look_ahead_m
+        # ahead. The legacy PD/feedforward gains are kept declared for backward
+        # compatibility but no longer affect the control (the controller ignores
+        # them); see docs/12 §3.
+        self.declare_parameter("look_ahead_m", 0.40)
+        self.declare_parameter("pursuit_gain", 1.0)
         self.declare_parameter("kp_ey", 6.0)
         self.declare_parameter("kd_epsi", 1.6)
         self.declare_parameter("kff_curv", 1.0)
@@ -106,9 +112,8 @@ class LaneKeeperGazeboNode(Node):
 
         self.controller = CVLaneController(
             speed=float(self.get_parameter("linear_speed").value),
-            kp_ey=float(self.get_parameter("kp_ey").value),
-            kd_epsi=float(self.get_parameter("kd_epsi").value),
-            kff_curv=float(self.get_parameter("kff_curv").value),
+            look_ahead_m=float(self.get_parameter("look_ahead_m").value),
+            pursuit_gain=float(self.get_parameter("pursuit_gain").value),
             max_angular_z=float(self.get_parameter("max_angular_z").value),
         )
 

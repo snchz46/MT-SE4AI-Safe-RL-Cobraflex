@@ -36,7 +36,12 @@ EXPECTED_LINKS = {
     "base_footprint", "base_link", "body_link",
     "front_left_wheel", "front_right_wheel",
     "rear_left_wheel", "rear_right_wheel",
-    "lidar_link", "camera_link", "camera_link_optical",
+    "lidar_link",
+    # ZED Mini front stereo pair (zed_macro.urdf.xacro, model=zedm).
+    "zedm_camera_link", "zedm_camera_center",
+    "zedm_left_camera_frame", "zedm_left_camera_frame_optical",
+    "zedm_right_camera_frame", "zedm_right_camera_frame_optical",
+    # Lane Cam + IMU.
     "camera_link_lane", "camera_link_optical_lane", "imu_link",
 }
 EXPECTED_WHEEL_JOINTS = {
@@ -97,7 +102,7 @@ def main() -> int:
     missing_frames = EXPECTED_LINKS - all_prim_names
     print(f"[check] articulation_root_present = {art_root}")
     print(f"[check] mass-bearing rigid-body links: {sorted(rigid_links)}")
-    print(f"[check] all 13 link frames present: {not missing_frames} "
+    print(f"[check] all {len(EXPECTED_LINKS)} link frames present: {not missing_frames} "
           f"(missing: {sorted(missing_frames)})")
     print(f"[check] mesh prims imported: {found_meshes}")
     print(f"[check] joints in stage: {sorted(found_joints)}")

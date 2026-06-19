@@ -10,7 +10,8 @@ Exact topic names and frame ids below.
 | subscribe | `/cmd_vel` | `geometry_msgs/Twist` | ~10 Hz | §1.1 |
 | publish | `/odom_truth` | `nav_msgs/Odometry` | ≥50 Hz | ground truth, §1.2 |
 | publish | `/camera/image_raw_lane` | `sensor_msgs/Image` | ≥20 Hz | §1.3 |
-| publish | `/camera/camera_info_lane` | `sensor_msgs/CameraInfo` | ≥20 Hz | §1.3 |
+| publish | `/camera/camera_info` | `sensor_msgs/CameraInfo` | ≥20 Hz | §1.3 (lane cam) |
+| optional | `/camera/{left,right}/image_raw` | `sensor_msgs/Image` | ~20 Hz | ZED stereo, not used by RL |
 | publish | `/clock` | `rosgraph_msgs/Clock` | every step | sim time |
 | publish | `/joint_states` | `sensor_msgs/JointState` | ≥30 Hz | 4 wheel joints |
 | publish | `/tf` (+ `/tf_static`) | `tf2_msgs/TFMessage` | ≥30 Hz | §1.4 |
@@ -29,11 +30,13 @@ Exact topic names and frame ids below.
 - `header.stamp` = sim time, ≥50 Hz.
 - Frame `odom` → child `base_footprint`; fill `pose.pose` and `twist.twist`.
 
-### 1.3 Camera `/camera/image_raw_lane` (+ `camera_info_lane`)
+### 1.3 Camera `/camera/image_raw_lane` (+ `camera_info`)
 
 - 640×360, `rgb8` (or `bgr8`/`mono8`), HFOV 1.5707963 rad (90°), square pixels.
 - Frame id `camera_link_optical_lane`, sim-time stamps, ≥20 Hz.
-- `camera_info_lane`: `fx = fy ≈ 320`, `cx = 320`, `cy = 180`.
+- `camera_info`: `fx = fy ≈ 320`, `cx = 320`, `cy = 180`. (The lane cam's info
+  topic is `camera/camera_info` — it took that name when the front ZED became a
+  left/right stereo pair publishing `camera/{left,right}/camera_info`.)
 
 ### 1.4 `/clock`, `/joint_states`, `/tf`
 
@@ -85,8 +88,9 @@ Only the Lane Cam is on the RL path; the rest are optional.
 
 | Sensor | Frame | Topic(s) | Resolution / FOV / range | Rate | Noise | RL |
 | --- | --- | --- | --- | --- | --- | --- |
-| Lane Cam (IMX219-160) | `camera_link_optical_lane` | `/camera/image_raw_lane`, `/camera/camera_info_lane` | 640×360, HFOV 1.5707963 rad (90°), `rgb8`, clip 0.1–15 m | 20 Hz | gaussian σ 0.007 | yes |
-| ZED Cam | `camera_link_optical` | `/camera/image_raw`, `/camera/camera_info` | 640×480, HFOV 1.3962634 rad (80°), `rgb8`, clip 0.1–15 m | 20 Hz | gaussian σ 0.007 | no |
+| Lane Cam (IMX219-160) | `camera_link_optical_lane` | `/camera/image_raw_lane`, `/camera/camera_info` | 640×360, HFOV 1.5707963 rad (90°), `rgb8`, clip 0.1–15 m | 20 Hz | gaussian σ 0.007 | yes |
+| ZED Mini left | `zedm_left_camera_frame_optical` | `/camera/left/image_raw`, `/camera/left/camera_info` | 640×480, HFOV 1.3962634 rad (80°), `rgb8`, clip 0.1–15 m | 20 Hz | gaussian σ 0.007 | no |
+| ZED Mini right | `zedm_right_camera_frame_optical` | `/camera/right/image_raw`, `/camera/right/camera_info` | 640×480, HFOV 1.3962634 rad (80°), `rgb8`, clip 0.1–15 m | 20 Hz | gaussian σ 0.007 | no |
 | RPLiDAR A2M4 | `lidar_link` | `/scan` | 360°, 4000 samples, range 0.015–8.0 m | 10 Hz | gaussian σ 0.01 m | no |
 | IMU | `imu_link` | `/imu` | 6-DoF | 200 Hz | — | no |
 

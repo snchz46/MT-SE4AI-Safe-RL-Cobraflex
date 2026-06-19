@@ -15,7 +15,7 @@ Isaac Sim cannot resolve:
 | Dependency | Role | Isaac needs it? |
 | --- | --- | --- |
 | `urdf/inertial_macros.xacro` | material + inertia macros | **yes** — expanded inline |
-| `urdf/robot.gazebo`          | Gazebo/`gz` plugins (DiffDrive, odometry, joint-state pub) + sensors (IMU, lidar, two cameras) | **no** — Gazebo-only, Isaac brings its own physics/sensors |
+| `urdf/robot.gazebo`          | Gazebo/`gz` plugins (DiffDrive, odometry, joint-state pub) + sensors (IMU, lidar, three cameras: ZED stereo pair + lane) | **no** — Gazebo-only, Isaac brings its own physics/sensors |
 
 On top of that the file uses `$(find cobraflex)` substitutions, xacro math /
 property expansion, and `<visual>`/`<collision>` elements with no `<geometry>`
@@ -48,13 +48,15 @@ xacro and re-run. Validate with `check_urdf src/cobraflex/urdf/cobraflex_isaac.u
 
 ### What is preserved
 
-All kinematic, inertial and material attributes of the source: 13 links, 12
-joints (4 `continuous` wheel joints + 8 fixed), the chassis/body/wheel/lidar/
-camera STL visuals, box/cylinder collisions, computed inertia tensors, and the
-named materials (black/grey/blue/yellow/orange). The camera mount frames
-(`camera_link`, `camera_link_lane` with their pitched optical frames), the
-`lidar_link` and `imu_link` frames are all kept — only the Gazebo *sensors* on
-them are dropped (Isaac sensors are added in-engine, not via URDF).
+All kinematic, inertial and material attributes of the source: 17 links, 16
+joints (4 `continuous` wheel joints + 12 fixed), the chassis/body/wheel/lidar/
+ZED STL visuals, box/cylinder/mesh collisions, computed inertia tensors, and the
+named materials (black/grey/blue/yellow/orange + the ZED's inline `zed_mat`). The
+ZED Mini stereo frames (`zedm_camera_link` → `zedm_camera_center` →
+`zedm_{left,right}_camera_frame` with their optical children), the Lane Cam
+(`camera_link_lane` + pitched `camera_link_optical_lane`), the `lidar_link` and
+`imu_link` frames are all kept — only the Gazebo *sensors* on them are dropped
+(Isaac sensors are added in-engine, not via URDF).
 
 ## Importing into Isaac Sim
 
@@ -84,10 +86,17 @@ usd_path = URDFImporter(cfg).import_urdf()   # writes a USD package, returns its
 ```
 
 It converts the URDF, loads the resulting USD with payloads, and asserts the
-articulation root, all 13 link frames, ≥5 mesh prims and the 4 revolute wheel
+articulation root, all 17 link frames, ≥5 mesh prims and the 4 revolute wheel
 joints are present (exit 0 = PASS).
 
 ## Verified result
+
+> **Note (2026-06-19):** the run below was on the **mono-ZED** URDF (13 links).
+> The source xacro since switched the front camera to a **ZED Mini stereo pair**
+> (`zedm_*` frames, 17 links / 16 joints), so `cobraflex_isaac.urdf` was
+> regenerated. The committed `isaac_usd/` package is therefore stale — re-import
+> it (`BRINGUP_REIMPORT=1`, or delete `isaac_usd/` then run
+> `isaac_import_check.py` / the bring-up) before relying on the figures here.
 
 Headless conversion on Isaac Sim `6.0.0-rc.59` produced a valid USD package
 under `src/cobraflex/urdf/isaac_usd/cobraflex_isaac/`:
@@ -126,7 +135,7 @@ node works unchanged.
 | (sim time) | pub `clock` | `IsaacReadSimulationTime` → `ROS2PublishClock` |
 | IMU sensor | pub `imu` | `IsaacImuSensor` prim → `IsaacReadIMU` → `ROS2PublishImu` |
 | gpu_lidar | pub `scan` | RTX lidar (`RPLIDAR_S2E`) + `IsaacCreateRenderProduct` → `ROS2RtxLidarHelper` |
-| camera / lane camera | pub `camera/image_raw[_lane]` (+ `camera_info`) | `Camera` prim + `ROS2CameraHelper` + `ROS2CameraInfoHelper` |
+| ZED stereo / lane camera | pub `camera/{left,right}/image_raw`, `camera/image_raw_lane` (+ `camera_info`) | `Camera` prim + `ROS2CameraHelper` + `ROS2CameraInfoHelper` (one graph each) |
 
 The drive train is the only non-trivial mapping: the Gazebo DiffDrive drove
 `left = front_left+rear_left`, `right = front_right+rear_right`. A ScriptNode runs
@@ -218,7 +227,7 @@ differential drive + passive casters.
   `ROS2PublishJointState` targetPrim) are non-fatal; switch to the
   `IsaacComputeTransformTree` / `IsaacReadJointState` feeders to silence them.
 
-### Sensors (lidar + two cameras)
+### Sensors (lidar + three cameras: ZED stereo + lane)
 
 Isaac sensors are created **in-engine** (not in the URDF) and published over the
 bridge with helper OG nodes. `add_sensors()` mirrors the Gazebo `<sensor>` blocks,
@@ -227,8 +236,8 @@ on the same ROS2 topics + frame ids so existing perception nodes (e.g.
 
 | Gazebo sensor | link | ROS2 topic(s) | Isaac graph |
 | --- | --- | --- | --- |
-| ZED Cam (640×480, hfov 80°) | `camera_link_optical` | `camera/image_raw` + `camera/camera_info` | `IsaacCreateRenderProduct` → `ROS2CameraHelper` (rgb) + `ROS2CameraInfoHelper` |
-| Lane Cam (640×360, hfov 90°) | `camera_link_optical_lane` | `camera/image_raw_lane` + `camera/camera_info_lane` | same, second graph |
+| ZED Mini stereo (640×480/eye, hfov 80°) | `zedm_{left,right}_camera_frame_optical` | `camera/{left,right}/image_raw` + `…/camera_info` | `IsaacCreateRenderProduct` → `ROS2CameraHelper` (rgb) + `ROS2CameraInfoHelper`, one graph per eye (skip both with `BRINGUP_ZED=0`) |
+| Lane Cam (640×360, hfov 90°) | `camera_link_optical_lane` | `camera/image_raw_lane` + `camera/camera_info` | same, own graph |
 | RPLiDAR (360°, 2D) | `lidar_link` | `scan` | `IsaacSensorCreateRtxLidar` → `IsaacCreateRenderProduct` → `ROS2RtxLidarHelper` (laser_scan) |
 | IMU (200 Hz) | `imu_link` | `imu` | `IsaacImuSensor` prim (`IMU.create`) → `IsaacReadIMU` → `ROS2PublishImu` |
 
@@ -243,9 +252,12 @@ Gazebo hfov, so `camera_info` intrinsics match (verified fx≈381 px for the ZED
 renders every frame (even `--headless`); they are skipped in the physics-only
 `--test`/`--turn` paths. Toggle with `BRINGUP_SENSORS=0`.
 
-**Verified** (sourced host terminal vs `--headless`): `ros2 topic list` shows
-`/scan /camera/image_raw /camera/camera_info /camera/image_raw_lane
-/camera/camera_info_lane`; `/camera/image_raw_lane` echoes height 360 × width 640.
+**Verified (mono-ZED build, 2026-06-16)** (sourced host terminal vs `--headless`):
+`ros2 topic list` showed `/scan /camera/image_raw /camera/camera_info
+/camera/image_raw_lane`; `/camera/image_raw_lane` echoed height 360 × width 640.
+After the ZED→stereo switch the front-camera topics become
+`/camera/{left,right}/image_raw` (+ `…/camera_info`) and the lane info topic is
+`/camera/camera_info` — re-verify after re-importing the URDF.
 
 The lidar uses the shipped **`RPLIDAR_S2E`** config (SLAMTEC, the RPLiDAR maker;
 already on Isaac's default profile search path): 360° 2D rotary, **near-range

@@ -118,19 +118,35 @@ GROUND_FRICTION = float(os.environ.get("GROUND_FRICTION", "0.05"))
 WHEEL_LINKS = ["front_left_wheel", "rear_left_wheel",
                "front_right_wheel", "rear_right_wheel"]
 
-# Sensors (off in --test/--turn; they need rendering). Each entry mirrors the
-# Gazebo <sensor> on that link: same ROS2 topics + frame ids so existing nodes
-# (lane_keeper, etc.) consume them unchanged. hfov from robot.gazebo.
+# Sensors (off in --test/--turn; they need rendering).
 SENSORS = os.environ.get("BRINGUP_SENSORS", "1") != "0"
 # Robot TF tree: off by default -> let robot_state_publisher (URDF + Isaac's
 # /joint_states) own it, exactly like the Gazebo setup. See build_ros2_graph.
 PUBLISH_ROBOT_TF = os.environ.get("BRINGUP_ROBOT_TF", "0") != "0"
-CAMERAS = [
-    # (link frame for the camera prim, hfov rad, width, height, image topic, info topic)
-    ("camera_link_optical", 1.3962634, 640, 480,
-     "camera/image_raw", "camera/camera_info"),
+# ZED Mini front stereo pair: scene camera, NOT on the RL path (only the Lane Cam
+# is). Two render products roughly double the camera render cost, so allow
+# dropping them with BRINGUP_ZED=0 (the Lane Cam is always kept).
+ZED = os.environ.get("BRINGUP_ZED", "1") != "0"
+# Each entry mirrors the Gazebo <sensor> on that link: same ROS2 topics + frame
+# ids (src/cobraflex/urdf/robot.gazebo, config/gz_bridge.yaml) so existing nodes
+# consume them unchanged. Tuple: (optical frame for the camera prim, hfov rad,
+# width, height, image topic, info topic). hfov from robot.gazebo.
+CAMERAS = []
+if ZED:
+    # ZED Mini stereo pair (63 mm baseline), per-eye 640x480, hfov 1.3962634 rad
+    # (80 deg). zed-ros2 topic convention: camera/{left,right}/{image_raw,camera_info}.
+    CAMERAS += [
+        ("zedm_left_camera_frame_optical", 1.3962634, 640, 480,
+         "camera/left/image_raw", "camera/left/camera_info"),
+        ("zedm_right_camera_frame_optical", 1.3962634, 640, 480,
+         "camera/right/image_raw", "camera/right/camera_info"),
+    ]
+# Lane Cam (IMX219-160 mirror), 640x360, hfov 1.5707963 rad (90 deg): the RL/CV
+# perception camera. Its info topic is camera/camera_info (matches robot.gazebo;
+# the former mono ZED freed that name when it became the left/right stereo pair).
+CAMERAS += [
     ("camera_link_optical_lane", 1.5707963, 640, 360,
-     "camera/image_raw_lane", "camera/camera_info_lane"),
+     "camera/image_raw_lane", "camera/camera_info"),
 ]
 IMU_LINK = "imu_link"
 IMU_TOPIC = "imu"
@@ -173,9 +189,14 @@ def compute(db):
 
 
 def ensure_robot_usd() -> str:
-    """Convert the URDF to USD if needed and return the .usda path."""
+    """Convert the URDF to USD if needed and return the .usda path.
+
+    An existing USD package is reused as-is. After editing cobraflex_isaac.urdf
+    (e.g. the ZED stereo frames) the cached USD is stale, so set BRINGUP_REIMPORT=1
+    to force a fresh URDF->USD import (or just delete src/cobraflex/urdf/isaac_usd/).
+    """
     out = os.path.join(USD_OUT, "cobraflex_isaac", "cobraflex_isaac.usda")
-    if os.path.exists(out):
+    if os.path.exists(out) and os.environ.get("BRINGUP_REIMPORT", "0") == "0":
         return out
     os.makedirs(USD_OUT, exist_ok=True)
     cfg = URDFImporterConfig(urdf_path=URDF, usd_path=USD_OUT,

@@ -193,30 +193,57 @@
     <child link="lidar_link" />
     <origin rpy="0 0 0" xyz="0 0 0.09" />
   </joint>
-  <link name="camera_link">
+  <link name="zedm_camera_link" />
+  <link name="zedm_camera_center">
     <visual>
       <origin rpy="1.5707963267948966 0 0" xyz="0 0 0" />
       <geometry>
         <mesh filename="../meshes/zedmini_camera.stl" scale="0.001 0.001 0.001" />
       </geometry>
-      <material name="yellow" />
+      <material name="zed_mat">
+        <color rgba="0 0 0 1.0" />
+      </material>
     </visual>
     <collision>
+      <origin rpy="1.5707963267948966 0 0" xyz="0 0 0" />
       <geometry>
-        <box size="0.01 0.1 0.02" />
+        <mesh filename="../meshes/zedmini_camera.stl" scale="0.001 0.001 0.001" />
       </geometry>
     </collision>
   </link>
-  <joint name="camera_joint" type="fixed">
-    <parent link="body_link" />
-    <child link="camera_link" />
-    <origin rpy="0 0 0" xyz="0.0665 0 0.02" />
+  <joint name="zedm_camera_center_joint" type="fixed">
+    <parent link="zedm_camera_link" />
+    <child link="zedm_camera_center" />
+    <origin rpy="0 0 0" xyz="0 0 0.01325" />
   </joint>
-  <link name="camera_link_optical" />
-  <joint name="camera_optical_joint" type="fixed">
-    <parent link="camera_link" />
-    <child link="camera_link_optical" />
-    <origin rpy="-1.5707963267948966 0 -1.5707963267948966" xyz="0 0 0" />
+  <link name="zedm_left_camera_frame" />
+  <joint name="zedm_left_camera_joint" type="fixed">
+    <parent link="zedm_camera_center" />
+    <child link="zedm_left_camera_frame" />
+    <origin rpy="0 0 0" xyz="0.02 0.0245 0" />
+  </joint>
+  <link name="zedm_left_camera_frame_optical" />
+  <joint name="zedm_left_camera_joint_optical" type="fixed">
+    <origin rpy="-1.5707963267948966 0.0 -1.5707963267948966" xyz="0 0 0" />
+    <parent link="zedm_left_camera_frame" />
+    <child link="zedm_left_camera_frame_optical" />
+  </joint>
+  <link name="zedm_right_camera_frame" />
+  <joint name="zedm_right_camera_joint" type="fixed">
+    <parent link="zedm_camera_center" />
+    <child link="zedm_right_camera_frame" />
+    <origin rpy="0 0 0" xyz="0.02 -0.0385 0" />
+  </joint>
+  <link name="zedm_right_camera_frame_optical" />
+  <joint name="zedm_right_camera_joint_optical" type="fixed">
+    <origin rpy="-1.5707963267948966 0.0 -1.5707963267948966" xyz="0 0 0" />
+    <parent link="zedm_right_camera_frame" />
+    <child link="zedm_right_camera_frame_optical" />
+  </joint>
+  <joint name="zedm_mount_joint" type="fixed">
+    <parent link="body_link" />
+    <child link="zedm_camera_link" />
+    <origin rpy="0 0 0" xyz="0.0665 0 0.00675" />
   </joint>
   <link name="camera_link_lane">
     <visual>

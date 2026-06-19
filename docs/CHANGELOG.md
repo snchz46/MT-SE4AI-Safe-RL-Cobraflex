@@ -31,6 +31,64 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [19.06.2026] — Isaac bring-up synced to the ZED Mini stereo pair (+ obsolete-frame cleanup)
+
+**Document(s) affected:** `tools/isaac_ros2_bringup.py`, `tools/isaac_import_check.py`, `src/cobraflex/urdf/cobraflex_isaac.urdf` (regenerated), `docs/13_isaacsim_urdf_import.md`, `docs/14_isaacsim_handover_spec.md`
+**Phase:** track 'E' tooling (Isaac Sim platform)
+**Gate context:** none (auxiliary platform tooling)
+**Author:** Samuel Sanchez
+
+### Change
+
+The Gazebo robot's front camera became a **ZED Mini stereo pair** (commit
+`412e2a1f`, `zedm_left_camera_frame` / `zedm_right_camera_frame`, topics
+`camera/{left,right}/{image_raw,camera_info}`), and the Lane Cam's info topic
+moved to `camera/camera_info`. The Isaac path still wired the **old mono ZED**
+(`camera_link_optical` → `camera/image_raw`). Brought it in line:
+
+1. **`isaac_ros2_bringup.py`** — `CAMERAS` now publishes the ZED stereo pair on
+   the `zedm_*_camera_frame_optical` frames + the Lane Cam on `camera/camera_info`,
+   matching `robot.gazebo` / `config/gz_bridge.yaml`. New `BRINGUP_ZED=0` drops the
+   (non-RL) stereo pair to halve camera render cost; `BRINGUP_REIMPORT=1` forces a
+   URDF→USD re-import so the stale cached `isaac_usd/` is not silently reused.
+2. **`cobraflex_isaac.urdf`** — regenerated camera section: old `camera_link` /
+   `camera_link_optical` replaced by the zed-macro expansion (`zedm_camera_link`
+   → `zedm_camera_center` → `zedm_{left,right}_camera_frame` + opticals). 13→17
+   links, 12→16 joints.
+3. **`isaac_import_check.py`** — `EXPECTED_LINKS` updated to the 17-frame set;
+   frame-count message de-hardcoded.
+4. **docs/13, docs/14** — sensor/topic/frame tables updated; empirical "Verified"
+   blocks caveated as the pre-stereo (mono) import.
+
+### Rationale
+
+The Isaac bring-up's contract is "same ROS2 nodes as Gazebo, unchanged." After the
+stereo switch the Isaac camera frames/topics no longer matched Gazebo or the bridge,
+so any node (or RViz) keyed to the new names saw nothing on the Isaac side. The
+generated Isaac URDF and the import smoke-test still referenced the deleted mono
+frames — orphaned artifacts that would fail the import check.
+
+### Impact
+
+`cobraflex_isaac.urdf` was regenerated **by hand** on the Windows host (the canonical
+`tools/build_isaac_urdf.py` needs `xacro` + a sourced ROS2 workspace, i.e. Ubuntu);
+re-run it on the Ubuntu host for the byte-canonical file. The committed
+`src/cobraflex/urdf/isaac_usd/` USD package is from the mono URDF and is now **stale**
+— re-import on the Isaac host (`BRINGUP_REIMPORT=1` or delete `isaac_usd/`) before the
+bring-up shows the ZED frames. No H/SR/C/SC/M identifiers touched. Lane-cam info topic
+rename is safe: no RL/CV consumer subscribes to it (they read `camera/image_raw_lane`;
+`lane_keeper_node` publishes its own `/lane/camera_info`).
+
+### Verification
+
+URDF re-validated (Python ElementTree): well-formed, single root `base_footprint`,
+17 links / 16 joints, 4 continuous wheel joints, 6 `zedm_*` frames, every joint
+parent/child resolves. `tools/check_traceability.py` unaffected (no ID changes).
+Isaac-side runtime (import check + live `ros2 topic list`) is **deferred to the Ubuntu
++ Isaac host** — not runnable on this Windows machine.
+
+---
+
 ## [19.06.2026] — CV baseline re-run on complex_b + Lane Cam (authoritative); PolylineTracker lap-seam fix
 
 **Document(s) affected:** `docs/12_cv_lane_keeper.md` (v0.4), `manuscript/chapters/chapter_08_experimental_evaluation.md` (§8.9.5), `experiments/sim/runs/cv_ctrl_eval_newcam_4k4/summary.json`, `experiments/sim/runs/baseline_cv_vs_rl_nominal.json`, `src/cobraflex_rl/cobraflex_rl/polyline_tracker.py`, `policy/tests/test_polyline_tracker.py`

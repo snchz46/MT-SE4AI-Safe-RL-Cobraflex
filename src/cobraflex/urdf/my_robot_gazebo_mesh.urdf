@@ -199,15 +199,15 @@
 
     <link name="camera_link_lane">
         <visual>
-            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <origin xyz="0 0 0" rpy="0 -1 0"/>
             <geometry>
-                <box size="0.005 0.02 0.02"/>
+                <cylinder radius="0.005" length="0.002"/>
             </geometry>
             <material name="yellow" />
         </visual>
         <collision>
              <geometry>
-                <box size="0.005 0.02 0.02"/>
+                <cylinder radius="0.005" length="0.002"/>
             </geometry>
         </collision>
     </link>

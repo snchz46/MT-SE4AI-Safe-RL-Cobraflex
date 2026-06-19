@@ -3,16 +3,16 @@
     customLayerData = {
         string creator = "URDF USD Converter v0.1.2"
     }
-    doc = """Generated from Composed Stage of root layer /tmp/tmpt2rvr9i2/cobraflex_robot.usdc
+    doc = """Generated from Composed Stage of root layer /tmp/tmpejia8fc_/cobraflex_robot.usdc
 
 
-Generated from Composed Stage of root layer /tmp/urdf_import_cobraflex_isaac_uz3wcyld/usdex_cobraflex_isaac/cobraflex_robot.usdc
+Generated from Composed Stage of root layer /tmp/urdf_import_cobraflex_isaac__7mwvajy/usdex_cobraflex_isaac/cobraflex_robot.usdc
 
 
-Generated from Composed Stage of root layer /tmp/urdf_import_cobraflex_isaac_uz3wcyld/temp_cobraflex_isaac/cobraflex_isaac.usd
+Generated from Composed Stage of root layer /tmp/urdf_import_cobraflex_isaac__7mwvajy/temp_cobraflex_isaac/cobraflex_isaac.usd
 
 
-Generated from Composed Stage of root layer /media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex/urdf/isaac_usd/cobraflex_isaac/payloads/base.usd
+Generated from Composed Stage of root layer /home/admit/Samuel/thesis_repo/src/cobraflex/urdf/isaac_usd/cobraflex_isaac_3/payloads/base.usd
 """
     kilogramsPerUnit = 1
     metersPerUnit = 1
@@ -99,17 +99,30 @@ def Scope "Instances"
         )
         {
             custom rel material:binding
-            prepend rel material:binding = </Instances/zedmini_camera/VisualMaterials/yellow>
+            prepend rel material:binding = </Instances/zedmini_camera/VisualMaterials/zed_mat>
         }
 
         def Scope "VisualMaterials"
         {
-            def Material "yellow" (
+            def Material "zed_mat" (
                 instanceable = true
-                prepend references = @./materials.usda@</Materials/yellow>
+                prepend references = @./materials.usda@</Materials/black>
             )
             {
             }
+        }
+    }
+
+    def Xform "zedmini_camera_1" (
+        prepend references = @./geometries.usd@</Geometries/zedmini_camera>
+    )
+    {
+        over "zedmini_camera" (
+            apiSchemas = ["PhysicsCollisionAPI", "NewtonCollisionAPI", "PhysicsMeshCollisionAPI", "NewtonMeshCollisionAPI"]
+        )
+        {
+            token physics:approximation = "convexHull"
+            token purpose = "guide"
         }
     }
 

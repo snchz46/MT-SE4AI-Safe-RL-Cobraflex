@@ -4,16 +4,16 @@
         string creator = "URDF USD Converter v0.1.2"
     }
     defaultPrim = "cobraflex_robot"
-    doc = """Generated from Composed Stage of root layer /tmp/tmpt2rvr9i2/cobraflex_robot.usdc
+    doc = """Generated from Composed Stage of root layer /tmp/tmpejia8fc_/cobraflex_robot.usdc
 
 
-Generated from Composed Stage of root layer /tmp/urdf_import_cobraflex_isaac_uz3wcyld/usdex_cobraflex_isaac/cobraflex_robot.usdc
+Generated from Composed Stage of root layer /tmp/urdf_import_cobraflex_isaac__7mwvajy/usdex_cobraflex_isaac/cobraflex_robot.usdc
 
 
-Generated from Composed Stage of root layer /tmp/urdf_import_cobraflex_isaac_uz3wcyld/temp_cobraflex_isaac/cobraflex_isaac.usd
+Generated from Composed Stage of root layer /tmp/urdf_import_cobraflex_isaac__7mwvajy/temp_cobraflex_isaac/cobraflex_isaac.usd
 
 
-Generated from Composed Stage of root layer /media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex/urdf/isaac_usd/cobraflex_isaac/payloads/base.usd
+Generated from Composed Stage of root layer /home/admit/Samuel/thesis_repo/src/cobraflex/urdf/isaac_usd/cobraflex_isaac_3/payloads/base.usd
 """
     kilogramsPerUnit = 1
     metersPerUnit = 1
@@ -31,10 +31,16 @@ def Xform "cobraflex_robot" (
     kind = "component"
 )
 {
-    float3[] extentsHint = [(-0.116000004, -0.090856954, 4.4768043e-7), (0.12934354, 0.08914305, 0.19626388), (3.4028235e38, 3.4028235e38, 3.4028235e38), (-3.4028235e38, -3.4028235e38, -3.4028235e38), (3.4028235e38, 3.4028235e38, 3.4028235e38), (-3.4028235e38, -3.4028235e38, -3.4028235e38), (-0.114, -0.09, -1.3257621e-9), (0.12934354, 0.09, 0.2445)]
+    float3[] extentsHint = [(-0.116000004, -0.090856954, 4.4768043e-7), (0.12846842, 0.08914305, 0.19626388), (3.4028235e38, 3.4028235e38, 3.4028235e38), (-3.4028235e38, -3.4028235e38, -3.4028235e38), (3.4028235e38, 3.4028235e38, 3.4028235e38), (-3.4028235e38, -3.4028235e38, -3.4028235e38), (-0.114, -0.09, -1.3257621e-9), (0.1290722, 0.09, 0.2445)]
 
     def Scope "Materials"
     {
+        def Material "yellow" (
+            instanceable = true
+            prepend references = @./materials.usda@</Materials/yellow>
+        )
+        {
+        }
     }
 
     def Scope "Geometry"
@@ -112,43 +118,74 @@ def Xform "cobraflex_robot" (
                         }
                     }
 
-                    def Xform "camera_link"
+                    def Xform "zedm_camera_link"
                     {
                         quatf xformOp:orient = (1, 0, 0, 0)
                         float3 xformOp:scale = (1, 1, 1)
-                        double3 xformOp:translate = (0.065, 0, 0.02)
+                        double3 xformOp:translate = (0.0665, 0, 0.006750000000000001)
                         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
 
-                        def Xform "zedmini_camera" (
-                            instanceable = true
-                            prepend references = @./instances.usda@</Instances/zedmini_camera>
-                        )
+                        def Xform "zedm_camera_center"
                         {
-                            quatd xformOp:orient = (0.7071067691, 0.7071067691, 0, 0)
-                            double3 xformOp:scale = (0.001000000047, 0.001000000047, 0.001000000047)
-                            double3 xformOp:translate = (0, 0, 0)
-                            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
-                        }
-
-                        def Cube "box" (
-                            prepend apiSchemas = ["PhysicsCollisionAPI"]
-                        )
-                        {
-                            float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
-                            uniform token purpose = "guide"
-                            double size = 1
                             quatf xformOp:orient = (1, 0, 0, 0)
-                            float3 xformOp:scale = (0.01, 0.1, 0.02)
-                            double3 xformOp:translate = (0, 0, 0)
-                            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
-                        }
-
-                        def Xform "camera_link_optical"
-                        {
-                            quatf xformOp:orient = (-0.5, 0.5, -0.5, 0.5)
                             float3 xformOp:scale = (1, 1, 1)
-                            double3 xformOp:translate = (0, 0, 0)
+                            double3 xformOp:translate = (0, 0, 0.01325)
                             uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                            def Xform "zedmini_camera" (
+                                instanceable = true
+                                prepend references = @./instances.usda@</Instances/zedmini_camera>
+                            )
+                            {
+                                quatd xformOp:orient = (0.7071067691, 0.7071067691, 0, 0)
+                                double3 xformOp:scale = (0.001000000047, 0.001000000047, 0.001000000047)
+                                double3 xformOp:translate = (0, 0, 0)
+                                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+                            }
+
+                            def Xform "zedmini_camera_1" (
+                                displayName = "zedmini_camera"
+                                instanceable = true
+                                prepend references = @./instances.usda@</Instances/zedmini_camera_1>
+                            )
+                            {
+                                quatd xformOp:orient = (0.7071067691, 0.7071067691, 0, 0)
+                                double3 xformOp:scale = (0.001000000047, 0.001000000047, 0.001000000047)
+                                double3 xformOp:translate = (0, 0, 0)
+                                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+                            }
+
+                            def Xform "zedm_left_camera_frame"
+                            {
+                                quatf xformOp:orient = (1, 0, 0, 0)
+                                float3 xformOp:scale = (1, 1, 1)
+                                double3 xformOp:translate = (0.02, 0.0245, 0)
+                                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                                def Xform "zedm_left_camera_frame_optical"
+                                {
+                                    quatf xformOp:orient = (-0.5, 0.5, -0.5, 0.5)
+                                    float3 xformOp:scale = (1, 1, 1)
+                                    double3 xformOp:translate = (0, 0, 0)
+                                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+                                }
+                            }
+
+                            def Xform "zedm_right_camera_frame"
+                            {
+                                quatf xformOp:orient = (1, 0, 0, 0)
+                                float3 xformOp:scale = (1, 1, 1)
+                                double3 xformOp:translate = (0.02, -0.0385, 0)
+                                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+                                def Xform "zedm_right_camera_frame_optical"
+                                {
+                                    quatf xformOp:orient = (-0.5, 0.5, -0.5, 0.5)
+                                    float3 xformOp:scale = (1, 1, 1)
+                                    double3 xformOp:translate = (0, 0, 0)
+                                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+                                }
+                            }
                         }
                     }
 
@@ -159,29 +196,33 @@ def Xform "cobraflex_robot" (
                         double3 xformOp:translate = (0.124, 0, -0.03)
                         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
 
-                        def Cube "box" (
+                        def Cylinder "cylinder" (
                             prepend apiSchemas = ["MaterialBindingAPI"]
                         )
                         {
-                            float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+                            uniform token axis = "Z"
+                            float3[] extent = [(-0.005, -0.005, -0.001), (0.005, 0.005, 0.001)]
+                            double height = 0.002
                             rel material:binding = </cobraflex_robot/Materials/yellow>
-                            double size = 1
-                            quatf xformOp:orient = (1, 0, 0, 0)
-                            float3 xformOp:scale = (0.005, 0.02, 0.02)
+                            double radius = 0.005
+                            quatf xformOp:orient = (0.87758255, 0, -0.47942555, 0)
+                            float3 xformOp:scale = (1, 1, 1)
                             double3 xformOp:translate = (0, 0, 0)
                             uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
                         }
 
-                        def Cube "box_1" (
+                        def Cylinder "cylinder_1" (
                             prepend apiSchemas = ["PhysicsCollisionAPI"]
-                            displayName = "box"
+                            displayName = "cylinder"
                         )
                         {
-                            float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+                            uniform token axis = "Z"
+                            float3[] extent = [(-0.005, -0.005, -0.001), (0.005, 0.005, 0.001)]
+                            double height = 0.002
                             uniform token purpose = "guide"
-                            double size = 1
+                            double radius = 0.005
                             quatf xformOp:orient = (1, 0, 0, 0)
-                            float3 xformOp:scale = (0.005, 0.02, 0.02)
+                            float3 xformOp:scale = (1, 1, 1)
                             double3 xformOp:translate = (0, 0, 0)
                             uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
                         }
@@ -212,7 +253,7 @@ def Xform "cobraflex_robot" (
                     {
                         quatf xformOp:orient = (1, 0, 0, 0)
                         float3 xformOp:scale = (1, 1, 1)
-                        double3 xformOp:translate = (0.07400000000000001, 0, 0.02)
+                        double3 xformOp:translate = (0.0665, 0, 0.02)
                         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
                     }
                 }

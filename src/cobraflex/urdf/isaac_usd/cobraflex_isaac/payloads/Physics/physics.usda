@@ -4,16 +4,16 @@
         string creator = "URDF USD Converter v0.1.2"
     }
     defaultPrim = "cobraflex_robot"
-    doc = """Generated from Composed Stage of root layer /tmp/tmpt2rvr9i2/cobraflex_robot.usdc
+    doc = """Generated from Composed Stage of root layer /tmp/tmpejia8fc_/cobraflex_robot.usdc
 
 
-Generated from Composed Stage of root layer /tmp/urdf_import_cobraflex_isaac_uz3wcyld/usdex_cobraflex_isaac/cobraflex_robot.usdc
+Generated from Composed Stage of root layer /tmp/urdf_import_cobraflex_isaac__7mwvajy/usdex_cobraflex_isaac/cobraflex_robot.usdc
 
 
-Generated from Composed Stage of root layer /tmp/urdf_import_cobraflex_isaac_uz3wcyld/temp_cobraflex_isaac/cobraflex_isaac.usd
+Generated from Composed Stage of root layer /tmp/urdf_import_cobraflex_isaac__7mwvajy/temp_cobraflex_isaac/cobraflex_isaac.usd
 
 
-Generated from Composed Stage of root layer /media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex/urdf/isaac_usd/cobraflex_isaac/payloads/base.usd
+Generated from Composed Stage of root layer /home/admit/Samuel/thesis_repo/src/cobraflex/urdf/isaac_usd/cobraflex_isaac_3/payloads/base.usd
 """
     kilogramsPerUnit = 1
     metersPerUnit = 1
@@ -61,12 +61,12 @@ over "cobraflex_robot"
                         }
                     }
 
-                    over "camera_link" (
+                    over "zedm_camera_link" (
                         prepend apiSchemas = ["PhysicsRigidBodyAPI"]
                     )
                     {
-                        over "box" (
-                            prepend apiSchemas = ["NewtonCollisionAPI"]
+                        over "zedm_camera_center" (
+                            prepend apiSchemas = ["PhysicsRigidBodyAPI"]
                         )
                         {
                         }
@@ -76,7 +76,7 @@ over "cobraflex_robot"
                         prepend apiSchemas = ["PhysicsRigidBodyAPI"]
                     )
                     {
-                        over "box_1" (
+                        over "cylinder_1" (
                             prepend apiSchemas = ["NewtonCollisionAPI"]
                         )
                         {
@@ -249,13 +249,25 @@ over "cobraflex_robot"
             quatf physics:localRot1 = (1, 0, 0, 0)
         }
 
-        def PhysicsFixedJoint "camera_joint"
+        def PhysicsFixedJoint "zedm_camera_center_joint"
+        {
+            custom rel physics:body0
+            prepend rel physics:body0 = </cobraflex_robot/Geometry/base_footprint/base_link/body_link/zedm_camera_link>
+            custom rel physics:body1
+            prepend rel physics:body1 = </cobraflex_robot/Geometry/base_footprint/base_link/body_link/zedm_camera_link/zedm_camera_center>
+            point3f physics:localPos0 = (0, 0, 0.01325)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+        }
+
+        def PhysicsFixedJoint "zedm_mount_joint"
         {
             custom rel physics:body0
             prepend rel physics:body0 = </cobraflex_robot/Geometry/base_footprint/base_link/body_link>
             custom rel physics:body1
-            prepend rel physics:body1 = </cobraflex_robot/Geometry/base_footprint/base_link/body_link/camera_link>
-            point3f physics:localPos0 = (0.065, 0, 0.02)
+            prepend rel physics:body1 = </cobraflex_robot/Geometry/base_footprint/base_link/body_link/zedm_camera_link>
+            point3f physics:localPos0 = (0.0665, 0, 0.00675)
             point3f physics:localPos1 = (0, 0, 0)
             quatf physics:localRot0 = (1, 0, 0, 0)
             quatf physics:localRot1 = (1, 0, 0, 0)

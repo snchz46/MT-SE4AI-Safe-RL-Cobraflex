@@ -3,10 +3,10 @@
 | Field | Value |
 | --- | --- |
 | Artifact | The logical (non-learned) camera lane-keeper: deployment node + shared control law + CV estimator |
-| Version | **0.3** (2026-06-18 — pure-pursuit control law + curvature boundary §4.7; complex_b softened to an "M") |
+| Version | **0.4** (2026-06-19 — authoritative complex_b + Lane Cam baseline run §7.5; PolylineTracker lap-seam fix) |
 | Phase / Gate | Track 'E' (camera) — the fair baseline for the RL camera agent (GE4 eval) |
 | Author | Samuel Sanchez |
-| Date | 2026-06-18 |
+| Date | 2026-06-19 |
 | Status | CONFIRMED — implemented in `cobraflex/lane_keeper_gazebo_node.py`, `cobraflex_rl/cv_lane_controller.py`, `cobraflex_rl/cv_lane_estimator.py`, `cobraflex_rl/camera_geometry.py` |
 | Normative spec | Training Specification Ch.7 §7.7 (track 'E'); ODD-1 lane geometry (`docs/08`) |
 | Decisions cited | D-43 (cage/baseline read a dedicated deterministic CV estimator), D-41 (end-to-end camera architecture) |
@@ -336,6 +336,43 @@ run at either, and **mean |ey| is the speed-fair comparison** across the two.
 
 ---
 
+## 7.5 Results: the authoritative CV baseline (complex_b + Lane Cam)
+
+This run is **the** control reference the RL camera agent is compared against from
+here on; it **supersedes** the earlier oval CV evals. Track `complex_b`, Lane Cam
+(IMX219-160, 640×360, §7.7.8), SC-NOM-01, seed 2024, 0.2 m/s, 4 400 steps,
+enforcement; cage v0.6.1.
+
+| Metric | CV pure-pursuit (complex_b, enf) | Requirement |
+| --- | --- | --- |
+| Completed laps | 4.85 | — |
+| mean \|ey\| | **17.2 mm** | — |
+| max \|ey\| | **57.3 mm** | < 160 (`d_max`) |
+| mean \|epsi\| | 0.025 rad | — |
+| emergencies | 0 | — |
+| cage intervention | 0.09 % (4 steps, C-02) | — |
+
+Run: `experiments/sim/runs/cv_ctrl_eval_newcam_4k4/`. The controller holds the lane
+to ~17 mm mean lateral error (max 57 mm, well under `d_max`) with 0 emergencies on a
+markedly twistier circuit than the oval; fewer laps (4.85 in 440 s) only because the
+perimeter is longer at fixed speed. The RL-vs-CV head-to-head on `complex_b` is
+**pending** the RL camera agent's eval on the same track (prepared + dry-run-validated,
+not yet launched; see CLAUDE.md track-'E' status).
+
+> **Measurement note (geometry fix).** This run's original `summary.json` reported
+> 1.68 m mean \|ey\| and 1.73 laps — a **scoring artifact, not a controller failure**.
+> `complex_b` is a self-approaching circuit whose right-lane centreline did **not**
+> duplicate its closing seam point (gap 0.060 m vs 0.052 m mean segment), so
+> `PolylineTracker` treated it as *open* and could not wrap at the start/finish line:
+> from lap 2 on, the stateful nearest-segment search pinned to the final segment and
+> `ey` exploded. Fixed by auto-closing loops whose endpoints sit within ~one segment
+> (`polyline_tracker.py`; regression test in `policy/tests/test_polyline_tracker.py`),
+> then re-deriving the geometry metrics offline from the logged pose (cage
+> interventions/emergencies unchanged; `metrics_rederived` field in `summary.json`).
+> The F-track oval (exact closure, gap 0) is **unaffected** — F4 results stand.
+
+---
+
 ## 7. History: what this replaced
 
 The current CV pure-pursuit law **supersedes the original histogram pure-P
@@ -346,7 +383,8 @@ histogram-peak heuristic with the calibrated ground-plane CV estimator (metric
 lane-centre polynomial) and a look-ahead pursuit law is what lets it track the
 nominal oval to **RMSE ~10 mm at 0.2 m/s** (requirement < 50 mm) and hold tight
 curves the earlier PD + curvature-feedforward law ran wide on (§3) — on par with the
-RL agent, a genuine like-for-like reference rather than a strawman.
+RL agent, a genuine like-for-like reference rather than a strawman. The authoritative
+baseline is now the `complex_b` + Lane Cam run (§7.5: ~17 mm mean \|ey\|).
 
 > **Doc-string note.** The module docstring of `eval_cv_controller.py` still
 > describes the *old* "histogram lane peaks → proportional steering" front-end;
@@ -434,8 +472,8 @@ pieces — `cv_lane_estimator`, `cv_lane_controller`, `camera_geometry`,
 Because it shares the RL agent's *perception ceiling*: same camera, same
 deterministic CV estimator the cage trusts. The only difference is the control
 policy (a transparent pure-pursuit law vs a learned CNN), so the comparison isolates
-the contribution of learning. And it is *competent* — RMSE ~10 mm at 0.2 m/s, the
-same order as the RL agent — not a deliberately weak reference.
+the contribution of learning. And it is *competent* — ~17 mm mean |ey| at 0.2 m/s on
+complex_b (§7.5), the same order as the RL agent — not a deliberately weak reference.
 
 **Q2. Why does the cage read this CV estimator instead of the policy's CNN, or
 ground truth?** Ground truth is impossible on a real road (D-43 supersedes the

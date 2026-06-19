@@ -8,6 +8,29 @@
     "d_max_mm": 160,
     "source": "SC-NOM-01 pass_criterion + C-01 d_max"
   },
+  "authoritative_cv_baseline": {
+    "note": "Current control baseline for the RL camera agent (track complex_b, Lane Cam, pure-pursuit). Supersedes the oval logical_cv_pd_controller arm below. RL-vs-CV head-to-head pending the RL camera eval on complex_b (not yet launched).",
+    "track": "complex_b",
+    "camera": "lane_cam_imx219_160_640x360",
+    "control_law": "pure-pursuit look-ahead (look_ahead_m=0.40, pursuit_gain=1.0)",
+    "runs": [
+      {
+        "run": "cv_ctrl_eval_newcam_4k4",
+        "mode": "enforcement",
+        "laps": 4.85,
+        "mean_abs_ey_mm": 17.2,
+        "max_abs_ey_mm": 57.3,
+        "mean_abs_epsi_rad": 0.025,
+        "emergencies": 0,
+        "interv_pct": 0.09,
+        "per_rule": {
+          "C-02": 4
+        },
+        "metrics_rederived": "ey/epsi/laps recomputed offline after the PolylineTracker lap-seam fix; original summary.json mis-scored complex_b as an open loop (1.68 m mean|ey| artifact)."
+      }
+    ]
+  },
+  "_superseded_oval_comparison": "The rl_camera_agent_425k and logical_cv_pd_controller arms below are the earlier OVAL eval (PD+curvature-FF CV law). Retained for history; superseded by authoritative_cv_baseline.",
   "rl_camera_agent_425k": [
     {
       "run": "rl_cam_eval_2024_425k_4k4",

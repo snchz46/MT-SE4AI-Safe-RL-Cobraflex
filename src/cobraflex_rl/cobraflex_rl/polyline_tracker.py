@@ -87,6 +87,25 @@ class PolylineTracker:
         if points.shape[0] < 2:
             raise ValueError("Polyline must contain at least two points.")
 
+        # Auto-close a circuit whose generator left the seam point un-duplicated.
+        # The closed-loop convention here is points[-1] == points[0] (the F2 oval
+        # repeats its first point, gap == 0). The complex_b offset right-lane
+        # centreline instead ends ~one segment short of the start (gap 0.060 m vs
+        # 0.052 m mean segment), so it would be mis-detected as *open* and the
+        # stateful nearest-segment search cannot wrap at the start/finish line:
+        # on lap 2+ it gets pinned near the final segment and ey explodes (this
+        # produced the spurious 1.68 m mean |ey| in the new-cam CV eval). Append
+        # the first point to close the loop when the endpoints sit within ~one
+        # segment of each other — a genuinely open path has its ends far apart,
+        # and the already-closed oval (gap == 0) is left untouched.
+        if points.shape[0] >= 3:
+            seam_gap = float(np.linalg.norm(points[0] - points[-1]))
+            median_seg = float(
+                np.median(np.linalg.norm(points[1:] - points[:-1], axis=1))
+            )
+            if 1e-6 < seam_gap < 1.75 * median_seg:
+                points = np.vstack([points, points[0]])
+
         self.points = points
         self.segment_vectors = self.points[1:] - self.points[:-1]
         self.segment_lengths = np.linalg.norm(self.segment_vectors, axis=1)

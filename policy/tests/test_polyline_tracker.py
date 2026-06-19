@@ -141,6 +141,43 @@ def test_distance_to_is_global_and_stateless():
     assert tr.distance_to(2.5, 0.3) == pytest.approx(0.3, abs=1e-6)
 
 
+def test_open_straight_is_not_auto_closed():
+    # Endpoints 3 m apart vs 1 m segments — a genuinely open path stays open.
+    assert _straight().closed is False
+
+
+def test_unduplicated_seam_loop_is_auto_closed():
+    # A unit square whose generator omitted the closing seam duplicate: the
+    # last point sits one segment (1 m) from the first. The tracker must treat
+    # it as closed (matches complex_b's offset right-lane centreline).
+    sq = PolylineTracker(
+        np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
+    )
+    assert sq.closed is True
+    # The appended seam point closes the loop, so the perimeter is the full 4 m.
+    assert float(sq.cumulative_lengths[-1]) == pytest.approx(4.0)
+
+
+def test_unduplicated_seam_loop_tracks_across_lap_seam():
+    # Regression for the new-cam CV eval: on a near-closed loop the stateful
+    # tracker must wrap at the start/finish line instead of pinning to the final
+    # segment and exploding ey. Drive ~2 laps along the (un-duplicated) square's
+    # centreline and assert ey stays tiny throughout, including past the seam.
+    loop = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
+    tr = PolylineTracker(loop)
+    headings = [0.0, math.pi / 2, math.pi, -math.pi / 2]  # bottom, right, top, left
+    max_abs_ey = 0.0
+    for lap in range(2):
+        for edge, h in enumerate(headings):
+            ax, ay = loop[edge]
+            bx, by = loop[(edge + 1) % 4]
+            for t in (0.25, 0.5, 0.75):
+                x, y = ax + t * (bx - ax), ay + t * (by - ay)
+                st = tr.track(x, y, h)
+                max_abs_ey = max(max_abs_ey, abs(st.ey))
+    assert max_abs_ey < 1e-6  # perfectly on the centreline → ey ~ 0 across the seam
+
+
 def test_distance_to_finds_globally_nearest_on_folded_path():
     # A path that folds back on itself (two rows 0.2 m apart): off-road must be
     # judged against the *nearest* road point, not the stateful tracked segment.

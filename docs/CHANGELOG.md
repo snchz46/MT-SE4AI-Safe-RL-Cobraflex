@@ -31,6 +31,52 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [19.06.2026] — CV baseline re-run on complex_b + Lane Cam (authoritative); PolylineTracker lap-seam fix
+
+**Document(s) affected:** `docs/12_cv_lane_keeper.md` (v0.4), `manuscript/chapters/chapter_08_experimental_evaluation.md` (§8.9.5), `experiments/sim/runs/cv_ctrl_eval_newcam_4k4/summary.json`, `experiments/sim/runs/baseline_cv_vs_rl_nominal.json`, `src/cobraflex_rl/cobraflex_rl/polyline_tracker.py`, `policy/tests/test_polyline_tracker.py`
+**Phase:** Track 'E' (camera) — GE4 baseline
+**Gate context:** before GE4 (425k) re-run
+**Author:** Samuel Sanchez
+
+### Change
+
+The CV control baseline was re-evaluated on the **complex_b** circuit with the **Lane
+Cam** (IMX219-160, 640×360) — the track + camera the RL camera agent will be scored on
+— and is now **the** authoritative control reference for the RL agent. All earlier oval
+CV results (`cv_ctrl_eval_2024_4k4{,_mon}`) are **superseded**. Authoritative numbers
+(SC-NOM-01, seed 2024, 0.2 m/s, enforcement, run `cv_ctrl_eval_newcam_4k4`):
+**4.85 laps, mean |ey| 17.2 mm, max |ey| 57.3 mm (< d_max=160), mean |epsi| 0.025 rad,
+0 emergencies, 0.09 % cage intervention (4× C-02).**
+
+Fixed a `PolylineTracker` lap-seam bug: a closed circuit whose generator left the seam
+point un-duplicated (complex_b right-lane: first–last gap 0.060 m vs 0.052 m mean
+segment) was mis-detected as *open*, so the stateful nearest-segment search could not
+wrap at the start/finish line and `ey` exploded from lap 2 on. The tracker now
+auto-closes loops whose endpoints sit within ~one segment; regression tests added.
+
+### Rationale
+
+The new-cam run's original `summary.json` reported 1.68 m mean |ey| and 1.73 laps — a
+scoring artifact, not a controller failure: the CV-perceived error (`cv_ey`) stayed at
+~14 mm throughout and true nearest-distance-to-centreline (recomputed from logged pose)
+was 2–42 mm. The cause was the lap-seam wrap bug above. Writing the artifact numbers
+into the thesis as the baseline would have been wrong.
+
+### Impact
+
+`summary.json` for the run was re-derived offline from the logged pose with the fixed
+tracker (geometry metrics only; cage interventions/emergencies unchanged — `metrics_rederived`
+field added). The F-track oval is exactly closed (gap 0) and **unaffected**: F4 results
+stand. The RL-vs-CV head-to-head on complex_b is **pending** the RL camera eval on the
+same track (prepared + dry-run-validated, not yet launched). Full pytest: 457 passed.
+
+### Verification
+
+`python3 -m pytest -q` → 457 passed (incl. 3 new tracker regression tests). Corrected
+metrics independently cross-checked by stateless global point-to-segment projection.
+
+---
+
 ## [18.06.2026] — CV baseline: pure-pursuit control + monocular curvature boundary; complex_b softened to an "M"
 
 **Document(s) affected:** docs/12 (§3, §4.5, §4.7 new, version log); `scripts/generate_complex_track.py`; `src/cobraflex_rl/config/complex_b_centerline.yaml` + `complex_b_right_lane_centerline.yaml`; `experiments/sim/tracks/complex_b/*`; `cv_lane_controller.py`, `cv_lane_estimator.py`, `gazebo_lane_env.py`, `eval_*`; `policy/tests/test_cv_lane_estimator.py`.

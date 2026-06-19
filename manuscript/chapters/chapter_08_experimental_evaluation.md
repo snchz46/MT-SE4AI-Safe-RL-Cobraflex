@@ -649,44 +649,68 @@ sistema del carril (0 contactos, M-S1 < d_max in-ODD) — convierte la degradaci
 percepción en **parada controlada**, no en excursión, y su valor in-ODD —nulo en
 F4— se vuelve **medible y decisivo** (SC-PERT-07: 20/20 vs 0/20).
 
-### 8.9.5 Línea base de control clásico con percepción real (CV + PD)  [E4]
+### 8.9.5 Línea base de control clásico con percepción real (CV + pure-pursuit)  [E4]
 
 El baseline del F-track (Cap. 7 §7.5) es un PD que lee el **estado ground-truth**;
 contrastar contra él una policy de **percepción real** sobrevalora a la RL (compite
 contra un controlador con estado perfecto). Para una comparación justa se introduce
 un **controlador lógico de cámara**: el mismo estimador CV determinista que usa la
 cage (D-43) —proyección de las marcas al plano de tierra con el modelo de cámara
-calibrado, `ey`/`epsi`/curvatura métricos— cerrando un lazo **PD + feed-forward de
-curvatura** (`steer = −(kp·ey + kd·epsi) + kff·v·κ`). Es el equivalente *no aprendido*
-del agente RL sobre la **misma** entrada de cámara, evaluado por el mismo
-`GazeboLaneEnv` y la misma métrica. Implementación compartida por el nodo de
-despliegue (`lane_keeper_gazebo_node`) y el eval (`eval_cv_controller`).
+calibrado, `ey`/`epsi` métricos— cerrando una ley de **pure-pursuit** con punto de
+mira a `look_ahead = 0,40 m` (docs/12 §3). Esta ley **supersede el lazo PD +
+feed-forward de curvatura** previo, que sub-giraba en curva cerrada por depender de
+una curvatura monocular inservible. Es el equivalente *no aprendido* del agente RL
+sobre la **misma** entrada de cámara, evaluado por el mismo `GazeboLaneEnv` y la
+misma métrica. Implementación compartida por el nodo de despliegue
+(`lane_keeper_gazebo_node`) y el eval (`eval_cv_controller`).
 
-Sobre SC-NOM-01 (semilla 2024, 0,2 m/s, 4 400 pasos ≈ 11 vueltas), idéntica
-configuración que el eval del agente RL de pico 425k (§7.7.8):
+**Línea base autoritativa (supersede el eval previo sobre el óvalo).** Re-ejecutada
+sobre el **circuito `complex_b`** con la **Lane Cam** (IMX219-160, 640×360, §7.7.8)
+—la misma vía y cámara sobre las que se evaluará el agente RL de cámara, de modo que
+el contraste futuro sea like-for-like. SC-NOM-01, semilla 2024, 0,2 m/s, 4 400 pasos:
 
-| Métrica | RL 425k (enf / mon) | CV+PD (enf / mon) | Requisito |
-| --- | --- | --- | --- |
-| Vueltas | 11,16 / 11,17 | 11,03 / 11,03 | — |
-| **M-P1 (RMSE)** | 14,2 / 14,0 mm | **10,5 / 10,5 mm** | < 50 mm |
-| media \|ey\| | 12,4 / 12,7 mm | **9,0 / 9,0 mm** | — |
-| máx \|ey\| | 56,7 / 27,4 mm | **20,5 / 20,5 mm** | < 160 (d_max) |
-| emergencias | 0 / 0 | 0 / 0 | — |
-| intervención cage | 85,9 % / 82,5 % | **0,6 % / 0,9 %** | — |
+| Métrica | CV pure-pursuit (`complex_b`, enf) | Requisito |
+| --- | --- | --- |
+| Vueltas | 4,85 | — |
+| media \|ey\| | **17,2 mm** | — |
+| máx \|ey\| | **57,3 mm** | < 160 (d_max) |
+| media \|epsi\| | 0,025 rad | — |
+| emergencias | 0 | — |
+| intervención cage | 0,09 % (4 pasos, C-02) | — |
 
-**Lectura.** Ambos cumplen el requisito (M-P1 < 50 mm, máx < d_max) con 0
-emergencias y ~11 vueltas, de modo que **la comparación es legítima** (ninguno
-queda fuera de norma por mala descripción). En nominal el controlador clásico es
-incluso **algo más preciso** (RMSE 10,5 vs 14,2 mm; máx 20,5 vs 56,7 mm) y
-**mucho más suave**: la cage interviene 0,6–0,9 % de los pasos frente al 82–86 %
-del RL —el steering a tirones de la CNN lo limita continuamente C-06 (limitador de
-tasa), mientras que el PD es suave por construcción. La precisión nominal, por
-tanto, **no** justifica al agente RL; su valor debe demostrarse **fuera de lo
-nominal** —degradación de percepción y *appearance shift*— donde el estimador CV
-se debilita y una política aprendida puede generalizar mejor. Eso es precisamente lo
-que mide la familia de mundos de robustez (líneas ausentes, marcas, manchas, agua;
-ver `src/cobraflex/worlds/README_robustness_worlds.md`), trabajo en curso. Evidencia:
-`experiments/sim/runs/cv_ctrl_eval_2024_4k4{,_mon}` y `baseline_cv_vs_rl_nominal.json`.
+**Lectura.** El controlador mantiene el carril con ~17 mm de error lateral medio
+(máx 57 mm, holgadamente por debajo de `d_max = 160 mm`) y **0 emergencias** sobre un
+circuito marcadamente más sinuoso que el óvalo; las vueltas son menos (4,85 en 440 s)
+porque el perímetro es mayor a velocidad fija. **Esta es la referencia de control
+contra la que se compara el agente RL de cámara de aquí en adelante.** El head-to-head
+RL-vs-CV sobre `complex_b` queda **pendiente** del eval del agente RL de cámara sobre
+la misma vía (preparado y validado en dry-run, aún no lanzado; §8.9).
+Evidencia: `experiments/sim/runs/cv_ctrl_eval_newcam_4k4/`.
+
+**Nota de medición (corrección de geometría).** El `summary.json` original del run
+reportaba 1,68 m de media \|ey\| y 1,73 vueltas: **artefacto del scoring, no fallo del
+controlador**. `complex_b` es un circuito que se aproxima a sí mismo y cuyo centerline
+de carril-derecho **no duplicaba el punto de cierre** (gap 0,060 m vs 0,052 m de
+segmento medio), por lo que `PolylineTracker` lo trataba como *abierto* y no envolvía
+en la línea de meta: a partir de la 2.ª vuelta la búsqueda de segmento más cercano se
+anclaba al último segmento y `ey` se disparaba. Se corrigió el tracker para auto-cerrar
+lazos cuyos extremos distan ~un segmento (`polyline_tracker.py`; test de regresión en
+`policy/tests/test_polyline_tracker.py`) y se **re-derivaron** las métricas de geometría
+off-line desde la pose logueada (las intervenciones/emergencias de la cage no cambian;
+campo `metrics_rederived` en `summary.json`). El óvalo del F-track (cierre exacto,
+gap 0) **no se ve afectado** y los resultados F4 permanecen invariantes.
+
+**Contexto histórico (óvalo, *superseded*).** En el eval previo sobre el óvalo con el
+lazo PD+FF, CV y RL eran ambos competentes y ~equiprecisos en nominal (CV RMSE 10,5 vs
+RL 14,2 mm; CV media \|ey\| 9,0 mm, ~11 vueltas), con la cage interviniendo 0,6–0,9 %
+(CV) frente al 82–86 % (RL, por el limitador de tasa C-06 sobre el steering a tirones de
+la CNN). La lectura cualitativa se mantiene: la precisión nominal **no** justifica al
+agente RL; su valor debe demostrarse **fuera de lo nominal** —degradación de percepción y
+*appearance shift*— donde el estimador CV se debilita y una política aprendida puede
+generalizar mejor. Eso es lo que mide la familia de mundos de robustez (líneas ausentes,
+marcas, manchas, agua; ver `src/cobraflex/worlds/README_robustness_worlds.md`), trabajo
+en curso. Evidencia previa: `experiments/sim/runs/cv_ctrl_eval_2024_4k4{,_mon}` y
+`baseline_cv_vs_rl_nominal.json`.
 
 ---
 

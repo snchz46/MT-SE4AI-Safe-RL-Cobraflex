@@ -138,8 +138,13 @@
         </sensor>
     </gazebo>
 
-    <gazebo reference="camera_link">
-        <sensor name="ZEDm Cam" type="camera">
+    <!-- ZED Mini front stereo pair. Two independent render sensors, one per
+         lens, mounted on the macro's left/right frames (63 mm baseline). Per-eye
+         intrinsics kept identical to the former mono sensor; the real ZED Mini
+         FOV is wider (~102 deg H) and can be calibrated later if the scene
+         camera is ever consumed. Topics follow the zed-ros2 convention. -->
+    <gazebo reference="zedm_left_camera_frame">
+        <sensor name="ZEDm Left Cam" type="camera">
             <camera>
                 <horizontal_fov>1.3962634</horizontal_fov>
                 <image>
@@ -156,13 +161,41 @@
                     <mean>0.0</mean>
                     <stddev>0.007</stddev>
                 </noise>
-                <optical_frame_id>camera_link_optical</optical_frame_id>
-                <camera_info_topic>camera/camera_info</camera_info_topic>
+                <optical_frame_id>zedm_left_camera_frame_optical</optical_frame_id>
+                <camera_info_topic>camera/left/camera_info</camera_info_topic>
             </camera>
             <always_on>1</always_on>
             <update_rate>20</update_rate>
             <visualize>true</visualize>
-            <topic>camera/image_raw</topic>            
+            <topic>camera/left/image_raw</topic>
+        </sensor>
+    </gazebo>
+
+    <gazebo reference="zedm_right_camera_frame">
+        <sensor name="ZEDm Right Cam" type="camera">
+            <camera>
+                <horizontal_fov>1.3962634</horizontal_fov>
+                <image>
+                    <width>640</width>
+                    <height>480</height>
+                    <format>R8G8B8</format>
+                </image>
+                <clip>
+                    <near>0.1</near>
+                    <far>15</far>
+                </clip>
+                <noise>
+                    <type>gaussian</type>
+                    <mean>0.0</mean>
+                    <stddev>0.007</stddev>
+                </noise>
+                <optical_frame_id>zedm_right_camera_frame_optical</optical_frame_id>
+                <camera_info_topic>camera/right/camera_info</camera_info_topic>
+            </camera>
+            <always_on>1</always_on>
+            <update_rate>20</update_rate>
+            <visualize>true</visualize>
+            <topic>camera/right/image_raw</topic>
         </sensor>
     </gazebo>
 
@@ -188,7 +221,7 @@
                     <stddev>0.007</stddev>
                 </noise>
                 <optical_frame_id>camera_link_optical_lane</optical_frame_id>
-                <camera_info_topic>camera/camera_info_lane</camera_info_topic>
+                <camera_info_topic>camera/camera_info</camera_info_topic>
             </camera>
             <always_on>1</always_on>
             <update_rate>20</update_rate>

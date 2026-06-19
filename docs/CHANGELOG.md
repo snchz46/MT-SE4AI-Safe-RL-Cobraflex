@@ -207,7 +207,7 @@ The 139k checkpoint (§7.7.7, GE4 §8.9) carried a real availability cost — a 
 
 ### Impact
 
-§8.9 (GE4 campaign) **still reports the 139k campaign** — the 1660-run E-campaign with the 425k checkpoint is prepared and dry-run-validated but **not yet re-executed** (≈220 h wall → dedicated host only). `docs/07` E-track verdicts and the `campaign_e/` artifacts remain those of the 139k run until the re-run lands. New checkpoint binary is gitignored (not tracked); sync manually. No traceability-graph change.
+§8.9 (GE4 campaign) **still reports the 139k campaign** — the 1660-run E-campaign with the 425k checkpoint is prepared and dry-run-validated but **not yet re-executed** (≈16–17 h wall, single-seed — corrected 19.06 from an earlier ≈220 h guess that was never derived; measured from the completed 139k E-campaign: 1660 runs in 16.5 h, ~31 s/run. N=5 multi-seed ≈ 80–85 h). `docs/07` E-track verdicts and the `campaign_e/` artifacts remain those of the 139k run until the re-run lands. New checkpoint binary is gitignored (not tracked); sync manually. No traceability-graph change.
 
 ### Verification
 

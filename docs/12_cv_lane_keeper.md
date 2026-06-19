@@ -468,6 +468,34 @@ real?** The CV pure-pursuit law in this document. The driver imports
 from the histogram era (§7). The recorded `controller` field in every run's
 `metadata.json` confirms the law that actually drove it.
 
+**Q6. If the goal is an unknown circuit, why is the track centreline fed to the
+PD and the RL agent at all?** Because the centreline has **two distinct roles**,
+and conflating them is the trap:
+
+1. **As a control *input*** — only on the **F-track**: the PD baseline and the
+   state-vector RL policy drive on `ey/epsi` derived from the *mapped centreline +
+   true pose*. This is exactly why they are **known-track baselines**, not the
+   deployable artefact (they need a prior map and a privileged pose — neither
+   exists on an unknown road). The camera variants (RL-cam, this CV controller)
+   take **no centreline as input**: they drive from pixels / detected lane lines.
+2. **As a reward + scoring *oracle*** — for **everyone**, but only inside the
+   simulator. `GazeboLaneEnv` treats the ground-truth centreline as the
+   *"reward/termination/metrics oracle only"* (its own words): it is the *teacher*
+   that shapes the reward at **training** time and the *ruler* that scores `ey` at
+   **evaluation** time. The **deployed artefact carries no map** — the CNN weights
+   (or this CV estimator) learned to extract from pixels what the centreline-based
+   reward rewarded. At inference there is no teacher and no ruler, only
+   image → action.
+
+So "feeding the centreline" is literally true for the F-track (hence: known-track
+reference) and false-as-an-input for the camera agent you would deploy. The
+centreline you see in a camera-agent evaluation is the *measuring stick*, not
+something the car consumes. (On a real unknown track you would also lose the
+ruler — you would measure performance differently — but that changes how you
+*evaluate*, not how the car *drives*.) The cage mirrors this split: F-track cage
+reads centreline-derived state (baseline); track-E cage reads the CV estimator
+(deployable, D-43).
+
 ---
 
 ## Version log

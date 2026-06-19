@@ -77,7 +77,8 @@ script reports orphans on either side.
   mean |ey| 12.4 mm, 0 emergencies** (C-06 + 5× C-02); monitoring `…_4k4_mon` = 11.17 laps, 0 emergencies.
   **Big win: the 139k curve-apex SR-014/Trigger-8 controlled stop is GONE** (4.69→11+ laps); cage latent in-ODD
   both modes (M-S2=0), F-track signature. **GE4 re-run with 425k prepared+dry-run-validated, NOT launched**
-  (≈220 h → dedicated host); §8.9 + docs/07 + `campaign_e/` still report the 139k campaign until re-run lands.
+  (≈16–17 h wall, single-seed — measured from the completed 139k E-campaign: 1660 runs in 16.5 h,
+  ~31 s/run; N=5 multi-seed ≈ 80–85 h); §8.9 + docs/07 + `campaign_e/` still report the 139k campaign until re-run lands.
 - **F2 evidence:** `ros_run_20260523T153003Z` — 9.91 laps, 845 s,
   0 emergencies, cage v0.5.1, PD v0.8.0.
 - **F3 evidence (closed):** main run `ppo_train_2024_200k` (seed 2024, 200k, reward v1.2,

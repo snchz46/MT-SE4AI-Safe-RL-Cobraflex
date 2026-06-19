@@ -412,8 +412,10 @@ The training implementation above produced the current E-main checkpoint
   **gone** (4.69 → 11+ laps).
 
 > **Scope note.** This document covers the *training* implementation. The 425k
-> **GE4 re-run is prepared + dry-run-validated but NOT yet launched** (≈ 220 h →
-> dedicated host); `docs/07`, Ch.8 §8.9 and `experiments/sim/campaign_e/` still
+> **GE4 re-run is prepared + dry-run-validated but NOT yet launched** (≈ 16–17 h
+> wall, single-seed — measured from the completed 139k E-campaign: 1660 runs in
+> 16.5 h, ~31 s/run; N=5 multi-seed ≈ 80–85 h); `docs/07`, Ch.8 §8.9 and
+> `experiments/sim/campaign_e/` still
 > report the **139k** campaign until the re-run lands. Do not cite a 425k campaign
 > verdict from this document.
 

@@ -9,6 +9,7 @@ seaborn>=0.12
 stable-baselines3>=2.0.0
 gymnasium>=0.29
 torch>=2.0
+tqdm>=4.66           # progress bars in the training callbacks (cobraflex_rl/callbacks.py)
 
 # Configuration and serialisation
 pyyaml>=6.0

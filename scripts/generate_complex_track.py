@@ -48,15 +48,21 @@ TRACKS = {
         (-3.2, 1.2), (-1.4, 1.9), (0.7, 2.0), (2.5, 1.1), (3.0, -0.5),
         (1.8, -1.2), (0.6, -0.5), (-0.8, -1.2), (-2.5, -1.5), (-3.5, -0.2),
     ],
-    # Long pure straight along the bottom (~2.8 m, 5 colinear pts); the opposite
-    # (top) side is a tighter, more technical run with a chicane.
+    # Long pure straight along the bottom (~2.8 m, 5 colinear pts); the top side
+    # is an "M" — two open humps with a central valley (the former 3-curve
+    # serpentine had its middle hump removed). Curves softened so the tightest
+    # radius is ~0.9 m (was ~0.43 m): the monocular CV cage-estimator's heading
+    # over-reads ∝ curvature × near-look-ahead, and at the old radii that
+    # apparent heading exceeded C-02's theta_max and latched false emergencies
+    # even with the car tracking to mm. See docs/12 §"Curvature boundary".
     "complex_b": [
         (-2.8, -1.5), (-1.4, -1.5), (0.0, -1.5), (1.4, -1.5), (2.8, -1.5),
-        (3.4, -0.5), (3.1, 0.9),                 # right end -> up
-        (2.1, 1.55), (1.2, 1.3),                 # right-top (softened)
-        (0.3, 1.55), (-0.6, 1.3),                # chicane (shallower up-down)
-        (-1.6, 1.55), (-2.6, 1.15),              # left-top (softened)
-        (-3.3, 0.1), (-3.2, -0.8),               # left end -> down to the straight
+        (3.7, -0.8), (3.9, 0.3), (3.4, 1.1),     # right end -> up (rounded U-turn)
+        (2.0, 1.35),                             # M: right hump
+        (0.0, 0.8),                              # M: central valley (pronounced —
+                                                 # the loop's main counter-steer)
+        (-2.0, 1.35),                            # M: left hump
+        (-3.4, 1.1), (-3.9, 0.3), (-3.7, -0.8),  # left end -> down (rounded U-turn)
     ],
     # Technical: full top sweep, right-hander down, gentle bottom chicane (S).
     "complex_c": [

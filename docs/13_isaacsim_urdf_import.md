@@ -144,6 +144,9 @@ full ROS2 graph and runs:
 ```bash
 source /opt/ros/jazzy/setup.bash          # bridge uses the system Jazzy (it vendors
                                           # jazzy+humble; sourcing ensures interop)
+# PC CAST
+/home/admit/isaac_sim_6.0.0/isaac-sim-standalone-6.0.0-linux-x86_64/python.sh tools/isaac_ros2_bringup.py                                 
+
 ~/isaacsim/python.sh tools/isaac_ros2_bringup.py            # GUI window
 ~/isaacsim/python.sh tools/isaac_ros2_bringup.py --headless # no window
 ~/isaacsim/python.sh tools/isaac_ros2_bringup.py --test     # headless self-test, exits
@@ -274,6 +277,9 @@ Run it (each terminal sourced, **`use_sim_time:=true`** everywhere because Isaac
 drives `/clock`):
 
 ```bash
+# PC CAST
+/home/admit/isaac_sim_6.0.0/isaac-sim-standalone-6.0.0-linux-x86_64/python.sh tools/isaac_ros2_bringup.py 
+
 # 1) Isaac bring-up (publishes odom, joint_states, sensors, clock)
 ~/isaacsim/python.sh tools/isaac_ros2_bringup.py
 

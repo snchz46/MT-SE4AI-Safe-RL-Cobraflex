@@ -1,25 +1,21 @@
 {
   "total_steps": 4400,
   "episodes": 1,
-  "completed_laps": 4.846344902400317,
-  "mean_ey_m": -0.016105553363064982,
-  "mean_abs_ey_m": 0.01724843100907684,
-  "max_abs_ey_m": 0.05732062644556386,
-  "mean_epsi_rad": 0.01086529894655767,
-  "mean_abs_epsi_rad": 0.024513105371185586,
+  "completed_laps": 4.8467895108344905,
+  "mean_ey_m": -0.016118208408604884,
+  "mean_abs_ey_m": 0.017250954701832372,
+  "max_abs_ey_m": 0.05731573120664013,
+  "mean_epsi_rad": 0.010751931568166432,
+  "mean_abs_epsi_rad": 0.024517225766344932,
   "emergency_steps": 0,
-  "intervention_steps": 4,
-  "intervention_rate_pct": 0.09090909090909091,
-  "interventions_per_rule": {
-    "C-02": 4
-  },
+  "intervention_steps": 0,
+  "intervention_rate_pct": 0.0,
+  "interventions_per_rule": {},
   "cycle_dt_s": 0.1,
   "duration_s": 440.0,
   "no_lane_steps": 0,
   "no_lane_rate_pct": 0.0,
-  "run_id": "cv_ctrl_eval_20260619T061128Z",
+  "run_id": "cv_ctrl_eval_newcam_4k4",
   "scenario_id": "SC-NOM-01",
-  "mode": "enforcement",
-  "perimeter_m": 19.992133430287343,
-  "metrics_rederived": "ey/epsi/s recomputed offline from logged pose with the auto-closing PolylineTracker fix; original summary.json mis-scored complex_b as an open loop (no lap-seam wrap), inflating mean|ey| to 1.68 m. Geometry only; cage interventions/emergencies unchanged."
+  "mode": "enforcement"
 }

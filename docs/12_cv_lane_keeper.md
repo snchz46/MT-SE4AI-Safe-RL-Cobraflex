@@ -350,12 +350,14 @@ enforcement; cage v0.6.1.
 | max \|ey\| | **57.3 mm** | < 160 (`d_max`) |
 | mean \|epsi\| | 0.025 rad | — |
 | emergencies | 0 | — |
-| cage intervention | 0.09 % (4 steps, C-02) | — |
+| cage intervention | 0 % | — |
 
 Run: `experiments/sim/runs/cv_ctrl_eval_newcam_4k4/`. The controller holds the lane
 to ~17 mm mean lateral error (max 57 mm, well under `d_max`) with 0 emergencies on a
 markedly twistier circuit than the oval; fewer laps (4.85 in 440 s) only because the
-perimeter is longer at fixed speed. The RL-vs-CV head-to-head on `complex_b` is
+perimeter is longer at fixed speed. Re-run live with the tracker fix in place (seed
+2024 → near-identical trajectory; the native `summary.json` matches the offline
+re-derivation to 4 decimals). The RL-vs-CV head-to-head on `complex_b` is
 **pending** the RL camera agent's eval on the same track (prepared + dry-run-validated,
 not yet launched; see CLAUDE.md track-'E' status).
 
@@ -366,10 +368,12 @@ not yet launched; see CLAUDE.md track-'E' status).
 > `PolylineTracker` treated it as *open* and could not wrap at the start/finish line:
 > from lap 2 on, the stateful nearest-segment search pinned to the final segment and
 > `ey` exploded. Fixed by auto-closing loops whose endpoints sit within ~one segment
-> (`polyline_tracker.py`; regression test in `policy/tests/test_polyline_tracker.py`),
-> then re-deriving the geometry metrics offline from the logged pose (cage
-> interventions/emergencies unchanged; `metrics_rederived` field in `summary.json`).
-> The F-track oval (exact closure, gap 0) is **unaffected** — F4 results stand.
+> (`polyline_tracker.py`; regression test in `policy/tests/test_polyline_tracker.py`).
+> The run above is the **clean live re-run** with the fix in place — confirmed against
+> an offline re-derivation from the original logged pose (identical to 4 decimals). The
+> complex_b loop is genuinely closed (the generator samples it with `endpoint=False`, so
+> the "gap" is one normal segment, not a hole). The F-track oval (exact closure, gap 0)
+> is **unaffected** — F4 results stand.
 
 ---
 

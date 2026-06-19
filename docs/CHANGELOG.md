@@ -64,16 +64,19 @@ into the thesis as the baseline would have been wrong.
 
 ### Impact
 
-`summary.json` for the run was re-derived offline from the logged pose with the fixed
-tracker (geometry metrics only; cage interventions/emergencies unchanged — `metrics_rederived`
-field added). The F-track oval is exactly closed (gap 0) and **unaffected**: F4 results
+The eval was **re-run live** on complex_b with the fixed tracker in place (headless,
+seed 2024, 0.2 m/s); the native `summary.json` (laps 4.847, mean |ey| 17.25 mm, max
+57.3 mm, 0 emergencies, 0 % cage) matches an offline re-derivation from the pre-fix
+logged pose to 4 decimals — the canonical `cv_ctrl_eval_newcam_4k4/` now holds this
+clean run. The F-track oval is exactly closed (gap 0) and **unaffected**: F4 results
 stand. The RL-vs-CV head-to-head on complex_b is **pending** the RL camera eval on the
 same track (prepared + dry-run-validated, not yet launched). Full pytest: 457 passed.
 
 ### Verification
 
-`python3 -m pytest -q` → 457 passed (incl. 3 new tracker regression tests). Corrected
-metrics independently cross-checked by stateless global point-to-segment projection.
+`python3 -m pytest -q` → 457 passed (incl. 3 new tracker regression tests). Live re-run
+(`ros2 launch cobraflex_rl eval_cv_controller.launch.py`, complex_b) reproduces the
+metrics; cross-checked against stateless global point-to-segment projection.
 
 ---
 

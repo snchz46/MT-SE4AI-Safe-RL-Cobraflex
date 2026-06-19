@@ -676,7 +676,7 @@ el contraste futuro sea like-for-like. SC-NOM-01, semilla 2024, 0,2 m/s, 4 400 p
 | máx \|ey\| | **57,3 mm** | < 160 (d_max) |
 | media \|epsi\| | 0,025 rad | — |
 | emergencias | 0 | — |
-| intervención cage | 0,09 % (4 pasos, C-02) | — |
+| intervención cage | 0 % | — |
 
 **Lectura.** El controlador mantiene el carril con ~17 mm de error lateral medio
 (máx 57 mm, holgadamente por debajo de `d_max = 160 mm`) y **0 emergencias** sobre un
@@ -695,10 +695,12 @@ segmento medio), por lo que `PolylineTracker` lo trataba como *abierto* y no env
 en la línea de meta: a partir de la 2.ª vuelta la búsqueda de segmento más cercano se
 anclaba al último segmento y `ey` se disparaba. Se corrigió el tracker para auto-cerrar
 lazos cuyos extremos distan ~un segmento (`polyline_tracker.py`; test de regresión en
-`policy/tests/test_polyline_tracker.py`) y se **re-derivaron** las métricas de geometría
-off-line desde la pose logueada (las intervenciones/emergencias de la cage no cambian;
-campo `metrics_rederived` en `summary.json`). El óvalo del F-track (cierre exacto,
-gap 0) **no se ve afectado** y los resultados F4 permanecen invariantes.
+`policy/tests/test_polyline_tracker.py`). La tabla anterior corresponde al **re-run en
+vivo limpio** con el fix aplicado, contrastado contra una re-derivación off-line desde
+la pose logueada original (idénticos a 4 decimales). El circuito `complex_b` está
+realmente cerrado (el generador lo muestrea con `endpoint=False`, así que el "gap" es un
+segmento normal, no un agujero). El óvalo del F-track (cierre exacto, gap 0) **no se ve
+afectado** y los resultados F4 permanecen invariantes.
 
 **Contexto histórico (óvalo, *superseded*).** En el eval previo sobre el óvalo con el
 lazo PD+FF, CV y RL eran ambos competentes y ~equiprecisos en nominal (CV RMSE 10,5 vs

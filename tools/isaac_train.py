@@ -31,7 +31,25 @@ import sys
 # --- Isaac must come up before any omni/isaacsim/pxr import -------------------
 from isaacsim import SimulationApp  # noqa: E402
 
-simulation_app = SimulationApp({"headless": True})
+
+def _preparse_render(argv):
+    """SimulationApp must be configured *before* argparse runs in main(), so peek
+    at the render mode (and nothing else) from argv / the ISAAC_RENDER env var.
+    'gui' opens the native viewport (slower, for human visual assessment);
+    'headless' (default) renders nothing and trains as fast as the host allows."""
+    mode = os.environ.get("ISAAC_RENDER", "headless")
+    for i, a in enumerate(argv):
+        if a == "--render" and i + 1 < len(argv):
+            mode = argv[i + 1]
+        elif a.startswith("--render="):
+            mode = a.split("=", 1)[1]
+    return mode.strip().lower()
+
+
+RENDER_MODE = _preparse_render(sys.argv[1:])
+simulation_app = SimulationApp({"headless": RENDER_MODE != "gui"})
+print(f"[isaac_train] render mode: {RENDER_MODE} "
+      f"(headless={RENDER_MODE != 'gui'})", flush=True)
 
 from isaacsim.core.utils.extensions import enable_extension  # noqa: E402
 
@@ -58,7 +76,11 @@ import numpy as np  # noqa: E402
 import yaml  # noqa: E402
 from stable_baselines3 import PPO  # noqa: E402
 from stable_baselines3.common.env_checker import check_env  # noqa: E402
-from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback  # noqa: E402
+from stable_baselines3.common.callbacks import (  # noqa: E402
+    BaseCallback,
+    CallbackList,
+    CheckpointCallback,
+)
 from stable_baselines3.common.monitor import Monitor  # noqa: E402
 from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack  # noqa: E402
 
@@ -74,6 +96,67 @@ from cobraflex_rl.run_io import git_commit, sha256_file  # noqa: E402
 SCENARIO_ID = "SC-NOM-01"
 
 
+class ObsPreviewCallback(BaseCallback):
+    """Live preview of the agent's camera observation — the exact (possibly
+    degraded) grayscale frame the CNN sees this step — upscaled into an OpenCV
+    window, refreshed every ``every`` env steps. For visual sanity-checking at
+    the cost of compute; needs OpenCV + a display, else it disables itself."""
+
+    def __init__(self, every: int = 15, scale: int = 5) -> None:
+        super().__init__()
+        self.every = max(1, int(every))
+        self.scale = max(1, int(scale))
+        self._cv2 = None
+        self._ok = False
+        self._win = "agent obs (CNN input)"
+
+    def _on_training_start(self) -> None:
+        try:
+            import cv2
+
+            self._cv2 = cv2
+            cv2.namedWindow(self._win, cv2.WINDOW_NORMAL)
+            self._ok = True
+            print("[isaac_train] --show-obs window open", flush=True)
+        except Exception as exc:  # pragma: no cover - display/cv2 absent
+            print(f"[isaac_train] --show-obs disabled ({exc})", flush=True)
+            self._ok = False
+
+    def _frame_from_obs(self, obs):
+        arr = np.asarray(obs)
+        if arr.ndim == 4:  # (n_env, H, W, stack) — most recent frame, env 0
+            arr = arr[0]
+        if arr.ndim != 3:
+            return None
+        # channels-last (H, W, C) vs channels-first (C, H, W): pick the newest frame
+        if arr.shape[-1] in (1, 3, 4):
+            return arr[:, :, -1]
+        if arr.shape[0] in (1, 3, 4):
+            return arr[-1]
+        return None
+
+    def _on_step(self) -> bool:
+        if not self._ok or self.num_timesteps % self.every != 0:
+            return True
+        frame = self._frame_from_obs(self.locals.get("new_obs"))
+        if frame is None:
+            return True
+        frame = frame.astype(np.uint8)
+        big = self._cv2.resize(
+            frame, (frame.shape[1] * self.scale, frame.shape[0] * self.scale),
+            interpolation=self._cv2.INTER_NEAREST)
+        self._cv2.imshow(self._win, big)
+        self._cv2.waitKey(1)
+        return True
+
+    def _on_training_end(self) -> None:
+        if self._ok:
+            try:
+                self._cv2.destroyWindow(self._win)
+            except Exception:  # pragma: no cover - best effort
+                pass
+
+
 def parse_args(argv):
     p = argparse.ArgumentParser(description="In-process Isaac-Sim PPO trainer.")
     p.add_argument("--train-config", type=str,
@@ -87,6 +170,17 @@ def parse_args(argv):
     p.add_argument("--model-path", type=str, default=None)
     p.add_argument("--run-id", type=str, default=None)
     p.add_argument("--resume-from", type=str, default=None)
+    # --- visual assessment (at the cost of compute) -------------------------
+    p.add_argument("--render", choices=["headless", "gui"], default="headless",
+                   help="'gui' opens the native Isaac viewport to watch the car "
+                        "drive (slow); 'headless' (default) renders nothing. "
+                        "Parsed before SimulationApp; repeated here for --help.")
+    p.add_argument("--show-obs", action="store_true",
+                   help="Live OpenCV window of the exact camera frame the CNN "
+                        "sees each step (camera obs only). Needs OpenCV + a "
+                        "display; disables itself otherwise.")
+    p.add_argument("--obs-preview-every", type=int, default=15,
+                   help="Refresh the --show-obs window every N env steps.")
     return p.parse_args(argv)
 
 
@@ -112,7 +206,7 @@ def repo_subdir(*parts) -> Path:
     return target
 
 
-def build_isaac_interface(train_cfg):
+def build_isaac_interface(train_cfg, render_always: bool = False):
     """Build the physics scene, init the articulation + (optional) Lane Cam
     render product, and wrap them in an IsaacSimInterface."""
     from isaacsim.core.prims import SingleArticulation
@@ -162,6 +256,7 @@ def build_isaac_interface(train_cfg):
         physics_dt=physics_dt,
         spawn_z=isaac_scene.SPAWN_Z,
         annotator=annotator,
+        render_always=render_always,
     )
     # Warm-up: settle physics + populate the first camera frame before training.
     for _ in range(5):
@@ -220,7 +315,8 @@ def main(argv):
     env = None
     interface = None
     try:
-        interface, camera_obs = build_isaac_interface(train_cfg)
+        interface, camera_obs = build_isaac_interface(
+            train_cfg, render_always=(cli.render == "gui"))
 
         centerline_points = np.asarray(centerline_cfg["centerline"]["points"], dtype=float)
         lane_width = float(centerline_cfg["lane_width"])
@@ -264,8 +360,8 @@ def main(argv):
             )
 
         checkpoint_freq = int(train_cfg.get("checkpoint_freq", train_cfg.get("n_steps", 1024)))
-        callback = CallbackList([
-            ProgressBarCallback(total_timesteps=total_timesteps),
+        callbacks = [
+            ProgressBarCallback(total_timesteps=total_timesteps, tty_fallback=True),
             LearningCurveCallback(csv_path=run_dir / "learning_curve.csv"),
             ActionSampleCallback(
                 csv_path=run_dir / "action_samples.csv",
@@ -273,7 +369,14 @@ def main(argv):
             ),
             CheckpointCallback(save_freq=checkpoint_freq, save_path=str(checkpoints_dir),
                                name_prefix="cobraflex_ppo_lane"),
-        ])
+        ]
+        if cli.show_obs:
+            if camera_obs:
+                callbacks.append(ObsPreviewCallback(every=cli.obs_preview_every))
+            else:
+                print("[isaac_train] --show-obs ignored: observation.type is not "
+                      "'camera' (no frame to preview).", flush=True)
+        callback = CallbackList(callbacks)
 
         model.learn(total_timesteps=total_timesteps, callback=callback,
                     reset_num_timesteps=not cli.resume_from)

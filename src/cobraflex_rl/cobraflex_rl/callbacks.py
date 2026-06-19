@@ -34,16 +34,41 @@ class ProgressBarCallback(BaseCallback):
     carriage-return redraw does not render; there it falls back to emitting a
     periodic one-line progress update that shows up cleanly in the launch log.
 
+    ``tty_fallback`` handles the in-process Isaac trainer: ``python.sh`` + omni
+    replace ``sys.stdout`` with a non-TTY log stream, so ``isatty()`` is ``False``
+    even in a real terminal and no bar would show. When set, the bar is rendered
+    straight to the controlling terminal (``/dev/tty``), bypassing the capture; if
+    there is no controlling terminal (nohup/CI) the line-by-line fallback stands.
+
     Reward/length come from ``model.ep_info_buffer`` (populated by the Monitor
     wrapper SB3 adds automatically), matching SB3's ``rollout/ep_rew_mean`` and
     ``rollout/ep_len_mean``.
     """
 
-    def __init__(self, total_timesteps: int, log_interval_steps: int = 1000) -> None:
+    def __init__(
+        self,
+        total_timesteps: int,
+        log_interval_steps: int = 1000,
+        tty_fallback: bool = False,
+    ) -> None:
         super().__init__()
         self.total_timesteps = int(total_timesteps)
         self.log_interval_steps = int(log_interval_steps)
-        self._use_tqdm = sys.stdout.isatty()
+        self._tty_file = None
+        if tty_fallback:
+            # Under Isaac, omni captures sys.stdout/stderr and re-emits them
+            # line-by-line, so tqdm's carriage-return ('\r', no newline) redraws
+            # never flush and the bar is invisible — even though isatty() may
+            # report True. Writing straight to the controlling terminal
+            # (/dev/tty) bypasses that capture, so prefer it. Falls back to the
+            # plain isatty() bar (stderr) and finally to line-by-line output.
+            try:
+                self._tty_file = open("/dev/tty", "w")
+                self._use_tqdm = True
+            except OSError:
+                self._use_tqdm = sys.stdout.isatty()
+        else:
+            self._use_tqdm = sys.stdout.isatty()
         self._pbar = None
         self._start_time = 0.0
         self._last_log_step = 0
@@ -71,7 +96,13 @@ class ProgressBarCallback(BaseCallback):
                 desc="PPO",
                 unit="step",
                 dynamic_ncols=True,
+                file=self._tty_file,  # None => tqdm's default (stderr)
             )
+            dest = "/dev/tty" if self._tty_file is not None else "stderr"
+            print(f"[progress] tqdm bar -> {dest}", flush=True)
+        else:
+            print("[progress] line-by-line mode (no usable TTY); progress every "
+                  f"{self.log_interval_steps} steps", flush=True)
 
     def _on_step(self) -> bool:
         mean_reward, mean_length, n_episodes = self._stats()
@@ -102,6 +133,9 @@ class ProgressBarCallback(BaseCallback):
             self._pbar.refresh()
             self._pbar.close()
             self._pbar = None
+        if self._tty_file is not None:
+            self._tty_file.close()
+            self._tty_file = None
 
 
 class LearningCurveCallback(BaseCallback):

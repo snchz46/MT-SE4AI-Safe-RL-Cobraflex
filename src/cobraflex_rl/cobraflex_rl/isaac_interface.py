@@ -93,6 +93,7 @@ class IsaacSimInterface:
         physics_dt: float,
         spawn_z: float,
         annotator=None,
+        render_always: bool = False,
     ) -> None:
         self.world = world
         self.articulation = articulation
@@ -103,6 +104,11 @@ class IsaacSimInterface:
         self._spawn_z = float(spawn_z)
         self.annotator = annotator
         self.camera_enabled = annotator is not None
+        # Force a render on the last sub-step even without a camera, so the GUI
+        # viewport refreshes when a human is watching the state-vector path
+        # (headless training never renders → frozen viewport). Costs one render
+        # per control step; off by default so headless campaigns pay nothing.
+        self.render_always = bool(render_always)
 
         self._logger = _PrintLogger()
         self._sim_time = 0.0
@@ -194,7 +200,7 @@ class IsaacSimInterface:
         n = max(1, int(round(float(duration) / self._physics_dt)))
         for i in range(n):
             self._apply_wheel()
-            render = self.camera_enabled and (i == n - 1)
+            render = (i == n - 1) and (self.camera_enabled or self.render_always)
             self.world.step(render=render)
             self._sim_time += self._physics_dt
             if render:

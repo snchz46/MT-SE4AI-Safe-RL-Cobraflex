@@ -123,16 +123,26 @@ class GazeboLaneEnv(gym.Env):
         # vehicle state) and /agent/obs_image each step. See cage_viz.CageViz.
         self._viz = None
         if bool(self.cfg.get("viz", False)):
-            self._viz = CageViz(
-                self.ros_interface,
-                reward_centerline=np.asarray(centerline, dtype=float),
-                road_centerline=(
-                    np.asarray(road_centerline, dtype=float)
-                    if road_centerline is not None
-                    else None
-                ),
-                road_width=self.road_width,
-            )
+            # CageViz publishes to the ROS bus for RViz. The Gazebo interface is
+            # a live rclpy node; the in-process Isaac interface is not (no ROS),
+            # so it cannot create publishers. Skip viz with a warning there
+            # rather than crashing the run — headless Isaac training has no RViz.
+            if hasattr(self.ros_interface, "create_publisher"):
+                self._viz = CageViz(
+                    self.ros_interface,
+                    reward_centerline=np.asarray(centerline, dtype=float),
+                    road_centerline=(
+                        np.asarray(road_centerline, dtype=float)
+                        if road_centerline is not None
+                        else None
+                    ),
+                    road_width=self.road_width,
+                )
+            else:
+                self.ros_interface.get_logger().warning(
+                    "viz=true requested but the sim interface cannot publish to "
+                    "ROS (in-process Isaac); RViz markers disabled for this run."
+                )
         self.prev_steer = 0.0
         # Raw (pre-cage) policy steering of the previous cycle. The smoothness
         # reward term penalises the *raw* delta, not the post-cage applied delta,

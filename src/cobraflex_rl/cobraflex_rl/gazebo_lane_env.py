@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import math
 from collections import deque
-from typing import Any, Dict, Mapping, Optional
+from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional
 
 import gymnasium as gym
 from gymnasium import spaces
@@ -37,8 +37,14 @@ from .cage_viz import CageViz
 from .camera_pipeline import CameraPipeline
 from .polyline_tracker import PolylineTracker, TrackState
 from .rewards import compute_reward
-from .ros_interface import RosGazeboInterface
 from .scenario_perturbations import NONE as NO_PERTURBATION
+
+# The env is transport-agnostic: it drives any object implementing the
+# interface contract — RosGazeboInterface (ROS2/Gazebo, pulls in rclpy) or
+# IsaacSimInterface (in-process Isaac Sim). Import only for typing so the env
+# can be used on the Isaac host without rclpy installed.
+if TYPE_CHECKING:
+    from .ros_interface import RosGazeboInterface
 from .scenario_perturbations import ScenarioPerturbation
 from .visual_degradation import degrade
 from .visual_domain_randomization import (

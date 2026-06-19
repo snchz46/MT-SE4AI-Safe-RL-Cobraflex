@@ -2,7 +2,7 @@
 
 The Isaac bring-up builds the track geometry procedurally in memory; this writes
 it to a standalone file you can hand to someone else. The geometry matches
-tools/isaac_ros2_bringup.py:_add_track_geometry (asphalt ribbon + white edge /
+tools/isaac_scene.py:_add_track_geometry (asphalt ribbon + white edge /
 centre-line strips + a green off-road quad), derived from the centreline YAML.
 
 Run:

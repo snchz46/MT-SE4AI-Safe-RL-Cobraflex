@@ -1,9 +1,26 @@
-# 13 — Importing the CobraFlex URDF into Isaac Sim
+# 13 — Isaac Sim utilities: building, driving & training the CobraFlex env
 
-Status: working (verified headless on Isaac Sim 6.0, RTX 5060 host, 2026-06-16).
+Status: URDF import + ROS2 bring-up working (verified headless on Isaac Sim 6.0, RTX 5060
+host, 2026-06-16). The **in-process RL training** path is authored but **host-deferred**
+(D-44) — see [RL training — in-process](#rl-training--in-process-gazebo-free-d-44).
 
 > Running it on a fresh machine? See **[docs/SETUP_ISAAC.md](SETUP_ISAAC.md)** for the
 > step-by-step recipe (deps, `download_meshes.sh`, **source ROS2 first**, smoke tests).
+
+This doc is the Isaac Sim toolbelt for CobraFlex: how the env is built from the URDF, the
+tools that run it, and the command to launch each.
+
+| Tool / module | Role | Run / import |
+| --- | --- | --- |
+| `tools/build_isaac_urdf.py` | regenerate the flat `cobraflex_isaac.urdf` from the source xacro | `python tools/build_isaac_urdf.py` (sourced ROS2) |
+| `tools/isaac_import_check.py` | headless smoke-test: URDF→USD import + assert frames/joints | `~/isaacsim/python.sh tools/isaac_import_check.py` |
+| `tools/isaac_scene.py` | **shared** physics-scene builder (URDF→USD, track, robot, wheel drives/materials + drivetrain constants); imported, not run | `import isaac_scene` |
+| `tools/isaac_ros2_bringup.py` | drive over the **ROS2 bridge** — same nodes as Gazebo (SLAM, perception, teleop, RViz, eval) | `~/isaacsim/python.sh tools/isaac_ros2_bringup.py` |
+| `tools/isaac_train.py` | **in-process** RL (PPO) training — drives the gym env directly, no ROS | `~/isaacsim/python.sh tools/isaac_train.py …` |
+| `src/cobraflex_rl/cobraflex_rl/isaac_interface.py` | `IsaacSimInterface`: in-process env I/O (teleport / step / camera) | imported by `isaac_train.py` |
+
+Flow below: URDF rationale & generation → import → **ROS2 bring-up** (drive / SLAM / RViz)
+→ physics tuning → sensors → track → **RL training in-process**.
 
 ## Why a dedicated URDF
 
@@ -147,8 +164,9 @@ produces no torque and the robot does not move.
 
 ### Bring-up script
 
-`tools/isaac_ros2_bringup.py` loads the robot, applies the wheel drives, builds the
-full ROS2 graph and runs:
+`tools/isaac_ros2_bringup.py` builds the physics scene — robot, wheel drives, track —
+via the shared `tools/isaac_scene.py` (the same module the RL trainer uses, so the two
+can't drift on drivetrain/scene parameters), wires the full ROS2 graph on top and runs:
 
 ```bash
 source /opt/ros/jazzy/setup.bash          # bridge uses the system Jazzy (it vendors
@@ -356,3 +374,75 @@ The bring-up builds the track as **USD geometry by default** (`TRACK_MODE=geom`)
 
 **Verified**: `--shot` renders the textured circuit (green off-road, dark asphalt,
 white dashed centre + solid edges) — the material binds correctly in Isaac.
+
+## RL training — in-process (Gazebo-free, D-44)
+
+The ROS2 bring-up reproduces the *steady-state* topic contract, but RL **training** also
+needs a per-episode **reset/teleport**. Against Gazebo that went through
+`gz service /world/<name>/set_pose` (a Gazebo Transport service) — which has **no Isaac
+equivalent** (no `gz` server runs alongside Isaac), so training cannot run over the
+bring-up. Instead it runs **in-process inside the Isaac Python app**, driving the gym env
+directly against the live `World` (option 2 of the migration; full rationale in
+[D-44](DECISIONS.md), the RL-side contract in [docs/14 §3](14_isaacsim_handover_spec.md)).
+
+### How it is built
+
+The bring-up and the trainer **share one physics scene**, so they can never drift on the
+drivetrain/scene parameters that define what the policy was trained against:
+
+```
+tools/isaac_scene.py        # SHARED: world, lights, ground, track geometry, robot spawn,
+                            # wheel velocity drives + low-friction materials, and the single
+                            # source of WHEEL_RADIUS / WHEEL_SEPARATION / WHEEL_JOINTS order /
+                            # WHEEL_SCRIPT + the Lane Cam spec. (omni/pxr imports deferred
+                            # into functions, so it is safe to import before SimulationApp.)
+  │
+  ├─ tools/isaac_ros2_bringup.py   # + ROS2-bridge graph + sensor graphs  (deploy / eval / SLAM)
+  └─ tools/isaac_train.py          # + Lane Cam render product + IsaacSimInterface + SB3 PPO
+```
+
+`IsaacSimInterface` (`src/cobraflex_rl/cobraflex_rl/isaac_interface.py`) duck-types the
+exact surface `GazeboLaneEnv` already calls, so the **gym env is unchanged** — each
+operation is a direct Isaac call instead of a ROS round-trip:
+
+| Env call | Gazebo path (ROS) | In-process Isaac path |
+| --- | --- | --- |
+| `set_vehicle_pose` (per-episode reset) | `gz service set_pose` | `articulation.set_world_pose` + zeroed velocities |
+| `send_action` (actuation) | publish `/cmd_vel` | diff-drive twist → 4 wheel `ArticulationAction` (same `WHEEL_SCRIPT` kinematics) |
+| `step_ros` (advance) | wait on `/odom_truth` sim-time | `world.step()` × `control_dt / physics_dt` sub-steps |
+| `get_pose` / `get_speed` | `/odom_truth` subscriber | articulation root (ground truth → no odom→world calibration) |
+| `get_camera_frame` | `/camera/image_raw_lane` subscriber | Replicator `rgb` render product on the Lane Cam (640×360, RGBA→BGR) |
+
+`GazeboLaneEnv`'s only hard `rclpy` import (the `RosGazeboInterface` type hint) is now
+under `TYPE_CHECKING`, so the env imports on the Isaac host **without `rclpy`**.
+
+### Launch commands
+
+Isaac's bundled python must have `stable-baselines3` + `gymnasium` installed; re-import the
+cached USD on first run (`BRINGUP_REIMPORT=1`). `TRACK` selects the *visual* scene track;
+`--centerline-config` selects the env *geometry* — **they must correspond**.
+
+```bash
+# F3 state-vector PPO (oval, the train_ppo.yaml defaults)
+~/isaacsim/python.sh tools/isaac_train.py
+
+# Track 'E' camera PPO on complex_b
+TRACK=complex_b BRINGUP_REIMPORT=1 ~/isaacsim/python.sh tools/isaac_train.py \
+    --train-config           src/cobraflex_rl/config/train_ppo_camera.yaml \
+    --centerline-config      src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml \
+    --road-centerline-config src/cobraflex_rl/config/complex_b_centerline.yaml
+
+# resume from a checkpoint
+~/isaacsim/python.sh tools/isaac_train.py --resume-from policy/checkpoints/<ckpt>.zip
+```
+
+Outputs mirror the Gazebo trainer: `experiments/sim/training/<run_id>/` (learning curve,
+action samples, `metadata.json` with `platform: sim-isaac`) + periodic checkpoints under
+`policy/checkpoints/`. No ROS, no `gz` CLI — training never needs a running bring-up.
+
+> **Host-deferred (not yet run on Isaac).** Authored on a Windows host without Isaac:
+> `py_compile` + an rclpy-free import check pass, but the live `world.step` /
+> `set_world_pose` / `get_linear_velocity` / Replicator annotator flow and
+> SB3-in-Isaac-python must be confirmed on the Ubuntu + Isaac host. The in-process camera
+> renders once per control step (~10 Hz at `control_dt` 0.10), which is what the env
+> samples (below the ≥20 Hz steady-state target the ROS bridge publishes).

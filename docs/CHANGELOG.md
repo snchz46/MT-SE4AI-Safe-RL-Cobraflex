@@ -31,6 +31,66 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [19.06.2026] — In-process Isaac-Sim RL training path (D-44), decoupled from the bring-up
+
+**Document(s) affected:** `tools/isaac_scene.py` (new), `tools/isaac_train.py` (new), `tools/isaac_ros2_bringup.py` (refactored), `src/cobraflex_rl/cobraflex_rl/isaac_interface.py` (new), `src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py` (import decouple), `docs/13_isaacsim_urdf_import.md` (retitled "Isaac Sim utilities" + in-process training section), `docs/14_isaacsim_handover_spec.md` (§3), `docs/DECISIONS.md` (D-44), `CLAUDE.md` (doc-13 label)
+**Phase:** track 'E' / F-track tooling (Isaac Sim platform)
+**Gate context:** none (RL training enablement; no H/SR/C/M identifiers touched)
+**Author:** Samuel Sanchez
+
+### Change
+
+Added the **in-process** Isaac-Sim RL training path (option 2 of the Gazebo→Isaac
+migration), and decoupled it from the ROS2 bring-up command:
+
+1. **`tools/isaac_scene.py`** (new) — the shared physics scene builder (URDF→USD import,
+   generated track geometry, robot spawn, wheel velocity drives + low-friction
+   wheel/ground materials) extracted from the bring-up. Single source of the drivetrain
+   constants (`WHEEL_RADIUS`/`WHEEL_SEPARATION`/`WHEEL_JOINTS` order, `WHEEL_SCRIPT`) and
+   the Lane Cam spec. All `omni`/`pxr` imports are deferred into functions so importing
+   the module is safe before `SimulationApp` exists.
+2. **`tools/isaac_ros2_bringup.py`** — refactored to import the scene from `isaac_scene`;
+   keeps only the ROS2-bridge graph, sensor publish graphs and the free-run loop. `build_scene`
+   is now `build_world()` + `add_sensors()`. Observed behaviour unchanged.
+3. **`isaac_interface.py`** (new) — `IsaacSimInterface` duck-types the surface
+   `GazeboLaneEnv` calls but drives the live Isaac `World` directly: per-episode reset =
+   `set_world_pose` + zeroed velocities; actuation = wheel `ArticulationAction`; advance =
+   `world.step()`; pose/speed from the articulation root (ground truth); Lane Cam via a
+   Replicator `rgb` render product (RGBA→BGR).
+4. **`isaac_train.py`** (new) — entry point: `SimulationApp` → shared scene (no ROS bridge)
+   → Lane Cam render product → `IsaacSimInterface` → `GazeboLaneEnv` → SB3 PPO. Reuses the
+   existing `config/train_ppo*.yaml`, callbacks and reproducibility metadata
+   (`platform: sim-isaac`).
+5. **`gazebo_lane_env.py`** — the lone hard `rclpy` coupling (the `RosGazeboInterface` type
+   import) moved under `TYPE_CHECKING`, so the env imports on the Isaac host without `rclpy`.
+
+### Rationale
+
+RL training's `reset()` teleports every episode via `gz service set_pose` (Gazebo-only);
+the bring-up exposes no Isaac equivalent, so training could not respawn episodes against
+it. Driving the gym env in-process against the `World` removes the blocker, is the standard
+Isaac-Lab-style pattern (no ROS↔gz bridge, no `gz` CLI per reset), and lets training and the
+bring-up evolve independently. Sharing the scene keeps the trained-policy kinematics
+identical to the deployment/demo path. See D-44.
+
+### Impact
+
+No hazard/SR/scenario/metric tables touched; `experiments/` and `docs/07` unchanged. The
+GE4 425k re-run (CLAUDE.md §8.9, host-deferred) can now train/eval on Isaac via this path
+once host-validated. The bring-up's cached `isaac_usd/` is still stale (ZED stereo switch)
+— re-import with `BRINGUP_REIMPORT=1` on first Isaac run.
+
+### Verification
+
+`python -m py_compile` passes on all four new/edited Python files; an rclpy-stubbed import
+check confirms `cobraflex_rl.gazebo_lane_env` no longer pulls `rclpy` (it now fails only on
+the absent `gymnasium`, not on `rclpy`). **Not yet run on Isaac** — this host is Windows
+(no Isaac); the live `world.step`/`set_world_pose`/Replicator flow and SB3-in-Isaac-python
+are deferred to the Ubuntu + Isaac host. `tools/check_traceability.py` unaffected (no
+identifier changes).
+
+---
+
 ## [19.06.2026] — Isaac bring-up synced to the ZED Mini stereo pair (+ obsolete-frame cleanup)
 
 **Document(s) affected:** `tools/isaac_ros2_bringup.py`, `tools/isaac_import_check.py`, `src/cobraflex/urdf/cobraflex_isaac.urdf` (regenerated), `docs/13_isaacsim_urdf_import.md`, `docs/14_isaacsim_handover_spec.md`

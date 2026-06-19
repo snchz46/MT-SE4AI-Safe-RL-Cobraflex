@@ -1,7 +1,7 @@
 # DECISIONS.md — Project decision log
 
 <!--
-Status: D9 (Phase 0 close) + F1 audit additions (D-25..D-33) + F3 (D-34) + F4 (D-35, D-36, D-37, D-38, D-39) + E-track (D-41 supersedes D-01; D-42 superseded by D-43; D-43).
+Status: D9 (Phase 0 close) + F1 audit additions (D-25..D-33) + F3 (D-34) + F4 (D-35, D-36, D-37, D-38, D-39) + E-track (D-41 supersedes D-01; D-42 superseded by D-43; D-43) + Isaac platform (D-44 in-process RL training).
 Last update: see Git commit date.
 -->
 
@@ -80,6 +80,7 @@ consistent with the chapters.
 | D-41 | Track 'E' (parallel, end-to-end front-camera): **supersedes D-01**; camera→action policy behind a retained modular cage; phases E0..E6 / gates GE0..GE6, commit prefix `E2:` | `docs/00`; `docs/01`; §3.5.1 | CONFIRMED |
 | D-42 | Track 'E' cage operates on an independent state estimate, not the camera (preserves cage independence; distinguishes H-06 cage-state from H-11 camera-perception) | `docs/04`; `docs/02` | SUPERSEDED by D-43 |
 | D-43 | Track 'E' cage state comes from a dedicated deterministic vision lane-estimator (separate from the policy CNN), not ground truth — for generalisation to any road with visible lines; accepts common-cause + new hazard H-12 | `docs/04`; `docs/09` §10; `docs/02` | CONFIRMED |
+| D-44 | Isaac-Sim RL training runs **in-process** (the gym env drives a live Isaac `World` via `IsaacSimInterface` — `set_world_pose` teleport / `world.step` / Replicator Lane Cam), **not** over the ROS2 bring-up; this supplies the per-episode reset the bring-up's `gz service set_pose` path could not, and decouples training from the bring-up command (shared scene only, `tools/isaac_scene.py`) | `docs/14`; `tools/isaac_train.py`; `tools/isaac_scene.py`; `src/cobraflex_rl/.../isaac_interface.py` | CONFIRMED |
 
 > **Renumbering note (11.06.2026, pre-merge).** The E-track decisions above were
 > originally allocated **D-38 / D-39 / D-40** on the `e2e-camera` branch, while
@@ -1687,3 +1688,61 @@ hallucinating a lane the CV does not see is bounded by C-01/C-02 on the CV state
 - D-42 status → **SUPERSEDED by D-43**.
 - Cites D-41, D-42 (superseded), D-08 (A2), D-01 (whose modular, auditable-cage spirit is
   retained: the cage is still a distinct, deterministic, inspectable module).
+
+---
+
+### D-44 — Isaac-Sim RL training is in-process, decoupled from the ROS2 bring-up
+
+**Status.** CONFIRMED (2026-06-19). Platform decision for the Gazebo→Isaac migration of
+the RL **training** loop; does not touch any H/SR/C/M identifier.
+
+**Context.** `tools/isaac_ros2_bringup.py` reproduces the Gazebo *steady-state* topic
+contract (`/cmd_vel` in; `/odom_truth`, `/camera/image_raw_lane`, `/clock`,
+`/joint_states`, `/tf` out) over a ROS2-bridge OmniGraph, and free-runs `world.step()`.
+But RL training needs one more operation the bring-up does **not** expose: a per-episode
+**reset/teleport**. `GazeboLaneEnv.reset()` performs it through
+`RosGazeboInterface.set_vehicle_pose()` → `gz service /world/<name>/set_pose`
+(`gz.msgs.Pose`, via the `gz` CLI) — a Gazebo Transport service with no Isaac equivalent
+(no `gz` server runs alongside Isaac). The same applies to `set_physics` (RTF) and the
+`pose/info` entity-id lookup. So driving training over the bring-up would leave every
+episode unable to respawn.
+
+**Decision.** Run training **in-process inside the Isaac Sim Python app** (option 2),
+driving the gym env directly against the live `World` rather than over ROS2:
+
+- A new `IsaacSimInterface` (`src/cobraflex_rl/cobraflex_rl/isaac_interface.py`)
+  duck-types the exact surface `GazeboLaneEnv` calls, so the env is **unchanged**. Its
+  operations are direct Isaac calls: per-episode reset = `articulation.set_world_pose` +
+  zeroed velocities; actuation = the diff-drive twist → 4 wheel `ArticulationAction`
+  (same kinematics as the bring-up `WHEEL_SCRIPT`); advance = `world.step()` over
+  `control_dt / physics_dt` sub-steps; pose/speed read straight from the articulation
+  root (ground truth → the odom→world calibration the Gazebo path needs is a no-op); the
+  Lane Cam frame comes from a Replicator `rgb` render product (RGBA→BGR to match
+  `camera_pipeline.decode_image`).
+- The physics scene (URDF→USD, track geometry, robot spawn, wheel drives/materials) is
+  extracted into a shared `tools/isaac_scene.py`, imported by **both** the bring-up and
+  the new trainer `tools/isaac_train.py`, so the two paths share **one** source for the
+  drivetrain constants (`WHEEL_RADIUS`/`WHEEL_SEPARATION`/`WHEEL_JOINTS` order) — a drift
+  there would silently invalidate a trained policy.
+- `GazeboLaneEnv`'s only hard `rclpy` coupling (the `RosGazeboInterface` type import) is
+  moved under `TYPE_CHECKING`, so the env imports on the Isaac host without `rclpy`.
+
+**Rationale.** It is the standard, far faster Isaac-Lab-style pattern (no async ROS↔gz
+bridge, no `gz` CLI subprocess per reset), and it removes the *only* training blocker in
+one move. Training and the bring-up command become independent: the bring-up keeps its
+"same ROS2 nodes as Gazebo" demo/eval role; training no longer needs a running bring-up.
+
+**Consequences / honest trade-offs.**
+- The bring-up is now a thin ROS2/sensor layer over `isaac_scene.build_world`; its observed
+  behaviour is unchanged (scene functions moved, not altered).
+- **Not yet host-validated.** This was authored on a Windows machine where Isaac does not
+  run; only `py_compile` + an rclpy-free import check of the env/interface were possible.
+  The Isaac API calls (`set_world_pose`, `get_world_pose`, `get_linear_velocity`,
+  `set_joint_velocities`, the Replicator render-product/annotator flow) must be confirmed
+  on the Ubuntu+Isaac host, and SB3+gymnasium must be installed into Isaac's bundled
+  python. The stale cached `isaac_usd/` should be re-imported (`BRINGUP_REIMPORT=1`).
+- The in-process camera renders once per control step (~10 Hz at `control_dt` 0.10), which
+  the env consumes one-frame-per-cycle; this is below the handover's ≥20 Hz steady-state
+  camera target but matches what training actually samples.
+- Cites D-34 (in-loop cage during training), D-41/D-43 (camera track + CV-estimator cage),
+  D-32 (third-party drivers untracked — here, Isaac/SB3 are host-installed, not vendored).

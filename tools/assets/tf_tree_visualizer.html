@@ -239,15 +239,23 @@
           <line x1="340" y1="225" x2="322" y2="225" stroke="#2d6eb0" stroke-width="0.8" opacity="0.5"/>
           <text x="340" y="248" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#2d6eb0b0" text-anchor="middle">RPLidar A2</text>
 
-          <!-- ZED Mini: camera_link joint xyz = 0.114 0 0.020 from body_link → SVG (465, 225)
-               zedm baseline=63 mm; thin vertical bar at front face; material=yellow/black -->
-          <rect x="462" y="193" width="12" height="64" rx="3" fill="#0d1117" stroke="#b08020" stroke-width="1.2"/>
+          <!-- ZED Mini (stereo): zedm_camera_link joint xyz = 0.0665 0 0.00675 from body_link;
+               body centre + the two eyes reach the front face. baseline 63 mm (vertical here);
+               mesh material black. Frame markers overlay this glyph → SVG ≈ (453–468, 225) -->
+          <rect x="461" y="200" width="13" height="50" rx="3" fill="#0d1117" stroke="#b08020" stroke-width="1.2"/>
           <circle cx="468" cy="208" r="5"   fill="#0d1117" stroke="#b08020" stroke-width="1"/>
           <circle cx="468" cy="208" r="2.5" fill="#b08020" opacity="0.45"/>
           <circle cx="468" cy="242" r="5"   fill="#0d1117" stroke="#b08020" stroke-width="1"/>
           <circle cx="468" cy="242" r="2.5" fill="#b08020" opacity="0.45"/>
-          <path d="M474,208 L510,190 M474,242 L510,260" stroke="#b08020" stroke-width="0.6" stroke-dasharray="3 3" opacity="0.2"/>
-          <text x="481" y="229" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#b0802080" text-anchor="middle">ZED Mini</text>
+          <text x="455" y="268" font-family="JetBrains Mono,monospace" font-size="7" fill="#b0802080" text-anchor="middle">ZED Mini (stereo)</text>
+
+          <!-- Lane Cam: camera_link_lane joint xyz = 0.124 0 −0.03, rpy 0 0.30 0 from body_link → SVG (487, 225).
+               Dedicated forward CV lane camera — protrudes past the front bevel, mounted lower
+               and pitched 0.30 rad down (small ▼ hint); feeds the CV lane estimator (D-43). -->
+          <rect x="483" y="218" width="9" height="14" rx="2" fill="#0d1117" stroke="#caa040" stroke-width="1"/>
+          <circle cx="487.5" cy="224" r="2.8" fill="#0d1117" stroke="#caa040" stroke-width="0.9"/>
+          <circle cx="487.5" cy="224" r="1.2" fill="#caa040" opacity="0.5"/>
+          <path d="M485,228.5 L490,228.5 L487.5,232 Z" fill="#caa040" opacity="0.45"/>
 
           <!-- Forward label -->
           <text x="548" y="229" font-family="JetBrains Mono,monospace" font-size="9" fill="#30363d">→ fwd</text>
@@ -371,19 +379,61 @@ const FRAMES = {
     joint:'xyz: 0 0 0.090 m  (body_h/2 + 0.04)\nrpy: 0 0 π',
     svgPos:{x:340, y:225},
   },
-  camera_link: {
-    label:'camera_link', jointType:'fixed', parent:'body_link',
-    desc:'ZED Mini stereo camera mount point. At the front face of the body (body_length/2 = 114 mm forward). Baseline 63 mm, black body.',
+  zedm_camera_link: {
+    label:'zedm_camera_link', jointType:'fixed', parent:'body_link',
+    desc:'ZED Mini stereo camera mount point (threaded screw hole at the camera base). Recessed 47.5 mm behind the body front face — same X·Y as imu_link, 13.25 mm below the camera centre. Root of the ZED Mini subtree.',
     publisher:'static_tf / robot_state_publisher',
-    joint:'xyz: 0.114 0 0.020 m  (body_length/2, CL, raised)',
-    svgPos:{x:465, y:225},
+    joint:'xyz: 0.0665 0 0.00675 m  (body_length/2 − 0.0475)\nrpy: 0 0 0',
+    svgPos:{x:453, y:225},
   },
-  camera_link_optical: {
-    label:'camera_link_optical', jointType:'fixed', parent:'camera_link',
-    desc:'Optical frame — Z-forward, X-right, Y-down convention (camera standard). Rotation-only transform from camera_link. Used by image processing nodes.',
+  zedm_camera_center: {
+    label:'zedm_camera_center', jointType:'fixed', parent:'zedm_camera_link',
+    desc:'ZED Mini body centre. Carries the camera mesh visual (zedmini_camera.stl, black). Parent of the left/right stereo eyes; 63 mm baseline split across them.',
+    publisher:'static_tf / robot_state_publisher',
+    joint:'xyz: 0 0 0.01325 m  (height/2)\nrpy: 0 0 0',
+    svgPos:{x:453, y:225},
+  },
+  zedm_left_camera_frame: {
+    label:'zedm_left_camera_frame', jointType:'fixed', parent:'zedm_camera_center',
+    desc:'Left stereo eye, sensor frame (ROS axes: X-forward, Z-up). Offset +24.5 mm left of the camera centre. Its image plane is the optical child.',
+    publisher:'static_tf / robot_state_publisher',
+    joint:'xyz: 0.02 0.0245 0 m\nrpy: 0 0 0',
+    svgPos:{x:468, y:208},
+  },
+  zedm_left_camera_frame_optical: {
+    label:'zedm_left_camera_frame_optical', jointType:'fixed', parent:'zedm_left_camera_frame',
+    desc:'Left eye optical frame — Z-forward, X-right, Y-down (image convention). Publishes camera/left/image_raw (+ camera/left/camera_info). 640×480, HFOV 80°.',
     publisher:'static_tf / robot_state_publisher',
     joint:'xyz: 0 0 0  rpy: −π/2 0 −π/2',
-    svgPos:{x:465, y:225},
+    svgPos:{x:468, y:208},
+  },
+  zedm_right_camera_frame: {
+    label:'zedm_right_camera_frame', jointType:'fixed', parent:'zedm_camera_center',
+    desc:'Right stereo eye, sensor frame (ROS axes: X-forward, Z-up). Offset −38.5 mm from the camera centre — 63 mm baseline from the left eye.',
+    publisher:'static_tf / robot_state_publisher',
+    joint:'xyz: 0.02 −0.0385 0 m\nrpy: 0 0 0',
+    svgPos:{x:468, y:242},
+  },
+  zedm_right_camera_frame_optical: {
+    label:'zedm_right_camera_frame_optical', jointType:'fixed', parent:'zedm_right_camera_frame',
+    desc:'Right eye optical frame — Z-forward, X-right, Y-down (image convention). Publishes camera/right/image_raw (+ camera/right/camera_info). 640×480, HFOV 80°.',
+    publisher:'static_tf / robot_state_publisher',
+    joint:'xyz: 0 0 0  rpy: −π/2 0 −π/2',
+    svgPos:{x:468, y:242},
+  },
+  camera_link_lane: {
+    label:'camera_link_lane', jointType:'fixed', parent:'body_link',
+    desc:'Dedicated Lane Cam mount (IMX219-160 mirror). Separate forward camera at the body front, 30 mm below centre and pitched 0.30 rad down to frame the lane ahead. Feeds the deterministic CV lane estimator (D-43) — distinct from the ZED.',
+    publisher:'static_tf / robot_state_publisher',
+    joint:'xyz: 0.124 0 −0.03 m  (body_length/2 + 0.01)\nrpy: 0 0.30 0  (pitch down)',
+    svgPos:{x:487, y:225},
+  },
+  camera_link_optical_lane: {
+    label:'camera_link_optical_lane', jointType:'fixed', parent:'camera_link_lane',
+    desc:'Lane Cam optical frame — Z-forward, X-right, Y-down (image convention). Publishes camera/image_raw_lane (+ camera/camera_info). 640×360, HFOV 90°.',
+    publisher:'static_tf / robot_state_publisher',
+    joint:'xyz: 0 0 0  rpy: −π/2 0 −π/2',
+    svgPos:{x:487, y:225},
   },
   imu_link: {
     label:'imu_link', jointType:'fixed', parent:'body_link',
@@ -400,11 +450,17 @@ const TREE = [
   { id:'odom',                 pfx:'└─ ',                    tag:''     },
   { id:'base_footprint',       pfx:'   └─ ',                 tag:''     },
   { id:'base_link',            pfx:'      └─ ',              tag:''     },
-  { id:'body_link',            pfx:'         ├─ ',           tag:''     },
-  { id:'lidar_link',           pfx:'         │  ├─ ',        tag:''     },
-  { id:'camera_link',          pfx:'         │  ├─ ',        tag:''     },
-  { id:'camera_link_optical',  pfx:'         │  │  └─ ',     tag:'opt'  },
-  { id:'imu_link',             pfx:'         │  └─ ',        tag:''     },
+  { id:'body_link',                       pfx:'         ├─ ',              tag:''     },
+  { id:'lidar_link',                      pfx:'         │  ├─ ',           tag:''     },
+  { id:'zedm_camera_link',                pfx:'         │  ├─ ',           tag:'ZED'  },
+  { id:'zedm_camera_center',              pfx:'         │  │  └─ ',        tag:'body' },
+  { id:'zedm_left_camera_frame',          pfx:'         │  │     ├─ ',     tag:'L'    },
+  { id:'zedm_left_camera_frame_optical',  pfx:'         │  │     │  └─ ',  tag:'opt'  },
+  { id:'zedm_right_camera_frame',         pfx:'         │  │     └─ ',     tag:'R'    },
+  { id:'zedm_right_camera_frame_optical', pfx:'         │  │        └─ ',  tag:'opt'  },
+  { id:'camera_link_lane',                pfx:'         │  ├─ ',           tag:'lane' },
+  { id:'camera_link_optical_lane',        pfx:'         │  │  └─ ',        tag:'opt'  },
+  { id:'imu_link',                        pfx:'         │  └─ ',           tag:''     },
   { id:'front_left_wheel',     pfx:'         ├─ ',           tag:'FL'   },
   { id:'front_right_wheel',    pfx:'         ├─ ',           tag:'FR'   },
   { id:'rear_left_wheel',      pfx:'         ├─ ',           tag:'RL'   },
@@ -458,13 +514,19 @@ function svgEl(tag, attrs) {
 // Slight positional offsets so overlapping frames (base_footprint/base_link/body_link/lidar_link)
 // remain individually clickable via tree; visually they cluster at vehicle centre.
 const OFFSET = {
-  base_footprint:      {dx: -7, dy:  5},
-  base_link:           {dx:  0, dy:  0},
-  body_link:           {dx:  7, dy: -5},
-  lidar_link:          {dx:  0, dy:-17},
-  camera_link:         {dx:  0, dy:  0},
-  camera_link_optical: {dx:  0, dy: 13},
-  imu_link:            {dx:  0, dy:  0},
+  base_footprint:                 {dx: -7, dy:  5},
+  base_link:                      {dx:  0, dy:  0},
+  body_link:                      {dx:  7, dy: -5},
+  lidar_link:                     {dx:  0, dy:-17},
+  zedm_camera_link:               {dx:-12, dy:  0},
+  zedm_camera_center:             {dx:  0, dy:  0},
+  zedm_left_camera_frame:         {dx:  0, dy:  0},
+  zedm_left_camera_frame_optical: {dx: 14, dy: -6},
+  zedm_right_camera_frame:        {dx:  0, dy:  0},
+  zedm_right_camera_frame_optical:{dx: 14, dy:  6},
+  camera_link_lane:               {dx:  0, dy:  0},
+  camera_link_optical_lane:       {dx: 14, dy:  6},
+  imu_link:                       {dx:  0, dy:  0},
   front_left_wheel:    {dx:  0, dy:  0},
   front_right_wheel:   {dx:  0, dy:  0},
   rear_left_wheel:     {dx:  0, dy:  0},

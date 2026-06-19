@@ -95,28 +95,32 @@ import math  # noqa: E402
 
 import omni.kit.app  # noqa: E402
 import omni.kit.commands  # noqa: E402
-from isaacsim.asset.importer.urdf import URDFImporter, URDFImporterConfig  # noqa: E402
-from isaacsim.core.utils.stage import add_reference_to_stage  # noqa: E402
-from pxr import Gf, UsdGeom, UsdPhysics  # noqa: E402
 
-# PhysX velocity control needs a drive with damping on each wheel joint. The URDF
-# `continuous` joints import without gains ("Stiffness and damping not available"),
-# so a commanded wheel velocity would produce no torque and the robot would not
-# move. Apply a stiffness-0 / high-damping angular drive => pure velocity tracking.
-WHEEL_DRIVE_DAMPING = 1.0e4
-WHEEL_DRIVE_MAX_FORCE = 1.0e3
+# Shared physics-scene builder (URDF->USD import, track geometry, robot spawn,
+# wheel velocity drives + low-friction materials). Its omni/pxr imports are
+# deferred into its functions, so importing the module here — after SimulationApp
+# exists — is safe. The in-process RL trainer (tools/isaac_train.py) imports the
+# same module so the two paths can never drift on drivetrain/scene parameters.
+import isaac_scene  # noqa: E402
+from isaac_scene import (  # noqa: E402
+    REPO,
+    WHEEL_FRICTION,
+    WHEEL_JOINTS,
+    WHEEL_RADIUS,
+    WHEEL_SCRIPT,
+    WHEEL_SEPARATION,
+    articulation_root,
+    build_world,
+    find_prim,
+    make_camera_prim,
+)
 
-# A 4-wheel skid-steer yaws by scrubbing all four wheels sideways. PhysX grips
-# harder than Gazebo's ODE, so with the wheels' default (high) friction the turn
-# that worked in Gazebo barely responds here. Lowering the wheel+ground friction
-# frees the lateral scrub so the robot yaws again (measured: f=0.5 -> 0.09 rad/s,
-# f=0.1 -> 0.26, f=0.05 -> 0.53, against an ideal 2.9 rad/s test command). Both
-# wheel and ground are set so the contact pair is fully controlled; combine="min".
-# (An asymmetric low-front/grippy-rear split was tried and made the yaw unstable.)
-WHEEL_FRICTION = float(os.environ.get("WHEEL_FRICTION", "0.05"))
-GROUND_FRICTION = float(os.environ.get("GROUND_FRICTION", "0.05"))
-WHEEL_LINKS = ["front_left_wheel", "rear_left_wheel",
-               "front_right_wheel", "rear_right_wheel"]
+# Backwards-compatible private aliases used by add_sensors/main below.
+_find_prim = find_prim
+_make_camera_prim = make_camera_prim
+
+# Drivetrain / friction / wheel-link constants now live in isaac_scene (imported
+# above) so the bring-up and the in-process trainer share a single source.
 
 # Sensors (off in --test/--turn; they need rendering).
 SENSORS = os.environ.get("BRINGUP_SENSORS", "1") != "0"
@@ -157,286 +161,10 @@ LIDAR_TOPIC = "scan"
 # detection. The stock Example_Rotary_2D only detected from 1 m. Override via env.
 LIDAR_CONFIG = os.environ.get("LIDAR_CONFIG", "RPLIDAR_S2E")
 
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-URDF = os.path.join(REPO, "src/cobraflex/urdf/cobraflex_isaac.urdf")
-USD_OUT = os.path.join(REPO, "src/cobraflex/urdf/isaac_usd")
-ROBOT_PATH = "/World/Cobraflex"
+# REPO / robot paths / drivetrain constants (WHEEL_RADIUS/SEPARATION/JOINTS) and
+# the diff-drive WHEEL_SCRIPT are imported from isaac_scene above. GRAPH_PATH is
+# the ROS2 action-graph root and stays here (ROS-specific to this bring-up).
 GRAPH_PATH = "/World/ActionGraph"
-
-WHEEL_RADIUS = 0.03725          # m   (matches robot.gazebo)
-WHEEL_SEPARATION = 0.154        # m   (matches robot.gazebo)
-# Order matters: jointNames[i] is commanded with velCmd[i].
-WHEEL_JOINTS = [
-    "front_left_wheel_joint", "rear_left_wheel_joint",     # left side
-    "front_right_wheel_joint", "rear_right_wheel_joint",   # right side
-]
-
-# Differential-drive kinematics: twist (v=linear.x, w=angular.z) -> wheel speeds.
-# Left wheels share v_l, right wheels share v_r. Output order matches WHEEL_JOINTS.
-WHEEL_SCRIPT = f"""
-def compute(db):
-    lin = db.inputs.linVel
-    ang = db.inputs.angVel
-    v = float(lin[0])
-    w = float(ang[2])
-    r = {WHEEL_RADIUS}
-    half = {WHEEL_SEPARATION} / 2.0
-    v_l = (v - w * half) / r
-    v_r = (v + w * half) / r
-    db.outputs.velCmd = [v_l, v_l, v_r, v_r]
-    return True
-"""
-
-
-def ensure_robot_usd() -> str:
-    """Convert the URDF to USD if needed and return the .usda path.
-
-    An existing USD package is reused as-is. After editing cobraflex_isaac.urdf
-    (e.g. the ZED stereo frames) the cached USD is stale, so set BRINGUP_REIMPORT=1
-    to force a fresh URDF->USD import (or just delete src/cobraflex/urdf/isaac_usd/).
-    """
-    out = os.path.join(USD_OUT, "cobraflex_isaac", "cobraflex_isaac.usda")
-    if os.path.exists(out) and os.environ.get("BRINGUP_REIMPORT", "0") == "0":
-        return out
-    os.makedirs(USD_OUT, exist_ok=True)
-    cfg = URDFImporterConfig(urdf_path=URDF, usd_path=USD_OUT,
-                             merge_fixed_joints=False, merge_mesh=False, fix_base=False)
-    return URDFImporter(cfg).import_urdf()
-
-
-def articulation_root(stage) -> str:
-    for prim in stage.Traverse():
-        if prim.HasAPI(UsdPhysics.ArticulationRootAPI):
-            return prim.GetPath().pathString
-    return ROBOT_PATH
-
-
-def configure_wheel_drives(stage) -> int:
-    """Add a velocity (stiffness=0) angular drive to each wheel joint."""
-    n = 0
-    for prim in stage.Traverse():
-        if prim.IsA(UsdPhysics.RevoluteJoint) and prim.GetName() in WHEEL_JOINTS:
-            drive = UsdPhysics.DriveAPI.Apply(prim, "angular")
-            drive.CreateTypeAttr().Set("force")
-            drive.CreateStiffnessAttr().Set(0.0)
-            drive.CreateDampingAttr().Set(WHEEL_DRIVE_DAMPING)
-            drive.CreateMaxForceAttr().Set(WHEEL_DRIVE_MAX_FORCE)
-            n += 1
-    return n
-
-
-def configure_wheel_material(stage, friction: float) -> int:
-    """Bind a low-friction material to the wheel colliders so the robot can yaw."""
-    from pxr import PhysxSchema, Sdf, UsdShade
-    from omni.physx.scripts import physicsUtils
-
-    mat_path = "/World/PhysicsMaterials/Wheel"
-    p = UsdShade.Material.Define(stage, mat_path).GetPrim()
-    m = UsdPhysics.MaterialAPI.Apply(p)
-    m.CreateStaticFrictionAttr().Set(friction)
-    m.CreateDynamicFrictionAttr().Set(friction)
-    m.CreateRestitutionAttr().Set(0.0)
-    PhysxSchema.PhysxMaterialAPI.Apply(p).CreateFrictionCombineModeAttr().Set("min")
-
-    # Bind to the wheel *collision* prims (the Cylinder colliders), not the link.
-    wheel_links = set(WHEEL_LINKS)
-    n = 0
-    for prim in stage.Traverse():
-        if not prim.HasAPI(UsdPhysics.CollisionAPI):
-            continue
-        a = prim
-        while a and a.GetPath() != a.GetPath().GetParentPath():
-            if a.GetName() in wheel_links:
-                physicsUtils.add_physics_material_to_prim(stage, prim, Sdf.Path(mat_path))
-                n += 1
-                break
-            a = a.GetParent()
-    return n
-
-
-def _flat_material(stage, path, rgb):
-    from pxr import Gf, Sdf, UsdShade
-    mtl = UsdShade.Material.Define(stage, path)
-    s = UsdShade.Shader.Define(stage, path + "/S")
-    s.CreateIdAttr("UsdPreviewSurface")
-    s.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(*rgb))
-    s.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.9)
-    s.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(0.0)
-    mtl.CreateSurfaceOutput().ConnectToSource(s.ConnectableAPI(), "surface")
-    return mtl
-
-
-def _bind(prim, mtl):
-    from pxr import UsdShade
-    UsdShade.MaterialBindingAPI(prim).Apply(prim)
-    UsdShade.MaterialBindingAPI(prim).Bind(mtl)
-
-
-def _ribbon_mesh(stage, path, inner, outer, z, mtl):
-    """Closed quad ribbon between two parallel polylines at height z."""
-    from pxr import UsdGeom
-    n = len(inner)
-    pts, counts, idx = [], [], []
-    for i in range(n):
-        pts.append((float(inner[i][0]), float(inner[i][1]), z))
-        pts.append((float(outer[i][0]), float(outer[i][1]), z))
-    for i in range(n):
-        a, b = 2 * i, 2 * i + 1
-        c, d = 2 * ((i + 1) % n) + 1, 2 * ((i + 1) % n)
-        idx += [a, b, c, d]
-        counts.append(4)
-    m = UsdGeom.Mesh.Define(stage, path)
-    m.CreatePointsAttr(pts)
-    m.CreateFaceVertexCountsAttr(counts)
-    m.CreateFaceVertexIndicesAttr(idx)
-    _bind(m.GetPrim(), mtl)
-    return m
-
-
-def _add_track_geometry(stage, meta, tdir):
-    """Build the road + lane lines as USD geometry (crisp at any zoom, no texture
-    aliasing) from the centreline. Better than a baked texture for Isaac."""
-    import numpy as np
-    import yaml
-    from pxr import UsdGeom
-
-    cl = yaml.safe_load(open(os.path.join(tdir, f"{meta['name']}_centerline.yaml")))
-    P = np.array(cl["centerline"]["points"], dtype=float)
-    rw = float(meta.get("road_width", 0.52))
-    two_lane = int(meta.get("lanes", 2)) == 2
-    lw = 0.01                                  # line width (m)
-
-    t = np.roll(P, -1, 0) - np.roll(P, 1, 0)
-    t /= (np.linalg.norm(t, axis=1, keepdims=True) + 1e-9)
-    nrm = np.stack([-t[:, 1], t[:, 0]], axis=1)
-    left = P + (rw / 2.0) * nrm
-    right = P - (rw / 2.0) * nrm
-
-    asphalt = _flat_material(stage, "/World/Track/MatAsphalt", (0.0, 0.0, 0.0))
-    white = _flat_material(stage, "/World/Track/MatLine", (0.9, 0.9, 0.9))
-    grass = _flat_material(stage, "/World/Track/MatGrass", (0.32, 0.42, 0.24))
-
-    # Off-road backdrop (one big quad just under the asphalt).
-    x0, y0, x1, y1 = meta["world_bbox"]
-    g = UsdGeom.Mesh.Define(stage, "/World/Track/Offroad")
-    g.CreatePointsAttr([(x0, y0, 0.0006), (x1, y0, 0.0006),
-                        (x1, y1, 0.0006), (x0, y1, 0.0006)])
-    g.CreateFaceVertexCountsAttr([4])
-    g.CreateFaceVertexIndicesAttr([0, 1, 2, 3])
-    _bind(g.GetPrim(), grass)
-
-    _ribbon_mesh(stage, "/World/Track/Asphalt", left, right, 0.0010, asphalt)
-    _ribbon_mesh(stage, "/World/Track/EdgeL",
-                 left + (lw / 2) * nrm, left - (lw / 2) * nrm, 0.0030, white)
-    _ribbon_mesh(stage, "/World/Track/EdgeR",
-                 right + (lw / 2) * nrm, right - (lw / 2) * nrm, 0.0030, white)
-
-    if two_lane:                               # dashed centre line, one mesh of quads
-        seg = np.linalg.norm(np.diff(np.vstack([P, P[:1]]), axis=0), axis=1)
-        s = np.concatenate([[0.0], np.cumsum(seg)])
-        dash, gap = 0.10, 0.10
-        pts, counts, idx, k = [], [], [], 0
-        pos = 0.0
-        while pos < s[-1]:
-            a0, a1 = pos, min(pos + dash, s[-1])
-            ia = int(np.searchsorted(s, a0)) % len(P)
-            ib = int(np.searchsorted(s, a1)) % len(P)
-            pa, pb, na = P[ia], P[ib], nrm[ia]
-            quad = [pa + (lw / 2) * na, pa - (lw / 2) * na,
-                    pb - (lw / 2) * na, pb + (lw / 2) * na]
-            for q in quad:
-                pts.append((float(q[0]), float(q[1]), 0.0030))
-            idx += [k, k + 1, k + 2, k + 3]
-            counts.append(4)
-            k += 4
-            pos += dash + gap
-        m = UsdGeom.Mesh.Define(stage, "/World/Track/Centre")
-        m.CreatePointsAttr(pts)
-        m.CreateFaceVertexCountsAttr(counts)
-        m.CreateFaceVertexIndicesAttr(idx)
-        _bind(m.GetPrim(), white)
-    print(f"[bringup] track '{meta['name']}' built as geometry "
-          f"({meta['size_m'][0]:.1f}x{meta['size_m'][1]:.1f} m, "
-          f"{'2-lane' if two_lane else '1-lane'})")
-
-
-def _add_track_texture(stage, meta, tdir):
-    from pxr import Gf, Sdf, UsdShade
-    png = os.path.join(tdir, meta["texture"])
-    cx, cy = meta["center_m"]
-    w, h = meta["size_m"]
-    hw, hh = w / 2.0, h / 2.0
-    quad = UsdGeom.Mesh.Define(stage, "/World/Track")
-    quad.CreatePointsAttr([(-hw, -hh, 0), (hw, -hh, 0), (hw, hh, 0), (-hw, hh, 0)])
-    quad.CreateFaceVertexCountsAttr([4])
-    quad.CreateFaceVertexIndicesAttr([0, 1, 2, 3])
-    st = UsdGeom.PrimvarsAPI(quad.GetPrim()).CreatePrimvar(
-        "st", Sdf.ValueTypeNames.TexCoord2fArray, UsdGeom.Tokens.varying)
-    st.Set([(0, 0), (1, 0), (1, 1), (0, 1)])
-    UsdGeom.Xformable(quad.GetPrim()).AddTranslateOp().Set(Gf.Vec3d(cx, cy, 0.0015))
-    mtl = UsdShade.Material.Define(stage, "/World/Track/Mat")
-    surf = UsdShade.Shader.Define(stage, "/World/Track/Mat/Surface")
-    surf.CreateIdAttr("UsdPreviewSurface")
-    surf.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.9)
-    streader = UsdShade.Shader.Define(stage, "/World/Track/Mat/St")
-    streader.CreateIdAttr("UsdPrimvarReader_float2")
-    streader.CreateInput("varname", Sdf.ValueTypeNames.Token).Set("st")
-    tex = UsdShade.Shader.Define(stage, "/World/Track/Mat/Tex")
-    tex.CreateIdAttr("UsdUVTexture")
-    tex.CreateInput("file", Sdf.ValueTypeNames.Asset).Set(png)
-    tex.CreateInput("sourceColorSpace", Sdf.ValueTypeNames.Token).Set("sRGB")
-    tex.CreateInput("st", Sdf.ValueTypeNames.Float2).ConnectToSource(
-        streader.ConnectableAPI(), "result")
-    surf.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).ConnectToSource(
-        tex.ConnectableAPI(), "rgb")
-    mtl.CreateSurfaceOutput().ConnectToSource(surf.ConnectableAPI(), "surface")
-    _bind(quad.GetPrim(), mtl)
-    print(f"[bringup] track '{meta['name']}' loaded as texture "
-          f"({w:.1f}x{h:.1f} m)")
-
-
-def add_track(stage):
-    """Build a generated track (scripts/generate_complex_track.py). Geometry by
-    default (crisp vector lines); TRACK_MODE=texture for the baked PNG. Returns the
-    track meta dict (start pose etc.) or None."""
-    import yaml
-
-    track = os.environ.get("TRACK", "complex_a")
-    if not track:
-        return None
-    tdir = os.path.join(REPO, "experiments/sim/tracks", track)
-    meta_path = os.path.join(tdir, f"{track}_meta.yaml")
-    if not os.path.exists(meta_path):
-        print(f"[bringup] no track '{track}' at {meta_path}, skipping")
-        return None
-    meta = yaml.safe_load(open(meta_path))
-    if os.environ.get("TRACK_MODE", "geom") == "texture":
-        _add_track_texture(stage, meta, tdir)
-    else:
-        _add_track_geometry(stage, meta, tdir)
-    return meta
-
-
-def _find_prim(stage, name: str) -> str:
-    for prim in stage.Traverse():
-        if prim.GetName() == name:
-            return prim.GetPath().pathString
-    return ""
-
-
-def _make_camera_prim(stage, parent_path, hfov, width, height):
-    """Define a USD Camera under the ROS optical frame with matching intrinsics."""
-    cam_path = parent_path + "/Camera"
-    cam = UsdGeom.Camera.Define(stage, cam_path)
-    # USD cameras look down local -Z; the ROS optical frame has +Z forward, so
-    # rotate 180 deg about X to point the camera along the optical viewing axis.
-    UsdGeom.Xformable(cam.GetPrim()).AddOrientOp().Set(Gf.Quatf(0, 1, 0, 0))
-    aperture = 20.955
-    cam.GetHorizontalApertureAttr().Set(aperture)
-    cam.GetVerticalApertureAttr().Set(aperture * height / width)
-    cam.GetFocalLengthAttr().Set(aperture / (2.0 * math.tan(hfov / 2.0)))
-    cam.GetClippingRangeAttr().Set(Gf.Vec2f(0.1, 15.0))
-    return cam_path
 
 
 def _add_camera_graph(idx, camera_path, frame_id, width, height, img_topic, info_topic):
@@ -571,59 +299,18 @@ def add_sensors(stage) -> None:
 
 
 def build_scene():
-    from isaacsim.core.api import World
-    from isaacsim.core.api.objects.ground_plane import GroundPlane
-    from isaacsim.core.api.materials import PhysicsMaterial
+    """Build the shared physics scene, then add this bring-up's ROS2 sensor
+    graphs on top.
 
-    world = World(stage_units_in_meters=1.0)
+    The physics scene itself — world, lights, ground, track geometry, robot
+    spawn, wheel velocity drives and the low-friction wheel/ground materials —
+    lives in ``isaac_scene.build_world`` so the in-process RL trainer
+    (``tools/isaac_train.py``) reuses the exact same physics. This bring-up's
+    only addition is the ROS2 sensor publish graphs (cameras/lidar/IMU), which
+    are skipped on the physics-only ``--test``/``--turn`` paths.
+    """
+    world, _track_meta = build_world()
     stage = omni.usd.get_context().get_stage()
-
-    # Lighting: the explicit GroundPlane (vs add_default_ground_plane) leaves the
-    # stage with no light, so the RTX viewport renders all black. Add a dome +
-    # distant light so the GUI shows the scene.
-    from pxr import UsdLux
-    dome = UsdLux.DomeLight.Define(stage, "/World/DomeLight")
-    dome.CreateIntensityAttr(1000.0)
-    sun = UsdLux.DistantLight.Define(stage, "/World/DistantLight")
-    sun.CreateIntensityAttr(3000.0)
-    sun.CreateAngleAttr(0.53)
-
-    # Explicit ground with a known friction so the wheel/ground contact pair is
-    # fully under our control (combine=min on the wheel material then wins).
-    gmat = PhysicsMaterial("/World/groundMat",
-                           static_friction=GROUND_FRICTION,
-                           dynamic_friction=GROUND_FRICTION, restitution=0.0)
-    GroundPlane("/World/groundPlane", z_position=0.0, physics_material=gmat)
-
-    # Track: textured ground quad (off by setting TRACK="").
-    track_meta = add_track(stage)
-
-    usd_path = ensure_robot_usd()
-    add_reference_to_stage(usd_path, ROBOT_PATH)
-    # Spawn at CAM_POSE="x,y,yaw" if set (camera-visibility checks), else the track
-    # start line (on the centreline), else the origin.
-    from isaacsim.core.prims import SingleXFormPrim
-    from pxr import Gf
-    cam_pose = os.environ.get("CAM_POSE", "")
-    if cam_pose:
-        sx, sy, yaw = (float(v) for v in cam_pose.split(","))
-        quat = Gf.Rotation(Gf.Vec3d(0, 0, 1), math.degrees(yaw)).GetQuat()
-        SingleXFormPrim(ROBOT_PATH, position=(sx, sy, 0.06),
-                        orientation=(quat.GetReal(), *quat.GetImaginary()))
-    elif track_meta:
-        sx, sy = track_meta["start_xy"]
-        yaw = float(track_meta["start_yaw"])
-        quat = Gf.Rotation(Gf.Vec3d(0, 0, 1), math.degrees(yaw)).GetQuat()
-        SingleXFormPrim(ROBOT_PATH, position=(sx, sy, 0.06),
-                        orientation=(quat.GetReal(), *quat.GetImaginary()))
-    else:
-        SingleXFormPrim(ROBOT_PATH, position=(0.0, 0.0, 0.06))
-    nd = configure_wheel_drives(stage)
-    nm = configure_wheel_material(stage, WHEEL_FRICTION)
-    print(f"[bringup] velocity drives on {nd} wheel joints; friction "
-          f"{WHEEL_FRICTION} (combine=min) on {nm} wheel colliders, "
-          f"ground {GROUND_FRICTION}")
-    # Sensors render off-screen; skip them in the physics-only --test/--turn paths.
     if SENSORS and not args.test:
         add_sensors(stage)
     return world

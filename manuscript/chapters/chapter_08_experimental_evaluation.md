@@ -527,11 +527,19 @@ organizadas por tipo de validez:
   invariantes geométricos del lane-following, no propiedades de una pista
   concreta—.
 
-- **Sim-to-real.** Todo este capítulo es simulación. El gap entre Gazebo y la
-  plataforma física —incluida la capa de percepción omitida aquí— se caracteriza
-  en el Capítulo 9 (adaptación A5). La cage, por estar especificada sobre el
-  estado abstracto e **independiente de la calidad de la policy y de la
-  percepción**, es el componente del que se espera la transferencia más fiel.
+- **Sim-to-real.** Todo este capítulo es simulación **en Gazebo**, que es el
+  entorno principal y portador del veredicto de esta tesis; sus resultados se
+  reportan como **evidencia principal provisional**. El gap hasta la plataforma
+  física —incluida la capa de percepción omitida aquí— se caracteriza en el
+  Capítulo 9 (adaptación A5) en peldaños de fidelidad creciente: se introduce un
+  **puente de mayor fidelidad en Isaac Sim** (PhysX + RTX, D-44) como herramienta
+  para estrechar el gap antes del hardware. Por ahora la evidencia de Isaac se
+  conserva para valoración interna (un checkpoint de Gazebo no transfiere a Isaac:
+  exige re-entrenamiento y re-evaluación); si esa campaña madura como resultado
+  más fuerte, el veredicto se re-enuncia con esas cifras. La cage, por estar
+  especificada sobre el estado abstracto e **independiente de la calidad de la
+  policy y de la percepción**, es el componente del que se espera la transferencia
+  más fiel en cualquiera de los entornos.
 
 ---
 

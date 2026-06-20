@@ -31,6 +31,46 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [20.06.2026] — Isaac positioned in the V-Model A5 as a higher-fidelity sim-to-real bridge (Gazebo stays the verdict environment)
+
+**Document(s) affected:** `docs/00_v_model_adapted.md` (A5 + chapter-mapping table + date), `docs/DECISIONS.md` (D-44 "Validation positioning" note), `manuscript/chapters/chapter_01_introduction.md` (outline §1.7 Ch.9 + contribution A4), `manuscript/chapters/chapter_06_implementation.md` (§6.7 transition), `manuscript/chapters/chapter_08_experimental_evaluation.md` (§8.8 sim-to-real limitation). Earlier same-day: `CLAUDE.md` (phase-status axes banner), `docs/11`/`docs/13` (positioning notes + DR section + command reference), broken doc-13 link fixes.
+**Phase:** track 'E' / methodology (Isaac Sim platform)
+**Gate context:** none (planning/methodology framing; no H/SR/C/M identifiers touched)
+**Author:** Samuel Sanchez
+
+### Change
+
+Updated the planning/methodology documents so the *evolving* thesis plan reflects Isaac
+Sim's real role. Adaptation **A5** (Bounded Operational Validation) is re-stated as a
+**graded sequence of increasing-fidelity environments**: In-simulation Validation (**Gazebo**,
+the primary verdict-bearing environment, reported as *provisional principal evidence*) → a
+**high-fidelity simulation bridge (Isaac Sim**, PhysX + RTX, D-44) as an intermediate rung
+aimed at narrowing the sim-to-real gap → Bounded Physical Validation. The chapter-mapping
+table gains an Isaac row; Ch.1 (Ch.9 outline + contribution A4), Ch.6 §6.7 and Ch.8 §8.8 carry
+the same framing; D-44 gains a "Validation positioning" note.
+
+### Rationale
+
+The work-plan drifted: Isaac entered (D-44) but the manuscript/methodology still described a
+single Gazebo→physical jump, conflating the **observation track** (F/E) and **simulator**
+(Gazebo/Isaac) axes. The author's decision (2026-06-20): Gazebo is the principal objective and
+carries the *provisional* verdict; Isaac is a more powerful tool toward the sim-to-real gap,
+kept as **internal evidence** for now (a Gazebo checkpoint does not transfer to Isaac → an
+Isaac campaign is a retrain/re-eval from scratch). If the Isaac campaign matures into the
+stronger result, the thesis is re-stated with those figures as final.
+
+### Impact
+
+No identifiers, scenarios, metrics or cage parameters change; no campaign re-runs implied. The
+E-track verdict still closes in Gazebo (docs/07, Ch.8 §8.9, `experiments/sim/campaign_e/`).
+Isaac evidence, when produced, is recorded for internal valuation, not as the thesis verdict.
+
+### Verification
+
+`tools/check_traceability.py` → **All checks PASSED, 0 warnings** (planning-prose edits only).
+
+---
+
 ## [19.06.2026] — In-process Isaac-Sim RL training path (D-44), decoupled from the bring-up
 
 **Document(s) affected:** `tools/isaac_scene.py` (new), `tools/isaac_train.py` (new), `tools/isaac_ros2_bringup.py` (refactored), `src/cobraflex_rl/cobraflex_rl/isaac_interface.py` (new), `src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py` (import decouple), `docs/13_isaacsim_urdf_import.md` (retitled "Isaac Sim utilities" + in-process training section), `docs/14_isaacsim_handover_spec.md` (§3), `docs/DECISIONS.md` (D-44), `CLAUDE.md` (doc-13 label)

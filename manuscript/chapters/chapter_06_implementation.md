@@ -801,7 +801,12 @@ entrenamiento PPO en el entorno de simulación; el Capítulo 8 evalúa
 estadísticamente la policy resultante sobre la *scenario library*
 (L4b'); los Capítulos 9 y 10 cierran la rama derecha del V-Model con
 la caracterización del gap sim-to-real y el verdicto de validación
-acotada.
+acotada. Este capítulo construye y justifica el stack **Gazebo**
+(ROS2 Jazzy), que es el entorno principal y portador del veredicto
+provisional de la tesis; un **puente de mayor fidelidad en Isaac Sim**
+(PhysX + RTX) se introduce más adelante (Cap. 9, adaptación A5, D-44)
+como herramienta para estrechar el gap sim-to-real, ortogonal a la
+elección de simulador hecha aquí.
 
 ---
 

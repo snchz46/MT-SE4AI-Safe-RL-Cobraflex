@@ -1,7 +1,7 @@
 # V-Model Adapted for Systems with Learned Components
 
 **Status:** Living document — Phase 0 deliverable  
-**Last update:** 11.05.2026  
+**Last update:** 20.06.2026 (A5 graded into Gazebo principal / Isaac high-fidelity bridge / physical — D-44)  
 **Approved at Gate:** G0 (pending)  
 
 ## Purpose
@@ -48,12 +48,13 @@ Compliance is verified mechanically by `tools/check_traceability.py` before ever
 
 ## Adaptation A5 — Bounded Operational Validation with sim-to-real characterisation
 
-Operational Validation, which classically lives at the top right of the V, is split into:
+Operational Validation, which classically lives at the top right of the V, is split into a **graded sequence of validation environments of increasing fidelity**, so the sim-to-real gap is characterised in *stages* rather than in a single jump:
 
-- **In-simulation Validation** — the principal experimental campaign, where most quantitative claims are sustained.
-- **Bounded Physical Validation** — a bounded transfer to the CobraFlex 1:14 platform, where the goal is not to reproduce all simulation results but to characterise the sim-to-real gap quantitatively for the principal metrics and to confirm the functional correctness of the safety cage on real hardware.
+- **In-simulation Validation (Gazebo) — the principal campaign.** The main experimental campaign, where most quantitative claims are sustained. Gazebo (ROS2 Jazzy) is the **primary objective and the current verdict-bearing environment**; its results are reported as the thesis's **provisional principal evidence**.
+- **High-fidelity simulation bridge (Isaac Sim) — a more powerful tool aimed at the gap.** A higher-fidelity simulator (PhysX contact dynamics + RTX rendering, decision D-44) introduced as an **intermediate rung** between Gazebo and hardware, expressly to *narrow* the sim-to-real gap before touching the platform. A Gazebo-trained policy does **not** transfer to Isaac (different physics + renderer), so an Isaac instantiation is a *re-training and re-evaluation*, not a port — and is therefore treated, for now, as **internal evidence for valuation** rather than as the thesis verdict. **Should the Isaac campaign mature into the stronger result, the thesis is re-stated with those figures as final**, with the Gazebo campaign retained as the provisional baseline.
+- **Bounded Physical Validation** — a bounded transfer to the CobraFlex 1:14 platform, where the goal is not to reproduce all simulation results but to characterise the *residual* sim-to-real gap quantitatively for the principal metrics and to confirm the functional correctness of the safety cage on real hardware.
 
-The output of A5 is not a single "validated" verdict but a pair of statements: what the simulation evidence supports, and how that evidence transfers to the physical setup with which gap.
+The output of A5 is therefore not a single "validated" verdict but a **chain of statements**: what the Gazebo evidence supports, how the higher-fidelity Isaac stage shifts it, and how it finally transfers to the physical setup — each with its own gap. Note that the **simulator backend (Gazebo vs Isaac) is orthogonal to the F/E observation-track axis** (§"Parallel track E"): either track can be carried in either simulator; Isaac is a fidelity upgrade, not a track.
 
 ## Parallel track E — end-to-end front-camera variant
 
@@ -75,7 +76,8 @@ The five adaptations (A1–A5) and the bidirectional-traceability spine (A4) car
 | Policy Behavioural Evaluation (A2) | Ch. 8 (Results, per-ODD analysis) |
 | Integration Testing | Ch. 8 (Results, end-to-end pipeline) |
 | Runtime Monitoring (A3) | Ch. 8 (Results, intervention log analysis) |
-| In-simulation Validation (A5) | Ch. 8 (Results, scenario campaign) |
+| In-simulation Validation (A5) — Gazebo, principal/provisional | Ch. 8 (Results, scenario campaign) |
+| High-fidelity simulation bridge (A5) — Isaac Sim, internal evidence | Ch. 9 (Sim-to-Real Transfer); tooling in `docs/13`–`docs/14` |
 | Bounded Physical Validation (A5) | Ch. 9 (Sim-to-Real Transfer) |
 | Traceability (A4) | Ch. 10 (Contribution) and Appendix F (full matrix) |
 

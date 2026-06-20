@@ -20,6 +20,13 @@
 > companion `docs/12` documents the deterministic CV controller used as the fair
 > baseline.
 
+> **This is the verdict-bearing E-track path, in Gazebo.** The E-track evaluation that
+> closes the thesis verdict (GE4, the 425k re-run) runs on **this** Gazebo stack —
+> `docs/07` and ch.8 §8.9 score it. The Isaac-Sim migration
+> ([docs/13](13_isaacsim_environment.md)) is a **separate, posterior** thread (a sim-to-real
+> bridge) that **does not supersede** these results; a Gazebo checkpoint does not transfer to
+> Isaac, so any Isaac E-policy is a future retrain, not a re-do of the 425k run documented here.
+
 ---
 
 ## 1. What "camera training" is, in one paragraph

@@ -24,6 +24,15 @@ script reports orphans on either side.
 
 ## Phase status (snapshot)
 
+> **Two orthogonal axes — don't conflate them.** *Observation:* **F-track** (state-vector,
+> frozen baseline) vs **E-track** (camera, active). *Simulator:* **Gazebo** carries every
+> result and **all thesis verdicts** (incl. the pending E-track GE4 425k re-run); **Isaac**
+> (D-44) is **posterior work** — a sim-to-real / physical-platform bridge, **not the E
+> verdict**. Gazebo checkpoints don't transfer to Isaac, so an Isaac E-policy is a *future
+> retrain*, not a re-do of the 425k. E verdict closes in Gazebo (docs/11, docs/07, ch.8 §8.9);
+> Isaac lives in docs/13–14 (note: `E4: Migration to Isaac Sim` commits tag this posterior
+> work under the E gate, but its eval is not GE4).
+
 - **Single trunk since 2026-06-11:** `e2e-camera` merged into `main`. The F-track results are
   **frozen as the ground-truth baseline** (control arm for "what does camera perception cost");
   track 'E' (end-to-end front camera) continues on top. Totals: **12 hazards, 14 SR, 6 cage rules,

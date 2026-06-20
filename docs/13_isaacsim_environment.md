@@ -4,6 +4,17 @@ Status: URDF import + ROS2 bring-up working (verified headless on Isaac Sim 6.0,
 host, 2026-06-16). The **in-process RL training** path is authored but **host-deferred**
 (D-44) — see [RL training — in-process](#rl-training--in-process-gazebo-free-d-44).
 
+> **Scope — this is posterior work, not the thesis verdict path.** The Isaac migration is a
+> **bridge toward sim-to-real / the physical platform**; it is **orthogonal** to the F/E
+> track distinction (the Isaac trainer can carry either modality). The **E-track verdict
+> closes in Gazebo** — the 425k GE4 re-run, with evidence in [docs/11](11_camera_rl_training.md),
+> [docs/07](07_traceability_matrix.md) and ch.8 §8.9 — and Isaac **does not supersede** it. A
+> checkpoint trained in Gazebo is **not transferable to Isaac** (different physics + renderer;
+> see [Speed and fidelity](#speed-and-fidelity--same-logic-different-environment)), so an
+> Isaac-based E policy is a **future retrain from scratch**, never a re-run of the current
+> result. Read this doc as the *next-stage* toolbelt, not as a change to what is being
+> evaluated now.
+
 > Running it on a fresh machine? See **[docs/SETUP_ISAAC.md](SETUP_ISAAC.md)** for the
 > step-by-step recipe (deps, `download_meshes.sh`, **source ROS2 first**, smoke tests).
 

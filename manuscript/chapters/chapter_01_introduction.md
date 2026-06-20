@@ -222,8 +222,11 @@ Las aportaciones específicas son cinco:
   de runtime publicados como conjunto reutilizable.
 
 - **A4 — Caracterización empírica del gap sim-to-real.** Cuantificación
-  documentada del gap entre simulación Gazebo y plataforma física a escala
-  1:14, en términos de las métricas definidas en el marco.
+  documentada del gap entre simulación y plataforma física a escala 1:14, en
+  términos de las métricas definidas en el marco. La caracterización se hace en
+  **peldaños de fidelidad creciente**: Gazebo (campaña principal, evidencia
+  provisional) → puente de mayor fidelidad en **Isaac Sim** (PhysX + RTX, D-44),
+  herramienta más potente con miras al gap → plataforma física.
 
 - **A5 — Auto-evaluación del marco.** Discusión razonada sobre el coste de
   adopción del V-Model adaptado, los puntos donde funcionó como se esperaba,
@@ -363,8 +366,13 @@ La tesis se organiza en doce capítulos agrupados en cuatro bloques.
 - *Capítulo 8.* Evaluación de la policy: caracterización estadística sobre
   la *scenario library*, análisis de modos de fallo y comparación
   policy-sola / policy+cage.
-- *Capítulo 9.* Caracterización del gap sim-to-real: despliegue físico,
-  métricas comparativas y análisis de las divergencias significativas.
+- *Capítulo 9.* Caracterización del gap sim-to-real en peldaños de fidelidad
+  creciente: la campaña principal en **Gazebo** como evidencia provisional, un
+  **puente de mayor fidelidad en Isaac Sim** (PhysX + RTX, D-44) introducido para
+  *estrechar* el gap antes de tocar la plataforma, y el despliegue físico final,
+  con métricas comparativas y análisis de las divergencias significativas. El
+  veredicto reposa hoy sobre Gazebo; si la campaña en Isaac madura como resultado
+  más fuerte, se re-enuncia con esas cifras como finales.
 
 **Bloque IV — Cierre.**
 

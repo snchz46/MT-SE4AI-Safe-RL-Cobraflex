@@ -1746,3 +1746,15 @@ one move. Training and the bring-up command become independent: the bring-up kee
   camera target but matches what training actually samples.
 - Cites D-34 (in-loop cage during training), D-41/D-43 (camera track + CV-estimator cage),
   D-32 (third-party drivers untracked — here, Isaac/SB3 are host-installed, not vendored).
+
+**Validation positioning (added 2026-06-20).** Within the V-Model's A5 (Bounded Operational
+Validation, `docs/00`), Isaac is positioned as a **higher-fidelity intermediate rung** of the
+sim-to-real characterisation (PhysX physics + RTX rendering), **not** as the thesis verdict
+environment. **Gazebo remains the primary, verdict-bearing environment**; its results are the
+thesis's *provisional principal evidence*. Because a Gazebo checkpoint does **not** transfer to
+Isaac (different physics + renderer — see `docs/13` §"Speed and fidelity"), an Isaac campaign is
+a re-training/re-evaluation from scratch, so for now Isaac evidence is kept **for internal
+valuation**. Should the Isaac campaign mature into the stronger result, the thesis is re-stated
+with those figures as final, with the Gazebo campaign retained as the provisional baseline. The
+simulator axis (Gazebo↔Isaac) is **orthogonal** to the F/E observation-track axis. Reflected in
+`docs/00` (A5 + mapping table), Ch.1 (outline §1.7 + contribution A4), Ch.6 §6.7, Ch.8 §8.8.

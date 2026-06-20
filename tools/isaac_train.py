@@ -206,9 +206,12 @@ def repo_subdir(*parts) -> Path:
     return target
 
 
-def build_isaac_interface(train_cfg, render_always: bool = False):
+def build_isaac_interface(train_cfg, render_always: bool = False, seed: int = 0):
     """Build the physics scene, init the articulation + (optional) Lane Cam
-    render product, and wrap them in an IsaacSimInterface."""
+    render product, and wrap them in an IsaacSimInterface. When the train config
+    enables ``dynamics_randomization`` and/or ``scene_randomization``, an
+    :class:`isaac_dr.IsaacDomainRandomizer` (seeded by ``seed``) is attached so
+    each episode reset re-samples physics/scene/latency (sim-to-real DR)."""
     from isaacsim.core.prims import SingleArticulation
 
     obs_cfg = dict(train_cfg.get("observation", {}))
@@ -247,6 +250,27 @@ def build_isaac_interface(train_cfg, render_always: bool = False):
 
     physics_dt = float(getattr(world, "get_physics_dt", lambda: 1.0 / 60.0)())
 
+    # Physics/scene/latency domain randomization (sim-to-real levers #2/#3/#4),
+    # attached only when enabled in the config so existing deterministic runs and
+    # the Gazebo path are unaffected. Seeded by `seed` for a reproducible episode
+    # stream that mirrors the PPO seed.
+    randomizer = None
+    dyn_cfg = dict(train_cfg.get("dynamics_randomization", {}))
+    scene_cfg = dict(train_cfg.get("scene_randomization", {}))
+    if dyn_cfg.get("enabled") or scene_cfg.get("enabled"):
+        from isaac_dr import IsaacDomainRandomizer  # sibling module in tools/
+        randomizer = IsaacDomainRandomizer(
+            stage,
+            articulation,
+            dynamics_cfg=dyn_cfg,
+            scene_cfg=scene_cfg,
+            seed=seed,
+            scene_paths=isaac_scene.dr_scene_paths(stage, art_root),
+        )
+        print(f"[isaac_train] domain randomization active "
+              f"(dynamics={bool(dyn_cfg.get('enabled'))}, "
+              f"scene={bool(scene_cfg.get('enabled'))}, seed={seed})")
+
     interface = IsaacSimInterface(
         world,
         articulation,
@@ -257,6 +281,7 @@ def build_isaac_interface(train_cfg, render_always: bool = False):
         spawn_z=isaac_scene.SPAWN_Z,
         annotator=annotator,
         render_always=render_always,
+        randomizer=randomizer,
     )
     # Warm-up: settle physics + populate the first camera frame before training.
     for _ in range(5):
@@ -283,6 +308,8 @@ def write_metadata(run_dir, run_id, seed, train_cfg, centerline_path, cage_yaml,
         "policy": str(train_cfg.get("policy", "MlpPolicy")),
         "observation": dict(train_cfg.get("observation", {})),
         "domain_randomization": dict(train_cfg.get("domain_randomization", {})),
+        "dynamics_randomization": dict(train_cfg.get("dynamics_randomization", {})),
+        "scene_randomization": dict(train_cfg.get("scene_randomization", {})),
         "status": status,
     }
     with (run_dir / "metadata.json").open("w", encoding="utf-8") as fh:
@@ -316,7 +343,7 @@ def main(argv):
     interface = None
     try:
         interface, camera_obs = build_isaac_interface(
-            train_cfg, render_always=(cli.render == "gui"))
+            train_cfg, render_always=(cli.render == "gui"), seed=seed)
 
         centerline_points = np.asarray(centerline_cfg["centerline"]["points"], dtype=float)
         lane_width = float(centerline_cfg["lane_width"])

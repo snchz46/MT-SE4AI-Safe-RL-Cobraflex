@@ -207,7 +207,7 @@ class LaneKeeperNode(Node):
         self.declare_parameter("publish_histogram_image", True)
         self.declare_parameter("publish_camera_info", True)
         self.declare_parameter("publish_markers", True)
-        self.declare_parameter("camera_frame_id", "camera_link_optical")
+        self.declare_parameter("camera_frame_id", "camera_link_optical_lane")
         self.declare_parameter("marker_frame_id", "base_footprint")
         self.declare_parameter("camera_hfov_deg", 90.0)
 

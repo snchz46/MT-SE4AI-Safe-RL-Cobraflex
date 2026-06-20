@@ -77,6 +77,17 @@ USD_OUT = os.path.join(REPO, "src/cobraflex/urdf/isaac_usd")
 ROBOT_PATH = "/World/Cobraflex"
 SPAWN_Z = 0.06                   # spawn height (m); also the per-episode teleport z
 
+# --- Randomizable prim paths (single source for isaac_dr.dr_scene_paths) ------
+# Lights + physics materials + geometry-mode track materials. Kept here so the
+# scene builder and the domain randomizer can never drift on a path string.
+DOME_LIGHT_PATH = "/World/DomeLight"
+DISTANT_LIGHT_PATH = "/World/DistantLight"
+GROUND_MATERIAL_PATH = "/World/groundMat"
+WHEEL_MATERIAL_PATH = "/World/PhysicsMaterials/Wheel"
+TRACK_ASPHALT_MATERIAL = "/World/Track/MatAsphalt"
+TRACK_LINE_MATERIAL = "/World/Track/MatLine"
+TRACK_GRASS_MATERIAL = "/World/Track/MatGrass"
+
 
 def ensure_robot_usd() -> str:
     """Convert the URDF to USD if needed and return the .usda path.
@@ -124,7 +135,7 @@ def configure_wheel_material(stage, friction: float) -> int:
     from pxr import PhysxSchema, Sdf, UsdPhysics, UsdShade
     from omni.physx.scripts import physicsUtils
 
-    mat_path = "/World/PhysicsMaterials/Wheel"
+    mat_path = WHEEL_MATERIAL_PATH
     p = UsdShade.Material.Define(stage, mat_path).GetPrim()
     m = UsdPhysics.MaterialAPI.Apply(p)
     m.CreateStaticFrictionAttr().Set(friction)
@@ -206,9 +217,9 @@ def _add_track_geometry(stage, meta, tdir):
     left = P + (rw / 2.0) * nrm
     right = P - (rw / 2.0) * nrm
 
-    asphalt = _flat_material(stage, "/World/Track/MatAsphalt", (0.0, 0.0, 0.0))
-    white = _flat_material(stage, "/World/Track/MatLine", (0.9, 0.9, 0.9))
-    grass = _flat_material(stage, "/World/Track/MatGrass", (0.32, 0.42, 0.24))
+    asphalt = _flat_material(stage, TRACK_ASPHALT_MATERIAL, (0.0, 0.0, 0.0))
+    white = _flat_material(stage, TRACK_LINE_MATERIAL, (0.9, 0.9, 0.9))
+    grass = _flat_material(stage, TRACK_GRASS_MATERIAL, (0.32, 0.42, 0.24))
 
     # Off-road backdrop (one big quad just under the asphalt).
     x0, y0, x1, y1 = meta["world_bbox"]
@@ -351,6 +362,31 @@ def make_lane_camera(stage):
     return make_camera_prim(stage, frame_path, LANE_CAM_HFOV, LANE_CAM_W, LANE_CAM_H)
 
 
+def dr_scene_paths(stage, articulation_root_path: str) -> dict:
+    """Prim-path map for :class:`isaac_dr.IsaacDomainRandomizer`.
+
+    Lights + physics materials are always present; the geometry-mode track
+    materials exist only when the track was built as vector geometry (the
+    default; ``TRACK_MODE=texture`` omits them, so those keys are dropped and the
+    colour DR for them becomes a no-op). ``articulation_root`` is for mass DR."""
+    paths = {
+        "dome_light": DOME_LIGHT_PATH,
+        "distant_light": DISTANT_LIGHT_PATH,
+        "wheel_material": WHEEL_MATERIAL_PATH,
+        "ground_material": GROUND_MATERIAL_PATH,
+        "articulation_root": articulation_root_path,
+    }
+    for key, path in (
+        ("asphalt_material", TRACK_ASPHALT_MATERIAL),
+        ("line_material", TRACK_LINE_MATERIAL),
+        ("grass_material", TRACK_GRASS_MATERIAL),
+    ):
+        prim = stage.GetPrimAtPath(path)
+        if prim and prim.IsValid():
+            paths[key] = path
+    return paths
+
+
 def build_world():
     """Build the physics scene (world, lights, ground, track, robot, drives,
     friction) shared by the bring-up and the trainer. Does **not** add ROS2
@@ -373,15 +409,15 @@ def build_world():
 
     # Lighting: the explicit GroundPlane leaves the stage with no light, so the
     # RTX viewport renders all black. Add a dome + distant light.
-    dome = UsdLux.DomeLight.Define(stage, "/World/DomeLight")
+    dome = UsdLux.DomeLight.Define(stage, DOME_LIGHT_PATH)
     dome.CreateIntensityAttr(1000.0)
-    sun = UsdLux.DistantLight.Define(stage, "/World/DistantLight")
+    sun = UsdLux.DistantLight.Define(stage, DISTANT_LIGHT_PATH)
     sun.CreateIntensityAttr(3000.0)
     sun.CreateAngleAttr(0.53)
 
     # Explicit ground with a known friction so the wheel/ground contact pair is
     # fully under our control (combine=min on the wheel material then wins).
-    gmat = PhysicsMaterial("/World/groundMat",
+    gmat = PhysicsMaterial(GROUND_MATERIAL_PATH,
                            static_friction=GROUND_FRICTION,
                            dynamic_friction=GROUND_FRICTION, restitution=0.0)
     GroundPlane("/World/groundPlane", z_position=0.0, physics_material=gmat)

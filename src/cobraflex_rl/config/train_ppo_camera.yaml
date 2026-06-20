@@ -49,9 +49,34 @@ observation:
 # SR-013/SR-014 stop.
 domain_randomization:
   enabled: true
-  p_degrade: 0.25               # per-episode degradation probability (0.0 → no degradation, 1.0 → degrade all)
-  level_range: [0.2, 0.5]       # degradation level range (0.0 → no degradation, 1.0 → max degradation); uniform sampling
+  p_degrade: 0.5                # per-episode degradation probability (raised 0.25→0.5 to widen H-10 coverage, matching the newcam 425k run)
+  level_range: [0.2, 0.8]       # degradation level range (raised 0.5→0.8 ceiling); uniform sampling
   # modes: defaults to the H-10 trio (visual_degradation.MODES)
+
+# Sim-to-real DR lever #2/#3 (Isaac in-process trainer only; ignored by the
+# Gazebo path and by deterministic eval). Per-episode physics + actuation-latency
+# randomization, applied by isaac_dr.IsaacDomainRandomizer on each reset. NB the
+# nominal yaw response is *not yet calibrated* against the real platform (see the
+# isaac_scene WHEEL_FRICTION note); friction/yaw ranges are placeholders centred
+# on the current sim nominal (0.05) — re-centre once real-platform system-ID lands.
+dynamics_randomization:
+  enabled: true
+  friction_range: [0.04, 0.07]    # effective wheel+ground friction (both set equal; combine=min)
+  mass_scale_range: [0.85, 1.15]  # multiply explicit link masses (best-effort; no-op if masses are density-derived)
+  yaw_scale_range: [0.8, 1.2]     # gain on commanded angular velocity (yaw-response uncertainty)
+  latency_steps_range: [0, 2]     # actuation delay in control cycles (inclusive); 0.10 s/step → up to 0.2 s
+
+# Sim-to-real DR lever #4 (camera only): per-episode scene-appearance randomization
+# (lights + track colours), complementary to the image-level domain_randomization
+# above. Covers shadows/exposure/surface-colour shifts the frame degradation cannot.
+scene_randomization:
+  enabled: true
+  dome_intensity_scale: [0.6, 1.4]
+  sun_intensity_scale: [0.5, 1.5]
+  light_tint: 0.1                 # ± per-channel multiplicative tint on the lights
+  asphalt_jitter: 0.08            # near-black asphalt: brighten-only lift up to this
+  line_jitter: 0.15               # lane-line grey jitter (±)
+  grass_jitter: 0.10              # off-road colour jitter (±)
 
 reward:
   lateral_error: 2.5

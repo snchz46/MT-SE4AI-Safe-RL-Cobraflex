@@ -30,6 +30,7 @@ by the entry point (``tools/isaac_train.py``) and passed in.
 from __future__ import annotations
 
 import math
+from collections import deque
 from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
@@ -80,6 +81,13 @@ class IsaacSimInterface:
     annotator:
         A Replicator ``rgb`` annotator already attached to the Lane Cam render
         product, or ``None`` for the F-track state-vector path (no camera).
+    randomizer:
+        An optional :class:`isaac_dr.IsaacDomainRandomizer`. When present,
+        ``reset_world`` re-samples its per-episode parameters, ``send_action``
+        scales the commanded yaw by ``randomizer.yaw_scale``, and the wheel
+        command is delayed by ``randomizer.latency_steps`` control cycles
+        (sim-to-real DR levers #2/#3). ``None`` => no randomization (the existing
+        deterministic path; the Gazebo interface never gets one).
     """
 
     def __init__(
@@ -94,6 +102,7 @@ class IsaacSimInterface:
         spawn_z: float,
         annotator=None,
         render_always: bool = False,
+        randomizer=None,
     ) -> None:
         self.world = world
         self.articulation = articulation
@@ -109,10 +118,15 @@ class IsaacSimInterface:
         # (headless training never renders → frozen viewport). Costs one render
         # per control step; off by default so headless campaigns pay nothing.
         self.render_always = bool(render_always)
+        self.randomizer = randomizer
 
         self._logger = _PrintLogger()
         self._sim_time = 0.0
         self._wheel_cmd: List[float] = [0.0, 0.0, 0.0, 0.0]
+        # Actuation-latency buffer (DR lever #3): holds pending wheel commands so
+        # the one applied this sub-step is `latency_steps` cycles old. Empty / no
+        # delay unless a randomizer supplies a positive latency.
+        self._cmd_buffer: "deque" = deque()
         self._cam_frame: Optional[Tuple[np.ndarray, float]] = None
         self._articulation_action_cls = None  # lazily imported (see _apply_wheel)
 
@@ -157,12 +171,29 @@ class IsaacSimInterface:
     def send_action(self, steer: float, speed: float) -> None:
         """Map a diff-drive twist (``angular.z = steer``, ``linear.x = speed``)
         to the four wheel velocities, in the same way as the bring-up's
-        ``WHEEL_SCRIPT``. The command is held and (re-)applied each sub-step."""
+        ``WHEEL_SCRIPT``. The command is held and (re-)applied each sub-step.
+
+        With a randomizer, the commanded yaw is scaled by ``yaw_scale`` (dynamics
+        DR) and the resulting wheel command is delayed by ``latency_steps``
+        control cycles via ``_cmd_buffer`` (actuation-latency DR): until the
+        buffer fills the actuator is idle, mirroring real start-up latency."""
         v = float(speed)
         w = float(steer)
+        latency = 0
+        if self.randomizer is not None:
+            w *= float(self.randomizer.yaw_scale)
+            latency = int(self.randomizer.latency_steps)
         v_l = (v - w * self._wheel_half) / self._wheel_radius
         v_r = (v + w * self._wheel_half) / self._wheel_radius
-        self._wheel_cmd = [v_l, v_l, v_r, v_r]
+        cmd = [v_l, v_l, v_r, v_r]
+        if latency <= 0:
+            self._wheel_cmd = cmd
+            return
+        self._cmd_buffer.append(cmd)
+        if len(self._cmd_buffer) > latency:
+            self._wheel_cmd = self._cmd_buffer.popleft()
+        else:
+            self._wheel_cmd = [0.0, 0.0, 0.0, 0.0]
 
     def _apply_wheel(self) -> None:
         if self._articulation_action_cls is None:
@@ -222,8 +253,13 @@ class IsaacSimInterface:
 
     # --- reset / teleport ----------------------------------------------------
     def reset_world(self) -> None:
-        """Soft reset: command zero motion (the world is not reloaded)."""
+        """Soft reset: command zero motion (the world is not reloaded) and, with
+        a randomizer, re-sample this episode's physics/scene/latency parameters.
+        The latency buffer is cleared so no command leaks across episodes."""
         self._wheel_cmd = [0.0, 0.0, 0.0, 0.0]
+        self._cmd_buffer.clear()
+        if self.randomizer is not None:
+            self.randomizer.randomize_episode()
 
     def set_vehicle_pose(self, x: float, y: float, yaw: float) -> None:
         """Teleport the robot to ``(x, y, yaw)`` and zero its velocities — the

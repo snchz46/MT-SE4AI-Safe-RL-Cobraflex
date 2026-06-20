@@ -3,12 +3,30 @@
 # (camera image, CnnPolicy, frame stack) and the H-10 visual domain
 # randomisation. Reward, cage wiring, actuation mapping, episode logic and the
 # spawn perturbation are IDENTICAL — the minimal-delta point of docs/09 §10.
-total_timesteps: 1000000    # 20k steps is ~20h on a single GPU, which is sufficient for a proof-of-concept; see Training Spec for scaling plans.
+total_timesteps: 1000000  # 1M-step main run (~34 h at ~8 steps/s on this host). 20k pilots live under experiments/.
 learning_rate: 0.0003
+# Stability levers added after the ppo_newcam_complex_b_2024_1M pilot collapsed
+# at ~105k steps: approx_kl ran away to ~2.7 (vs a healthy ~0.02-0.4 band) with
+# no trust-region brake, destroying the policy + value function (and the tiny
+# post-collapse episodes then hammered the gz set_pose service -> reset storm).
+# target_kl stops the PPO update once a minibatch's approx_kl exceeds
+# 1.5*target_kl (0.5 -> brake at 0.75: above the healthy ceiling ~0.4, far below
+# the 2.7 runaway). lr_schedule: linear anneals the LR to 0 across training.
+lr_schedule: linear       # constant | linear (anneal to 0)
+target_kl: 0.5            # trust-region KL early-stop; null disables
 gamma: 0.99
+gae_lambda: 0.95
 n_steps: 1024
 batch_size: 64
+n_epochs: 10
+clip_range: 0.2
+ent_coef: 0.0
+vf_coef: 0.5
+max_grad_norm: 0.5        # gradient clip; bounds per-step policy movement (SB3 default)
 device: auto              # CNN benefits from CUDA when present; falls back to cpu
+# gz set_pose/set_physics CLI timeout (ms). Raised 2000->3500: the CLI does
+# service discovery per call and occasionally times out under reset load.
+service_timeout_ms: 3500
 seed: 2024                # E-main seed mirrors the F-track main run (D-36 precedent)
 max_episode_steps: 1024
 control_dt: 0.10

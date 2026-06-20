@@ -40,7 +40,7 @@ class RosGazeboInterface(Node):
         world_name: str = "lane_following_oval",
         model_name: str = "cobraflex_robot",
         spawn_z: float = 0.05,
-        service_timeout_ms: int = 2000,
+        service_timeout_ms: int = 3500,
         odom_topic: str = "/odom_truth",
         camera_topic: str = "",
     ) -> None:
@@ -287,7 +287,13 @@ class RosGazeboInterface(Node):
         self.send_action(0.0, 0.0)
 
     def set_vehicle_pose(self, x: float, y: float, yaw: float) -> None:
-        """Teleport the model via the gz ``set_pose`` service (one retry)."""
+        """Teleport the model via the gz ``set_pose`` service (up to three retries).
+
+        The gz CLI does service discovery on each call, so under load (e.g. the
+        rapid resets of a degenerate short-episode regime) it occasionally times
+        out. A failed teleport is *silent* — the episode then trains on a stale
+        spawn calibration — so prefer extra retries here over corrupt episodes.
+        """
         # Resolve entity ID once and cache it for the rest of the training run
         # to avoid a subprocess timeout on every episode reset.
         if self._model_entity_id is None:
@@ -305,7 +311,8 @@ class RosGazeboInterface(Node):
         # always blocks until fresh post-teleport data arrives, regardless of
         # whether the service call succeeds or fails.
         self._odom_msg = None
-        for attempt in range(2):
+        attempts = 4
+        for attempt in range(attempts):
             if self._call_gz_service(
                 service=f"/world/{self.world_name}/set_pose",
                 request_type="gz.msgs.Pose",
@@ -313,7 +320,7 @@ class RosGazeboInterface(Node):
                 request=request,
             ):
                 return
-            if attempt == 0:
+            if attempt < attempts - 1:
                 time.sleep(0.5)
 
     def _call_gz_service(

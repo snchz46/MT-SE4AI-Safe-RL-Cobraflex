@@ -127,6 +127,36 @@ def resolve_save_path(path: Path) -> Path:
     return path if path.suffix == ".zip" else path.with_suffix(".zip")
 
 
+def _linear_schedule(initial_value: float):
+    """SB3-style schedule: ``initial_value`` at the start of training, linearly
+    annealed to 0 at the end (``progress_remaining`` runs 1.0 -> 0.0)."""
+
+    def schedule(progress_remaining: float) -> float:
+        return float(progress_remaining) * float(initial_value)
+
+    return schedule
+
+
+def _resolve_learning_rate(train_cfg: Dict[str, Any]):
+    """Return the LR (float) or a linear-anneal schedule per ``lr_schedule``."""
+    base_lr = float(train_cfg.get("learning_rate", 3.0e-4))
+    if str(train_cfg.get("lr_schedule", "constant")).lower() == "linear":
+        return _linear_schedule(base_lr)
+    return base_lr
+
+
+def _resolve_target_kl(train_cfg: Dict[str, Any]) -> Optional[float]:
+    """Trust-region KL early-stop (SB3 ``target_kl``); None disables it.
+
+    Added after the ``ppo_newcam_complex_b_2024_1M`` pilot collapsed at ~105k
+    steps: ``approx_kl`` ran away to ~2.7 (100x its healthy ~0.02-0.4 band) with
+    no brake, destroying the policy and value function. SB3 stops the update once
+    a minibatch's approx_kl exceeds ``1.5 * target_kl``, capping the runaway.
+    """
+    value = train_cfg.get("target_kl", None)
+    return float(value) if value is not None else None
+
+
 def _write_training_metadata(
     run_dir: Path,
     run_id: str,
@@ -155,9 +185,17 @@ def _write_training_metadata(
         "total_timesteps": total_timesteps,
         "hyperparameters": {
             "learning_rate": float(train_cfg.get("learning_rate", 3.0e-4)),
+            "lr_schedule": str(train_cfg.get("lr_schedule", "constant")).lower(),
             "gamma": float(train_cfg.get("gamma", 0.99)),
             "n_steps": int(train_cfg.get("n_steps", 1024)),
             "batch_size": int(train_cfg.get("batch_size", 64)),
+            "n_epochs": int(train_cfg.get("n_epochs", 10)),
+            "gae_lambda": float(train_cfg.get("gae_lambda", 0.95)),
+            "clip_range": float(train_cfg.get("clip_range", 0.2)),
+            "ent_coef": float(train_cfg.get("ent_coef", 0.0)),
+            "vf_coef": float(train_cfg.get("vf_coef", 0.5)),
+            "max_grad_norm": float(train_cfg.get("max_grad_norm", 0.5)),
+            "target_kl": _resolve_target_kl(train_cfg),
         },
         # Track 'E' provenance (inert for the state-vector track): policy
         # class, observation type, frame stack and the H-10 DR envelope.
@@ -250,6 +288,7 @@ def main(args: Optional[Sequence[str]] = None) -> None:
                 if camera_obs
                 else ""
             ),
+            service_timeout_ms=int(train_cfg.get("service_timeout_ms", 3500)),
         )
         if not interface.wait_for_initial_data(timeout_sec=10.0):
             raise RuntimeError("Timed out waiting for /odom data.")
@@ -310,15 +349,28 @@ def main(args: Optional[Sequence[str]] = None) -> None:
                 device=str(train_cfg.get("device", "cpu")),
                 verbose=1,
             )
+            # PPO.load restores the checkpoint's hyperparameters, so re-apply the
+            # trust-region brake from the (current) config — otherwise a resume
+            # silently keeps the checkpoint's target_kl (often None).
+            model.target_kl = _resolve_target_kl(train_cfg)
             print(f"Resumed PPO from {resume_from} at {model.num_timesteps} steps")
         else:
             model = PPO(
                 policy=policy_name,
                 env=train_env,
-                learning_rate=float(train_cfg.get("learning_rate", 3.0e-4)),
+                # learning_rate may be a float or a linear-anneal schedule
+                # (lr_schedule: linear); target_kl is the trust-region brake.
+                learning_rate=_resolve_learning_rate(train_cfg),
                 gamma=float(train_cfg.get("gamma", 0.99)),
                 n_steps=int(train_cfg.get("n_steps", 1024)),
                 batch_size=int(train_cfg.get("batch_size", 64)),
+                n_epochs=int(train_cfg.get("n_epochs", 10)),
+                gae_lambda=float(train_cfg.get("gae_lambda", 0.95)),
+                clip_range=float(train_cfg.get("clip_range", 0.2)),
+                ent_coef=float(train_cfg.get("ent_coef", 0.0)),
+                vf_coef=float(train_cfg.get("vf_coef", 0.5)),
+                max_grad_norm=float(train_cfg.get("max_grad_norm", 0.5)),
+                target_kl=_resolve_target_kl(train_cfg),
                 device=str(train_cfg.get("device", "cpu")),
                 # §7.2.7: seeds python/numpy/torch + action space, and propagates to
                 # env.reset(seed=...) so the spawn perturbation is reproducible too.

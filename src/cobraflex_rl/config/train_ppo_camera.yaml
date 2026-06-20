@@ -53,13 +53,8 @@ domain_randomization:
   level_range: [0.2, 0.8]       # degradation level range (raised 0.5→0.8 ceiling); uniform sampling
   # modes: defaults to the H-10 trio (visual_degradation.MODES)
 
-# Sim-to-real DR lever #2/#3 (Isaac in-process trainer only; ignored by the
-# Gazebo path and by deterministic eval). Per-episode physics + actuation-latency
-# randomization, applied by isaac_dr.IsaacDomainRandomizer on each reset. NB the
-# nominal yaw response is *not yet calibrated* against the real platform (see the
-# isaac_scene WHEEL_FRICTION note); friction/yaw ranges are placeholders centred
-# on the current sim nominal (0.05) — re-centre once real-platform system-ID lands.
-dynamics_randomization:
+# Sim-to-real DR lever #2/#3 (Isaac in-process trainer only. Per-episode physics + actuation-latency
+dynamics_randomization:           # Isaac Sim only; ignored by Gazebo and eval
   enabled: true
   friction_range: [0.04, 0.07]    # effective wheel+ground friction (both set equal; combine=min)
   mass_scale_range: [0.85, 1.15]  # multiply explicit link masses (best-effort; no-op if masses are density-derived)
@@ -69,7 +64,7 @@ dynamics_randomization:
 # Sim-to-real DR lever #4 (camera only): per-episode scene-appearance randomization
 # (lights + track colours), complementary to the image-level domain_randomization
 # above. Covers shadows/exposure/surface-colour shifts the frame degradation cannot.
-scene_randomization:
+scene_randomization:              # Isaac Sim only; ignored by Gazebo and eval
   enabled: true
   dome_intensity_scale: [0.6, 1.4]
   sun_intensity_scale: [0.5, 1.5]

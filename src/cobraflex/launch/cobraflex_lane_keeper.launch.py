@@ -18,7 +18,7 @@ def generate_launch_description():
 
     lane_keeper_node = Node(
         package="cobraflex",
-        executable="lane_keeper",
+        executable="lane_keeper_node",
         name="lane_keeper",
         output="screen",
         emulate_tty=True,

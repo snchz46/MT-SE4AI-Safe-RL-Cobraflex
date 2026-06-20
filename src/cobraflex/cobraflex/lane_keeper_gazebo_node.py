@@ -99,7 +99,7 @@ class LaneKeeperGazeboNode(Node):
         self.declare_parameter("max_angular_z", 0.9)
         # Stop (vs coast straight) when the estimator finds no usable lane.
         self.declare_parameter("stop_on_no_lane", True)
-        self.declare_parameter("publish_debug_image", False)
+        self.declare_parameter("publish_debug_image", True)
         self.declare_parameter("show_debug_windows", False)
         self.declare_parameter("watchdog_timeout_sec", 1.5)
 

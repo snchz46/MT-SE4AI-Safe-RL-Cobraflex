@@ -215,8 +215,13 @@ class LaneKeeperGazeboNode(Node):
             cv2.circle(overlay, (int(u), int(v)), 3, (0, 0, 255), -1)
         d = self.controller.dbg
         if d.get("ok"):
-            txt = (f"ey={d['ey']:+.3f}m  epsi={d['epsi']:+.3f}rad  "
-                   f"k={d['kappa']:+.2f}  cmd=(v{cmd.linear.x:.2f}, w{cmd.angular.z:+.2f})")
+            # CVLaneController.dbg (pure-pursuit, docs/12 §3) exposes
+            # ok/ey/epsi/y_l/kappa_cmd/nL — there is no 'kappa' key (that was the
+            # old PD law). Read via .get so a future dbg change can't crash the
+            # node mid-callback.
+            txt = (f"ey={d.get('ey', 0.0):+.3f}m  epsi={d.get('epsi', 0.0):+.3f}rad  "
+                   f"k_cmd={d.get('kappa_cmd', 0.0):+.2f}  "
+                   f"cmd=(v{cmd.linear.x:.2f}, w{cmd.angular.z:+.2f})")
             color = (0, 255, 255)
         else:
             txt = (f"NO LANE [{d.get('reason', '')}]  "
@@ -233,7 +238,7 @@ class LaneKeeperGazeboNode(Node):
         h, w = img.shape[:2]
         rows = [("ey (m)", d.get("ey", 0.0), 0.15),
                 ("epsi (rad)", d.get("epsi", 0.0), 0.5),
-                ("kappa (1/m)", d.get("kappa", 0.0), 3.0),
+                ("kappa_cmd", d.get("kappa_cmd", 0.0), 3.0),
                 ("cmd w", cmd.angular.z, 1.0)]
         panel_h = 16 * len(rows) + 8
         y0 = h - panel_h

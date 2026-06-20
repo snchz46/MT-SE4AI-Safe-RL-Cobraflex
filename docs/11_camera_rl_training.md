@@ -423,29 +423,45 @@ The training implementation above produced the current E-main checkpoint
 
 ## 9. How to run
 
-`train_lane.launch.py` now defaults to the **complex_b** circuit and wires the
-three things that must agree (world, reward centerline + road centre, and the SDF
-`world_name` the gz teleport services are namespaced by):
+**Command summary** (detail + rationale below; all on **Ubuntu 24.04 + ROS2 Jazzy**, source
+ROS2 first). `CFG=$(ros2 pkg prefix cobraflex_rl)/share/cobraflex_rl/config`:
 
 ```bash
-# Headless Gazebo (complex_b) + the train node, all wired by the launch defaults:
-#   world=lane_following_oval_complex.world, world_name=lane_following_complex_b,
-#   centerline=complex_b_right_lane_centerline.yaml (reward target),
-#   road_centerline=complex_b_centerline.yaml (off-road geometry, §3.5).
-# Note: the launch runs train_ppo bare → STATE config; for the CAMERA policy run
-# the node explicitly against an already-running Gazebo (two-step, as before):
-ros2 launch cobraflex gazebo_mesh.launch.py world:=lane_following_oval_complex gui:=false
-CFG=$(ros2 pkg prefix cobraflex_rl)/share/cobraflex_rl/config
-ros2 run cobraflex_rl train_ppo \
-  --train-config        $CFG/train_ppo_camera.yaml \
-  --centerline-config   $CFG/complex_b_right_lane_centerline.yaml \
-  --road-centerline-config $CFG/complex_b_centerline.yaml \
-  --world-name lane_following_complex_b \
-  --run-id ppo_newcam_complex_b_2024
+# ── State-track (F-track) PPO — launch wires headless Gazebo + the bare train node ──
+ros2 launch cobraflex_rl train_lane.launch.py            # complex_b, STATE config (train_ppo.yaml)
 
-# Revert to the oval: world:=lane_following_oval, centerline/road-centerline:=
-#   oval_right_lane_centerline.yaml, --world-name lane_following_oval.
+# ── Track-'E' camera PPO — two-step: own Gazebo, then the node (see §9 for why) ──────
+ros2 launch cobraflex gazebo_mesh.launch.py world:=lane_following_oval_complex gui:=false
+ros2 run cobraflex_rl train_ppo \
+  --train-config           $CFG/train_ppo_camera.yaml \
+  --centerline-config      $CFG/complex_b_right_lane_centerline.yaml \
+  --road-centerline-config $CFG/complex_b_centerline.yaml \
+  --world-name lane_following_complex_b --run-id ppo_newcam_complex_b_2024
+
+# ── Resume a checkpoint (adds the config's total_timesteps on top, §2) ───────────────
+ros2 run cobraflex_rl train_ppo --train-config $CFG/train_ppo_camera.yaml \
+  --resume-from policy/checkpoints/<ckpt>.zip --run-id <run>
+
+# ── Live RViz cage/agent view (needs viz: true in train_ppo_camera.yaml, §9.1) ───────
+ros2 run rviz2 rviz2 -d src/cobraflex/rviz/cage_viz.rviz --ros-args -p use_sim_time:=true
 ```
+
+> Long-lived runs: launch Gazebo **headless** (`gui:=false`) and detach with `setsid` —
+> closing the GUI tears down the bridge/`robot_state_publisher` and orphans `gz sim -s`,
+> starving the env's `/odom_truth` wait. For the Isaac (Gazebo-free) trainer, see
+> [docs/13 §Command reference](13_isaacsim_environment.md#command-reference-what-launches-what).
+
+**Why the camera run is two-step** (the commands are in the summary above).
+`train_lane.launch.py` defaults to the **complex_b** circuit and wires the three things that
+must agree — `world=lane_following_oval_complex.world`,
+`world_name=lane_following_complex_b` (the SDF name the gz teleport services are namespaced
+by), `centerline=complex_b_right_lane_centerline.yaml` (reward target) and
+`road_centerline=complex_b_centerline.yaml` (off-road geometry, §3.5) — but it runs
+`train_ppo` **bare → the STATE config**. So the **camera** policy is run as two steps: bring
+up Gazebo (`gui:=false`), then launch the node explicitly with `train_ppo_camera.yaml`
+against that already-running world (the summary block). To **revert to the oval**, swap
+`world:=lane_following_oval`, both centerlines to `oval_right_lane_centerline.yaml`, and
+`--world-name lane_following_oval`.
 
 **Live RViz view (`viz: true` in `train_ppo_camera.yaml`).** The env can publish
 what the cage and agent see — off by default so headless campaigns pay nothing;
@@ -454,11 +470,8 @@ see §9.1.
 > Host: **Ubuntu 24.04 + ROS2 Jazzy**. The commands above **were executed on this
 > host** — a full 20k-step camera smoke run on complex_b completed clean
 > (`ep_rew_mean` 34→90, `ep_len_mean` 72→141, 0 errors), exercising the §3.5
-> off-road fix. Two operational notes: launch Gazebo **headless** (`gui:=false`)
-> and detach long-lived processes with `setsid` — closing the Gazebo GUI window
-> tears down the launch's bridge/`robot_state_publisher`, leaving an orphan
-> `gz sim -s` and starving the env's `/odom_truth` wait. The pure-Python pieces
-> (`camera_pipeline`, `camera_geometry`, `visual_degradation`,
+> off-road fix (the `setsid`/headless caveat is in the summary note above). The
+> pure-Python pieces (`camera_pipeline`, `camera_geometry`, `visual_degradation`,
 > `visual_domain_randomization`, `cv_lane_estimator`, `polyline_tracker`) are
 > host-testable without ROS (`policy/tests/`).
 

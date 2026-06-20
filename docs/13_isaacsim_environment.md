@@ -17,10 +17,79 @@ tools that run it, and the command to launch each.
 | `tools/isaac_scene.py` | **shared** physics-scene builder (URDF→USD, track, robot, wheel drives/materials + drivetrain constants); imported, not run | `import isaac_scene` |
 | `tools/isaac_ros2_bringup.py` | drive over the **ROS2 bridge** — same nodes as Gazebo (SLAM, perception, teleop, RViz, eval) | `~/isaacsim/python.sh tools/isaac_ros2_bringup.py` |
 | `tools/isaac_train.py` | **in-process** RL (PPO) training — drives the gym env directly, no ROS | `~/isaacsim/python.sh tools/isaac_train.py …` |
-| `src/cobraflex_rl/cobraflex_rl/isaac_interface.py` | `IsaacSimInterface`: in-process env I/O (teleport / step / camera) | imported by `isaac_train.py` |
+| `tools/isaac_dr.py` | per-episode **physics + scene domain randomization** (sim-to-real levers #2/#3/#4); attached by the trainer on each reset | `import isaac_dr` |
+| `src/cobraflex_rl/cobraflex_rl/isaac_interface.py` | `IsaacSimInterface`: in-process env I/O (teleport / step / camera + latency buffer) | imported by `isaac_train.py` |
 
 Flow below: URDF rationale & generation → import → **ROS2 bring-up** (drive / SLAM / RViz)
 → physics tuning → sensors → track → **RL training in-process**.
+
+## Command reference (what launches what)
+
+Everything runnable, in one place — the sections below give the *why*. Two conventions:
+
+- `$ISAAC` = the Isaac Python launcher. On this host `~/isaacsim/python.sh`; on **PC CAST**
+  `/home/admit/isaac_sim_6.0.0/isaac-sim-standalone-6.0.0-linux-x86_64/python.sh`. Export it
+  once: `ISAAC=~/isaacsim/python.sh`.
+- **Source ROS2 first** for anything touching the bridge or `xacro`:
+  `source /opt/ros/jazzy/setup.bash`. Run every ROS2 client (teleop / RViz / RSP) with
+  `use_sim_time:=true` (Isaac drives `/clock`).
+
+```bash
+# ── Build & import (sourced ROS2) ──────────────────────────────────────────────
+python tools/build_isaac_urdf.py                         # regen src/cobraflex/urdf/cobraflex_isaac.urdf
+check_urdf src/cobraflex/urdf/cobraflex_isaac.urdf       # validate it
+$ISAAC tools/isaac_import_check.py                       # URDF→USD smoke-test (exit 0 = PASS)
+
+# ── Track assets (plain python) ────────────────────────────────────────────────
+python scripts/generate_complex_track.py --name all      # build all presets (complex_a/b/c)
+python scripts/track_to_gazebo_world.py --name complex_b  # + a Gazebo .world
+
+# ── Bring-up: drive / SLAM / RViz / eval over the ROS2 bridge (defaults to GUI) ─
+$ISAAC tools/isaac_ros2_bringup.py                       # GUI viewport
+$ISAAC tools/isaac_ros2_bringup.py --headless            # no window
+$ISAAC tools/isaac_ros2_bringup.py --test                # headless drivetrain self-test, exits
+$ISAAC tools/isaac_ros2_bringup.py --turn                # headless yaw-rate test, exits
+$ISAAC tools/isaac_ros2_bringup.py --shot /tmp/t.png     # headless top-down render, exits
+CAM_POSE=x,y,yaw $ISAAC tools/isaac_ros2_bringup.py --cam-shot /tmp/cam.png   # lane-cam view, exits
+TRACK=complex_b $ISAAC tools/isaac_ros2_bringup.py       # pick the track (TRACK= → bare ground)
+WHEEL_FRICTION=0.1 GROUND_FRICTION=0.1 $ISAAC tools/isaac_ros2_bringup.py     # tune skid-steer turning
+
+# ── Drive / visualise it (each in its own sourced terminal, use_sim_time:=true) ─
+ros2 run teleop_twist_keyboard teleop_twist_keyboard     # publish /cmd_vel
+ros2 run robot_state_publisher robot_state_publisher --ros-args -p use_sim_time:=true \
+    -p robot_description:="$(xacro src/cobraflex/urdf/my_robot_gazebo_mesh.urdf)"   # robot TF + RobotModel
+ros2 run rviz2 rviz2 -d src/cobraflex/rviz/<config>.rviz --ros-args -p use_sim_time:=true
+
+# ── In-process RL training (no ROS, no bring-up) ───────────────────────────────
+$ISAAC tools/isaac_train.py                              # F3 state-vector PPO (oval, train_ppo.yaml defaults)
+TRACK=complex_b BRINGUP_REIMPORT=1 $ISAAC tools/isaac_train.py \
+    --train-config           src/cobraflex_rl/config/train_ppo_camera.yaml \
+    --centerline-config      src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml \
+    --road-centerline-config src/cobraflex_rl/config/complex_b_centerline.yaml      # track-E camera PPO
+$ISAAC tools/isaac_train.py --resume-from policy/checkpoints/<ckpt>.zip             # resume a checkpoint
+$ISAAC tools/isaac_train.py --render gui --show-obs                                 # watch (slower)
+```
+
+**Environment variables** (`isaac_scene.py` is shared, so its vars apply to **both** the
+bring-up and the trainer):
+
+| Var | Read by | Effect | Default |
+| --- | --- | --- | --- |
+| `BRINGUP_REIMPORT` | both | re-import the cached USD (do this on first run / after a URDF change) | `0` |
+| `TRACK` | both | visual track preset (`complex_a`/`b`/`c`; empty = bare ground) | `complex_a` |
+| `TRACK_MODE` | both | track build: `geom` (USD meshes) or `texture` (baked PNG quad) | `geom` |
+| `CAM_POSE` | both | `x,y,yaw` pose for `--cam-shot` / camera-visibility checks | robot pose |
+| `WHEEL_FRICTION` / `GROUND_FRICTION` | both | skid-steer wheel/ground friction (see [physics tuning](#physics-tuning--skid-steer-turning)) | `0.05` |
+| `BRINGUP_SENSORS` | bring-up | `0` skips all sensor graphs (physics only) | `1` |
+| `BRINGUP_ZED` | bring-up | `0` skips both ZED-eye camera graphs | `1` |
+| `BRINGUP_ROBOT_TF` | bring-up | `1` enables Isaac's own (partial) standalone TF tree | `0` |
+| `LIDAR_CONFIG` | bring-up | RTX-lidar profile name | `RPLIDAR_S2E` |
+| `ISAAC_RENDER` | train | `gui` or `headless` (same as `--render`) | `headless` |
+
+**CLI flags** — bring-up: `--headless`, `--test`, `--turn`, `--shot PNG`, `--cam-shot PNG`
+(the last four force headless and exit). Trainer: `--train-config`, `--centerline-config`,
+`--road-centerline-config`, `--model-path`, `--run-id`, `--resume-from`,
+`--render {headless,gui}`, `--show-obs`, `--obs-preview-every N`.
 
 ## Why a dedicated URDF
 
@@ -166,18 +235,20 @@ produces no torque and the robot does not move.
 
 `tools/isaac_ros2_bringup.py` builds the physics scene — robot, wheel drives, track —
 via the shared `tools/isaac_scene.py` (the same module the RL trainer uses, so the two
-can't drift on drivetrain/scene parameters), wires the full ROS2 graph on top and runs:
+can't drift on drivetrain/scene parameters), wires the full ROS2 graph on top and runs.
+Invocations (GUI / `--headless` / `--test`) and env vars are in the
+[Command reference](#command-reference-what-launches-what); source ROS2 first so the
+bridge talks to the system Jazzy.
 
-```bash
-source /opt/ros/jazzy/setup.bash          # bridge uses the system Jazzy (it vendors
-                                          # jazzy+humble; sourcing ensures interop)
-# PC CAST
-/home/admit/isaac_sim_6.0.0/isaac-sim-standalone-6.0.0-linux-x86_64/python.sh tools/isaac_ros2_bringup.py                                 
-
-~/isaacsim/python.sh tools/isaac_ros2_bringup.py            # GUI window
-~/isaacsim/python.sh tools/isaac_ros2_bringup.py --headless # no window
-~/isaacsim/python.sh tools/isaac_ros2_bringup.py --test     # headless self-test, exits
-```
+> **gui/headless convention (note the asymmetry between the two tools).** The
+> bring-up **defaults to the GUI viewport** (it is an interactive drive/SLAM/RViz
+> tool) and you opt *out* with `--headless`. The RL trainer
+> ([below](#rl-training--in-process-gazebo-free-d-44)) is the opposite: it
+> **defaults to headless** (the fast/reproducible path) and you opt *in* with
+> `--render gui`. So GUI-on is `isaac_ros2_bringup.py` (no flag) vs
+> `isaac_train.py --render gui`; headless is `isaac_ros2_bringup.py --headless` vs
+> `isaac_train.py` (no flag). `--test`/`--turn`/`--shot`/`--cam-shot` force
+> headless regardless.
 
 Then drive it from another sourced terminal — exactly like with Gazebo:
 
@@ -307,11 +378,8 @@ Run it (each terminal sourced, **`use_sim_time:=true`** everywhere because Isaac
 drives `/clock`):
 
 ```bash
-# PC CAST
-/home/admit/isaac_sim_6.0.0/isaac-sim-standalone-6.0.0-linux-x86_64/python.sh tools/isaac_ros2_bringup.py 
-
 # 1) Isaac bring-up (publishes odom, joint_states, sensors, clock)
-~/isaacsim/python.sh tools/isaac_ros2_bringup.py
+$ISAAC tools/isaac_ros2_bringup.py
 
 # 2) robot_state_publisher = robot TF tree + RobotModel (/robot_description)
 ros2 launch cobraflex cobraflex_description.launch.xml   # your existing launch, add use_sim_time
@@ -361,14 +429,10 @@ python scripts/generate_complex_track.py --name all   # build all presets
 python scripts/track_to_gazebo_world.py --name complex_b   # + a Gazebo .world
 ```
 
-The bring-up loads it as a textured ground quad (visual only; the GroundPlane keeps
-physics) and spawns the robot at the start line:
-
-```bash
-TRACK=complex_a ~/isaacsim/python.sh tools/isaac_ros2_bringup.py   # default
-TRACK= ...                                                          # empty ground
-~/isaacsim/python.sh tools/isaac_ros2_bringup.py --shot /tmp/t.png  # headless top-down render
-```
+The bring-up loads the selected track (visual only; the GroundPlane keeps physics) and
+spawns the robot at the start line — pick it with `TRACK=<preset>` (empty `TRACK=` → bare
+ground) and snapshot it with `--shot`; both are in the
+[Command reference](#command-reference-what-launches-what).
 
 The bring-up builds the track as **USD geometry by default** (`TRACK_MODE=geom`): asphalt ribbon + white edge/centre-line meshes from the centreline — crisp at any camera distance, no texture aliasing or resolution ceiling (the better choice for Isaac vs a baked PNG). `TRACK_MODE=texture` falls back to the PNG quad (what the Gazebo `.world` uses). Camera-visibility of any pose: `CAM_POSE=x,y,yaw ... --cam-shot out.png`.
 
@@ -418,23 +482,57 @@ under `TYPE_CHECKING`, so the env imports on the Isaac host **without `rclpy`**.
 
 ### Launch commands
 
-Isaac's bundled python must have `stable-baselines3` + `gymnasium` installed; re-import the
-cached USD on first run (`BRINGUP_REIMPORT=1`). `TRACK` selects the *visual* scene track;
-`--centerline-config` selects the env *geometry* — **they must correspond**.
+The exact invocations (state-vector, track-'E' camera, resume, `--render gui`) live in the
+[Command reference](#command-reference-what-launches-what). Two requirements that bite if
+missed: Isaac's bundled python must have `stable-baselines3` + `gymnasium` installed and the
+cached USD must be re-imported on first run (`BRINGUP_REIMPORT=1`); and `TRACK` selects the
+*visual* scene track while `--centerline-config` selects the env *geometry* — **they must
+correspond**.
 
-```bash
-# F3 state-vector PPO (oval, the train_ppo.yaml defaults)
-~/isaacsim/python.sh tools/isaac_train.py
+### Domain randomization (sim-to-real)
 
-# Track 'E' camera PPO on complex_b
-TRACK=complex_b BRINGUP_REIMPORT=1 ~/isaacsim/python.sh tools/isaac_train.py \
-    --train-config           src/cobraflex_rl/config/train_ppo_camera.yaml \
-    --centerline-config      src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml \
-    --road-centerline-config src/cobraflex_rl/config/complex_b_centerline.yaml
+Beyond the image-level visual degradation (`domain_randomization` — the H-10 trio that
+corrupts the *rendered frame*, shared with the Gazebo path), the in-process Isaac trainer
+adds **per-episode physics + scene randomization** so the policy sees a *distribution* of
+dynamics and appearances instead of a single un-calibrated nominal. It is applied by
+`tools/isaac_dr.py` (`IsaacDomainRandomizer`), attached in `build_isaac_interface` and
+re-sampled on every reset, seeded by the PPO seed for a reproducible episode-parameter
+stream. **Isaac-only** — the Gazebo path and deterministic eval ignore these blocks; every
+`pxr` import is deferred per the `isaac_scene` import-order contract, so the module is safe
+to import off the Isaac host (pytest, the campaign runner) — it pulls in only `numpy`.
 
-# resume from a checkpoint
-~/isaacsim/python.sh tools/isaac_train.py --resume-from policy/checkpoints/<ckpt>.zip
+Three independent, config-gated aspects (each inert unless `enabled`), set in the train
+YAML (e.g. `train_ppo_camera.yaml`):
+
+| Block | Lever | What it randomizes per episode |
+| --- | --- | --- |
+| `dynamics_randomization` | #2 dynamics + #3 latency | wheel+ground `friction_range`, `mass_scale_range` (best-effort link-mass scale), `yaw_scale_range` (gain on commanded angular velocity), `latency_steps_range` (actuation delay in control cycles — the interface buffers wheel commands and applies the N-steps-old one) |
+| `scene_randomization` | #4 scene appearance (camera only) | dome/sun light intensity scales, `light_tint`, and asphalt / lane-line / grass diffuse-colour jitter — shadows, exposure and surface-colour shifts the frame-level degradation cannot reproduce |
+
+```yaml
+dynamics_randomization:           # sim-to-real lever #2/#3
+  enabled: true
+  friction_range:      [0.04, 0.07]   # effective wheel+ground friction (both equal; combine=min)
+  mass_scale_range:    [0.85, 1.15]   # multiply explicit link masses (no-op if density-derived)
+  yaw_scale_range:     [0.8, 1.2]     # gain on commanded angular velocity (yaw uncertainty)
+  latency_steps_range: [0, 2]         # actuation delay in control cycles (0.10 s/step → up to 0.2 s)
+
+scene_randomization:              # sim-to-real lever #4 (camera only)
+  enabled: true
+  dome_intensity_scale: [0.6, 1.4]
+  sun_intensity_scale:  [0.5, 1.5]
+  light_tint:    0.1                   # ± per-channel multiplicative tint on the lights
+  asphalt_jitter: 0.08                 # near-black asphalt: brighten-only lift up to this
+  line_jitter:   0.15                  # lane-line grey jitter (±)
+  grass_jitter:  0.10                  # off-road colour jitter (±)
 ```
+
+> **Friction/yaw ranges are placeholders.** They are centred on the current sim nominal
+> (friction 0.05; cf. the `WHEEL_FRICTION` note above) because the skid-steer yaw response
+> is **not yet calibrated against the real platform** — re-centre once real-platform
+> system-ID lands. The scene blocks also enabled the `p_degrade` 0.25→0.5 / `level_range`
+> ceiling 0.5→0.8 widening of the image-level `domain_randomization` that the newcam 425k
+> run used (§7.7.8).
 
 **Watching training (at the cost of compute).** Headless is the default and the fast path.
 For human visual assessment two independent switches are available:
@@ -447,7 +545,10 @@ For human visual assessment two independent switches are available:
 `--render` is parsed before `SimulationApp` (it sets `headless`), so it also works as the
 `ISAAC_RENDER` env var. The two combine — `--render gui --show-obs` shows both the 3D scene
 and the CNN input. Neither changes the training math; they only add render/I-O work, so the
-fast/reproducible runs stay headless.
+fast/reproducible runs stay headless. (Mind the convention flip vs the bring-up: the trainer
+**defaults to headless** and opts *into* the viewport with `--render gui`, whereas
+`isaac_ros2_bringup.py` defaults to the GUI and opts *out* with `--headless` — see the
+[bring-up note](#bring-up-script).)
 
 Outputs mirror the Gazebo trainer: `experiments/sim/training/<run_id>/` (learning curve,
 action samples, `metadata.json` with `platform: sim-isaac`) + periodic checkpoints under

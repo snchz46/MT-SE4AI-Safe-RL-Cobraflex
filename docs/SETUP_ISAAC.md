@@ -2,7 +2,7 @@
 
 Step-by-step to reproduce the Isaac Sim bring-up (`tools/isaac_ros2_bringup.py`) on
 another computer from a clone. Deep design details live in
-[docs/13_isaacsim_urdf_import.md](13_isaacsim_urdf_import.md); this is the recipe.
+[docs/13_isaacsim_environment.md](13_isaacsim_environment.md); this is the recipe.
 
 > **The one that bites everyone:** `source` ROS2 **before** launching Isaac, or the
 > ROS2 bridge fails to load (`libament_index_cpp.so: cannot open shared object file`
@@ -92,7 +92,7 @@ ros2 topic list                                        # /cmd_vel /odom /scan /i
 Isaac publishes `odom→base_footprint` + `/joint_states`; run
 `robot_state_publisher` for the robot tree + RobotModel, RViz with `use_sim_time:=true`,
 Fixed Frame `odom`. Full recipe in
-[docs/13 §"RViz"](13_isaacsim_urdf_import.md).
+[docs/13 §"RViz"](13_isaacsim_environment.md).
 
 ## 8. Troubleshooting
 

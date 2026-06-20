@@ -3,7 +3,7 @@
 # (camera image, CnnPolicy, frame stack) and the H-10 visual domain
 # randomisation. Reward, cage wiring, actuation mapping, episode logic and the
 # spawn perturbation are IDENTICAL — the minimal-delta point of docs/09 §10.
-total_timesteps: 20000    # 20k steps is ~20h on a single GPU, which is sufficient for a proof-of-concept; see Training Spec for scaling plans.
+total_timesteps: 1000000    # 20k steps is ~20h on a single GPU, which is sufficient for a proof-of-concept; see Training Spec for scaling plans.
 learning_rate: 0.0003
 gamma: 0.99
 n_steps: 1024

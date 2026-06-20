@@ -439,6 +439,9 @@ ros2 launch cobraflex_rl train_lane.launch.py            # complex_b, STATE conf
 
 # ── Track-'E' camera PPO — two-step: own Gazebo, then the node (see §9 for why) ──────
 ros2 launch cobraflex gazebo_mesh.launch.py world:=lane_following_oval_complex gui:=false
+
+export CFG=$PWD/src/cobraflex_rl/config     # PC CAST  
+
 ros2 run cobraflex_rl train_ppo \
   --train-config           $CFG/train_ppo_camera.yaml \
   --centerline-config      $CFG/complex_b_right_lane_centerline.yaml \

@@ -290,11 +290,21 @@ Three wrapper details, each load-bearing:
 ### 4.1 Hyperparameters (`train_ppo_camera.yaml`)
 
 ```yaml
-total_timesteps: 750000     # budget for the newcam main run
+total_timesteps: 1000000    # 1M main run (~34 h at ~8 steps/s)
 learning_rate:  0.0003
+lr_schedule:    linear      # anneal the LR to 0 over training (stability)
 gamma:          0.99
+gae_lambda:     0.95
 n_steps:        1024        # rollout length before each PPO update
 batch_size:     64
+n_epochs:       10
+clip_range:     0.2
+ent_coef:       0.0
+vf_coef:        0.5
+max_grad_norm:  0.5
+target_kl:      0.5         # trust-region KL early-stop (stability brake)
+normalize_reward: true      # VecNormalize(norm_reward, norm_obs=False) (stability)
+clip_range_vf:  0.2         # value-fn clip; only meaningful with normalize_reward
 device:         auto        # CNN uses CUDA when present, else CPU
 seed:           2024        # E-main seed, mirrors the F-track main run (D-36)
 policy:         CnnPolicy
@@ -303,9 +313,30 @@ fixed_speed:    0.20
 sim_real_time_factor: 1     # camera rendering is real-time-bound
 ```
 
-The PPO hyperparameters are **deliberately unchanged from the F-track** so the
-camera↔state comparison isolates the observation modality, not the optimiser
-settings. `seed` propagates to Python/NumPy/Torch, the action space, *and*
+The **base** PPO hyperparameters (learning rate, `gamma`, `n_steps`, `batch_size`)
+stay matched to the F-track so the camera↔state comparison isolates the
+observation modality. The **stability levers** are the deliberate exception —
+added after the first 1M camera run exposed an instability the F-track 200k run
+never reached:
+
+- **`target_kl: 0.5`** — without a trust-region brake, `approx_kl` ran away to ~2.7
+  at ~105k steps and destroyed the policy + value function. SB3 now early-stops the
+  update once a minibatch's `approx_kl` exceeds `1.5·target_kl`.
+- **`normalize_reward: true` + `clip_range_vf: 0.2`** — even with the brake, the large
+  reward scale (returns ~700) destabilised the critic (`value_loss` spiking to ~470),
+  giving recoverable *sawtooth* crashes. `VecNormalize(norm_reward, norm_obs=False)`
+  keeps the critic's targets ~O(1); `clip_range_vf` bounds its per-update move on
+  that normalised scale.
+- **`lr_schedule: linear`** — anneals the LR to 0, easing late-training instability.
+
+These are *optimiser-stability* levers, not modality changes: `norm_obs` stays
+`False` (the CNN consumes raw frames, so eval/inference are untouched) and
+`ep_rew_mean` is logged **raw** (Monitor sits inside `VecNormalize`), so the
+learning curve stays comparable to the F-track. Configs without these keys (the
+frozen F-track `train_ppo.yaml`) get the SB3 defaults — F-track behaviour is
+unchanged. The Isaac in-process trainer (`tools/isaac_train.py`) reads the same
+config and honours the same levers ([docs/13](13_isaacsim_environment.md)).
+`seed` propagates to Python/NumPy/Torch, the action space, *and*
 `env.reset(seed=...)` so the spawn perturbation and the per-episode domain-
 randomisation draw are reproducible (§7.2.7).
 
@@ -561,6 +592,14 @@ multi-seed N=5 confirmation is the planned robustness check).
 
 ## Version log
 
+- **v0.3 (2026-06-21):** **PPO stability levers** added to `train_ppo_camera.yaml`
+  (§4.1) after the first 1M camera run collapsed (`approx_kl` runaway at ~105k) then
+  *sawtoothed* (critic chasing the ~700 reward scale): `target_kl`, `lr_schedule:
+  linear`, `normalize_reward` (`VecNormalize`, reward-only), `clip_range_vf`, plus the
+  full PPO hyperparameter set now explicit. Also hardened the gz `set_pose` reset
+  path (timeout 2000→3500 ms, 2→4 retries) and propagated the same levers to the
+  Isaac trainer (`tools/isaac_train.py`), whose defaults now target complex_b camera
+  ([docs/13](13_isaacsim_environment.md)). Inert defaults keep the F-track unchanged.
 - **v0.2 (2026-06-18):** training moved to the **complex_b** circuit. Added: the
   self-approaching-circuit **off-road fix** (§3.5 — off-road by global distance to
   the road-centre centerline via `PolylineTracker.distance_to`; reward stays on the

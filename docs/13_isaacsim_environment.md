@@ -72,13 +72,17 @@ ros2 run robot_state_publisher robot_state_publisher --ros-args -p use_sim_time:
 ros2 run rviz2 rviz2 -d src/cobraflex/rviz/<config>.rviz --ros-args -p use_sim_time:=true
 
 # ── In-process RL training (no ROS, no bring-up) ───────────────────────────────
-$ISAAC tools/isaac_train.py                              # F3 state-vector PPO (oval, train_ppo.yaml defaults)
-TRACK=complex_b BRINGUP_REIMPORT=1 $ISAAC tools/isaac_train.py \
-    --train-config           src/cobraflex_rl/config/train_ppo_camera.yaml \
-    --centerline-config      src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml \
-    --road-centerline-config src/cobraflex_rl/config/complex_b_centerline.yaml      # track-E camera PPO
+# Track-E camera PPO on complex_b is now the DEFAULT (train_ppo_camera.yaml + complex_b
+# lane/road centerlines + --track complex_b all default in). First run only: re-import the USD.
+BRINGUP_REIMPORT=1 $ISAAC tools/isaac_train.py                                      # track-E camera PPO (1st run)
+$ISAAC tools/isaac_train.py                                                         # subsequent runs (USD cached)
 $ISAAC tools/isaac_train.py --resume-from policy/checkpoints/<ckpt>.zip             # resume a checkpoint
 $ISAAC tools/isaac_train.py --render gui --show-obs                                 # watch (slower)
+# Other track/config: override the defaults, keeping --track in sync with the centerlines, e.g.
+$ISAAC tools/isaac_train.py --track oval \
+    --train-config           src/cobraflex_rl/config/train_ppo.yaml \
+    --centerline-config      src/cobraflex_rl/config/oval_right_lane_centerline.yaml \
+    --road-centerline-config ''                                                     # F3 state-vector on the oval
 ```
 
 **Environment variables** (`isaac_scene.py` is shared, so its vars apply to **both** the
@@ -87,7 +91,7 @@ bring-up and the trainer):
 | Var | Read by | Effect | Default |
 | --- | --- | --- | --- |
 | `BRINGUP_REIMPORT` | both | re-import the cached USD (do this on first run / after a URDF change) | `0` |
-| `TRACK` | both | visual track preset (`complex_a`/`b`/`c`; empty = bare ground) | `complex_a` |
+| `TRACK` | both | visual track preset (`complex_a`/`b`/`c`; empty = bare ground); the trainer sets it from `--track` | bring-up `complex_a`; trainer `complex_b` |
 | `TRACK_MODE` | both | track build: `geom` (USD meshes) or `texture` (baked PNG quad) | `geom` |
 | `CAM_POSE` | both | `x,y,yaw` pose for `--cam-shot` / camera-visibility checks | robot pose |
 | `WHEEL_FRICTION` / `GROUND_FRICTION` | both | skid-steer wheel/ground friction (see [physics tuning](#physics-tuning--skid-steer-turning)) | `0.05` |
@@ -99,8 +103,10 @@ bring-up and the trainer):
 
 **CLI flags** — bring-up: `--headless`, `--test`, `--turn`, `--shot PNG`, `--cam-shot PNG`
 (the last four force headless and exit). Trainer: `--train-config`, `--centerline-config`,
-`--road-centerline-config`, `--model-path`, `--run-id`, `--resume-from`,
-`--render {headless,gui}`, `--show-obs`, `--obs-preview-every N`.
+`--road-centerline-config`, `--track` (visual scene, defaults to `complex_b` / the `TRACK`
+env), `--model-path`, `--run-id`, `--resume-from`, `--render {headless,gui}`, `--show-obs`,
+`--obs-preview-every N`. The trainer's geometry + `--track` defaults all pair to **complex_b
+camera**, so a bare `isaac_train.py` is a complete run.
 
 ## Why a dedicated URDF
 

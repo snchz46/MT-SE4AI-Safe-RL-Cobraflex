@@ -3,11 +3,14 @@
 Run with Isaac Sim's bundled python (which must also have stable-baselines3 +
 gymnasium installed):
 
-    ~/isaacsim/python.sh tools/isaac_train.py                     # state-vector (F3)
-    TRACK=complex_b ~/isaacsim/python.sh tools/isaac_train.py \\
-        --train-config      src/cobraflex_rl/config/train_ppo_camera.yaml \\
-        --centerline-config src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml \\
-        --road-centerline-config src/cobraflex_rl/config/complex_b_centerline.yaml
+    # Track-E camera PPO on complex_b is now the DEFAULT (train_ppo_camera.yaml +
+    # complex_b lane/road centerlines + --track complex_b). 1st run: re-import USD.
+    BRINGUP_REIMPORT=1 ~/isaacsim/python.sh tools/isaac_train.py
+    # F3 state-vector on the oval — override the defaults:
+    ~/isaacsim/python.sh tools/isaac_train.py --track oval \\
+        --train-config      src/cobraflex_rl/config/train_ppo.yaml \\
+        --centerline-config src/cobraflex_rl/config/oval_right_lane_centerline.yaml \\
+        --road-centerline-config ''
 
 This is option-2 of the Gazebo→Isaac migration: instead of driving Isaac over a
 ROS2 bridge and resetting episodes via ``gz service set_pose`` (Gazebo-only, and
@@ -21,8 +24,9 @@ decoupled (they share only the physics scene, ``tools/isaac_scene.py``).
 The SB3 wiring (PPO, frame-stack for the camera obs, callbacks, reproducibility
 metadata) mirrors ``cobraflex_rl/train_ppo.py`` so checkpoints are comparable.
 
-NB: ``TRACK`` selects the *visual* scene track (isaac_scene.build_world); the
-``--centerline-config`` selects the env's *geometry* — they must correspond.
+NB: ``--track`` (or the ``TRACK`` env) selects the *visual* scene track
+(isaac_scene.build_world) and ``--centerline-config`` selects the env's *geometry*
+— they must correspond; the defaults pair them for complex_b.
 """
 import argparse
 import os
@@ -82,7 +86,12 @@ from stable_baselines3.common.callbacks import (  # noqa: E402
     CheckpointCallback,
 )
 from stable_baselines3.common.monitor import Monitor  # noqa: E402
-from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack  # noqa: E402
+from stable_baselines3.common.vec_env import (  # noqa: E402
+    DummyVecEnv,
+    VecEnv,
+    VecFrameStack,
+    VecNormalize,
+)
 
 from cobraflex_rl.callbacks import (  # noqa: E402
     ActionSampleCallback,
@@ -94,6 +103,41 @@ from cobraflex_rl.isaac_interface import IsaacSimInterface  # noqa: E402
 from cobraflex_rl.run_io import git_commit, sha256_file  # noqa: E402
 
 SCENARIO_ID = "SC-NOM-01"
+
+
+# --- PPO stability resolvers (mirror cobraflex_rl.train_ppo). isaac_train reads
+# the SAME train config, so it must honour the same target_kl / lr_schedule /
+# reward-normalization keys — otherwise it is the same brakeless PPO that the
+# Gazebo 1M pilot collapsed under (approx_kl runaway) and sawtoothed (critic
+# chasing returns ~700). Kept in lockstep with train_ppo's _resolve_* helpers. --
+def _linear_schedule(initial_value):
+    """initial_value at the start of training, linearly annealed to 0 at the end."""
+
+    def schedule(progress_remaining):
+        return float(progress_remaining) * float(initial_value)
+
+    return schedule
+
+
+def _resolve_learning_rate(train_cfg):
+    """Return the LR (float) or a linear-anneal schedule per ``lr_schedule``."""
+    base_lr = float(train_cfg.get("learning_rate", 3.0e-4))
+    if str(train_cfg.get("lr_schedule", "constant")).lower() == "linear":
+        return _linear_schedule(base_lr)
+    return base_lr
+
+
+def _resolve_target_kl(train_cfg):
+    """Trust-region KL early-stop (SB3 ``target_kl``); None disables it."""
+    value = train_cfg.get("target_kl", None)
+    return float(value) if value is not None else None
+
+
+def _resolve_clip_range_vf(train_cfg):
+    """Value-function clipping (SB3 ``clip_range_vf``); None disables it. Only
+    meaningful alongside ``normalize_reward`` (normalized critic scale)."""
+    value = train_cfg.get("clip_range_vf", None)
+    return float(value) if value is not None else None
 
 
 class ObsPreviewCallback(BaseCallback):
@@ -159,14 +203,24 @@ class ObsPreviewCallback(BaseCallback):
 
 def parse_args(argv):
     p = argparse.ArgumentParser(description="In-process Isaac-Sim PPO trainer.")
+    # Track 'E' (camera) is the active track; its config carries the PPO stability
+    # keys (target_kl, lr_schedule, normalize_reward, clip_range_vf). train_ppo.yaml
+    # is the old state-vector (F-track) config and lacks them.
     p.add_argument("--train-config", type=str,
-                   default=os.path.join(REPO, "src/cobraflex_rl/config/train_ppo.yaml"))
+                   default=os.path.join(REPO, "src/cobraflex_rl/config/train_ppo_camera.yaml"))
+    # complex_b is the active camera track; pair its lane + road centerlines by
+    # default. Run a different track with TRACK=<scene> and matching centerlines.
     p.add_argument("--centerline-config", type=str,
                    default=os.path.join(
-                       REPO, "src/cobraflex_rl/config/oval_right_lane_centerline.yaml"))
-    p.add_argument("--road-centerline-config", type=str, default=None,
+                       REPO, "src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml"))
+    p.add_argument("--road-centerline-config", type=str,
+                   default=os.path.join(REPO, "src/cobraflex_rl/config/complex_b_centerline.yaml"),
                    help="Road-centre centerline YAML for off-road geometry "
                         "(self-approaching circuits, e.g. complex_b).")
+    p.add_argument("--track", type=str, default=os.environ.get("TRACK", "complex_b"),
+                   help="Visual scene track for isaac_scene.build_world (sets the "
+                        "TRACK env). Defaults to the TRACK env if set, else complex_b. "
+                        "Must match the --centerline-config geometry.")
     p.add_argument("--model-path", type=str, default=None)
     p.add_argument("--run-id", type=str, default=None)
     p.add_argument("--resume-from", type=str, default=None)
@@ -305,6 +359,22 @@ def write_metadata(run_dir, run_id, seed, train_cfg, centerline_path, cage_yaml,
         "seed": seed,
         "platform": "sim-isaac",
         "total_timesteps": total_timesteps,
+        "hyperparameters": {
+            "learning_rate": float(train_cfg.get("learning_rate", 3.0e-4)),
+            "lr_schedule": str(train_cfg.get("lr_schedule", "constant")).lower(),
+            "gamma": float(train_cfg.get("gamma", 0.99)),
+            "n_steps": int(train_cfg.get("n_steps", 1024)),
+            "batch_size": int(train_cfg.get("batch_size", 64)),
+            "n_epochs": int(train_cfg.get("n_epochs", 10)),
+            "gae_lambda": float(train_cfg.get("gae_lambda", 0.95)),
+            "clip_range": float(train_cfg.get("clip_range", 0.2)),
+            "ent_coef": float(train_cfg.get("ent_coef", 0.0)),
+            "vf_coef": float(train_cfg.get("vf_coef", 0.5)),
+            "max_grad_norm": float(train_cfg.get("max_grad_norm", 0.5)),
+            "target_kl": _resolve_target_kl(train_cfg),
+            "clip_range_vf": _resolve_clip_range_vf(train_cfg),
+            "normalize_reward": bool(train_cfg.get("normalize_reward", False)),
+        },
         "policy": str(train_cfg.get("policy", "MlpPolicy")),
         "observation": dict(train_cfg.get("observation", {})),
         "domain_randomization": dict(train_cfg.get("domain_randomization", {})),
@@ -318,6 +388,11 @@ def write_metadata(run_dir, run_id, seed, train_cfg, centerline_path, cage_yaml,
 
 def main(argv):
     cli = parse_args(argv)
+    # isaac_scene.add_track reads TRACK from the environment at build_world() time
+    # (runtime), so fold the CLI choice in here — before the scene is built — so the
+    # visual track matches the --centerline-config geometry and the no-arg default
+    # is coherent (complex_b), not isaac_scene's bare complex_a fallback.
+    os.environ["TRACK"] = cli.track
     train_cfg = load_yaml(cli.train_config)
     centerline_cfg = load_yaml(cli.centerline_config)
 
@@ -368,19 +443,48 @@ def main(argv):
         else:
             train_env = env
 
+        # Optional reward normalization (VecNormalize, norm_reward only): keeps the
+        # critic's targets ~O(1) so the large reward scale doesn't destabilise it —
+        # the value-function root cause of the Gazebo 1M sawtooth. norm_obs stays
+        # False, so eval/inference need no normalization stats. Mirrors train_ppo.
+        normalize_reward = bool(train_cfg.get("normalize_reward", False))
+        if normalize_reward:
+            if not isinstance(train_env, VecEnv):
+                train_env = DummyVecEnv([lambda: Monitor(env)])
+            train_env = VecNormalize(
+                train_env,
+                norm_obs=False,
+                norm_reward=True,
+                gamma=float(train_cfg.get("gamma", 0.99)),
+                clip_reward=float(train_cfg.get("clip_reward", 10.0)),
+            )
+
         if cli.resume_from:
             model = PPO.load(cli.resume_from, env=train_env,
                              device=str(train_cfg.get("device", "cpu")), verbose=1)
+            # PPO.load restores the checkpoint's hyperparameters; re-apply the
+            # trust-region brake from the current config (else resume keeps None).
+            model.target_kl = _resolve_target_kl(train_cfg)
             print(f"[isaac_train] resumed PPO from {cli.resume_from} at "
                   f"{model.num_timesteps} steps")
         else:
             model = PPO(
                 policy=policy_name,
                 env=train_env,
-                learning_rate=float(train_cfg.get("learning_rate", 3.0e-4)),
+                # learning_rate may be a float or a linear-anneal schedule
+                # (lr_schedule: linear); target_kl is the trust-region brake.
+                learning_rate=_resolve_learning_rate(train_cfg),
                 gamma=float(train_cfg.get("gamma", 0.99)),
                 n_steps=int(train_cfg.get("n_steps", 1024)),
                 batch_size=int(train_cfg.get("batch_size", 64)),
+                n_epochs=int(train_cfg.get("n_epochs", 10)),
+                gae_lambda=float(train_cfg.get("gae_lambda", 0.95)),
+                clip_range=float(train_cfg.get("clip_range", 0.2)),
+                ent_coef=float(train_cfg.get("ent_coef", 0.0)),
+                vf_coef=float(train_cfg.get("vf_coef", 0.5)),
+                max_grad_norm=float(train_cfg.get("max_grad_norm", 0.5)),
+                target_kl=_resolve_target_kl(train_cfg),
+                clip_range_vf=_resolve_clip_range_vf(train_cfg),
                 device=str(train_cfg.get("device", "cpu")),
                 seed=seed,
                 verbose=1,
@@ -395,7 +499,8 @@ def main(argv):
                 sample_every=int(train_cfg.get("action_sample_every", 10)),
             ),
             CheckpointCallback(save_freq=checkpoint_freq, save_path=str(checkpoints_dir),
-                               name_prefix="cobraflex_ppo_lane"),
+                               name_prefix="cobraflex_ppo_lane",
+                               save_vecnormalize=normalize_reward),
         ]
         if cli.show_obs:
             if camera_obs:

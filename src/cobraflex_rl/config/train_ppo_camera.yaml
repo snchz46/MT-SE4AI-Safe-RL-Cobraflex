@@ -23,6 +23,17 @@ clip_range: 0.2
 ent_coef: 0.0
 vf_coef: 0.5
 max_grad_norm: 0.5        # gradient clip; bounds per-step policy movement (SB3 default)
+# Value-function stabilization (root-cause fix for the sawtooth seen in the
+# v2 1M run: it reached rew ~735 but kept crashing to single digits with
+# value_loss exploding to ~470 — the critic chasing returns ~700). VecNormalize
+# divides the reward the algorithm sees by the running std of the discounted
+# return so the critic's targets stay ~O(1); clip_range_vf then bounds the
+# per-update critic movement on that normalized scale. norm_obs stays False, so
+# eval/inference are unaffected and ep_rew_mean in the learning curve stays RAW
+# (Monitor is inside VecNormalize) — comparable with past runs and the F3 536.
+normalize_reward: true    # wrap env in VecNormalize(norm_reward=True, norm_obs=False)
+clip_range_vf: 0.2        # value clip; only meaningful WITH normalize_reward; null disables
+clip_reward: 10.0         # VecNormalize clip on the normalized reward (rarely hit)
 device: auto              # CNN benefits from CUDA when present; falls back to cpu
 # gz set_pose/set_physics CLI timeout (ms). Raised 2000->3500: the CLI does
 # service discovery per call and occasionally times out under reset load.

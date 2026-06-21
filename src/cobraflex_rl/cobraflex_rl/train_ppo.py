@@ -27,7 +27,12 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
+from stable_baselines3.common.vec_env import (
+    DummyVecEnv,
+    VecEnv,
+    VecFrameStack,
+    VecNormalize,
+)
 import yaml
 
 from .callbacks import (
@@ -157,6 +162,19 @@ def _resolve_target_kl(train_cfg: Dict[str, Any]) -> Optional[float]:
     return float(value) if value is not None else None
 
 
+def _resolve_clip_range_vf(train_cfg: Dict[str, Any]) -> Optional[float]:
+    """Value-function clipping (SB3 ``clip_range_vf``); None disables it.
+
+    Bounds how far the critic's prediction can move per update — extra insurance
+    against the value-loss spikes that drove the 1M pilot's sawtooth. Only
+    meaningful when rewards are normalised (``normalize_reward``): on the raw
+    reward scale (returns ~700) a 0.2 clip would freeze the critic, so set both
+    together.
+    """
+    value = train_cfg.get("clip_range_vf", None)
+    return float(value) if value is not None else None
+
+
 def _write_training_metadata(
     run_dir: Path,
     run_id: str,
@@ -196,6 +214,8 @@ def _write_training_metadata(
             "vf_coef": float(train_cfg.get("vf_coef", 0.5)),
             "max_grad_norm": float(train_cfg.get("max_grad_norm", 0.5)),
             "target_kl": _resolve_target_kl(train_cfg),
+            "clip_range_vf": _resolve_clip_range_vf(train_cfg),
+            "normalize_reward": bool(train_cfg.get("normalize_reward", False)),
         },
         # Track 'E' provenance (inert for the state-vector track): policy
         # class, observation type, frame stack and the H-10 DR envelope.
@@ -341,6 +361,25 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         else:
             train_env = env
 
+        # Optional reward normalization (VecNormalize, norm_reward only): divides
+        # the reward the algorithm sees by the running std of the discounted
+        # return, keeping the critic's targets ~O(1). The 1M pilot's sawtooth was
+        # value-function-driven (value_loss spiking to ~470 chasing returns ~700);
+        # this is the root-cause fix. norm_obs stays False — the CNN/MLP consume
+        # raw obs, so eval/inference need NO normalization stats (the policy's
+        # obs->action map is unchanged). ep_rew_mean stays raw (Monitor is inside).
+        normalize_reward = bool(train_cfg.get("normalize_reward", False))
+        if normalize_reward:
+            if not isinstance(train_env, VecEnv):
+                train_env = DummyVecEnv([lambda: Monitor(env)])
+            train_env = VecNormalize(
+                train_env,
+                norm_obs=False,
+                norm_reward=True,
+                gamma=float(train_cfg.get("gamma", 0.99)),
+                clip_reward=float(train_cfg.get("clip_reward", 10.0)),
+            )
+
         resume_from = getattr(cli_args, "resume_from", None)
         if resume_from:
             model = PPO.load(
@@ -371,6 +410,7 @@ def main(args: Optional[Sequence[str]] = None) -> None:
                 vf_coef=float(train_cfg.get("vf_coef", 0.5)),
                 max_grad_norm=float(train_cfg.get("max_grad_norm", 0.5)),
                 target_kl=_resolve_target_kl(train_cfg),
+                clip_range_vf=_resolve_clip_range_vf(train_cfg),
                 device=str(train_cfg.get("device", "cpu")),
                 # §7.2.7: seeds python/numpy/torch + action space, and propagates to
                 # env.reset(seed=...) so the spawn perturbation is reproducible too.
@@ -392,6 +432,10 @@ def main(args: Optional[Sequence[str]] = None) -> None:
                 save_freq=checkpoint_freq,
                 save_path=str(checkpoints_dir),
                 name_prefix="cobraflex_ppo_lane",
+                # Persist the VecNormalize running stats alongside each checkpoint
+                # (needed only to *resume* a normalized run; deterministic eval
+                # with norm_obs=False does not need them).
+                save_vecnormalize=normalize_reward,
             ),
         ])
 

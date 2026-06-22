@@ -483,6 +483,18 @@ ros2 run cobraflex_rl train_ppo \
 ros2 run cobraflex_rl train_ppo --train-config $CFG/train_ppo_camera.yaml \
   --resume-from policy/checkpoints/<ckpt>.zip --run-id <run>
 
+# ── Evaluate a specific checkpoint on SC-NOM-01 (deterministic, DR off; ~11-lap horizon) ─
+#    Bring up Gazebo first (the camera two-step above), then point --model-path at the .zip.
+#    Same scored harness as the CV baseline — see docs/12 §8 for the CV-vs-RL pairing.
+ros2 run cobraflex_rl eval_policy \
+  --train-config           $CFG/train_ppo_camera.yaml \
+  --centerline-config      $CFG/complex_b_right_lane_centerline.yaml \
+  --road-centerline-config $CFG/complex_b_centerline.yaml \
+  --world-name lane_following_complex_b \
+  --model-path policy/checkpoints/<ckpt>.zip \
+  --max-steps 4400 --mode enforcement \
+  --run-id <eval_run> --output-root experiments/sim/eval_cv
+
 # ── Live RViz cage/agent view (needs viz: true in train_ppo_camera.yaml, §9.1) ───────
 ros2 run rviz2 rviz2 -d src/cobraflex/rviz/cage_viz.rviz --ros-args -p use_sim_time:=true
 ```
@@ -600,6 +612,7 @@ multi-seed N=5 confirmation is the planned robustness check).
   path (timeout 2000→3500 ms, 2→4 retries) and propagated the same levers to the
   Isaac trainer (`tools/isaac_train.py`), whose defaults now target complex_b camera
   ([docs/13](13_isaacsim_environment.md)). Inert defaults keep the F-track unchanged.
+  §9 also gains the `eval_policy` checkpoint-eval command (previously only in docs/12 §8).
 - **v0.2 (2026-06-18):** training moved to the **complex_b** circuit. Added: the
   self-approaching-circuit **off-road fix** (§3.5 — off-road by global distance to
   the road-centre centerline via `PolylineTracker.distance_to`; reward stays on the

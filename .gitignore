@@ -75,6 +75,7 @@ experiments/physical/run_*/raw_logs/
 policy/checkpoints/*.zip
 policy/checkpoints/*.pt
 policy/checkpoints/*.pth
+policy/checkpoints/*.pkl
 
 # Demo/evidence videos (large; the manuscript references them as supplementary
 # material and embeds a still frame instead). Keep the .mp4 under manuscript/media/

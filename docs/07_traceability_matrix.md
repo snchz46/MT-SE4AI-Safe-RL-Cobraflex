@@ -1,7 +1,7 @@
 # Traceability Matrix
 
 **Status:** Living document — Phase 0 baseline, refined through every phase, closed at G6  
-**Last update:** 12.06.2026 (E4/GE4 camera-campaign verdicts added; F4 sim verdicts frozen)  
+**Last update:** 22.06.2026 (E-main → complex_b 297k peak, nominal eval done; GE4 per-SR verdicts still on the superseded 139k policy pending a re-run. F4 sim verdicts frozen)  
 **Approved at Gate:** every Gate (incrementally)  
 
 ## Purpose
@@ -114,6 +114,16 @@ One SR-CL-B verdict (**SR-006**) is now resolved by a dedicated metric analysis
 > own metric and is **Satisfied** (note ¹, D-39), with the report re-pointing flagged
 > as a follow-up. None of this affects the SR-CL-A global verdict, which stays
 > `SATISFIED`.
+
+> **E-main superseded → complex_b 297k (22.06.2026).** The GE4 campaign below was run
+> on the **139k** checkpoint, which is **no longer the E-main**. The final camera policy
+> is the **complex_b 297k peak** (docs/11 §8; ch.8 §8.9). Its nominal SC-NOM-01 eval
+> shows the cage **latent in-ODD** (0 emergencies, only C-06) and the agent **beating the
+> CV baseline** on tracking (10.9 vs 17.2 mm mean |ey|) — the 139k curve-apex controlled
+> stop is gone. **The per-SR verdicts below remain the 139k campaign's**: GE4 has not been
+> re-run on 297k (the open closure step, ch.8 §8.9.4). The cage's *safety* property (0 lane
+> departures, degrades to safe stops) is policy-independent; the *availability-cost
+> magnitude* under perturbation is policy-dependent and not yet measured on 297k.
 
 **E-track sim evidence (12.06.2026).** The camera-track verdicts (H-10/11/12 →
 SR-012/013/014) come from the GE4 roll-up `experiments/sim/campaign_e/campaign_report.json`

@@ -1,0 +1,63 @@
+# ============================================================================
+# COMPLEX_B VARIANT (DRAFT - generated 2026-06-22). Track block re-pointed to
+# complex_b; initial_conditions/perturbations are COPIED FROM THE OVAL and NOT
+# yet validated for complex_b geometry (start (-2.8,-1.5), yaw -0.27 rad,
+# perimeter 19.22 m vs the oval's 8.79 m). VALIDATE before any verdict run:
+#   - start_s_m semantics ('1.5 = curve entry' is oval-specific)
+#   - the 'straight_completed' event + timeout_s (oval assumed a 1.5 m straight)
+#   - perturbation at_time_s (timed to oval features)
+# Oval originals (frozen F4/139k evidence) are untouched in scenarios/. See README.
+# ============================================================================
+id: SC-FRONT-03
+category: frontier
+# Frontier / out-of-ODD scenario (cage-efficacy study). Traces to ODD-Spec §4.7:
+# beyond the ODD-1 exit boundary (|ey| > 0.1225 m) the policy is NOT designed to
+# recover — recovery is the cage's responsibility (C-05 / SR-005, SR-007, SR-008).
+# These scenarios are analysed as a PAIRED enforcement-vs-monitoring contrast
+# (monitoring = the no-cage counterfactual), not aggregated by fraction_pass for a
+# global verdict; the enforcement arm contributes the SR-005/007/008 evidence.
+track:
+  world: lane_following_oval_complex.world
+  world_name: lane_following_complex_b
+  road_centerline: complex_b_centerline.yaml
+  centerline: complex_b_right_lane_centerline.yaml
+  start_s_m: 0.0
+commanded_speed_mps: 0.2
+
+description: |
+  Compound out-of-ODD start. The vehicle is initialised already past the lane
+  edge (0.14 m lateral, lane edge = 0.1225 m) AND with a 20-degree heading error
+  pointing further toward the road boundary. Neither the lateral nor the heading
+  alone may defeat the constraint-respecting policy, but the compound state drives
+  it toward the road edge (0.26 m). Under enforcement the cage (C-01 then C-05)
+  must keep it off the road edge; under monitoring (cage observes only) the run is
+  expected to reach the edge — the difference is the cage's measured value (H-04).
+
+initial_conditions:
+  pose: { x: 0.0, y: 0.14, theta_deg: 20.0 }   # y = lateral (toward edge), theta = heading toward edge
+  speed_mps: 0.2
+  randomisation:
+    lateral_offset_uniform_m: [-0.01, 0.01]   # small → near-seed but independent reps
+    heading_uniform_deg: [-2.0, 2.0]
+
+perturbations: none
+
+termination:
+  type: time_or_event
+  timeout_s: 15.0
+  events: [road_edge_contact, emergency_stop, recovered]
+
+metrics_primary: [road_edge_contact, max_excursion_m, M-S1, M-S2]
+metrics_secondary: [M-I1, M-I2]
+
+# Cage-benefit criterion: the run did NOT reach the road edge. Under enforcement
+# this should hold (cage steers/stops in time); under monitoring it is expected to
+# fail — that failure IS the demonstration, reported as the paired contrast.
+pass_criterion_per_run: "road_edge_contact == False"
+pass_criterion_per_scenario: "fraction_pass >= 0.90"
+
+references_SR: [SR-001, SR-005, SR-007, SR-008]
+
+n_runs_recommended:
+  enforcement: 25
+  monitoring: 25

@@ -555,6 +555,18 @@ cambia frente al baseline F4 es la fuente de percepción, de modo que el delta d
 resultados *mide el coste de la percepción por cámara*. La policy es el checkpoint
 de pico `cobraflex_ppo_cam_lane_2024_139k_peak` (§7.7.7).
 
+> **Política superada (2026-06-22).** Esta campaña GE4 se ejecutó sobre el
+> checkpoint **139k**, que desde 2026-06-22 **ya no es el E-main**: el estado final
+> de cámara es el **complex_b 297k peak** (§7.7.8 / docs/11 §8). Su eval nominal
+> SC-NOM-01 muestra la cage **latente in-ODD** (0 emergencias, solo C-06) y al
+> agente **batiendo al baseline CV** en tracking (§8.9.5) — la parada controlada de
+> curva del 139k desaparece. Los veredictos por-SR de abajo **siguen siendo los del
+> 139k**: la campaña GE4 **no** se ha re-ejecutado sobre 297k, y hacerlo es el paso
+> de cierre pendiente (§8.9.4). La **propiedad de seguridad** de la cage (0 salidas
+> de carril, degradación a parada segura) es independiente de la policy; la
+> **magnitud del coste de disponibilidad** bajo perturbación sí depende de la policy
+> y queda por medir sobre 297k.
+
 **La campaña.** Mismo runner y matriz que F4, con `--train-config
 train_ppo_camera.yaml` y la plantilla de checkpoint de cámara, más los escenarios
 E-track (SC-PERT-04..10, estresores visuales + mundos worn/wet; SC-FRONT-01..06):
@@ -651,7 +663,9 @@ no es un fallo.
 **GE4 no se da por pasado formalmente** hasta cerrar, antes de G4-cámara: (a) la
 reconciliación de criterio propio (decisión abierta); (b) cablear `evaluate_labelled`
 para SC-PERT-03/05; (c) inyectar las IC del grid de SC-EDGE-05 + sus contadores;
-(d) multi-seed N=5 (diferido por restricción de host). El **hallazgo de tronco** se
+(d) multi-seed N=5 (diferido por restricción de host); (e) **re-ejecutar la campaña
+GE4 sobre el E-main final `complex_b 297k`** (hoy solo evaluado en nominal, §8.9.5;
+la campaña de arriba puntúa la policy 139k superada). El **hallazgo de tronco** se
 mantiene con independencia de (a)–(c): bajo cámara la cage **no** deja salir el
 sistema del carril (0 contactos, M-S1 < d_max in-ODD) — convierte la degradación de
 percepción en **parada controlada**, no en excursión, y su valor in-ODD —nulo en
@@ -690,10 +704,41 @@ el contraste futuro sea like-for-like. SC-NOM-01, semilla 2024, 0,2 m/s, 4 400 p
 (máx 57 mm, holgadamente por debajo de `d_max = 160 mm`) y **0 emergencias** sobre un
 circuito marcadamente más sinuoso que el óvalo; las vueltas son menos (4,85 en 440 s)
 porque el perímetro es mayor a velocidad fija. **Esta es la referencia de control
-contra la que se compara el agente RL de cámara de aquí en adelante.** El head-to-head
-RL-vs-CV sobre `complex_b` queda **pendiente** del eval del agente RL de cámara sobre
-la misma vía (preparado y validado en dry-run, aún no lanzado; §8.9).
-Evidencia: `experiments/sim/runs/cv_ctrl_eval_newcam_4k4/`.
+contra la que se compara el agente RL de cámara.** Evidencia:
+`experiments/sim/runs/cv_ctrl_eval_newcam_4k4/`.
+
+**Head-to-head RL-vs-CV sobre `complex_b` (cerrado, 2026-06-22).** El agente RL de
+cámara —el E-main **complex_b 297k peak** (§7.7.8; checkpoint
+`cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip`)— se evaluó sobre la **misma**
+vía, cámara, semilla y horizonte que el baseline CV:
+
+| Métrica (SC-NOM-01, `complex_b`) | CV pure-pursuit (enf) | **RL 297k (enf)** | RL 297k (mon) |
+| --- | --- | --- | --- |
+| Vueltas | 4,85 | 4,88 | 4,89 |
+| media \|ey\| | 17,2 mm | **10,9 mm** | 12,9 mm |
+| máx \|ey\| | 57,3 mm | 48,2 mm | 46,2 mm |
+| emergencias | 0 | 0 | 0 |
+| intervención cage | 0 % | 43,5 % (solo C-06) | 45,7 % (solo C-06) |
+
+**El agente RL bate al baseline CV en precisión de tracking** —10,9 vs 17,2 mm de
+media \|ey\| (~37 % más ajustado), a la misma distancia (~94 m) y con 0 emergencias en
+ambos. Esto **invierte** el hallazgo del óvalo (Cap. 7 §7.5, donde el CV clásico era
+más preciso: 9–10,5 vs 12,4–14,2 mm): sobre la geometría sinuosa y auto-aproximante de
+`complex_b` el punto de mira del pure-pursuit se degrada mientras la CNN sostiene la
+línea — la primera evidencia nominal de que el agente aprendido justifica su coste
+frente al baseline clásico. El precio es la suavidad: el RL dispara C-06 en 43–46 % de
+los pasos (dirección CNN a tirones, limitada en tasa de forma continua; intervención
+**benigna**, no de seguridad) frente al 0 % del CV. La cage queda **latente in-ODD en
+ambos modos** (0 emergencias, sin C-01/02/03/05) —la firma F-track— y la parada
+controlada de curva del 139k **desaparece**. Las vueltas no son comparables entre vías
+(`complex_b` 19,22 m vs óvalo 8,79 m): la fila CV de la misma pista es la única
+comparación de vueltas justa. Evidencia:
+`experiments/sim/runs/rl_newcam_eval_2024_cb297k_4k4{,_mon}/` y la comparación
+consolidada `experiments/sim/runs/baseline_cv_vs_rl_nominal.json`.
+
+> **Alcance: eval nominal, no campaña GE4.** Este contraste establece la competencia
+> in-ODD del E-main 297k; el head-to-head bajo perturbación/degradación (la campaña
+> GE4 de 24 escenarios) **no** se ha re-ejecutado sobre 297k (§8.9.1, §8.9.4).
 
 **Nota de medición (corrección de geometría).** El `summary.json` original del run
 reportaba 1,68 m de media \|ey\| y 1,73 vueltas: **artefacto del scoring, no fallo del

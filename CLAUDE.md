@@ -26,10 +26,10 @@ script reports orphans on either side.
 
 > **Two orthogonal axes — don't conflate them.** *Observation:* **F-track** (state-vector,
 > frozen baseline) vs **E-track** (camera, active). *Simulator:* **Gazebo** carries every
-> result and **all thesis verdicts** (incl. the pending E-track GE4 425k re-run); **Isaac**
+> result and **all thesis verdicts** (incl. the pending E-track GE4 re-run on the complex_b 297k E-main); **Isaac**
 > (D-44) is **posterior work** — a sim-to-real / physical-platform bridge, **not the E
 > verdict**. Gazebo checkpoints don't transfer to Isaac, so an Isaac E-policy is a *future
-> retrain*, not a re-do of the 425k. E verdict closes in Gazebo (docs/11, docs/07, ch.8 §8.9);
+> retrain*, not a re-do of the 297k E-main. E verdict closes in Gazebo (docs/11, docs/07, ch.8 §8.9);
 > Isaac lives in docs/13–14 (note: `E4: Migration to Isaac Sim` commits tag this posterior
 > work under the E gate, but its eval is not GE4).
 
@@ -76,18 +76,22 @@ script reports orphans on either side.
   reconciliation à la D-39 (re-score SR-012/SR-001-camera on M-S1≤d_max ∧ M-S2=0 — **flagged decision, NOT applied**);
   (b) wire `evaluate_labelled`; (c) SC-EDGE-05 grid; (d) multi-seed N=5 (host-deferred). See CHANGELOG 12.06
   'E4/GE4' + docs/07 E-track evidence + ch.8 §8.9.
-- **Track 'E' camera switch + 425k retrain (2026-06-15, supersedes 139k as E-main; §7.7.8).** Perception
-  re-pointed to a dedicated **Lane Cam** (IMX219-160 mirror, 640×360, HFOV ≈90°, mounted 5 cm lower at body
-  front: `camera_geometry` h≈0.077 m, pitch 0.25 rad) → 139k obs distribution stale → retrain from scratch.
-  New main run `ppo_newcam_train_2024_750k` (seed 2024, CnnPolicy, DR p=0.5 level 0.2–0.8): `ep_rew_mean`
-  peaks **335.6 @ ≈425k** (>288.5 old `cam` peak), degrades to ~256 by 750k (checkpoint-on-peak). New E-main
-  checkpoint `cobraflex_ppo_newcam_lane_2024_425k_peak.zip` (hash `953ba930…`, **gitignored**, sync manually).
-  Nominal eval (SC-NOM-01, seed 2024, 4400 steps, DR off): enforcement `rl_cam_eval_2024_425k_4k4` = **11.16 laps,
-  mean |ey| 12.4 mm, 0 emergencies** (C-06 + 5× C-02); monitoring `…_4k4_mon` = 11.17 laps, 0 emergencies.
-  **Big win: the 139k curve-apex SR-014/Trigger-8 controlled stop is GONE** (4.69→11+ laps); cage latent in-ODD
-  both modes (M-S2=0), F-track signature. **GE4 re-run with 425k prepared+dry-run-validated, NOT launched**
-  (≈16–17 h wall, single-seed — measured from the completed 139k E-campaign: 1660 runs in 16.5 h,
-  ~31 s/run; N=5 multi-seed ≈ 80–85 h); §8.9 + docs/07 + `campaign_e/` still report the 139k campaign until re-run lands.
+- **Track 'E' E-main predecessor — 425k oval peak (2026-06-15, superseded by 297k on 2026-06-22; detail docs/11 §8.3).**
+  Lane-Cam retrain `ppo_newcam_train_2024_750k` → `cobraflex_ppo_newcam_lane_2024_425k_peak.zip` (peak 335.6 @ ≈425k);
+  nominal `rl_cam_eval_2024_425k_4k4` = 11.16 laps, |ey| 12.4 mm, 0 emergencies, cage latent. Its GE4 re-run was
+  prepared+dry-run-validated but **never launched** (the GE4 closure is now scoped to the 297k E-main below).
+- **Track 'E' E-main → complex_b 297k peak (2026-06-22, supersedes the 425k; §7.7.8/docs/11 §8).** Training moved to
+  the **complex_b** circuit (perimeter 19.22 m, 2.2× the oval). Run `ppo_newcam_complex_b_2024_1M` (seed 2024, CnnPolicy,
+  v3 stability stack: target_kl 0.5 + linear LR + VecNormalize + clip_range_vf) stopped manually ~662k of 1M: `ep_rew_mean`
+  peaks **822.9 @ ~297k** (value_loss tiny all run — exploration collapse, not the v2 sawtooth), decays to ~113 by 662k.
+  Peak rescued + verified (`num_timesteps==296960`): `cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip` in
+  `…/ppo_newcam_complex_b_2024_1M/checkpoints_peak/` (hash `44c8e912…`, gitignored; run-record `metadata.json` reconstructed,
+  status interrupted). **Nominal eval (SC-NOM-01, seed 2024, 4400 steps, DR off, complex_b):** enforcement
+  `rl_newcam_eval_2024_cb297k_4k4` = **4.88 laps, mean |ey| 10.9 mm, 0 emergencies** (43.5% C-06 only); monitoring `…_mon`
+  = 4.89 laps, 12.9 mm, 0 emerg. **Cage latent in-ODD both modes** (no C-01/02/03/05, F-track signature; 139k curve-apex stop
+  gone). **RL beats the CV baseline on the same track** (10.9 vs 17.2 mm |ey|), reversing the oval finding. Laps NOT comparable
+  across tracks (~94 m ≈ the 425k's 98 m). **Only nominal done; GE4 campaign NOT re-run on 297k** — docs/07 + §8.9 + `campaign_e/`
+  per-SR verdicts still score the superseded 139k; GE4-on-297k is the open closure step.
 - **F2 evidence:** `ros_run_20260523T153003Z` — 9.91 laps, 845 s,
   0 emergencies, cage v0.5.1, PD v0.8.0.
 - **F3 evidence (closed):** main run `ppo_train_2024_200k` (seed 2024, 200k, reward v1.2,

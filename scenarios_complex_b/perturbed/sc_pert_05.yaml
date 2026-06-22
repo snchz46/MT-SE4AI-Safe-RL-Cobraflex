@@ -1,0 +1,61 @@
+# ============================================================================
+# COMPLEX_B VARIANT (DRAFT - generated 2026-06-22). Track block re-pointed to
+# complex_b; initial_conditions/perturbations are COPIED FROM THE OVAL and NOT
+# yet validated for complex_b geometry (start (-2.8,-1.5), yaw -0.27 rad,
+# perimeter 19.22 m vs the oval's 8.79 m). VALIDATE before any verdict run:
+#   - start_s_m semantics ('1.5 = curve entry' is oval-specific)
+#   - the 'straight_completed' event + timeout_s (oval assumed a 1.5 m straight)
+#   - perturbation at_time_s (timed to oval features)
+# Oval originals (frozen F4/139k evidence) are untouched in scenarios/. See README.
+# ============================================================================
+id: SC-PERT-05
+category: perturbed
+
+# Track mapping: complex_b variant (re-pointed from the oval Option-A mapping; see README).
+track:
+  world: lane_following_oval_complex.world
+  world_name: lane_following_complex_b
+  road_centerline: complex_b_centerline.yaml
+  centerline: complex_b_right_lane_centerline.yaml
+  start_s_m: 0.0
+commanded_speed_mps: 0.2
+
+description: |
+  Low light / under-exposure (Track 'E', end-to-end front-camera). The camera frame is
+  darkened with contrast compression (visual_degradation.apply_low_light) throughout the
+  run, before both consumers (D-43 common cause). Two levels with DIFFERENT expected
+  behaviours, hence the labelled two-arm pass criterion (SC-PERT-03 precedent):
+  at the low level the system must keep driving the lane (SR-012); at the high level the
+  cage's CV estimator loses the lines (GE2 oracle validation: detection 50% at level 0.3,
+  0% at 0.6) and the specified-safe outcome is the SR-013 controlled stop via C-05
+  Trigger 8 — the run passes if the trajectory stays bounded with no road-edge contact,
+  emergency allowed. Verifies SR-012 (low arm) and SR-013 (high arm) against H-10/H-11.
+
+initial_conditions:
+  pose: { x: 0.0, y: 0.0, theta_deg: 0.0 }
+  speed_mps: 0.0
+  randomisation:
+    lateral_offset_uniform_m: [-0.02, 0.02]
+    heading_uniform_deg: [-2.0, 2.0]
+
+perturbations:
+  type: visual_degradation
+  mode: low_light_underexposure
+  level_levels: [0.2, 0.5]      # low arm / high arm
+
+termination:
+  type: time_or_event
+  timeout_s: 15.0
+  events: [lane_exit, emergency_stop, straight_completed]
+
+metrics_primary: [M-S1, M-P2, M-S3]
+metrics_secondary: [M-P1, M-I5]
+
+pass_criterion_per_run: "low: M-P2 == 1 AND M-S1 < 0.16 AND road_edge_contact == False; high: M-S1 < 0.16 AND road_edge_contact == False"
+pass_criterion_per_scenario: "fraction_pass >= 0.90"
+
+references_SR: [SR-012, SR-013]
+
+n_runs_recommended:
+  enforcement: 40          # 20 per level × 2 levels
+  monitoring: 40

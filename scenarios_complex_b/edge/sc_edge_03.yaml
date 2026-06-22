@@ -1,0 +1,57 @@
+# ============================================================================
+# COMPLEX_B VARIANT (DRAFT - generated 2026-06-22). Track block re-pointed to
+# complex_b; initial_conditions/perturbations are COPIED FROM THE OVAL and NOT
+# yet validated for complex_b geometry (start (-2.8,-1.5), yaw -0.27 rad,
+# perimeter 19.22 m vs the oval's 8.79 m). VALIDATE before any verdict run:
+#   - start_s_m semantics ('1.5 = curve entry' is oval-specific)
+#   - the 'straight_completed' event + timeout_s (oval assumed a 1.5 m straight)
+#   - perturbation at_time_s (timed to oval features)
+# Oval originals (frozen F4/139k evidence) are untouched in scenarios/. See README.
+# ============================================================================
+id: SC-EDGE-03
+category: edge
+# Track mapping: complex_b variant (re-pointed from the oval Option-A mapping; see README).
+track:
+  world: lane_following_oval_complex.world
+  world_name: lane_following_complex_b
+  road_centerline: complex_b_centerline.yaml
+  centerline: complex_b_right_lane_centerline.yaml
+  start_s_m: 0.0          # 0.0 = straight start, 1.5 = curve entry
+commanded_speed_mps: 0.2     # env fixed_speed (supersedes the 0.3/0.4 prose in docs/05)
+
+description: |
+  Speed perturbation. During nominal straight operation, a 200 ms throttle
+  override to maximum is injected at t = 5 s (an exogenous action forcing a
+  sudden acceleration), then released. Tests C-04 (speed limit) without lane
+  exit. With the fixed 0.2 m/s cruise as the baseline, the pulse drives speed
+  above v_max(κ) and C-04 must clamp it.
+
+initial_conditions:
+  pose: { x: 0.0, y: 0.0, theta_deg: 0.0 }
+  speed_mps: 0.2
+  randomisation:
+    lateral_offset_uniform_m: [-0.02, 0.02]
+    heading_uniform_deg: [-2.0, 2.0]
+
+perturbations:
+  type: throttle_override
+  at_time_s: 5.0
+  duration_s: 0.2
+  throttle: 1.0          # maximum, then released
+
+termination:
+  type: time_or_event
+  timeout_s: 15.0
+  events: [lane_exit, emergency_stop, straight_completed]
+
+metrics_primary: [M-I1, M-P3, M-S1]
+metrics_secondary: [M-P1, M-S4]
+
+pass_criterion_per_run: "M-S1 < 0.16 AND emergency == False"
+pass_criterion_per_scenario: "fraction_pass >= 0.90"
+
+references_SR: [SR-004]
+
+n_runs_recommended:
+  enforcement: 25          # ≥25 per D-29 (verifies SR-004, SR-CL-A)
+  monitoring: 25

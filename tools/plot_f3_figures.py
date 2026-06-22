@@ -118,8 +118,8 @@ def _smooth(y: np.ndarray, w: int = 5) -> np.ndarray:
     return num / den
 
 
-def _load_centerline() -> Tuple[np.ndarray, float]:
-    cfg = yaml.safe_load(CENTERLINE.read_text(encoding="utf-8"))
+def _load_centerline(path: Path = CENTERLINE) -> Tuple[np.ndarray, float]:
+    cfg = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
     pts = np.asarray(cfg["centerline"]["points"], dtype=float)
     seg = np.linalg.norm(np.diff(pts, axis=0), axis=1)
     return pts, float(seg.sum())
@@ -177,12 +177,16 @@ def _pd_series(pd_run: Path):
     return ey, cum_s
 
 
-def fig_trajectory(rl_run: Path, pd_run: Optional[Path], out: Path, laps: float = 2.0) -> None:
-    pts, perimeter = _load_centerline()
+def fig_trajectory(rl_run: Path, pd_run: Optional[Path], out: Path, laps: float = 2.0,
+                   centerline_path: Path = CENTERLINE, cv_run: Optional[Path] = None,
+                   track_name: str = "oval") -> None:
+    pts, perimeter = _load_centerline(centerline_path)
     rl_x, rl_y, rl_ey, rl_s = _rl_series(rl_run)
 
-    # --- Fig 7.2: spatial trajectory (RL only — exact x/y; the PD log has no
-    #     world pose and integrating its speed drifts over ~10 laps). ---
+    # --- Fig 7.5: spatial trajectory (RL only — exact x/y; the PD log has no
+    #     world pose and integrating its speed drifts over ~10 laps). The dashed
+    #     overlay is the *same* centerline the run was driven on (centerline_path);
+    #     pass --centerline for the camera track's complex_b geometry. ---
     n_rl = int(np.searchsorted(rl_s, laps * perimeter)) or len(rl_s)
     fig, ax = plt.subplots(figsize=(6.5, 4.2))
     ax.plot(pts[:, 0], pts[:, 1], "--", color="0.6", lw=1, label="centerline (lane)")
@@ -190,15 +194,19 @@ def fig_trajectory(rl_run: Path, pd_run: Optional[Path], out: Path, laps: float 
     ax.set_aspect("equal")
     ax.set_xlabel("x (m)")
     ax.set_ylabel("y (m)")
-    ax.set_title(f"Fig. 7.5 — PPO trajectory on the oval (~{laps:g} laps)")
+    ax.set_title(f"Fig. 7.5 — PPO trajectory on {track_name} (~{laps:g} laps)")
     ax.legend(loc="center", fontsize=8)
     fig.tight_layout()
     fig.savefig(out / "fig_7_5_trajectory.png", dpi=150)
     plt.close(fig)
     print(f"  wrote {out/'fig_7_5_trajectory.png'}")
 
-    # --- Fig 7.2b: |ey| vs cumulative laps, RL vs PD (same v·dt integration for
-    #     both, so the x-axis is consistent); warm-up (first 0.3 laps) trimmed. ---
+    # --- Fig 7.6: |ey| vs cumulative laps, RL vs baseline. The x-axis is the
+    #     CUMULATIVE arc length (cumsum v·dt) / perimeter, NOT the per-lap Frenet
+    #     `s` (which wraps to 0 each lap and would draw a spurious horizontal line
+    #     across the plot at every lap seam). Baseline: a CV eval (--cv-run, same
+    #     eval schema, loaded like the RL run) for the camera track, else the F2 PD
+    #     log (--pd-run). Warm-up (first 0.3 laps) trimmed. ---
     fig2, ax2 = plt.subplots(figsize=(7.5, 3.6))
     show_laps = max(3.0, laps)
     warm = 0.3
@@ -209,15 +217,21 @@ def fig_trajectory(rl_run: Path, pd_run: Optional[Path], out: Path, laps: float 
         ax.plot(lap[m] - warm, np.abs(ey[m]) * 1000, color=color, lw=1.0, label=label)
 
     _plot(ax2, rl_ey, rl_s, "#1f77b4", "PPO (RL)")
-    pd = _pd_series(pd_run) if pd_run else None
-    if pd is not None:
-        pd_ey, pd_s = pd
-        _plot(ax2, pd_ey, pd_s, "#d62728", "PD baseline")
+    if cv_run is not None:
+        _, _, cv_ey, cv_s = _rl_series(cv_run)  # CV eval shares the RL eval schema
+        _plot(ax2, cv_ey, cv_s, "#d62728", "CV baseline")
+        baseline = "CV"
+    else:
+        pd = _pd_series(pd_run) if pd_run else None
+        if pd is not None:
+            pd_ey, pd_s = pd
+            _plot(ax2, pd_ey, pd_s, "#d62728", "PD baseline")
+        baseline = "PD"
     ax2.axhline(122, color="0.7", ls=":", lw=0.8)  # half-lane 122 mm
     ax2.text(0.02, 124, "half-lane 122 mm", fontsize=7, color="0.4")
     ax2.set_xlabel(f"laps (first {warm:g} lap warm-up trimmed)")
     ax2.set_ylabel("|ey| (mm)")
-    ax2.set_title("Fig. 7.6 — Lateral tracking error: RL vs PD")
+    ax2.set_title(f"Fig. 7.6 — Lateral tracking error: RL vs {baseline}")
     ax2.legend(loc="upper right", fontsize=8)
     ax2.grid(True, alpha=0.3)
     fig2.tight_layout()
@@ -418,6 +432,14 @@ def main() -> None:
     ap.add_argument("--train-run", type=Path, default=None)
     ap.add_argument("--rl-run", type=Path, default=None)
     ap.add_argument("--pd-run", type=Path, default=None)
+    ap.add_argument("--cv-run", type=Path, default=None,
+                    help="CV controller eval dir (same eval schema) used as the Fig 7.6 "
+                         "baseline instead of --pd-run (camera track).")
+    ap.add_argument("--centerline", type=Path, default=None,
+                    help="centerline YAML drawn under the Fig 7.5 trajectory (default: oval). "
+                         "Use the complex_b right-lane centerline for the camera track.")
+    ap.add_argument("--track-name", type=str, default="oval",
+                    help="track name shown in the Fig 7.5 title (e.g. complex_b).")
     ap.add_argument("--out", type=Path, default=REPO / "manuscript" / "figures" / "auto")
     ap.add_argument("--laps", type=float, default=2.0, help="laps to draw in Fig 7.2")
     ap.add_argument("--seed-runs", type=str, default=None,
@@ -446,7 +468,10 @@ def main() -> None:
         fig_ppo_health(train_run, args.out)
         fig_action_distribution(train_run, args.out)
     if rl_run:
-        fig_trajectory(rl_run, pd_run, args.out, laps=args.laps)
+        centerline_path = args.centerline or CENTERLINE
+        fig_trajectory(rl_run, pd_run, args.out, laps=args.laps,
+                       centerline_path=centerline_path, cv_run=args.cv_run,
+                       track_name=args.track_name)
 
 
 if __name__ == "__main__":

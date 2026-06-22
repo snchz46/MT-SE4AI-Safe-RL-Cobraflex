@@ -1,0 +1,51 @@
+# ============================================================================
+# COMPLEX_B VARIANT (DRAFT - generated 2026-06-22). Track block re-pointed to
+# complex_b; initial_conditions/perturbations are COPIED FROM THE OVAL and NOT
+# yet validated for complex_b geometry (start (-2.8,-1.5), yaw -0.27 rad,
+# perimeter 19.22 m vs the oval's 8.79 m). VALIDATE before any verdict run:
+#   - start_s_m semantics ('1.5 = curve entry' is oval-specific)
+#   - the 'straight_completed' event + timeout_s (oval assumed a 1.5 m straight)
+#   - perturbation at_time_s (timed to oval features)
+# Oval originals (frozen F4/139k evidence) are untouched in scenarios/. See README.
+# ============================================================================
+id: SC-NOM-01
+category: nominal
+# Track mapping: complex_b variant (re-pointed from the oval Option-A mapping; see README).
+track:
+  world: lane_following_oval_complex.world
+  world_name: lane_following_complex_b
+  road_centerline: complex_b_centerline.yaml
+  centerline: complex_b_right_lane_centerline.yaml
+  start_s_m: 0.0          # 0.0 = straight start, 1.5 = curve entry
+commanded_speed_mps: 0.2     # env fixed_speed (supersedes the 0.3/0.4 prose in docs/05)
+
+description: |
+  Straight nominal run. Vehicle initialises at the start of a straight
+  section with near-zero offset and near-zero heading error. Nominal
+  commanded speed. No perturbations.
+
+initial_conditions:
+  pose: { x: 0.0, y: 0.0, theta_deg: 0.0 }
+  speed_mps: 0.0
+  randomisation:
+    lateral_offset_uniform_m: [-0.02, 0.02]
+    heading_uniform_deg: [-2.0, 2.0]
+
+perturbations: none
+
+termination:
+  type: time_or_event
+  timeout_s: 30.0
+  events: [lane_exit, emergency_stop]
+
+metrics_primary: [M-P1, M-P2, M-I1]
+metrics_secondary: [M-S1, M-I5]
+
+pass_criterion_per_run: "M-P1 < 0.05 AND M-P2 == 1 AND emergency == False"
+pass_criterion_per_scenario: "fraction_pass >= 0.95"
+
+references_SR: [SR-001, SR-006]
+
+n_runs_recommended:
+  enforcement: 50
+  monitoring: 50

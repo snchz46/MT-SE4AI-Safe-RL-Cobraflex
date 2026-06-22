@@ -578,24 +578,29 @@ entrenamiento exponencialmente mayores que las arquitecturas modulares
 para alcanzar prestaciones equivalentes. Esta decisión se documenta en
 `DECISIONS.md` como decisión D-01 del proyecto.
 
-**Actualización — track paralelo 'E' (D-41, que supersede a D-01).** Con la
-campaña F4 en curso se abrió un track de desarrollo **paralelo** (rama
-`e2e-camera`) que reconsidera esta decisión para una variante **end-to-end con
-cámara frontal**: la *policy* aprende la percepción mapeando la imagen de la
-cámara directamente a la acción, en lugar de consumir el vector de estado
-construido a mano. D-41 supersede formalmente a D-01 en este punto. La
+**Actualización — el track de cámara 'E' es ahora el sistema primario (D-41,
+que supersede a D-01).** El sistema **principal** de la tesis pasa a ser una
+variante **end-to-end con cámara frontal** (track 'E', rama `e2e-camera`, ya
+integrada en `main`): la *policy* es una CNN que aprende la percepción mapeando
+la imagen de la cámara directamente a la acción, en lugar de consumir el vector
+de estado construido a mano. **D-41 supersede formalmente a D-01.** La
 supersesión es **segura** porque no se reemplaza la arquitectura de seguridad: el
-**cage modular se conserva** y opera sobre un estimador de estado **independiente
-de la cámara** (D-42), de modo que los píxeles entran a la *policy* pero **nunca a
-la envolvente de seguridad** —la actuación sigue mediada por el cage—. Las
-adaptaciones del framework que motivaban D-01 siguen siendo viables: A1 (Cage Spec
-≠ Training Spec), porque cage y *policy* siguen siendo módulos distintos; A2 (cage
-verificable de forma independiente), porque el cage es separable de la *policy* de
-cámara; y A4 (trazabilidad), porque la cadena H↔SR↔C↔SC↔M no cambia. El coste que
-el track sí asume es el otro motivo de D-01 —el mayor tamaño de conjunto de
-entrenamiento del end-to-end (Shalev-Shwartz y Shashua, 2016)—, presupuestado en
-la fase de entrenamiento del track. El F-track conserva su arquitectura modular y
-su evidencia F2/F3/F4 intacta.
+**cage modular se conserva** y opera sobre su **propio estimador de carril CV
+determinista** (**D-43**, que supersede a D-42) —un pipeline clásico separado de
+la CNN de la *policy*, ni ground truth ni la red aprendida—, de modo que los
+píxeles entran a la *policy* pero la envolvente de seguridad razona sobre un
+estado **auditable e independiente de la red aprendida**; la actuación sigue
+mediada por el cage. Las adaptaciones del framework que motivaban D-01 siguen
+siendo viables: A1 (Cage Spec ≠ Training Spec), porque cage y *policy* siguen
+siendo módulos distintos; A2 (cage verificable de forma independiente), porque el
+cage es separable de la *policy* de cámara; y A4 (trazabilidad), porque la cadena
+H↔SR↔C↔SC↔M no cambia. El coste que el track asume es el otro motivo de D-01 —el
+mayor tamaño de conjunto de entrenamiento del end-to-end (Shalev-Shwartz y
+Shashua, 2016)—, presupuestado en el entrenamiento (Cap. 7). El **track de estado
+'F' se conserva como línea base / brazo de control** —arquitectura modular y
+evidencia F2/F3/F4 intactas— para **aislar el coste de la percepción por cámara**
+(el delta E↔F); 'F' será superado por 'E' como evidencia de cierre cuando se
+ejecute la campaña GE4 de cámara (Cap. 8).
 
 ### 3.5.2 Mapeo del framework al caso
 

@@ -100,11 +100,19 @@ exhibir los problemas característicos —especificación de comportamiento
 aprendido, gap sim-to-real, runtime monitoring— y suficientemente acotado como
 para ser abordable por un único investigador en el horizonte de un proyecto de
 máster. El caso elegido en esta tesis es un sistema de seguimiento de carril
-(*lane-following*) implementado sobre un vehículo a escala 1:14, entrenado en
-simulación Gazebo mediante PPO sobre una interfaz gymnasium-Gazebo-ROS2 que
-reutiliza un entorno previamente construido por el autor en un trabajo de
-investigación anterior, y desplegado físicamente bajo la supervisión de una
-cage de reglas determinista.
+(*lane-following*) sobre un vehículo a escala 1:14, entrenado en simulación
+Gazebo mediante PPO sobre una interfaz gymnasium-Gazebo-ROS2 que reutiliza un
+entorno previamente construido por el autor en un trabajo de investigación
+anterior. En su instanciación **principal**, la *policy* es **end-to-end con
+cámara frontal** —una CNN que aprende la percepción, mapeando la imagen
+directamente a la acción— con la cage de reglas determinista operando sobre su
+**propio estimador de carril por visión** (separado de la red aprendida); esto
+introduce deliberadamente el problema de **percepción** en el lazo, el caso más
+exigente y representativo. Una segunda instanciación de **vector de estado**
+(pose ground-truth proyectada en lugar de percepción) se conserva como **brazo
+de control** que aísla el efecto de la cage y cuantifica el coste de la
+percepción por cámara. El sistema se despliega físicamente bajo la supervisión
+de la cage.
 
 La pregunta de investigación principal se formula como sigue:
 
@@ -176,8 +184,10 @@ TR 5469 y UL 4600.
   4–8 como ejecución.)*
 
 - **OE4.** Aplicar el marco a un caso de estudio —lane-following con PPO y
-  cage sobre coche RC 1:14 en Gazebo— hasta producir un sistema funcional,
-  evaluable y con trazabilidad completa. *(Capítulos 4–8.)*
+  cage sobre coche RC 1:14 en Gazebo, en su instanciación **principal
+  end-to-end con cámara** y su instanciación **de vector de estado como línea
+  base**— hasta producir un sistema funcional, evaluable y con trazabilidad
+  completa. *(Capítulos 4–8.)*
 
 - **OE5.** Caracterizar cuantitativamente el gap entre el entorno de
   entrenamiento (simulación) y el entorno operacional (físico), cumpliendo
@@ -217,9 +227,12 @@ Las aportaciones específicas son cinco:
   `check_traceability.py` que aplica la trazabilidad como restricción dura).
 
 - **A3 — Caso de estudio completo y reproducible.** Aplicación del marco a un
-  sistema de lane-following implementado de cero hasta despliegue físico,
-  con artefactos versionados, scripts de entrenamiento y evaluación, y datos
-  de runtime publicados como conjunto reutilizable.
+  sistema de lane-following implementado de cero hasta despliegue físico, en dos
+  instanciaciones —**end-to-end con cámara** (principal, la *policy* aprende la
+  percepción) y **vector de estado** (línea base de control)— cuyo contraste
+  aísla el coste de la percepción por cámara, con artefactos versionados, scripts
+  de entrenamiento y evaluación, y datos de runtime publicados como conjunto
+  reutilizable.
 
 - **A4 — Caracterización empírica del gap sim-to-real.** Cuantificación
   documentada del gap entre simulación y plataforma física a escala 1:14, en
@@ -296,21 +309,28 @@ trazable—. El sistema se entiende como una pila de capas:
 
 > `percepción → estado (ey, epsi, v, κ) → [ policy + cage ] → actuación → dinámica`
 
-La aportación reside en el bloque `[policy + cage]`, especificado sobre el
-**estado abstracto** (offset lateral `ey`, error de heading `epsi`, velocidad y
-curvatura `κ`) en el que las reglas de la cage (C-01..C-06) están definidas. Las
-abstracciones que rodean a ese bloque son:
+La aportación reside en el bloque `[policy + cage]`. En el **track primario de
+cámara** (track 'E') la policy **abarca también la percepción** (imagen →
+actuación) y la cage opera sobre el **estado abstracto** (`ey`, `epsi`, `v`, `κ`)
+reconstruido por su **estimador CV propio** (D-43); en el track de estado la
+policy consume ese estado directamente. Las reglas de la cage (C-01..C-06) se
+definen sobre ese estado abstracto en ambos casos. Las abstracciones que rodean
+a ese bloque son:
 
-- **Estado a partir de pose *ground-truth*, no de percepción visual del carril.**
-  En simulación, `(ey, epsi, v)` se obtienen proyectando la pose ground-truth
-  sobre una línea central conocida, no detectando marcas de carril con cámara o
-  lidar. Esto aísla el problema de **control** del problema de **percepción**:
-  cualquier fallo observado es atribuible a la policy o a la cage, no al sensor.
-  La cage es **agnóstica al origen del estado**, y los veredictos de seguridad se
-  miden sobre la pose verdadera —salir del carril es un hecho físico, no un
-  artefacto—. La capa de percepción real se introduce como estresor (ruido de
-  estado) en la evaluación (Capítulo 8) y se aborda en el despliegue físico
-  (Capítulo 9).
+- **Dos tracks de observación: cámara end-to-end (primario) y estado
+  *ground-truth* (línea base de control).** El sistema **principal** de la tesis
+  es el **track 'E'**: la policy es una CNN que conduce **desde la imagen de la
+  cámara frontal** y la cage lee su **propio estimador de carril CV determinista**
+  (D-43), de modo que la **percepción entra en el alcance** como contribución
+  central. En paralelo se conserva el **track 'F'** como **brazo de control**:
+  `(ey, epsi, v)` se obtienen proyectando la pose ground-truth sobre la línea
+  central, **fijando** la capa de percepción para **aislar el efecto de la cage** y
+  medir el **coste de la percepción por cámara** (el delta E↔F). La cage es
+  **agnóstica al origen del estado** (C-01..C-06 idénticas en ambos tracks) y los
+  veredictos de seguridad se miden sobre la pose verdadera —salir del carril es un
+  hecho físico, no un artefacto—. El track 'F' está plenamente caracterizado
+  (campaña G4, global `SATISFIED`); el track 'E' lo **superará como evidencia de
+  cierre** cuando se ejecute su campaña GE4 sobre el E-main de cámara (Capítulo 8).
 
 - **Velocidad longitudinal fija.** El componente aprendido controla únicamente la
   dirección; la velocidad se mantiene constante. Esto reduce el problema de
@@ -319,10 +339,12 @@ abstracciones que rodean a ese bloque son:
   regla de seguridad asociada (C-04) se ejercitan mediante perturbación inyectada
   en la campaña de evaluación (SC-EDGE-03); su aprendizaje queda como extensión.
 
-- **Una geometría de pista y una plataforma.** La validación se realiza sobre un
-  óvalo único (R = 0.8 m) y el vehículo 1:14; la generalización a otras geometrías
-  o vehículos se argumenta por plausibilidad estructural, no por evidencia
-  empírica (cf. §1.6.2).
+- **Dos geometrías de pista y una plataforma.** El track de estado se valida sobre
+  un **óvalo** (R = 0.8 m) y el track primario de cámara sobre el circuito
+  **`complex_b`** (sinuoso y auto-aproximante, perímetro 19,22 m), ambos sobre el
+  vehículo 1:14; la generalización a otras geometrías o vehículos se argumenta por
+  plausibilidad estructural —reforzada por esta segunda geometría—, no por
+  evidencia empírica exhaustiva (cf. §1.6.2).
 
 El hilo conductor es que estas fronteras **no debilitan** la afirmación central
 de la tesis —que la cage añade seguridad **medible y trazable** a un componente

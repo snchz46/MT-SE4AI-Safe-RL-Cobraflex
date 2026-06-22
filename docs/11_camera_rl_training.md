@@ -3,7 +3,7 @@
 | Field | Value |
 | --- | --- |
 | Artifact | Track 'E' training implementation (the camera counterpart of `docs/09`) |
-| Version | **0.3** (2026-06-22 — complex_b 1M run outcome: 297k peak rescued + run-record reconstructed, SC-NOM-01 eval prepared) |
+| Version | **0.4** (2026-06-22 — complex_b 297k is now the E-main camera policy; SC-NOM-01 eval done: cage latent in-ODD, RL beats the CV baseline on tracking. 425k/139k demoted to predecessors) |
 | Phase / Gate | F3 training infrastructure, reused by track 'E' (GE3 train, GE4 eval) |
 | Author | Samuel Sanchez |
 | Date | 2026-06-22 |
@@ -428,101 +428,101 @@ CLAUDE.md "Reproducibility metadata" rule, instantiated for the camera run.
 
 ---
 
-## 8. The current E-main run (newcam, 425k peak)
+## 8. The E-main run (newcam, complex_b 297k peak)
 
-The training implementation above produced the current E-main checkpoint
-(Ch.7 §7.7.8; CHANGELOG 2026-06-15):
+The **final camera policy of record** (the E-main) is the **complex_b 297k peak**.
+It supersedes the oval 425k peak and the 139k campaign policy (§8.3) and is the
+camera counterpart of the F-track ground-truth baseline — the policy a committee
+should read as *what the end-to-end front-camera agent achieves*.
 
-- **Run** `ppo_newcam_train_2024_750k` — seed 2024, `CnnPolicy`, the DR envelope
-  above (`p_degrade = 0.5`, level 0.2–0.8), over the **dedicated Lane Cam**
-  (IMX219-160 mirror, 640×360, HFOV ≈ 90°, mounted 5 cm lower at the body front;
-  `camera_geometry` h ≈ 0.077 m, pitch 0.30 rad — see `docs/12` §5).
-- **Learning curve:** `ep_rew_mean` peaks **≈ 335.6 at ≈ 425k** steps (above the
-  old `cam` peak of 288.5), then degrades to ~256 by 750k — hence
-  **checkpoint-on-peak** selection.
-- **E-main checkpoint** `cobraflex_ppo_newcam_lane_2024_425k_peak.zip`
-  (hash `953ba930…`, **gitignored** per the binary-checkpoint policy — sync
-  manually).
-- **Nominal eval** (SC-NOM-01, seed 2024, 4400 steps, DR off): enforcement
-  `rl_cam_eval_2024_425k_4k4` = **11.16 laps, mean |ey| 12.4 mm, 0 emergencies**;
-  the F-track signature returns — the cage is **latent in-ODD** in both modes
-  (M-S2 = 0), and the old 139k curve-apex SR-014/Trigger-8 controlled stop is
-  **gone** (4.69 → 11+ laps).
-
-> **Scope note.** This document covers the *training* implementation. The 425k
-> **GE4 re-run is prepared + dry-run-validated but NOT yet launched** (≈ 16–17 h
-> wall, single-seed — measured from the completed 139k E-campaign: 1660 runs in
-> 16.5 h, ~31 s/run; N=5 multi-seed ≈ 80–85 h); `docs/07`, Ch.8 §8.9 and
-> `experiments/sim/campaign_e/` still
-> report the **139k** campaign until the re-run lands. Do not cite a 425k campaign
-> verdict from this document.
-
-### 8.1 The complex_b 1M run (newcam, 297k peak — candidate, eval pending)
+### 8.1 Training (the complex_b 1M run)
 
 After the Lane-Cam switch, training moved to the **complex_b** circuit (§3.5; the
-self-approaching scalloped track, perimeter 19.2 m). The main run
-`ppo_newcam_complex_b_2024_1M` — seed 2024, `CnnPolicy`, the DR envelope above,
-with the **v3 stability stack** (`target_kl = 0.5` trust-region brake +
-`lr_schedule: linear` + `VecNormalize(norm_reward=True, norm_obs=False)` +
+self-approaching scalloped track, perimeter **19.22 m** — 2.2× the 8.79 m oval).
+The main run `ppo_newcam_complex_b_2024_1M` — seed 2024, `CnnPolicy`, the DR
+envelope above, with the **v3 stability stack** (`target_kl = 0.5` trust-region
+brake + `lr_schedule: linear` + `VecNormalize(norm_reward=True, norm_obs=False)` +
 `clip_range_vf = 0.2`) added after the first complex_b pilot collapsed at ~105k
 (§7 config rationale) — was **stopped manually at ≈ 662k of the 1M plan**.
 
-- **Learning curve:** `ep_rew_mean` peaks **≈ 822.9 at ≈ 297k** steps
-  (`ep_len_mean` ≈ 791, near the 1024-step cap → near-complete episodes), holds
-  the 700–800 band from ~120k to ~490k, then **decays to ~113 by ~662k** as the
-  policy `std` over-anneals (0.034 → 0.018). Crucially, `value_loss` stays tiny
-  (~0.003–0.07) the whole run — this is **not** the v2 value-function sawtooth;
-  the late decay is exploration collapse, so the **peak is the policy to keep**
-  (checkpoint-on-peak).
+- **Learning curve:** `ep_rew_mean` peaks **≈ 822.9 at ≈ 297k** steps (`ep_len_mean`
+  ≈ 791, near the 1024-step cap → near-complete episodes), holds the 700–800 band
+  from ~120k to ~490k, then **decays to ~113 by ~662k** as the policy `std`
+  over-anneals (0.034 → 0.018). `value_loss` stays tiny (~0.003–0.07) the whole
+  run — **not** the v2 value-function sawtooth; the late decay is exploration
+  collapse, so the **peak is the policy to keep** (checkpoint-on-peak).
 - **Peak checkpoint** `cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip` under
-  `experiments/sim/training/ppo_newcam_complex_b_2024_1M/checkpoints_peak/`
-  (hash `44c8e912…`, **gitignored** via the `checkpoints_peak/` rule — sync
-  manually). The rescue is verified: `num_timesteps == 296960` inside the zip
-  matches the peak rollout.
-- **Run-record** `experiments/sim/training/ppo_newcam_complex_b_2024_1M/metadata.json`
-  was **reconstructed post-hoc** (the interrupted run never fired the trainer's
-  end-of-run metadata writer); it carries the reproducibility pins (git commit,
-  cage/centerline hashes, checkpoint hash, seed, hyperparameters, peak step/reward)
-  and is flagged `status: interrupted`.
+  `experiments/sim/training/ppo_newcam_complex_b_2024_1M/checkpoints_peak/` (hash
+  `44c8e912…`, **gitignored** via the `checkpoints_peak/` rule — sync manually).
+  Verified: `num_timesteps == 296960` inside the zip matches the peak rollout.
+- **Run-record** `…/ppo_newcam_complex_b_2024_1M/metadata.json` reconstructed
+  post-hoc (the interrupted run never fired the trainer's end-of-run writer);
+  carries the reproducibility pins, flagged `status: interrupted`.
 
 > **Reward is not comparable across tracks.** The 822.9 peak dwarfs the oval 425k
-> peak (335.6) and even the F3 state-vector run (536.8), but complex_b is a
-> different, harder circuit with a different reward integral (longer perimeter,
-> tighter geometry) — the number says nothing about lap-keeping quality on its own.
-> **Whether this checkpoint is a usable policy is exactly what the pending eval
-> decides**, given the run died after the peak.
+> peak (335.6) and the F3 state-vector run (536.8), but complex_b is longer and
+> tighter (different reward integral) — the number alone says nothing about
+> lap-keeping quality. The eval below is what establishes it.
 
-**Eval status: prepared, NOT yet run.** A first **nominal SC-NOM-01** evaluation
-on complex_b (deterministic, DR off, 4400-step ~11-lap horizon), both cage modes,
-points `--model-path` at the peak above (concrete command below). This is a
-sanity check on the rescued checkpoint, **not** a GE4 campaign — no verdict,
-`docs/07`, or Ch.8 §8.9 claim follows until it runs. It must run on **Ubuntu 24.04
-+ ROS2 Jazzy + Gazebo** (it cannot be launched from the Windows authoring host).
+### 8.2 Nominal eval (SC-NOM-01) — the cage is latent and the policy beats CV
 
-```bash
-# On Ubuntu, source ROS2 + bring up Gazebo headless first (the camera two-step, §9):
-#   ros2 launch cobraflex gazebo_mesh.launch.py world:=lane_following_oval_complex gui:=false
-export CFG=$PWD/src/cobraflex_rl/config
-PEAK=experiments/sim/training/ppo_newcam_complex_b_2024_1M/checkpoints_peak/cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip
+Single-episode SC-NOM-01, seed 2024, 4400 steps (440 s), DR off, on complex_b,
+both cage modes. Evidence:
+`experiments/sim/runs/rl_newcam_eval_2024_cb297k_4k4{,_mon}/` (checkpoint hash
+`44c8e912…`, centerline `f04a04e6…`).
 
-# enforcement
-ros2 run cobraflex_rl eval_policy \
-  --train-config           $CFG/train_ppo_camera.yaml \
-  --centerline-config      $CFG/complex_b_right_lane_centerline.yaml \
-  --road-centerline-config $CFG/complex_b_centerline.yaml \
-  --world-name lane_following_complex_b \
-  --model-path $PEAK --max-steps 4400 --mode enforcement \
-  --run-id rl_cam_eval_2024_cb297k_4k4
+| Controller (complex_b, SC-NOM-01) | laps | mean \|ey\| | max \|ey\| | emergencies | interventions |
+| --- | --- | --- | --- | --- | --- |
+| **RL 297k — enforcement** | 4.88 | **10.9 mm** | 48.2 mm | **0** | 43.5 % (C-06 only) |
+| RL 297k — monitoring | 4.89 | 12.9 mm | 46.2 mm | 0 | 45.7 % (C-06 only) |
+| CV baseline `cv_ctrl_eval_newcam_4k4` | 4.85 | 17.2 mm | 57.3 mm | 0 | 0 % |
 
-# monitoring (cage observes but does not act — the latent-vs-active contrast)
-ros2 run cobraflex_rl eval_policy \
-  --train-config           $CFG/train_ppo_camera.yaml \
-  --centerline-config      $CFG/complex_b_right_lane_centerline.yaml \
-  --road-centerline-config $CFG/complex_b_centerline.yaml \
-  --world-name lane_following_complex_b \
-  --model-path $PEAK --max-steps 4400 --mode monitoring \
-  --run-id rl_cam_eval_2024_cb297k_4k4_mon
-```
+Three readings:
+
+1. **The cage is latent in-ODD, both modes.** 0 emergencies, and *no* C-01/C-02/
+   C-03/C-05 — only C-06 (rate limiter) fires. Enforcement and monitoring give
+   the same laps/|ey| (4.88 vs 4.89; 10.9 vs 12.9 mm): the **F-track signature** —
+   the policy drives itself and the cage never acts on safety. The 139k
+   curve-apex SR-014 / Trigger-8 controlled stop is **gone**, and — unlike the
+   425k — this is on the *harder* circuit.
+2. **The RL agent beats the CV baseline on tracking** — 10.9 vs 17.2 mm mean |ey|
+   (≈ 37 % tighter), same distance, 0 emergencies both. This **reverses the oval
+   nominal finding** (where CV was the more accurate: 9–10.5 vs 12.4–14.2 mm). On
+   complex_b's tight, self-approaching geometry the pure-pursuit CV look-ahead
+   degrades while the CNN holds the line — the first nominal evidence that the
+   learned agent earns its keep against the classical baseline.
+3. **Laps are not comparable across tracks.** 4.88 laps × 19.22 m ≈ 94 m in 440 s
+   — the same distance as the 425k's 11.16 laps × 8.79 m ≈ 98 m on the oval. The
+   lower lap *count* is purely the 2.2× longer perimeter, not worse driving; the
+   only apples-to-apples lap comparison is the CV row above (same track).
+
+The cost side: RL's 43–46 % C-06 vs CV's 0 % — the CNN commands jerkier steering
+that the rate limiter continuously smooths (benign; not a safety intervention).
+The RL agent is thus **tighter but jerkier** than CV; C-06 absorbs the jerk
+without hurting accuracy (enforcement |ey| is even slightly *better* than
+monitoring).
+
+> **Scope: this is the nominal eval, not the GE4 campaign.** It establishes the
+> in-ODD competence of the E-main policy. The 24-scenario GE4 campaign (the
+> perturbation/degradation verdicts) has **not** been re-run on 297k — `docs/07`
+> and Ch.8 §8.9 still carry the **139k** campaign verdict (now scoring a
+> superseded policy; §8.3). Re-running GE4 on 297k is the open closure step.
+
+### 8.3 Superseded predecessors (oval 425k, 139k)
+
+Earlier E-main checkpoints, kept for history; **not** the camera state of record:
+
+- **425k (oval)** — `ppo_newcam_train_2024_750k`,
+  `cobraflex_ppo_newcam_lane_2024_425k_peak.zip` (hash `953ba930…`). `ep_rew_mean`
+  peaked ≈ 335.6 @ ≈ 425k on the oval; nominal eval `rl_cam_eval_2024_425k_4k4` =
+  11.16 laps, |ey| 12.4 mm, 0 emergencies, cage latent. Its GE4 re-run was prepared
+  but never launched.
+- **139k** — `cobraflex_ppo_cam_lane_2024_139k_peak.zip`; the **only** policy with a
+  completed GE4 campaign (1660 runs, global `NOT SATISFIED` = an availability cost:
+  safe controlled stops under perturbation). That campaign is the current evidence
+  in `docs/07` + Ch.8 §8.9; it now scores a superseded policy. The complex_b 297k
+  nominal signature (cage latent, beats CV) already supersedes the 139k's nominal
+  curve-apex stop (4.69 laps).
 
 ---
 

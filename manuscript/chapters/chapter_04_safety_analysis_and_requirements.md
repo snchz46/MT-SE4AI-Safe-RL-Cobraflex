@@ -407,8 +407,8 @@ autónomo. Cualquier modificación al registro debe propagarse a esta
 tabla en el mismo commit para que `tools/check_traceability.py`
 mantenga consistencia.
 
-**Extensión del track 'E' (D-41 / D-43).** El track paralelo end-to-end con
-cámara frontal (§3.5.1; D-41, que supersede a D-01) añade tres hazards de
+**Extensión del track 'E' (D-41 / D-43).** El track end-to-end con cámara
+frontal —hoy el **sistema primario** (§3.5.1; D-41, que supersede a D-01)— añade tres hazards de
 percepción de cámara en el espacio de IDs compartido: **H-10** (mala percepción
 por entrada visual degradada), **H-11** (pérdida de percepción válida) y **H-12**
 (mala detección del cage: carril falso). Son **fallos funcionales de percepción**

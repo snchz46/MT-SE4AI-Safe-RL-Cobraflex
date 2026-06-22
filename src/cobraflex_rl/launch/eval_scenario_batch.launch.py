@@ -60,6 +60,18 @@ def generate_launch_description():
         DeclareLaunchArgument("train_config", default_value="",
                               description="Training config YAML for the eval env "
                                           "(empty = package default train_ppo.yaml)."),
+        # Track geometry overrides (empty = eval_policy's oval defaults, so the
+        # F-track / oval campaign cells are byte-identical). The complex_b camera
+        # campaign passes all three from the scenario's track block.
+        DeclareLaunchArgument("centerline", default_value="",
+                              description="Lane centerline YAML (reward target / Frenet "
+                                          "frame); empty = oval_right_lane_centerline.yaml."),
+        DeclareLaunchArgument("road_centerline", default_value="",
+                              description="Road-centre centerline YAML for off-road geometry "
+                                          "(complex_b self-approach, docs/11 §3.5); empty = none."),
+        DeclareLaunchArgument("world_name", default_value="",
+                              description="SDF world name for the gz teleport services "
+                                          "(e.g. lane_following_complex_b); empty = eval_policy default."),
     ]
 
     gazebo = IncludeLaunchDescription(
@@ -87,6 +99,12 @@ def generate_launch_description():
             "--output-root", LaunchConfiguration("output_root"),
             # Empty string falls back to the package default inside eval_policy.
             "--train-config", LaunchConfiguration("train_config"),
+            # Track geometry: eval_policy treats an empty value as "use default"
+            # (`centerline_config or <oval>`; `if road_centerline_config:`;
+            # `if world_name:`), so passing "" keeps the oval behaviour.
+            "--centerline-config", LaunchConfiguration("centerline"),
+            "--road-centerline-config", LaunchConfiguration("road_centerline"),
+            "--world-name", LaunchConfiguration("world_name"),
         ],
     )
 

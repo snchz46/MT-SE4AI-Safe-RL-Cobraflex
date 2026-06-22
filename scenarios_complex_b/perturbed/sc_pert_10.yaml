@@ -1,0 +1,64 @@
+# ============================================================================
+# COMPLEX_B VARIANT (DRAFT - generated 2026-06-22). Track block re-pointed to
+# complex_b; initial_conditions/perturbations are COPIED FROM THE OVAL and NOT
+# yet validated for complex_b geometry (start (-2.8,-1.5), yaw -0.27 rad,
+# perimeter 19.22 m vs the oval's 8.79 m). VALIDATE before any verdict run:
+#   - start_s_m semantics ('1.5 = curve entry' is oval-specific)
+#   - the 'straight_completed' event + timeout_s (oval assumed a 1.5 m straight)
+#   - perturbation at_time_s (timed to oval features)
+# Oval originals (frozen F4/139k evidence) are untouched in scenarios/. See README.
+# ============================================================================
+id: SC-PERT-10
+category: perturbed
+
+# Track mapping: complex_b variant (re-pointed from the oval Option-A mapping; see README).
+# Camera-track scenario (track 'E'). The WORLD is the perturbation mechanism
+# (non-runtime, like SC-PERT-03's pre_run_policy_finetune): the executor passes
+# track.world to the launch; resolve_perturbation yields NONE for world_variant.
+track:
+  world: lane_following_oval_complex.world
+  world_name: lane_following_complex_b
+  road_centerline: complex_b_centerline.yaml  # TODO(complex_b): no complex_b wet world exists - texture variant lost; recreate the wet world or apply the degradation in-pipeline
+  centerline: complex_b_right_lane_centerline.yaml
+  start_s_m: 0.0
+commanded_speed_mps: 0.2
+
+description: |
+  Wet / darkened road surface (Track 'E', end-to-end front-camera). The oval is
+  rendered with the wet-asphalt variant texture (darker surface, brighter sheen
+  patches) instead of the clean training texture — a static appearance shift
+  hitting both consumers (policy CNN and the cage's CV lane-estimator, D-43
+  common cause) for the whole run. Geometry and centerline are identical to
+  SC-NOM-01 (D-37 Option A preserved). The wet texture is the harder mask case:
+  1.65% of road pixels pass the estimator's white mask (sheen clutter) vs 0.32%
+  on the worn variant, while line pixels stay 100% inside the mask — evidence:
+  experiments/sim/e_cam_visibility/world_variant_mask_check.json. Verifies
+  SR-012 against H-10 (ODD-2 adverse-appearance face) and SR-014 under clutter.
+
+initial_conditions:
+  pose: { x: 0.0, y: 0.0, theta_deg: 0.0 }
+  speed_mps: 0.0
+  randomisation:
+    lateral_offset_uniform_m: [-0.02, 0.02]
+    heading_uniform_deg: [-2.0, 2.0]
+
+perturbations:
+  type: world_variant            # non-runtime; mechanism = track.world above
+  world: lane_following_oval_wet.world
+
+termination:
+  type: time_or_event
+  timeout_s: 15.0
+  events: [lane_exit, emergency_stop, straight_completed]
+
+metrics_primary: [M-S1, M-P1, M-I1]
+metrics_secondary: [M-S3, M-I5]
+
+pass_criterion_per_run: "M-S1 < 0.16 AND road_edge_contact == False AND emergency == False"
+pass_criterion_per_scenario: "fraction_pass >= 0.90"
+
+references_SR: [SR-012, SR-014]
+
+n_runs_recommended:
+  enforcement: 20
+  monitoring: 20

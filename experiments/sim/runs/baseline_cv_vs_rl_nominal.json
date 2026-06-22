@@ -9,7 +9,7 @@
     "source": "SC-NOM-01 pass_criterion + C-01 d_max"
   },
   "authoritative_cv_baseline": {
-    "note": "Current control baseline for the RL camera agent (track complex_b, Lane Cam, pure-pursuit). Supersedes the oval logical_cv_pd_controller arm below. RL-vs-CV head-to-head pending the RL camera eval on complex_b (not yet launched).",
+    "note": "Current control baseline for the RL camera agent (track complex_b, Lane Cam, pure-pursuit). Supersedes the oval logical_cv_pd_controller arm below. RL-vs-CV head-to-head now CLOSED (2026-06-22) — see authoritative_rl_camera_complex_b_297k: the RL agent beats this CV baseline on tracking error.",
     "track": "complex_b",
     "camera": "lane_cam_imx219_160_640x360",
     "control_law": "pure-pursuit look-ahead (look_ahead_m=0.40, pursuit_gain=1.0)",
@@ -28,6 +28,38 @@
       }
     ]
   },
+  "authoritative_rl_camera_complex_b_297k": {
+    "note": "E-main camera policy (complex_b 297k peak). First nominal RL-vs-CV head-to-head on complex_b. Cage latent in-ODD (0 emergencies, only C-06 rate-limiter, no C-01/02/03/05); RL beats the CV baseline above on tracking error.",
+    "track": "complex_b",
+    "checkpoint": "cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip",
+    "checkpoint_hash": "44c8e912bb4cb1de76bacbb4dc50dc1d5fc9f7aef648a9e9b108da7d295a5aee",
+    "peak_step": 296960,
+    "runs": [
+      {
+        "run": "rl_newcam_eval_2024_cb297k_4k4",
+        "mode": "enforcement",
+        "laps": 4.88,
+        "mean_abs_ey_mm": 10.9,
+        "max_abs_ey_mm": 48.2,
+        "mean_abs_epsi_rad": 0.028,
+        "emergencies": 0,
+        "interv_pct": 43.5,
+        "per_rule": {"C-06": 1913}
+      },
+      {
+        "run": "rl_newcam_eval_2024_cb297k_4k4_mon",
+        "mode": "monitoring",
+        "laps": 4.89,
+        "mean_abs_ey_mm": 12.9,
+        "max_abs_ey_mm": 46.2,
+        "mean_abs_epsi_rad": 0.030,
+        "emergencies": 0,
+        "interv_pct": 45.7,
+        "per_rule": {"C-06": 2009}
+      }
+    ]
+  },
+  "finding_complex_b": "On complex_b (the harder, self-approaching circuit, perimeter 19.22 m) the camera RL agent BEATS the CV baseline on tracking: mean|ey| 10.9 mm (RL enforcement) vs 17.2 mm (CV), max 48.2 vs 57.3 mm, both 0 emergencies and the same distance (~94 m / 4.88 laps). This REVERSES the oval finding below (where the classical CV was more accurate): the pure-pursuit CV look-ahead degrades on tight self-approaching geometry while the CNN holds the line. Cost: the RL agent runs 43-46% C-06 rate-limiter (jerky CNN steering, benign) vs CV 0%; the cage stays latent in-ODD in both modes (no C-01/02/03/05, 0 emergencies) — the F-track signature, and the 139k curve-apex controlled stop is gone. Laps are not comparable across tracks (complex_b 19.22 m vs oval 8.79 m); the same-track CV row is the only fair lap comparison. CAVEAT: nominal only — the perturbation/degradation (GE4 campaign) head-to-head on 297k is not yet run.",
   "_superseded_oval_comparison": "The rl_camera_agent_425k and logical_cv_pd_controller arms below are the earlier OVAL eval (PD+curvature-FF CV law). Retained for history; superseded by authoritative_cv_baseline.",
   "rl_camera_agent_425k": [
     {
@@ -86,5 +118,5 @@
       }
     }
   ],
-  "finding": "Both pass the RL requirement (M-P1<50mm, max<d_max) with 0 emergencies and ~11 laps. In nominal the classical CV+PD baseline is slightly more accurate (RMSE 10.5 vs 14.2 mm, max 20.5 vs 56.7 mm) and far smoother (cage intervention 0.6-0.9% vs 82-86%: the RL CNN's jerky steering is continuously rate-limited by C-06). Nominal accuracy therefore does NOT favour the RL agent; its value must be demonstrated under perturbation/degradation where the CV estimator weakens \u2014 the robustness-world study."
+  "finding": "Both pass the RL requirement (M-P1<50mm, max<d_max) with 0 emergencies and ~11 laps. In nominal the classical CV+PD baseline is slightly more accurate (RMSE 10.5 vs 14.2 mm, max 20.5 vs 56.7 mm) and far smoother (cage intervention 0.6-0.9% vs 82-86%: the RL CNN's jerky steering is continuously rate-limited by C-06). Nominal accuracy therefore does NOT favour the RL agent; its value must be demonstrated under perturbation/degradation where the CV estimator weakens — the robustness-world study."
 }

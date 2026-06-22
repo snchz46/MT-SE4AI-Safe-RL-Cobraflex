@@ -1,0 +1,53 @@
+# ============================================================================
+# COMPLEX_B VARIANT (DRAFT - generated 2026-06-22). Track block re-pointed to
+# complex_b; initial_conditions/perturbations are COPIED FROM THE OVAL and NOT
+# yet validated for complex_b geometry (start (-2.8,-1.5), yaw -0.27 rad,
+# perimeter 19.22 m vs the oval's 8.79 m). VALIDATE before any verdict run:
+#   - start_s_m semantics ('1.5 = curve entry' is oval-specific)
+#   - the 'straight_completed' event + timeout_s (oval assumed a 1.5 m straight)
+#   - perturbation at_time_s (timed to oval features)
+# Oval originals (frozen F4/139k evidence) are untouched in scenarios/. See README.
+# ============================================================================
+id: SC-EDGE-04
+category: edge
+# Track mapping: complex_b variant (re-pointed from the oval Option-A mapping; see README).
+track:
+  world: lane_following_oval_complex.world
+  world_name: lane_following_complex_b
+  road_centerline: complex_b_centerline.yaml
+  centerline: complex_b_right_lane_centerline.yaml
+  start_s_m: 0.0          # 0.0 = straight start, 1.5 = curve entry
+commanded_speed_mps: 0.2     # env fixed_speed (supersedes the 0.3/0.4 prose in docs/05)
+
+description: |
+  Compound state. Vehicle initialises on the straight with both a 10-degree
+  heading error and a 0.08 m lateral offset. Neither is severe alone, but the
+  combination can lead to a compound hazardous state (H-04). The cage should
+  recover before it becomes irrecoverable, or activate C-05 (emergency) with an
+  orderly stop and no lane exit. Verifies the joint-envelope behaviour (SR-010).
+
+initial_conditions:
+  pose: { x: 0.0, y: 0.08, theta_deg: 10.0 }   # y = lateral offset, theta = heading error (seed)
+  speed_mps: 0.2
+  randomisation:
+    lateral_offset_uniform_m: [-0.01, 0.01]   # small → keep runs independent but near the seed
+    heading_uniform_deg: [-1.0, 1.0]
+
+perturbations: none
+
+termination:
+  type: time_or_event
+  timeout_s: 15.0
+  events: [lane_exit, emergency_stop, straight_completed]
+
+metrics_primary: [M-S2, M-S3, M-S1, M-I1]
+metrics_secondary: [M-P4, M-S4]
+
+pass_criterion_per_run: "M-S2 == 0 AND M-S1 < 0.16"
+pass_criterion_per_scenario: "fraction_pass >= 0.85"
+
+references_SR: [SR-002, SR-005, SR-008, SR-010, SR-011]
+
+n_runs_recommended:
+  enforcement: 30
+  monitoring: 30

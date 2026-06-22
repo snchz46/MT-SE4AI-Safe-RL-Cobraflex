@@ -454,6 +454,29 @@ def resolve_world_path(world_name: str) -> Path:
     raise FileNotFoundError(f"scenario world not found: {world_name}")
 
 
+def resolve_config_path(name: str) -> Path:
+    """Absolute path for a scenario ``track`` config filename (centerline /
+    road_centerline), resolved against the cobraflex_rl share/config (what the
+    launch default uses) with a source-tree fallback. Mirrors resolve_world_path
+    so a complex_b campaign cell fails at plan time, not mid-Gazebo, if a
+    centerline YAML is missing."""
+    candidate = Path(name)
+    if candidate.is_absolute() and candidate.is_file():
+        return candidate
+    try:  # pragma: no cover - needs a sourced ROS2 env
+        from ament_index_python.packages import get_package_share_directory
+
+        share = Path(get_package_share_directory("cobraflex_rl")) / "config" / name
+        if share.is_file():
+            return share
+    except Exception:
+        pass
+    src = REPO / "src" / "cobraflex_rl" / "config" / name
+    if src.is_file():
+        return src
+    raise FileNotFoundError(f"scenario centerline config not found: {name}")
+
+
 def run_id_for(run_spec: RunSpec) -> str:
     """Deterministic, collision-free run id for a matrix cell, so the executor
     can locate the run dir it just produced and the campaign tree is traceable."""
@@ -559,6 +582,20 @@ def execute_run(
     world_name = str(scenario.track.get("world") or "").strip()
     if world_name and world_name != "lane_following_oval.world":
         cmd.append(f"world:={resolve_world_path(world_name)}")
+    # Track geometry (complex_b camera campaign): pass the lane centerline, the
+    # road-centre centerline (off-road geometry on self-approaching circuits,
+    # docs/11 §3.5) and the SDF world_name for the gz teleport services. Each is
+    # appended only when the scenario's track block sets it, so oval cells stay
+    # byte-identical (empty -> eval_policy's oval defaults).
+    centerline = str(scenario.track.get("centerline") or "").strip()
+    if centerline and centerline != "oval_right_lane_centerline.yaml":
+        cmd.append(f"centerline:={resolve_config_path(centerline)}")
+    road_centerline = str(scenario.track.get("road_centerline") or "").strip()
+    if road_centerline:
+        cmd.append(f"road_centerline:={resolve_config_path(road_centerline)}")
+    sdf_world_name = str(scenario.track.get("world_name") or "").strip()
+    if sdf_world_name:
+        cmd.append(f"world_name:={sdf_world_name}")
     # Isolate this run's Gazebo transport in its own partition, so a lingering
     # gz server from the previous run (the EmitEvent(Shutdown) teardown can lag
     # past ros2 launch's exit) cannot cross-talk with this one via gz's
@@ -764,6 +801,13 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     p.add_argument("--checkpoint-template", default=DEFAULT_CHECKPOINT_TEMPLATE,
                    help="checkpoint filename template with {seed} "
                         "(E-track: cobraflex_ppo_cam_lane_{seed}_200k.zip).")
+    p.add_argument("--model-path", default="",
+                   help="explicit checkpoint .zip path (overrides --checkpoint-template / "
+                        "the seed template; e.g. the gitignored complex_b 297k peak under "
+                        "experiments/sim/training/.../checkpoints_peak/). Single-policy campaigns.")
+    p.add_argument("--scenario-dir", default="",
+                   help="scenario library root (dir of <category>/*.yaml). Empty = the "
+                        "oval `scenarios/`; pass `scenarios_complex_b` for the camera campaign.")
     return p.parse_args(argv)
 
 
@@ -792,7 +836,7 @@ def render_frontier_plots(out_dir: Path) -> None:
 def main(argv: Optional[Sequence[str]] = None) -> int:
     """Drive the campaign: plan the matrix, execute (resume-aware), aggregate, report."""
     args = _parse_args(argv)
-    scenarios = load_scenarios()
+    scenarios = load_scenarios(Path(args.scenario_dir) if args.scenario_dir else SCENARIO_DIR)
     srs = load_srs()
     controllers = [c.strip() for c in args.controllers.split(",") if c.strip()]
     seeds = [int(s) for s in args.seeds.split(",") if s.strip()]
@@ -840,11 +884,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         line = f"[{i:>4}/{total}] {rs.scenario_id} {rs.mode} seed{rs.seed} rep{rs.rep:02d} -> {tag}"
         print(line + (f"  ({outcome.error})" if outcome.error else ""))
 
+    model_path_override = Path(args.model_path) if args.model_path else None
     executor: Executor = (
         lambda rs, sc, **kw: execute_run(
             rs, sc, gui=args.gui, rviz=args.rviz, resume=args.resume,
             retries=args.retries, train_config=args.train_config,
-            checkpoint_template=args.checkpoint_template, **kw)
+            checkpoint_template=args.checkpoint_template,
+            model_path=model_path_override, **kw)
     )
     outcomes = run_matrix(
         matrix, scenarios, runs_root, executor=executor,

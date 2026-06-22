@@ -17,6 +17,15 @@
 > defense questions. It complements the thesis prose (Ch. 7) with the
 > engineering detail the committee may ask for.
 
+> **Track framing (2026-06-22).** This document specifies the **state-vector**
+> training environment (F3), now the **baseline / control arm**. The thesis's
+> **primary** system is the **end-to-end camera** track (track 'E', D-41/D-43):
+> its environment — image observation, camera pipeline, visual domain
+> randomisation, and the cage's own CV estimator — is specified in **§10** here
+> and, normatively, in `docs/11_camera_rl_training.md` and Chapter 7. The only
+> delta between the two environments is the **perception source**; that delta is
+> exactly what measures the cost of camera perception (E↔F).
+
 ---
 
 ## 1. Origin of the decisions (D36 morning analysis)

@@ -1,0 +1,76 @@
+# ============================================================================
+# COMPLEX_B VARIANT (DRAFT - generated 2026-06-22). Track block re-pointed to
+# complex_b; initial_conditions/perturbations are COPIED FROM THE OVAL and NOT
+# yet validated for complex_b geometry (start (-2.8,-1.5), yaw -0.27 rad,
+# perimeter 19.22 m vs the oval's 8.79 m). VALIDATE before any verdict run:
+#   - start_s_m semantics ('1.5 = curve entry' is oval-specific)
+#   - the 'straight_completed' event + timeout_s (oval assumed a 1.5 m straight)
+#   - perturbation at_time_s (timed to oval features)
+# Oval originals (frozen F4/139k evidence) are untouched in scenarios/. See README.
+# ============================================================================
+id: SC-EDGE-05
+category: edge
+# Track mapping: complex_b variant (re-pointed from the oval Option-A mapping; see README).
+track:
+  world: lane_following_oval_complex.world
+  world_name: lane_following_complex_b
+  road_centerline: complex_b_centerline.yaml
+  centerline: complex_b_right_lane_centerline.yaml
+  start_s_m: 0.0          # 0.0 = straight start, 1.5 = curve entry
+commanded_speed_mps: 0.2     # env fixed_speed (supersedes the 0.3/0.4 prose in docs/05)
+
+description: |
+  Cage rule co-activation matrix. Systematic stress test of the cage's joint
+  behaviour, parameterised over a grid of initial conditions chosen so that, at
+  t = 0, at least two of {C-01, C-02, C-03, C-04, C-06} are in their
+  hazard-compatible state and likely to activate in the same cycle. C-05 is
+  excluded from the matrix because it short-circuits the rest by design.
+  Verifies SR-010 (joint-envelope assertion and inter-cycle oscillation).
+  A "run" in this scenario is one grid-point evaluation.
+
+initial_conditions:
+  type: parameterised_grid
+  speed_mps: 0.30            # default cruise; overridden per-anchor where v is seeded
+  randomisation: none        # fixed seeds for exact reproducibility
+  # Anchor points (each is a pair- or triple-activation seed; triples are
+  # formed by combining anchors). >= 20 grid points are drawn from these.
+  grid_anchors:
+    - id: C01_C02
+      seed: { d_m: 0.10, theta_deg: 12.0 }
+      expected_activation: [C-01, C-02]
+    - id: C01_C03
+      seed: { d_m: 0.08, theta_deg: 8.0, ttlc_seed_s: 0.9 }
+      expected_activation: [C-01, C-03]
+    - id: C04_C06
+      seed: { v_mps: 0.45, kappa_seed_rad_m: 0.6 }
+      expected_activation: [C-04, C-06]
+    - id: C01_C04_C06
+      seed: { d_m: 0.10, v_mps: 0.45, kappa_seed_rad_m: 0.6 }
+      expected_activation: [C-01, C-04, C-06]
+    - id: C01_C02_C04
+      seed: { d_m: 0.10, theta_deg: 12.0, v_mps: 0.45 }
+      expected_activation: [C-01, C-02, C-04]
+
+perturbations: none   # the stress is from initial-condition placement, not runtime
+
+termination:
+  type: time_or_event
+  timeout_s: 10.0
+  settle_window_s: 2.0   # t_psd_settle: joint-envelope predicate held this long after entry = settled
+  events: [joint_envelope_settled, joint_envelope_assertion_failure, lane_exit]
+
+metrics_primary: [M-S2, M-I2, M-I3]
+metrics_secondary: [M-S1, M-I1]
+
+# Per-run verdict also asserts the two scenario-specific counters reported
+# alongside the primary metrics: joint-envelope assertion failures and
+# inter-cycle oscillation events (both must be zero).
+pass_criterion_per_run: "joint_envelope_assertion_failures == 0 AND M-S2 == 0 AND inter_cycle_oscillations == 0"
+pass_criterion_per_scenario: "fraction_pass >= 0.95"   # >= 95% of grid points pass
+
+references_SR: [SR-010, SR-001, SR-002, SR-004, SR-006]
+
+n_runs_recommended:
+  # 5 repetitions per grid point x >= 20 grid points = >= 100 runs per mode
+  enforcement: 100
+  monitoring: 100

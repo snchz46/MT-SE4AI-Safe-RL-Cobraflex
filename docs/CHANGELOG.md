@@ -31,6 +31,140 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [22.06.2026] — GE4-on-297k campaign wiring (host-independent prep) + complex_b scenario scaffold
+
+**Document(s) affected:** `tools/run_campaign.py` (new `--model-path`, `--scenario-dir`; `resolve_config_path`; `execute_run` now passes `centerline`/`road_centerline`/`world_name` from each scenario's `track`), `src/cobraflex_rl/launch/eval_scenario_batch.launch.py` (new `centerline`/`road_centerline`/`world_name` launch args → eval_policy). New: `scenarios_complex_b/` (24 scenario drafts + README). `tools/plot_f3_figures.py` was extended earlier the same day.  
+**Phase:** track 'E' (camera) — pre-GE4 readiness  
+**Gate context:** none (campaign tooling + draft scenarios; no H/SR/C/M identifiers touched; no verdict)  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Did the **host-independent** prep to run the GE4 campaign on the complex_b 297k E-main.
+The campaign launch path now plumbs complex_b geometry end-to-end (it previously passed
+only `world`, leaving eval_policy on the oval centerline with no road-centerline/world_name).
+Added `--model-path` (point at the gitignored 297k peak) and `--scenario-dir` (select a
+scenario set). Scaffolded `scenarios_complex_b/` — the 24 scenarios with their `track`
+block re-pointed to complex_b (world, world_name, complex_b centerlines), **ICs copied
+from the oval and loudly flagged as needing validation** (start_s_m semantics,
+`straight_completed`/timeout, perturbation timing; SC-PERT-09/10 have no complex_b wet/worn
+world). The **oval `scenarios/` set is untouched** (frozen F4 / 139k evidence).
+
+### Rationale
+
+User: "do everything you can here; I'll switch to Ubuntu later." The policy + 297k checkpoint
++ nominal eval were ready, but the campaign was built for the oval and the 297k is a complex_b
+policy — so the launch plumbing, checkpoint flag, and a complex_b scenario set were the
+blockers reachable from the Windows host.
+
+### Impact
+
+`--dry-run` against `scenarios_complex_b` builds the **1660-run** matrix and the D-29
+feasibility cleanly; SR-012/013/014 show the **same** coverage GAPs as the 139k campaign
+(SC-PERT-07/08/09/10 at 20<25 runs/family — pre-existing, not new). **Remaining for Ubuntu:**
+validate/adapt the per-scenario ICs for complex_b geometry, provide complex_b wet/worn worlds
+(SC-PERT-09/10), then run. No campaign verdict changed (still the 139k in docs/07 + §8.9).
+
+### Verification
+
+`python -m py_compile` on `run_campaign.py` + `eval_scenario_batch.launch.py` (OK);
+`run_campaign.py --scenario-dir scenarios_complex_b --dry-run` builds the matrix (1660) +
+feasibility; `python tools/check_traceability.py` → **All checks PASSED. 0 warning(s).**
+
+---
+
+## [22.06.2026] — Manuscript pivot: track 'E' (camera) made primary, track 'F' kept as baseline; ch.7 rewritten + E figures
+
+**Document(s) affected:** `manuscript/chapters/chapter_07_training_specification.md` (full rewrite → E-primary, F baseline, §7.7 folded into the body, complex_b 297k results in the §7.2–7.6 structure), `chapter_01_introduction.md` (§1.6.3 scope/abstractions → perception in scope, two geometries), `chapter_03_methodology.md` (§3.5.1 D-41 framed as primary; **D-42→D-43** fix), `chapter_04_safety_analysis_and_requirements.md` ("track paralelo" → primary), `docs/00_v_model_adapted.md` ("Track 'E' (primary)" reframe + staleness fix: D-42→D-43, H-12, SR-014, SC list, commit prefix), `docs/09_environment_design.md` (track-framing note). New: `manuscript/figures/fig_7_1..7_6_*_newcam.png` (E-track figures).  
+**Phase:** track 'E' (camera) — manuscript consolidation  
+**Gate context:** none (narrative framing; no H/SR/C/M identifiers touched; no campaign verdict changed)  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Pivoted the manuscript/docs so the **end-to-end camera track 'E'** (E-main complex_b
+297k) is the **primary** narrative, with the **state-vector track 'F'** kept as the
+explicit **baseline / control arm** (not deleted). Chapter 7 was fully rewritten into
+an E-primary chapter (camera observation, the v3 stability stack, the complex_b 297k
+convergence + nominal eval vs the CV baseline) keeping the same §7.2–7.6 figure/table
+structure; §7.7 was folded into the body. Generated six E-track figures from the
+complex_b run + eval (`_newcam` suffix); the F-track figures are retained for the
+baseline subsections. **Training figures were cropped to ≤450k** (the run collapses by
+exploration after ~450k; the post-450k tail is irrelevant to the peak-297k deployed
+policy and is omitted from the figures, with an honest prose note + checkpoint-on-peak
+rationale). Also fixed a stale **D-42→D-43** reference in ch.3 and docs/00, and
+completed docs/00's E hazard/SR/scenario lists (H-12, SR-014, SC-PERT-04..10).
+
+### Rationale
+
+The user's directive: track 'E' is the system of record going forward; 'F' will be
+**superseded by 'E' once the GE4 camera campaign runs** (the camera eval to date is
+nominal, §8.9). Centring the camera track makes the thesis reflect the actual final
+system while the state-vector baseline isolates the cost of perception (E↔F delta).
+
+### Impact
+
+**No campaign verdict changed.** The GE4 per-SR verdicts (ch.8 §8.9, docs/07) remain the
+139k campaign's — flipping them awaits the GE4 re-run on 297k (group 'C', deferred per the
+"F superseded in the future" premise). The **case-study framing** in ch.1 (§1.2 nivel
+concreto, OE4, A3) was reframed E-primary (group 'B', applied). The **hypothesis (§1.3
+H1–H3)** and the methodological contributions (A1/A2/A4/A5) are **track-agnostic and
+unchanged** — this is a methodology thesis, so its core claims do not depend on the
+observation track. Shared content (ODD, hazards H-01..09, methodology) unchanged.
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED. 0 warning(s).** Figures
+regenerated via `tools/plot_f3_figures.py` on the truncated (≤450k) complex_b run. The
+generator was extended (backward-compatible): `--centerline` (Fig 7.5 draws the complex_b
+centerline, not the oval), `--cv-run` + cumulative arc length (Fig 7.6 RL-vs-CV with no
+per-lap-`s` seam artifact), and `--track-name`.
+
+---
+
+## [22.06.2026] — complex_b 297k SC-NOM-01 eval done → new E-main camera policy of record
+
+**Document(s) affected:** `docs/11_camera_rl_training.md` (header → v0.4; §8 rewritten — complex_b 297k is the E-main, 425k/139k demoted to §8.3 predecessors; eval results + RL-vs-CV table in §8.2), `docs/07_traceability_matrix.md` ("Last update" + a "policy superseded" callout on the E-track evidence block), `manuscript/chapters/chapter_08_experimental_evaluation.md` (§8.9 superseded-policy callout, §8.9.4 closure item (e), §8.9.5 RL-vs-CV head-to-head closed), `CLAUDE.md` (new E-main bullet + banner 425k→297k), `experiments/sim/runs/baseline_cv_vs_rl_nominal.json` (RL complex_b arm + finding_complex_b).  
+**Phase:** track 'E' (camera) — GE3 / pre-GE4  
+**Gate context:** none (nominal eval evidence + state-of-record update; no H/SR/C/M touched; no campaign verdict changed)  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Ran and analysed the first SC-NOM-01 eval of the complex_b 297k peak (enforcement +
+monitoring), and promoted it to the **E-main camera policy of record**, superseding the
+oval 425k peak and the 139k campaign policy. Eval (seed 2024, 4400 steps, DR off,
+complex_b): enforcement `rl_newcam_eval_2024_cb297k_4k4` = **4.88 laps, mean |ey| 10.9 mm,
+0 emergencies, 43.5 % C-06-only**; monitoring `…_mon` = 4.89 laps, 12.9 mm, 0 emergencies.
+Cage **latent in-ODD** in both modes (no C-01/02/03/05). Head-to-head on the **same track**
+vs the CV baseline (`cv_ctrl_eval_newcam_4k4`, 17.2 mm): the RL agent is ≈ 37 % tighter on
+mean |ey| — closing the previously-pending RL-vs-CV contrast.
+
+### Rationale
+
+This is the final camera state ("este es el estado final de la cámara y la anterior no").
+The 297k peak predates the run's late-run exploration collapse, so the "failed" training
+did not contaminate it; the eval confirms a competent in-ODD policy that beats the classical
+CV baseline on the hard circuit (reversing the oval finding, where CV was more accurate) and
+restores the F-track latent-cage signature (the 139k curve-apex controlled stop is gone).
+
+### Impact
+
+`docs/11` §8, `CLAUDE.md` status and `baseline_cv_vs_rl_nominal.json` now read 297k as the
+E-main. **The GE4 per-SR verdicts are unchanged**: the 1660-run campaign in `docs/07` + ch.8
+§8.9 + `experiments/sim/campaign_e/` still scores the **superseded 139k** policy — a nominal
+eval is not a campaign, so no SR verdict or global `NOT SATISFIED` was rewritten. Re-running
+GE4 on 297k is the open closure step (ch.8 §8.9.4 item (e); docs/07 callout). Laps are not
+comparable across tracks (complex_b 19.22 m vs oval 8.79 m); the same-track CV row is the only
+fair lap comparison.
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED. 0 warning(s).** `baseline_cv_vs_rl_nominal.json`
+re-validated as well-formed JSON. (No hazard/SR/cage/scenario/metric identifiers were touched.)
+
+---
+
 ## [22.06.2026] — complex_b 1M run: 297k peak rescued, run-record reconstructed, SC-NOM-01 eval prepared
 
 **Document(s) affected:** `docs/11_camera_rl_training.md` (header → v0.3; new §8.1 "The complex_b 1M run, 297k peak"). New artifacts: `experiments/sim/training/ppo_newcam_complex_b_2024_1M/metadata.json` (reconstructed run-record) and `…/checkpoints_peak/cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip` (canonical peak, gitignored).  

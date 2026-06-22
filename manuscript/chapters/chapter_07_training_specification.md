@@ -1,16 +1,17 @@
 # Capítulo 7 — Training Specification y Entrenamiento PPO
 
 <!--
-Estado: ESQUELETO F3 (D36+).
-Extensión objetivo: 10–14 páginas.
-Convención: secciones marcadas [BORRADOR D3X] tienen prosa fijada.
-Las marcadas [COMPLETAR FASE 3] dependen de resultados medidos durante
-el entrenamiento (curvas de convergencia, métricas de evaluación,
-número de timesteps, completion rate del RL).
-Las marcadas [PULIDO FASE 6] requieren retoque estilístico al cierre.
+Estado: E-track PRIMARIO (2026-06-22). El capítulo reporta el track 'E'
+(cámara end-to-end, D-41/D-43) como sistema principal; el track 'F'
+(vector de estado) queda como LÍNEA BASE / brazo de control ("coste de la
+percepción por cámara"), no se elimina. F quedará formalmente superado por
+E cuando se ejecute la campaña GE4 sobre el E-main 297k (hoy E tiene eval
+nominal; la campaña de 24 escenarios sobre 297k está pendiente, §8.9).
 
-Artefacto A1 del V-Model adaptado: Training Specification.
-Debe existir antes del primer entrenamiento (D-07, D-34).
+Convención de figuras: las figuras primarias E llevan sufijo `_newcam`
+(generadas del run complex_b 297k por `tools/plot_f3_figures.py`); las
+figuras F originales (fig_7_1..fig_7_6, fig_7_8) se conservan como línea
+base. Artefacto A1 del V-Model adaptado (D-07, D-34): Training Specification.
 -->
 
 ## 7.1 Introducción del capítulo  [BORRADOR D36]
@@ -24,6 +25,18 @@ observación, espacio de acción, función de recompensa, criterios de
 terminación y truncación, hiperparámetros PPO, y el modo de operación de
 la cage durante el entrenamiento.
 
+El **sistema principal de la tesis es el agente end-to-end de cámara
+frontal** (track 'E', D-41/D-43): una política CNN que conduce desde la
+imagen cruda, con la cage leyendo su **propio estimador de carril CV
+determinista** (D-43). El agente de **vector de estado** (track 'F') se
+conserva como **línea base / brazo de control**: comparte toda la Training
+Specification salvo la observación, de modo que el delta de resultados
+**aísla el coste de la percepción por cámara**. El track 'F' está
+plenamente caracterizado (campaña G4, global `SATISFIED`); el track 'E'
+**superará** a 'F' como evidencia de cierre **una vez se ejecute la campaña
+GE4 sobre el E-main de cámara** (hoy con evaluación nominal; §7.5, §8.9). El
+capítulo reporta 'E' como primario y 'F' como baseline.
+
 La Training Specification no es un resultado experimental: es un
 *meta-diseño* que precede al primer entrenamiento y determina qué puede
 y qué no puede aprender la policy. Las decisiones técnicas documentadas
@@ -32,13 +45,15 @@ decisiones producen una policy competente es responsabilidad del
 Capítulo 8.
 
 El capítulo tiene la siguiente estructura. La sección 7.2 desarrolla la
-Training Specification propiamente dicha, con sus ocho componentes. La
-sección 7.3 describe el entorno de simulación adaptado para entrenamiento
-RL. La sección 7.4 reporta los resultados del entrenamiento PPO
-definitivo. La sección 7.5 evalúa la policy entrenada sobre el
-escenario nominal (SC-NOM-01) para establecer una línea base de
-rendimiento. La sección 7.6 sintetiza y articula la transición al
-Capítulo 8.
+Training Specification con sus ocho componentes (observación de cámara
+como primaria; vector de estado como baseline). La sección 7.3 describe el
+entorno de simulación adaptado para entrenamiento RL (circuito `complex_b`
+de cámara como primario; óvalo del track 'F' como baseline). La sección
+7.4 reporta los resultados del entrenamiento PPO de cámara (E-main
+`complex_b` 297k) con el contraste de la convergencia del track 'F'. La
+sección 7.5 evalúa la policy de cámara sobre el escenario nominal
+(SC-NOM-01) contra la línea base de control clásico (CV). La sección 7.6
+sintetiza y articula la transición al Capítulo 8.
 
 ---
 
@@ -47,76 +62,78 @@ Capítulo 8.
 La Training Specification es el artefacto A1 del V-Model adaptado
 (D-07). Se documenta aquí antes del primer entrenamiento; cualquier
 modificación posterior constituye una revisión del documento y se
-registra en `docs/CHANGELOG.md` con su rationale.
+registra en `docs/CHANGELOG.md` con su rationale. Salvo la observación
+(§7.2.1) y los detalles de red/estabilidad de §7.2.6, **los ocho
+componentes son comunes a ambos tracks**: ese es el delta mínimo que
+D-41/D-43 persiguen — solo cambia la fuente de percepción.
 
 ### 7.2.1 Espacio de observación
 
-El vector de observación es un array de seis flotantes:
+**Primario (track 'E', cámara — D-41).** La observación es la **imagen de
+la cámara frontal** reescalada a **84×84 píxeles en escala de grises**
+(uint8), con **frame stack k=4** aplicado por el entrenador
+(`VecFrameStack`). La política es una CNN (§7.2.2) que aprende la
+percepción en lugar de consumir un estado construido a mano (supersede a
+D-01/ED-1 para este track). Las decisiones de codificación quedan fijadas
+en E2 dentro de la envolvente que `docs/09` §10 dejó abierta:
+
+- **Escala de grises:** la señal de carril es luminancia (líneas blancas
+  sobre asfalto); el color triplica la entrada sin información de carril e
+  invita a depender del eje de apariencia que la *domain randomisation* de
+  H-10 varía.
+- **84×84:** entrada nativa del extractor NatureCNN de SB3; a esa
+  resolución las líneas (~10 mm) conservan ≥1 píxel en el campo cercano.
+- **k=4:** la observación de cámara no incluye el canal `prev_steer` del
+  baseline, así que las pistas de velocidad angular salen íntegramente del
+  stack; se toma el extremo superior de la envolvente.
+
+La cámara fuente es la **Lane Cam dedicada** (espejo IMX219-160, 640×360,
+HFOV ≈ 90°) montada **5 cm más abajo en el frente del chasis**
+(`camera_geometry` h ≈ 0,077 m, pitch 0,25 rad), compartida por la CNN de
+la política y el estimador CV de la cage. Cada fotograma atraviesa el
+**pipeline compartido** (`camera_pipeline.CameraPipeline`): un único punto
+de degradación (estresor de escenario o *domain randomisation*) **antes de
+ambos consumidores** — la causa común que D-43 acepta y documenta. La
+especificación completa del pipeline, *domain randomisation*, supervisor
+de percepción y Trigger 8 de C-05 está en §7.2.5 y en `docs/09` §10.
+
+**Baseline (track 'F', vector de estado).** El brazo de control sustituye
+la imagen por un vector de seis flotantes:
 
 ```text
 obs = [ey, epsi, speed, prev_steer, kappa_near, kappa_far]
 ```
 
-donde `ey` es el offset lateral respecto a la línea central del carril
-(positivo a la izquierda), `epsi` es el error de heading respecto a la
-tangente de la línea central (positivo en sentido antihorario), `speed`
-es la velocidad escalar del vehículo en m/s, `prev_steer` es el
-steering aplicado en el ciclo anterior (normalizado en [-1, 1]), y
-`kappa_near`/`kappa_far` son la **curvatura con signo** de la línea
-central (rad/m, positiva a la izquierda) a dos horizontes de preview
-(3 y 8 segmentos por defecto).
+donde `ey` es el offset lateral respecto a la línea central del carril,
+`epsi` el error de heading, `speed` la velocidad escalar, `prev_steer` el
+steering del ciclo anterior, y `kappa_near`/`kappa_far` la **curvatura con
+signo** de la línea central a dos horizontes de preview (3 y 8 segmentos).
+El preview de curvatura (revisión F3, ED-7 en `docs/09`) fue necesario para
+desbloquear el aprendizaje en el baseline; en el track 'E' la geometría de
+la curva debe inferirse **desde la imagen** — el problema de percepción más
+difícil que D-41 asume, con su coste presupuestado en datos
+(Shalev-Shwartz & Shashua 2016).
 
-Los límites del espacio son [-∞, +∞] para `ey`, `speed`, `kappa_near` y
-`kappa_far`, [-π, π] para `epsi`, y [-1, 1] para `prev_steer`. En la
-práctica, el rango operativo es estrecho: ey ∈ [-0.12, 0.12] m,
-epsi ∈ [-0.4, 0.4] rad (ver §6.6.2), |kappa| ≤ 1.25 rad/m (R=0.8 m).
+### 7.2.2 Arquitectura de la política y espacio de acción
 
-La inclusión de `prev_steer` es una forma ligera de memoria de primer
-orden que ayuda al agente a regularizar su comportamiento de steering sin
-requerir una arquitectura recurrente. El `speed` es información necesaria
-para la calibración de la corrección de heading en curva.
+El espacio de acción es común a ambos tracks: un flotante `action =
+[steering]` en [-1, 1], con velocidad fija (`fixed_speed = 0.2 m/s`)
+durante el entrenamiento; el agente no controla el throttle. Esta elección
+reduce la dimensionalidad del aprendizaje; si el control de velocidad
+resulta necesario para los escenarios perturbados de Fase 4, la
+especificación se revisa.
 
-**Preview de curvatura (revisión F3, primer run).** El vector original
-de cuatro componentes era puramente reactivo: el agente solo veía
-`ey/epsi` actuales y no la curva que se aproxima. En el primer run de
-entrenamiento esto bloqueó el aprendizaje — en la curva de R=0.8 m, sin
-anticipación, el agente derivaba hasta que la cage tomaba el control
-(C-01/C-03) y disparaba C-05, con señal de crédito casi nula
-(`explained_variance ≈ 0`). La cage **ya** consumía `curvature_ahead`
-internamente; exponerla también a la política (`kappa_near`, `kappa_far`)
-le permite anticipar la curva. Con el preview, el agente pasó a completar
-vueltas y terminar por truncación. Decisión (ED-7) en
-`docs/09_environment_design.md`.
-
-**Track paralelo 'E' (D-41 / D-43).** En el track end-to-end con cámara frontal la
-observación deja de ser este vector de 6 dimensiones y pasa a ser la **imagen de la
-cámara frontal** (política CNN): la *policy* aprende la percepción en lugar de
-consumir el estado construido a mano (supersede a D-01 / ED-1 para este track). El
-**espacio de acción y la recompensa no cambian** (la recompensa se computa sobre
-estado ground-truth + progreso, agnóstica a la observación). La cage, por **D-43**
-(que supersede a D-42), evalúa C-01..C-06 sobre el estado producido por un
-**estimador de carril CV determinista propio** — ni ground truth ni la CNN de la
-política — de modo que cage y política generalizan a cualquier vía con líneas
-visibles; el ground truth queda confinado en simulación a la recompensa y al
-papel de oráculo de validación del estimador. La especificación completa del
-track 'E' (observación, pipeline de cámara, *domain randomisation*, supervisor de
-percepción y Trigger 8 de C-05) se desarrolla en la **§7.7** de este capítulo y en
-`docs/09_environment_design.md` §10.
-
-### 7.2.2 Espacio de acción
-
-El espacio de acción es un array de un flotante: `action = [steering]`
-en [-1, 1]. La velocidad es fija (`fixed_speed = 0.2 m/s`) durante el
-entrenamiento; el agente no controla el throttle. Esta elección reduce
-la dimensionalidad del problema de aprendizaje: en la Fase 2 el PD con
-velocidad fija ya produce comportamiento estable, por lo que no hay
-evidencia de que el agente RL necesite control de velocidad para el
-escenario nominal. Si el control de velocidad resulta necesario para los
-escenarios perturbados de Fase 4, la Training Specification se revisa.
+**Primario (E):** `CnnPolicy` de SB3 (extractor NatureCNN: conv 32@8×8/4 →
+64@4×4/2 → 64@3×3/1 → FC 512, con normalización de imagen interna), sobre la
+observación apilada (84×84×4 tras `VecFrameStack` + `VecTransposeImage`).
+**Baseline (F):** `MlpPolicy` por defecto (dos capas de 64 `tanh`, redes
+separadas pi/vf), sobre el vector de 6 dimensiones. Ambas producen salida
+Gaussiana diagonal (media + `log_std` independiente del estado).
 
 ### 7.2.3 Función de recompensa
 
-La función de recompensa en un ciclo de control es:
+La recompensa es **idéntica en ambos tracks** y se computa sobre el estado
+**ground-truth** + progreso, agnóstica a la observación:
 
 ```text
 r = w_fwd · max(progress, 0)
@@ -127,799 +144,446 @@ r = w_fwd · max(progress, 0)
 ```
 
 donde `progress` es el avance **normalizado** a lo largo de la línea
-central en ese ciclo (≈1.0 a velocidad de crucero; el entorno gestiona el
-wrap del arco en el circuito cerrado), `Δsteering` es el cambio en el
-steering **crudo de la política** (no el post-cage; ver §7.2.5), y
-`[terminated_off_road]` es 1 solo si el episodio termina por salida de
-**vía** (no por emergencia C-05; ver §7.2.4). Los pesos nominales (sujetos
-a ajuste experimental) son:
+central, `Δsteering` es el cambio en el steering **crudo de la política**
+(no el post-cage; §7.2.5), y `[terminated_off_road]` es 1 solo si el
+episodio termina por salida de **vía** (no por emergencia C-05; §7.2.4).
+Los pesos nominales (sujetos a ajuste experimental) son:
 
 | Parámetro | Valor | Rationale |
 | --- | --- | --- |
 | `w_fwd` (forward_progress) | 1.0 | Premia progreso real (≈1.0/paso a crucero) |
 | `w_ey` (lateral_error) | 2.5 | Penalización principal: offset lateral |
 | `w_eps` (heading_error) | 0.75 | Penalización secundaria: heading |
-| `w_ds` (steer_delta) | 0.20 | Suavidad de actuación (sobre Δsteering **crudo**, v1.2; ver §7.2.5) |
+| `w_ds` (steer_delta) | 0.20 | Suavidad de actuación (sobre Δsteering **crudo**, v1.2; §7.2.5) |
 | `w_term` (termination) | 25.0 | Desincentiva salida de vía |
 
-**Progreso, no velocidad (revisión F3, primer run).** El término forward
-originalmente era `w_fwd · speed`. Como la velocidad es fija (crucero
-cage-controlado), ese término era una constante ≈0.2 que no discriminaba
-la conducta de la política: el retorno apenas dependía de las acciones, lo
-que dejaba `explained_variance ≈ 0` y el aprendizaje plano. Sustituirlo
-por el **progreso normalizado a lo largo del centerline** hace que el
-retorno premie sobrevivir y avanzar más (completar curvas/vueltas) — la
-señal que el agente sí puede optimizar. Además mantiene cada paso en pista
-**netamente positivo**, de modo que terminar pronto (vía la emergencia
-C-05 sin penalización, §7.2.4) nunca renta más que continuar.
-
-El diseño de recompensa es deliberadamente simple. La penalización de
-terminación alta (25.0) prioriza la permanencia en **vía** sobre la
-optimización de velocidad; nótese que **solo** la salida de vía la aplica
-— la emergencia C-05 termina sin penalización (la intervención de la cage
-es dinámica, no castigo; D-34, §7.2.4/§7.2.5).
-
-Los pesos son `[provisional, M-P1..M-P4]` — se marcan provisionalmente
-hasta que el análisis de sensibilidad del Capítulo 8 confirme que no hay
-degeneración. Detalle y banco de preguntas en `docs/10_reward_function.md`.
+El término forward usa **progreso normalizado** (no velocidad): como la
+velocidad es fija, un término `w_fwd·speed` sería una constante que no
+discrimina la conducta y dejaba `explained_variance ≈ 0` (revisión F3,
+primer run). La penalización de terminación alta (25.0) prioriza la
+permanencia en **vía**; **solo** la salida de vía la aplica — la emergencia
+C-05 termina sin penalización (la intervención de la cage es dinámica, no
+castigo; D-34, §7.2.4). Los pesos son `[provisional, M-P1..M-P4]`; detalle
+en `docs/10_reward_function.md`.
 
 ### 7.2.4 Criterios de terminación y truncación
 
-**Terminación** (episodio falla): el episodio termina (`terminated=True`)
-en cualquiera de dos condiciones:
+Comunes a ambos tracks. **Terminación** (`terminated=True`) en dos
+condiciones: (1) **salida de vía** `|ey| > road_width/2` — única condición
+que aplica `w_term`; se termina en el borde de **vía**, no de carril, para
+que una policy inicial aleatoria acumule experiencia útil (la cage corrige
+las violaciones de **carril** C-01/C-03 dentro de la vía); (2)
+**emergencia C-05** — el rollout ya falló (coche congelado), se trata como
+fallo terminal **sin penalización** (castigar la cage contradiría D-34).
+`info["termination_reason"] ∈ {off_road, cage_emergency, truncated}`.
 
-1. **Salida de vía**: `|ey| > road_width / 2`. Se termina en el borde de
-   vía y no en el de carril (`lane_width/2`) por una razón deliberada de
-   entrenamiento: una policy inicial aleatoria saldría del carril en 1–2
-   pasos y nunca acumularía experiencia útil. La cage corrige las
-   violaciones de **carril** dentro de la vía (C-01/C-03); terminar en el
-   borde de **vía** marca el caso "la cage no pudo evitarlo". **Esta** es
-   la única condición que aplica la penalización `w_term` (§7.2.3).
-2. **Emergencia C-05** (revisión F3): si la cage enclava un paro de
-   emergencia, el rollout ya falló (el coche queda congelado) y los pasos
-   restantes no aportan señal — terminar de inmediato evita malgastar el
-   horizonte. Se trata como fallo terminal (el value bootstrapea desde 0)
-   pero **sin penalización** (`done=off_road` en la recompensa): castigar
-   la acción de la cage contradiría su tratamiento como dinámica del
-   entorno (D-34). `info["termination_reason"] ∈ {off_road, cage_emergency,
-   truncated}`.
-
-Implementación en `GazeboLaneEnv.step`; rationale en
-`docs/09_environment_design.md` (ED-4 / ED-8) y D-34 (addendum F3).
-
-**Truncación** (episodio completo): `step_count ≥ max_episode_steps`.
-Con `max_episode_steps = 500` y `control_dt = 0.10 s`, el episodio dura
-50 s (≈ 1.14 vueltas al óvalo). Episodios más largos aceleran la
-convergencia porque el agente ve más variedad de estados por episodio.
-El valor de 500 pasos es `[provisional, M-P6]`; el horizonte resultó
-adecuado: en el ciclo definitivo de 200 000 timesteps la policy aprende a
-recorrer el episodio completo sin terminar (`ep_len_mean` satura en los 500
-pasos, §7.4.1), de modo que toda la experiencia tardía es por truncación.
+**Truncación** (`step_count ≥ max_episode_steps`). Con `max_episode_steps`
+= 1024 y `control_dt = 0.10 s` el episodio dura ≈ 102 s. En el track 'E'
+sobre `complex_b` el horizonte resultó adecuado: la policy de cámara
+aprende a recorrer episodios casi completos (`ep_len_mean` ≈ 791 en el pico,
+§7.4.1). Implementación en `GazeboLaneEnv.step`; rationale en `docs/09`
+(ED-4/ED-8) y D-34.
 
 ### 7.2.5 Cage durante el entrenamiento
 
-La cage opera en modo `enforcement` durante todo el entrenamiento
-(D-34). En cada ciclo de control, `GazeboLaneEnv` construye el estado de
-la cage a partir del tracker, forma la acción raw `(steering_policy,
-throttle_nominal)`, e invoca **en proceso** la misma clase
-`SafetyCageNode` —con el mismo `cage/cage.yaml`— que el nodo de
-despliegue `cage_ros_node` envuelve por tópicos. La acción segura
-resultante se mapea a `/cmd_vel` replicando `vehicle_control_node`
-(throttle→velocidad, `angular.z = steering·yaw_gain`, emergencia→parada
-controlada). La recompensa se calcula sobre la acción segura y el estado
-resultante, no sobre la acción raw, **con una excepción deliberada: el
-término de suavidad `w_ds·|Δsteering|`** (reward v1.2). Ese término existe
-para moldear la actuación de la *propia política*. Bajo el reward anterior
-(v1.0, con el Δ medido **post-cage**) C-06 absorbía el bang-bang crudo en
-una señal post-cage casi idéntica se saturara o no la política, de modo que
-medir el Δ post-cage dejaba el término sin efecto: un ciclo previo mostró a
-la policy llevando C-06 a su tope el ~89% de los pasos sin pagar por ello.
-Por eso el término se computa sobre el `Δsteering` **crudo** (pre-cage) y se
-sube de peso (`w_ds = 0.10 → 0.20`): así la política paga su propio jerk en
-lugar de delegarlo gratis en C-06. **La evaluación del ciclo definitivo
-(§7.5.2) confirma el efecto:** bajo reward v1.2 la policy aprende a girar de
-forma nativa suave (|Δraw| medio 0.030, muy por debajo del límite 0.15 de
-C-06) y la cage queda latente (0 % de los pasos: ninguna activación del
-cage en 4 400). El resto de términos
-(ey, epsi, progreso, terminación) sigue sobre el estado resultante / la
-acción segura, y las intervenciones de la cage no se penalizan (D-34).
+La cage opera en modo `enforcement` durante todo el entrenamiento, **en
+ambos tracks** (D-34). `GazeboLaneEnv` invoca **en proceso** la misma clase
+`SafetyCageNode` —con el mismo `cage/cage.yaml` (v0.6.1)— que el nodo de
+despliegue envuelve por tópicos, por determinismo y para que el
+comportamiento de la cage sea idéntico al de despliegue. La acción segura
+se mapea a `/cmd_vel` replicando `vehicle_control_node`. La recompensa se
+calcula sobre la acción segura y el estado resultante, **con una excepción
+deliberada: el término de suavidad `w_ds·|Δsteering|`** (reward v1.2) se
+computa sobre el `Δsteering` **crudo** (pre-cage) y con peso subido
+(`w_ds = 0.10 → 0.20`), para que la política pague su propio jerk en lugar
+de delegarlo gratis en C-06 (el rate-limiter). El cableado puro y libre de
+ROS reside en `cobraflex_rl/cage_bridge.py`.
 
-La invocación en proceso —en lugar del intercambio asíncrono
-`/raw_action`→`/safe_action` por tópicos— se elige por determinismo (bajo
-la semilla fija de §7.2.7) y porque produce un comportamiento de cage
-idéntico al de despliegue: misma clase y misma configuración (ver D-34).
-El cableado puro y libre de ROS reside en `cobraflex_rl/cage_bridge.py`.
-
-Esta elección alinea entrenamiento con despliegue: la policy aprende
-bajo la misma restricción que encontrará en evaluación y en físico. Las
-intervenciones de la cage son parte de la dinámica del entorno desde la
-perspectiva del agente; no se penalizan explícitamente en la recompensa
-(la penalización está implícita en el peor estado que la cage corregida
-no puede evitar completamente).
-
-Este cableado es la tarea TS-01 de F3, ya implementada. La cage puede
-desactivarse (`cage.enabled: false` en `train_ppo.yaml`) para reproducir
-el bucle sin cage usado en la depuración preliminar del pipeline.
+**Fuente del estado de la cage (track 'E', D-43).** Lo que cambia en el
+track de cámara es la **fuente del estado de la cage**: el supervisor de
+percepción (`cage_perception.CagePerceptionSupervisor`) compone el
+**estimador CV determinista** con el monitor de salud (SR-013) y el chequeo
+de plausibilidad/consistencia temporal (SR-014); cuando el estimado es
+aceptable produce el `State` de la cage, y cuando la percepción se pierde o
+es sospechosa levanta el **Trigger 8 de C-05** (parada controlada en lazo
+abierto). Ni ground truth ni la CNN de la política: así cage y política
+generalizan a cualquier vía con líneas visibles. El ground truth queda
+confinado a recompensa, terminación y métricas. Presupuestos al ciclo de
+10 Hz: `staleness_max_s = 0.5 s`, persistencia del supervisor 4 ciclos;
+en cada reset el supervisor se ceba (*priming*) sobre la vista de spawn.
+En el **baseline (F)** la cage lee el estado del tracker ground-truth
+directamente. Tarea TS-01 de F3, implementada.
 
 ### 7.2.6 Hiperparámetros PPO
 
-Los hiperparámetros de partida (versión 1.0) siguen los valores
-recomendados de Stable-Baselines3 (SB3 2.8.0) para entornos de control
-continuo, con ajuste del horizonte `n_steps` al periodo del episodio. La
-tabla lista la configuración **efectiva completa**: las seis primeras filas
-se fijan explícitamente (`train_ppo.yaml` → `PPO(...)` en `train_ppo.py`);
-el resto son los valores por defecto de SB3 2.8.0, **no sobreescritos**, y se
-documentan aquí para reproducibilidad.
+La tabla lista la configuración **efectiva completa**. La columna E-main es
+la del run de cámara `ppo_newcam_complex_b_2024_1M`; la baseline F es la del
+run de estado `ppo_train_2024_200k`.
 
-| Parámetro | Valor | Fijado en | Fuente / nota |
+| Parámetro | E-main (cámara) | Baseline (F, estado) | Fuente / nota |
 | --- | --- | --- | --- |
-| `total_timesteps` | 200 000 | `train_ppo.yaml` | `[provisional, M-P7]` |
-| `learning_rate` | 3×10⁻⁴ | `train_ppo.yaml` | = SB3 default |
-| `gamma` | 0.99 | `train_ppo.yaml` | = SB3 default |
-| `n_steps` | 1 024 | `train_ppo.yaml` | ≈ 2 episodios de 500 pasos (SB3 default 2 048) |
-| `batch_size` | 64 | `train_ppo.yaml` | = SB3 default |
-| `device` | cpu | `train_ppo.yaml` | Máquina de desarrollo sin GPU |
-| `n_epochs` | 10 | SB3 default | épocas de optimización por rollout |
-| `gae_lambda` | 0.95 | SB3 default | trade-off sesgo-varianza en GAE |
-| `clip_range` | 0.2 | SB3 default | clip del ratio de probabilidad de PPO |
-| `ent_coef` | 0.0 | SB3 default | sin bonus de entropía explícito |
-| `vf_coef` | 0.5 | SB3 default | peso de la *value loss* en la pérdida total |
-| `max_grad_norm` | 0.5 | SB3 default | clipping de la norma del gradiente |
-| `normalize_advantage` | True | SB3 default | normaliza ventajas por minibatch |
+| `policy` | **CnnPolicy** | MlpPolicy | red de la política |
+| `total_timesteps` | 1 000 000 (plan; parado ≈662k) | 200 000 | `[provisional, M-P7]` |
+| `learning_rate` | 3×10⁻⁴, **anneal lineal** | 3×10⁻⁴ constante | E: `lr_schedule: linear` |
+| `target_kl` | **0.5** | — (sin freno) | E: freno de región de confianza (§7.4.1) |
+| `normalize_reward` | **True** (`VecNormalize`) | False | E: estabiliza el crítico (§7.4.1) |
+| `clip_range_vf` | **0.2** | null | E: clip del valor sobre recompensa normalizada |
+| `gamma` | 0.99 | 0.99 | = SB3 default |
+| `n_steps` | 1 024 | 1 024 | ≈ 1 episodio |
+| `batch_size` | 64 | 64 | = SB3 default |
+| `n_epochs` | 10 | 10 | SB3 default |
+| `gae_lambda` | 0.95 | 0.95 | SB3 default |
+| `clip_range` | 0.2 | 0.2 | SB3 default |
+| `ent_coef` | 0.0 | 0.0 | sin bonus de entropía |
+| `vf_coef` | 0.5 | 0.5 | SB3 default |
+| `max_grad_norm` | 0.5 | 0.5 | SB3 default |
+| `device` | auto (CUDA si existe) | cpu | E: la CNN aprovecha GPU |
 
-**Arquitectura de red.** La política es la `MlpPolicy` por defecto de SB3:
-dos capas ocultas de 64 unidades con activación `tanh` y **redes separadas**
-para policy y value (sin backbone compartido — el `net_arch` por defecto de
-SB3 2.x es `pi=[64, 64]`, `vf=[64, 64]` sobre un extractor identidad), con
-salida Gaussiana diagonal (media + `log_std` independiente del estado). No se
-modifica `policy_kwargs`: se parte de un default bien probado para minimizar
-el riesgo de configuración. La elección de `ent_coef = 0.0` implica que la
-exploración no se incentiva explícitamente vía bonus de entropía; la entropía
-de la política decae de forma natural al comprometerse con la tarea (su curva
-se diagnostica en §7.4).
-
-El presupuesto de timesteps `[provisional, M-P7]` se fijó iterativamente.
-Un primer ciclo de 50 000 timesteps produjo una policy competente pero
-**no saturada** —la recompensa seguía creciendo al agotar el presupuesto—,
-lo que motivó extenderlo. El ciclo definitivo de **200 000 timesteps**
-(seed 2024, reward v1.2, §7.4) satura con margen holgado: la literatura de
-lane-following simple con PPO sitúa la convergencia entre 20 000 y 100 000
-timesteps según la complejidad del entorno, y aquí `ep_len_mean` alcanza el
-horizonte completo de 500 pasos hacia ~75 000 timesteps, con la recompensa
-estabilizada en el último tercio del presupuesto (§7.4.1).
+Los **cuatro levers de estabilidad** del E-main (`target_kl`, anneal lineal
+de LR, `VecNormalize(norm_reward)` y `clip_range_vf`) **no** existen en el
+baseline F: se añadieron tras observar que PPO sobre CNN con randomización
+visual es marcadamente menos estable que sobre el vector de estado (§7.4.1).
+`norm_obs` se mantiene **False**, de modo que la evaluación/inferencia no se
+ve afectada y `ep_rew_mean` en la curva queda **cruda** (comparable con el
+baseline). El presupuesto de cámara es **≥ 1M pasos** (D-41 acepta la mayor
+demanda de datos del extremo a extremo); un piloto de ~20k valida el bucle
+antes de comprometer el presupuesto.
 
 ### 7.2.7 Semillas y reproducibilidad
 
-El ciclo definitivo usa `seed = 2024` y 200 000 timesteps bajo el reward v1.2
-(§7.2.3, §7.2.5); los resultados detallados de §7.4 y §7.5.1–§7.5.2
-corresponden a esta semilla (la mejor de las cinco; §7.5.3). Se han entrenado **cinco semillas** (42, 123, 2024,
-23, 666) bajo la **misma** configuración y presupuesto (**N = 5**). La comparación
-entre semillas —que revela **dos cuencas de convergencia** cualitativamente
-distintas, *constraint-respecting* (seeds 42, 2024, 23, 666) y *cage-dependent*
-(seed 123)— se reporta en §7.5.3. El análisis de sensibilidad de `w_ds` sobre esta
-distribución (4/5 vs 1/5) se completa en el
-Capítulo 8; dada la **bimodalidad** observada, se reportan las semillas
-individualmente (la mediana enmascararía las dos cuencas).
+Semilla principal **2024** en ambos tracks (precedente D-36). El **baseline
+F** está caracterizado con **N = 5** (seeds 42, 123, 2024, 23, 666), que
+revela dos cuencas de convergencia (*constraint-respecting* vs
+*cage-dependent*, §7.5.3). El **E-main de cámara** se reporta sobre la
+semilla 2024; el multi-seed N=5 de cámara queda **pendiente** (coste de
+cómputo por el límite de tiempo-real de la cámara, §7.2.8) y se ejecutará
+con la campaña GE4.
 
 ### 7.2.8 Checkpoints y registro
 
-Los checkpoints se guardan en `policy/checkpoints/` cada `n_steps`
-pasos (denominación SB3 `cobraflex_ppo_lane_<N>_steps.zip`, p.ej.
-`cobraflex_ppo_lane_50176_steps.zip`).
-El modelo final se guarda como `cobraflex_ppo_lane.zip`. Cada run de
-entrenamiento registra en `experiments/sim/training/<run_id>/`:
-
-- `learning_curve.csv` — una fila por rollout con
-  `[timestep, ep_rew_mean, ep_len_mean, explained_variance, value_loss,
-  entropy, approx_kl, clip_fraction, std, intervention_rate, emergency_rate,
-  int_rate_C-01 … int_rate_C-06]`. Las columnas de salud de PPO (`value_loss`,
-  `entropy = −entropy_loss`, `approx_kl`, `clip_fraction`, `std`) y de
-  actividad del cage (tasa de intervención global, tasa de emergencia C-05 y
-  desglose por regla, acumuladas por paso desde el `info` del entorno)
-  habilitan las figuras de dinámica de §7.4. El esquema es un **superconjunto**
-  del histórico de cuatro columnas, de modo que las herramientas que leen por
-  nombre de columna siguen operando sobre runs antiguos.
-- `action_samples.csv` — el steering crudo de la política submuestreado
-  (`[timestep, raw_steer]`, una muestra cada `action_sample_every` pasos, 10 por
-  defecto), para la figura de distribución de acciones inicio-vs-fin (§7.4).
-- `metadata.json` — los mismos campos de reproducibilidad que los runs de
-  validación (git commit, hashes YAML, seed, timestamp).
-
-La instrumentación reside en `cobraflex_rl/callbacks.py`
-(`LearningCurveCallback`, `ActionSampleCallback`) y en el módulo puro
-`cobraflex_rl/training_metrics.py` (esquema de columnas + agregación de la
-actividad del cage; tests en `policy/tests/test_training_metrics.py`).
-
-> **Nota de cobertura.** Los cinco ciclos definitivos (seeds 42, 123, 2024, 23,
-> 666; §7.5.3) se registraron con la instrumentación extendida completa —columnas
-> de actividad del cage y de salud de PPO + `action_samples.csv`—, lo que puebla
-> las Figuras 7.2–7.4 (y la 7.8 multi-semilla).
+Los checkpoints se guardan cada `n_steps` pasos (denominación SB3
+`cobraflex_ppo_lane_<N>_steps.zip`); un *peak* puede seleccionarse post-hoc
+(§7.4.1). Cada run registra en `experiments/sim/training/<run_id>/`:
+`learning_curve.csv` (una fila por rollout: `ep_rew_mean`, `ep_len_mean`,
+salud de PPO `explained_variance/value_loss/entropy/approx_kl/clip_fraction/std`
+y actividad del cage `intervention_rate/emergency_rate/int_rate_C-0x`),
+`action_samples.csv` (steering crudo submuestreado) y `metadata.json`
+(commit, hashes de cage/escenario/checkpoint, semilla, hiperparámetros, y —
+track 'E'— clase de política, bloque de observación y envolvente de DR). La
+instrumentación reside en `cobraflex_rl/callbacks.py` y el módulo puro
+`cobraflex_rl/training_metrics.py`. Restricción operativa del track 'E': con
+cámara el simulador queda ligado a tiempo real (la renderización a RTF > 1
+deja sin atender los servicios de gz), de modo que el coste de pared es
+≈ control_dt por paso (~8 FPS).
 
 ---
 
 ## 7.3 Entorno de simulación para entrenamiento RL  [BORRADOR D36]
 
-El entorno de simulación para entrenamiento es el mismo mundo Gazebo
-(`lane_following_oval.world`) utilizado en la validación F2, con tres
-adaptaciones para el ciclo RL.
+**Primario (track 'E'): el circuito `complex_b`.** El entrenamiento de
+cámara se ejecuta sobre el circuito **`complex_b`** — un trazado sinuoso
+que **se aproxima a sí mismo** (perímetro **19,22 m**, 2,2× el óvalo del
+baseline), elegido para forzar generalización geométrica de la percepción.
+La terminación fuera de vía se juzga por la distancia global a la línea
+**centro-de-vía** vs `road_width/2` (robusta donde el circuito se aproxima
+a sí mismo y el `ey` estático colapsa; `--road-centerline-config`, §3.5 de
+`docs/11`).
 
-Primera, **control del reloj de simulación.** En la validación F2 el
-reloj de Gazebo avanza en tiempo real (RTF ≈ 1). En el entrenamiento RL
-el simulador se ejecuta *headless* (sin GUI) y con el reloj sin pausa,
-lo que permite un RTF superior a 1 y acelera el muestreo de timesteps.
-El RTF efectivo depende del hardware; en la máquina de desarrollo se
-estima en 2–4×.
+**Baseline (track 'F'): el óvalo.** El brazo de control se entrena sobre
+`lane_following_oval.world` (perímetro 8,79 m), el mismo mundo de la
+validación F2.
 
-Segunda, **reset de episodio.** Al inicio de cada episodio, el vehículo
-se teletransporta a la posición de spawn mediante el servicio
-`/world/lane_following_oval/set_pose`. Este reset usa el mismo mecanismo
-que la detección de warp en `lane_perception_node` (§6.3.2): el nodo
-detecta el salto brusco de posición y reinicia su tracker y EMA.
-
-Tercera, **perturbación de spawn.** Para generar diversidad de estados
-de inicio, cada episodio introduce una perturbación aleatoria en el
-heading de spawn dentro de `[-0.15, +0.15] rad` y en la posición lateral
-dentro de `[-0.05, +0.05] m`. Esto evita que la policy memori\-ze una
-única trayectoria de arranque y mejora la generalización a los escenarios
-perturbados de Fase 4. Los rangos son `[provisional, M-P5]`.
+Tres adaptaciones comunes para el ciclo RL: (1) **reloj de simulación** —
+*headless* y sin pausa; en el track de estado RTF 2–4×, en el de cámara
+RTF ≈ 1 (ligado al render, §7.2.8); (2) **reset de episodio** por
+teletransporte (`/world/<world>/set_pose`), detectado como warp por el
+tracker; (3) **perturbación de spawn** — heading `[-0.15, +0.15] rad` y
+lateral `[-0.05, +0.05] m` por episodio, para diversidad de estados de
+arranque (rangos `[provisional, M-P5]`).
 
 ---
 
 ## 7.4 Resultados del entrenamiento
 
-Ciclo de entrenamiento PPO definitivo: run `ppo_train_2024_200k` (run_id
-`ppo_train_20260606T082917Z`, seed 2024, 200 000 timesteps, reward v1.2,
-~6 h a tiempo real, fps≈9) —la semilla con **mejor recompensa y mejor salud de
-PPO** (`explained_variance` 0.67) de las cinco entrenadas (§7.5.3)—, registrado
-con la instrumentación extendida de §7.2.8 (actividad del cage + salud de PPO por
-rollout + `action_samples.csv`), lo que habilita las Figuras 7.2–7.4. Datos crudos:
-`experiments/sim/training/ppo_train_2024_200k/learning_curve.csv`
-(196 iteraciones de 1 024 pasos). Este ciclo, entrenado bajo el reward
-v1.2 (§7.2.5), **supersede** a los ciclos previos —el preliminar de
-50 000 timesteps (no saturado) y un ciclo de 250 000 timesteps con reward
-v1.0 que saturaba pero dejaba a la policy apoyándose en C-06 el ~89 % de
-los pasos (§7.5.2)— y es el que se evalúa en §7.5.
+**E-main (cámara):** run `ppo_newcam_complex_b_2024_1M` (seed 2024,
+`CnnPolicy`, DR p=0,5 nivel 0,2–0,8, los cuatro levers de estabilidad de
+§7.2.6), sobre `complex_b`. Plan de 1M pasos, **parado manualmente a ≈ 662k**
+por degradación tardía (abajo). Datos crudos:
+`experiments/sim/training/ppo_newcam_complex_b_2024_1M/learning_curve.csv`
+(647 iteraciones); checkpoint-en-pico verificado
+(`cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip`, hash `44c8e912…`,
+`num_timesteps == 296960`). El **baseline F** (`ppo_train_2024_200k`, seed
+2024, estado, reward v1.2) se reporta al final de la sección como contraste.
 
-### 7.4.1 Curva de convergencia
+### 7.4.1 Curva de convergencia y estabilidad (E-main)
 
-`ep_rew_mean` crece de 20.9 (1 024 pasos) a un plateau de **536.8**
-(200 704 pasos; máximo 536.8); `ep_len_mean` de 40.8 a **500.0**, es decir
-el horizonte completo de truncación (≈ 1.14 vueltas por episodio). La
-Figura 7.1 muestra ambas curvas (raw + suavizado ventana 5). A diferencia
-del ciclo de 50 000 timesteps, esta corrida **satura**: `ep_len_mean`
-alcanza los 500 pasos hacia los ~75 000 timesteps —la policy deja de
-salirse y agota el episodio por truncación— y `ep_rew_mean` llega a ~483
-(≈ 90 % de su valor final) hacia los ~94 000. El tramo restante (94k–200k)
-es un plateau estable en el que `ep_rew_mean` asciende suavemente de ~483 a
-536.8 mientras `ep_len_mean` permanece clavado en 500 —el episodio se
-completa entero durante toda la meseta—, de modo que esa ganancia tardía de
-recompensa es refinamiento residual de la calidad de tracking, no mayor
-supervivencia.
+`ep_rew_mean` asciende de ~14 (1k) hasta un **pico de ≈ 822,9 en el paso
+≈ 297k** (`ep_len_mean` ≈ 791, cerca del tope de 1024 → episodios casi
+completos) y **mantiene la banda 700–800 hasta ~450k** (Figura 7.1, **recortada
+en 450k**: ~770 en la última iteración mostrada). El run se detuvo manualmente
+más tarde, tras un **colapso de exploración posterior a ~450k** (`ep_rew_mean`
+cae a ~113 hacia 662k al sobre-recocerse el `std`, 0,034 → 0,018); ese tramo es
+**irrelevante para la policy desplegada** —el checkpoint-en-pico (§7.4.3) es del
+paso 297k, muy anterior— y se **omite de las figuras de entrenamiento** por no
+informar sobre el agente evaluado.
 
-<img src="../figures/fig_7_1_convergence.png" alt="Figura 7.1 — Curva de convergencia del entrenamiento PPO: ep_rew_mean y ep_len_mean vs timesteps." width="560"/>
+<img src="../figures/fig_7_1_convergence_newcam.png" alt="Figura 7.1 — Curva de convergencia del entrenamiento de cámara (complex_b 297k): ep_rew_mean y ep_len_mean vs timesteps." width="560"/>
 
-*Figura 7.1 — Curva de convergencia del entrenamiento PPO (run
-`ppo_train_2024_200k`, seed 2024, 200 000 timesteps): `ep_rew_mean`
-(azul) y `ep_len_mean` (rojo) vs timesteps, datos crudos + suavizado
-(ventana 5). `ep_len_mean` satura en el horizonte de 500 pasos hacia ~75k y
-la recompensa asciende hasta su plateau de ~537 en el último tercio.
-Generada por `tools/plot_f3_figures.py`.*
+*Figura 7.1 — Convergencia del E-main de cámara (run `ppo_newcam_complex_b_2024_1M`,
+seed 2024): `ep_rew_mean` y `ep_len_mean` vs timesteps (crudo + suavizado).
+Pico ≈ 822,9 @ ≈ 297k y meseta 700–800 hasta el corte en **~450k**; el colapso
+de exploración posterior a ~450k (que motivó el paro manual) se omite por
+irrelevante para la policy desplegada — de ahí la selección de
+**checkpoint-en-pico** (297k). Generada por `tools/plot_f3_figures.py`.*
 
-### 7.4.2 Estabilidad y explained_variance
+**Decaimiento tardío = colapso de exploración, no del crítico.**
+Crucialmente, `value_loss` permanece **minúsculo** (~0,003–0,07) durante
+todo el run —incluido el tramo posterior a 450k omitido de las figuras—: no es
+la inestabilidad de la función de valor de iteraciones previas, sino contracción
+de exploración una vez el `std` anela. Por eso **el pico es la política a conservar** (checkpoint-en-pico) y
+el decaimiento posterior no contamina el checkpoint del paso 297k. Los
+cuatro levers de §7.2.6 nacen precisamente de domar la inestabilidad del
+PPO de cámara: `target_kl = 0,5` frena la actualización cuando un minibatch
+excede 1,5× ese valor (un piloto previo de `complex_b` colapsó a ~105k con
+`approx_kl` desbocado a ~2,7 sin freno de región de confianza);
+`VecNormalize(norm_reward)` + `clip_range_vf` mantienen los objetivos del
+crítico ~O(1) (sin ellos el crítico perseguía retornos ~700–800 y la curva
+hacía dientes de sierra hasta dígitos sueltos).
 
-`explained_variance` fue baja y ruidosa durante la fase de mejora rápida
-(con tramos negativos y picos aislados): el crítico persigue un retorno
-creciente, con la función de valor por detrás de una policy que mejora
-rápido. Una vez la recompensa hace plateau se estabiliza: promedia **0.53**
-en la meseta (≥75k) —el 62 % de las iteraciones de plateau queda ≥0.5 y el
-80 % ≥0.4— y cierra en **0.67** (máximo 0.81), **por encima del umbral de
-0.5** de esta sección: el crítico predice con fiabilidad el retorno de una
-policy estacionaria.
+### 7.4.2 Co-adaptación policy–cage (E-main)
 
-El criterio de convergencia (`ep_rew_mean` estable en ventana de 10
-iteraciones) **se cumple**: la recompensa lleva en plateau desde los ~94k
-timesteps, de modo que el presupuesto de 200 000 deja un amplio margen
-sobre el punto de convergencia. Esto resuelve la limitación documentada
-del ciclo preliminar de 50 000 (no saturado): la policy resultante es
-competente (§7.5) **y** saturada.
+La tasa de intervención del cage **decrece de ~87 % (inicio) a ~40 %** (en el
+corte de ~450k), **dominada por C-06** (el rate-limiter), con las reglas de seguridad
+(C-01/C-03) cayendo a ~0 (Figura 7.2). Es decir: la policy aprende a
+**respetar las constraints de seguridad** (no se acerca al borde), pero su
+steering crudo sigue siendo a tirones y C-06 lo suaviza de forma continua —
+un comportamiento benigno coherente con la evaluación (§7.5: 43 % C-06, 0
+emergencias). La entropía decae de forma gradual (Figura 7.3), sin colapso
+prematuro de la exploración hasta el sobre-recocido tardío.
 
-### 7.4.3 Observaciones sobre la convergencia
+<img src="../figures/fig_7_2_intervention_newcam.png" alt="Figura 7.2 — Actividad del cage durante el entrenamiento de cámara y desglose por regla vs timesteps." width="560"/>
 
-- **Inicio (≈0–7%):** la policy emergencia/sale en ~41 pasos de media;
-  episodios cortos con emergencias C-05 (~2 % de los pasos) y el cage
-  interviniendo en ~90 % (ver `docs/CHANGELOG.md`, entrada de bring-up F3).
-- **Subida (≈7–37%):** `ep_len_mean` trepa desde ~41 hasta los 500 pasos
-  —la policy completa fracciones crecientes de vuelta hasta recorrer el
-  episodio entero, hacia ~75k timesteps—; en paralelo `ep_rew_mean` sube de
-  ~45 a ~483.
-- **Plateau (≈37–100%):** `ep_len_mean` ≈ 500 (horizonte completo, ~1.14
-  vueltas); deja de salirse por completo (las emergencias caen a 0 hacia los
-  ~14k timesteps, confirmado en la evaluación §7.5: 0 emergencias en las 11.2
-  vueltas / 4 400 pasos). La policy se compromete con acciones concretas y la
-  recompensa asciende suavemente de ~483 a ~537.
-- **Co-adaptación policy–cage (Figura 7.2).** La tasa de intervención del
-  cage **decrece monótonamente de ~90 % a ~3.4 %** a lo largo del
-  entrenamiento (por debajo del 45 % hacia ~101k y del 9 % hacia ~171k): la
-  policy aprende progresivamente a producir acciones que **respetan las
-  constraints** (*constraint-respecting*) en lugar de depender de la
-  corrección del cage. El desglose por regla muestra que el grueso es **C-06**
-  (rate-limiter), con C-01/C-03 activas solo en el caos inicial (<20k) y luego
-  nulas. En paralelo, la **entropía** de la política cae de 1.42 a −1.52
-  (Figura 7.3) de forma gradual —exploración que se contrae al comprometerse
-  con la tarea, sin colapso prematuro—.
-- **Actuación cruda suave (reward v1.2, Figura 7.4):** a diferencia del ciclo
-  previo de reward v1.0 —cuyo steering raw era bang-bang y delegaba el
-  suavizado en C-06—, bajo reward v1.2 la actuación cruda es **nativamente
-  suave** (|Δraw| medio 0.030, cambios de signo en el 1.1 % de los pasos, 0 %
-  de saturación a ±1): el rate-limiter C-06 ya casi no interviene (§7.5.2). La
-  Figura 7.4 contrasta la distribución del steering crudo al inicio (bimodal,
-  saturando en ±1) y al final (concentrada y moderada). A nivel de
-  **trayectoria** tampoco hay oscilación apreciable (ey máx 23 mm sobre 11.2
-  vueltas en evaluación, §7.5).
+*Figura 7.2 — Actividad del cage durante el entrenamiento de cámara (run
+`ppo_newcam_complex_b_2024_1M`): tasa de intervención global + emergencia C-05
+(arriba) y desglose por regla C-01..C-06 (abajo). La intervención cae de ~87 %
+a ~40 % **dominada por C-06**; C-01/C-03 caen a ~0 (la policy se vuelve
+constraint-respecting en seguridad, pero su jerk lo absorbe el rate-limiter).
+Curva recortada en ~450k. Generada por `tools/plot_f3_figures.py`.*
 
-<img src="../figures/fig_7_2_intervention.png" alt="Figura 7.2 — Tasa de intervención del cage y desglose por regla vs timesteps." width="560"/>
+<img src="../figures/fig_7_3_ppo_health_newcam.png" alt="Figura 7.3 — Value loss y entropía de la política de cámara vs timesteps." width="560"/>
 
-*Figura 7.2 — Actividad del cage durante el entrenamiento (run
-`ppo_train_2024_200k`): tasa de intervención global (de ~90 % a ~3.4 %) +
-emergencia C-05 (arriba) y desglose por regla C-01..C-06 (abajo). La caída
-monótona es la evidencia directa de **co-adaptación policy–cage**: la policy
-aprende a no necesitar la corrección. Generada por `tools/plot_f3_figures.py`.*
-
-<img src="../figures/fig_7_3_ppo_health.png" alt="Figura 7.3 — Value loss y entropía de la política vs timesteps." width="560"/>
-
-*Figura 7.3 — Salud interna de PPO: value loss (azul) y entropía de la política
-(naranja) vs timesteps. La entropía decae de forma gradual (1.42 → −1.52), sin
-colapso prematuro de la exploración. Generada por `tools/plot_f3_figures.py`.*
-
-<img src="../figures/fig_7_4_action_distribution.png" alt="Figura 7.4 — Distribución del steering crudo, inicio vs fin del entrenamiento." width="560"/>
-
-*Figura 7.4 — Distribución de la acción (steering crudo) al inicio (azul, primer
-10 % de pasos) vs al final (rojo, último 10 %) del entrenamiento. La policy pasa
-de un comando bimodal saturado en ±1 (bang-bang) a uno concentrado y moderado:
-aprende suavidad nativa en vez de delegarla en C-06. Generada por
+*Figura 7.3 — Salud interna de PPO (cámara): value loss (azul) y entropía
+(naranja) vs timesteps (recortada en ~450k). El `value_loss` se mantiene
+minúsculo en todo el tramo mostrado (y también en el posterior omitido) —
+la estabilización por `VecNormalize`/`clip_range_vf` funciona; el decaimiento
+tardío de recompensa es exploración, no el crítico. Generada por
 `tools/plot_f3_figures.py`.*
+
+<img src="../figures/fig_7_4_action_distribution_newcam.png" alt="Figura 7.4 — Distribución del steering crudo de la política de cámara, inicio vs fin." width="560"/>
+
+*Figura 7.4 — Distribución de la acción (steering crudo) al inicio vs al
+final del entrenamiento de cámara. Generada por `tools/plot_f3_figures.py`.*
+
+### 7.4.3 La inestabilidad del PPO de cámara como hallazgo de track
+
+El contraste con la convergencia **monótona** del baseline de estado
+(§7.4.4) es un **hallazgo del track**: **PPO sobre CNN con randomización
+visual es marcadamente menos estable** que sobre el vector de 6 dimensiones.
+La evolución de la cámara lo confirma a lo largo de tres runs principales:
+la cámara frontal original (ZED) colapsó tras un pico de 288,5 @ 139k; la
+*Lane Cam* sobre óvalo (`ppo_newcam_train_2024_750k`) alcanzó 335,6 @ 425k y
+degradó; y este run de `complex_b` alcanza 822,9 @ 297k con los levers de
+estabilidad antes de degradar. En los tres, la **política de checkpoints
+periódicos (cada 1024 pasos) pasa de conveniencia a necesidad** y la
+selección por **checkpoint-en-pico** es la norma. La recompensa **no es
+comparable entre circuitos** (el integral de recompensa de `complex_b`
+—perímetro mayor, geometría más cerrada— difiere del óvalo): 822,9 no dice
+nada por sí solo sobre la calidad de conducción; eso lo establece la
+evaluación de §7.5.
+
+### 7.4.4 Línea base (track 'F', vector de estado) — contraste
+
+El run de estado `ppo_train_2024_200k` (seed 2024, 200k, reward v1.2)
+**converge de forma monótona**: `ep_rew_mean` 20,9 → **536,8**,
+`ep_len_mean` → **500** (horizonte completo hacia ~75k), `explained_variance`
+cierra en **0,67**. La intervención del cage cae de ~90 % a ~3,4 % (caída
+mucho más profunda que la del track de cámara: el estado perfecto permite a
+la policy emitir steering **nativamente suave**, |Δraw| medio 0,030, y C-06
+queda casi inactivo). Esta convergencia limpia es exactamente el baseline
+contra el que se mide la inestabilidad del track de cámara (§7.4.3). Las
+figuras del baseline de estado se conservan como `fig_7_1_convergence.png`,
+`fig_7_2_intervention.png`, `fig_7_3_ppo_health.png` y
+`fig_7_4_action_distribution.png` (sufijo sin `_newcam`).
 
 ---
 
-## 7.5 Evaluación de la policy sobre SC-NOM-01
+## 7.5 Evaluación sobre SC-NOM-01
 
-Policy evaluada: checkpoint `cobraflex_ppo_lane` (run de entrenamiento
-`ppo_train_2024_200k`, seed 2024, 200 000 timesteps, reward v1.2). Run de
-evaluación `rl_eval_2024_200k_4k4` (run_id `rl_eval_20260606T145204Z`): un
-episodio determinista (spawn sin perturbación, §7.3), horizonte extendido a
-4 400 pasos = 440 s (≈ 11.2 vueltas continuas) para que el recuento de
-vueltas sea comparable con el PD. Comparación directa con la run del PD
-baseline `ros_run_20260523T153003Z` (§6.6.1).
+**Primario (E-main de cámara).** Policy evaluada: checkpoint del pico
+`cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip` (seed 2024). Runs de
+evaluación `rl_newcam_eval_2024_cb297k_4k4` (enforcement) y `…_mon`
+(monitoring): un episodio determinista (spawn sin perturbación, §7.3),
+horizonte 4 400 pasos = 440 s, DR desactivada (el único estresor visual
+legítimo en evaluación es el del escenario), sobre `complex_b`. La línea
+base de comparación es el **controlador clásico CV** (pure-pursuit sobre el
+mismo estimador CV determinista, misma vía y cámara): run
+`cv_ctrl_eval_newcam_4k4`.
 
-### 7.5.1 Completion rate y métricas de tracking
+### 7.5.1 Completion rate, tracking y comparación con la base CV
 
-| Métrica | PD (pre-F3) | PPO (F3) |
-| --- | --- | --- |
-| Vueltas completadas | 9.91 (845 s) | 11.21 (440 s) † |
-| Emergencias cage (C-05) | 0 | **0** |
-| Intervenciones cage (% de pasos) | 0.047% | **0%** |
-| ey medio \|ey\| (m) | 0.023 | **0.0099** |
-| epsi medio \|epsi\| (rad) | 0.076 | **0.033** |
+| Métrica (SC-NOM-01, `complex_b`) | CV pure-pursuit (enf) | **RL 297k (enf)** | RL 297k (mon) |
+| --- | --- | --- | --- |
+| Vueltas completadas | 4,85 | 4,88 | 4,89 |
+| media \|ey\| | 17,2 mm | **10,9 mm** | 12,9 mm |
+| máx \|ey\| | 57,3 mm | 48,2 mm | 46,2 mm |
+| media \|epsi\| | 0,025 rad | 0,028 rad | 0,030 rad |
+| Emergencias C-05 | 0 | **0** | 0 |
+| Intervención cage | 0 % | 43,5 % (solo C-06) | 45,7 % (solo C-06) |
 
-† Las duraciones difieren (PPO 440 s, PD 845 s), así que el recuento bruto
-de vueltas **no es 1:1**. Lo robusto y comparable: **ambos completaron su
-corrida sin un solo fallo** (0 emergencias), y la PPO **sostuvo > 11
-vueltas continuas** sin que el cage tuviera que activar la parada de
-emergencia. Las métricas por-paso (tasa de intervención, error de
-tracking) son independientes de la duración y son el resultado
-discriminante. Referencia:
-`experiments/sim/runs/rl_eval_2024_200k_4k4/cage_status.csv`.
+Evidencia: `experiments/sim/runs/rl_newcam_eval_2024_cb297k_4k4{,_mon}/` y la
+comparación consolidada `experiments/sim/runs/baseline_cv_vs_rl_nominal.json`.
 
-**Lectura.** La PPO **iguala** al PD en seguridad (0 emergencias en 11.2
-vueltas), lo **supera en precisión de tracking** —el error lateral medio
-cae de 23 mm a 9.9 mm (×2.3; máximo 23 mm, dentro del medio-carril de
-122 mm y muy por debajo del `d_max = 160 mm` del cage) y el error de
-heading medio de 4.3° a 1.9° (×2.3)— y, a diferencia del ciclo previo de
-reward v1.0, lo hace **sin una sola intervención del cage** en todo el
-episodio (0 % de los pasos, §7.5.2): la policy se mantiene por sí misma
-dentro de la envolvente de seguridad en el escenario nominal.
+**Lectura.** **El agente RL de cámara bate al baseline CV en precisión de
+tracking** — 10,9 vs 17,2 mm de media \|ey\| (~37 % más ajustado), a la misma
+distancia (~94 m) y con **0 emergencias** en ambos. Esto **invierte el
+hallazgo del óvalo** (donde el CV clásico era el más preciso): sobre la
+geometría sinuosa y auto-aproximante de `complex_b` el punto de mira del
+pure-pursuit se degrada mientras la CNN sostiene la línea — la primera
+evidencia nominal de que el agente aprendido justifica su coste frente al
+baseline clásico. **Las vueltas no son comparables entre circuitos**
+(`complex_b` 19,22 m vs óvalo 8,79 m): la fila CV de la misma pista es la
+única comparación de vueltas justa, y la distancia recorrida (~94 m) iguala
+a las 11,16 vueltas del eval sobre óvalo (~98 m).
 
-<img src="../figures/fig_7_5_trajectory.png" alt="Figura 7.5 — Trayectoria de la policy PPO sobre el óvalo." width="460"/>
+<img src="../figures/fig_7_5_trajectory_newcam.png" alt="Figura 7.5 — Trayectoria de la policy de cámara sobre complex_b." width="460"/>
 
-*Figura 7.5 — Trayectoria de la policy PPO sobre el óvalo (~2 vueltas, run
-`rl_eval_2024_200k_4k4`), ciñéndose a la línea central del carril. A
-escala espacial la diferencia de tracking con el PD (mm) no es resoluble;
-ver Figura 7.6. Generada por `tools/plot_f3_figures.py`.*
+*Figura 7.5 — Trayectoria del E-main de cámara sobre `complex_b` (run
+`rl_newcam_eval_2024_cb297k_4k4`), ciñéndose a la línea central del carril en
+el trazado sinuoso. Generada por `tools/plot_f3_figures.py`.*
 
-<img src="../figures/fig_7_6_tracking_error.png" alt="Figura 7.6 — Error lateral RL vs PD a lo largo de la corrida." width="600"/>
+<img src="../figures/fig_7_6_tracking_error_newcam.png" alt="Figura 7.6 — Error lateral RL de cámara vs CV baseline sobre complex_b." width="600"/>
 
-*Figura 7.6 — Error lateral \|ey\| a lo largo de la corrida: PPO (azul) vs
-PD baseline (rojo), warm-up de 0.3 vueltas recortado. La PPO se mantiene en
-una banda estrecha (~0–23 mm) frente a la oscilación del PD en curva (hasta
-~65 mm), ambos muy por debajo del medio-carril (122 mm). Generada por
-`tools/plot_f3_figures.py`.*
+*Figura 7.6 — Error lateral \|ey\| sobre `complex_b`: RL de cámara (azul) vs
+CV pure-pursuit baseline (rojo), warm-up de 0.3 vueltas recortado. El eje x es la
+distancia **acumulada** (vueltas), no la `s` por-vuelta. El RL se mantiene en
+banda más estrecha que el CV, ambos muy por debajo del medio-carril (122 mm).
+Generada por `tools/plot_f3_figures.py --cv-run`.*
 
-### 7.5.2 Comportamiento cualitativo
+### 7.5.2 Comportamiento cualitativo: la cage queda latente
 
 Tres observaciones del log por-paso (`cage_status.csv`):
 
-1. **Tracking más fino que el PD.** La PPO centra el vehículo con ~2.3× menos
-   error lateral (9.9 mm vs 23 mm) y ~2.3× menos error de heading (1.9° vs 4.3°),
-   sostenido a lo largo de las 11.2 vueltas. Visualmente (Figura 7.5) la
-   trayectoria RL se ciñe a la línea central con menos desviación en curva que el
-   PD; la diferencia de banda es nítida en la Figura 7.6.
-2. **Actuación cruda nativamente suave (reward v1.2).** A diferencia del ciclo
-   previo de reward v1.0 —cuyo steering *crudo* era bang-bang (cambio de signo en
-   ~46% de los pasos, saturación frecuente a ±1, \|Δraw\| medio ≈ 0.54, > 3× el
-   límite `delta_max = 0.15` de C-06) y delegaba el suavizado en el rate-limiter—,
-   la policy entrenada bajo reward v1.2 emite un comando crudo **suave y
-   moderado**: magnitud media \|raw\| = **0.26** (máx 0.56, **sin saturar**),
-   cambios de signo en solo el **1.1%** de los pasos y \|Δraw\| medio = **0.030**,
-   holgadamente **por debajo** del límite de tasa de C-06. La policy aprendió a
-   girar de forma continua en lugar de explotar el rate-limiter como actuador de
-   tasa. Este es el efecto buscado del término de suavidad sobre el `Δsteering`
-   **crudo** (`w_ds = 0.20`, §7.2.5): al pagar su propio jerk, la política
-   internaliza la suavidad en vez de delegarla en C-06.
-3. **El cage no interviene en nominal (salvaguarda latente).** Como
-   consecuencia directa de (2), el steering crudo **nunca** viola
-   ninguna regla: la acción segura coincide con la cruda en **los 4 400
-   pasos** (\|raw − safe\| = 0 en todo el episodio), de modo que la tasa de
-   intervención del cage es **0 %** —**ninguna activación** de ninguna regla
-   C-01..C-06— frente al **89.0%** (todo C-06) del ciclo previo de reward v1.0
-   y al 0.047% del PD. En
-   el escenario nominal la policy se mantiene por sí misma dentro de la envolvente
-   de seguridad y el cage opera como **salvaguarda latente**: presente y armado,
-   pero sin coste de actuación. El valor protector del cage no se ejerce en
-   crucero nominal, sino frente a las perturbaciones y casos límite del Capítulo 8
-   (SC-EDGE, SC-PERT), donde la policy sí puede acercarse a los bordes del carril.
-   Esto **completa** el diagnóstico del ciclo de reward v1.0: aquél mostró que un
-   término de suavidad post-cage era inocuo (la policy llevaba C-06 a su tope
-   gratis); reformularlo sobre el `Δsteering` crudo produjo una policy que ya no
-   necesita el rate-limiter en nominal.
+1. **Tracking más fino que la base clásica.** El RL centra el vehículo con
+   ~37 % menos error lateral que el CV (10,9 vs 17,2 mm), sostenido a lo
+   largo de la corrida.
+2. **La cage queda latente in-ODD en ambos modos.** **0 emergencias** y
+   **ninguna** activación de C-01/C-02/C-03/C-05 — **solo C-06** (el
+   rate-limiter) dispara (43–46 %). Enforcement y monitoring dan vueltas y
+   \|ey\| casi idénticos (4,88 vs 4,89; 10,9 vs 12,9 mm): la policy se mantiene
+   por sí misma dentro de la envolvente de seguridad y la cage no actúa sobre
+   seguridad. Es la **firma del track 'F'** recuperada — y, a diferencia de
+   checkpoints de cámara previos (la parada de curva SR-014/Trigger-8 del
+   139k), aquí ocurre sobre un circuito **más difícil**.
+3. **El coste es la suavidad, no la seguridad.** El RL dispara C-06 en
+   43–46 % de los pasos (la CNN comanda steering a tirones que el limitador
+   suaviza, intervención **benigna**) frente al 0 % del CV. La actuación es
+   **más ajustada pero más a tirones** que la del CV; C-06 absorbe el jerk
+   sin dañar la precisión (el \|ey\| de enforcement es incluso ligeramente
+   mejor que el de monitoring).
 
-   > **Refinamiento confirmado (reward v1.2).** El término de suavidad reformulado
-   > para penalizar el `Δsteering` **crudo** (pre-cage), con peso subido
-   > `w_ds = 0.10 → 0.20` (§7.2.5, `docs/10_reward_function.md`), se diseñó para
-   > que la política pagara su propio bang-bang en lugar de delegarlo gratis en
-   > C-06. Su efecto, que en el ciclo de reward v1.0 quedaba **pendiente de
-   > confirmar en un nuevo ciclo de entrenamiento**, queda **verificado** por esta
-   > evaluación: bajo reward v1.2 la actuación cruda es nativamente suave (punto 2)
-   > y el cage queda efectivamente latente en el escenario nominal (punto 3, **cero
-   > activaciones del cage** en 4 400 pasos). Los pesos siguen
-   > `[provisional, M-P4]` a la espera del análisis de sensibilidad del Capítulo 8.
+> **Alcance: eval nominal, no campaña GE4.** Esta evaluación establece la
+> **competencia in-ODD** del E-main de cámara. El head-to-head bajo
+> perturbación/degradación (la campaña GE4 de 24 escenarios) **no** se ha
+> re-ejecutado sobre el 297k: el §8.9 del Cap. 8 y `docs/07` reportan todavía
+> la campaña GE4 sobre el checkpoint **139k** (política superada). La
+> propiedad de **seguridad** de la cage (0 salidas de carril → parada segura)
+> es independiente de la policy; la **magnitud del coste de disponibilidad**
+> bajo perturbación queda por medir sobre 297k — el paso de cierre que
+> formalmente hará que el track 'E' supere al 'F'.
 
-<img src="../figures/fig_7_7_gazebo_capture.png" alt="Figura 7.7 — Captura de la evaluación en Gazebo: la policy PPO conduciendo el óvalo bajo el cage." width="640"/>
+<img src="../figures/fig_7_7_gazebo_capture.png" alt="Figura 7.7 — Captura de la evaluación en Gazebo bajo el cage." width="640"/>
 
-*Figura 7.7 — Captura representativa del lane-following de la policy PPO bajo el
-cage (corrida de evaluación de un ciclo previo; visualmente equivalente al run
-definitivo de §7.5, ya que la vista de Gazebo/RViz no depende del checkpoint):
-vista de Gazebo (óvalo + vehículo 1:14, izquierda) y RViz (modelo del robot y
-frames TF, derecha).*
+*Figura 7.7 — Captura representativa del lane-following bajo el cage: vista de
+Gazebo (vehículo 1:14) y RViz (modelo del robot y frames TF). La vista no
+depende del checkpoint.*
 
-> **Material suplementario (vídeo).** Las grabaciones completas de las corridas
-> están en `manuscript/media/` (no versionadas por tamaño; ver `.gitignore`):
-> `training_1_lap.mp4` (una vuelta, política entrenada) y `eval_11_lap.mp4` (una
-> corrida de evaluación de ~11.5 vueltas de un ciclo previo, representativa de la
-> conducta de §7.5).
+### 7.5.3 Variabilidad entre semillas (baseline F) y estado del multi-seed E
 
-### 7.5.3 Variabilidad entre semillas: *constraint-respecting* vs *cage-dependent*
+El multi-seed de cámara está **pendiente** (se ejecutará con la campaña
+GE4). La caracterización multi-seed disponible es la del **baseline de
+estado**, y se conserva porque establece el fenómeno que el track 'E'
+heredará: entrenar **cinco semillas** (42, 123, 2024, 23, 666) del baseline
+F revela **dos cuencas de convergencia** — **cuatro** convergen a
+*constraint-respecting* y **una** (123) a *cage-dependent*.
 
-La evaluación de §7.5.1–§7.5.2 corresponde a la seed 2024. Entrenar **cuatro semillas
-adicionales** (42, 123, 23 y 666) bajo la **misma** configuración, presupuesto y
-reward revela que la semilla no produce una variación cuantitativa menor, sino
-**dos cuencas de convergencia cualitativamente distintas** —el fenómeno
-*constraint-respecting* vs *cage-dependent* anticipado en el diseño del entorno—:
-**cuatro de las cinco semillas (42, 2024, 23, 666) convergen a *constraint-respecting*
-y una (123) a *cage-dependent***. La Figura 7.8 contrasta sus dinámicas; la tabla
-resume el resultado.
-
-| Métrica | Seed 42 | Seed 2024 | Seed 23 | Seed 666 | Seed 123 |
+| Métrica (baseline F, estado) | Seed 42 | Seed 2024 | Seed 23 | Seed 666 | Seed 123 |
 | --- | --- | --- | --- | --- | --- |
 | **Cuenca** | c-respecting | c-respecting | c-respecting | c-respecting | **cage-dependent** |
-| `ep_rew_mean` (plateau) | 530.2 | 537.0 | 535.0 | 529.3 | 443.1 |
-| Tasa de intervención (fin de training) | 5 % | 3 % | 5 % | 11 % | **74 %** |
-| **Intervención del cage en eval** | 0.02 % | 0 % | **0 %** | 1.55 % | **58.8 %** † |
-| `mean \|ey\|` en eval | 11.6 mm | 9.9 mm | **6.7 mm** | 8.0 mm | **90.7 mm** |
-| `max \|ey\|` en eval | 27 mm | 23 mm | 22 mm | 26 mm | **145 mm** |
+| Tasa de intervención (eval) | 0,02 % | 0 % | 0 % | 1,55 % | **58,8 %** |
+| `mean \|ey\|` (eval) | 11,6 mm | 9,9 mm | 6,7 mm | 8,0 mm | **90,7 mm** |
+| `max \|ey\|` (eval) | 27 mm | 23 mm | 22 mm | 26 mm | **145 mm** |
 | Emergencias C-05 | 0 | 0 | 0 | 0 | 0 |
-| Vueltas completadas | 11.0 | 11.2 | 11.1 | 11.1 | 11.9 |
 
-† Seed 123 en eval, desglose por regla: **C-06 58 %, C-01 6 %, C-03 3 %** — el cage
-no solo suaviza (C-06) sino que **previene salida de carril** (C-01/C-03) en tiempo real.
+<img src="../figures/fig_7_8_multiseed.png" alt="Figura 7.8 — Comparación multi-semilla del baseline de estado." width="560"/>
 
-<img src="../figures/fig_7_8_multiseed.png" alt="Figura 7.8 — Comparación multi-semilla: reward e intervención del cage vs timesteps." width="560"/>
-
-*Figura 7.8 — Comparación multi-semilla (seeds 42, 123, 2024, 23, 666): `ep_rew_mean`
-(arriba) y tasa de intervención del cage (abajo) vs timesteps. Las cinco arrancan
-en ~90 % de intervención (policy aleatoria); **las seeds 42, 2024, 23 y 666 se
-agrupan decayendo a ~5–12 %** (cuenca *constraint-respecting*) mientras la **seed 123
-se mantiene en ~75 %** (única en la cuenca *cage-dependent*). Generada por
+*Figura 7.8 — Multi-semilla del **baseline de estado** (seeds 42, 123, 2024,
+23, 666): `ep_rew_mean` (arriba) e intervención del cage (abajo) vs timesteps.
+Las seeds 42/2024/23/666 decaen a ~5–12 % (*constraint-respecting*) mientras
+la 123 se mantiene en ~75 % (*cage-dependent*). El multi-seed de cámara
+replicará este contraste con la campaña GE4. Generada por
 `tools/plot_f3_figures.py --seed-runs`.*
 
-**Las dos cuencas.** Ambas policies completan la corrida **sin una sola
-emergencia** —la seguridad la garantiza el cage con independencia de la calidad de
-la policy—, pero por caminos opuestos:
-
-- **Seeds 42, 2024, 23 y 666 (*constraint-respecting*):** el cage queda **latente**
-  (0.02 %, 0 %, 0 % y 1.55 % en eval) y **solo dispara C-06** (suavizado) —nunca las
-  reglas de salida de carril C-01/C-03—; la policy aprendió a girar de forma
-  nativamente suave y se ciñe a la línea central (11.6, 9.9, 6.7 y 8.0 mm). Sin cage
-  seguirían funcionando razonablemente en nominal.
-- **Seed 123 (*cage-dependent*):** el cage interviene en el **58.8 %** de los
-  pasos, y **no es solo suavizado**: **C-01 (borde de carril) y C-03 (TTLC)
-  disparan activamente** (6 % y 3 % de los pasos) porque la policy conduce con un
-  error lateral medio de 90.7 mm y alcanza picos de **145 mm —cruza el medio-carril
-  (122 mm)—**, y el cage la frena antes del `d_max` (160 mm). Es decir, **el cage
-  previene salidas de carril en tiempo real**: sin él, esta policy abandonaría el
-  carril.
-
-**Por qué importa para la tesis.** La seed 123 es la evidencia de utilidad del
-cage que el escenario nominal de las semillas *constraint-respecting* (como la
-2024 evaluada en §7.5) no podía dar: una policy *peor* que el
-cage mantiene **segura y dentro de la vía** pese a un tracking pobre y un 58 % de
-intervención. El valor del cage **depende de la policy**, y cumple su función en
-ambos extremos —latente cuando la policy basta, protector activo cuando no—. Es la
-historia de co-adaptación completa.
-
-**Sensibilidad del peso de suavidad (`w_ds`).** Ambas cuencas existen porque el
-cage hace *viable* el steering bang-bang (C-06 lo limpia cada paso); la única
-fuerza que empuja hacia *constraint-respecting* es el término de suavidad
-`w_ds·|Δsteer|` (`w_ds = 0.20`, §7.2.5). Ese valor bastó para **cuatro de las cinco
-semillas (42, 2024, 23, 666)** pero **no para la 123**: el peso produce
-comportamiento *constraint-respecting* en la mayoría de los casos (**4/5 = 80 %**),
-pero **no de forma fiable** entre semillas —la 123 es el caso atípico—. Es
-exactamente el motivo del tag `[provisional, M-P4]`; el análisis de sensibilidad del
-Capítulo 8 determinará un `w_ds` que reduzca la varianza entre cuencas, o documentará
-dicha varianza como resultado. Con **N = 5** la distribución observada queda fijada
-en **4/5 *constraint-respecting* vs 1/5 *cage-dependent***.
+**Por qué importa.** La seed 123 es la evidencia de utilidad del cage que el
+escenario nominal de las semillas *constraint-respecting* no puede dar: una
+policy *peor* que el cage mantiene **segura y dentro de la vía** (C-01/C-03
+disparan activamente; sin cage abandonaría el carril). El valor del cage
+**depende de la policy** — latente cuando la policy basta (el E-main de
+cámara en nominal, §7.5.2), protector activo cuando no. La fuerza que empuja
+hacia *constraint-respecting* es el término de suavidad `w_ds` (§7.2.5),
+suficiente para 4/5 semillas del baseline pero no para la 123: motivo del tag
+`[provisional, M-P4]`; el análisis de sensibilidad es del Capítulo 8.
 
 ---
 
 ## 7.6 Síntesis y transición al Capítulo 8  [BORRADOR D36]
 
 Este capítulo ha producido la Training Specification (artefacto A1 del
-V-Model) y, una vez completado con los datos de §7.4 y §7.5, la
-primera evidencia empírica de que una policy PPO puede aprender
-lane-following en el mismo entorno donde el PD baseline fue validado.
+V-Model) y la primera evidencia empírica de que una policy PPO **de cámara
+end-to-end** puede aprender lane-following: el E-main `complex_b` 297k
+conduce con ~11 mm de error lateral, **bate al baseline de control clásico
+(CV)** y mantiene la cage **latente** en nominal, sobre un circuito sinuoso.
+El brazo de control de estado (track 'F') queda como baseline plenamente
+caracterizado que aísla el coste de la percepción.
 
-La Training Specification es un documento de diseño, no de evaluación.
-El hecho de que la policy converja en entrenamiento no valida que cumpla
-los Safety Requirements: esa validación es el objeto del Capítulo 8.
-Lo que este capítulo establece es que existe una policy candidata —
-entrenada bajo condiciones documentadas y reproducibles — que el
-Capítulo 8 puede evaluar sistemáticamente.
-
-El Capítulo 8 introduce la *scenario library* como instrumento de
-evaluación: en vez de una única corrida nominal, la policy se evalúa
-sobre todos los escenarios de la library (SC-NOM-01..03, SC-EDGE-01..05,
-SC-PERT-01..03), con las métricas M-S1..M-S4, M-P1..M-P7, M-I1..M-I5,
-M-C1..M-C2 definidas en `docs/06_metrics_catalogue.md`. La comparación
-sistemática entre RL+cage y PD+cage es el resultado experimental central
-de la tesis.
-
----
-
-## 7.7 Track 'E' — Especificación de entrenamiento end-to-end con cámara  [E2]
-
-Esta sección extiende la Training Specification al track paralelo 'E'
-(D-41): la política pasa de consumir el vector de estado de 6 dimensiones
-(§7.2.1) a consumir directamente la **imagen de la cámara frontal**. Todo lo
-que no se redefine aquí — acción (§7.2.2), recompensa (§7.2.3), terminación
-(§7.2.4), hiperparámetros PPO (§7.2.6), checkpoints y registro (§7.2.8) —
-**se hereda sin cambios**: ése es el delta mínimo que D-41/D-43 persiguen.
-
-### 7.7.1 Observación: imagen de cámara y pipeline compartido
-
-La observación es la imagen de la cámara frontal reescalada a **84×84
-píxeles en escala de grises** (uint8), con **frame stack k=4** aplicado por
-el entrenador (`VecFrameStack`); ambos valores quedan fijados en E2 dentro
-de la envolvente que `docs/09` §10 dejó abierta (84×84, gris o RGB, k=2–4):
-
-- **Escala de grises:** la señal de carril es luminancia (líneas blancas
-  sobre asfalto); el color triplica la entrada sin información de carril y
-  invita a depender exactamente del eje de apariencia que la *domain
-  randomisation* de H-10 varía.
-- **84×84:** entrada nativa del extractor NatureCNN de SB3; a esa
-  resolución las líneas (~10 mm) conservan ≥1 píxel en el campo cercano.
-- **k=4:** la observación de cámara no incluye el canal `prev_steer` del
-  track F, así que las pistas de velocidad angular deben salir íntegramente
-  del stack; se toma el extremo superior de la envolvente.
-
-La cámara fuente es el sensor `ZEDm Cam` de Gazebo (640×480 RGB, 20 Hz,
-HFOV 1.396 rad), **inclinada 0,25 rad hacia abajo** (E2: montada plana, la
-curva de R = 0,80 m salía del campo visual en la entrada de curva; evidencia
-en `experiments/sim/e_cam_visibility/`). Cada fotograma nativo atraviesa el
-**pipeline compartido** (`camera_pipeline.CameraPipeline`): un único punto
-de degradación (estresor de escenario o *domain randomisation*) **antes de
-ambos consumidores** — la CNN de la política y el estimador CV de la cage —
-que es exactamente la causa común que D-43 acepta y documenta.
-
-### 7.7.2 Arquitectura de la política
-
-`CnnPolicy` de SB3 (extractor NatureCNN: conv 32@8×8/4 → 64@4×4/2 →
-64@3×3/1 → FC 512, con normalización de imagen interna), sobre la
-observación apilada (84×84×4 tras `VecFrameStack` + `VecTransposeImage`).
-Los escalares de *curvature preview* (`kappa_near/far`, ED-7) **no** están
-en la observación: la política debe inferir la geometría de la curva desde
-la imagen — el problema de percepción más difícil que D-41 asume, con su
-coste presupuestado en datos (Shalev-Shwartz & Shashua 2016).
-
-### 7.7.3 Domain randomisation visual (H-10 / SR-012)
-
-Mitigación de H-10 en entrenamiento: por episodio se sortea una degradación
-del trío H-10 — `glare_overexposure`, `low_light_underexposure`,
-`motion_blur` — con probabilidad `p_degrade = 0.5` e intensidad uniforme en
-`[0.2, 0.8]`, reproducible vía la semilla del entorno
-(`domain_randomization` en `train_ppo_camera.yaml`). Los modos `occlusion`
-y `false_lane` (SC-PERT-07/08) quedan **excluidos del entrenamiento por
-diseño**: entrenar sobre ellos enseñaría a la política a ignorar
-exactamente las señales cuya pérdida debe disparar la parada de SR-013 /
-SR-014.
-
-### 7.7.4 La cage durante el entrenamiento del track 'E'
-
-D-34 se mantiene: la cage opera **en enforcement** dentro del bucle de
-entrenamiento, con la misma `cage.yaml` que despliegue (v0.6.1). Lo que
-cambia es la **fuente de su estado** (D-43): el supervisor de percepción
-(`cage_perception.CagePerceptionSupervisor`) compone el estimador CV
-determinista con el monitor de salud (SR-013) y el chequeo de
-plausibilidad/consistencia temporal (SR-014); cuando el estimado es
-aceptable produce el `State` de la cage, y cuando la percepción se pierde o
-es sospechosa levanta el **Trigger 8 de C-05** (parada controlada en lazo
-abierto). El ground truth queda confinado a recompensa, terminación y
-métricas. Los presupuestos temporales están alineados al ciclo de control
-de 10 Hz (cage 0.6.1): `staleness_max_s = n_missing_max_cycles × control_dt
-= 0.5 s`, persistencia del supervisor 4 ciclos. En el reset de cada
-episodio el supervisor se ceba (*priming*) sobre la vista de spawn asentada
-antes del primer ciclo de la cage.
-
-### 7.7.5 Hiperparámetros, presupuesto y semillas
-
-Idénticos a §7.2.6 salvo: `policy: CnnPolicy`, `device: auto` (CUDA si
-existe). Presupuesto principal **≥200k pasos** — D-41 acepta explícitamente
-la mayor demanda de datos del extremo a extremo; el piloto de ~20k pasos
-valida el bucle (obs fluyendo, cage interviniendo, recompensa sana, FPS
-viable) antes de comprometer el presupuesto. Semilla principal **2024**
-(precedente D-36: la semilla principal del track F); multi-seed N=5 si el
-cómputo lo permite, con la misma batería {42, 123, 2024, 23, 666} para que
-el contraste *constraint-respecting* vs *cage-dependent* de §7.5.3 sea
-comparable entre tracks.
-
-### 7.7.6 Registro y reproducibilidad
-
-Igual que §7.2.8 (curva de aprendizaje, muestras de acción, checkpoints,
-`metadata.json` con commit, hashes de cage/escenario/checkpoint y semilla),
-más la procedencia del track 'E': clase de política, bloque de observación
-y envolvente de DR quedan en `metadata.json`. La configuración fuente es
-`src/cobraflex_rl/config/train_ppo_camera.yaml`. Restricción operativa
-registrada: con cámara el simulador queda ligado a tiempo real (la
-renderización a RTF > 1 deja sin atender los servicios de gz — medido en
-E2), de modo que el coste de pared es ≈ control_dt por paso (~8 FPS).
-
-### 7.7.7 Resultados del piloto y del run principal
-
-**Piloto** (`ppo_cam_pilot_2024_20k`, semilla 2024, 20 480 pasos, DR activa,
-cage 0.6.1 en *enforcement*): el lazo de entrenamiento con cámara queda
-demostrado. `ep_rew_mean` sube de 17,9 (1k) a 137,7 (20k) y `ep_len_mean`
-de 31,7 a 160,7 pasos, con `explained_variance` positiva durante todo el
-run (pico 0,79). La tasa de emergencias cae de 3,1 % a ~0,3 %; las
-intervenciones quedan dominadas por C-06 (limitador de tasa, ~89 % — el
-comportamiento esperado de una CNN temprana con acciones bruscas),
-mientras C-01/C-03/C-05 son casi nulas al final del piloto. El throughput
-confirmó la restricción de §7.7.6: ~8 FPS a RTF 1.
-
-Criterio de continuación del piloto (lazo cerrado con observación de
-cámara, intervenciones de la cage registradas, recompensa creciente, FPS
-viable): **cumplido** → se lanzó el run principal.
-
-**Run principal** (`ppo_cam_train_2024_200k`, 200 704 pasos, semilla 2024,
-~6,5 h a RTF 1; figura `fig_convergence.png` del run). La curva muestra
-tres regímenes: un ascenso limpio hasta `ep_rew_mean` ≈ 270 en 55k; un
-episodio de *churn* (270 → 160 en 55k–75k) del que el agente se recupera
-solo hasta el **máximo de 288,5 en el paso 139 264** (`ep_len_mean` 327);
-y un **colapso tardío sin recuperación** a partir de 156k —
-`approx_kl` salta a 0,227 (>10× su valor de régimen) en la fila de inicio,
-la firma de una actualización destructiva — que deja el checkpoint final
-en `ep_rew_mean` 56 / `ep_len_mean` 76. La tasa de emergencias se mantiene
-≤1–2 % incluso durante el colapso (el agente pierde progreso, no
-seguridad). Este contraste con la convergencia monótona del run F3
-(§7.4, vector de estado) es un hallazgo del track: **PPO sobre CNN con
-randomización visual es marcadamente menos estable** que sobre el estado
-de 6 dimensiones, y la política de checkpoints periódicos (cada 1024
-pasos) pasa de conveniencia a necesidad.
-
-**Selección de checkpoint por evaluación de cierre** (precedente D-36: el
-mérito se mide, no se asume; DR desactivada en eval — el único estresor
-visual legítimo en evaluación es el del escenario). Sobre SC-NOM-01,
-enforcement, tope 4096 pasos:
-
-| Candidato | Vueltas | media \|ey\| | Intervenciones | Terminación |
-| --- | --- | --- | --- | --- |
-| **139k (pico)** — `cobraflex_ppo_cam_lane_2024_139k_peak.zip` | **4,69** | **10,1 mm** | 63 % (C-06 dominante) | 1 parada C-05 a los 181 s |
-| 200k (final) | 0,23 | 102 mm | 42 % (C-02/C-03 activas) | parada C-05 a los 9 s |
-
-Se selecciona el **checkpoint del pico (139k)** como política E-main. Su
-|ey| medio (10,1 mm) está en paridad con el eval F3 de estado perfecto
-(9,9 mm, `rl_eval_2024_200k_4k4`); la diferencia con F3 no es de precisión
-sino de **disponibilidad de percepción**: la única parada en 181 s la
-disparó el Trigger 8 (SR-014) cuando el estimador CV produjo picos de
-heading (`cv_epsi` ≈ −0,38 rad) en los huecos de línea discontinua del
-ápice y el supervisor agotó su presupuesto de plausibilidad — una **parada
-controlada correcta** (excursión máxima 37 mm, sin contacto con el borde),
-no una pérdida de control. La tasa de esas paradas por percepción es
-**estocástica entre repeticiones**: la repetición oficial paró a las 4,7
-vueltas; una repetición headless de control (arranque frío, 11.06)
-completó 8,2 vueltas sin ninguna activación de C-05; y de dos
-repeticiones con la GUI de Gazebo activa, una paró ya en la entrada de la
-curva y otra completó su vuelta limpia (PASS). La carga de render de la
-GUI compite con el render de la cámara del servidor y **aumenta el
-riesgo** de agotar el presupuesto de percepción en el ápice, sin
-determinarlo; por política, toda evaluación con veredicto corre headless
-y la observación se hace por suscriptor pasivo (`rqt_image_view`). La
-cuantificación (20 reps por escenario, campaña E-eval) y la mitigación
-(suavizado EMA determinista del canal `epsi` del estimador) quedan para
-la campaña y trabajo futuro, respectivamente. **La campaña GE4 ya se
-ejecutó** (§8.9, Cap. 8: 1660 runs, seed 2024): confirma que la parada por
-percepción es el comportamiento operativo bajo cámara —la cage pasa de
-*latente* (F4) a *activa*— y que el sistema no incurre en brecha de carril
-en enforcement (0 contactos de borde), degradando a parada controlada.
-
-**Multi-seed (N=5).** Pendiente de decisión correr-vs-deferral: el coste
-es ~7 h/semilla a RTF 1 (restricción §7.7.6) en una máquina dedicada; si
-se difiere, aplica el formato de deferral documentado de §7.5.3.
-
-### 7.7.8 Cambio de cámara y re-entrenamiento extendido (newcam, 750k)
-
-El piloto y el run principal de §7.7.7 usaban la cámara frontal original. La
-percepción se re-orientó a una **cámara dedicada de carril** (*Lane Cam* —
-espejo IMX219-160, 640×360, HFOV 1,5708 rad ≈ 90°) montada **5 cm más abajo en
-el frente del chasis** (h ≈ 0,077 m sobre el suelo, pitch 0,25 rad), tanto para
-la policy como para el estimador CV de la cage. Con la nueva geometría la
-**distribución de observación del checkpoint 139k deja de coincidir** y la policy
-se re-entrena desde cero. El run principal con cámara nueva
-(`ppo_newcam_train_2024_750k`, semilla 2024, `CnnPolicy`, DR p=0,5 nivel 0,2–0,8,
-**750k pasos**) confirma el régimen de inestabilidad tardía ya observado en
-§7.7.7: `ep_rew_mean` asciende hasta un **pico de 335,6 en el paso ≈ 424 960**
-(`ep_len_mean` 347) —marca de agua claramente superior al pico de 288,5 del run
-`cam` de 200k— y luego **degrada sin recuperación** hasta ~256 al cierre (750k).
-La política de *checkpoint en el pico* se reafirma como necesidad, no
-conveniencia.
-
-**Selección de checkpoint** (mismo precedente D-36, DR desactivada en eval). Se
-selecciona el **checkpoint del pico (425k)**, `cobraflex_ppo_newcam_lane_2024_425k_peak.zip`
-(hash `953ba930…`), como nueva política E-main. Evaluación nominal de cierre
-sobre SC-NOM-01, semilla 2024, tope 4 400 pasos, en ambos modos:
-
-| Modo | Vueltas | media \|ey\| | máx \|ey\| | Emergencias | Intervenciones |
-| --- | --- | --- | --- | --- | --- |
-| enforcement (`rl_cam_eval_2024_425k_4k4`) | **11,16** | 12,4 mm | 56,7 mm | **0** | 85,9 % (C-06 limitador; 5 × C-02) |
-| monitoring (`…_4k4_mon`) | 11,17 | 12,7 mm | 27,4 mm | 0 | 82,5 % (C-06 sólo) |
-
-El **hallazgo central**: la parada controlada SR-014/Trigger-8 en el ápice de la
-curva que limitaba al checkpoint 139k (4,69 vueltas, una parada C-05) **desaparece**.
-La nueva cámara recupera la **disponibilidad de percepción** que faltaba: 11+
-vueltas y **0 emergencias en ambos modos**, en paridad de precisión con el eval F3
-de estado perfecto (|ey| ~10 mm) y sin la parada por percepción. Las intervenciones
-quedan dominadas por C-06 (limitador de tasa — comportamiento benigno esperado de
-una CNN), con C-01/C-03/C-05 nulas. La cage queda **latente** in-ODD en ambos modos
-(M-S2 = 0 nominal), recuperando la firma del F-track.
-
-**Estado.** El checkpoint 425k es campaign-ready y la campaña GE4 con él está
-**preparada (1660 runs, dry-run validado) pero aún no re-ejecutada**; el §8.9 del
-Cap. 8 reporta todavía la campaña con el checkpoint 139k. La re-ejecución y el
-multi-seed quedan para la máquina dedicada (restricción de host §7.7.6).
+La Training Specification es un documento de diseño, no de evaluación. Que
+la policy converja en entrenamiento no valida que cumpla los Safety
+Requirements: esa validación es el objeto del Capítulo 8, que introduce la
+*scenario library* como instrumento — la policy se evalúa sobre todos los
+escenarios (SC-NOM/EDGE/PERT/FRONT) con las métricas M-S/M-P/M-I/M-C de
+`docs/06`. La campaña **GE4 sobre el E-main de cámara 297k** es el paso de
+cierre pendiente: cuando se ejecute, el track 'E' superará formalmente al
+'F' como evidencia de veredicto (hoy el §8.9 reporta la campaña GE4 sobre el
+checkpoint 139k). La comparación sistemática RL+cage vs CV+cage —y el
+contraste E↔F como coste de la percepción— es el resultado experimental
+central de la tesis.
 
 ---
 
 <!--
 APÉNDICE INTERNO — TRABAJO PENDIENTE EN ESTE CAPÍTULO
 
-Fase 4–5:
-  [ ] Re-entrenar con el logger extendido (callbacks.py / training_metrics.py) y
-      generar las figuras 7.4 (intervención + desglose), 7.5 (value loss +
-      entropía) y 7.6 (distribución de acciones); descomentar el bloque de §7.4
-  [x] Evaluar sobre todos los escenarios SC-NOM, SC-EDGE, SC-PERT — campaña
-      GE4 (§8.9, Cap. 8): 1660 runs, global NOT SATISFIED = coste de
-      disponibilidad (paradas controladas seguras), no brecha de seguridad
-  [ ] Añadir análisis multi-semilla (N≥5) — diferido (restricción de host ≤1 h)
+E-track (primario):
+  [x] E-main de cámara complex_b 297k: training + eval nominal SC-NOM-01
+      (enf+mon) — cage latente, bate al baseline CV (§7.4–7.5)
+  [x] Figuras E (convergencia, co-adaptación, salud PPO, acción, trayectoria,
+      tracking) generadas del run complex_b (sufijo _newcam)
+  [ ] Campaña GE4 sobre el E-main 297k (24 escenarios) — pendiente; al
+      ejecutarse, track 'E' supera a 'F' como evidencia de veredicto (§8.9)
+  [ ] Multi-seed N=5 de cámara — diferido (restricción de tiempo-real, §7.2.8)
+
+Baseline F (conservado):
+  [x] Caracterizado: 200k estado, N=5 semillas, campaña G4 SATISFIED
 
 Fase 6 (consolidación):
-  [ ] Pulido de prosa
-  [ ] Verificar coherencia cruzada §7.2.3 (pesos recompensa) con
-       resultados del Capítulo 8 si se revisan los pesos
+  [ ] Pulido de prosa; coherencia §7.2.3 (pesos) con sensibilidad del Cap. 8
 -->

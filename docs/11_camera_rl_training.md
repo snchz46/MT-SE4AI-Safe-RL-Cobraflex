@@ -3,10 +3,10 @@
 | Field | Value |
 | --- | --- |
 | Artifact | Track 'E' training implementation (the camera counterpart of `docs/09`) |
-| Version | **0.2** (2026-06-18 — complex_b training + self-approach off-road fix + RViz viz) |
+| Version | **0.3** (2026-06-22 — complex_b 1M run outcome: 297k peak rescued + run-record reconstructed, SC-NOM-01 eval prepared) |
 | Phase / Gate | F3 training infrastructure, reused by track 'E' (GE3 train, GE4 eval) |
 | Author | Samuel Sanchez |
-| Date | 2026-06-18 |
+| Date | 2026-06-22 |
 | Status | CONFIRMED — implemented in `cobraflex_rl/train_ppo.py` + the camera branch of `cobraflex_rl/gazebo_lane_env.py` |
 | Normative spec | Training Specification Ch.7 §7.2 (loop) + §7.7 (camera track). **This document is supporting rationale, not the normative source**: on any numeric discrepancy, §7.2/§7.7 prevails. |
 | Decisions cited | D-41 (end-to-end camera architecture), D-43 (cage reads its own CV estimator), D-34 (cage in the training loop / TS-01), D-36 (main seed 2024), D-32 (external drivers) |
@@ -456,6 +456,73 @@ The training implementation above produced the current E-main checkpoint
 > `experiments/sim/campaign_e/` still
 > report the **139k** campaign until the re-run lands. Do not cite a 425k campaign
 > verdict from this document.
+
+### 8.1 The complex_b 1M run (newcam, 297k peak — candidate, eval pending)
+
+After the Lane-Cam switch, training moved to the **complex_b** circuit (§3.5; the
+self-approaching scalloped track, perimeter 19.2 m). The main run
+`ppo_newcam_complex_b_2024_1M` — seed 2024, `CnnPolicy`, the DR envelope above,
+with the **v3 stability stack** (`target_kl = 0.5` trust-region brake +
+`lr_schedule: linear` + `VecNormalize(norm_reward=True, norm_obs=False)` +
+`clip_range_vf = 0.2`) added after the first complex_b pilot collapsed at ~105k
+(§7 config rationale) — was **stopped manually at ≈ 662k of the 1M plan**.
+
+- **Learning curve:** `ep_rew_mean` peaks **≈ 822.9 at ≈ 297k** steps
+  (`ep_len_mean` ≈ 791, near the 1024-step cap → near-complete episodes), holds
+  the 700–800 band from ~120k to ~490k, then **decays to ~113 by ~662k** as the
+  policy `std` over-anneals (0.034 → 0.018). Crucially, `value_loss` stays tiny
+  (~0.003–0.07) the whole run — this is **not** the v2 value-function sawtooth;
+  the late decay is exploration collapse, so the **peak is the policy to keep**
+  (checkpoint-on-peak).
+- **Peak checkpoint** `cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip` under
+  `experiments/sim/training/ppo_newcam_complex_b_2024_1M/checkpoints_peak/`
+  (hash `44c8e912…`, **gitignored** via the `checkpoints_peak/` rule — sync
+  manually). The rescue is verified: `num_timesteps == 296960` inside the zip
+  matches the peak rollout.
+- **Run-record** `experiments/sim/training/ppo_newcam_complex_b_2024_1M/metadata.json`
+  was **reconstructed post-hoc** (the interrupted run never fired the trainer's
+  end-of-run metadata writer); it carries the reproducibility pins (git commit,
+  cage/centerline hashes, checkpoint hash, seed, hyperparameters, peak step/reward)
+  and is flagged `status: interrupted`.
+
+> **Reward is not comparable across tracks.** The 822.9 peak dwarfs the oval 425k
+> peak (335.6) and even the F3 state-vector run (536.8), but complex_b is a
+> different, harder circuit with a different reward integral (longer perimeter,
+> tighter geometry) — the number says nothing about lap-keeping quality on its own.
+> **Whether this checkpoint is a usable policy is exactly what the pending eval
+> decides**, given the run died after the peak.
+
+**Eval status: prepared, NOT yet run.** A first **nominal SC-NOM-01** evaluation
+on complex_b (deterministic, DR off, 4400-step ~11-lap horizon), both cage modes,
+points `--model-path` at the peak above (concrete command below). This is a
+sanity check on the rescued checkpoint, **not** a GE4 campaign — no verdict,
+`docs/07`, or Ch.8 §8.9 claim follows until it runs. It must run on **Ubuntu 24.04
++ ROS2 Jazzy + Gazebo** (it cannot be launched from the Windows authoring host).
+
+```bash
+# On Ubuntu, source ROS2 + bring up Gazebo headless first (the camera two-step, §9):
+#   ros2 launch cobraflex gazebo_mesh.launch.py world:=lane_following_oval_complex gui:=false
+export CFG=$PWD/src/cobraflex_rl/config
+PEAK=experiments/sim/training/ppo_newcam_complex_b_2024_1M/checkpoints_peak/cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip
+
+# enforcement
+ros2 run cobraflex_rl eval_policy \
+  --train-config           $CFG/train_ppo_camera.yaml \
+  --centerline-config      $CFG/complex_b_right_lane_centerline.yaml \
+  --road-centerline-config $CFG/complex_b_centerline.yaml \
+  --world-name lane_following_complex_b \
+  --model-path $PEAK --max-steps 4400 --mode enforcement \
+  --run-id rl_cam_eval_2024_cb297k_4k4
+
+# monitoring (cage observes but does not act — the latent-vs-active contrast)
+ros2 run cobraflex_rl eval_policy \
+  --train-config           $CFG/train_ppo_camera.yaml \
+  --centerline-config      $CFG/complex_b_right_lane_centerline.yaml \
+  --road-centerline-config $CFG/complex_b_centerline.yaml \
+  --world-name lane_following_complex_b \
+  --model-path $PEAK --max-steps 4400 --mode monitoring \
+  --run-id rl_cam_eval_2024_cb297k_4k4_mon
+```
 
 ---
 

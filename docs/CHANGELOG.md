@@ -31,6 +31,56 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [22.06.2026] — complex_b 1M run: 297k peak rescued, run-record reconstructed, SC-NOM-01 eval prepared
+
+**Document(s) affected:** `docs/11_camera_rl_training.md` (header → v0.3; new §8.1 "The complex_b 1M run, 297k peak"). New artifacts: `experiments/sim/training/ppo_newcam_complex_b_2024_1M/metadata.json` (reconstructed run-record) and `…/checkpoints_peak/cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip` (canonical peak, gitignored).  
+**Phase:** track 'E' (camera) — GE3 training / pre-GE4  
+**Gate context:** none yet (training artifact + eval prep; no verdict, no H/SR/C/M touched)  
+**Author:** Samuel Sanchez  
+
+### Change
+
+The `ppo_newcam_complex_b_2024_1M` camera run (seed 2024, `CnnPolicy`, complex_b
+circuit, v3 stability stack) was stopped manually at ≈ 662k of the 1M plan after
+late-run reward decay. Generated the **missing run-record** `metadata.json`
+(reconstructed post-hoc from `learning_curve.csv` + the rescued checkpoint — the
+interrupted run never fired the trainer's end-of-run writer): reproducibility pins
+(git commit, cage/centerline hashes, checkpoint hash `44c8e912…`, seed,
+hyperparameters), `status: interrupted`, and the checkpoint-on-peak metadata
+(`ep_rew_mean ≈ 822.9 @ ≈ 297k`, `ep_len ≈ 791`). Placed the operator-rescued
+peak as the canonical `cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip` inside
+the gitignored `experiments/sim/training/ppo_newcam_complex_b_2024_1M/checkpoints_peak/`
+(peak verified: `num_timesteps == 296960` in the zip). Documented the run in
+docs/11 §8.1 with the concrete SC-NOM-01 eval command (enforcement + monitoring).
+
+### Rationale
+
+The run produced the highest camera reward yet (822.9, vs oval 425k's 335.6) but
+died after the peak, so the peak must be evaluated before it can be trusted — the
+user's "a ver si aunque haya fallado ese checkpoint vale". The run-record and a
+traceably-named, gitignored peak are prerequisites for that eval and for the
+CLAUDE.md reproducibility-metadata rule. Reward is **not** comparable across
+tracks (different perimeter/geometry/reward integral), so §8.1 explicitly defers
+the usability question to the eval.
+
+### Impact
+
+No verdict change. `docs/07`, Ch.8 §8.9 and `experiments/sim/campaign_e/` are
+untouched and still report the 139k campaign — the complex_b peak is a **candidate**
+pending a first nominal eval, which must run on Ubuntu 24.04 + ROS2 Jazzy + Gazebo
+(it cannot be launched from the Windows authoring host). Hygiene note: the original
+top-level `experiments/sim/cobraflex_ppo_lane_newcam_2024_peak.zip` (20 MB) is
+**git-tracked** (committed in `24f7811f`) because `experiments/sim/*.zip` is not
+ignored; the canonical copy now lives in the gitignored `checkpoints_peak/` dir, so
+the top-level one can be `git rm --cached`-ed.
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED. 0 warning(s).** (No
+hazard/SR/cage/scenario/metric identifiers were touched.)
+
+---
+
 ## [20.06.2026] — Isaac positioned in the V-Model A5 as a higher-fidelity sim-to-real bridge (Gazebo stays the verdict environment)
 
 **Document(s) affected:** `docs/00_v_model_adapted.md` (A5 + chapter-mapping table + date), `docs/DECISIONS.md` (D-44 "Validation positioning" note), `manuscript/chapters/chapter_01_introduction.md` (outline §1.7 Ch.9 + contribution A4), `manuscript/chapters/chapter_06_implementation.md` (§6.7 transition), `manuscript/chapters/chapter_08_experimental_evaluation.md` (§8.8 sim-to-real limitation). Earlier same-day: `CLAUDE.md` (phase-status axes banner), `docs/11`/`docs/13` (positioning notes + DR section + command reference), broken doc-13 link fixes.

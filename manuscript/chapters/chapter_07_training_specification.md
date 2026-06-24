@@ -516,24 +516,29 @@ baseline F, el E-main se entrena sobre la batería **{2024, 42, 23, 666, 123}**
 exploración** (2024 tras ~490k, 42 tras ~410k) → selección por
 **checkpoint-en-pico**, con notable **variabilidad de semilla en la altura y el
 momento del pico** (2024: 822,9 @ ~297k; 42: 720,2 @ ~120k). El **eval nominal
-SC-NOM-01** de cada peak fija las columnas de evaluación; **solo la 2024 está
-evaluada** (la del 42 y las 3 restantes quedan pendientes de Gazebo).
+SC-NOM-01** de cada peak fija las columnas de evaluación; **2024 y 42 están
+evaluadas** (enforcement; faltan las 3 restantes, pendientes de Gazebo).
 
 | Métrica (track 'E', `complex_b`) | Seed 2024 | Seed 42 | Seed 23 | Seed 666 | Seed 123 |
 | --- | --- | --- | --- | --- | --- |
-| **Cuenca** | c-respecting | c-respecting ¹ | TBD | TBD | TBD |
+| **Cuenca** | c-respecting | c-respecting | TBD | TBD | TBD |
 | `ep_rew_mean` (pico) | **822,9** | **720,2** | TBD | TBD | TBD |
 | Paso del checkpoint | 296 960 | 124 928 | TBD | TBD | TBD |
 | Intervención (fin sano, C-06) | ~40 % (@450k) | ~41 % (@400k) | TBD | TBD | TBD |
-| Intervención cage (**eval**) | 43,5 % (solo C-06) | — pendiente | TBD | TBD | TBD |
-| `mean \|ey\|` (**eval**) | 10,9 mm | — pendiente | TBD | TBD | TBD |
-| `max \|ey\|` (**eval**) | 48,2 mm | — pendiente | TBD | TBD | TBD |
-| Emergencias C-05 (**eval**) | 0 | — pendiente | TBD | TBD | TBD |
-| Vueltas (**eval**) | 4,88 | — pendiente | TBD | TBD | TBD |
+| Intervención cage (**eval**) | 43,5 % (solo C-06) | 64,9 % (solo C-06) | TBD | TBD | TBD |
+| `mean \|ey\|` (**eval**) | 10,9 mm | 13,3 mm | TBD | TBD | TBD |
+| `max \|ey\|` (**eval**) | 48,2 mm | 41,6 mm | TBD | TBD | TBD |
+| Emergencias C-05 (**eval**) | 0 | 0 | TBD | TBD | TBD |
+| Vueltas (**eval**) | 4,88 | 4,91 | TBD | TBD | TBD |
 
-¹ **Cuenca de la 42, tentativa desde el entrenamiento** (C-01/C-03 ≈ 0 todo el
-run; la intervención es C-06, suavizado del jerk de la CNN): apunta a
-*constraint-respecting* como la 2024, pero **se confirma con el eval** (pendiente).
+**Lectura (2024 vs 42).** Las dos semillas evaluadas **confirman
+*constraint-respecting***: 0 emergencias, **sin C-01/C-03/C-05** (cage latente en
+seguridad), solo C-06; y **ambas baten al CV** en tracking (10,9 y 13,3 mm vs
+17,2 mm). La diferencia es de **suavidad**: la 42 dispara C-06 el **64,9 %** de los
+pasos (vs 43,5 % de la 2024) — más a tirones, coherente con su pico más bajo y
+temprano (720 @ ~120k vs 822 @ ~297k) y menos refinado. La cuenca se mantiene
+estable entre semillas en lo que importa para seguridad; lo que varía es el coste
+(benigno) de rate-limiting de C-06.
 
 <img src="../figures/fig_7_8_multiseed_newcam.png" alt="Figura 7.8 — Comparación multi-semilla del track de cámara (seeds 2024 y 42)." width="560"/>
 

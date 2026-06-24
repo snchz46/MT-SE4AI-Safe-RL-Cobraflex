@@ -31,6 +31,35 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [24.06.2026] — Seed 42 nominal eval done (enforcement) → multi-seed table row filled, basin confirmed
+
+**Document(s) affected:** `manuscript/chapters/chapter_07_training_specification.md` (§7.5.3 — seed-42 eval columns filled + reading). Evidence: `experiments/sim/runs/rl_newcam_eval_42_cb125k_4k4/` (synced from Ubuntu).  
+**Phase:** track 'E' (camera) — multi-seed (GE3)  
+**Gate context:** none  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Seed 42 evaluated on SC-NOM-01 (enforcement, complex_b, checkpoint hash `bc7e3d17…`):
+**4,91 laps, mean |ey| 13,3 mm, max 41,6 mm, 0 emergencies, 64,9 % interventions (C-06
+only)**. Filled the §7.5.3 multi-seed table row and added the 2024-vs-42 reading.
+
+### Rationale / Impact
+
+Confirms seed 42 is **constraint-respecting** (cage latent in safety — 0 emergencies, no
+C-01/C-03/C-05) and **beats the CV baseline** on tracking (13,3 vs 17,2 mm), like 2024. The
+only seed difference is **smoothness**: 42 runs 64,9 % C-06 vs 2024's 43,5 % (jerkier,
+consistent with its lower/earlier peak). So the constraint-respecting basin is **stable
+across the two seeds** in what matters for safety; only the benign C-06 rate-limiting cost
+varies. Monitoring arm for 42 not yet run; seeds 23/666/123 still TBD. No verdict changed.
+
+### Verification
+
+Checkpoint hash in the eval metadata (`bc7e3d17…`) matches the rescued seed-42 peak
+(`num_timesteps == 124928`). `tools/check_traceability.py` → PASS.
+
+---
+
 ## [23.06.2026] — Track-'E' multi-seed comparison started (seed 42 added; table + figure prepared for N=5)
 
 **Document(s) affected:** `manuscript/chapters/chapter_07_training_specification.md` (§7.5.3 — new E-track multi-seed table; §7.2.7 — "2 of 5 done"). New: `manuscript/figures/fig_7_8_multiseed_newcam.png`; `experiments/sim/training/ppo_newcam_complex_b_42/checkpoints_peak/cobraflex_ppo_newcam_complex_b_42_125k_peak.zip` + augmented `…/ppo_newcam_complex_b_42/metadata.json` (peak block).  

@@ -20,7 +20,7 @@ track:
   world_name: lane_following_complex_b
   road_centerline: complex_b_centerline.yaml  # TODO(complex_b): no complex_b wet world exists - texture variant lost; recreate the wet world or apply the degradation in-pipeline
   centerline: complex_b_right_lane_centerline.yaml
-  start_s_m: 0.0
+  start_s_m: 2.0          # complex_b straight (s≈1–5 m, mid). Oval 0.0 = curve here. Static geom pass — confirm in Gazebo.
 commanded_speed_mps: 0.2
 
 description: |
@@ -54,7 +54,9 @@ termination:
 metrics_primary: [M-S1, M-P1, M-I1]
 metrics_secondary: [M-S3, M-I5]
 
-pass_criterion_per_run: "M-S1 < 0.16 AND road_edge_contact == False AND emergency == False"
+# D-45: safe controlled stop = pass iff the SR safety limits held; `emergency == False`
+# dropped (the stop is a safe outcome, not a breach). A real breach (M-S1>=d_max / road-edge) still fails.
+pass_criterion_per_run: "M-S1 < 0.16 AND road_edge_contact == False"
 pass_criterion_per_scenario: "fraction_pass >= 0.90"
 
 references_SR: [SR-012, SR-014]

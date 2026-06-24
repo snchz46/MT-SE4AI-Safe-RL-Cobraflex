@@ -1,0 +1,65 @@
+# ============================================================================
+# complex_b-NATIVE scenario (track 'E', camera) — NOT copied from the oval.
+# Geometry set for complex_b: start_s_m = 2.0 (mid-straight); the run s≈2–8
+# traverses the worn-marking zone of complex_b_gaps.png. The A+B (compound) arm
+# of the markings/image factorial: worn markings AND camera-image degradation
+# at once. See scenarios_complex_b/README.md.
+# ============================================================================
+id: SC-PERT-13
+category: perturbed
+
+# Track mapping: WORN-MARKINGS world variant (gaps) PLUS a runtime image filter.
+# Two independent degradation paths stack: track.world erases lane paint, and
+# perturbations applies glare to the frame — both hit the CNN and the cage CV
+# estimator (D-43 common cause). The hardest camera case.
+track:
+  world: lane_following_complex_b_gaps.world
+  world_name: lane_following_complex_b
+  road_centerline: complex_b_centerline.yaml
+  centerline: complex_b_right_lane_centerline.yaml
+  start_s_m: 2.0
+commanded_speed_mps: 0.2
+
+description: |
+  Worn markings + camera image degradation, combined (Track 'E', end-to-end
+  front-camera). The complex_b road has the lane paint partially erased
+  (complex_b_gaps.png: right edge s≈2.5–4.0, centre dash s≈4.5–6.5) AND the
+  camera frame is degraded by glare / over-exposure throughout the run. The two
+  stressors compound before both consumers (policy CNN + cage CV estimator,
+  D-43 common cause): fewer real lane cues in the world, and the few that remain
+  are washed out in the image — the worst-case for the lane estimate. The policy
+  must keep the lane; if the estimate becomes suspect the cage holds the
+  envelope (SR-014), and if the lane becomes undetectable it executes the
+  controlled stop (SR-013). Verifies SR-012 against hazard H-10 under compound
+  degradation; secondarily stresses SR-013 (loss) and SR-014 (suspect estimate).
+
+initial_conditions:
+  pose: { x: 0.0, y: 0.0, theta_deg: 0.0 }
+  speed_mps: 0.0
+  randomisation:
+    lateral_offset_uniform_m: [-0.02, 0.02]
+    heading_uniform_deg: [-2.0, 2.0]
+
+perturbations:
+  type: visual_degradation
+  mode: glare_overexposure
+  level_levels: [0.3, 0.6]       # rep-resolved (20 runs per level); stacks on the worn-markings world
+
+termination:
+  type: time_or_event
+  timeout_s: 30.0
+  events: [lane_exit, emergency_stop]
+
+metrics_primary: [M-S1, M-P1, M-I1]
+metrics_secondary: [M-S3, M-I5]
+
+# D-45: safe controlled stop = pass iff the SR safety limits held; `emergency == False`
+# dropped (the stop is a safe outcome, not a breach). A real breach (M-S1>=d_max / road-edge) still fails.
+pass_criterion_per_run: "M-S1 < 0.16 AND road_edge_contact == False"
+pass_criterion_per_scenario: "fraction_pass >= 0.90"
+
+references_SR: [SR-012, SR-013, SR-014]
+
+n_runs_recommended:
+  enforcement: 40          # 20 per level × 2 levels
+  monitoring: 40

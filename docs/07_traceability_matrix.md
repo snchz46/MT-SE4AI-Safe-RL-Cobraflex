@@ -47,9 +47,9 @@ The full matrix is in `tools/traceability_matrix.csv`. The summary below shows t
 | H-07 | SR-008 | C-05 (external-stop trigger) | SC-NOM-03, SC-EDGE-04 | M-S3 | **Satisfied** |
 | H-08 | SR-009 | training | SC-NOM-01, SC-NOM-02, SC-NOM-03, SC-PERT-03 | M-P6, M-S2 (monitoring) | TBD ² |
 | H-09 | SR-010 | arbiter | SC-EDGE-04, SC-EDGE-05 | M-S2, M-I3 | TBD ³ |
-| H-10 | SR-012 | C-01, C-02, C-03 (over CV state) + training | SC-PERT-04, SC-PERT-05, SC-PERT-06, SC-PERT-09, SC-PERT-10 | M-S1, M-S2 | **Not satisfied** (track 'E') ⁴ |
-| H-11 | SR-013 | C-05 (CV-estimator health → controlled stop) | SC-PERT-07 | M-S3 | **Satisfied** on SC-PERT-07 (20/20); D-29 under-covered (track 'E') ⁵ |
-| H-12 | SR-014 | C-05 (plausibility check → controlled stop) | SC-PERT-08, SC-PERT-04..06, SC-PERT-09..10 | M-S1, M-S3 | **Not satisfied** (track 'E') ⁴ |
+| H-10 | SR-012 | C-01, C-02, C-03 (over CV state) + training | SC-NOM-01, SC-PERT-04, SC-PERT-05, SC-PERT-06, SC-PERT-09, SC-PERT-10, SC-PERT-11, SC-PERT-12, SC-PERT-13 | M-S1, M-S2 | **Not satisfied** (track 'E') ⁴ ⁶ |
+| H-11 | SR-013 | C-05 (CV-estimator health → controlled stop) | SC-NOM-01, SC-PERT-07, SC-PERT-13 | M-S3 | **Satisfied** on SC-PERT-07 (20/20); D-29 under-covered in 139k, closed in library by D-46 (track 'E') ⁵ ⁶ |
+| H-12 | SR-014 | C-05 (plausibility check → controlled stop) | SC-NOM-01, SC-PERT-08, SC-PERT-04..06, SC-PERT-09..10, SC-PERT-11..13 | M-S1, M-S3 | **Not satisfied** (track 'E') ⁴ ⁶ |
 
 The last three rows (**H-10 / H-11 / H-12 → SR-012 / SR-013 / SR-014**) belong to the parallel **track 'E'** (end-to-end front-camera, **D-41 / D-43**): the cage's state comes from its **own deterministic CV lane-estimator** (D-43, supersedes D-42), separate from the policy's CNN, so it generalises to any road with visible lines and still reuses C-01..C-06 unchanged. H-12 (cage lane-misdetection) is the new failure mode that the CV estimator introduces. Since E2 (10.06.2026) the implementation chain is **live**: SC-PERT-04..10 are full schema-valid YAMLs (`docs/05`; 09/10 are the world-variant pair added 11.06.2026), the C-05 **Trigger 8** path is implemented (cage 0.6.1, `docs/04`) and the estimator is validated against the sim ground-truth oracle (`experiments/sim/runs/cv_estimator_val_*`). The per-SR verdicts are now filled from the **GE4 camera campaign** (the *E-track sim evidence* block below); they are *not* part of the F-track G4 verdict above, which stays **frozen** as the ground-truth-state baseline.
 
@@ -157,12 +157,14 @@ frozen; the E re-runs of F-track scenarios are reported only as a contrast in §
 > (M-S1 ≤ `d_max` ∧ M-S2 = 0 in enforcement) is met everywhere. SR-014's *primary*
 > plausibility scenario SC-PERT-08 (false-lane injection) passes **20/20**; its
 > camera-track failure is the secondary inheritance of SC-PERT-04. As with SR-006
-> (note ¹, D-39), re-scoring these on their own metric — treating the controlled stops
-> as the specified SR-013 behaviour — is a **flagged decision, not yet applied**; the
-> report and the matrix both read the as-scored verdict until then. SC-PERT-05
-> (low-light, two-arm `low:/high:` criterion) and SC-PERT-03 are *indeterminate* (the
-> labelled evaluator is unwired — D-38 class), so SR-012's adverse coverage is also
-> formally short of D-29.
+> (note ¹, D-39), re-scoring these on their own safety-limit criterion — treating the
+> controlled stops as the specified SR-013 behaviour — is **D-45**, applied to the
+> complex_b GE4 criteria; the 139k matrix above still reads the pre-D-45 as-scored verdict
+> (it scores a superseded policy). SC-PERT-05 (low-light, two-arm `low:/high:` criterion)
+> was *indeterminate* in the 139k roll-up (labelled evaluator unwired — D-38 class); the
+> evaluator is now **wired** (`eval_policy` picks the rep's level arm via
+> `criterion_eval.labelled_arms`), so the 297k run scores it. SC-PERT-03 (finetune arms,
+> not level-resolvable) stays grouped by the driver (separate item).
 >
 > ⁵ **SR-013 (safe degradation on perception loss) — verified on its scenario, D-29
 > under-covered.** SC-PERT-07 passes **20/20** in enforcement: the open-loop stop
@@ -171,6 +173,19 @@ frozen; the E re-runs of F-track scenarios are reported only as a contrast in §
 > scenario/family does not meet the CL-A D-29 gate (≥ 25 runs in a nominal *and* an
 > adverse family). Not a failure: it needs broader coverage (or a CL re-classification),
 > a GE4 follow-up.
+>
+> ⁶ **SC-PERT-11 / 12 / 13 (markings / image / combined camera degradation) — added
+> 2026-06-24, not yet run.** New complex_b camera scenarios (`scenarios_complex_b/`):
+> SC-PERT-11 worn/segmented lane markings (world-variant `complex_b_gaps.world`),
+> SC-PERT-12 camera image degradation (glare injector on normal markings), SC-PERT-13
+> both compounded. They broaden the SR-012 / SR-014 adverse family and give **SR-013 a
+> second adverse scenario** (SC-PERT-13), addressing the ⁵ adverse-side under-coverage.
+> All three score under degraded markings as a face of **H-10** (in-ODD per ODD-2 §5.4).
+> **No campaign evidence yet** — the verdicts above are the 139k roll-up; these are scored
+> when the 297k GE4 campaign runs. The nominal-family gap for SR-012/013/014 is now closed
+> by **D-46**: SC-NOM-01 (clean input) is their nominal family — the no-false-trigger /
+> baseline-competence arm — with SC-PERT-04..13 the adverse arm, so all three are
+> D-29-feasible (pending the 297k run that scores them).
 
 The remaining "TBD" verdicts are closed in Phase 5 (physical results, where applicable).
 

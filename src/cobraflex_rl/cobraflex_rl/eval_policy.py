@@ -27,7 +27,7 @@ import yaml
 
 from .campaign_metrics import compute_run_metrics
 from .criterion_eval import evaluate as evaluate_criterion
-from .criterion_eval import is_labelled
+from .criterion_eval import is_labelled, labelled_arms
 from .eval_metrics import summarize_eval
 from .gazebo_lane_env import GazeboLaneEnv
 from .ros_interface import RosGazeboInterface
@@ -437,8 +437,25 @@ def _evaluate_scenario(
     )
 
     expr = run_config.pass_criterion_per_run
-    if is_labelled(expr):
-        verdict, clauses, note = None, [], "labelled multi-arm criterion (PERT-03) not scored in single-run eval"
+    pert = getattr(run_config, "perturbation", None)
+    if is_labelled(expr) and pert is not None and pert.active:
+        # Level-resolved labelled criterion (e.g. SC-PERT-05 low/high): this rep
+        # ran ONE perturbation level, so score the matching arm only. Arm order
+        # follows the YAML, which matches the scenario's level_levels order.
+        arms = labelled_arms(expr)
+        label, sub = arms[pert.level_index % len(arms)]
+        result = evaluate_criterion(sub, values)
+        verdict, clauses = result["passed"], result["clauses"]
+        note = f"labelled arm '{label}' (level {pert.level_label or pert.level_index})"
+        if result.get("error"):
+            note += f"; {result['error']}"
+    elif is_labelled(expr):
+        # Labelled but not level-resolvable in a single run (e.g. SC-PERT-03's
+        # finetune arms): the campaign driver runs/groups the arms separately.
+        verdict, clauses, note = None, [], (
+            "labelled multi-arm criterion not level-resolvable in single-run eval "
+            "(grouped in the driver)"
+        )
     else:
         result = evaluate_criterion(expr, values)
         verdict, clauses, note = result["passed"], result["clauses"], result.get("error")

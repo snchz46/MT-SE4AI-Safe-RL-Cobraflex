@@ -130,7 +130,24 @@ def signed_curvature(curve: np.ndarray) -> np.ndarray:
 
 
 def build(name: str, waypoints, px_per_m: int, out_dir: Path, ss: int = 2,
-          road_width: float = ROAD_WIDTH_M, two_lane: bool = True):
+          road_width: float = ROAD_WIDTH_M, two_lane: bool = True,
+          *, draw_center: bool = True, draw_left_edge: bool = True,
+          draw_right_edge: bool = True,
+          erase_center=None, erase_left=None, erase_right=None,
+          write_aux: bool = True):
+    """Render the track texture (+ optional centreline/meta YAML).
+
+    The ``draw_center`` / ``draw_left_edge`` / ``draw_right_edge`` toggles
+    (default all on = the normal two-lane road) let a caller render a
+    **missing-marking variant** of an existing track — same geometry, same
+    pixel grid — by removing a whole lane line.
+
+    For a *partial* degradation (the realistic case: only some stretches of a
+    line are worn away, the agent meets gaps mid-track) pass
+    ``erase_center`` / ``erase_left`` / ``erase_right`` as lists of centreline
+    arc-length intervals ``[(s0, s1), ...]`` in metres; the line is painted
+    everywhere except those spans. ``write_aux=False`` writes only the PNG (the
+    variant reuses the base track's centreline/meta)."""
     half_road = road_width / 2.0
     wp = np.array(waypoints, dtype=float)
     dense = catmull_rom_closed(wp)
@@ -176,25 +193,58 @@ def build(name: str, waypoints, px_per_m: int, out_dir: Path, ss: int = 2,
                  fill=ASPHALT)
 
     lw = max(1, int(round(LINE_WIDTH_M * rppm)))
-    # Solid white edges
-    for edge in (lpx, rpx):
-        seq = [tuple(p) for p in edge] + [tuple(edge[0])]
-        draw.line(seq, fill=LINE_WHITE, width=lw, joint="curve")
-    # Dashed white centreline — only on a two-lane road. A single-lane road has
-    # just the two edges so the camera-CV lane keeper never sees an adjacent lane
-    # to confuse with on tight curves.
+    # Per-point centreline arc-length s[i] (s[-1] = perimeter): drives the dash
+    # spacing AND lets a caller place line GAPS by feature (erase_* intervals).
     seg = np.linalg.norm(np.diff(np.vstack([center, center[:1]]), axis=0), axis=1)
     s = np.concatenate([[0.0], np.cumsum(seg)])
+
+    def _in_any(si, intervals):
+        return any(lo <= si <= hi for lo, hi in intervals)
+
+    def _overlaps(a0, a1, intervals):
+        return any(not (a1 < lo or a0 > hi) for lo, hi in intervals)
+
+    # Solid white edges. Fully toggleable (draw_left/right_edge) AND partially
+    # eraseable over a list of centreline arc-length intervals (erase_left/right):
+    # a missing-marking track keeps the line everywhere except a few worn-away
+    # patches, so the agent meets gaps mid-track rather than a wholesale removal.
+    edge_specs = []
+    if draw_left_edge:
+        edge_specs.append((lpx, list(erase_left or [])))
+    if draw_right_edge:
+        edge_specs.append((rpx, list(erase_right or [])))
+    for edge, erase in edge_specs:
+        if not erase:
+            seq = [tuple(p) for p in edge] + [tuple(edge[0])]
+            draw.line(seq, fill=LINE_WHITE, width=lw, joint="curve")
+            continue
+        run = []                                   # current contiguous painted span
+        for i in range(len(edge) + 1):             # +1 closes the start/finish seam
+            si = s[i] if i < len(edge) else s[-1]
+            if _in_any(si, erase):
+                if len(run) >= 2:
+                    draw.line(run, fill=LINE_WHITE, width=lw, joint="curve")
+                run = []
+            else:
+                run.append(tuple(edge[i % len(edge)]))
+        if len(run) >= 2:
+            draw.line(run, fill=LINE_WHITE, width=lw, joint="curve")
+    # Dashed white centreline — only on a two-lane road. A single-lane road has
+    # just the two edges so the camera-CV lane keeper never sees an adjacent lane
+    # to confuse with on tight curves. A dash overlapping an erase_center
+    # interval is skipped (a worn-away patch of the centre line).
+    erase_c = list(erase_center or [])
     dash, gap = DASH_MARK_M, DASH_GAP_M
     pos = 0.0
-    while two_lane and pos < s[-1]:
+    while two_lane and draw_center and pos < s[-1]:
         a0, a1 = pos, min(pos + dash, s[-1])
-        ja = np.searchsorted(s, a0) - 1
-        jb = np.searchsorted(s, a1) - 1
-        idx = list(range(max(ja, 0), min(jb + 2, len(center))))
-        if len(idx) >= 2:
-            seq = [tuple(p) for p in cpx[idx]]
-            draw.line(seq, fill=LINE_WHITE, width=lw, joint="curve")
+        if not _overlaps(a0, a1, erase_c):
+            ja = np.searchsorted(s, a0) - 1
+            jb = np.searchsorted(s, a1) - 1
+            idx = list(range(max(ja, 0), min(jb + 2, len(center))))
+            if len(idx) >= 2:
+                seq = [tuple(p) for p in cpx[idx]]
+                draw.line(seq, fill=LINE_WHITE, width=lw, joint="curve")
         pos += dash + gap
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -215,7 +265,8 @@ def build(name: str, waypoints, px_per_m: int, out_dir: Path, ss: int = 2,
         "lane_width": (LANE_USEFUL_M if two_lane else round(road_width, 4)),
         "road_width": round(road_width, 4),
     }
-    (out_dir / f"{name}_centerline.yaml").write_text(yaml.safe_dump(cl_yaml, sort_keys=False))
+    if write_aux:
+        (out_dir / f"{name}_centerline.yaml").write_text(yaml.safe_dump(cl_yaml, sort_keys=False))
 
     # Meta for Isaac plane placement: texture covers [xmin,xmax]x[ymin,ymax] at z=0.
     meta = {
@@ -233,8 +284,10 @@ def build(name: str, waypoints, px_per_m: int, out_dir: Path, ss: int = 2,
         "start_yaw": round(float(math.atan2(center[1, 1] - center[0, 1],
                                             center[1, 0] - center[0, 0])), 4),
     }
-    (out_dir / f"{name}_meta.yaml").write_text(yaml.safe_dump(meta, sort_keys=False))
-    print(f"[track] wrote {png_path} ({W_px}x{H_px}px), centerline + meta in {out_dir}")
+    if write_aux:
+        (out_dir / f"{name}_meta.yaml").write_text(yaml.safe_dump(meta, sort_keys=False))
+    print(f"[track] wrote {png_path} ({W_px}x{H_px}px)"
+          + (f", centerline + meta in {out_dir}" if write_aux else " (texture only)"))
     return png_path
 
 
@@ -247,16 +300,52 @@ def main():
                     help="1 = single lane (two edges, no centre line); 2 = two-lane")
     ap.add_argument("--road-width", type=float, default=None,
                     help="override road width (m); default 0.52 two-lane / 0.30 single")
+    # Missing-marking variants (track 'E' degraded-markings scenarios): same
+    # geometry, one lane line erased. Use with --name-suffix + --texture-only so
+    # the variant PNG sits beside the base track and reuses its centreline.
+    ap.add_argument("--name-suffix", default="",
+                    help="suffix for the output filename (e.g. _nocenter); reuses the base geometry")
+    ap.add_argument("--no-center", action="store_true",
+                    help="omit the dashed centre line (missing-marking variant)")
+    ap.add_argument("--no-left-edge", action="store_true",
+                    help="omit the left solid edge line")
+    ap.add_argument("--no-right-edge", action="store_true",
+                    help="omit the right solid edge line")
+    ap.add_argument("--erase-center", default="",
+                    help="dashed-centre GAPS as arc-length intervals 's0:s1,s0:s1' (m) — worn patches")
+    ap.add_argument("--erase-left", default="",
+                    help="left-edge GAPS as arc-length intervals 's0:s1,...' (m)")
+    ap.add_argument("--erase-right", default="",
+                    help="right-edge GAPS as arc-length intervals 's0:s1,...' (m)")
+    ap.add_argument("--texture-only", action="store_true",
+                    help="write only the PNG (skip centreline/meta) — for a variant of an existing track")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
     two_lane = args.lanes == 2
     rw = args.road_width or (ROAD_WIDTH_M if two_lane else 0.30)
+
+    def _intervals(spec):
+        out = []
+        for part in str(spec or "").split(","):
+            part = part.strip()
+            if part:
+                lo, hi = part.split(":")
+                out.append((float(lo), float(hi)))
+        return out
+
     repo = Path(__file__).resolve().parents[1]
     names = list(TRACKS) if args.name == "all" else [args.name]
     for name in names:
         out_dir = Path(args.out) if args.out else repo / "experiments/sim/tracks" / name
-        build(name, TRACKS[name], args.px_per_m, out_dir, ss=args.ss,
-              road_width=rw, two_lane=two_lane)
+        build(name + args.name_suffix, TRACKS[name], args.px_per_m, out_dir, ss=args.ss,
+              road_width=rw, two_lane=two_lane,
+              draw_center=not args.no_center,
+              draw_left_edge=not args.no_left_edge,
+              draw_right_edge=not args.no_right_edge,
+              erase_center=_intervals(args.erase_center),
+              erase_left=_intervals(args.erase_left),
+              erase_right=_intervals(args.erase_right),
+              write_aux=not args.texture_only)
 
 
 if __name__ == "__main__":

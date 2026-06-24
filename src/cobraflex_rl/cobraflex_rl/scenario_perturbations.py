@@ -65,6 +65,9 @@ class ScenarioPerturbation:
     visual_onset_s: float = 0.0
     # human-readable level tag for run logging (e.g. "sigma=0.03m", "latency=100ms")
     level_label: str = ""
+    # index of this rep's level within the scenario's level list (rep % n_levels);
+    # selects the arm of a labelled per-run criterion (e.g. SC-PERT-05 low/high).
+    level_index: int = 0
 
     @property
     def active(self) -> bool:
@@ -127,6 +130,7 @@ def resolve_perturbation(
             obs_noise_sigma_m=sigma,
             obs_noise_channel=str(block.get("channel", "lateral_offset")),
             level_label=f"sigma={sigma:g}m",
+            level_index=rep % len(levels),
         )
 
     if kind == "actuation_latency":
@@ -139,6 +143,7 @@ def resolve_perturbation(
             kind="actuation_latency",
             latency_steps=steps,
             level_label=f"latency={ms:g}ms({steps}step)",
+            level_index=rep % len(levels_ms),
         )
 
     if kind == "throttle_override":
@@ -175,6 +180,7 @@ def resolve_perturbation(
             visual_level=level,
             visual_onset_s=onset,
             level_label=f"{mode}={level:g}@{onset:g}s",
+            level_index=rep % len(levels),
         )
 
     return NONE

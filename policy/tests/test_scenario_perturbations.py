@@ -160,3 +160,14 @@ def test_visual_modes_exist_in_degradation_catalogue():
 
 def test_none_has_no_visual_degradation():
     assert NONE.visual_degradation_at(0.0) is None
+
+
+def test_visual_degradation_level_index_round_robin():
+    """The resolved perturbation records its level index (rep % n_levels) so a
+    single-run evaluator can pick the matching arm of a labelled criterion
+    (SC-PERT-05 low/high)."""
+    block = {"type": "visual_degradation", "mode": "low_light_underexposure",
+             "level_levels": [0.2, 0.5]}
+    assert resolve_perturbation(block, 0).level_index == 0
+    assert resolve_perturbation(block, 1).level_index == 1
+    assert resolve_perturbation(block, 2).level_index == 0

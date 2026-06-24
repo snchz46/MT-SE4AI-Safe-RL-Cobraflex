@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import math
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 _OP_RE = re.compile(r"^(.*?)(<=|>=|==|!=|<|>)(.*)$")
 _AND_RE = re.compile(r"\s+AND\s+")
@@ -124,6 +124,22 @@ def is_labelled(expression: str) -> bool:
         return False
     segments = [seg for seg in expression.split(";") if seg.strip()]
     return bool(segments) and all(_LABEL_SEG_RE.match(seg) for seg in segments)
+
+
+def labelled_arms(expression: str) -> List[Tuple[str, str]]:
+    """Ordered ``(label, sub-expression)`` arms of a labelled criterion
+    (``"low: ...; high: ..."``). Order matches the YAML, which by convention
+    matches the scenario's ``level_levels`` order (low arm first). A single-run
+    evaluator picks the arm at the rep's level index; the scenario aggregator
+    pools across arms via :func:`evaluate_labelled`."""
+    arms: List[Tuple[str, str]] = []
+    for seg in expression.split(";"):
+        seg = seg.strip()
+        if not seg:
+            continue
+        label, _, sub = seg.partition(":")
+        arms.append((label.strip(), sub.strip()))
+    return arms
 
 
 def _split_labelled(expression: str) -> Dict[str, str]:

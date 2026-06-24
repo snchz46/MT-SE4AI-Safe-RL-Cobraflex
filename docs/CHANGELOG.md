@@ -31,6 +31,172 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [24.06.2026] — GE4 indeterminate fix: SC-PERT-05 labelled criterion wired into the per-run verdict
+
+**Document(s) affected:** code — `src/cobraflex_rl/cobraflex_rl/criterion_eval.py` (new `labelled_arms`), `scenario_perturbations.py` (`level_index`), `eval_policy.py` (labelled-arm selection); tests `policy/tests/test_criterion_eval.py` + `test_scenario_perturbations.py`. Docs: `docs/07` footnote ⁴.  
+**Phase:** track 'E' (camera) — GE4 (eval) wiring  
+**Gate context:** before the complex_b 297k GE4 verdict run  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Wired the two-arm `low:/high:` labelled per-run criterion so a single run is scored against
+the arm matching its perturbation level: `eval_policy` now evaluates
+`criterion_eval.labelled_arms(expr)[perturbation.level_index]` instead of hard-coding
+`verdict = None`. `scenario_perturbations` records `level_index` (rep % n_levels) for the
+multi-level types. Resolves GE4 open item (b) for **SC-PERT-05**.
+
+### Rationale
+
+SC-PERT-05 (low-light) was indeterminate (D-38 class) only because the labelled evaluator was
+unwired — it has two arms with different specified outcomes (low: keep driving / SR-012;
+high: controlled stop allowed / SR-013), one per level. Each rep runs one level, so the
+matching arm is the correct per-run verdict.
+
+### Impact
+
+SC-PERT-05 will **score** (not indeterminate) on the 297k GE4 run — completing SR-012's
+adverse evidence on the low arm and SR-013 on the high arm. **Still open** (separate, F-track
+CL-B): SC-PERT-03 (finetune arms, not level-resolvable — grouped by the driver) and SC-EDGE-05
+(parameterised_grid IC injection). No verdict change now (139k roll-up unchanged).
+
+### Verification
+
+`pytest` → **454 passed, 5 skipped** (incl. new `test_labelled_arms_order_and_level_arm_semantics`
++ `test_visual_degradation_level_index_round_robin`). Logic check: SC-PERT-05 rep0 → low arm
+(a stop fails — `M-P2 == 1` required), rep1 → high arm (safe stop passes).
+
+---
+
+## [24.06.2026] — D-46: two-sided D-29 coverage for the camera SRs (SC-NOM-01 nominal anchor)
+
+**Document(s) affected:** `docs/03_safety_requirements.md` (SR-012/013/014 Scenarios += SC-NOM-01) → `docs/data/safety_requirements.csv`; `docs/07_traceability_matrix.md` (matrix cells + footnote ⁶); `docs/DECISIONS.md` (D-46 + index + status note); `scenarios_complex_b/nominal/sc_nom_01.yaml` (`references_SR`).  
+**Phase:** track 'E' (camera) — GE4 coverage  
+**Gate context:** before the complex_b 297k GE4 verdict run  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Anchored the **D-29 nominal family** of the camera-stressor SRs (SR-012/013/014) on the
+clean-input nominal run **SC-NOM-01** (the no-false-trigger / baseline-competence arm),
+keeping the adverse family on the SC-PERT camera scenarios. Recorded as **D-46**;
+SC-NOM-01's `references_SR` updated for bidirectional traceability.
+
+### Rationale
+
+The camera SRs were authored adverse-only → `nominal = 0` → INCOMPLETE under D-29. D-29's
+nominal family is the **baseline arm of a two-sided test** (no-false-trigger + correct
+response), not a "repeat the hazard under clean input" requirement; SC-NOM-01 is the genuine
+no-false-positive control + competence baseline. Mirrors how SR-001 is covered
+(SC-NOM-01/02 nominal + SC-EDGE-02 adverse). See D-46.
+
+### Impact
+
+`--dry-run` D-29 feasibility: SR-012/013/014 nominal **0 → 50**, adverse ≥ 25 → all three
+**FEASIBLE** (GAP cleared). Combined with D-45 (SR-CL-A vetoes cleared) and SC-PERT-13
+(SR-013 adverse), the camera SRs are now **coverage-ready**; the verdict is scored when the
+297k GE4 campaign runs. No verdict change now (coverage/plan, not evidence).
+
+### Verification
+
+`python tools/sync_safety_requirements.py` → 14 SRs. `python tools/check_traceability.py`
+→ **All checks PASSED, 0 warnings**. `run_campaign --dry-run` on `scenarios_complex_b`:
+SR-012/013/014 `[OK]`, families nominal = 50 / adverse = 40.
+
+---
+
+## [24.06.2026] — Track-'E' degraded-markings scenarios SC-PERT-11/12/13 + scenario↔SR traceability
+
+**Document(s) affected:** `docs/03_safety_requirements.md` (SR-012/013/014 Scenarios column) → `docs/data/safety_requirements.csv` (regenerated via `sync_safety_requirements.py`); `docs/07_traceability_matrix.md` (SR-012/013/014 Scenario cells + new footnote ⁶). New artefacts: `scenarios_complex_b/perturbed/sc_pert_{11,12,13}.yaml`; `scripts/generate_complex_track.py` (line toggles + arc-length erase); `experiments/sim/tracks/complex_b/complex_b_gaps.png` + `src/cobraflex/materials/road_assets/tracks/complex_b_gaps.png`; `src/cobraflex/worlds/lane_following_complex_b_gaps.world`.  
+**Phase:** track 'E' (camera) — GE4 scenario library  
+**Gate context:** before the complex_b 297k GE4 verdict run  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Added three complex_b camera scenarios for **degraded lane markings**, a face of H-10
+admitted in-ODD by ODD-2 §5.4 ("lane markings may be partially degraded or faded along
+arbitrary segments"): **SC-PERT-11** worn/segmented markings (world-variant — the
+`generate_complex_track.py` line-erase renders `complex_b_gaps.png`, lane paint removed
+over arc-length patches s≈2.5–6.5; new `lane_following_complex_b_gaps.world`),
+**SC-PERT-12** camera image degradation (glare injector on normal markings — matched
+control), **SC-PERT-13** both compounded. All complex_b-native (start_s_m = 2.0, the run
+traverses the degraded zone), criterion per **D-45** (`M-S1 < 0.16 AND road_edge_contact
+== False`). Wired the scenario↔SR traceability: SR-012 / SR-014 ← SC-PERT-11/12/13,
+SR-013 ← SC-PERT-13, in both the docs/03 SR register (→ CSV) and the docs/07 matrix.
+
+### Rationale
+
+No new SR/hazard needed: worn/missing markings degrade the lane cue → it is the
+infrastructure face of **H-10 / SR-012** (with SR-013 loss and SR-014 suspect-estimate as
+the severity-dependent fall-backs), the twin of the SC-PERT-09/10 worn/wet world variants.
+The combined SC-PERT-13 additionally gives **SR-013 a second adverse scenario**, closing
+its adverse-side D-29 gap.
+
+### Impact
+
+`--dry-run` D-29 feasibility: SR-013 adverse family **0 → 40** (SC-PERT-13); SR-012/014
+adverse families stay ≥ 25. The three camera SRs now have **adverse coverage met**; the
+residual gap is **nominal = 0** (separate — the clean-input SC-NOM-01 anchor, Option 1).
+Scenarios **not yet run** — no verdict change; scored when the 297k GE4 campaign runs.
+Matrix grows 1660 → 1880 runs (seed 2024). check_traceability **PASS**.
+
+### Verification
+
+`python tools/sync_safety_requirements.py` → 14 SRs written. `python
+tools/check_traceability.py` → **All checks PASSED, 0 warnings**. `run_campaign --dry-run`
+on `scenarios_complex_b` loads 27 scenarios, builds the matrix, SR-013 adverse = 40.
+Variant texture verified pixel-aligned to the base (only the erased patches differ).
+
+---
+
+## [24.06.2026] — D-45: controlled safe stop scored as pass on the SR limit predicate (camera GE4 criteria)
+
+**Document(s) affected:** `scenarios_complex_b/` per-run criteria — `edge/sc_edge_02`, `edge/sc_edge_03`, `perturbed/sc_pert_01`, `perturbed/sc_pert_02`, `perturbed/sc_pert_04`, `perturbed/sc_pert_06`, `perturbed/sc_pert_09`, `perturbed/sc_pert_10`; `docs/DECISIONS.md` (new **D-45** + index + status note); `scenarios_complex_b/README.md` (new "Verdict scoring" section).  
+**Phase:** track 'E' (camera) — GE4 (eval) scoring  
+**Gate context:** before the complex_b 297k GE4 verdict run  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Dropped the `emergency == False` clause from the per-run pass criterion of the **eight
+adverse safety scenarios** in the complex_b camera library, so a cage-commanded
+**controlled safe stop scores as a pass** whenever the SR's safety limit held
+(`M-S1 < 0.16`, plus `road_edge_contact == False` where present). A real breach
+(`M-S1 >= d_max` / road-edge) still fails. Recorded the rule as decision **D-45**.
+SC-PERT-07 (SR-013, stop *required*: `emergency == True`) and the nominal scenarios
+(gated by `M-P2 == 1`) are unchanged; the frozen oval `scenarios/` + 139k evidence
+are untouched.
+
+### Rationale
+
+Under the camera (D-41/D-43) the cage flips latent→active in-ODD: a controlled stop is
+the safety mechanism working, not a breach. The original clause scored those safe stops
+as fails (139k: 13/13 SC-EDGE-02 + 20/20 SC-PERT-04 enforcement fails were emergency-only,
+with `M-S1 < d_max` and 0 road-edge contacts) — an **availability** cost mis-scored as a
+**safety** failure. The thesis verdict is a safety verdict (D-28/D-30). Full argument and
+alternatives in D-45.
+
+### Impact
+
+Clears the three SR-CL-A vetoes behind the 139k `NOT SATISFIED` (SR-001, SR-012, SR-014).
+**Not sufficient for `SATISFIED`**: SR-013 stays INCOMPLETE (D-29 family coverage —
+adverse-only SC-PERT-07) and the indeterminates persist (SC-PERT-05 labelled criterion
+unwired; SC-EDGE-05 grid ICs not injected). Applies when the 297k GE4 campaign is run on
+`scenarios_complex_b`; `docs/07` + Ch.8 §8.9 E-track verdicts to be re-pointed 139k→297k
+at that time. No H/SR/C/M identifier changed (per-run criterion strings only;
+`references_SR` untouched).
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED, 0 warnings** (criteria edits
+touch no IDs). `python -m pytest -q` → **452 passed, 5 skipped**. Direct evaluation of the
+eight edited criteria via `run_campaign.evaluate_criterion`: a safe stop with limits held →
+pass, a real breach → fail, drove-fine → pass; SC-PERT-07 confirmed unchanged (no-stop →
+fail). The 24 complex_b YAMLs parse (`load_scenarios`).
+
+---
+
 ## [24.06.2026] — Root README pivoted to track 'E' (camera) primary; F kept as baseline
 
 **Document(s) affected:** `README.md` (intro framing, "Results at a glance" rewritten to the `complex_b` 297 k camera E-main + `_newcam` figures, track-'E' status note, "RL policy" pillar, GIF captions, how-to-read pointer to `docs/11`).  

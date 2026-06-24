@@ -1,7 +1,7 @@
 # DECISIONS.md — Project decision log
 
 <!--
-Status: D9 (Phase 0 close) + F1 audit additions (D-25..D-33) + F3 (D-34) + F4 (D-35, D-36, D-37, D-38, D-39) + E-track (D-41 supersedes D-01; D-42 superseded by D-43; D-43) + Isaac platform (D-44 in-process RL training).
+Status: D9 (Phase 0 close) + F1 audit additions (D-25..D-33) + F3 (D-34) + F4 (D-35, D-36, D-37, D-38, D-39) + E-track (D-41 supersedes D-01; D-42 superseded by D-43; D-43) + Isaac platform (D-44 in-process RL training) + track-'E' GE4 (D-45 safe-stop scoring; D-46 camera-SR nominal coverage).
 Last update: see Git commit date.
 -->
 
@@ -81,6 +81,8 @@ consistent with the chapters.
 | D-42 | Track 'E' cage operates on an independent state estimate, not the camera (preserves cage independence; distinguishes H-06 cage-state from H-11 camera-perception) | `docs/04`; `docs/02` | SUPERSEDED by D-43 |
 | D-43 | Track 'E' cage state comes from a dedicated deterministic vision lane-estimator (separate from the policy CNN), not ground truth — for generalisation to any road with visible lines; accepts common-cause + new hazard H-12 | `docs/04`; `docs/09` §10; `docs/02` | CONFIRMED |
 | D-44 | Isaac-Sim RL training runs **in-process** (the gym env drives a live Isaac `World` via `IsaacSimInterface` — `set_world_pose` teleport / `world.step` / Replicator Lane Cam), **not** over the ROS2 bring-up; this supplies the per-episode reset the bring-up's `gz service set_pose` path could not, and decouples training from the bring-up command (shared scene only, `tools/isaac_scene.py`) | `docs/14`; `tools/isaac_train.py`; `tools/isaac_scene.py`; `src/cobraflex_rl/.../isaac_interface.py` | CONFIRMED |
+| D-45 | Track-'E' GE4 safety verdict scored on the SR limit predicate, not the absence of a controlled stop (`emergency == False` dropped from the 8 adverse safety scenarios; a safe stop within limits = pass) | `scenarios_complex_b/*`; `docs/07`; Ch.8 §8.9 | CONFIRMED |
+| D-46 | Two-sided D-29 coverage for the camera-stressor SRs: SR-012/013/014 take their nominal family from the clean-input SC-NOM-01 (no-false-trigger baseline), adverse from SC-PERT-04..13 — D-29-feasible without weakening the gate | `docs/03`; `docs/07`; `scenarios_complex_b` | CONFIRMED |
 
 > **Renumbering note (11.06.2026, pre-merge).** The E-track decisions above were
 > originally allocated **D-38 / D-39 / D-40** on the `e2e-camera` branch, while
@@ -1758,3 +1760,105 @@ valuation**. Should the Isaac campaign mature into the stronger result, the thes
 with those figures as final, with the Gazebo campaign retained as the provisional baseline. The
 simulator axis (Gazebo↔Isaac) is **orthogonal** to the F/E observation-track axis. Reflected in
 `docs/00` (A5 + mapping table), Ch.1 (outline §1.7 + contribution A4), Ch.6 §6.7, Ch.8 §8.8.
+
+---
+
+### D-45 — Track-'E' GE4 safety verdict scored on the SR limit predicate, not the absence of a controlled stop
+
+| Field | Value |
+| --- | --- |
+| Section | `scenarios_complex_b/*` (per-run criteria); `tools/run_campaign.py` (`evaluate_criterion`); `docs/07` (E-track verdicts); Ch.8 §8.9; `scenarios_complex_b/README.md` |
+| Status | CONFIRMED |
+| Date | track 'E' / GE4 (24.06.2026) |
+
+**Decision.** For the track-'E' camera GE4 campaign (the complex_b 297k E-main), a per-run
+**controlled safe stop scores as a pass iff the SR's own safety-limit predicate held** — the
+lane envelope `M-S1 < d_max` (0.16 m) and, where applicable, `road_edge_contact == False`. The
+`emergency == False` clause is **dropped** from the eight adverse safety scenarios (SC-EDGE-02,
+SC-EDGE-03, SC-PERT-01, SC-PERT-02, SC-PERT-04, SC-PERT-06, SC-PERT-09, SC-PERT-10): a
+cage-commanded controlled stop is a **safe outcome of the mitigation**, not a safety breach. A
+genuine breach (`M-S1 >= d_max`, or a road-edge contact) still fails. Scenarios where stopping
+is the *required* behaviour (SC-PERT-07 / SR-013: `emergency == True`) and the nominal/availability
+scenarios (SC-NOM-01/02/03, already gated by completion `M-P2 == 1`) are **unchanged**.
+
+**Rationale.** Under the camera (D-41/D-43) the cage flips latent→active in-ODD: the
+SR-013/Trigger-8 controlled stop becomes the in-ODD safety mechanism. The original criteria
+conflated "the policy never needed the cage" with "the cage kept the system safe" — they scored a
+*safe controlled stop* as a fail purely on `emergency == False`, even when `M-S1 < d_max` and no
+road-edge contact held throughout. On the (superseded) 139k campaign that artifact accounted for
+**13/13** SC-EDGE-02 + **20/20** SC-PERT-04 enforcement fails (emergency-only, limits respected;
+**0** road-edge contacts across all 830 enforcement runs). That is an **availability** cost (the
+vehicle stopped), not a safety violation, and the thesis verdict is a **safety** verdict (D-28,
+D-30). The safety truth is the limit predicate; `emergency` is only the mechanism that enforces it.
+
+**Alternatives considered and rejected.**
+- *Keep `emergency == False` in the adverse safety criteria.* Rejected: scores the cage's correct
+  safe-stop behaviour as a safety failure — the same honesty defect D-38 (indeterminate-as-fail)
+  and D-39 (irrelevant-failure inheritance) fixed, here for a safe-outcome-as-fail.
+- *Re-score out-of-band with a dedicated tool (the D-39 `tools/sr006_smoothness.py` pattern).*
+  Rejected here: D-39 needed an out-of-band tool because the oval scenarios were **frozen** F4
+  evidence; the complex_b scenarios are **DRAFT** (not yet verdict-run), so the correct criterion
+  belongs in the source YAML — the single source of truth that `evaluate_criterion` reads directly.
+- *Make `emergency` a global don't-care across all scenarios.* Rejected: nominal scenarios
+  (SC-NOM-*) legitimately require completion (`M-P2 == 1`, which already fails an early stop), and
+  SR-013 (SC-PERT-07) legitimately *requires* the stop.
+
+**Consequences.**
+- Clears the three SR-CL-A vetoes that drove the 139k `NOT SATISFIED` (SR-001/SC-EDGE-02,
+  SR-012+SR-014/SC-PERT-04), reframing them as satisfied-on-safety with the controlled stop logged
+  as an availability cost.
+- **Does not by itself reach `SATISFIED`.** SR-013 stays `INCOMPLETE` under D-29 family coverage
+  (its only scenario SC-PERT-07 is adverse-only; perception-loss has no natural nominal companion),
+  and the indeterminate scenarios remain (SC-PERT-05 labelled `low:/high:` criterion unwired;
+  SC-EDGE-05 grid ICs not injected). The 297k GE4 global verdict therefore moves
+  `NOT SATISFIED` → at best `INCOMPLETE` until those are addressed.
+- For the SR-007 staleness scenarios (SC-PERT-01/02) the dropped clause removes the implicit
+  "no false-trigger" assertion; the run now passes on the lane envelope alone, with spurious-stop
+  behaviour relegated to the availability axis (consistent with the safety/availability split above).
+- Applies to the **complex_b camera GE4** set only. The frozen oval `scenarios/` and the 139k
+  campaign evidence are **not** rewritten (read through this decision). `docs/05` documents the
+  oval criteria; the variant deviation is documented in `scenarios_complex_b/README.md`.
+- All inputs are logged per-run evidence (`M-S1`, `road_edge_contact`, `emergency` in
+  `summary.json`), so the verdict stays computable and auditable (traceability intact).
+  Cites D-28, D-30, D-38, D-39, D-41, D-43.
+
+---
+
+### D-46 — Two-sided D-29 coverage for the camera-stressor SRs (clean-input nominal anchor)
+
+| Field | Value |
+| --- | --- |
+| Section | `docs/03` (SR register SR-012/013/014 Scenarios) → `docs/data/safety_requirements.csv`; `docs/07`; `scenarios_complex_b/nominal/sc_nom_01.yaml` |
+| Status | CONFIRMED |
+| Date | track 'E' / GE4 (24.06.2026) |
+
+**Decision.** SR-012 / SR-013 / SR-014 (the track-'E' camera-stressor SRs, adverse by
+construction) take their **D-29 nominal family from the clean-input nominal run SC-NOM-01**,
+with the adverse family from the SC-PERT camera scenarios (SC-PERT-04..13). This makes all
+three D-29-feasible (≥ 25 runs in a nominal **and** an adverse family) without weakening the
+gate — mirroring how the F-track SR-001 is covered (SC-NOM-01/02 nominal + SC-EDGE-02 adverse).
+
+**Rationale.** A clean nominal run cannot exercise "degraded / lost / suspect visual input",
+so the camera SRs were authored adverse-only and read INCOMPLETE on the 139k roll-up
+(`nominal = 0`). But D-29's nominal family is the **baseline arm of a two-sided test**, not a
+"repeat the hazard under clean input" requirement: for a safety mechanism the two necessary
+tests are (i) it does **not** regress / false-trigger under valid input — the nominal arm
+(SC-NOM-01: lane kept, `emergency == False`, zero spurious controlled stops) — and (ii) it
+responds **correctly** under the stressor — the adverse arm (SC-PERT-04..13). SC-NOM-01 is the
+genuine no-false-positive control for SR-013/014 and the un-stressed competence baseline for
+SR-012. The 139k `nominal = 0` was a coverage-authoring gap, not a missing-evidence gap.
+
+**Alternatives considered and rejected.**
+- *Documented D-29 exception (waive the nominal family for camera SRs).* Rejected: the nominal
+  arm is genuinely meaningful (no-false-trigger), so satisfying D-29 honestly beats waiving it.
+- *A new dedicated nominal camera scenario.* Rejected: SC-NOM-01 already **is** the clean-input
+  nominal of the same perception→control loop; a duplicate adds nothing.
+
+**Consequences.**
+- `docs/03` SR register: SR-012/013/014 Scenarios gain SC-NOM-01 (→ CSV regenerated); `docs/07`
+  matrix + footnote ⁶ updated; SC-NOM-01 (complex_b) `references_SR` gains SR-012/013/014
+  (bidirectional, D-10).
+- `--dry-run` D-29 feasibility: SR-012/013/014 nominal family **0 → 50** (SC-NOM-01), adverse
+  ≥ 25 (incl. SC-PERT-13, D-45-era) → **feasible, GAP cleared**.
+- A coverage/plan change, **not** evidence: the verdict is still scored when the 297k GE4
+  campaign runs. Cites D-29, D-30, D-43, D-45.

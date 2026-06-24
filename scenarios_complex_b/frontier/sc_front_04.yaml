@@ -18,7 +18,7 @@ track:
   world_name: lane_following_complex_b
   road_centerline: complex_b_centerline.yaml
   centerline: complex_b_right_lane_centerline.yaml
-  start_s_m: 0.0
+  start_s_m: 2.0          # complex_b straight (s≈1–5 m, mid). Oval 0.0 = curve here. Static geom pass — confirm in Gazebo.
 commanded_speed_mps: 0.2
 
 description: |

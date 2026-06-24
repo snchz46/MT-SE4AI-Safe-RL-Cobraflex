@@ -16,6 +16,7 @@ from cobraflex_rl.criterion_eval import (  # noqa: E402
     evaluate,
     evaluate_labelled,
     is_labelled,
+    labelled_arms,
 )
 
 
@@ -108,3 +109,18 @@ def test_labelled_indeterminate():
         "released": {"M-P6": None, "M-P2": 1},     # released arm not evaluable
     })
     assert res["passed"] is None
+
+
+def test_labelled_arms_order_and_level_arm_semantics():
+    """labelled_arms keeps YAML/level order; SC-PERT-05's low arm requires
+    completion (a stop fails) while the high arm allows the controlled stop —
+    the per-rep arm a single run is scored against (eval_policy picks by level)."""
+    expr = ("low: M-P2 == 1 AND M-S1 < 0.16 AND road_edge_contact == False; "
+            "high: M-S1 < 0.16 AND road_edge_contact == False")
+    arms = labelled_arms(expr)
+    assert [a[0] for a in arms] == ["low", "high"]
+    kept = {"M-P2": 1, "M-S1": 0.10, "road_edge_contact": False}
+    stopped = {"M-P2": 0, "M-S1": 0.10, "road_edge_contact": False}
+    assert evaluate(arms[0][1], kept)["passed"] is True
+    assert evaluate(arms[0][1], stopped)["passed"] is False   # low: must keep driving
+    assert evaluate(arms[1][1], stopped)["passed"] is True     # high: safe stop ok

@@ -51,7 +51,10 @@ C-01/C-03/C-05) and **beats the CV baseline** on tracking (13,3 vs 17,2 mm), lik
 only seed difference is **smoothness**: 42 runs 64,9 % C-06 vs 2024's 43,5 % (jerkier,
 consistent with its lower/earlier peak). So the constraint-respecting basin is **stable
 across the two seeds** in what matters for safety; only the benign C-06 rate-limiting cost
-varies. Monitoring arm for 42 not yet run; seeds 23/666/123 still TBD. No verdict changed.
+varies. Monitoring arm for 42 also done (4,90 laps, |ey| 16,5 mm, 0 emerg, 68 % C-06): the
+enforcement↔monitoring contrast shows C-06 contributes ~3 mm of tracking to this jerkier
+seed (mon 16,5 mm → enf 13,3 mm; near the CV's 17,2 without it), while staying safety-latent
+(no C-01/C-03/C-05 either mode). Seeds 23/666/123 still TBD. No verdict changed.
 
 ### Verification
 

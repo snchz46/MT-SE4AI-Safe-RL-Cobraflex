@@ -533,12 +533,18 @@ evaluadas** (enforcement; faltan las 3 restantes, pendientes de Gazebo).
 
 **Lectura (2024 vs 42).** Las dos semillas evaluadas **confirman
 *constraint-respecting***: 0 emergencias, **sin C-01/C-03/C-05** (cage latente en
-seguridad), solo C-06; y **ambas baten al CV** en tracking (10,9 y 13,3 mm vs
-17,2 mm). La diferencia es de **suavidad**: la 42 dispara C-06 el **64,9 %** de los
-pasos (vs 43,5 % de la 2024) — más a tirones, coherente con su pico más bajo y
-temprano (720 @ ~120k vs 822 @ ~297k) y menos refinado. La cuenca se mantiene
-estable entre semillas en lo que importa para seguridad; lo que varía es el coste
-(benigno) de rate-limiting de C-06.
+seguridad) en **ambos modos**, solo C-06; y **ambas baten al CV** en tracking
+(enforcement 10,9 y 13,3 mm vs 17,2 mm). La diferencia es de **suavidad**: la 42
+dispara C-06 el **64,9 %** de los pasos (vs 43,5 % de la 2024) — más a tirones,
+coherente con su pico más bajo y temprano (720 @ ~120k vs 822 @ ~297k) y menos
+refinado. El contraste **enforcement↔monitoring** muestra que ese C-06 **no es solo
+cosmético** en la 42: sin actuar (monitoring) su `mean |ey|` sube a **16,5 mm**
+—rozando el CV (17,2)— y el limitador lo aprieta a **13,3 mm** en enforcement; en
+la 2024, más suave, el efecto es menor (10,9 enf vs 12,9 mon). Es decir, el
+rate-limiter aporta de forma **medible** (~3 mm) a la calidad de tracking de la
+semilla más a tirones, sin dejar de ser una salvaguarda de seguridad **latente**
+(0 emergencias, sin C-01/C-03). La cuenca se mantiene estable entre semillas en lo
+que importa para seguridad; lo que varía es cuánto trabajo de suavizado hace C-06.
 
 <img src="../figures/fig_7_8_multiseed_newcam.png" alt="Figura 7.8 — Comparación multi-semilla del track de cámara (seeds 2024 y 42)." width="560"/>
 

@@ -31,6 +31,46 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [23.06.2026] — Track-'E' multi-seed comparison started (seed 42 added; table + figure prepared for N=5)
+
+**Document(s) affected:** `manuscript/chapters/chapter_07_training_specification.md` (§7.5.3 — new E-track multi-seed table; §7.2.7 — "2 of 5 done"). New: `manuscript/figures/fig_7_8_multiseed_newcam.png`; `experiments/sim/training/ppo_newcam_complex_b_42/checkpoints_peak/cobraflex_ppo_newcam_complex_b_42_125k_peak.zip` + augmented `…/ppo_newcam_complex_b_42/metadata.json` (peak block).  
+**Phase:** track 'E' (camera) — multi-seed (GE3)  
+**Gate context:** none (training-side comparison; no H/SR/C/M touched; no verdict)  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Second camera seed (**42**) trained on complex_b; like seed 2024 it collapses late
+(by ~410k) by exploration contraction → **checkpoint-on-peak** (`ep_rew_mean` 720,2
+@ ~120k; rescued checkpoint `num_timesteps == 124928`, hash `bc7e3d17…`, placed in
+its `checkpoints_peak/`; metadata augmented with the peak block). Built the **E-track
+multi-seed table** in §7.5.3 on the F-track battery {2024, 42, 23, 666, 123}: seed 2024
+fully filled (training + nominal eval), seed 42 training-side filled with **eval columns
+TBD** (Gazebo), seeds 23/666/123 TBD. Generated the E-track multi-seed figure (Fig. 7.8,
+`_newcam`) from the two seeds' learning curves cropped to their healthy regions
+(2024 ≤450k, 42 ≤400k). The F-track multi-seed table/figure are kept as the baseline.
+
+### Rationale
+
+User ran seed 42 and asked for the F-track-style seed comparison with the table prepared
+ahead of the remaining 3 seeds. Both camera seeds crashing late corroborates that the
+camera-PPO instability is **seed-general** (a track finding, §7.4.3), not a 2024 fluke.
+
+### Impact
+
+Training-side only: peak height/timing vary by seed (2024: 822,9 @ ~297k; 42: 720,2 @
+~120k); both are **constraint-respecting in safety during training** (C-01/C-03 ≈ 0, only
+C-06). Seed 42's basin is **tentative pending its eval**. Remaining (Ubuntu): nominal evals
+for seed 42 + seeds 23/666/123, then complete the table. No verdict changed.
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED. 0 warning(s).** Figure via
+`tools/plot_f3_figures.py --seed-runs` on truncated copies; seed-42 peak verified
+(`num_timesteps == 124928`, seed 42).
+
+---
+
 ## [22.06.2026] — GE4-on-297k campaign wiring (host-independent prep) + complex_b scenario scaffold
 
 **Document(s) affected:** `tools/run_campaign.py` (new `--model-path`, `--scenario-dir`; `resolve_config_path`; `execute_run` now passes `centerline`/`road_centerline`/`world_name` from each scenario's `track`), `src/cobraflex_rl/launch/eval_scenario_batch.launch.py` (new `centerline`/`road_centerline`/`world_name` launch args → eval_policy). New: `scenarios_complex_b/` (24 scenario drafts + README). `tools/plot_f3_figures.py` was extended earlier the same day.  

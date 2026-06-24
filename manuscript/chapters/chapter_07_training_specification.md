@@ -255,9 +255,9 @@ Semilla principal **2024** en ambos tracks (precedente D-36). El **baseline
 F** está caracterizado con **N = 5** (seeds 42, 123, 2024, 23, 666), que
 revela dos cuencas de convergencia (*constraint-respecting* vs
 *cage-dependent*, §7.5.3). El **E-main de cámara** se reporta sobre la
-semilla 2024; el multi-seed N=5 de cámara queda **pendiente** (coste de
-cómputo por el límite de tiempo-real de la cámara, §7.2.8) y se ejecutará
-con la campaña GE4.
+semilla 2024; su **multi-seed N=5** (misma batería) está **en curso — 2 de 5
+hechas (2024, 42), 3 pendientes** (coste de cómputo por el límite de tiempo-real
+de la cámara, §7.2.8). El contraste por-semilla se desarrolla en §7.5.3.
 
 ### 7.2.8 Checkpoints y registro
 
@@ -507,14 +507,46 @@ Tres observaciones del log por-paso (`cage_status.csv`):
 Gazebo (vehículo 1:14) y RViz (modelo del robot y frames TF). La vista no
 depende del checkpoint.*
 
-### 7.5.3 Variabilidad entre semillas (baseline F) y estado del multi-seed E
+### 7.5.3 Variabilidad entre semillas (track 'E' cámara — en curso; baseline F)
 
-El multi-seed de cámara está **pendiente** (se ejecutará con la campaña
-GE4). La caracterización multi-seed disponible es la del **baseline de
-estado**, y se conserva porque establece el fenómeno que el track 'E'
-heredará: entrenar **cinco semillas** (42, 123, 2024, 23, 666) del baseline
-F revela **dos cuencas de convergencia** — **cuatro** convergen a
-*constraint-respecting* y **una** (123) a *cage-dependent*.
+**Multi-seed de cámara (en curso, N = 5 previsto).** Replicando el protocolo del
+baseline F, el E-main se entrena sobre la batería **{2024, 42, 23, 666, 123}**
+(la misma que F, para que el contraste E↔F sea comparable, §7.2.7). Hechas **2 de
+5** (2024, 42); faltan 3. Ambas semillas **colapsan tarde por contracción de
+exploración** (2024 tras ~490k, 42 tras ~410k) → selección por
+**checkpoint-en-pico**, con notable **variabilidad de semilla en la altura y el
+momento del pico** (2024: 822,9 @ ~297k; 42: 720,2 @ ~120k). El **eval nominal
+SC-NOM-01** de cada peak fija las columnas de evaluación; **solo la 2024 está
+evaluada** (la del 42 y las 3 restantes quedan pendientes de Gazebo).
+
+| Métrica (track 'E', `complex_b`) | Seed 2024 | Seed 42 | Seed 23 | Seed 666 | Seed 123 |
+| --- | --- | --- | --- | --- | --- |
+| **Cuenca** | c-respecting | c-respecting ¹ | TBD | TBD | TBD |
+| `ep_rew_mean` (pico) | **822,9** | **720,2** | TBD | TBD | TBD |
+| Paso del checkpoint | 296 960 | 124 928 | TBD | TBD | TBD |
+| Intervención (fin sano, C-06) | ~40 % (@450k) | ~41 % (@400k) | TBD | TBD | TBD |
+| Intervención cage (**eval**) | 43,5 % (solo C-06) | — pendiente | TBD | TBD | TBD |
+| `mean \|ey\|` (**eval**) | 10,9 mm | — pendiente | TBD | TBD | TBD |
+| `max \|ey\|` (**eval**) | 48,2 mm | — pendiente | TBD | TBD | TBD |
+| Emergencias C-05 (**eval**) | 0 | — pendiente | TBD | TBD | TBD |
+| Vueltas (**eval**) | 4,88 | — pendiente | TBD | TBD | TBD |
+
+¹ **Cuenca de la 42, tentativa desde el entrenamiento** (C-01/C-03 ≈ 0 todo el
+run; la intervención es C-06, suavizado del jerk de la CNN): apunta a
+*constraint-respecting* como la 2024, pero **se confirma con el eval** (pendiente).
+
+<img src="../figures/fig_7_8_multiseed_newcam.png" alt="Figura 7.8 — Comparación multi-semilla del track de cámara (seeds 2024 y 42)." width="560"/>
+
+*Figura 7.8 — Multi-semilla del **track de cámara** (seeds 2024 y 42; recortadas
+en su tramo sano ~450k / ~400k): `ep_rew_mean` (arriba) e intervención del cage
+(abajo) vs timesteps. Ambas son *constraint-respecting* en seguridad (C-01/C-03
+≈ 0; la intervención es C-06). Pendientes las 3 semillas restantes; la tabla se
+completará con sus evals. Generada por `tools/plot_f3_figures.py --seed-runs`.*
+
+**Línea base (track 'F', estado) — la referencia que estableció las cuencas.**
+Las cinco semillas del baseline F revelan **dos cuencas**: cuatro
+*constraint-respecting* y una (123) *cage-dependent* (curvas en
+`fig_7_8_multiseed.png`, Fig. 7.8b).
 
 | Métrica (baseline F, estado) | Seed 42 | Seed 2024 | Seed 23 | Seed 666 | Seed 123 |
 | --- | --- | --- | --- | --- | --- |
@@ -524,24 +556,16 @@ F revela **dos cuencas de convergencia** — **cuatro** convergen a
 | `max \|ey\|` (eval) | 27 mm | 23 mm | 22 mm | 26 mm | **145 mm** |
 | Emergencias C-05 | 0 | 0 | 0 | 0 | 0 |
 
-<img src="../figures/fig_7_8_multiseed.png" alt="Figura 7.8 — Comparación multi-semilla del baseline de estado." width="560"/>
-
-*Figura 7.8 — Multi-semilla del **baseline de estado** (seeds 42, 123, 2024,
-23, 666): `ep_rew_mean` (arriba) e intervención del cage (abajo) vs timesteps.
-Las seeds 42/2024/23/666 decaen a ~5–12 % (*constraint-respecting*) mientras
-la 123 se mantiene en ~75 % (*cage-dependent*). El multi-seed de cámara
-replicará este contraste con la campaña GE4. Generada por
-`tools/plot_f3_figures.py --seed-runs`.*
-
-**Por qué importa.** La seed 123 es la evidencia de utilidad del cage que el
-escenario nominal de las semillas *constraint-respecting* no puede dar: una
+**Por qué importa.** En el baseline F la seed 123 es la evidencia de utilidad del
+cage que el escenario nominal de las *constraint-respecting* no puede dar: una
 policy *peor* que el cage mantiene **segura y dentro de la vía** (C-01/C-03
 disparan activamente; sin cage abandonaría el carril). El valor del cage
-**depende de la policy** — latente cuando la policy basta (el E-main de
-cámara en nominal, §7.5.2), protector activo cuando no. La fuerza que empuja
-hacia *constraint-respecting* es el término de suavidad `w_ds` (§7.2.5),
-suficiente para 4/5 semillas del baseline pero no para la 123: motivo del tag
-`[provisional, M-P4]`; el análisis de sensibilidad es del Capítulo 8.
+**depende de la policy** — latente cuando la policy basta (el E-main de cámara en
+nominal, §7.5.2), protector activo cuando no. La fuerza que empuja hacia
+*constraint-respecting* es el término de suavidad `w_ds` (§7.2.5), suficiente para
+4/5 semillas del baseline F; el multi-seed de cámara dirá si se sostiene también
+bajo percepción. El análisis de sensibilidad de `w_ds` es del Capítulo 8 (tag
+`[provisional, M-P4]`).
 
 ---
 

@@ -31,6 +31,29 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [24.06.2026] — Root README pivoted to track 'E' (camera) primary; F kept as baseline
+
+**Document(s) affected:** `README.md` (intro framing, "Results at a glance" rewritten to the `complex_b` 297 k camera E-main + `_newcam` figures, track-'E' status note, "RL policy" pillar, GIF captions, how-to-read pointer to `docs/11`).  
+**Phase:** track 'E' (camera) — public-facing consolidation  
+**Gate context:** none (front-page narrative; no H/SR/C/M touched; no verdict)  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Brought the repository's front page in line with the manuscript pivot: the **end-to-end
+camera** policy (E-main `complex_b` 297 k) is now the headline result (beats the CV baseline
+on tracking, 10.9 vs 17.2 mm, 0 emergencies, cage latent), with the **state-vector track 'F'**
+(oval, 11.2 laps / 9.9 mm vs PD 23 mm, G4-`SATISFIED`) kept explicitly as the frozen baseline /
+control arm. Results figures swapped to the `_newcam` set; GIF captions labelled as the
+state-vector baseline demo; added the honest scope note (nominal eval done; GE4-on-297k pending).
+
+### Verification
+
+Referenced `_newcam` figures exist; the only residual F-track numbers are the labelled baseline
+mention. `tools/check_traceability.py` → PASS (no identifiers touched).
+
+---
+
 ## [24.06.2026] — Seed 42 nominal eval done (enforcement) → multi-seed table row filled, basin confirmed
 
 **Document(s) affected:** `manuscript/chapters/chapter_07_training_specification.md` (§7.5.3 — seed-42 eval columns filled + reading). Evidence: `experiments/sim/runs/rl_newcam_eval_42_cb125k_4k4/` (synced from Ubuntu).  

@@ -12,7 +12,7 @@
 </td>
 <td width="68%" valign="middle">
 
-**CobraFlex 1:14** is a scale ground vehicle with a 360° lidar, a stereo camera and a differential / skid-steer drive (four fixed wheels, no steering angle — the sim's DiffDrive plugin is faithful to this). The thesis develops and validates the safety cage in Gazebo first, on an oval lane-following circuit, then transfers it to the physical car. The URDF/SDF, Gazebo worlds, road assets and perception/control nodes all live in [`src/cobraflex`](src/cobraflex/).
+**CobraFlex 1:14** is a scale ground vehicle with a 360° lidar, a stereo camera and a differential / skid-steer drive (four fixed wheels, no steering angle — the sim's DiffDrive plugin is faithful to this). The thesis develops and validates the safety cage in Gazebo — first around a **state-vector** lane-follower on an oval (the baseline / control arm), then around the **primary end-to-end front-camera** policy on the harder `complex_b` circuit — before transferring it to the physical car. The URDF/SDF, Gazebo worlds, road assets and perception/control nodes all live in [`src/cobraflex`](src/cobraflex/).
 
 </td>
 </tr>
@@ -35,7 +35,7 @@
     <img src="manuscript/media/PPO_Eval.gif" alt="Trained policy lane-keeping in Gazebo with the live RViz state view" width="840">
   </a>
   <br>
-  <sub>The trained PPO policy lane-keeping on the oval in <b>Gazebo</b> (left), the live <b>RViz</b> state view (centre) and the vehicle TF tree (right).
+  <sub>The trained <b>state-vector</b> PPO policy (the baseline track) lane-keeping on the oval in <b>Gazebo</b> (left), the live <b>RViz</b> state view (centre) and the vehicle TF tree (right). The primary end-to-end camera track is showcased under <i>Results</i>.
 </p>
 
 <p align="center">
@@ -43,7 +43,7 @@
     <img src="manuscript/media/PPO_Training.gif" alt="Trained policy lane-keeping in Gazebo with the live RViz state view" width="840">
   </a>
   <br>
-  <sub>Training the PPO policy lane-keeping on the oval in <b>Gazebo</b> (left), the live <b>RViz</b> state view (centre) and the vehicle TF tree (right).
+  <sub>Training the <b>state-vector</b> PPO policy (the baseline track) lane-keeping on the oval in <b>Gazebo</b> (left), the live <b>RViz</b> state view (centre) and the vehicle TF tree (right).
 </p>
 
 ---
@@ -59,7 +59,7 @@ Everything is exercised in **Gazebo** simulation and is being carried toward the
 | **Hazard analysis** | 12 hazards (`H-01…H-12`) systematically identified and rated (incl. 3 camera-perception hazards from track 'E') |
 | **Safety requirements** | 14 requirements (`SR-001…SR-014`) derived from those hazards |
 | **Runtime safety cage** | 6 rules (`C-01…C-06`) that filter the RL policy's action *before* it reaches the car |
-| **RL policy** | A PPO lane-follower trained and evaluated under cage supervision |
+| **RL policy** | An end-to-end front-camera PPO lane-follower (primary) + a state-vector baseline, trained and evaluated under cage supervision |
 | **Validation scenarios** | Nominal, edge-case and perturbed scenarios for systematic testing |
 | **Full traceability** | Every hazard reaches a verdict through an auditable, mechanically-checked chain |
 
@@ -104,26 +104,30 @@ The cage ([`cage/`](cage/)) is **pure Python** and importable without ROS 2, so 
 
 ## Results at a glance
 
-The definitive F3 training cycle (`ppo_train_2024_200k` — seed 2024, 200 k steps, reward v1.2) **saturates**: the policy learns to complete full laps and then refines its smoothness on the plateau. Seed 2024 is the main run of the five-seed campaign (best reward + PPO health; 4/5 seeds constraint-respecting).
+The thesis's **primary** system is the **end-to-end front-camera** policy (track 'E'): a CNN that drives straight from the raw camera, with the cage reading its **own deterministic CV lane-estimator** (not the network). The current E-main is the `complex_b` 297 k peak (`cobraflex_ppo_newcam_complex_b_2024_297k_peak`, seed 2024).
 
 <p align="center">
-  <b>11.2 continuous laps&nbsp;·&nbsp; 0 emergencies&nbsp;·&nbsp; 9.9 mm mean lateral error&nbsp;·&nbsp; 0 % cage intervention</b>
+  <b>Beats the classical CV baseline on tracking&nbsp;·&nbsp; 10.9 mm vs 17.2 mm mean lateral error&nbsp;·&nbsp; 0 emergencies&nbsp;·&nbsp; cage latent (only the C-06 rate-limiter)</b>
 </p>
 
 <table>
 <tr>
-<td width="50%"><img src="manuscript/figures/fig_7_1_convergence.png" alt="PPO convergence — reward and episode length vs timesteps" width="100%"></td>
-<td width="45%"><img src="manuscript/figures/fig_7_5_trajectory.png" alt="PPO trajectory tracking the lane centreline on the oval" width="100%"></td>
+<td width="50%"><img src="manuscript/figures/fig_7_1_convergence_newcam.png" alt="Camera-PPO convergence on complex_b — reward peaks ~822 then collapses, hence checkpoint-on-peak" width="100%"></td>
+<td width="45%"><img src="manuscript/figures/fig_7_5_trajectory_newcam.png" alt="Camera-PPO trajectory tracking the lane centreline on the complex_b circuit" width="100%"></td>
 </tr>
 </table>
 
 <p align="center">
-  <img src="manuscript/figures/fig_7_6_tracking_error.png" alt="Lateral tracking error — RL stays roughly 2.3x tighter than the PD baseline" width="500">
+  <img src="manuscript/figures/fig_7_6_tracking_error_newcam.png" alt="Lateral tracking error on complex_b — the camera RL agent stays tighter than the CV baseline" width="500">
 </p>
 
-**Training** — `ep_rew_mean` climbs 20.9 → **536.8**, `ep_len_mean` reaches the **500-step** cap (saturated by ~75 k steps), and `explained_variance` settles at **0.67** (above the 0.5 threshold).
+**Training** — on the harder, self-approaching `complex_b` circuit (perimeter 19.2 m), `ep_rew_mean` peaks **~822** then degrades by exploration contraction, so the **peak** checkpoint is selected. Camera-CNN PPO is markedly **less stable** than the state-vector baseline — a reportable track finding, replicated across both trained seeds (2024 and 42).
 
-**Evaluation** (`rl_eval_2024_200k_4k4`, scenario `SC-NOM-01`) — the policy drives **11.2 continuous laps** with a mean lateral error of **9.9 mm**, against **23 mm** for the PD baseline on the same scenario (~2.3× tighter, see the tracking-error figure). Crucially the cage records **0 % interventions**: under reward v1.2 the policy already steers within every cage rule, so the raw action *equals* the safe action at every step — the cage stays silent because the policy is well-behaved, not because it is switched off.
+**Evaluation** (`rl_newcam_eval_2024_cb297k_4k4`, scenario `SC-NOM-01`) — the camera policy holds **10.9 mm** mean lateral error against **17.2 mm** for the deterministic CV controller on the same circuit (~37 % tighter), with **0 emergencies** and the cage **latent in-ODD** (no lane-boundary / heading / TTLC intervention — only the benign C-06 rate-limiter). This **reverses the oval finding** (where the classical baseline was the more accurate): on the tight `complex_b` geometry the learned agent earns its keep. Multi-seed **N = 5 in progress** (2/5 done — 2024, 42 — both *constraint-respecting*).
+
+> **Scope.** This is the nominal evaluation; the full 24-scenario **GE4 campaign on the 297 k policy is wired and pending** (Ubuntu + Gazebo). The per-SR camera verdicts in `docs/07` + ch. 8 §8.9 still reflect the **superseded 139 k** campaign until that re-run lands.
+
+**Baseline / control arm (track 'F' — state-vector, oval, frozen).** To isolate *the cost of camera perception*, the same cage + PPO recipe runs on a privileged 6-D ground-truth state on the oval: `ppo_train_2024_200k` drives **11.2 continuous laps** at **9.9 mm** mean error (vs **23 mm** for the PD baseline), 0 emergencies, 0 % cage intervention — a fully-characterised, G4-`SATISFIED` campaign (4/5 seeds *constraint-respecting*). Laps are **not** comparable across circuits (oval 8.8 m vs `complex_b` 19.2 m); the like-for-like contrast is the same-circuit CV baseline above.
 
 > Earlier F2 milestone — the PD baseline **+ cage** closed-loop demo (`ros_run_20260523T153003Z`) drove 9.91 laps over 845 s with 0 emergencies, validating the runtime pipeline end-to-end before the RL policy existed.
 
@@ -145,13 +149,11 @@ The work advances through gated phases. Each Gate is blocked until traceability 
 | --- | --- | :---: | --- |
 | **F0** | Foundation & workspace | G0 | complete |
 | **F1** | Hazard analysis + safety requirements (9 H / 11 SR) | G1 | complete |
-| **F2** | Safety cage (`C-01…C-06`) + ROS 2 pipeline | G2 | complete — passed 2026-05-23 |
-| **F3** | PPO training & policy | G3 | complete — passed 2026-06-03 |
-| **F4** | Simulation-based scenario evaluation | G4 | campaign closed — global verdict `SATISFIED`; G4 pending (2 SR-CL-B TBD) |
+| **F2** | Safety cage (`C-01…C-06`) + ROS 2 pipeline | G2 | complete |
+| **F3** | PPO training & policy | G3 | complete |
+| **F4** | Simulation-based scenario evaluation | G4 | Evaluation campaign pending |
 | F5 | Physical CobraFlex platform | G5 | planned |
 | F6 | Closure & defence | G6 | planned |
-
-> **Parallel track 'E' (end-to-end front camera):** merged into the trunk after **GE3 (training) closed** — camera-PPO peak checkpoint selected; **GE4 (eval campaign) in preparation**. The F-track results above are frozen as the ground-truth baseline (the control arm for "what does camera perception cost").
 
 ---
 
@@ -226,8 +228,6 @@ ros2 launch cobraflex_rl train.launch.py             # an RL training episode
 
 > Run `pip install -e .` **once before** `colcon build` — the ROS 2 nodes import `cage` via a path-walk bootstrap that relies on the editable install.
 
-The M-1 / M-2 calibration loggers currently live as standalone scripts under [`cage/ros2/`](cage/ros2/) (invoke via `python -m cage.ros2.<logger>` from a ROS 2-sourced shell); they are not yet a colcon package. Third-party drivers `sllidar_ros2` and `zed-ros2-wrapper` are intentionally **not** tracked (decision [`D-32`](docs/DECISIONS.md)) — install them externally if your physical setup needs them.
-
 ---
 
 ## How to read this repository
@@ -243,7 +243,7 @@ Suggested order for a newcomer:
 7. [`docs/06_metrics_catalogue.md`](docs/06_metrics_catalogue.md) — the metrics computed on every run.
 8. [`docs/07_traceability_matrix.md`](docs/07_traceability_matrix.md) — the master matrix that connects everything.
 9. [`docs/08_odd_specification.md`](docs/08_odd_specification.md) — the Operational Design Domain.
-10. [`docs/09_environment_design.md`](docs/09_environment_design.md) and [`docs/10_reward_function.md`](docs/10_reward_function.md) — the RL environment and reward (F3).
+10. [`docs/09_environment_design.md`](docs/09_environment_design.md) and [`docs/10_reward_function.md`](docs/10_reward_function.md) — the RL environment and reward (state-vector baseline); [`docs/11_camera_rl_training.md`](docs/11_camera_rl_training.md) — the **primary** end-to-end camera training (track 'E').
 
 The documents under `docs/` are **living**: every change is recorded in [`docs/CHANGELOG.md`](docs/CHANGELOG.md) with its rationale and triggers a re-run of the traceability check. A document is *closed* only when its Gate review approves it.
 

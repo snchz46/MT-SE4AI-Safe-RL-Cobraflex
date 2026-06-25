@@ -869,6 +869,19 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print("\n--dry-run: plan only, no Gazebo execution.")
         return 0
 
+    # Fail fast before launching dozens of cells: an empty/bad --train-config makes
+    # every RL launch reject a malformed `train_config:=` arg (one cryptic error per
+    # cell). The camera eval requires it, so catch it once here.
+    if "rl" in controllers:
+        if not str(args.train_config).strip():
+            print("\nERROR: --train-config is empty. Pass the camera eval config, e.g.\n"
+                  "  source /opt/ros/jazzy/setup.bash\n"
+                  "  --train-config $(ros2 pkg prefix cobraflex_rl)/share/cobraflex_rl/config/train_ppo_camera.yaml")
+            return 2
+        if not Path(args.train_config).is_file():
+            print(f"\nERROR: --train-config file not found: {args.train_config!r}")
+            return 2
+
     # Execution path (Ubuntu+Jazzy host): drive each matrix cell through Gazebo,
     # then aggregate per-run -> per-scenario -> per-SR (D-29) -> global (D-30).
     runs_root = args.out / "runs"

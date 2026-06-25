@@ -630,8 +630,9 @@ cage behaves.
 
 ```bash
 cd <repo> && source /opt/ros/jazzy/setup.bash && export DISPLAY=:0
-PEAK=experiments/sim/training/ppo_newcam_complex_b_2024_1M/checkpoints_peak/cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip
-TRAINCFG=$(ros2 pkg prefix cobraflex_rl)/share/cobraflex_rl/config/train_ppo_camera.yaml
+export PEAK=experiments/sim/training/ppo_newcam_complex_b_2024_1M/checkpoints_peak/cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip
+export TRAINCFG=$(ros2 pkg prefix cobraflex_rl)/share/cobraflex_rl/config/train_ppo_camera.yaml
+ls -l "$PEAK" "$TRAINCFG"     # both MUST print a file — an empty $TRAINCFG (ROS not sourced) breaks every run
 
 # Preview the matrix (no Gazebo):
 python3 tools/run_campaign.py --scenario-dir scenarios_complex_b --model-path "$PEAK" \

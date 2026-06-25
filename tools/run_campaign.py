@@ -510,6 +510,12 @@ def _reap_orphan_gazebo() -> int:
         ["pkill", "-9", "-f", r"gz sim.*cobraflex/share/cobraflex/worlds"],
         check=False,
     )
+    # The GUI client (`gz sim -g`) carries no world path, so the server pattern
+    # above misses it. With --gui it ignores the launch's on-exit Shutdown the
+    # same way the server does and lingers, so a fresh window opens every run and
+    # they pile up (multiple Gazebo instances). The server cmdline is `gz sim -r
+    # -s …`, never `-g`, so this is GUI-only — a campaign owns the only gz GUI.
+    subprocess.run(["pkill", "-9", "-f", r"gz sim -g"], check=False)
     return proc.returncode
 
 

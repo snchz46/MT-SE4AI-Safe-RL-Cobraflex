@@ -44,7 +44,7 @@ perturbations:
 
 termination:
   type: time_or_event
-  timeout_s: 15.0
+  timeout_s: 40.0          # start_s 2 → s≈10 at 0.2 m/s: covers the straight + first scallop curve (s≈5.5–9)
   events: [lane_exit, emergency_stop, straight_completed]
 
 metrics_primary: [M-S1, M-P1, M-I1]

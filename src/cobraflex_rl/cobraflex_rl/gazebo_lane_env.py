@@ -309,6 +309,12 @@ class GazeboLaneEnv(gym.Env):
         self._perturbation = opts.get("perturbation") or NO_PERTURBATION
         self._cmd_delay.clear()
         start_s = opts.get("start_s_m")
+        # SC-EDGE-05 kappa_seed: spawn on the curve whose curvature matches the
+        # grid anchor's kappa_seed_rad_m, so C-04's curvature-parameterised speed
+        # ceiling sees real geometry (overrides the scenario's straight start_s).
+        kappa_seed = opts.get("kappa_seed_rad_m")
+        if kappa_seed is not None:
+            start_s = self.tracker.arclength_at_curvature(float(kappa_seed))
         if start_s is not None:
             base_x, base_y, base_heading = self.tracker.pose_at_arclength(
                 float(start_s), float(opts.get("lateral_offset_m", 0.0) or 0.0)
@@ -651,6 +657,8 @@ class GazeboLaneEnv(gym.Env):
                     "cage_enabled": False,
                     "cage_emergency": False,
                     "cage_interventions": [],
+                    "cage_joint_envelope_violated": False,
+                    "cage_oscillation_persistent": False,
                     "raw_steer": policy_steer,
                     "safe_steer": policy_steer,
                     "steer_correction": 0.0,
@@ -707,6 +715,11 @@ class GazeboLaneEnv(gym.Env):
             "cage_enabled": True,
             "cage_emergency": emergency,
             "cage_interventions": [iv["rule"] for iv in result["interventions"]],
+            # SR-010 (SC-EDGE-05) co-activation diagnostics: the cage's per-cycle
+            # joint-envelope assertion + oscillation-persistence flags, surfaced so
+            # eval_policy can count assertion failures / oscillation events per run.
+            "cage_joint_envelope_violated": bool(result.get("joint_envelope_violated", False)),
+            "cage_oscillation_persistent": bool(result.get("oscillation_persistent", False)),
             "raw_steer": policy_steer,
             "safe_steer": float(safe_steer),
             "steer_correction": float(safe_steer) - policy_steer,

@@ -16,13 +16,14 @@ track:
   world_name: lane_following_complex_b
   road_centerline: complex_b_centerline.yaml
   centerline: complex_b_right_lane_centerline.yaml
-  start_s_m: 0.0          # 0.0 = straight start, 1.5 = curve entry
+  start_s_m: 0.0          # full-circuit run covers the whole loop regardless of start (README); s=0 is a left curve on complex_b, not a straight
 commanded_speed_mps: 0.2     # env fixed_speed (supersedes the 0.3/0.4 prose in docs/05)
 
 description: |
-  Full-circuit run. Vehicle completes three full laps of the oval (alternating
-  1.5 m straights and R = 0.8 m curves), testing consistency over extended
-  duration. No perturbations.
+  Full-circuit run. Vehicle completes three full laps of the complex_b circuit
+  (perimeter 19.93 m; mix of straights and the scallop/self-approach curves),
+  testing consistency over extended duration. No perturbations. At 0.2 m/s one
+  lap is ~100 s, so timeout_s = 300 s covers ~3 laps.
 
 initial_conditions:
   pose: { x: 0.0, y: 0.0, theta_deg: 0.0 }
@@ -35,7 +36,7 @@ perturbations: none
 
 termination:
   type: time_or_event
-  timeout_s: 120.0
+  timeout_s: 300.0
   events: [lane_exit, emergency_stop, laps_completed]
 
 # M-P4 gates SR-002 (heading ≤ θ_max = 25° = 0.436 rad) in nominal; emergency == False

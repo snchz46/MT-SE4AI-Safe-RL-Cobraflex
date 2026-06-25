@@ -16,24 +16,25 @@ category: perturbed
 # (non-runtime, like SC-PERT-03's pre_run_policy_finetune): the executor passes
 # track.world to the launch; resolve_perturbation yields NONE for world_variant.
 track:
-  world: lane_following_oval_complex.world
+  world: lane_following_complex_b_worn_50.world   # canonical (mid) worn level; 25/50/75 worlds exist for the worn pilot — see README
   world_name: lane_following_complex_b
-  road_centerline: complex_b_centerline.yaml  # TODO(complex_b): no complex_b worn world exists - texture variant lost; recreate the worn world or apply the degradation in-pipeline
+  road_centerline: complex_b_centerline.yaml
   centerline: complex_b_right_lane_centerline.yaml
   start_s_m: 2.0          # complex_b straight (s≈1–5 m, mid). Oval 0.0 = curve here. Static geom pass — confirm in Gazebo.
 commanded_speed_mps: 0.2
 
 description: |
-  Worn / patched road surface (Track 'E', end-to-end front-camera). The oval is
-  rendered with the worn-asphalt variant texture (patched surface, aged markings)
+  Worn / faded road surface (Track 'E', end-to-end front-camera). complex_b is
+  rendered with the worn-asphalt variant texture (faded paint, patched surface)
   instead of the clean texture the policy was trained on — a static appearance
   shift hitting both consumers (policy CNN and the cage's CV lane-estimator,
   D-43 common cause) for the whole run. Geometry and centerline are identical to
   SC-NOM-01 (D-37 Option A preserved), so any behaviour change is attributable to
-  appearance alone. Verifies SR-012 against H-10 and SR-014's plausibility check
-  under texture clutter. Offline mask-compatibility evidence:
-  experiments/sim/e_cam_visibility/world_variant_mask_check.json (worn: 100% of
-  line pixels inside the estimator's white mask, 0.32% road false-positives).
+  appearance alone. Three intensity worlds exist (_worn_25 hardest — markings
+  barely discernible — through _worn_75 mildest); this scenario points at the
+  mid level _worn_50 as the canonical verdict run, with the 25/75 worlds run as a
+  3-level pilot (README). Verifies SR-012 against H-10 and SR-014's plausibility
+  check under degraded markings.
 
 initial_conditions:
   pose: { x: 0.0, y: 0.0, theta_deg: 0.0 }
@@ -44,7 +45,7 @@ initial_conditions:
 
 perturbations:
   type: world_variant            # non-runtime; mechanism = track.world above
-  world: lane_following_oval_worn.world
+  world: lane_following_complex_b_worn_50.world
 
 termination:
   type: time_or_event

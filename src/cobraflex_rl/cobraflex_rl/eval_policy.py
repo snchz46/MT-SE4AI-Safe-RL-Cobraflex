@@ -144,6 +144,10 @@ def _record_from_info(episode: int, step: int, info: Dict[str, Any]) -> Dict[str
         "steer_correction": float(info.get("steer_correction", 0.0)),
         "interventions": list(info.get("cage_interventions", [])),
         "emergency": bool(info.get("cage_emergency", False)),
+        # SR-010 / SC-EDGE-05 per-cycle cage co-activation flags (0/False on every
+        # other scenario): aggregated into the per-run assertion/oscillation counters.
+        "joint_envelope_violated": bool(info.get("cage_joint_envelope_violated", False)),
+        "oscillation_persistent": bool(info.get("cage_oscillation_persistent", False)),
         # Track-'E' perception diagnostics (0/absent on the state-vector track):
         # the SC-PERT-07/08 verdicts need the Trigger-8 / availability trace.
         "cv_ok": bool(info.get("cv_ok", False)),
@@ -168,6 +172,7 @@ def _write_cage_status_csv(path: Path, records: List[Dict[str, Any]]) -> None:
         "episode", "step", "x", "y", "yaw", "ey", "epsi", "s", "speed",
         "raw_steer", "safe_steer", "steer_correction",
         "interventions", "emergency",
+        "joint_envelope_violated", "oscillation_persistent",
         "cv_ok", "cv_state_available", "cv_perception_invalid",
         "cv_ey", "cv_epsi", "cv_confidence",
         "cv_curvature", "cv_lane_width", "cv_n_lines", "cv_reason",
@@ -183,6 +188,8 @@ def _write_cage_status_csv(path: Path, records: List[Dict[str, Any]]) -> None:
                 f"{r['speed']:.6f}", f"{r['raw_steer']:.6f}",
                 f"{r['safe_steer']:.6f}", f"{r['steer_correction']:.6f}",
                 ";".join(r["interventions"]), int(r["emergency"]),
+                int(r.get("joint_envelope_violated", False)),
+                int(r.get("oscillation_persistent", False)),
                 int(r.get("cv_ok", False)), int(r.get("cv_state_available", False)),
                 int(r.get("cv_perception_invalid", False)),
                 f"{r.get('cv_ey', 0.0):.6f}", f"{r.get('cv_epsi', 0.0):.6f}",
@@ -435,6 +442,19 @@ def _evaluate_scenario(
     values["road_edge_contact"] = (
         road_edge_contact(records, road_half_m) if road_half_m else None
     )
+    # SR-010 / SC-EDGE-05 co-activation counters from the per-cycle cage flags.
+    # joint_envelope_assertion_failures = #cycles the joint-envelope predicate was
+    # violated; inter_cycle_oscillations = #distinct oscillation events (rising
+    # edges of the cage's persistent-oscillation flag). Both 0 on every non-grid
+    # scenario (the flags are False there), so they are inert in other criteria.
+    values["joint_envelope_assertion_failures"] = sum(
+        1 for r in records if r.get("joint_envelope_violated")
+    )
+    values["inter_cycle_oscillations"] = sum(
+        1 for i, r in enumerate(records)
+        if r.get("oscillation_persistent")
+        and not (i > 0 and records[i - 1].get("oscillation_persistent"))
+    )
 
     expr = run_config.pass_criterion_per_run
     pert = getattr(run_config, "perturbation", None)
@@ -463,6 +483,10 @@ def _evaluate_scenario(
     return {
         "scenario_id": run_config.scenario_id,
         "criterion": expr,
+        # SC-EDGE-05 only: the co-activation grid point this rep ran (anchor id,
+        # expected cage rules, bracket factor, scaled seed) so the SR-010 analysis
+        # can compare expected vs observed co-activation. None for every other scenario.
+        "grid_point": getattr(run_config, "grid_point", None),
         "verdict": verdict,           # True / False / None (indeterminate)
         "clauses": _jsonable(clauses),
         "values": _jsonable(values),

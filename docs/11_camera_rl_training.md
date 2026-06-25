@@ -618,6 +618,79 @@ streak); a zero stamp makes RViz resolve against the latest transform. Fixed Fra
 = `odom`. The per-episode teleport back to the spawn (a `reset()`) makes the
 vehicle marker "jump" — that is the episode boundary, not a fault.
 
+### 9.2 GE4 evaluation campaign — visual pilot + full run (`run_campaign.py`)
+
+The GE4 (track-'E') verdict campaign scores the 297k E-main over the whole
+`scenarios_complex_b/` library (28 scenarios × {enforcement, monitoring}) through the
+pure-Python driver + Gazebo executor (`tools/run_campaign.py`; see
+[`scenarios_complex_b/README.md`](../scenarios_complex_b/README.md) for the per-scenario
+status). Before committing the ~1600-run campaign, run a **visual pilot** (`--gui`, 1–2
+reps/scenario) to eyeball that every scenario spawns on-lane, the camera bridges, and the
+cage behaves.
+
+```bash
+cd <repo> && source /opt/ros/jazzy/setup.bash && export DISPLAY=:0
+PEAK=experiments/sim/training/ppo_newcam_complex_b_2024_1M/checkpoints_peak/cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip
+TRAINCFG=$(ros2 pkg prefix cobraflex_rl)/share/cobraflex_rl/config/train_ppo_camera.yaml
+
+# Preview the matrix (no Gazebo):
+python3 tools/run_campaign.py --scenario-dir scenarios_complex_b --model-path "$PEAK" \
+  --train-config "$TRAINCFG" --seeds 2024 --modes enforcement --reps 1 \
+  --out /tmp/pilot_297k --dry-run
+
+# Visual pilot — one Gazebo window per scenario (28 runs, ~25-40 min). --reps 2 for a couple each.
+python3 tools/run_campaign.py --scenario-dir scenarios_complex_b --model-path "$PEAK" \
+  --train-config "$TRAINCFG" --seeds 2024 --modes enforcement --reps 1 \
+  --gui --retries 0 --out /tmp/pilot_297k
+```
+
+> **Do NOT add `--rviz`** alongside `--gui`: RViz + the camera render exhausts the 8 GB GPU
+> (Ogre GL vertex-buffer OOM, observed 2026-06-25). `--gui` alone is fine. If a `gz sim`
+> window lingers between runs, reap with `bash tools/reap_sim.sh` (never `pkill -f` — it
+> matches its own shell). Quick command check: add `--scenarios SC-NOM-01,SC-EDGE-05,SC-FRONT-07,SC-PERT-09`.
+
+**What "going well" looks like, by family** — emergencies in the adverse / edge / frontier
+families are the cage *working*, not a fault:
+
+| Family | Correct behaviour |
+| --- | --- |
+| `SC-NOM-*` | spawn on the straight, drives the lane clean, **no** emergency |
+| `SC-PERT-09/10/11/12/13` (worn / particles / gaps / glare) | drives, or a **safe controlled stop** when perception degrades (emergency OK, no road-edge) |
+| `SC-PERT-07` (occlusion) | controlled stop — emergency **required** |
+| `SC-EDGE-05` (grid) | spawn offset by the anchor (lateral/heading, or **on a curve** for the `kappa_seed` anchors), cage co-activates |
+| `SC-FRONT-*` incl. **07 (flip)** | OOD: the policy may drift and the **cage stops it off the road edge** (emergency expected) |
+
+Red flags: spawn **off** the lane, a black camera frame, or `road_edge_contact == True`.
+Inspect verdicts after the pilot:
+
+```bash
+python3 - <<'EOF'
+import json, glob
+for d in sorted(glob.glob("/tmp/pilot_297k/runs/*/")):
+    try:
+        c = json.load(open(d+"summary.json")).get("campaign") or {}; v = c.get("values", {})
+        print(f"{c.get('scenario_id','?'):14s} verdict={str(c.get('verdict')):5} "
+              f"emerg={v.get('emergency')} edge={v.get('road_edge_contact')} M-S1={round(v.get('M-S1') or 0,3)}")
+    except FileNotFoundError: pass
+EOF
+```
+
+**Full verdict campaign** (the ~1600-run run — host it **off this machine** per the ≤1 h
+rule): drop `--gui`, run both modes, with `--resume` so an interrupted run continues. The
+per-scenario reps come from each scenario's `n_runs_recommended` (`--reps` only *caps* them
+for a subset).
+
+```bash
+python3 tools/run_campaign.py --scenario-dir scenarios_complex_b --model-path "$PEAK" \
+  --train-config "$TRAINCFG" --seeds 2024 --modes enforcement,monitoring \
+  --resume --out experiments/sim/campaign_e_297k
+```
+
+The frontier scenarios are scored as a paired enforcement-vs-monitoring contrast (the cage
+counterfactual), not by `fraction_pass` aggregation; the eight adverse-safety scenarios use
+the D-45 "safe controlled stop = pass" criterion. Both are detailed in
+`scenarios_complex_b/README.md`.
+
 <!---
 
 ## 10. Anticipated defense questions
@@ -671,6 +744,11 @@ multi-seed N=5 confirmation is the planned robustness check).
 
 ## Version log
 
+- **v0.4 (2026-06-25):** added **§9.2 — GE4 evaluation campaign (visual pilot + full run)**:
+  the `run_campaign.py` pilot/`--gui` workflow, the per-family "what going well looks like"
+  table, the verdict-inspection snippet and the full enf+mon campaign command. Documents the
+  `--rviz`+`--gui` GPU-OOM caveat and points at `scenarios_complex_b/README.md` for per-scenario
+  status (worn/particles/gaps worlds, SC-EDGE-05 grid wiring, SC-FRONT-07 flip — all Gazebo-validated this session).
 - **v0.3 (2026-06-21):** **PPO stability levers** added to `train_ppo_camera.yaml`
   (§4.1) after the first 1M camera run collapsed (`approx_kl` runaway at ~105k) then
   *sawtoothed* (critic chasing the ~700 reward scale): `target_kl`, `lr_schedule:

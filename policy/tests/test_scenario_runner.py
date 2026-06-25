@@ -148,6 +148,146 @@ from cobraflex_rl.scenario_metrics import (  # noqa: E402
     max_excursion_m, emergency_triggered, road_edge_contact)
 
 
+# --------------------------------------------------------------------------- #
+# parameterised_grid (SC-EDGE-05 cage co-activation matrix, SR-010)
+# --------------------------------------------------------------------------- #
+from cobraflex_rl.scenario_runner import expand_grid  # noqa: E402
+
+_SC_EDGE_05 = {
+    "id": "SC-EDGE-05",
+    "track": {"start_s_m": 2.0},
+    "commanded_speed_mps": 0.2,
+    "initial_conditions": {
+        "type": "parameterised_grid",
+        "speed_mps": 0.30,
+        "randomisation": "none",
+        "grid_anchors": [
+            {"id": "C01_C02", "seed": {"d_m": 0.10, "theta_deg": 12.0},
+             "expected_activation": ["C-01", "C-02"]},
+            {"id": "C01_C03", "seed": {"d_m": 0.08, "theta_deg": 8.0, "ttlc_seed_s": 0.9},
+             "expected_activation": ["C-01", "C-03"]},
+            {"id": "C04_C06", "seed": {"v_mps": 0.45, "kappa_seed_rad_m": 0.6},
+             "expected_activation": ["C-04", "C-06"]},
+            {"id": "C01_C04_C06", "seed": {"d_m": 0.10, "v_mps": 0.45, "kappa_seed_rad_m": 0.6},
+             "expected_activation": ["C-01", "C-04", "C-06"]},
+            {"id": "C01_C02_C04", "seed": {"d_m": 0.10, "theta_deg": 12.0, "v_mps": 0.45},
+             "expected_activation": ["C-01", "C-02", "C-04"]},
+        ],
+    },
+    "termination": {"timeout_s": 10.0},
+    "pass_criterion_per_run":
+        "joint_envelope_assertion_failures == 0 AND M-S2 == 0 AND inter_cycle_oscillations == 0",
+}
+
+
+def test_expand_grid_yields_at_least_20_points_from_5_anchors():
+    pts = expand_grid(_SC_EDGE_05["initial_conditions"]["grid_anchors"])
+    assert len(pts) >= 20
+    # 5 anchors × ceil(20/5)=4 factors.
+    assert len(pts) == 20
+    # every point carries its anchor + expected co-activation set.
+    assert all(p["anchor_id"] and p["expected_activation"] for p in pts)
+
+
+def test_expand_grid_is_deterministic():
+    a = expand_grid(_SC_EDGE_05["initial_conditions"]["grid_anchors"])
+    b = expand_grid(_SC_EDGE_05["initial_conditions"]["grid_anchors"])
+    assert a == b
+
+
+def test_expand_grid_brackets_boundary_with_factor_sweep():
+    pts = expand_grid([{"id": "C01_C02", "seed": {"d_m": 0.10, "theta_deg": 12.0},
+                        "expected_activation": ["C-01", "C-02"]}])
+    factors = [p["factor"] for p in pts]
+    assert min(factors) < 1.0 < max(factors)  # some seeds under, some over nominal
+    # scaling is applied to the seed magnitudes.
+    nominal = next(p for p in pts if p["factor"] == 1.0)
+    assert nominal["seed"]["d_m"] == pytest.approx(0.10)
+    hottest = max(pts, key=lambda p: p["factor"])
+    assert hottest["seed"]["d_m"] > 0.10 and hottest["seed"]["theta_deg"] > 12.0
+
+
+def test_grid_run_config_injects_coactivation_ic():
+    # rep 0 -> first anchor (C01_C02), first factor: lateral + heading both seeded.
+    cfg = derive_run_config(_SC_EDGE_05, rep=0, control_dt=0.1)
+    assert cfg.grid_point is not None
+    assert cfg.grid_point["anchor_id"] == "C01_C02"
+    assert cfg.grid_point["expected_activation"] == ["C-01", "C-02"]
+    # d_m -> lateral_offset_m, theta_deg -> heading_error_rad (both non-zero => co-activate).
+    assert cfg.reset_options["lateral_offset_m"] > 0.0
+    assert cfg.reset_options["heading_error_rad"] > 0.0
+    assert cfg.reset_options["start_s_m"] == pytest.approx(2.0)
+    # no runtime perturbation: the stress is the initial-condition placement.
+    assert not cfg.perturbation.active
+
+
+def test_grid_run_config_speed_override_and_passthrough():
+    # The C04_C06 anchor (index 2) is reached by rep where rep % 20 lands on it.
+    pts = expand_grid(_SC_EDGE_05["initial_conditions"]["grid_anchors"])
+    rep = next(i for i, p in enumerate(pts) if p["anchor_id"] == "C04_C06")
+    cfg = derive_run_config(_SC_EDGE_05, rep=rep, control_dt=0.1)
+    assert cfg.grid_point["anchor_id"] == "C04_C06"
+    # v_mps seeds the commanded speed (C-04); kappa_seed carried for forward-compat.
+    assert cfg.fixed_speed > 0.30
+    assert "kappa_seed_rad_m" in cfg.reset_options
+
+
+def test_grid_run_config_reproducible_and_cycles_points():
+    a = derive_run_config(_SC_EDGE_05, rep=3, control_dt=0.1)
+    b = derive_run_config(_SC_EDGE_05, rep=3, control_dt=0.1)
+    assert a.reset_options == b.reset_options and a.grid_point == b.grid_point
+    # rep and rep+20 map to the same grid point (5 reps per point over 100 runs).
+    c = derive_run_config(_SC_EDGE_05, rep=3 + 20, control_dt=0.1)
+    assert c.grid_point["anchor_id"] == a.grid_point["anchor_id"]
+    assert c.grid_point["seed"] == a.grid_point["seed"]
+
+
+def test_grid_run_config_max_steps_from_timeout():
+    cfg = derive_run_config(_SC_EDGE_05, rep=0, control_dt=0.1)
+    assert cfg.max_steps == 100  # 10 s / 0.1 s
+
+
+def test_grid_ttlc_seed_overrides_heading_for_target_ttlc():
+    # rep 5 = C01_C03 at factor 1.0 (anchor order × 4 factors): d=0.08, ttlc_seed=0.9.
+    cfg = derive_run_config(_SC_EDGE_05, rep=5, control_dt=0.1)
+    assert cfg.grid_point["anchor_id"] == "C01_C03"
+    d = abs(cfg.reset_options["lateral_offset_m"]); v = cfg.fixed_speed
+    psi = abs(cfg.reset_options["heading_error_rad"])
+    # the seeded heading reproduces C-03's TTLC = (d_max-|d|)/(v·sin|psi|) ≈ 0.9 s
+    ttlc = (0.16 - d) / (v * math.sin(psi))
+    assert ttlc == pytest.approx(0.9, abs=0.05)
+    # and it superseded the anchor's theta_deg=8° (0.14 rad)
+    assert psi > math.radians(8.0)
+
+
+def test_grid_kappa_seed_carried_through_for_env():
+    pts = expand_grid(_SC_EDGE_05["initial_conditions"]["grid_anchors"])
+    rep = next(i for i, p in enumerate(pts) if p["anchor_id"] == "C04_C06")
+    cfg = derive_run_config(_SC_EDGE_05, rep=rep, control_dt=0.1)
+    # no pure mapping: the env resolves it to a curve spawn; it must be carried.
+    assert cfg.reset_options.get("kappa_seed_rad_m", 0.0) > 0.0
+
+
+def test_arclength_at_curvature_discriminates_on_complex_b():
+    import yaml
+    from cobraflex_rl.polyline_tracker import PolylineTracker
+    cl = _PKG_PARENT / "config" / "complex_b_centerline.yaml"
+    if not cl.is_file():
+        pytest.skip("complex_b centerline not present")
+    pts = np.asarray(yaml.safe_load(cl.read_text())["centerline"]["points"], dtype=float)
+    tr = PolylineTracker(pts)
+    total = float(tr.cumulative_lengths[-1])
+    s_straight = tr.arclength_at_curvature(0.0)
+    s_curve = tr.arclength_at_curvature(0.8)
+    assert 0.0 <= s_straight <= total and 0.0 <= s_curve <= total
+
+    def kappa_at(s):
+        i = int(np.searchsorted(tr.cumulative_lengths, s, side="right") - 1)
+        return abs(tr.curvature_ahead(max(0, i)))
+    # the curve target lands on materially higher local curvature than the straight.
+    assert kappa_at(s_curve) > kappa_at(s_straight) + 0.2
+
+
 def _recE(ey, emergency=False):
     return {"ey": ey, "epsi": 0.0, "emergency": emergency}
 

@@ -200,6 +200,11 @@ Full loop: `ros2 launch cobraflex lane_keeper_gazebo.launch.py`. The ROS2 nodes 
 ## Environment & host constraints
 
 - Dev machine: **Ubuntu 24.04 LTS** with ROS2 Jazzy at `/opt/ros/jazzy`.
+- **Gazebo + ROS2 are runnable here for smoke tests** (single short eval cells,
+  world-load / camera-bridge / cage checks). The `.venv/` is a husk (no numpy/pytest);
+  use system `python3` (after `source /opt/ros/jazzy/setup.bash` it has numpy + pytest).
+  Do **not** run multi-hundred-run campaigns or >1 h trainings here — those hand off
+  to the user's other machine.
 - `.venv/` is the local Python env. `pyproject.toml` exposes `cage`,
   `cage.rules`, `policy` for `pip install -e .`.
 - Third-party drivers (`sllidar_ros2`, `zed-ros2-wrapper`) are
@@ -271,4 +276,11 @@ Full loop: `ros2 launch cobraflex lane_keeper_gazebo.launch.py`. The ROS2 nodes 
 
 ## Git commits
 
-Do not add agent attribution to commit messages. No `Co-Authored-By: Claude ...`, no "Generated with Claude Code" trailers, no tool/model signatures. Write the commit message as the human author.
+**NEVER run `git commit` or `git push`** (user rule, 2026-06-25). Leave changes in
+the working tree; the user reviews and commits manually. Offer to draft the commit
+message / CHANGELOG text, but stop short of committing — even an explicit "commit"
+request should be confirmed first against this rule.
+
+When the user *does* commit: do not add agent attribution to commit messages. No
+`Co-Authored-By: Claude ...`, no "Generated with Claude Code" trailers, no
+tool/model signatures. Write the commit message as the human author.

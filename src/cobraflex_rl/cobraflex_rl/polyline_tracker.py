@@ -316,6 +316,28 @@ class PolylineTracker:
         )
         return dpsi / arc
 
+    def arclength_at_curvature(
+        self, target_kappa: float, lookahead_segments: int = 5
+    ) -> float:
+        """Arc-length ``s`` of the track location whose local curvature magnitude
+        is closest to ``|target_kappa|`` (1/m).
+
+        Used by SC-EDGE-05's ``kappa_seed_rad_m`` grid anchors so the vehicle
+        spawns on a curve of the requested curvature, exercising C-04's
+        curvature-parameterised speed ceiling for real geometry rather than a
+        synthetic seed. Scans every segment's :meth:`curvature_ahead` and returns
+        the cumulative arc-length at the best match (0.0 on a degenerate track)."""
+        n = len(self.segment_headings)
+        if n < 2:
+            return 0.0
+        target = abs(float(target_kappa))
+        best_index, best_err = 0, float("inf")
+        for i in range(n):
+            err = abs(abs(self.curvature_ahead(i, lookahead_segments)) - target)
+            if err < best_err:
+                best_err, best_index = err, i
+        return float(self.cumulative_lengths[best_index])
+
     def _smoothed_heading(self, segment_index: int) -> float:
         """Circular mean of segment headings within `_HEADING_SMOOTHING_RADIUS`."""
         n = len(self.segment_headings)

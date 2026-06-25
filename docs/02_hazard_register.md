@@ -389,11 +389,50 @@ The systematic pass does not introduce new cage rules: it produces additional co
 
 **Track 'E' addendum (D-41 / D-43).** The camera-perception hazards H-10, H-11 and H-12 are treated by analogy rather than by a fresh four-UCA enumeration: H-10 mirrors H-01's steering-action pass (a wrong percept produces UCA3/UCA4 corrections, bounded on the cage's CV-derived state, D-43); H-11 mirrors H-04's collapse-to-substitution (no valid lane ⇒ all commands untrustworthy ⇒ open-loop controlled stop via C-05); and H-12 (cage lane-misdetection) is a "wrong-belief" case — the cage acts correctly given a false state, mitigated by SR-014 (distrust low-plausibility detections + controlled stop). None introduces a new cage rule; see §H-10, §H-11 and §H-12.
 
+**Control-structure completeness (per-block UCA sweep, STPA p.23–24).** Mapping the registered hazards onto the four blocks of the STPA control loop (controller → actuator → controlled process → sensor → controller) confirms each block carries ≥ 1–2 unsafe-control-action sources:
+
+| Control-structure block | Unsafe control actions (UCA type) | Where covered |
+| --- | --- | --- |
+| **Controller** (policy + cage + control node) | steering not given / unsafe / wrong-magnitude / late (UCA1–4); cage composes an inconsistent command; control-algorithm pathology (inaction) | H-01, H-02, H-03, H-04, H-09 (C-01..C-05, SR-010); H-08 (SR-009) |
+| **Sensor / feedback** (camera, CV estimator, odometry) | stale/invalid feedback; degraded camera input; loss of perception; false/implausible estimate | H-06, H-10, H-11, H-12 (SR-007, SR-012, SR-013, SR-014) |
+| **Controlled process** (vehicle dynamics + track) | progress stall (UCA "stops too soon/inaction"); **process disturbance / low-friction skid** (exogenous departure) | H-08 (SR-009); process-disturbance entry below (Phase 5 / ODD-excluded) |
+| **Actuator** (diff-drive motors) | abrupt command shaping; **safe command not executed** (UCA "not given" at the actuator); **executed distorted** (saturation / skid-steer asymmetry) | H-05 (C-06) + SC-PERT-02 latency; actuator execution-fault entry below (Phase 5) |
+
+The actuator and process *execution-level* faults are deliberately scoped to the physical platform: in Gazebo the DiffDrive actuator is faithful (platform note) and the track is flat / dry / controlled (ODD-1/2), so these UCAs cannot manifest in the sim verdict and their mitigation is actuator-/platform-level, not cage-level. They are registered below for completeness and Phase-5 follow-up; either may be promoted to a full H-XX with an `implementation deferred` SR when physical validation begins.
+
+The closed control loop and its four blocks are shown in **Fig. STPA-CS**:
+
+![STPA control structure of the CobraFlex lane-following system](../manuscript/figures/fig_stpa_control_structure.svg)
+
+*Fig. STPA-CS — the four-block control loop (controller → actuator → controlled process → sensors → controller), each block annotated with its UCAs and the hazards/SRs that cover them. Blue = covered in sim/ODD; amber = execution-level fault identified but deferred to the physical platform (Phase 5). STPA after Thomas (MIT, 2020); control-structure form after Abdulkhaleq (2017).*
+
+**SR-derivation table (UCA → safety constraint → SR).** The same analysis read bottom-up: each SR is the safety constraint answering a specific block + UCA (the top-down hazard mapping is the per-hazard sections above and the summary table). This is the STPA half of the derivation chain `block → UCA → constraint → SR → C-rule/training → scenario/metric` whose right-hand side is the traceability matrix ([docs/07](07_traceability_matrix.md)).
+
+| Block | UCA (type) | Safety constraint (the SR ensures…) | SR | Mechanism |
+| --- | --- | --- | --- | --- |
+| Controller | UCA1/3 — no / weak lane correction | lateral offset stays within `d_max` | SR-001 | C-01 |
+| Controller | UCA3 — heading over/under-correction | heading bounded; no sustained oscillation | SR-002, SR-011 | C-02, C-06 + training |
+| Controller | UCA4 — correction too late | predicted time-to-lane-crossing ≥ `t_min` | SR-003 | C-03 |
+| Controller | UCA1 — no slow-down for curvature | speed ≤ curvature ceiling | SR-004 | C-04 |
+| Controller | compound state (UCAs collapse) | substitute the command; enter emergency | SR-005 | C-05 |
+| Controller | UCA2 — inconsistent composed command | joint cage envelope holds under co-activation | SR-010 | arbiter |
+| Controller | UCA1 — stop not given on demand | a controlled stop is available within `t_stop_max` | SR-008 | C-05 |
+| Controller | algorithm pathology — inaction | minimum forward progress (liveness) | SR-009 | training |
+| Actuator | abrupt command | committed-steer rate ≤ `δ_max` | SR-006 | C-06 |
+| Sensor | stale / invalid state | act only on fresh, valid state | SR-007 | C-05 |
+| Sensor | degraded camera input | lane kept under the visual-degradation envelope | SR-012 | C-01/02/03 over CV + training |
+| Sensor | loss of valid perception | safe open-loop stop when the lane is undetectable | SR-013 | C-05 (Trigger 8) |
+| Sensor | false / implausible estimate | no enforcement on a suspect estimate; stop instead | SR-014 | C-05 (plausibility) |
+
+The actuator *execution* faults and the process *disturbance* UCA have no SR yet — they are the Phase-5 / ODD-excluded entries below.
+
 ## Open hazards under consideration
 
 The following potential hazards are under active consideration but not yet registered:
 
 - *H-?? Sensor calibration drift over physical operation.* Specific to physical deployment; to be addressed in Phase 5.
+- *H-?? Actuator command not faithfully executed (fault / saturation / slip).* The cage's safe command — a steering correction or the C-05 controlled stop — is issued but the actuator does not apply it faithfully: drive-motor fault or command dropout (UCA *action not given* at the actuator, e.g. a controlled stop that does not halt the vehicle), or torque saturation / asymmetric skid-steer wheel response that distorts the realised action (UCA *unsafe action given*). Out of the cage's reach — it is a control-level arbiter with no actuator feedback / wheel-encoder cross-check. In simulation the Gazebo DiffDrive plugin executes commands faithfully, so this is a **physical-deployment** hazard for Phase 5 (actuator-level diagnostics / redundancy / encoder cross-check). Surfaced today only indirectly via H-05 (command smoothness, C-06) and the SC-PERT-02 actuation-latency scenario.
+- *H-?? Process disturbance / unmodelled dynamics.* An exogenous disturbance moves the vehicle off the commanded trajectory independent of any control action — low-friction skid on a wet/loose surface, a slope, or a bump (a UCA at the controlled-process block). Largely **ODD-excluded** today (ODD-1/2 assume a flat, dry, controlled track; gradient and weather-beyond-illumination are out of scope) and behaviourally absorbed by C-01/C-03 reacting to the resulting offset; the residual (real-surface friction) is a **physical-deployment** concern for Phase 5. Distinct from H-08 (a training-time stall, not an external disturbance).
 <!--
 ## Anticipated defense questions
 

@@ -31,6 +31,68 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [24.06.2026] — STPA SR-derivation table + control-structure diagram (folded into docs/02)
+
+**Document(s) affected:** `docs/02_hazard_register.md` (SR-derivation table UCA→constraint→SR + Fig. STPA-CS reference, next to the per-block sweep); new `manuscript/figures/fig_stpa_control_structure.svg`.  
+**Phase:** F1 safety analysis (STPA) — methodology documentation  
+**Gate context:** none (derivation rationale; no H/SR/C/M changed, no verdict)  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Added, **in docs/02** (next to the per-block sweep), the bottom-up "SRs derived this way"
+view requested as a thesis tool: a **UCA → safety-constraint → SR derivation table** tracing
+every SR-001..014 to the block + UCA it answers, and the **control-structure block diagram**
+(Fig. STPA-CS, `.svg`, in the style of the SE4ADS Ch.5 STPA slides). An interim standalone
+`docs/15` was **consolidated into docs/02 and removed** to keep a single STPA home (the
+analysis already lived in docs/02). Operationalises **D-27**.
+
+### Rationale
+
+Requested as a thesis tool ("the SRs were derived this way, per the four blocks, what could
+fail"). Makes the bottom-up STPA reasoning auditable and the per-block coverage explicit
+(controller/sensor fully derived; process/actuator execution-faults Phase-5).
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED** (no registered IDs changed;
+docs/02 references existing H/SR/C only).
+
+---
+
+## [24.06.2026] — STPA per-block completeness: actuator + process UCAs identified (Phase-5 deferred)
+
+**Document(s) affected:** `docs/02_hazard_register.md` (STPA scope statement — new per-block control-structure sweep table; "Open hazards under consideration" — actuator execution-fault + process-disturbance entries).  
+**Phase:** safety analysis (STPA) — coverage audit  
+**Gate context:** none (hazard identification; no new *registered* H/SR/C, no verdict)  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Audited the hazard register against the four STPA control-structure blocks (controller /
+sensor / process / actuator; SE4ADS ch.5 p.23–24, the four UCA types). Added an explicit
+**per-block UCA sweep** table to the STPA scope statement, and registered two
+previously-implicit UCAs under "Open hazards under consideration": **actuator command not
+faithfully executed** (UCA *not given* / *unsafe given* at the actuator) and **process
+disturbance / unmodelled dynamics** (low-friction skid).
+
+### Rationale
+
+The sweep showed controller and sensor blocks strongly covered (H-01/02/03/04/09;
+H-06/10/11/12) but the **actuator** block only implicit (H-05 command-shaping + SC-PERT-02
+latency) and the **process** block thin (H-08 stall only). Both new UCAs are deferred to
+**Phase 5 (physical)**: the Gazebo DiffDrive actuator is faithful and the track is
+flat/dry/controlled (ODD-1/2), so a control-level cage with no actuator feedback cannot
+mitigate them in the sim verdict — mitigation is actuator-/platform-level. Mirrors the
+existing Phase-5 "sensor calibration drift" entry.
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED** (no registered IDs changed; the
+`H-??` entries are under-consideration / Phase-5, outside the H/SR/C traceability chain).
+
+---
+
 ## [24.06.2026] — GE4 indeterminate fix: SC-PERT-05 labelled criterion wired into the per-run verdict
 
 **Document(s) affected:** code — `src/cobraflex_rl/cobraflex_rl/criterion_eval.py` (new `labelled_arms`), `scenario_perturbations.py` (`level_index`), `eval_policy.py` (labelled-arm selection); tests `policy/tests/test_criterion_eval.py` + `test_scenario_perturbations.py`. Docs: `docs/07` footnote ⁴.  

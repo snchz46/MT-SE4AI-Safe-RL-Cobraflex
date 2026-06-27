@@ -98,6 +98,13 @@ class CvLaneEstimatorConfig:
     # fallback those stretches read as perception loss.
     single_line_fallback: bool = True
     single_line_confidence_scale: float = 0.5
+    # Conservative lane selection (D-48): when two plausible lane pairs straddle
+    # the vehicle with opposite-sign centres (a neighbouring-lane line forms a
+    # competing pair as the vehicle departs its lane), pick the larger-offset
+    # interpretation instead of the nearest-centre one, so the cage is never fed a
+    # falsely-centred state (the SC-EDGE-02 H-12 under-read). True = safe default;
+    # False restores the legacy pure nearest-centre rule.
+    conservative_lane_selection: bool = True
     # The surviving line must sit roughly half a lane to one side; beyond
     # this slack the side assignment is too ambiguous to trust (H-12 risk —
     # the plausibility temporal check is the backstop).
@@ -331,20 +338,39 @@ class CvLaneEstimator:
             )
 
         # Order lines right→left by intercept (Y at the vehicle, X=0);
-        # examine adjacent pairs for a plausible lane.
+        # collect every adjacent pair with a plausible lane separation.
         lines.sort(key=lambda cl: cl["c0"])
-        best_pair = None
-        best_center = None
+        plausible: List[Tuple[float, dict, dict]] = []  # (centre, right, left)
         for right, left in zip(lines[:-1], lines[1:]):
             sep = left["c0"] - right["c0"]
             if abs(sep - cfg.lane_width_nominal_m) > cfg.lane_width_tol_m:
                 continue
-            center = 0.5 * (left["c0"] + right["c0"])
-            if best_center is None or abs(center) < abs(best_center):
-                best_pair = (right, left)
-                best_center = center
-        if best_pair is None:
+            plausible.append((0.5 * (left["c0"] + right["c0"]), right, left))
+        if not plausible:
             return self._single_line_estimate(lines, points, "no_plausible_lane_pair")
+        # Lane selection. Default: the driven lane is the pair whose centre is
+        # nearest the vehicle (min |centre|). BUT when the vehicle is off-centre
+        # past ~half a lane, a neighbouring-lane line forms a *competing* plausible
+        # pair on the other side whose centre is marginally nearer — picking it
+        # makes the vehicle look centred in the wrong lane while it is actually
+        # departing its own (the H-12 under-read, D-48: at ey≈0.12 m the true pair
+        # reads +0.14 m but the neighbour pair reads −0.13 m and won by ~10 mm,
+        # so C-01/C-05 were never triggered and the car ran off the road). The
+        # signature is two plausible pairs with **opposite-sign centres** (genuine
+        # left/right ambiguity). In that case pick the most *conservative*
+        # interpretation — the largest |centre|, i.e. the largest reported offset —
+        # so the safety monitor is never fed a falsely-centred state. This is inert
+        # in nominal driving and on curves (a single plausible pair, or pairs that
+        # agree on side), and at worst yields a conservative false "off-centre"
+        # (an availability cost, a safe outcome) rather than a silent under-read.
+        centres = [c for c, _, _ in plausible]
+        ambiguous = (
+            cfg.conservative_lane_selection
+            and max(centres) > 0.0 > min(centres)
+        )
+        select = max if ambiguous else min
+        best_center, *best_pair = select(plausible, key=lambda t: abs(t[0]))
+        best_pair = tuple(best_pair)
 
         # Lane-centre polynomial = mean of the two line fits; the state is
         # read off its coefficients at the vehicle (X=0).

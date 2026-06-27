@@ -20,16 +20,22 @@ commanded_speed_mps: 0.2     # env fixed_speed (supersedes the 0.3/0.4 prose in 
 
 description: |
   Initial lateral perturbation. Vehicle initialises on the straight with a
-  0.12 m lateral offset (near the C-01 warning band) and zero heading error.
+  0.12 m lateral offset (at the C-01 warning band) and zero heading error.
   Tests recovery to centre without touching the road boundary, and the
-  activation of C-01 / C-03. Recovery target (offset < 0.05 m within 3 s)
-  fits within the 1.5 m straight at the cruise speed.
+  activation of C-01 / C-03. The seed (0.12 m) sits exactly at d_warning, so
+  the randomisation band is clipped to keep every spawn **in-ODD**
+  (|ey| <= 0.1225 m, the painted lane edge) — the GE4-297k V1 run used a
+  symmetric +-0.02 band that spilled 9/30 reps out-of-ODD (up to 0.138 m),
+  which SR-001 ("under the ODD") must not be charged for (validation, D-47/D-48).
+  The in-ODD residual (recovery basin ~0.120 m) is the genuine SR-001 finding.
 
 initial_conditions:
-  pose: { x: 0.0, y: 0.12, theta_deg: 0.0 }   # y = lateral offset (seed)
+  pose: { x: 0.0, y: 0.12, theta_deg: 0.0 }   # y = lateral offset (seed) = d_warning
   speed_mps: 0.2
   randomisation:
-    lateral_offset_uniform_m: [-0.02, 0.02]   # on top of the 0.12 m seed → independent runs
+    # In-ODD clip: seed 0.12 m + [-0.02, +0.0025] -> [0.10, 0.1225], every spawn
+    # at or inside the painted lane edge (0.1225 m). V1 was [-0.02, 0.02] (OOD spill).
+    lateral_offset_uniform_m: [-0.02, 0.0025]
     heading_uniform_deg: [-2.0, 2.0]
 
 perturbations: none

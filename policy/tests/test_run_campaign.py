@@ -128,6 +128,21 @@ def test_sr_failed_scenario_fails_verdict():
     assert sr.status == "failed" and sr.verdict is False
 
 
+def test_sr006_scored_out_of_band_does_not_inherit_scenario_fails():
+    """SR-006 (D-39) is scored out-of-band, so it never inherits the unrelated
+    per-scenario fails its ``ALL`` mapping would otherwise pull in."""
+    assert "SR-006" in rc.OUT_OF_BAND_SRS
+    objs = {"SC-NOM-01": _scen("SC-NOM-01"), "SC-EDGE-02": _scen("SC-EDGE-02")}
+    results = {"SC-NOM-01": _result("SC-NOM-01", True),
+               "SC-EDGE-02": _result("SC-EDGE-02", False)}  # a failing scenario
+    runs = {"SC-NOM-01": 50, "SC-EDGE-02": 50}
+    sr = rc.aggregate_sr("SR-006", "SR-CL-B", ["SC-NOM-01", "SC-EDGE-02"],
+                         objs, results, runs)
+    assert sr.status == "scored_out_of_band"
+    assert sr.verdict is None          # neither pass nor fail
+    assert sr.failing_scenarios == []  # no inherited fails
+
+
 # ----- three-valued / indeterminate handling (D-38 reconciliation) --------- #
 def test_aggregate_scenario_excludes_indeterminate_from_fraction():
     # 24 pass + 1 indeterminate -> fraction over *evaluable* = 1.0, verdict True.

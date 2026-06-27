@@ -315,3 +315,44 @@ def test_controller_accepts_legacy_gain_kwargs(cam):
                            max_angular_z=0.9)
     angular, detected = ctrl.compute(render_lane(cam, centered_lane(kappa=0.6)))
     assert detected and angular > 0.05
+
+
+def _three_line_offcenter(ey: float = 0.14):
+    """Vehicle at +``ey`` m left of its lane centre — *past its own left line*
+    (ey > LANE_W/2), with the next-left lane's line also in view: the geometry
+    that produced the SC-EDGE-02 H-12 under-read (D-48). Three lines: the own
+    lane's right/left pair (centre −ey) plus a third line a further lane-width to
+    the left, which forms a competing plausible pair whose centre is
+    opposite-signed and *nearer* the vehicle, so the legacy nearest-centre rule
+    locks onto it and reports the vehicle as centred in the wrong lane."""
+    centre = -ey
+    return (
+        lambda x: centre - LANE_W / 2.0,        # own right line
+        lambda x: centre + LANE_W / 2.0,        # own left line
+        lambda x: centre + 3.0 * LANE_W / 2.0,  # next-left lane's line
+    )
+
+
+def test_offcenter_conservative_picks_own_lane_not_neighbour(cam):
+    """Conservative selection (D-48 default) reports the true large offset rather
+    than locking onto the centred neighbour pair (the SC-EDGE-02 under-read)."""
+    img = render_lane(cam, _three_line_offcenter(ey=0.14))
+    est = CvLaneEstimator(cam).estimate(img)
+    assert est.ok, est.reason
+    assert est.n_lines >= 3
+    # true offset is +0.14 m (left of own lane centre, past the own left line);
+    # must keep the correct sign and not under-read to the neighbour lane.
+    assert est.ey > 0.10, f"under-read: ey={est.ey:.3f}"
+    assert est.ey == pytest.approx(0.14, abs=0.04), f"ey={est.ey:.3f}"
+
+
+def test_offcenter_legacy_rule_mislocks_to_neighbour(cam):
+    """With conservative selection disabled, the legacy nearest-centre rule
+    mis-locks onto the neighbour pair and reports the wrong sign — the bug D-48
+    fixes (guards against regression / documents the contrast)."""
+    legacy = CvLaneEstimator(
+        cam, CvLaneEstimatorConfig(conservative_lane_selection=False)
+    )
+    est = legacy.estimate(render_lane(cam, _three_line_offcenter(ey=0.14)))
+    assert est.ok, est.reason
+    assert est.ey < 0.0, f"legacy should mis-lock to the wrong sign, got {est.ey:.3f}"

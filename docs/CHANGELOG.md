@@ -31,6 +31,67 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [27.06.2026] — GE4-V2 prep: SC-EDGE-02 in-ODD IC clip (ruta 1) + H-12 under-read mechanism finding (D-48)
+
+**Document(s) affected:** docs/DECISIONS.md (D-48), docs/07 (GE4 note mechanism), docs/11 (§8.4 mechanism), scenarios_complex_b/edge/sc_edge_02.yaml; src/cobraflex_rl/cobraflex_rl/cv_lane_estimator.py + policy/tests/test_cv_lane_estimator.py  
+**Phase:** E4 (track-'E' GE4 evaluation — V2 prep)  
+**Gate context:** GE4 (camera) evaluation — V2 closure prep  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Investigated the sole remaining SR-001 blocker (SC-EDGE-02). **Ruta 1 (applied):** clipped the IC
+randomisation so every spawn is in-ODD — `lateral_offset_uniform_m: [-0.02, 0.02] → [-0.02, 0.0025]`
+(seed 0.12 m → [0.10, 0.1225]); the V1 symmetric band spilled 9/30 reps out-of-ODD. **Mechanism
+correction (D-48):** V1 traces show the SC-EDGE-02 fails are an **H-12 estimator under-read**, not
+perception loss — `cv_ok` stays True and `cv_ey ≈ 0.04 m` while true `ey` → 0.30 m (wrong-lane lock,
+self-consistent, so SR-014 misses it). Corrected the "estimator loses the lane" wording in docs/07 +
+docs/11 §8.4. **Ruta 2b (implemented + validated):** a Gazebo frame dump at the SC-EDGE-02 offsets
+pinned the cause — when the vehicle is past its own left line a third (next-left) line forms a
+competing pair whose opposite-signed centre is marginally nearer, so the legacy `min |centre|`
+selection mis-locks onto the neighbour. Fix: `CvLaneEstimator` now picks the conservative
+(largest-offset) pair when plausible pairs straddle the vehicle with opposite-sign centres
+(`conservative_lane_selection`, default True; inert otherwise). Re-running the dump, cv_ey now reads
++0.140 / +0.181 m at ey 0.12 / 0.16 (was −0.130 / −0.088); full pytest green (471, +2 wrong-lock
+regression tests). Ruta 2a (retrain) is out of scope per user. **SR-012/014 D-29 gate:** their V1
+INCOMPLETE was a run-count gap (SC-PERT-08/09/10 ran 20 enf < the 25 CL-A min; the SC-PERT-07-style
+bump had been missed) — bumped 20 → 25 (enf+mon); all pass 20/20, so V2 reaches coverage. **CL-B
+items (non-gating) addressed** (docs/07 note ⁸): SR-011 reconciled on its own metric (max σ_θ over
+1 s = 3.0° < 5° M-P7; same SC-EDGE-01 recovery-time artifact as SR-002/003); SR-006 re-pointed in
+`run_campaign.aggregate_sr` → `scored_out_of_band` (`OUT_OF_BAND_SRS`, +unit test; D-39 follow-up)
+so the V2 report stops reading `failed`. **SR-010 attribution gap CLOSED** (on existing V1 data —
+`grid_point` is persisted under `summary.json["campaign"]`): added `sc_edge05_grid_split` to
+`tools/campaign_e_failure_modes.py` (+3 unit tests). The split corrects the earlier "largely OOD"
+guess — **30 of 85 in-ODD grid points breach M-S1** (a genuine SR-010 co-activation finding) vs 10/15
+OOD; SR-010 is a real CL-B result, plausibly reduced in V2 by ruta-2b. **SR-009 resolved as N/A for the
+steering-only action space (D-49):** SC-PERT-03's stall test is ill-posed for `ACT_DIM=1` (throttle
+fixed → M-P6 ≡ 0 by construction, the `r−λ·|throttle|` injection is inert) — the stall fine-tune was
+**not launched** (it would produce an identical policy). Stall arm satisfied-by-construction; the live
+M-S2-monitoring arm is covered. **D-49** records: keep steering-only for the Gazebo E verdict (ED-2),
+defer 2-D action (steering+throttle) to the Isaac posterior track (docs/14) after E4 closes for Gazebo.
+
+### Rationale
+
+SR-001 is the only thing standing between the GE4 verdict and (at best) INCOMPLETE; pinning down
+whether it is a scenario-IC artifact or a genuine cage limitation required the trace analysis above.
+It is both: 9/12 V1 fails are an out-of-ODD IC spill (ruta 1 fixes), and the residual is a genuine
+H-12 safety-monitor blind spot (ruta 2b target).
+
+### Impact
+
+No verdict change yet (V2 not re-run). SC-EDGE-02 IC changed → its spawns differ in V2; the cage
+perception is changed (conservative selection, default on) → the V2 campaign uses it automatically.
+GE4-V2 is **ready on the perception side**; the open step is the ≈1940-run campaign itself (a host
+job) + the closed-loop confirmation it gives. No CSV regeneration.
+
+### Verification
+
+`tools/check_traceability.py` → All checks PASSED, 0 warnings. `sc_edge_02.yaml` re-parses (valid).
+`pytest` → **471 passed** (incl. 2 new wrong-lock regression tests). Gazebo frame dump
+(`scratchpad/edge02_estimator_dump.json`): cv_ey +0.140 / +0.181 m at ey 0.12 / 0.16 (corrected).
+
+---
+
 ## [27.06.2026] — complex_b GE4 scenario validation + SR-002/003 own-criterion reconciliation (D-47)
 
 **Document(s) affected:** docs/07 (GE4-297k note + new footnote ⁷), docs/11 (§8.4 verdict + table), docs/DECISIONS.md (D-47), scenarios_complex_b/ (24 scenario banners + 22 inline comments, README.md)  

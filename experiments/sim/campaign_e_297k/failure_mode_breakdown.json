@@ -2118,5 +2118,59 @@
       "e_fraction_pass": null,
       "verdict_flip": null
     }
+  },
+  "sc_edge05_grid_split_enforcement": {
+    "criteria": {
+      "d_odd_m": 0.1225,
+      "theta_odd_deg": 25.0,
+      "d_max_m": 0.16
+    },
+    "buckets": {
+      "in_odd": {
+        "n": 85,
+        "pass": 17,
+        "fail": 68,
+        "ms1_breach": 30
+      },
+      "ood": {
+        "n": 15,
+        "pass": 0,
+        "fail": 15,
+        "ms1_breach": 10
+      }
+    },
+    "per_anchor": {
+      "C01_C02": {
+        "n": 20,
+        "fail": 18,
+        "ms1_breach": 15,
+        "in_odd": 15
+      },
+      "C01_C02_C04": {
+        "n": 20,
+        "fail": 15,
+        "ms1_breach": 15,
+        "in_odd": 15
+      },
+      "C01_C03": {
+        "n": 20,
+        "fail": 10,
+        "ms1_breach": 10,
+        "in_odd": 20
+      },
+      "C01_C04_C06": {
+        "n": 20,
+        "fail": 20,
+        "ms1_breach": 0,
+        "in_odd": 15
+      },
+      "C04_C06": {
+        "n": 20,
+        "fail": 20,
+        "ms1_breach": 0,
+        "in_odd": 20
+      }
+    },
+    "reading": "30 in-ODD M-S1 breaches of 85 in-ODD runs (genuine SR-010 co-activation finding); 10/15 OOD (out of scope)"
   }
 }

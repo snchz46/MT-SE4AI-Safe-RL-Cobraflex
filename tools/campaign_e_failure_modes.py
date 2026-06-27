@@ -44,6 +44,61 @@ from typing import Dict, List, Optional
 
 REPO = Path(__file__).resolve().parents[1]
 D_MAX_M = 0.16  # SR-001 lane-boundary hard limit (docs/03)
+# ODD lateral / heading envelope used to classify an SC-EDGE-05 grid point's
+# *seed* as in-ODD vs out-of-ODD (the SR-010 attribution split, D-48): the
+# painted-lane edge |ey| = 0.1225 m (ODD-1 exit) and SR-002's theta_max = 25 deg.
+D_ODD_M = 0.1225
+THETA_ODD_DEG = 25.0
+
+
+def sc_edge05_grid_split(runs: List[dict]) -> Optional[dict]:
+    """SR-010 attribution split (D-48): for SC-EDGE-05 (the parameterised co-activation
+    grid) classify each enforcement run's grid point by whether its *seed* is in-ODD
+    (|d| <= 0.1225 m AND |theta| <= 25 deg) and report pass/fail/M-S1-breach per bucket
+    and per anchor. Lets SR-010's M-S1 breaches be attributed to genuine in-ODD
+    co-activation vs the grid's deliberate out-of-ODD bracket points (factors 0.85-1.30),
+    rather than lumped together. Returns None if the campaign has no grid runs."""
+    buckets: Dict[str, dict] = {
+        b: {"n": 0, "pass": 0, "fail": 0, "ms1_breach": 0} for b in ("in_odd", "ood")
+    }
+    per_anchor: Dict[str, dict] = defaultdict(
+        lambda: {"n": 0, "fail": 0, "ms1_breach": 0, "in_odd": 0})
+    seen = False
+    for s in runs:
+        if s.get("scenario_id") != "SC-EDGE-05" or s.get("mode") != "enforcement":
+            continue
+        gp = (s.get("campaign", {}) or {}).get("grid_point")
+        if not gp:
+            continue
+        seen = True
+        seed = gp.get("seed", {}) or {}
+        in_odd = abs(seed.get("d_m", 0.0)) <= D_ODD_M and abs(seed.get("theta_deg", 0.0)) <= THETA_ODD_DEG
+        b = buckets["in_odd" if in_odd else "ood"]
+        vals = s.get("campaign", {}).get("values", {})
+        ms1 = vals.get("M-S1")
+        breach = ms1 is not None and ms1 >= D_MAX_M
+        verdict = s.get("verdict")
+        b["n"] += 1
+        b["pass"] += 1 if verdict is True else 0
+        b["fail"] += 1 if verdict is False else 0
+        b["ms1_breach"] += 1 if breach else 0
+        a = per_anchor[gp.get("anchor_id", "?")]
+        a["n"] += 1
+        a["fail"] += 1 if verdict is False else 0
+        a["ms1_breach"] += 1 if breach else 0
+        a["in_odd"] += 1 if in_odd else 0
+    if not seen:
+        return None
+    return {
+        "criteria": {"d_odd_m": D_ODD_M, "theta_odd_deg": THETA_ODD_DEG, "d_max_m": D_MAX_M},
+        "buckets": buckets,
+        "per_anchor": {k: per_anchor[k] for k in sorted(per_anchor)},
+        "reading": (
+            f"{buckets['in_odd']['ms1_breach']} in-ODD M-S1 breaches of "
+            f"{buckets['in_odd']['n']} in-ODD runs (genuine SR-010 co-activation finding); "
+            f"{buckets['ood']['ms1_breach']}/{buckets['ood']['n']} OOD (out of scope)"
+        ),
+    }
 
 
 def _load_runs(runs_dir: Path) -> List[dict]:
@@ -186,6 +241,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     contrast = baseline_contrast(runs, args.baseline_dir)
     if contrast is not None:
         report["baseline_contrast_enforcement"] = contrast
+    grid = sc_edge05_grid_split(runs)
+    if grid is not None:
+        report["sc_edge05_grid_split_enforcement"] = grid
 
     out = args.out or (args.campaign_dir / "failure_mode_breakdown.json")
     out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
@@ -211,6 +269,13 @@ def main(argv: Optional[List[str]] = None) -> int:
     if contrast:
         flips = {k: v["verdict_flip"] for k, v in contrast.items() if v["verdict_flip"]}
         print(f"\nF4->E enforcement verdict flips: {flips}")
+    if grid is not None:
+        b = grid["buckets"]
+        print("\nSC-EDGE-05 grid split (SR-010 attribution, enforcement):")
+        print(f"  in-ODD : {b['in_odd']['n']:>3} runs  {b['in_odd']['fail']:>3} fail  "
+              f"{b['in_odd']['ms1_breach']:>3} M-S1 breach  (genuine SR-010 finding)")
+        print(f"  OOD    : {b['ood']['n']:>3} runs  {b['ood']['fail']:>3} fail  "
+              f"{b['ood']['ms1_breach']:>3} M-S1 breach  (out of scope, grid bracket)")
     print(f"\nwrote {out.relative_to(REPO)}")
     return 0
 

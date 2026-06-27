@@ -61,5 +61,5 @@ pass_criterion_per_scenario: "fraction_pass >= 0.90"
 references_SR: [SR-014]
 
 n_runs_recommended:
-  enforcement: 20
-  monitoring: 20
+  enforcement: 25          # >=25 per D-29 (verifies SR-014, SR-CL-A min 25; was 20, D-48)
+  monitoring: 25

@@ -24,6 +24,17 @@ Exact topic names and frame ids below.
 - Map to 4 wheels: `wheel_radius 0.03725`, `wheel_separation 0.154`, left =
   `front_left + rear_left`, right = `front_right + rear_right`.
 
+> **Future work — 2-D action (steering + throttle), D-49.** The Gazebo E-track policy is
+> **steering-only** (`ACT_DIM = 1`, throttle fixed at cruise; ED-2 in `docs/09` §3). The natural
+> Isaac extension is a **2-D action** that also commands throttle/speed. It is deferred to Isaac (not
+> Gazebo) because it requires a full E-main retrain + cage speed-rule (C-04/C-05/C-06) re-calibration
+> and would invalidate the frozen F-vs-E baseline — so it belongs to the posterior sim-to-real track,
+> after E4 closes for Gazebo. Payoff: it makes **SR-009's liveness/stall sub-mode well-posed** (M-P6
+> becomes meaningful; the SC-PERT-03 negative test becomes exercisable) and genuinely exercises the
+> cage speed rules. The throttle→speed plumbing already exists (`linear.x` above; the cage already
+> modulates speed via `clamp(throttle/throttle_nominal, [0.35, 1])`), so the cost is the retrain +
+> re-baseline, not the interface. See D-49.
+
 ### 1.2 `/odom_truth` (publish)
 
 - True simulator pose (not wheel-encoder dead-reckoning).

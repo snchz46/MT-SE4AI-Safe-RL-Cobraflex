@@ -555,12 +555,18 @@ vehicle *already past the painted lane* (|ey| > 0.1225 m) or drive it there. **T
 exception is the decisive one — SC-EDGE-02**, which spawns at a *legal* 0.12 m boundary-band
 offset (inside the painted lane) yet sees 12/30 enforcement runs diverge outward to
 M-S1 ≈ 0.31 m and contact the edge; the cage halves the breaches vs monitoring (12 vs 26) but
-cannot pull a boundary-band offset back. The mechanism is **D-43**: the cage reads its own CV
-lane-estimator, which — like the policy's CNN — loses the lane once the vehicle is off it, so
-the cage goes blind exactly when recovery is needed and cannot pull it back. The **F4→E
-enforcement flips** (SC-EDGE-02 + SC-FRONT-01/03/04/06 **PASS→FAIL**) quantify this: the
-*ground-truth-state* cage (F4) recovered these starts; the *camera* cage cannot. This is a
-genuine limitation of the camera architecture, **not** a scoring artifact. (SC-EDGE-01 is
+cannot pull a boundary-band offset back. **Mechanism (V1 traces, all 12 fails — not what D-43
+first assumed).** The estimator does **not** go blind: `cv_ok` stays True and perception is never
+flagged. Instead it **confidently under-reads** the offset — as the vehicle drifts off-centre it
+locks onto the wrong lane reference and reports `cv_ey ≈ 0.04 m` (near-centred) while the true
+`ey` reaches 0.30 m (max |cv_ey − ey| ≈ 0.265 m, uniform across the 12 runs). The cage is fed a
+false "in-band" state, so C-01/C-05 never trigger and the vehicle diverges freely. This is an
+**H-12** (cage lane-misdetection) realization that the **SR-014** plausibility check cannot catch:
+the wrong estimate is geometrically *and* temporally self-consistent, so neither the range gate
+nor the inter-frame jump gate fires (D-48). The **F4→E enforcement flips** (SC-EDGE-02 +
+SC-FRONT-01/03/04/06 **PASS→FAIL**) quantify the gap: the *ground-truth-state* cage (F4) recovered
+these starts; the *camera* cage cannot. This is a genuine safety-monitor blind spot, **not** a
+scoring artifact. (SC-EDGE-01 is
 *not* among the flips: its 9 enforcement "fails" are recovery-time-only and reconcile to PASS
 on the SR-002/003 own criterion — **D-47**.) The SR-001 finding is a more demanding result
 than the 139k's pure availability cost.

@@ -270,6 +270,15 @@ class SRResult:
         return None
 
 
+# SRs verified by a dedicated out-of-band metric analysis rather than the
+# per-scenario pass/fail aggregation. SR-006 (C-06 committed-steer smoothness)
+# lists ``ALL`` scenarios and would otherwise inherit every unrelated scenario
+# fail; D-39 scores it via tools/sr006_smoothness.py. Marking it here stops the
+# campaign report reading a spurious ``failed`` (D-39 follow-up; CL-B, global
+# unaffected — the verdict of record is docs/07 note ¹).
+OUT_OF_BAND_SRS = frozenset({"SR-006"})
+
+
 def aggregate_sr(
     sr_id: str,
     criticality: str,
@@ -289,7 +298,19 @@ def aggregate_sr(
     ``run_count_ok`` is the D-29 sufficiency flag: each contributing family must
     reach MIN_RUNS_BY_CRITICALITY, and an SR-CL-A must additionally be covered in
     >=1 nominal AND >=1 adverse family.
+
+    SRs in ``OUT_OF_BAND_SRS`` (SR-006, D-39) are scored by a dedicated metric
+    tool, not this per-scenario aggregation, so they short-circuit to a
+    ``scored_out_of_band`` status (verdict None — neither pass nor fail) instead
+    of inheriting unrelated per-scenario fails.
     """
+    if sr_id in OUT_OF_BAND_SRS:
+        return SRResult(
+            sr_id, criticality, "scored_out_of_band", run_count_ok=True,
+            families_covered=[], failing_scenarios=[], indeterminate_scenarios=[],
+            notes=("scored out-of-band on its own metric (tools/sr006_smoothness.py, "
+                   "D-39); not aggregated from per-scenario verdicts (CL-B)"),
+        )
     min_runs = MIN_RUNS_BY_CRITICALITY.get(criticality, 0)
     families: set[str] = set()
     failing: List[str] = []

@@ -1917,3 +1917,143 @@ prior GE4 write-up (CLAUDE.md), now applied with the trace evidence in hand.
 - All inputs are logged per-run evidence (`M-P4` recomputable from `epsi` in `cage_status.csv`,
   `max_abs_ey_m`, `emergency_steps` in `summary.json`); the reconciliation is auditable.
   Cites D-28, D-30, D-38, D-39, D-43, D-45; SR-002/SR-003 (`docs/03`).
+
+---
+
+### D-48 — GE4-V2 prep: SR-001's SC-EDGE-02 failure is an H-12 estimator under-read (not perception loss); in-ODD IC clip applied, estimator fix scoped
+
+| Field | Value |
+| --- | --- |
+| Section | `scenarios_complex_b/edge/sc_edge_02.yaml`; `src/cobraflex_rl/cobraflex_rl/cv_lane_estimator.py` (target); `docs/07` GE4 note; `docs/11` §8.4; H-12 / SR-014 (`docs/02`/`docs/03`) |
+| Status | OPEN (V2 prep — ruta 1 + ruta 2b applied & perception-validated; V2 campaign not re-run) |
+| Date | track 'E' / GE4-V2 validation (27.06.2026) |
+
+**Context.** SR-001 is the **only** blocking SR-CL-A in the 297k GE4 V1 verdict (D-47), carried
+entirely by SC-EDGE-02 (SC-NOM-01/02 pass clean). Trace analysis of the 297k V1 run gives a sharp,
+reproducible picture that **corrects the D-43 "perception loss" framing**.
+
+**Findings (from `experiments/sim/campaign_e_297k/runs/camp_edge02_*` traces).**
+- **Sharp recovery-basin boundary at ey ≈ 0.120 m.** Every rep spawning at |ey0| ≤ 0.1201 m
+  recovers (M-S1 ≈ start, pass); every rep at |ey0| ≥ 0.1202 m diverges to M-S1 ≈ 0.31 m and
+  contacts the edge. Of the 12 V1 fails, **9 spawn out-of-ODD** (>0.1225 m, the painted lane edge;
+  the V1 IC's symmetric ±0.02 band on a 0.12 m seed spilled there) and **3 sit in a ~2 mm in-ODD
+  sliver** (0.1202–0.1224 m).
+- **The estimator under-reads — it does not go blind (uniform across all 12 fails).** `cv_ok`
+  stays True and `cv_perception_invalid` never sets; yet `cv_ey ≈ 0.04 m` (near-centred) while the
+  true `ey` reaches ≈ 0.30 m (max |cv_ey − ey| ≈ 0.265 m). The CV estimator locks onto the wrong
+  lane reference once the vehicle is ~half-a-lane off-centre and reports a confident, near-centred
+  offset, so C-01/C-05 are fed a false in-band state and never intervene. The mis-lock is present
+  already at frame 1 (the spawn frame), so it is not tracking drift.
+- **SR-014 cannot catch it.** `LanePlausibilityCheck` gates geometric range and inter-frame jumps;
+  the wrong estimate is **self-consistent on both** (|cv_ey| < ey_max, smooth frame-to-frame), so
+  neither gate fires. This is a latent **H-12** (cage lane-misdetection) realization the current
+  SR-014 design does not cover.
+
+**Decision.**
+- **Ruta 1 (applied).** SC-EDGE-02's IC randomisation is clipped to keep every spawn in-ODD —
+  seed 0.12 m + `[-0.02, +0.0025]` → `[0.10, 0.1225]` (was `[-0.02, +0.02]`). SR-001 is scoped
+  "under the ODD", so the 9 out-of-ODD V1 fails must not be charged to it. This is a validation
+  fix, not a relaxation: the in-ODD sliver (0.1202–0.1224 m) is retained as the genuine residual.
+  *Not sufficient alone:* even all-in-ODD, the recovery basin (~0.120 m) leaves the 0.120–0.1225 m
+  band failing, so SC-EDGE-02 still misses the 0.90 bar until ruta 2b widens the basin.
+- **Ruta 2b (applied + perception-validated).** A **Gazebo frame dump** at the SC-EDGE-02 spawn
+  offsets pinned the exact cause: when the vehicle is past its own left line a third line (the
+  next-left lane edge) appears and forms a **competing plausible pair** whose centre is
+  *opposite-signed and marginally nearer* the vehicle (real frames: at ey=0.12 m the true pair
+  reads +0.140 m, the neighbour pair −0.130 m, and the legacy `min |centre|` rule picked the
+  neighbour by ~10 mm; at ey=0.16 m, +0.181 vs −0.088). **Fix:** `CvLaneEstimator` lane selection
+  now, *only when plausible pairs straddle the vehicle with opposite-sign centres* (the ambiguous
+  / departing-lane case), picks the most **conservative** interpretation — the largest `|centre|`
+  (largest reported offset) — so the cage is never fed a falsely-centred state
+  (`conservative_lane_selection`, default True). It is **inert** in nominal driving and on curves
+  (a single plausible pair, or pairs that agree on side), so it cannot disturb the delicate
+  near-field-slope / curve-apex tuning. **Validated:** re-running the same Gazebo dump, cv_ey now
+  reads **+0.140 / +0.181 m** at ey=0.12 / 0.16 (correct sign + magnitude, was −0.130 / −0.088);
+  full `pytest` green (471, incl. 2 new wrong-lock regression tests) with the nominal/offset/curve
+  cases unchanged. **Ruta 2a (policy retrain) remains out of scope** (user, 27.06.2026).
+
+**Consequences / readiness.**
+- The D-43 "common cause / estimator loses the lane" narrative is corrected to an **H-12
+  under-read / wrong-lane lock** in `docs/07` + `docs/11` §8.4 (it holds for the in-ODD SC-EDGE-02;
+  the deep-OOD frontier contacts past the painted lane are a separate, un-reverified regime).
+- **SR-012 / SR-014 D-29 run-count gate cleared (CL-A).** Their V1 `INCOMPLETE` (run_count_ok=False)
+  was not a criterion failure: the verifying scenarios **SC-PERT-08/09/10** ran **20 enforcement
+  reps < the 25 CL-A minimum** (the SC-PERT-07 bump of the same kind had been missed for these
+  three). All three pass 20/20 in V1, so their reps are bumped **20 → 25** (enf + mon); in V2 the
+  two SRs reach D-29 coverage and read satisfied. With this + SR-001 (ruta 1/2b) + SR-002/003
+  (D-47), the **CL-A path to a SATISFIED V2 global is clear** (the residual risk is only whether
+  SR-001's in-ODD sliver recovers vs safe-stops in the closed loop).
+- **CL-B items (do not gate the global safety verdict) — addressed (docs/07 note ⁸):**
+  *SR-011* — its SC-EDGE-01 "fail" is the **same recovery-time artifact** as SR-002/003 (measured
+  max σ_θ over 1 s = 3.0° < the 5° M-P7 limit); reconciled on its own criterion à la D-47 (note ⁸).
+  *SR-006* — the D-39 committed-steer artifact: `run_campaign.aggregate_sr` now returns it
+  `scored_out_of_band` (`OUT_OF_BAND_SRS`, +unit test) instead of inheriting its `ALL`-scenario
+  fails, so the V2 report no longer reads `failed`.
+- **SR-010 attribution gap CLOSED (on existing V1 data).** `grid_point` *is* persisted (nested under
+  `summary.json["campaign"]`), so `tools/campaign_e_failure_modes.py` gained `sc_edge05_grid_split`
+  (in-ODD = |d| ≤ 0.1225 m ∧ |θ| ≤ 25°). The split **corrects the earlier "largely OOD" guess**:
+  **30 of 85 in-ODD grid points breach M-S1** (a *genuine* SR-010 in-ODD co-activation finding) vs
+  10/15 OOD bracket points. SR-010 is a **real CL-B result**, not an artifact — plausibly reduced in
+  V2 by ruta-2b (the under-read that hid lateral drift also hides co-activation drift). The
+  attribution is the closure; the residual is a real finding for the V2 run to re-measure.
+- **SR-009 stall sub-mode is N/A for the steering-only action space (resolved, see D-49).** SC-PERT-03
+  is a *negative* test that fine-tunes a policy under `r' = r − λ·|throttle|` to induce a stall. But
+  the track-E policy is **steering-only** (`ACT_DIM = 1`, ED-2) with throttle fixed at cruise, so
+  (a) the reward term `λ·|throttle|` is a **constant** → inert, no gradient effect, and (b) the policy
+  has **no speed authority** → it cannot converge to inaction → **M-P6 ≡ 0 by construction**. The
+  stall fine-tune was therefore **not launched** (it would produce an identical policy and SC-PERT-03
+  would still not fire). SR-009's stall arm is satisfied-by-construction; its live arm — M-S2 under
+  monitoring (H-08 adversarial-direction sub-mode) — is covered by the nominal/monitoring runs. The
+  well-posed stall test is deferred to the 2-D-action Isaac work (**D-49**).
+- **GE4-V2 is ready to launch (perception side done); the campaign run itself is the open step.**
+  Ruta 1 (in-ODD IC) and ruta 2b (estimator fix) are applied, unit-tested and Gazebo-dump-validated;
+  the V2 campaign uses them automatically (default `CagePerceptionSupervisor` → conservative
+  selection). What remains is the **multi-hour ≈1940-run campaign itself, a host job** (not run
+  in-session), plus the **closed-loop confirmation** it provides: the dump proves the cage now
+  *sees* the departure (necessary condition); whether the policy+cage then recover vs controlled-stop
+  (a D-45 pass) vs still diverge at the in-ODD sliver (0.120–0.1225 m) is decided by the run.
+- The fix supersedes the earlier "estimator goes blind" reading; the SR-014 plausibility check
+  remains blind to a *self-consistent* wrong-lock, so an SR-014 strengthening (absolute-offset
+  corroboration, not temporal-jump only) and/or an explicit H-12 mitigation entry is still worth
+  considering — flagged, not opened here.
+  Cites D-41, D-43, D-45, D-47; H-12, SR-001, SR-014.
+
+---
+
+### D-49 — Action space stays steering-only (1-D) for the track-E Gazebo verdict; throttle-as-action (2-D) deferred to the Isaac posterior work
+
+| Field | Value |
+| --- | --- |
+| Section | `src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py` (`action_space`); `docs/09` §3 (ED-2); `docs/13`/`docs/14` (Isaac future work); SR-009 (`docs/03`); `docs/07` note ⁸ |
+| Status | CONFIRMED (steering-only retained for E); 2-D = future work (Isaac) |
+| Date | track 'E' / GE4-V2 (27.06.2026) |
+
+**Decision.** The track-E camera policy keeps the **steering-only 1-D action space** (`ACT_DIM = 1`,
+throttle fixed at cruise) for the whole Gazebo E verdict, per the original **ED-2** design choice
+(`docs/09` §3: steering-only, fixed speed — lower dimensionality, faster learning, PD baseline stable
+at fixed speed). Expanding to a **2-D action (steering + throttle)** is **deferred to the Isaac
+posterior track** (`docs/13`/`docs/14`), where a sim-to-real retrain is already expected and it does
+not disturb the frozen Gazebo verdicts.
+
+**Rationale.** The question surfaced from SR-009: its H-08 *stall* sub-mode (M-P6) and its negative
+test SC-PERT-03 are **ill-posed for a steering-only policy** — with no speed authority the policy
+cannot converge to inaction (M-P6 ≡ 0 by construction) and the SC-PERT-03 reward injection
+`r' = r − λ·|throttle|` is a constant (inert). Making them well-posed needs throttle-as-action. But
+doing that **now** would (i) invalidate the **frozen F-track baseline** and the controlled F-vs-E
+"cost of camera" comparison (both built on the same 1-D action), (ii) force a **full E-main retrain**
+(larger than ruta-2a, explicitly out of scope), (iii) require **re-calibrating the cage speed rules**
+(C-04/C-05/C-06) and the throttle-override perturbation (SC-EDGE-03), all of which assume exogenous
+throttle, (iv) **re-run every GE4 campaign**, and (v) change the thesis question itself — with the
+policy controlling throttle the cage's speed rules *arbitrate against* the policy, a different (richer)
+safety problem than the cage-as-filter study the thesis poses. The cost is disproportionate to closing
+one CL-B SR that resolves cleanly as N/A (note ⁸).
+
+**Consequences.**
+- SR-009 stall arm is **satisfied-by-construction** (M-P6 ≡ 0; steering-only) and its M-S2-monitoring
+  arm is covered; SC-PERT-03 is documented **N/A for this action space** (not `insufficient_evidence`).
+- **Future work (Isaac):** a 2-D action makes SR-009's liveness well-posed (real stall test, genuine
+  C-04/C-05 exercise) and is closer to real driving. The throttle→speed plumbing already exists
+  (`docs/09`: `linear.x = fixed_speed · clamp(throttle/throttle_nominal, [0.35, 1])`; the cage already
+  modulates speed), so the cost is the **retrain + re-baseline**, not the wiring. Captured in
+  `docs/13`/`docs/14` as a posterior-work item, to be taken up after E4 closes for Gazebo.
+  Cites ED-2 (`docs/09`), D-44 (Isaac), D-47, D-48; SR-009, H-08.

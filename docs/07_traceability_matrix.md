@@ -127,16 +127,23 @@ One SR-CL-B verdict (**SR-006**) is now resolved by a dedicated metric analysis
 > CV estimator cannot reacquire the line. **The exception, and the single genuine SR-001 veto, is
 > SC-EDGE-02**: it spawns *in-ODD* at 0.12 m (boundary band, inside the painted lane) yet 12/30
 > enforcement runs still diverge outward to M-S1 ≈ 0.31 m and contact the edge — the cage halves
-> the breaches vs monitoring (12 vs 26) but cannot pull a boundary-band offset back. This is the
-> **D-43 common-cause** cost: the cage's CV estimator loses the lane exactly when the policy does
-> (F4→E flips SC-EDGE-02 + SC-FRONT-01/03/04/06 **PASS→FAIL**; SC-EDGE-01 is *not* a real flip —
-> note ⁷). **In-ODD safety otherwise holds**: NOM + PERT all pass in enforcement, 0 road-edge, and
+> the breaches vs monitoring (12 vs 26) but cannot pull a boundary-band offset back. **Mechanism
+> (V1 traces, all 12 fails): not "the estimator goes blind" — it confidently *under-reads* the
+> offset.** As the vehicle drifts off-centre the cage's CV estimator locks onto the wrong lane
+> reference and reports `cv_ey ≈ 0.04 m` (near-centred) while the true `ey` reaches 0.30 m
+> (cv_ok stays True, perception never flagged), so C-01/C-05 are fed a false "in-band" state and
+> never intervene. This is an **H-12** (cage lane-misdetection) realization that the SR-014
+> plausibility check cannot catch — the wrong estimate is geometrically *and* temporally
+> self-consistent (D-48). (F4→E flips SC-EDGE-02 + SC-FRONT-01/03/04/06 **PASS→FAIL**; SC-EDGE-01
+> is *not* a real flip — note ⁷.) **In-ODD safety otherwise holds**: NOM + PERT all pass in
+> enforcement, 0 road-edge, and
 > the cage *removes* perception-degradation failures the bare policy commits (PERT-04/09/11/12/13
 > enf PASS vs mon FAIL). So the GE4 finding is two-sided — the cage is a safety asset in-ODD and at
 > the ODD boundary but cannot substitute for perception once the vehicle is already past the lane
 > edge; **not a pure availability cost** as the 139k was. SC-EDGE-05 is now
 > **determinate** (grid wired, 0.17: 43 % safe stops + 40 % M-S1 breaches → SR-010 fail) and
-> SC-FRONT-07 (flip generalization) **passes**.
+> SC-FRONT-07 (flip generalization) **passes**. The CL-B GE4 readings (SR-006/009/010/011) do
+> not gate the global verdict and are reconciled / characterised in **note ⁸**.
 
 **E-track sim evidence (12.06.2026).** The camera-track verdicts (H-10/11/12 →
 SR-012/013/014) come from the GE4 roll-up `experiments/sim/campaign_e/campaign_report.json`
@@ -211,6 +218,28 @@ frozen; the E re-runs of F-track scenarios are reported only as a contrast in §
 > are **Satisfied** — the 2.0 s recovery-time clause is a performance overlay copied verbatim from
 > the oval set, not a safety predicate. Re-scored on own criterion à la note ¹ (D-39) / note ⁴
 > (SR-012), leaving **SR-001 the only blocking SR-CL-A**. See **D-47**.
+>
+> ⁸ **CL-B GE4 readings (do not gate the global safety verdict) — reconciled / characterised
+> (D-48).** **SR-011** (heading-variance) reads `failed` only by inheriting SC-EDGE-01's
+> recovery-time clause; on its own metric the measured max σ_θ over 1 s is **3.0° < the 5° M-P7
+> limit**, so it is Satisfied (same artifact as SR-002/003, note ⁷). **SR-006** (committed-steer
+> smoothness) is scored **out-of-band** on its own metric (`tools/sr006_smoothness.py`, D-39);
+> `run_campaign.aggregate_sr` now returns it as `scored_out_of_band` (`OUT_OF_BAND_SRS`) instead of
+> letting its `ALL`-scenario mapping inherit unrelated fails — the V2 report no longer reads
+> `failed`. **SR-010**: the `grid_point` in-ODD/OOD attribution is now wired
+> (`tools/campaign_e_failure_modes.py` → `sc_edge05_grid_split`). The split **corrects the earlier
+> "largely OOD" guess** — of SC-EDGE-05's 100 enforcement runs, **30 of 85 in-ODD grid points breach
+> M-S1** (a *genuine* SR-010 co-activation finding) vs 10/15 OOD bracket points (factors 0.85–1.30,
+> out of scope). SR-010 is therefore a **real CL-B co-activation result**, not an artifact — plausibly
+> reduced in V2 by the ruta-2b estimator fix (the under-read that hid lateral drift also affects
+> co-activation drift), to confirm on the run. **SR-009** — its stall sub-mode is **N/A for the
+> steering-only action space** (ED-2 / D-49): the policy controls steering only (`ACT_DIM = 1`),
+> throttle is fixed cruise, so the vehicle cannot converge to inaction — **M-P6 ≡ 0 by construction**,
+> and SC-PERT-03's reward-injection (`r' = r − λ·|throttle|`) is **inert** (a constant on a fixed
+> throttle), so the stall negative test is not applicable to this policy class. SR-009's *live* arm —
+> M-S2 under monitoring (the adversarial-direction sub-mode of H-08) — **is** covered by the
+> nominal/monitoring runs. So SR-009 is **satisfied-by-construction on the stall arm + covered on the
+> M-S2 arm** for track E; the well-posed stall test is deferred to the 2-D-action Isaac work (D-49).
 
 The remaining "TBD" verdicts are closed in Phase 5 (physical results, where applicable).
 

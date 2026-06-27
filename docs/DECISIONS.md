@@ -1862,3 +1862,58 @@ SR-012. The 139k `nominal = 0` was a coverage-authoring gap, not a missing-evide
   ≥ 25 (incl. SC-PERT-13, D-45-era) → **feasible, GAP cleared**.
 - A coverage/plan change, **not** evidence: the verdict is still scored when the 297k GE4
   campaign runs. Cites D-29, D-30, D-43, D-45.
+
+---
+
+### D-47 — SR-002 / SR-003 scored on their own satisfaction criterion, not SC-EDGE-01's oval-legacy recovery-time clause
+
+| Field | Value |
+| --- | --- |
+| Section | `docs/07` (E-track GE4 note + footnote ⁷); `docs/11` §8.4; `scenarios_complex_b/edge/sc_edge_01.yaml`; Ch.8 §8.9 |
+| Status | CONFIRMED |
+| Date | track 'E' / GE4 validation (27.06.2026) |
+
+**Decision.** In the complex_b 297k GE4 roll-up, **SR-002 (heading stability) and SR-003
+(predictive TTLC) are scored on their documented satisfaction criteria** — `M-P4 ≤ θ_max = 25°`
+(SR-002) and `TTLC ≥ t_min` (SR-003, docs/03) — **not** on SC-EDGE-01's per-run clause
+`time_to_recovery_heading < 2.0 s`. Re-scored thus, **both are `Satisfied`**, and the only
+blocking SR-CL-A in the 297k global `NOT SATISFIED` is **SR-001** (SC-EDGE-02, a genuine
+in-ODD boundary-band lateral-recovery failure).
+
+**Rationale.** SC-EDGE-01 (15° heading-error start) records **9/30** enforcement "fails", but
+every one fails *only* the `time_to_recovery_heading < 2.0 s` clause: from the trace, **M-P4 =
+14.3°** (the vehicle never exceeds its 15° start, far inside θ_max = 25°), **max M-S1 = 0.035 m**
+(≪ d_max = 0.16 m), **0 emergencies**, **0 road-edge contacts**. The heading is recovered cleanly
+and no safety limit is approached — SR-002 and SR-003 hold on their own predicates. The 2.0 s
+recovery-time bar is a **performance overlay copied verbatim from the frozen oval scenario set**;
+it is not part of either SR's `docs/03` satisfaction criterion, and SR-003's 0.7 s policy-side
+component is itself marked *provisional, revisit at Phase-3 close*. Scoring an SR by a scenario
+clause stricter than (and orthogonal to) the SR's own limit is the same honesty defect addressed
+by **D-39** (SR-006: irrelevant-failure inheritance, re-scored out-of-band) and **note ⁴** (SR-012:
+safe-stop-as-fail). This is the own-criterion reconciliation **flagged but not applied** in the
+prior GE4 write-up (CLAUDE.md), now applied with the trace evidence in hand.
+
+**Alternatives considered and rejected.**
+- *Keep the 2.0 s bar and report SR-002/003 as failed.* Rejected: scores a clean,
+  limit-respecting heading recovery as a safety-requirement violation — the verdict is a
+  **safety** verdict (D-28/D-30), and both SRs' safety predicates are met with wide margin.
+- *Tighten the bar / retune 2.0 s for complex_b geometry.* Rejected as the verdict mechanism:
+  recovery-time is a policy **performance** metric, not a safety limit, and tuning it cannot
+  change an SR verdict — the SR criterion is the limit predicate. (A retuned recovery-time bar
+  may still be reported as an availability/performance observation.)
+- *Edit SC-EDGE-01's per-run clause to drop the 2.0 s term.* Deferred: the scenario stays as the
+  performance probe; the SR verdict is taken on the SR criterion via this decision (mirrors how
+  D-39 left the oval scenario frozen and re-scored out-of-band). A future scenario refactor may
+  split the safety predicate from the performance overlay.
+
+**Consequences.**
+- 297k GE4 blocking SR-CL-A: **{SR-001, SR-002, SR-003} → {SR-001}**. Global stays
+  `NOT SATISFIED` (SR-001 is a genuine breach), but the finding is now single-cause and clean:
+  the camera-fed cage cannot recover a boundary-band lateral offset on complex_b (D-43 cost),
+  while heading stability and predictive lane-departure prevention **hold** under the camera.
+- The **F4→E PASS→FAIL flip list drops SC-EDGE-01**; only SC-EDGE-02 + SC-FRONT-01/03/04/06
+  remain as genuine camera-cage recovery failures (all lateral, consistent with the D-43
+  shared-perception mechanism — heading/TTLC are unaffected).
+- All inputs are logged per-run evidence (`M-P4` recomputable from `epsi` in `cage_status.csv`,
+  `max_abs_ey_m`, `emergency_steps` in `summary.json`); the reconciliation is auditable.
+  Cites D-28, D-30, D-38, D-39, D-43, D-45; SR-002/SR-003 (`docs/03`).

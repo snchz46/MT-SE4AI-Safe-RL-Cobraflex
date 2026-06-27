@@ -1,12 +1,11 @@
 # ============================================================================
-# COMPLEX_B VARIANT (DRAFT - generated 2026-06-22). Track block re-pointed to
-# complex_b; initial_conditions/perturbations are COPIED FROM THE OVAL and NOT
-# yet validated for complex_b geometry (start (-2.8,-1.5), yaw -0.27 rad,
-# perimeter 19.22 m vs the oval's 8.79 m). VALIDATE before any verdict run:
-#   - start_s_m semantics ('1.5 = curve entry' is oval-specific)
-#   - the 'straight_completed' event + timeout_s (oval assumed a 1.5 m straight)
-#   - perturbation at_time_s (timed to oval features)
-# Oval originals (frozen F4/139k evidence) are untouched in scenarios/. See README.
+# COMPLEX_B VARIANT — VALIDATED 2026-06-27 (GE4-297k). Track block re-pointed to
+# complex_b (world/centerlines below); start_s_m re-mapped to complex_b geometry
+# (clean straight s≈2–4 m), D-45 scoring applied. Spawn poses confirmed against
+# the GE4-297k verdict-run traces (lateral/heading ICs land as authored). The
+# '*_completed' termination events are decorative — scenario_runner is timeout-
+# bounded (timeout_s -> max_steps). Oval originals (frozen F4/139k evidence) are
+# untouched in scenarios/. See README.md for the validation record.
 # ============================================================================
 id: SC-EDGE-01
 category: edge
@@ -16,7 +15,7 @@ track:
   world_name: lane_following_complex_b
   road_centerline: complex_b_centerline.yaml
   centerline: complex_b_right_lane_centerline.yaml
-  start_s_m: 2.0          # complex_b straight (s≈1–5 m, mid). Oval 0.0 = curve here. Static geom pass — confirm in Gazebo.
+  start_s_m: 2.0          # complex_b straight (s≈1–5 m, mid). Oval 0.0 = curve here. Confirmed via GE4-297k spawn traces.
 commanded_speed_mps: 0.2     # env fixed_speed (supersedes the 0.3/0.4 prose in docs/05)
 
 description: |

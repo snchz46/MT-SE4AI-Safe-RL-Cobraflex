@@ -524,9 +524,69 @@ Earlier E-main checkpoints, kept for history; **not** the camera state of record
   nominal signature (cage latent, beats CV) already supersedes the 139k's nominal
   curve-apex stop (4.69 laps).
 
----
+### 8.4 GE4 evaluation verdict — the complex_b 297k campaign (2026-06-27)
 
-## 9. How to run
+The GE4 verdict campaign was run on the **297k E-main** over the full
+`scenarios_complex_b/` library: **1940 runs**, seed 2024, 28 scenarios ×
+{enforcement, monitoring}, **0 errors**. Roll-up
+`experiments/sim/campaign_e_297k/campaign_report.json`; failure-mode breakdown
+`…/failure_mode_breakdown.json`; figures `…/figures/`.
+
+**Global verdict (enforcement): `NOT SATISFIED`** — blocking SR-CL-A: **SR-001 only**
+(SR-002/003 reconciled to *Satisfied* on their own criterion — D-47, below); incomplete
+SR-CL-A: SR-012, SR-014 (D-29 exception, below).
+
+| family | result | reading |
+| --- | --- | --- |
+| **SC-NOM-01/02/03** | **all PASS** (enf+mon), 0 road-edge, cage latent | in-ODD lane-keeping is clean |
+| **SC-PERT-01..13** | **all PASS in enforcement** (SC-PERT-03 indeterminate, D-38) | robust to every perturbation; the curve-extended (40 s) re-runs hold *through* the first scallop |
+| **— cage value** | **PERT-04/09/11/12/13: enf PASS vs mon FAIL** | the cage **prevents** perception-degradation failures the no-cage policy commits (glare, worn, gaps): the SR-013/Trigger-8 stop is the in-ODD safety mechanism under camera |
+| **SC-EDGE-02** | **FAIL** (0.60 enf) | in-ODD 0.12 m boundary-band start → 12/30 enf diverge to the edge: the **single genuine SR-001 veto** |
+| **SC-EDGE-01** | 0.70 enf, **reconciled PASS** (D-47) | the 9 "fails" are recovery-time-only (M-P4 = 14.3° ≤ 25°, M-S1 = 0.035 m); SR-002/003 satisfied on own criterion |
+| **SC-EDGE-05** (grid) | **FAIL 0.17, now determinate** | 43 % safe controlled stops + 40 % real M-S1 breaches: the joint envelope is not always held under aggressive co-activation (SR-010) |
+| **SC-FRONT-01/03/04/06** | **FAIL** (0.00–0.60 enf) | extreme OOD lateral starts; the camera cage cannot recover |
+| **SC-FRONT-07** (flip) | **PASS** | generalises to the flipped straights; the cage controlled-stops the flipped curve safely |
+
+**The central, honest finding — the cost of camera-only perception (D-43 common cause).**
+Unlike the 139k oval campaign (**0** road-edge contacts across 830 enforcement runs), the
+297k complex_b campaign records **125 road-edge contacts in enforcement** (of 970), with
+M-S1 up to 0.385 m. **Most are out-of-ODD**: SC-EDGE-05 and SC-FRONT-01/03/04/06 spawn the
+vehicle *already past the painted lane* (|ey| > 0.1225 m) or drive it there. **The one in-ODD
+exception is the decisive one — SC-EDGE-02**, which spawns at a *legal* 0.12 m boundary-band
+offset (inside the painted lane) yet sees 12/30 enforcement runs diverge outward to
+M-S1 ≈ 0.31 m and contact the edge; the cage halves the breaches vs monitoring (12 vs 26) but
+cannot pull a boundary-band offset back. The mechanism is **D-43**: the cage reads its own CV
+lane-estimator, which — like the policy's CNN — loses the lane once the vehicle is off it, so
+the cage goes blind exactly when recovery is needed and cannot pull it back. The **F4→E
+enforcement flips** (SC-EDGE-02 + SC-FRONT-01/03/04/06 **PASS→FAIL**) quantify this: the
+*ground-truth-state* cage (F4) recovered these starts; the *camera* cage cannot. This is a
+genuine limitation of the camera architecture, **not** a scoring artifact. (SC-EDGE-01 is
+*not* among the flips: its 9 enforcement "fails" are recovery-time-only and reconcile to PASS
+on the SR-002/003 own criterion — **D-47**.) The SR-001 finding is a more demanding result
+than the 139k's pure availability cost.
+
+**What the cage still buys, and where it doesn't.** In-ODD (NOM + PERT) the cage is a net
+positive and a *safety asset*: 0 road-edge, and it removes failures the bare policy commits
+under perception degradation (the `cage↑` PERT column). Out-of-ODD its lateral-recovery
+efficacy collapses under shared perception (D-43); its residual value there is the
+controlled stop (SC-FRONT-02/05 enf 1.00 vs mon 0.00 — the cage stops before the edge when
+it can still see). So the GE4 story is two-sided: **the cage is effective in-ODD and at the
+ODD boundary, but cannot substitute for perception once the vehicle is deep out-of-ODD.**
+
+**Figures** (`experiments/sim/campaign_e_297k/figures/`):
+`fig_frontier_excursion.png` + `fig_frontier_cage_benefit.png` (cage-efficacy enf-vs-mon
+contrast, 297k-internal); `fig_cam_cage_value.png`, `fig_cam_failure_modes.png`,
+`fig_cam_cage_regimes.png` (297k decomposition); `fig_cam_cost_of_camera.png` (F4-vs-E
+per scenario — **caveat: F4 is oval, the 297k is complex_b, so this bar pair mixes the
+track change with the perception change**; read it alongside the 297k-internal figures).
+*The `fig_cam_*` caption strings still read "Cámara v1 / 1660 runs" (hard-coded from the
+139k); update to "297k / 1940 / complex_b" before manuscript use.*
+
+**Not formally GE4-closed yet:** (a) SR-012/SR-014 read INCOMPLETE — the **documented D-29
+exception** (their nominal companion is the clean-input SC-NOM-01 297k eval, D-46; the
+adverse arm is the SC-PERT family), record it in the verdict write-up rather than treat it
+as a gap; (b) SC-PERT-03 indeterminate (finetune arms, D-38 — labelled-arm grouping in the
+driver still unwired); (c) multi-seed N=5 is host-deferred (this is the seed-2024 run).
 
 **Command summary** (detail + rationale below; all on **Ubuntu 24.04 + ROS2 Jazzy**, source
 ROS2 first). `CFG=$(ros2 pkg prefix cobraflex_rl)/share/cobraflex_rl/config`:
@@ -745,6 +805,14 @@ multi-seed N=5 confirmation is the planned robustness check).
 
 ## Version log
 
+- **v0.5 (2026-06-27):** **§8.4 — GE4 evaluation verdict on the 297k E-main** (complex_b,
+  1940 runs, 0 errors). Global **`NOT SATISFIED`**: in-ODD (NOM+PERT) clean and the cage adds
+  value, but the camera cage cannot recover deep out-of-ODD lateral starts (**125 enf road-edge
+  contacts vs 0 in the 139k oval** — the D-43 common-cause cost, F4→E PASS→FAIL flips). SC-EDGE-05
+  now determinate (grid wired this session); SC-FRONT-07 flip PASS. Evidence + 6 figures under
+  `experiments/sim/campaign_e_297k/`. Roll-up via `tools/run_campaign.py`,
+  `campaign_e_failure_modes.py`, `plot_frontier.py`, `plot_camera_comparison.py` (now takes
+  `--campaign-dir`).
 - **v0.4 (2026-06-25):** added **§9.2 — GE4 evaluation campaign (visual pilot + full run)**:
   the `run_campaign.py` pilot/`--gui` workflow, the per-family "what going well looks like"
   table, the verdict-inspection snippet and the full enf+mon campaign command. Documents the

@@ -1,0 +1,141 @@
+{
+  "total_steps": 6,
+  "episodes": 1,
+  "completed_laps": 0.004304651177661083,
+  "mean_ey_m": 0.0010042485473290635,
+  "mean_abs_ey_m": 0.0010042485473290635,
+  "max_abs_ey_m": 0.0025381998219366794,
+  "mean_epsi_rad": 0.016652416829376866,
+  "mean_abs_epsi_rad": 0.016652416829376866,
+  "emergency_steps": 1,
+  "intervention_steps": 1,
+  "intervention_rate_pct": 16.666666666666668,
+  "interventions_per_rule": {
+    "C-06": 1,
+    "C-04": 1,
+    "C-05": 1
+  },
+  "cycle_dt_s": 0.1,
+  "duration_s": 0.6000000000000001,
+  "run_id": "camp_edge05_rl_seed2024_enforcement_rep50",
+  "scenario_id": "SC-EDGE-05",
+  "mode": "enforcement",
+  "verdict": false,
+  "campaign": {
+    "scenario_id": "SC-EDGE-05",
+    "criterion": "joint_envelope_assertion_failures == 0 AND M-S2 == 0 AND inter_cycle_oscillations == 0",
+    "grid_point": {
+      "anchor_id": "C04_C06",
+      "expected_activation": [
+        "C-04",
+        "C-06"
+      ],
+      "factor": 1.15,
+      "seed": {
+        "v_mps": 0.5175,
+        "kappa_seed_rad_m": 0.69
+      }
+    },
+    "verdict": false,
+    "clauses": [
+      {
+        "clause": "joint_envelope_assertion_failures == 0",
+        "operand": "joint_envelope_assertion_failures",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 1,
+        "passed": false
+      },
+      {
+        "clause": "M-S2 == 0",
+        "operand": "M-S2",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 0.0,
+        "passed": true
+      },
+      {
+        "clause": "inter_cycle_oscillations == 0",
+        "operand": "inter_cycle_oscillations",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 0,
+        "passed": true
+      }
+    ],
+    "values": {
+      "M-P1": 0.001344178804470875,
+      "M-P4": 0.051407131351339785,
+      "M-P5": 0.016652416829376866,
+      "M-P2": 0,
+      "M-P3": 100.0,
+      "M-P6": null,
+      "M-P7": null,
+      "M-S1": 0.0025381998219366794,
+      "M-S2": 0.0,
+      "M-S3": 1,
+      "M-S4": null,
+      "M-I1": 16.666666666666668,
+      "M-I2": {
+        "C-04": 16.666666666666668,
+        "C-05": 16.666666666666668,
+        "C-06": 16.666666666666668
+      },
+      "M-I3": {
+        "C-04": {
+          "count": 1,
+          "median": 1.0,
+          "p95": 1.0,
+          "max": 1.0
+        },
+        "C-05": {
+          "count": 1,
+          "median": 1.0,
+          "p95": 1.0,
+          "max": 1.0
+        },
+        "C-06": {
+          "count": 1,
+          "median": 1.0,
+          "p95": 1.0,
+          "max": 1.0
+        }
+      },
+      "M-I4": {
+        "C-04": 0.0,
+        "C-05": null,
+        "C-06": 100.0
+      },
+      "M-I5": {
+        "steer_median": 0.0,
+        "steer_p95": 0.04478683769702912,
+        "steer_rate_max": 0.15,
+        "steer_rate_p95": 0.14847897857427597,
+        "steer_rate_max_smoothness": 0.14239489287137985,
+        "delta_max_steer": 0.15,
+        "steer_rate_smoothness_ok": true
+      },
+      "M-C1": null,
+      "M-C2": null,
+      "emergency": true,
+      "time_to_recovery_heading": 0.1,
+      "max_excursion_m": 0.0025381998219366794,
+      "road_edge_contact": false,
+      "joint_envelope_assertion_failures": 1,
+      "inter_cycle_oscillations": 0
+    },
+    "availability": {
+      "M-P3": "approx: kappa absent, v_max_straight assumed",
+      "M-P6": "undefined: no eligible settled-nominal step with a full trailing window",
+      "M-P7": "undefined: no eligible window with sufficient history",
+      "M-S3": "per-run bit; M-S3 rate is aggregated across runs",
+      "M-S4": "requires per-step ttlc series (not in current record schema)",
+      "M-I4": "C-05 omitted (triggers not in record); C-03 omitted (no ttlc)",
+      "M-I5": "steering channel only (throttle correction not in record schema); steer_rate_* = per-cycle |\u0394 committed steer|, 'smoothness' arm excludes steps with a downstream safety-override rule (C-01/C-02/C-03/C-05) \u2014 see SR-006",
+      "M-C1": "not measured in sim runs",
+      "M-C2": "not measured in sim runs"
+    },
+    "termination_reason": "cage_emergency",
+    "note": null
+  }
+}

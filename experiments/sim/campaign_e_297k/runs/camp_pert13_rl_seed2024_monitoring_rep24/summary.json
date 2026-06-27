@@ -1,0 +1,144 @@
+{
+  "total_steps": 156,
+  "episodes": 1,
+  "completed_laps": 0.17574830389298132,
+  "mean_ey_m": 0.07833882141381524,
+  "mean_abs_ey_m": 0.07833882141381524,
+  "max_abs_ey_m": 0.3868014227163162,
+  "mean_epsi_rad": 0.11680795056651878,
+  "mean_abs_epsi_rad": 0.12038827329906389,
+  "emergency_steps": 144,
+  "intervention_steps": 146,
+  "intervention_rate_pct": 93.58974358974359,
+  "interventions_per_rule": {
+    "C-06": 28,
+    "C-05": 144,
+    "C-01": 54,
+    "C-03": 10,
+    "C-02": 26
+  },
+  "cycle_dt_s": 0.1,
+  "duration_s": 15.600000000000001,
+  "perturbation": {
+    "kind": "visual_degradation",
+    "level": "glare_overexposure=0.3@0s"
+  },
+  "run_id": "camp_pert13_rl_seed2024_monitoring_rep24",
+  "scenario_id": "SC-PERT-13",
+  "mode": "monitoring",
+  "verdict": false,
+  "campaign": {
+    "scenario_id": "SC-PERT-13",
+    "criterion": "M-S1 < 0.16 AND road_edge_contact == False",
+    "grid_point": null,
+    "verdict": false,
+    "clauses": [
+      {
+        "clause": "M-S1 < 0.16",
+        "operand": "M-S1",
+        "op": "<",
+        "rhs": 0.16,
+        "lhs": 0.3868014227163162,
+        "passed": false
+      },
+      {
+        "clause": "road_edge_contact == False",
+        "operand": "road_edge_contact",
+        "op": "==",
+        "rhs": false,
+        "lhs": true,
+        "passed": false
+      }
+    ],
+    "values": {
+      "M-P1": 0.13395613761347835,
+      "M-P4": 0.4128838790459923,
+      "M-P5": 0.12038827329906389,
+      "M-P2": 0,
+      "M-P3": 100.0,
+      "M-P6": null,
+      "M-P7": 0.01254215922833376,
+      "M-S1": 0.3868014227163162,
+      "M-S2": 1.923076923076923,
+      "M-S3": 1,
+      "M-S4": null,
+      "M-I1": 93.58974358974359,
+      "M-I2": {
+        "C-01": 34.61538461538461,
+        "C-02": 16.666666666666668,
+        "C-03": 6.410256410256411,
+        "C-05": 92.3076923076923,
+        "C-06": 17.94871794871795
+      },
+      "M-I3": {
+        "C-01": {
+          "count": 1,
+          "median": 54.0,
+          "p95": 54.0,
+          "max": 54.0
+        },
+        "C-02": {
+          "count": 1,
+          "median": 26.0,
+          "p95": 26.0,
+          "max": 26.0
+        },
+        "C-03": {
+          "count": 1,
+          "median": 10.0,
+          "p95": 10.0,
+          "max": 10.0
+        },
+        "C-05": {
+          "count": 1,
+          "median": 144.0,
+          "p95": 144.0,
+          "max": 144.0
+        },
+        "C-06": {
+          "count": 28,
+          "median": 1.0,
+          "p95": 1.0,
+          "max": 1.0
+        }
+      },
+      "M-I4": {
+        "C-01": 0.0,
+        "C-02": 100.0,
+        "C-03": null,
+        "C-05": null,
+        "C-06": 100.0
+      },
+      "M-I5": {
+        "steer_median": 0.0,
+        "steer_p95": 0.0,
+        "steer_rate_max": 0.4261699616909027,
+        "steer_rate_p95": 0.2754034407436847,
+        "steer_rate_max_smoothness": 0.20882266759872437,
+        "delta_max_steer": 0.15,
+        "steer_rate_smoothness_ok": false
+      },
+      "M-C1": null,
+      "M-C2": null,
+      "emergency": true,
+      "time_to_recovery_heading": 0.0,
+      "max_excursion_m": 0.3868014227163162,
+      "road_edge_contact": true,
+      "joint_envelope_assertion_failures": 74,
+      "inter_cycle_oscillations": 0
+    },
+    "availability": {
+      "M-P3": "approx: kappa absent, v_max_straight assumed",
+      "M-P6": "undefined: no eligible settled-nominal step with a full trailing window",
+      "M-P7": "exact",
+      "M-S3": "per-run bit; M-S3 rate is aggregated across runs",
+      "M-S4": "requires per-step ttlc series (not in current record schema)",
+      "M-I4": "C-05 omitted (triggers not in record); C-03 omitted (no ttlc)",
+      "M-I5": "steering channel only (throttle correction not in record schema); steer_rate_* = per-cycle |\u0394 committed steer|, 'smoothness' arm excludes steps with a downstream safety-override rule (C-01/C-02/C-03/C-05) \u2014 see SR-006",
+      "M-C1": "not measured in sim runs",
+      "M-C2": "not measured in sim runs"
+    },
+    "termination_reason": "off_road",
+    "note": null
+  }
+}

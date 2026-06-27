@@ -31,6 +31,96 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [27.06.2026] — complex_b GE4 scenario validation + SR-002/003 own-criterion reconciliation (D-47)
+
+**Document(s) affected:** docs/07 (GE4-297k note + new footnote ⁷), docs/11 (§8.4 verdict + table), docs/DECISIONS.md (D-47), scenarios_complex_b/ (24 scenario banners + 22 inline comments, README.md)  
+**Phase:** E4 (track-'E' GE4 evaluation)  
+**Gate context:** GE4 (camera) evaluation — verdict validation  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Validated the `scenarios_complex_b/` library against the 297k GE4 evidence on four axes and
+recorded the result. (1) **Timing/geometry audit:** `start_s_m = 2.0` re-mapping confirmed sound;
+`*_completed` termination events confirmed decorative (`scenario_runner` is `timeout_s`-bounded);
+only SC-EDGE-03's throttle pulse lands on the straight (optional curvature-coupling refinement,
+SR-004 already satisfied). (2) **Spawn spot-check:** confirmed from the verdict-run
+`cage_status.csv` spawn rows — SC-EDGE-02 lateral +0.128 m (IC 0.12), SC-FRONT-01 +0.169 m
+(IC 0.16), SC-EDGE-01 yaw +14.3° (IC 15°), `start_s = 2.0` on the straight. (3) **Frontier
+scoring:** confirmed already correct — the aggregator maps SR→scenario via the docs/03 "Verified
+by" lists, so SC-FRONT-* are contrast-only and never veto an SR-CL-A. (4) **SR-002/003
+reconciliation (D-47):** the 9 SC-EDGE-01 enforcement "fails" fail only the oval-legacy
+`time_to_recovery_heading < 2.0 s` clause; on the SRs' own criteria (M-P4 = 14.3° ≤ 25°;
+TTLC unbreached, max M-S1 = 0.035 m) both are **Satisfied**. Updated docs/07 + docs/11: blocking
+SR-CL-A **{SR-001/002/003} → {SR-001}**, the F4→E flip list drops SC-EDGE-01, and SC-EDGE-02 is
+re-characterised as an *in-ODD* boundary-band failure (not "out-of-ODD"). Replaced the stale
+"DRAFT / NOT validated" banners on 24 scenarios with a VALIDATED banner.
+
+### Rationale
+
+The GE4-297k global `NOT SATISFIED` was reported as blocking on three SR-CL-A; validation against
+the logged per-run evidence shows two of the three (SR-002/003) are scored by a scenario clause
+that is neither SR's documented satisfaction predicate — the same honesty defect D-39/note ⁴ fixed.
+SR-001 remains a genuine breach (in-ODD 0.12 m start → 12/30 enforcement edge contacts), so the
+global verdict is unchanged but its cause is now single and clean (D-43 camera-perception cost on
+lateral recovery; heading/TTLC hold under the camera).
+
+### Impact
+
+Global 297k GE4 verdict unchanged (`NOT SATISFIED`, SR-001). SR-002/003 verdicts move
+Not-satisfied-as-scored → Satisfied-on-own-criterion. No re-run required — the reconciliation is
+computed from existing logged evidence (`epsi`/`summary.json`). The F-track matrix rows
+(SR-001..011) are unaffected (F4 frozen). No CSV regeneration (no hazard/SR register edits).
+
+### Verification
+
+`tools/check_traceability.py` — see entry below / re-run after edit.
+
+---
+
+## [27.06.2026] — GE4 evaluation campaign on the 297k E-main (complex_b) — global NOT SATISFIED
+
+**Document(s) affected:** docs/07, docs/11 (§8.4 new, §9.2, version log v0.5), scenarios_complex_b/README.md; tools/run_campaign.py, tools/plot_camera_comparison.py; new evidence under experiments/sim/campaign_e_297k/  
+**Phase:** E4 (track-'E' GE4 evaluation)  
+**Gate context:** GE4 (camera) evaluation  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Ran the full GE4 verdict campaign on the **complex_b 297k peak** E-main: **1940 runs**,
+seed 2024, 28 scenarios × {enforcement, monitoring}, 0 errors
+(`experiments/sim/campaign_e_297k/campaign_report.json` + `failure_mode_breakdown.json` +
+6 figures). Documented the verdict in docs/11 §8.4 and the docs/07 GE4-on-297k note (the
+139k per-SR block is now historical). Pre-campaign hardening this cycle: `parameterised_grid`
+IC injection + per-run co-activation counters + `kappa_seed` curve-spawn hook (SC-EDGE-05 now
+determinate), the worn/particles/flip worlds + SC-FRONT-07 flip scenario, PERT timeouts → 40 s
+(cover the first curve) + SC-PERT-07/08 onset moved into the curve, a `--train-config` fail-fast
+guard and a GUI-reap fix in `run_campaign.py`, and a `--campaign-dir` arg on
+`plot_camera_comparison.py`.
+
+### Rationale
+
+The per-SR verdicts were still scored on the superseded 139k oval policy; the thesis verdict
+must come from the 297k E-main on its own circuit.
+
+### Impact
+
+**Global verdict (enforcement) `NOT SATISFIED`** — blocking SR-CL-A SR-001/002/003; SR-012/014
+INCOMPLETE (documented D-29 exception, D-46). Two-sided finding: **in-ODD (NOM + PERT) the cage
+is a safety asset** (0 road-edge, removes perception-degradation failures the bare policy
+commits — PERT-04/09/11/12/13 enf PASS vs mon FAIL), but **out-of-ODD the camera cage cannot
+recover** (125 enforcement road-edge contacts vs 0 in the 139k, all in SC-EDGE-02/05 +
+SC-FRONT-01/03/04/06; D-43 common cause; F4→E PASS→FAIL flips). SC-EDGE-05 determinate (0.17),
+SC-FRONT-07 flip PASS. Not a pure availability cost as the 139k was. Open: SC-PERT-03 (D-38),
+multi-seed N=5 (host-deferred), figure caption strings ("v1/1660" → 297k/1940).
+
+### Verification
+
+`tools/check_traceability.py` PASS (0 warnings); `pytest policy/tests cage/tests` 462 passed.
+Campaign roll-up reproducible via `tools/run_campaign.py … --out experiments/sim/campaign_e_297k`.
+
+---
+
 ## [24.06.2026] — STPA SR-derivation table + control-structure diagram (folded into docs/02)
 
 **Document(s) affected:** `docs/02_hazard_register.md` (SR-derivation table UCA→constraint→SR + Fig. STPA-CS reference, next to the per-block sweep); new `manuscript/figures/fig_stpa_control_structure.svg`.  

@@ -1,0 +1,19 @@
+{
+  "run_id": "camp_nom02_rl_seed2024_monitoring_rep30",
+  "scenario_id": "SC-NOM-02",
+  "mode": "monitoring",
+  "timestamp_iso": "2026-06-26T17:11:28.203465+00:00",
+  "duration_s": 45.0,
+  "git_commit": "fe72d6ebbadb8915cc20f7c11f4707c72ca836d6",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "policy_checkpoint": "experiments/sim/training/ppo_newcam_complex_b_2024_1M/checkpoints_peak/cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip",
+  "policy_checkpoint_hash": "44c8e912bb4cb1de76bacbb4dc50dc1d5fc9f7aef648a9e9b108da7d295a5aee",
+  "centerline_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "scenario_yaml": "scenarios_complex_b/nominal/sc_nom_02.yaml",
+  "scenario_yaml_hash": "11106c53ae78090827c76b3ad4ca20b2eeb9a72ba78f6ded9f0852f013a19a25",
+  "rep": 30,
+  "seed": 42,
+  "platform": "sim",
+  "status": "completed"
+}

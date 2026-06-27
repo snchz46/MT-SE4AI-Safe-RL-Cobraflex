@@ -1,9 +1,16 @@
-# scenarios_complex_b — complex_b variant of the scenario library (DRAFT)
+# scenarios_complex_b — complex_b variant of the scenario library
 
 Parallel scenario set for the **track-'E' camera campaign** on the **complex_b**
 circuit. The E-main policy `cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip` was
 trained on complex_b and must be evaluated there. The oval set in `../scenarios/`
 is **frozen F4 / 139k-campaign evidence and is left untouched**.
+
+> **GE4-on-297k campaign DONE (2026-06-27).** 1940 runs, seed 2024, 28 scenarios ×
+> {enf, mon}, 0 errors → `experiments/sim/campaign_e_297k/`. **Global `NOT SATISFIED`**:
+> in-ODD (NOM+PERT) clean and the cage adds value, but the camera cage cannot recover
+> deep out-of-ODD lateral starts (125 enf road-edge contacts, all in SC-EDGE-02/05 +
+> SC-FRONT-01/03/04/06; D-43 cost). SC-EDGE-05 determinate, SC-FRONT-07 flip PASS. Full
+> verdict: docs/11 §8.4, docs/07. The "STILL OPEN" items below are now resolved/historical.
 
 ## What is done (mechanical, correct)
 Every scenario's `track:` block is re-pointed to complex_b:
@@ -29,7 +36,7 @@ SC-PERT-07 (SR-013, stop *required*: `emergency == True`) and the nominal scenar
 coverage gap and the SC-PERT-05 / SC-EDGE-05 indeterminates remain. See
 `docs/DECISIONS.md` D-45.
 
-## Geometry pass (start points) — DONE; confirm in Gazebo
+## Geometry pass (start points) — DONE; confirmed via GE4-297k traces
 Static analysis of `complex_b_right_lane_centerline.yaml` (closed loop, perimeter
 **19.93 m**, 384 pts): **s=0 is a LEFT curve** (R≈1.13 m) — *not* a straight, so the
 oval `start_s_m: 0.0` "straight start" was wrong. The clean **straight is s≈1–5 m**
@@ -144,8 +151,12 @@ Two oval assumptions turned out **inert** on inspection (no edit needed):
 - **SC-EDGE-03** — kept on the straight (s=2.0) per its "nominal straight operation"
   text; to stress C-04's curvature-parameterised ceiling, start ~4.5 so the t=5 s pulse
   lands in the s≈5.5 curve.
-- **Gazebo confirmation** — the start points above are a static-geometry pass; spot-check
-  spawn pose/heading in RViz/Gazebo before the verdict campaign.
+- **Gazebo confirmation — DONE (2026-06-27, via the GE4-297k verdict-run traces).** The
+  start points are no longer just a static-geometry pass: the campaign's own `cage_status.csv`
+  spawn rows confirm the ICs land as authored — `start_s_m: 2.0` → world x≈-0.836 on the clean
+  straight (yaw≈0), and the lateral/heading seeds match (SC-EDGE-02 lateral +0.128 m vs the
+  0.12 m seed; SC-FRONT-01 +0.169 m vs 0.16 m; SC-EDGE-01 yaw +14.3° vs the 15° seed; SC-NOM-01
+  ≈0 lateral). No separate RViz spot-check needed — the verdict run is the confirmation.
 
 ## How to run (Ubuntu + ROS2 Jazzy + Gazebo)
 ```bash

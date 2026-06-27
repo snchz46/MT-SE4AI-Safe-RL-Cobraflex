@@ -348,16 +348,23 @@ def fig_cage_regimes(out: Path, S: dict) -> Path:
 def main(argv: Optional[List[str]] = None) -> int:
     """Render the four F4-vs-camera comparison figures."""
     ap = argparse.ArgumentParser(description="Camera-vs-ground-truth comparison figures.")
-    ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    ap.add_argument("--out", type=Path, default=None)
+    ap.add_argument("--campaign-dir", type=Path, default=None,
+                    help="E-campaign dir (default: experiments/sim/campaign_e, the 139k). "
+                         "Point at experiments/sim/campaign_e_297k for the 297k E-main.")
     ap.add_argument("--lang", choices=["es", "en"], default="es",
                     help="figure language (default es; the manuscript is Spanish).")
     args = ap.parse_args(argv)
-    args.out.mkdir(parents=True, exist_ok=True)
+    e_report = (args.campaign_dir / "campaign_report.json") if args.campaign_dir else E_REPORT
+    e_breakdown = (args.campaign_dir / "failure_mode_breakdown.json") if args.campaign_dir else E_BREAKDOWN
+    out = (args.out or (args.campaign_dir / "figures" if args.campaign_dir else DEFAULT_OUT)).resolve()
+    out.mkdir(parents=True, exist_ok=True)
+    args.out = out
     S = STRINGS[args.lang]
     sfx = "" if args.lang == "es" else "_en"
     f4 = json.loads(F4_REPORT.read_text(encoding="utf-8"))
-    e = json.loads(E_REPORT.read_text(encoding="utf-8"))
-    bd = json.loads(E_BREAKDOWN.read_text(encoding="utf-8"))
+    e = json.loads(e_report.read_text(encoding="utf-8"))
+    bd = json.loads(e_breakdown.read_text(encoding="utf-8"))
     outs = [
         fig_cost_of_camera(f4, e, args.out / f"fig_cam_cost_of_camera{sfx}.png", S),
         fig_cage_value(e, args.out / f"fig_cam_cage_value{sfx}.png", S),

@@ -1,0 +1,142 @@
+{
+  "total_steps": 43,
+  "episodes": 1,
+  "completed_laps": 0.06466602315355274,
+  "mean_ey_m": 0.25165957179222015,
+  "mean_abs_ey_m": 0.25165957179222015,
+  "max_abs_ey_m": 0.3836148698709658,
+  "mean_epsi_rad": 0.22722553084033348,
+  "mean_abs_epsi_rad": 0.22722553084033348,
+  "emergency_steps": 0,
+  "intervention_steps": 23,
+  "intervention_rate_pct": 53.48837209302326,
+  "interventions_per_rule": {
+    "C-01": 7,
+    "C-06": 21,
+    "C-03": 10
+  },
+  "cycle_dt_s": 0.1,
+  "duration_s": 4.3,
+  "run_id": "camp_edge05_rl_seed2024_enforcement_rep85",
+  "scenario_id": "SC-EDGE-05",
+  "mode": "enforcement",
+  "verdict": false,
+  "campaign": {
+    "scenario_id": "SC-EDGE-05",
+    "criterion": "joint_envelope_assertion_failures == 0 AND M-S2 == 0 AND inter_cycle_oscillations == 0",
+    "grid_point": {
+      "anchor_id": "C01_C03",
+      "expected_activation": [
+        "C-01",
+        "C-03"
+      ],
+      "factor": 1.0,
+      "seed": {
+        "d_m": 0.08,
+        "theta_deg": 8.0,
+        "ttlc_seed_s": 0.9
+      }
+    },
+    "verdict": false,
+    "clauses": [
+      {
+        "clause": "joint_envelope_assertion_failures == 0",
+        "operand": "joint_envelope_assertion_failures",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 0,
+        "passed": true
+      },
+      {
+        "clause": "M-S2 == 0",
+        "operand": "M-S2",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 7.674418604651163,
+        "passed": false
+      },
+      {
+        "clause": "inter_cycle_oscillations == 0",
+        "operand": "inter_cycle_oscillations",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 0,
+        "passed": true
+      }
+    ],
+    "values": {
+      "M-P1": 0.26997026121880807,
+      "M-P4": 0.3366023875974165,
+      "M-P5": 0.22722553084033348,
+      "M-P2": 0,
+      "M-P3": 100.0,
+      "M-P6": 0.0,
+      "M-P7": 0.03876046183113437,
+      "M-S1": 0.3836148698709658,
+      "M-S2": 7.674418604651163,
+      "M-S3": 0,
+      "M-S4": null,
+      "M-I1": 53.48837209302326,
+      "M-I2": {
+        "C-01": 16.27906976744186,
+        "C-03": 23.25581395348837,
+        "C-06": 48.83720930232558
+      },
+      "M-I3": {
+        "C-01": {
+          "count": 1,
+          "median": 7.0,
+          "p95": 7.0,
+          "max": 7.0
+        },
+        "C-03": {
+          "count": 1,
+          "median": 10.0,
+          "p95": 10.0,
+          "max": 10.0
+        },
+        "C-06": {
+          "count": 6,
+          "median": 1.0,
+          "p95": 9.25,
+          "max": 10.0
+        }
+      },
+      "M-I4": {
+        "C-01": 100.0,
+        "C-03": null,
+        "C-06": 28.571428571428573
+      },
+      "M-I5": {
+        "steer_median": 0.008036706969141966,
+        "steer_p95": 0.4058695611053523,
+        "steer_rate_max": 0.21035497065110365,
+        "steer_rate_p95": 0.15,
+        "steer_rate_max_smoothness": 0.15,
+        "delta_max_steer": 0.15,
+        "steer_rate_smoothness_ok": true
+      },
+      "M-C1": null,
+      "M-C2": null,
+      "emergency": false,
+      "time_to_recovery_heading": null,
+      "max_excursion_m": 0.3836148698709658,
+      "road_edge_contact": true,
+      "joint_envelope_assertion_failures": 0,
+      "inter_cycle_oscillations": 0
+    },
+    "availability": {
+      "M-P3": "approx: kappa absent, v_max_straight assumed",
+      "M-P6": "exact",
+      "M-P7": "exact",
+      "M-S3": "per-run bit; M-S3 rate is aggregated across runs",
+      "M-S4": "requires per-step ttlc series (not in current record schema)",
+      "M-I4": "C-05 omitted (triggers not in record); C-03 omitted (no ttlc)",
+      "M-I5": "steering channel only (throttle correction not in record schema); steer_rate_* = per-cycle |\u0394 committed steer|, 'smoothness' arm excludes steps with a downstream safety-override rule (C-01/C-02/C-03/C-05) \u2014 see SR-006",
+      "M-C1": "not measured in sim runs",
+      "M-C2": "not measured in sim runs"
+    },
+    "termination_reason": "off_road",
+    "note": null
+  }
+}

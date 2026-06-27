@@ -1,0 +1,142 @@
+{
+  "total_steps": 44,
+  "episodes": 1,
+  "completed_laps": 0.06657177454499262,
+  "mean_ey_m": 0.2526682879844225,
+  "mean_abs_ey_m": 0.2526682879844225,
+  "max_abs_ey_m": 0.38278879326526405,
+  "mean_epsi_rad": 0.22114045851394765,
+  "mean_abs_epsi_rad": 0.22114045851394765,
+  "emergency_steps": 0,
+  "intervention_steps": 23,
+  "intervention_rate_pct": 52.27272727272727,
+  "interventions_per_rule": {
+    "C-01": 7,
+    "C-06": 21,
+    "C-03": 8
+  },
+  "cycle_dt_s": 0.1,
+  "duration_s": 4.4,
+  "run_id": "camp_edge05_rl_seed2024_enforcement_rep05",
+  "scenario_id": "SC-EDGE-05",
+  "mode": "enforcement",
+  "verdict": false,
+  "campaign": {
+    "scenario_id": "SC-EDGE-05",
+    "criterion": "joint_envelope_assertion_failures == 0 AND M-S2 == 0 AND inter_cycle_oscillations == 0",
+    "grid_point": {
+      "anchor_id": "C01_C03",
+      "expected_activation": [
+        "C-01",
+        "C-03"
+      ],
+      "factor": 1.0,
+      "seed": {
+        "d_m": 0.08,
+        "theta_deg": 8.0,
+        "ttlc_seed_s": 0.9
+      }
+    },
+    "verdict": false,
+    "clauses": [
+      {
+        "clause": "joint_envelope_assertion_failures == 0",
+        "operand": "joint_envelope_assertion_failures",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 0,
+        "passed": true
+      },
+      {
+        "clause": "M-S2 == 0",
+        "operand": "M-S2",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 7.727272727272727,
+        "passed": false
+      },
+      {
+        "clause": "inter_cycle_oscillations == 0",
+        "operand": "inter_cycle_oscillations",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 0,
+        "passed": true
+      }
+    ],
+    "values": {
+      "M-P1": 0.27038003694578566,
+      "M-P4": 0.34027748342473474,
+      "M-P5": 0.22114045851394765,
+      "M-P2": 0,
+      "M-P3": 100.0,
+      "M-P6": 0.0,
+      "M-P7": 0.04408775018177115,
+      "M-S1": 0.38278879326526405,
+      "M-S2": 7.727272727272727,
+      "M-S3": 0,
+      "M-S4": null,
+      "M-I1": 52.27272727272727,
+      "M-I2": {
+        "C-01": 15.909090909090908,
+        "C-03": 18.181818181818183,
+        "C-06": 47.72727272727273
+      },
+      "M-I3": {
+        "C-01": {
+          "count": 1,
+          "median": 7.0,
+          "p95": 7.0,
+          "max": 7.0
+        },
+        "C-03": {
+          "count": 1,
+          "median": 8.0,
+          "p95": 8.0,
+          "max": 8.0
+        },
+        "C-06": {
+          "count": 6,
+          "median": 2.5,
+          "p95": 7.0,
+          "max": 7.0
+        }
+      },
+      "M-I4": {
+        "C-01": 100.0,
+        "C-03": null,
+        "C-06": 42.857142857142854
+      },
+      "M-I5": {
+        "steer_median": 0.017787835001945487,
+        "steer_p95": 0.38002982956880227,
+        "steer_rate_max": 0.4223113923363675,
+        "steer_rate_p95": 0.17012343547298814,
+        "steer_rate_max_smoothness": 0.15000000000000002,
+        "delta_max_steer": 0.15,
+        "steer_rate_smoothness_ok": true
+      },
+      "M-C1": null,
+      "M-C2": null,
+      "emergency": false,
+      "time_to_recovery_heading": null,
+      "max_excursion_m": 0.38278879326526405,
+      "road_edge_contact": true,
+      "joint_envelope_assertion_failures": 0,
+      "inter_cycle_oscillations": 0
+    },
+    "availability": {
+      "M-P3": "approx: kappa absent, v_max_straight assumed",
+      "M-P6": "exact",
+      "M-P7": "exact",
+      "M-S3": "per-run bit; M-S3 rate is aggregated across runs",
+      "M-S4": "requires per-step ttlc series (not in current record schema)",
+      "M-I4": "C-05 omitted (triggers not in record); C-03 omitted (no ttlc)",
+      "M-I5": "steering channel only (throttle correction not in record schema); steer_rate_* = per-cycle |\u0394 committed steer|, 'smoothness' arm excludes steps with a downstream safety-override rule (C-01/C-02/C-03/C-05) \u2014 see SR-006",
+      "M-C1": "not measured in sim runs",
+      "M-C2": "not measured in sim runs"
+    },
+    "termination_reason": "off_road",
+    "note": null
+  }
+}

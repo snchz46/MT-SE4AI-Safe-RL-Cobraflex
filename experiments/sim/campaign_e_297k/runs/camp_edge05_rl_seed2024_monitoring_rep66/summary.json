@@ -1,0 +1,142 @@
+{
+  "total_steps": 36,
+  "episodes": 1,
+  "completed_laps": 0.05203200488151059,
+  "mean_ey_m": 0.24110970172413346,
+  "mean_abs_ey_m": 0.24110970172413346,
+  "max_abs_ey_m": 0.38881565756185865,
+  "mean_epsi_rad": 0.2811415813735192,
+  "mean_abs_epsi_rad": 0.2811415813735192,
+  "emergency_steps": 33,
+  "intervention_steps": 33,
+  "intervention_rate_pct": 91.66666666666667,
+  "interventions_per_rule": {
+    "C-05": 33,
+    "C-06": 4,
+    "C-03": 7
+  },
+  "cycle_dt_s": 0.1,
+  "duration_s": 3.6,
+  "run_id": "camp_edge05_rl_seed2024_monitoring_rep66",
+  "scenario_id": "SC-EDGE-05",
+  "mode": "monitoring",
+  "verdict": false,
+  "campaign": {
+    "scenario_id": "SC-EDGE-05",
+    "criterion": "joint_envelope_assertion_failures == 0 AND M-S2 == 0 AND inter_cycle_oscillations == 0",
+    "grid_point": {
+      "anchor_id": "C01_C03",
+      "expected_activation": [
+        "C-01",
+        "C-03"
+      ],
+      "factor": 1.15,
+      "seed": {
+        "d_m": 0.092,
+        "theta_deg": 9.2,
+        "ttlc_seed_s": 1.035
+      }
+    },
+    "verdict": false,
+    "clauses": [
+      {
+        "clause": "joint_envelope_assertion_failures == 0",
+        "operand": "joint_envelope_assertion_failures",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 0,
+        "passed": true
+      },
+      {
+        "clause": "M-S2 == 0",
+        "operand": "M-S2",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 7.5,
+        "passed": false
+      },
+      {
+        "clause": "inter_cycle_oscillations == 0",
+        "operand": "inter_cycle_oscillations",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 0,
+        "passed": true
+      }
+    ],
+    "values": {
+      "M-P1": 0.25816808259467794,
+      "M-P4": 0.36280682656196706,
+      "M-P5": 0.2811415813735192,
+      "M-P2": 0,
+      "M-P3": 100.0,
+      "M-P6": null,
+      "M-P7": null,
+      "M-S1": 0.38881565756185865,
+      "M-S2": 7.5,
+      "M-S3": 1,
+      "M-S4": null,
+      "M-I1": 91.66666666666667,
+      "M-I2": {
+        "C-03": 19.444444444444443,
+        "C-05": 91.66666666666667,
+        "C-06": 11.11111111111111
+      },
+      "M-I3": {
+        "C-03": {
+          "count": 1,
+          "median": 7.0,
+          "p95": 7.0,
+          "max": 7.0
+        },
+        "C-05": {
+          "count": 1,
+          "median": 33.0,
+          "p95": 33.0,
+          "max": 33.0
+        },
+        "C-06": {
+          "count": 2,
+          "median": 2.0,
+          "p95": 2.0,
+          "max": 2.0
+        }
+      },
+      "M-I4": {
+        "C-03": null,
+        "C-05": null,
+        "C-06": 100.0
+      },
+      "M-I5": {
+        "steer_median": 0.0,
+        "steer_p95": 0.0,
+        "steer_rate_max": 0.35730867832899094,
+        "steer_rate_p95": 0.15540018081665036,
+        "steer_rate_max_smoothness": 0.07013565301895142,
+        "delta_max_steer": 0.15,
+        "steer_rate_smoothness_ok": true
+      },
+      "M-C1": null,
+      "M-C2": null,
+      "emergency": true,
+      "time_to_recovery_heading": null,
+      "max_excursion_m": 0.38881565756185865,
+      "road_edge_contact": true,
+      "joint_envelope_assertion_failures": 0,
+      "inter_cycle_oscillations": 0
+    },
+    "availability": {
+      "M-P3": "approx: kappa absent, v_max_straight assumed",
+      "M-P6": "undefined: no eligible settled-nominal step with a full trailing window",
+      "M-P7": "undefined: no eligible window with sufficient history",
+      "M-S3": "per-run bit; M-S3 rate is aggregated across runs",
+      "M-S4": "requires per-step ttlc series (not in current record schema)",
+      "M-I4": "C-05 omitted (triggers not in record); C-03 omitted (no ttlc)",
+      "M-I5": "steering channel only (throttle correction not in record schema); steer_rate_* = per-cycle |\u0394 committed steer|, 'smoothness' arm excludes steps with a downstream safety-override rule (C-01/C-02/C-03/C-05) \u2014 see SR-006",
+      "M-C1": "not measured in sim runs",
+      "M-C2": "not measured in sim runs"
+    },
+    "termination_reason": "off_road",
+    "note": null
+  }
+}

@@ -1,7 +1,7 @@
 # Traceability Matrix
 
 **Status:** Living document — Phase 0 baseline, refined through every phase, closed at G6  
-**Last update:** 22.06.2026 (E-main → complex_b 297k peak, nominal eval done; GE4 per-SR verdicts still on the superseded 139k policy pending a re-run. F4 sim verdicts frozen)  
+**Last update:** 27.06.2026 (**GE4-on-297k campaign COMPLETE + validated** — 1940 runs, global `NOT SATISFIED`, blocking SR-001 only (SR-002/003 reconciled to Satisfied on own criterion, D-47); in-ODD lane-keeping clean + cage adds value, but the camera cage cannot recover a boundary-band lateral offset (SC-EDGE-02, in-ODD) nor deep-OOD starts = the D-43 camera cost. See the GE4-on-297k note below + docs/11 §8.4. The 139k per-SR block is now historical. F4 sim verdicts frozen)  
 **Approved at Gate:** every Gate (incrementally)  
 
 ## Purpose
@@ -115,15 +115,28 @@ One SR-CL-B verdict (**SR-006**) is now resolved by a dedicated metric analysis
 > as a follow-up. None of this affects the SR-CL-A global verdict, which stays
 > `SATISFIED`.
 
-> **E-main superseded → complex_b 297k (22.06.2026).** The GE4 campaign below was run
-> on the **139k** checkpoint, which is **no longer the E-main**. The final camera policy
-> is the **complex_b 297k peak** (docs/11 §8; ch.8 §8.9). Its nominal SC-NOM-01 eval
-> shows the cage **latent in-ODD** (0 emergencies, only C-06) and the agent **beating the
-> CV baseline** on tracking (10.9 vs 17.2 mm mean |ey|) — the 139k curve-apex controlled
-> stop is gone. **The per-SR verdicts below remain the 139k campaign's**: GE4 has not been
-> re-run on 297k (the open closure step, ch.8 §8.9.4). The cage's *safety* property (0 lane
-> departures, degrades to safe stops) is policy-independent; the *availability-cost
-> magnitude* under perturbation is policy-dependent and not yet measured on 297k.
+> **GE4-on-297k COMPLETE (27.06.2026) — the current camera verdict; the 139k block below is
+> now historical.** The verdict campaign was re-run on the **complex_b 297k E-main**: **1940
+> runs**, seed 2024, 28 scenarios × {enf, mon}, 0 errors
+> (`experiments/sim/campaign_e_297k/`; detail docs/11 §8.4, ch.8 §8.9). **Global
+> `NOT SATISFIED`**, blocking SR-CL-A **SR-001 only** — SR-002/003 reconciled to *Satisfied*
+> on their own documented criterion (note ⁷); SR-012/014 INCOMPLETE (D-29 exception, note ⁴/⁶).
+> **Key change from the 139k oval:** the 297k on complex_b records **125 enforcement road-edge
+> contacts (vs 0 in the 139k)**. Most are *out-of-ODD* — SC-EDGE-05 + SC-FRONT-01/03/04/06 spawn
+> the vehicle past the painted lane (|ey| > 0.1225 m), where recovery is the cage's job and the
+> CV estimator cannot reacquire the line. **The exception, and the single genuine SR-001 veto, is
+> SC-EDGE-02**: it spawns *in-ODD* at 0.12 m (boundary band, inside the painted lane) yet 12/30
+> enforcement runs still diverge outward to M-S1 ≈ 0.31 m and contact the edge — the cage halves
+> the breaches vs monitoring (12 vs 26) but cannot pull a boundary-band offset back. This is the
+> **D-43 common-cause** cost: the cage's CV estimator loses the lane exactly when the policy does
+> (F4→E flips SC-EDGE-02 + SC-FRONT-01/03/04/06 **PASS→FAIL**; SC-EDGE-01 is *not* a real flip —
+> note ⁷). **In-ODD safety otherwise holds**: NOM + PERT all pass in enforcement, 0 road-edge, and
+> the cage *removes* perception-degradation failures the bare policy commits (PERT-04/09/11/12/13
+> enf PASS vs mon FAIL). So the GE4 finding is two-sided — the cage is a safety asset in-ODD and at
+> the ODD boundary but cannot substitute for perception once the vehicle is already past the lane
+> edge; **not a pure availability cost** as the 139k was. SC-EDGE-05 is now
+> **determinate** (grid wired, 0.17: 43 % safe stops + 40 % M-S1 breaches → SR-010 fail) and
+> SC-FRONT-07 (flip generalization) **passes**.
 
 **E-track sim evidence (12.06.2026).** The camera-track verdicts (H-10/11/12 →
 SR-012/013/014) come from the GE4 roll-up `experiments/sim/campaign_e/campaign_report.json`
@@ -186,6 +199,18 @@ frozen; the E re-runs of F-track scenarios are reported only as a contrast in §
 > by **D-46**: SC-NOM-01 (clean input) is their nominal family — the no-false-trigger /
 > baseline-competence arm — with SC-PERT-04..13 the adverse arm, so all three are
 > D-29-feasible (pending the 297k run that scores them).
+>
+> ⁷ **SR-002 / SR-003 (heading stability / predictive TTLC) — Satisfied on own criterion; the
+> SC-EDGE-01 "fail" is an oval-legacy performance bar (D-39 class, D-47).** SC-EDGE-01 (15°
+> heading-error start) shows **9/30** enforcement "fails", but all 9 fail *only* the scenario
+> clause `time_to_recovery_heading < 2.0 s` — a bar that is **neither SR's documented satisfaction
+> criterion**. **SR-002** is `M-P4 ≤ θ_max = 25°`: measured **M-P4 = 14.3°** in the failing runs
+> (the vehicle never exceeds its 15° start). **SR-003** is `TTLC ≥ t_min`, whose 0.7 s policy-side
+> component docs/03 flags *provisional, revisit at Phase-3 close*; the vehicle never approaches the
+> lane (max M-S1 = 0.035 m, 0 emergency, 0 edge contact). On their own safety-limit criteria both
+> are **Satisfied** — the 2.0 s recovery-time clause is a performance overlay copied verbatim from
+> the oval set, not a safety predicate. Re-scored on own criterion à la note ¹ (D-39) / note ⁴
+> (SR-012), leaving **SR-001 the only blocking SR-CL-A**. See **D-47**.
 
 The remaining "TBD" verdicts are closed in Phase 5 (physical results, where applicable).
 

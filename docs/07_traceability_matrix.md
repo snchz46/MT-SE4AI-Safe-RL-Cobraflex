@@ -230,9 +230,9 @@ frozen; the E re-runs of F-track scenarios are reported only as a contrast in §
 > (`tools/campaign_e_failure_modes.py` → `sc_edge05_grid_split`). The split **corrects the earlier
 > "largely OOD" guess** — of SC-EDGE-05's 100 enforcement runs, **30 of 85 in-ODD grid points breach
 > M-S1** (a *genuine* SR-010 co-activation finding) vs 10/15 OOD bracket points (factors 0.85–1.30,
-> out of scope). SR-010 is therefore a **real CL-B co-activation result**, not an artifact — plausibly
-> reduced in V2 by the ruta-2b estimator fix (the under-read that hid lateral drift also affects
-> co-activation drift), to confirm on the run. **SR-009** — its stall sub-mode is **N/A for the
+> out of scope). SR-010 is therefore a **real CL-B co-activation result**, not an artifact, to
+> re-measure on the V2 run (legacy estimator — the ruta-2b estimator change was reverted after it
+> regressed in closed loop, D-48). **SR-009** — its stall sub-mode is **N/A for the
 > steering-only action space** (ED-2 / D-49): the policy controls steering only (`ACT_DIM = 1`),
 > throttle is fixed cruise, so the vehicle cannot converge to inaction — **M-P6 ≡ 0 by construction**,
 > and SC-PERT-03's reward-injection (`r' = r − λ·|throttle|`) is **inert** (a constant on a fixed

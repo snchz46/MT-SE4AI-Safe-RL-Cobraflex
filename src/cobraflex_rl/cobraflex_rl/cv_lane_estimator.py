@@ -101,10 +101,18 @@ class CvLaneEstimatorConfig:
     # Conservative lane selection (D-48): when two plausible lane pairs straddle
     # the vehicle with opposite-sign centres (a neighbouring-lane line forms a
     # competing pair as the vehicle departs its lane), pick the larger-offset
-    # interpretation instead of the nearest-centre one, so the cage is never fed a
-    # falsely-centred state (the SC-EDGE-02 H-12 under-read). True = safe default;
-    # False restores the legacy pure nearest-centre rule.
-    conservative_lane_selection: bool = True
+    # interpretation instead of the nearest-centre one, to counter the SC-EDGE-02
+    # H-12 under-read. **DEFAULT OFF (reverted, D-48):** this single-frame rule
+    # cannot distinguish a genuinely off-centre vehicle from a *centred* one viewed
+    # under a small heading error (the latter splits its lines into the same
+    # opposite-sign pairs). It fires a spurious C-01/C-05 emergency whenever a
+    # centred/recovering/curving vehicle's heading passes through small angles —
+    # confirmed in closed loop (SC-EDGE-01: emergency at step 8 vs V1's clean 150
+    # steps; SC-NOM-02 curve regressed). A heading gate only relocated the false
+    # trigger. No robust single-frame fix exists; a real fix needs temporal lane
+    # tracking (which still would not fix the SC-EDGE-02 *spawn* frame). Kept True-
+    # capable only for the opt-in regression tests / future work.
+    conservative_lane_selection: bool = False
     # The surviving line must sit roughly half a lane to one side; beyond
     # this slack the side assignment is too ambiguous to trust (H-12 risk —
     # the plausibility temporal check is the backstop).

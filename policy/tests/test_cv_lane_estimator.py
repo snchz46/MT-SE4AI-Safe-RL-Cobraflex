@@ -334,10 +334,15 @@ def _three_line_offcenter(ey: float = 0.14):
 
 
 def test_offcenter_conservative_picks_own_lane_not_neighbour(cam):
-    """Conservative selection (D-48 default) reports the true large offset rather
-    than locking onto the centred neighbour pair (the SC-EDGE-02 under-read)."""
+    """Conservative selection (D-48, opt-in: default OFF after the closed-loop
+    regression) reports the true large offset rather than locking onto the centred
+    neighbour pair on a straight off-centre frame. This is the narrow case the rule
+    handles; it is disabled in production because it mis-fires on heading-skewed
+    centred/curve views (see CvLaneEstimatorConfig.conservative_lane_selection)."""
     img = render_lane(cam, _three_line_offcenter(ey=0.14))
-    est = CvLaneEstimator(cam).estimate(img)
+    est = CvLaneEstimator(
+        cam, CvLaneEstimatorConfig(conservative_lane_selection=True)
+    ).estimate(img)
     assert est.ok, est.reason
     assert est.n_lines >= 3
     # true offset is +0.14 m (left of own lane centre, past the own left line);

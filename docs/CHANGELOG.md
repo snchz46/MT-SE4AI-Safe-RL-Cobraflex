@@ -31,6 +31,45 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [27.06.2026] — ruta-2b REVERTED (conservative lane-selection); no robust single-frame fix for the H-12 under-read (D-48)
+
+**Document(s) affected:** src/cobraflex_rl/cobraflex_rl/cv_lane_estimator.py, policy/tests/test_cv_lane_estimator.py, docs/07, docs/11, docs/DECISIONS.md (D-48)  
+**Phase:** E4 (track-'E' GE4 evaluation — V2 prep)  
+**Gate context:** GE4 (camera) evaluation — V2 launch verification  
+**Author:** Samuel Sanchez  
+
+### Change
+
+The committed ruta-2b conservative lane-selection (`conservative_lane_selection`) is set **default
+False** (legacy nearest-centre restored). Reason: verifying the first V2 launch's early output caught
+a regression — **SC-EDGE-01 emergency at step 1** (V1: clean 150 steps). The conservative rule cannot
+distinguish a genuinely off-centre vehicle from a *centred* one under a small heading error (both
+split into the same opposite-sign pairs), so it fires spurious C-01/C-05 emergencies. A heading gate
+only relocated the false trigger to step 8 (a 9-run closed-loop smoke confirmed SC-EDGE-01 still
+emergencies and **SC-NOM-02, a clean V1 nominal curve, regressed**). The ambiguity is irreducibly
+single-frame; a real fix needs temporal lane tracking, which still would not fix the SC-EDGE-02 spawn
+frame (no prior) → would not close SR-001 anyway. **SR-001 stays a genuine fail** (the H-12 under-read
+is an un-cheaply-patchable D-43 limitation). Kept opt-in for the regression tests / future work.
+
+### Rationale
+
+A 16 h verdict campaign must use a trusted estimator; an estimator that fires spurious emergencies on
+centred/recovering/curving views would invalidate the run (and is scientifically dishonest vs the
+genuine SR-001 finding). The early-output check did its job.
+
+### Impact
+
+V2 re-runs with the legacy estimator; SR-001 expected to fail (global `NOT SATISFIED`). Ruta 1 (in-ODD
+IC), the run-count bump (SR-012/014), and the D-47/SR-006/SR-009/SR-010 reconciliations are unaffected.
+The prior-entry claims of "ruta-2b implemented + validated" are superseded by this revert.
+
+### Verification
+
+`pytest` → **475 passed** (conservative tests now opt-in explicit). `check_traceability` PASS.
+Closed-loop smoke (SC-EDGE-01/02 + SC-NOM-02 curve) is what surfaced the regression.
+
+---
+
 ## [27.06.2026] — GE4-V2 prep: SC-EDGE-02 in-ODD IC clip (ruta 1) + H-12 under-read mechanism finding (D-48)
 
 **Document(s) affected:** docs/DECISIONS.md (D-48), docs/07 (GE4 note mechanism), docs/11 (§8.4 mechanism), scenarios_complex_b/edge/sc_edge_02.yaml; src/cobraflex_rl/cobraflex_rl/cv_lane_estimator.py + policy/tests/test_cv_lane_estimator.py  

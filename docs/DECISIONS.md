@@ -1956,21 +1956,24 @@ reproducible picture that **corrects the D-43 "perception loss" framing**.
   fix, not a relaxation: the in-ODD sliver (0.1202–0.1224 m) is retained as the genuine residual.
   *Not sufficient alone:* even all-in-ODD, the recovery basin (~0.120 m) leaves the 0.120–0.1225 m
   band failing, so SC-EDGE-02 still misses the 0.90 bar until ruta 2b widens the basin.
-- **Ruta 2b (applied + perception-validated).** A **Gazebo frame dump** at the SC-EDGE-02 spawn
-  offsets pinned the exact cause: when the vehicle is past its own left line a third line (the
-  next-left lane edge) appears and forms a **competing plausible pair** whose centre is
-  *opposite-signed and marginally nearer* the vehicle (real frames: at ey=0.12 m the true pair
-  reads +0.140 m, the neighbour pair −0.130 m, and the legacy `min |centre|` rule picked the
-  neighbour by ~10 mm; at ey=0.16 m, +0.181 vs −0.088). **Fix:** `CvLaneEstimator` lane selection
-  now, *only when plausible pairs straddle the vehicle with opposite-sign centres* (the ambiguous
-  / departing-lane case), picks the most **conservative** interpretation — the largest `|centre|`
-  (largest reported offset) — so the cage is never fed a falsely-centred state
-  (`conservative_lane_selection`, default True). It is **inert** in nominal driving and on curves
-  (a single plausible pair, or pairs that agree on side), so it cannot disturb the delicate
-  near-field-slope / curve-apex tuning. **Validated:** re-running the same Gazebo dump, cv_ey now
-  reads **+0.140 / +0.181 m** at ey=0.12 / 0.16 (correct sign + magnitude, was −0.130 / −0.088);
-  full `pytest` green (471, incl. 2 new wrong-lock regression tests) with the nominal/offset/curve
-  cases unchanged. **Ruta 2a (policy retrain) remains out of scope** (user, 27.06.2026).
+- **Ruta 2b (attempted, then REVERTED — no robust single-frame fix exists).** A Gazebo frame dump
+  pinned the cause: past its own left line the vehicle sees a third (next-left) line forming a
+  *competing* plausible pair whose centre is opposite-signed and marginally nearer, so the legacy
+  `min |centre|` rule locks the neighbour (the under-read). A conservative rule (pick the
+  larger-`|centre|` pair when pairs straddle the vehicle with opposite-sign centres) fixed the
+  single-frame dump (cv_ey +0.14/+0.18 at ey 0.12/0.16) and passed unit tests — **but regressed in
+  the actual campaign:** a *centred* vehicle under a small heading error splits its lines into the
+  *same* opposite-sign pairs, so the rule fires a spurious C-01/C-05 emergency. Caught by verifying
+  the first V2 launch's early output: **SC-EDGE-01 emergency at step 1** (V1: clean 150 steps). A
+  **heading gate** (apply only when the line slope/heading is small) only *relocated* the false
+  trigger to step 8 (when the recovering heading drops below the gate); a 9-run closed-loop smoke
+  confirmed SC-EDGE-01 still emergencies and **SC-NOM-02 (a clean nominal curve in V1) regressed**.
+  The geometric ambiguity (centred-with-heading ≡ off-centre) is **irreducible single-frame**; a
+  real fix needs **temporal lane tracking**, which still would not fix the SC-EDGE-02 *spawn* frame
+  (no prior) and so **would not close SR-001 anyway**. **Decision:** `conservative_lane_selection`
+  default **False** (legacy nearest-centre restored); kept opt-in only for the regression tests /
+  future work. **SR-001 stays a genuine fail** — the H-12 under-read is a real, un-cheaply-patchable
+  D-43 limitation (a stronger finding than a fragile "fix"). **Ruta 2a (retrain) stays out of scope.**
 
 **Consequences / readiness.**
 - The D-43 "common cause / estimator loses the lane" narrative is corrected to an **H-12
@@ -2005,13 +2008,15 @@ reproducible picture that **corrects the D-43 "perception loss" framing**.
   would still not fire). SR-009's stall arm is satisfied-by-construction; its live arm — M-S2 under
   monitoring (H-08 adversarial-direction sub-mode) — is covered by the nominal/monitoring runs. The
   well-posed stall test is deferred to the 2-D-action Isaac work (**D-49**).
-- **GE4-V2 is ready to launch (perception side done); the campaign run itself is the open step.**
-  Ruta 1 (in-ODD IC) and ruta 2b (estimator fix) are applied, unit-tested and Gazebo-dump-validated;
-  the V2 campaign uses them automatically (default `CagePerceptionSupervisor` → conservative
-  selection). What remains is the **multi-hour ≈1940-run campaign itself, a host job** (not run
-  in-session), plus the **closed-loop confirmation** it provides: the dump proves the cage now
-  *sees* the departure (necessary condition); whether the policy+cage then recover vs controlled-stop
-  (a D-45 pass) vs still diverge at the in-ODD sliver (0.120–0.1225 m) is decided by the run.
+- **GE4-V2 runs with the legacy (honest) estimator; ruta-2b reverted.** Ruta 1 (in-ODD IC), the
+  SC-PERT-08/09/10 run-count bump (SR-012/014), and the D-47/SR-006/SR-010 reconciliations stand;
+  ruta-2b is OFF (above). With the legacy estimator the cage under-reads SC-EDGE-02's in-ODD spawn,
+  so **SR-001 is expected to fail again** (the genuine D-43 finding) and the global stays
+  `NOT SATISFIED`. V2's value is the *clean* verdict on top of the in-ODD IC + the now-feasible
+  SR-012/013/014 coverage — not a SATISFIED flip. The ≈1970-run campaign is a **host job** (multi-hour),
+  re-run with the legacy estimator; pre-flight (commit/checkpoint/disk/orphans/dry-run) passed, and
+  the first launch was aborted *because* the early-output verification caught the ruta-2b regression
+  (the check working as intended).
 - The fix supersedes the earlier "estimator goes blind" reading; the SR-014 plausibility check
   remains blind to a *self-consistent* wrong-lock, so an SR-014 strengthening (absolute-offset
   corroboration, not temporal-jump only) and/or an explicit H-12 mitigation entry is still worth

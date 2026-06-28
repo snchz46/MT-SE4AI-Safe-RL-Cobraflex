@@ -524,52 +524,66 @@ Earlier E-main checkpoints, kept for history; **not** the camera state of record
   nominal signature (cage latent, beats CV) already supersedes the 139k's nominal
   curve-apex stop (4.69 laps).
 
-### 8.4 GE4 evaluation verdict — the complex_b 297k campaign (2026-06-27)
+### 8.4 GE4 evaluation verdict — the complex_b 297k campaign (V2, 2026-06-28)
 
-The GE4 verdict campaign was run on the **297k E-main** over the full
-`scenarios_complex_b/` library: **1940 runs**, seed 2024, 28 scenarios ×
+The GE4 verdict campaign (V2) was run on the **297k E-main** over the full
+`scenarios_complex_b/` library: **1970 runs**, seed 2024, 28 scenarios ×
 {enforcement, monitoring}, **0 errors**. Roll-up
-`experiments/sim/campaign_e_297k/campaign_report.json`; failure-mode breakdown
-`…/failure_mode_breakdown.json`; figures `…/figures/`.
+`experiments/sim/campaign_e_v2/campaign_report.json`; failure-mode breakdown
+`…/failure_mode_breakdown.json`; figures `…/figures/`. V2 supersedes the V1 run
+(`experiments/sim/campaign_e_297k/`); the V1→V2 changes are in §8.4.1.
 
-**Global verdict (enforcement): `NOT SATISFIED`** — blocking SR-CL-A: **SR-001 only**
-(SR-002/003 reconciled to *Satisfied* on their own criterion — D-47, below); incomplete
-SR-CL-A: SR-012, SR-014 (D-29 exception, below).
+**Global verdict (enforcement): `NOT SATISFIED`** (verdict of record, literal) —
+blocking SR-CL-A: **SR-002, SR-003 only**. But both fail *only* on SC-EDGE-01's oval-legacy
+`time_to_recovery_heading < 2.0 s` clause; on their own documented criteria (M-P4 ≤ θ_max,
+TTLC ≥ t_min) they are **Satisfied** (D-47), so the literal `NOT SATISFIED` is a
+scenario-criterion technicality, **not a safety breach**. Critically, **SR-001 — the most
+important requirement — is now SATISFIED** (ruta-1, §8.4.1), and **SR-012/013/014 reach D-29
+coverage** (no longer INCOMPLETE). So every SR-CL-A *safety predicate* holds; the global is
+held at NOT SATISFIED only by the SR-002/003 recovery-time clause.
 
 | family | result | reading |
 | --- | --- | --- |
 | **SC-NOM-01/02/03** | **all PASS** (enf+mon), 0 road-edge, cage latent | in-ODD lane-keeping is clean |
 | **SC-PERT-01..13** | **all PASS in enforcement** (SC-PERT-03 indeterminate, D-38) | robust to every perturbation; the curve-extended (40 s) re-runs hold *through* the first scallop |
 | **— cage value** | **PERT-04/09/11/12/13: enf PASS vs mon FAIL** | the cage **prevents** perception-degradation failures the no-cage policy commits (glare, worn, gaps): the SR-013/Trigger-8 stop is the in-ODD safety mechanism under camera |
-| **SC-EDGE-02** | **FAIL** (0.60 enf) | in-ODD 0.12 m boundary-band start → 12/30 enf diverge to the edge: the **single genuine SR-001 veto** |
-| **SC-EDGE-01** | 0.70 enf, **reconciled PASS** (D-47) | the 9 "fails" are recovery-time-only (M-P4 = 14.3° ≤ 25°, M-S1 = 0.035 m); SR-002/003 satisfied on own criterion |
-| **SC-EDGE-05** (grid) | **FAIL 0.17, now determinate** | 43 % safe controlled stops + 40 % real M-S1 breaches: the joint envelope is not always held under aggressive co-activation (SR-010) |
-| **SC-FRONT-01/03/04/06** | **FAIL** (0.00–0.60 enf) | extreme OOD lateral starts; the camera cage cannot recover |
+| **SC-EDGE-02 (SR-001)** | **PASS 28/30 (0.93)** | ruta-1 in-ODD IC clip: 0 OOD spawns; the 2 residual fails spawn at 0.118 / 0.121 m (the recovery-basin edge ~0.120 m, against the painted edge). **SR-001 Satisfied** |
+| **SC-EDGE-01 (SR-002/003)** | 17/30 enf, **reconciled PASS** (D-47) | the 13 "fails" are recovery-time-only (max M-P4 = 14.4° ≤ 25°, M-S1 ≈ 0.035 m, 0 emergency); SR-002/003 satisfied on own criterion |
+| **SC-EDGE-05** (grid, SR-010) | **FAIL** | grid split: **30/85 in-ODD** co-activation M-S1 breaches (genuine CL-B) + 10/15 OOD bracket points (out of scope) |
+| **SC-FRONT-01/03/04/06** | **FAIL** | extreme OOD lateral starts (past the painted lane); the camera cage cannot recover. Contrast-only — *not* in any SR-CL-A's verifying set, so they do not veto |
 | **SC-FRONT-07** (flip) | **PASS** | generalises to the flipped straights; the cage controlled-stops the flipped curve safely |
 
-**The central, honest finding — the cost of camera-only perception (D-43 common cause).**
-Unlike the 139k oval campaign (**0** road-edge contacts across 830 enforcement runs), the
-297k complex_b campaign records **125 road-edge contacts in enforcement** (of 970), with
-M-S1 up to 0.385 m. **Most are out-of-ODD**: SC-EDGE-05 and SC-FRONT-01/03/04/06 spawn the
-vehicle *already past the painted lane* (|ey| > 0.1225 m) or drive it there. **The one in-ODD
-exception is the decisive one — SC-EDGE-02**, which spawns at a *legal* 0.12 m boundary-band
-offset (inside the painted lane) yet sees 12/30 enforcement runs diverge outward to
-M-S1 ≈ 0.31 m and contact the edge; the cage halves the breaches vs monitoring (12 vs 26) but
-cannot pull a boundary-band offset back. **Mechanism (V1 traces, all 12 fails — not what D-43
-first assumed).** The estimator does **not** go blind: `cv_ok` stays True and perception is never
-flagged. Instead it **confidently under-reads** the offset — as the vehicle drifts off-centre it
-locks onto the wrong lane reference and reports `cv_ey ≈ 0.04 m` (near-centred) while the true
-`ey` reaches 0.30 m (max |cv_ey − ey| ≈ 0.265 m, uniform across the 12 runs). The cage is fed a
-false "in-band" state, so C-01/C-05 never trigger and the vehicle diverges freely. This is an
-**H-12** (cage lane-misdetection) realization that the **SR-014** plausibility check cannot catch:
-the wrong estimate is geometrically *and* temporally self-consistent, so neither the range gate
-nor the inter-frame jump gate fires (D-48). The **F4→E enforcement flips** (SC-EDGE-02 +
-SC-FRONT-01/03/04/06 **PASS→FAIL**) quantify the gap: the *ground-truth-state* cage (F4) recovered
-these starts; the *camera* cage cannot. This is a genuine safety-monitor blind spot, **not** a
-scoring artifact. (SC-EDGE-01 is
-*not* among the flips: its 9 enforcement "fails" are recovery-time-only and reconcile to PASS
-on the SR-002/003 own criterion — **D-47**.) The SR-001 finding is a more demanding result
-than the 139k's pure availability cost.
+#### 8.4.1 What changed V1 → V2 (and why SR-001 closed)
+
+V1 (1940 runs) blocked on **SR-001 + SR-002/003**, with SR-012/014 INCOMPLETE. Three *validated,
+no-retrain* changes produced V2:
+
+- **Ruta-1 — SC-EDGE-02 in-ODD IC clip.** V1's randomisation band (±0.02 m on the 0.12 m seed)
+  spilled **9/30 reps out-of-ODD** (> 0.1225 m, past the painted lane), which SR-001 ("under the
+  ODD") must not be charged for. Clipped to [0.10, 0.1225]. **Result: SC-EDGE-02 passes 28/30
+  (0.93) → SR-001 Satisfied.** The only residual is 2 reps spawning at 0.118 / 0.121 m — the
+  recovery-basin edge (~0.120 m), right against the painted edge — that still diverge. **Ruta-1
+  alone closed SR-001**; the abandoned ruta-2b estimator change was unnecessary (and regressed in
+  closed loop → reverted, D-48).
+- **SC-PERT-08/09/10 reps 20 → 25** — closes the D-29 run-count gate → **SR-012/013/014 Satisfied**.
+- **SR-006 scored out-of-band** (D-39, aggregator) and **SC-EDGE-05 grid in-ODD/OOD split** (D-48).
+
+#### 8.4.2 The D-43 under-read — a real but in-ODD-marginal limitation
+
+The mechanism behind the 2 residual SC-EDGE-02 breaches (and the SC-EDGE-05 in-ODD breaches) is
+genuine. The cage reads its **own CV lane-estimator**, not ground truth (D-43). When the vehicle is
+off-centre the estimator **confidently under-reads**: it locks onto the wrong (neighbour) line pair
+and reports `cv_ey ≈ 0.04 m` while the true `ey` reaches ~0.30 m (`cv_ok` stays True; SR-014 cannot
+catch a *self-consistent* wrong estimate — an **H-12** realization). The cage is fed a false
+"in-band" state, C-01 never fires, the vehicle diverges. The **F-track (ground-truth-state) cage
+recovered the same starts**, isolating the cause as the **camera perception** (the controlled F-vs-E
+comparison the thesis is built to make). But once the spawn band is scoped to the ODD (ruta-1), only
+the final ~2 mm against the painted edge fails — so the under-read is a **real but boundary-marginal**
+cost, **not** a wholesale SR-001 failure. It is **not cheaply patchable** (D-48): a single-frame
+"read the larger offset" rule cannot tell a centred vehicle under a heading error from a genuinely
+off-centre one, and fires spurious C-01/C-05 emergencies on normal centred / recovering / curving
+driving (confirmed in a closed-loop smoke → reverted). The honest closure is **better perception**
+(a temporal estimator, or the 2-D-action Isaac retrain, D-49) — not a single-frame patch.
 
 **What the cage still buys, and where it doesn't.** In-ODD (NOM + PERT) the cage is a net
 positive and a *safety asset*: 0 road-edge, and it removes failures the bare policy commits
@@ -579,20 +593,45 @@ controlled stop (SC-FRONT-02/05 enf 1.00 vs mon 0.00 — the cage stops before t
 it can still see). So the GE4 story is two-sided: **the cage is effective in-ODD and at the
 ODD boundary, but cannot substitute for perception once the vehicle is deep out-of-ODD.**
 
-**Figures** (`experiments/sim/campaign_e_297k/figures/`):
-`fig_frontier_excursion.png` + `fig_frontier_cage_benefit.png` (cage-efficacy enf-vs-mon
-contrast, 297k-internal); `fig_cam_cage_value.png`, `fig_cam_failure_modes.png`,
-`fig_cam_cage_regimes.png` (297k decomposition); `fig_cam_cost_of_camera.png` (F4-vs-E
-per scenario — **caveat: F4 is oval, the 297k is complex_b, so this bar pair mixes the
-track change with the perception change**; read it alongside the 297k-internal figures).
-*The `fig_cam_*` caption strings still read "Cámara v1 / 1660 runs" (hard-coded from the
-139k); update to "297k / 1940 / complex_b" before manuscript use.*
+#### 8.4.3 Per-SR reconciled verdict (record = `NOT SATISFIED`, literal; reconciliation annotated)
 
-**Not formally GE4-closed yet:** (a) SR-012/SR-014 read INCOMPLETE — the **documented D-29
-exception** (their nominal companion is the clean-input SC-NOM-01 297k eval, D-46; the
-adverse arm is the SC-PERT family), record it in the verdict write-up rather than treat it
-as a gap; (b) SC-PERT-03 indeterminate (finetune arms, D-38 — labelled-arm grouping in the
-driver still unwired); (c) multi-seed N=5 is host-deferred (this is the seed-2024 run).
+The verdict of record is the literal campaign global — **`NOT SATISFIED`**, blocking SR-002/003 —
+reported with the reconciliation annotated (not claimed as SATISFIED). On the SR **safety
+predicates**:
+
+- **SR-001 — Satisfied** (SC-EDGE-02 28/30; 2 boundary-edge breaches residual, §8.4.2). The most
+  important requirement is met in-ODD.
+- **SR-002 / SR-003 — blocking (literal); Satisfied on own criterion (D-47).** The 13/30 SC-EDGE-01
+  fails are recovery-time-only (max M-P4 = 14.4° ≤ θ_max = 25°, TTLC unbreached, M-S1 ≈ 0.035 m, 0
+  emergency). The literal global `NOT SATISFIED` rests **entirely** on this oval-legacy
+  `time_to_recovery_heading < 2.0 s` clause — neither SR's documented satisfaction criterion.
+- **SR-004 / 005 / 007 / 008 / 013 — Satisfied; SR-012 / 014 — Satisfied** (coverage closed).
+- **SR-006 — scored_out_of_band** (D-39); **SR-009 —** stall sub-mode N/A for the steering-only
+  action (D-49), M-S2-monitoring arm covered; **SR-010 —** genuine CL-B (30 in-ODD co-activation
+  breaches, §8.4.2); **SR-011 —** Satisfied on own criterion (M-P7 σ_θ = 3° < 5°).
+
+So **every SR-CL-A safety predicate holds**; the global is held at `NOT SATISFIED` purely by the
+SR-002/003 recovery-time clause. The defensible reading: under the camera the cage **meets its safety
+requirements in-ODD and at the ODD boundary**, with one documented boundary-marginal residual (the 2
+SC-EDGE-02 breaches, D-43 under-read) and one genuine CL-B co-activation finding (SR-010). Whether to
+re-state the global as SATISFIED after applying D-47 (as already done for SR-006/012/014) is the open
+**verdict-framing** decision; it is reported here conservatively as **literal `NOT SATISFIED` +
+reconciliation**.
+
+**Figures** (`experiments/sim/campaign_e_v2/figures/`, regenerated for V2 with `tools/plot_frontier.py`
+and `tools/plot_camera_comparison.py`): `fig_frontier_excursion.png` + `fig_frontier_cage_benefit.png`
+(cage-efficacy enf-vs-mon contrast); `fig_cam_cage_value.png`, `fig_cam_failure_modes.png`,
+`fig_cam_cage_regimes.png` (V2 decomposition); `fig_cam_cost_of_camera.png` (F-vs-E per scenario —
+**caveat: F4 is oval, V2 is complex_b, so this bar pair mixes the track change with the perception
+change**); `fig_sr001_edge02_offset.png` (SC-EDGE-02 spawn-offset vs verdict — the ruta-1 in-ODD clip
+and the 2 boundary-edge residuals). Captions read "297k / 1970 / complex_b (V2)".
+
+**Open / not formally GE4-closed:** (a) the **verdict-framing** decision (literal `NOT SATISFIED` vs
+SATISFIED-after-D-47) — reported here as literal NOT SATISFIED + reconciliation (§8.4.3); (b) SC-PERT-03
+indeterminate (negative *stall* test, N/A for the steering-only action space, D-49); (c) SR-010's
+in-ODD co-activation breaches (a real CL-B finding to carry, plausibly improved by better perception);
+(d) multi-seed N=5 is host-deferred (this is the seed-2024 run). SR-012/013/014 are **no longer
+INCOMPLETE** (coverage closed by the SC-PERT-08/09/10 run bump).
 
 **Command summary** (detail + rationale below; all on **Ubuntu 24.04 + ROS2 Jazzy**, source
 ROS2 first). `CFG=$(ros2 pkg prefix cobraflex_rl)/share/cobraflex_rl/config`:

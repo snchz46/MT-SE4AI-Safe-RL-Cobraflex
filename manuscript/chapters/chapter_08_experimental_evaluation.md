@@ -555,53 +555,53 @@ cambia frente al baseline F4 es la fuente de percepción, de modo que el delta d
 resultados *mide el coste de la percepción por cámara*. La policy es el checkpoint
 de pico `cobraflex_ppo_cam_lane_2024_139k_peak` (§7.7.7).
 
-> **Política superada (2026-06-22).** Esta campaña GE4 se ejecutó sobre el
-> checkpoint **139k**, que desde 2026-06-22 **ya no es el E-main**: el estado final
-> de cámara es el **complex_b 297k peak** (§7.7.8 / docs/11 §8). Su eval nominal
-> SC-NOM-01 muestra la cage **latente in-ODD** (0 emergencias, solo C-06) y al
-> agente **batiendo al baseline CV** en tracking (§8.9.5) — la parada controlada de
-> curva del 139k desaparece. Los veredictos por-SR de abajo **siguen siendo los del
-> 139k**: la campaña GE4 **no** se ha re-ejecutado sobre 297k, y hacerlo es el paso
-> de cierre pendiente (§8.9.4). La **propiedad de seguridad** de la cage (0 salidas
-> de carril, degradación a parada segura) es independiente de la policy; la
-> **magnitud del coste de disponibilidad** bajo perturbación sí depende de la policy
-> y queda por medir sobre 297k.
+> **Campaña GE4 actualizada — V2 sobre el E-main 297k (28.06.2026).** La campaña GE4
+> original descrita abajo se ejecutó sobre el checkpoint **139k**, hoy superado por el
+> **complex_b 297k peak** (§7.7.8 / docs/11 §8). La campaña se re-ejecutó sobre 297k
+> —primero V1, luego **V2** tras validar la librería de escenarios complex_b— y **V2 es
+> el veredicto de récord** (`experiments/sim/campaign_e_v2/`; detalle en docs/11 §8.4).
+> El §8.9.1 siguiente reporta **V2**; §8.9.2–8.9.5 conservan la lectura *cualitativa*
+> (cage latente→activa, coste de cámara) con números 139k en migración a V2.
 
-**La campaña.** Mismo runner y matriz que F4, con `--train-config
-train_ppo_camera.yaml` y la plantilla de checkpoint de cámara, más los escenarios
-E-track (SC-PERT-04..10, estresores visuales + mundos worn/wet; SC-FRONT-01..06):
-**1660 runs** (24 escenarios × {enforcement, monitoring}, seed 2024), **0 errores**
-de ejecutor. Roll-up `experiments/sim/campaign_e/campaign_report.json`; desglose
-por-cláusula `failure_mode_breakdown.json` (`tools/campaign_e_failure_modes.py`).
+**La campaña (V2).** Mismo runner y matriz que F4, con `--train-config
+train_ppo_camera.yaml` y el checkpoint **297k**, sobre la librería complex_b completa
+(28 escenarios): **1970 runs** ({enforcement, monitoring}, seed 2024), **0 errores**.
+Roll-up `experiments/sim/campaign_e_v2/campaign_report.json`; desglose
+`failure_mode_breakdown.json` (`tools/campaign_e_failure_modes.py`).
 
-### 8.9.1 Veredicto global y su lectura
+### 8.9.1 Veredicto global y su lectura (V2)
 
-El **veredicto global es `NOT SATISFIED`** (D-30): tres SR-CL-A —SR-001, SR-012,
-SR-014— fallan su criterio de escenario, y SR-013 queda INCOMPLETE por cobertura
-D-29. Pero el veredicto **no es una brecha de seguridad**, y dos hechos lo acotan.
+El **veredicto global de récord es `NOT SATISFIED`** (D-30, literal), bloqueando
+**solo SR-002/003**. Y ambos fallan *únicamente* por la cláusula heredada del oval
+`time_to_recovery_heading < 2.0 s` de SC-EDGE-01 (13/30; máx M-P4 = 14.4° ≤ θ_max =
+25°, TTLC sin breach, M-S1 ≈ 0.035 m, 0 emergencias), satisfechos en su criterio
+propio (D-47). Así que **ningún predicado de seguridad SR-CL-A se incumple**: el
+global queda en `NOT SATISFIED` solo por esa cláusula de tiempo de recuperación.
 
-**Primero: el invariante de seguridad de la cage se mantiene bajo la cámara.** En
-los **830 runs de enforcement** hay **0 contactos con el borde de calzada**, y
-`M-S1 < d_max` en todos salvo los 9 runs de SC-FRONT-01 —que *inician el vehículo
-exactamente en* `d_max` = 0.16 m (arranque out-of-ODD, puntuado por contacto de
-borde, no por M-S1; máx M-S1 ahí 0.168 m, sin contacto). La cámara **nunca** llevó
-el sistema a una violación de carril en enforcement: degradó a **paradas seguras**.
+**SR-001 —el requisito más importante— se cumple.** Frente a V1 (que bloqueaba
+SR-001), V2 aplica **ruta-1**: la condición inicial de SC-EDGE-02 se recorta al ODD
+(`[0.10, 0.1225]` m), quitando los 9/30 spawns *out-of-ODD* que SR-001 («bajo el
+ODD») no debe cargar. Así SC-EDGE-02 **pasa 28/30**; el único residuo son 2 reps a
+0.118/0.121 m —el borde de la cuenca de recuperación (~0.120 m), contra el borde
+pintado. Ruta-1 **sola** cerró SR-001; el cambio de estimador (ruta-2b) fue
+innecesario y se revirtió por regresar en lazo cerrado (D-48). **SR-012/013/014
+quedan Satisfied** (cobertura D-29 cerrada por el bump de reps de SC-PERT-08/09/10).
 
-**Segundo: los vetos son paradas controladas seguras, no brechas.** Los tres vetos
-se concentran en **dos** escenarios, y en ambos *el único* fallo es la cláusula
-`emergency == False`:
+**El invariante de seguridad in-ODD se mantiene.** En enforcement: **0 contactos de
+borde in-ODD**, NOM + PERT pasan, y la cage *elimina* fallos de degradación de
+percepción que la policy desnuda comete (PERT-04/09/11/12/13: enf PASS vs mon FAIL).
+Los **117 contactos de borde en enforcement son out-of-ODD** (SC-FRONT-\* + puntos
+OOD del grid SC-EDGE-05); el contraste F-vs-E muestra que la cage de *estado*
+recuperaba esos arranques, aislando la causa en la **percepción de cámara** (coste
+D-43). Figura `fig_sr001_edge02_offset.png`.
 
-| Escenario | Modo | n | fracción PASS | fallos | *emergency-only* | F4 (estado GT) |
-| --- | --- | --: | --: | --: | --: | --: |
-| SC-EDGE-02 (recuperación cerca del borde) | enforcement | 30 | **0.567** | 13 | **13/13** | 1.00 |
-| SC-PERT-04 (glare de cámara) | enforcement | 40 | **0.500** | 20 | **20/20** | (stub en F4) |
-
-En cada fallo `M-S1 < d_max` y sin contacto de borde: la cage ejecutó su **parada
-controlada SR-013 / Trigger-8** sobre un percept degradado y el criterio del
-escenario puntúa esa parada segura como fallo. El criterio *propio* de SR-012
-(`M-S1 ≤ d_max ∧ M-S2 = 0` en enforcement) **se cumple en todo el set**. SC-EDGE-02
-regresa desde 1.00 en F4 (la policy de estado recuperaba suavemente desde el offset
-de spawn de 0.12 m; la CNN+CV, no: para a la entrada de la recta).
+**El coste D-43 (under-read) es real pero marginal-de-borde.** Al descentrarse, el
+estimador CV de la cage **sub-lee con confianza** (lee `cv_ey ≈ 0.04 m` mientras el
+`ey` real → 0.30 m; `cv_ok` True, SR-014 no caza un estimado auto-consistente —
+realización de **H-12**). Acotado al ODD cuesta solo los 2 breaches de borde de
+SC-EDGE-02. No es parcheable barato en un solo frame (D-48); el cierre honesto es
+**mejor percepción** (estimador temporal, o el retrain de acción 2-D de Isaac, D-49).
+SR-010 es un hallazgo CL-B genuino (30/85 breaches de co-activación in-ODD).
 
 ### 8.9.2 La cage pasa de latente a activa
 
@@ -609,67 +609,68 @@ El §8.6 reportó la cage **latente** dentro del ODD (M-S2 = 0 en ambos modos: l
 policy F-track no se acerca a la frontera) y protectora solo fuera del ODD
 (frontier). El track 'E' aporta **la mitad in-ODD que faltaba**: bajo la percepción
 más ruidosa de la cámara, la **parada controlada (SR-013/Trigger-8) se vuelve el
-mecanismo de seguridad operativo dentro del ODD**. El contraste pareado lo hace
-inequívoco:
+mecanismo de seguridad operativo dentro del ODD**. El contraste pareado enf-vs-mon
+lo hace inequívoco (V2):
 
 | Escenario | enforcement | monitoring | naturaleza de los fallos de monitoring |
 | --- | --: | --: | --- |
-| SC-PERT-07 (oclusión / pérdida) | **20/20 PASS** | **0/20** | **brechas reales de M-S1** (sin cage la policy ocluida se sale) |
-| SC-PERT-10 (mundo mojado) | 18/20 (0.90) | 2/20 (0.10) | parada *would-be* de la cage (M-S1 acotado) |
+| SC-PERT-13 (degradación combinada) | **40/40 PASS** | **0/40** | **brechas reales de M-S1** (sin cage la policy degradada se sale) |
+| SC-PERT-11 (marcas worn/segmentadas) | **30/30 PASS** | **0/30** | ídem |
+| SC-PERT-09 (worn) · SC-EDGE-04 (heading+lateral) | **25/25 · 30/30** | **0/25 · 0/30** | ídem |
+| SC-PERT-12 (degradación de imagen) | **40/40** | 23/40 (0.57) | parcial: la cage previene 17 de las salidas |
 
-SC-PERT-07 es la demostración limpia del valor de la cage en el track 'E': su
-criterio *exige* `emergency == True` (la parada open-loop **es** la seguridad),
-enforcement la dispara 20/20, y los 20 fallos de monitoring son salidas de carril
-que la parada previene. Donde F4 medía el valor de la cage solo en la frontier (la
-seed cage-dependent 123, §8.6), el track 'E' lo mide **dentro del ODD** sobre la
-propia policy principal.
+Donde F4 medía el valor de la cage solo en la frontier (la seed cage-dependent 123,
+§8.6), el track 'E' lo mide **dentro del ODD** sobre la propia policy principal: bajo
+degradación de percepción la cage convierte en **parada controlada** (M-S1 acotado)
+lo que sin ella es una salida de carril. (SC-PERT-07/10 pasan ahora en ambos modos
+25/25 — la policy 297k aguanta esos estresores sin necesitar la parada.)
 
 ### 8.9.3 Lo que se sostiene, y los huecos de instrumentación
 
-El resto de la library se sostiene bajo la cámara: SC-NOM-01/02/03 ≥ 0.96,
-SC-EDGE-03/04 ≥ 0.96, SC-FRONT-01..06 1.00, SC-PERT-06 (blur) 0.975, **SC-PERT-08**
-(falsa línea, primario de SR-014) **20/20**, SC-PERT-09 (worn) 1.00, SC-PERT-10
-(wet) 0.90; SC-PERT-01 incluso pasa de FAIL a PASS F4→E (0.88 → 0.98). El primario
-de plausibilidad de SR-014 (SC-PERT-08) se cumple por completo: la cage rechaza la
-línea falsa sin inducir excursión.
+El resto de la library se sostiene bajo la cámara (V2, enforcement): SC-NOM-01/02 1.00,
+SC-NOM-03 1.00, SC-EDGE-03/04 1.00, SC-PERT-01/05/06/08/09/10 1.00, SC-PERT-11/12/13
+1.00 (SC-PERT-01 incluso pasa de FAIL a PASS F4→E). El primario de plausibilidad de
+SR-014 (**SC-PERT-08**, falsa línea) se cumple **25/25**: la cage rechaza la línea
+falsa sin inducir excursión. Dos huecos de instrumentación de V1 quedaron **cerrados**:
+**SC-PERT-05** (criterio etiquetado de dos brazos `low:/high:`) está cableado al
+evaluador `labelled_arms` y puntúa 40/40; **SC-EDGE-05** quedó **determinante** (grid de
+co-activación cableado), revelando 30/85 breaches in-ODD genuinos (SR-010, §8.4.2).
 
-Tres escenarios quedan **indeterminados** (per-run `None`, no fallo — clase D-38,
-§8.2.4), por lo que SR-009/010 y la cobertura adverse de SR-012 quedan formalmente
-bajo D-29: **SC-EDGE-05** (operandos `joint_envelope_assertion_failures` /
-`inter_cycle_oscillations` ausentes del esquema de registro), **SC-PERT-03** y
-**SC-PERT-05** (criterio etiquetado de dos brazos `low:/high:` aún no cableado al
-evaluador `evaluate_labelled`, que ya existe). Por evidencia parcial, ambos brazos
-de SC-PERT-05 parecen pasar (brazo bajo conduce; brazo alto para de forma segura),
-pero el veredicto **se abstiene** hasta cablear el evaluador —hueco de
-instrumentación, no fallo.
+Solo **SC-PERT-03** queda indeterminado (per-run `None`, no fallo). Es un test
+*negativo* de stall —verifica que la métrica M-P6 detecta un agente parado— que **no
+aplica al espacio de acción solo-dirección**: la policy no controla throttle, no puede
+converger a la inacción, así que M-P6 ≡ 0 por construcción y la inyección de reward del
+escenario es inerte (D-49). Su brazo vivo de SR-009 —M-S2 bajo monitoring— sí queda
+cubierto por la familia nominal. El test de stall bien-puesto se difiere a la acción
+2-D de Isaac (D-49).
 
 ### 8.9.4 Matriz E-track y trabajo de cierre
 
-| SR | Clase | Escenario(s) | Veredicto (Sim, track 'E') |
+| SR | Clase | Escenario(s) | Veredicto (Sim, track 'E', V2) |
 | --- | --- | --- | --- |
-| SR-012 (carril con visión degradada) | CL-A | SC-PERT-04/05/06/09/10 | **Not satisfied** (as-scored) ⁴ |
-| SR-013 (degradación segura por pérdida de percepción) | CL-A | SC-PERT-07 | **Satisfied** en SC-PERT-07 (20/20); D-29 sub-cubierto ⁵ |
-| SR-014 (plausibilidad del estimador) | CL-A | SC-PERT-08 (prim.), SC-PERT-04..06/09/10 | **Not satisfied** (as-scored) ⁴ |
+| SR-001 (límite de carril) | CL-A | SC-NOM-01/02, SC-EDGE-02 | **Satisfied** (SC-EDGE-02 28/30; 2 residuos de borde) |
+| SR-002/003 (rumbo / TTLC) | CL-A | SC-EDGE-01/04, SC-NOM-02 | **Satisfied** en criterio propio (M-P4 ≤ 25°, TTLC); bloqueo *literal* por la cláusula recovery-time ⁴ |
+| SR-012 (carril con visión degradada) | CL-A | SC-NOM-01 + SC-PERT-04..13 | **Satisfied** (cobertura D-29 cerrada) |
+| SR-013 (degradación segura por pérdida de percepción) | CL-A | SC-NOM-01, SC-PERT-07/13 | **Satisfied** |
+| SR-014 (plausibilidad del estimador) | CL-A | SC-PERT-08 (prim.) + SC-PERT-04..13 | **Satisfied** |
 
-⁴ Mismo patrón que SR-006 (D-39): el veto es la cláusula `emergency == False`
-puntuando la parada segura; el criterio propio de SR-012 (M-S1 ≤ d_max ∧ M-S2 = 0)
-se cumple en enforcement. Re-puntuar SR-012 / SR-001-cámara sobre su métrica propia
-—tratando las paradas controladas como el comportamiento SR-013 especificado— es
-una **decisión señalada, aún no aplicada**; reporte y matriz leen el veredicto
-*as-scored* hasta entonces. ⁵ La conducta de SR-013 se verifica limpiamente (20/20)
-pero una sola familia adverse no cumple el gate D-29 CL-A; necesita más cobertura,
-no es un fallo.
+⁴ Los 13/30 fallos de SC-EDGE-01 son **solo** la cláusula heredada del oval
+`time_to_recovery_heading < 2.0 s` (máx M-P4 = 14.4° ≤ θ_max, TTLC sin breach, M-S1 ≈
+0.035 m); en el criterio documentado de SR-002/003 se cumplen (D-47). El global
+`NOT SATISFIED` *literal* descansa enteramente en esa cláusula. El bump de reps de
+SC-PERT-08/09/10 (20→25) cerró el gate D-29 que dejaba SR-012/014 INCOMPLETE en V1.
 
-**GE4 no se da por pasado formalmente** hasta cerrar, antes de G4-cámara: (a) la
-reconciliación de criterio propio (decisión abierta); (b) cablear `evaluate_labelled`
-para SC-PERT-03/05; (c) inyectar las IC del grid de SC-EDGE-05 + sus contadores;
-(d) multi-seed N=5 (diferido por restricción de host); (e) **re-ejecutar la campaña
-GE4 sobre el E-main final `complex_b 297k`** (hoy solo evaluado en nominal, §8.9.5;
-la campaña de arriba puntúa la policy 139k superada). El **hallazgo de tronco** se
-mantiene con independencia de (a)–(c): bajo cámara la cage **no** deja salir el
-sistema del carril (0 contactos, M-S1 < d_max in-ODD) — convierte la degradación de
-percepción en **parada controlada**, no en excursión, y su valor in-ODD —nulo en
-F4— se vuelve **medible y decisivo** (SC-PERT-07: 20/20 vs 0/20).
+**Estado de cierre GE4 (V2, hecho):** (a) reconciliación de criterio propio aplicada
+(D-47 SR-002/003/011; D-39 out-of-band SR-006); (b) `labelled_arms` cableado
+(SC-PERT-05); (c) IC del grid de SC-EDGE-05 inyectadas + contadores; (e) **campaña GE4
+re-ejecutada sobre el E-main 297k** (V2, 1970 runs, `campaign_e_v2`). Pendiente: (d)
+multi-seed N=5 (diferido por restricción de host); SC-PERT-03 = N/A por espacio de
+acción solo-dirección (D-49). El **hallazgo de tronco** se mantiene: bajo cámara la
+cage **no** deja salir el sistema del carril in-ODD (0 contactos, M-S1 < d_max) —
+convierte la degradación de percepción en **parada controlada**, no en excursión, y
+su valor in-ODD —nulo en F4— se vuelve **medible y decisivo** (SC-PERT-13: 40/40 vs
+0/40). El veredicto cierra GE4 en Gazebo con SR-001 cumplido y un único bloqueo
+literal residual (la cláusula recovery-time de SR-002/003).
 
 ### 8.9.5 Línea base de control clásico con percepción real (CV + pure-pursuit)  [E4]
 
@@ -811,25 +812,29 @@ F4 (campaña):
   [ ] SR-010 / SC-EDGE-05: cablear inyección de IC de parameterised_grid en el runner
        (as-run = 0 co-activación); añadir contadores joint_envelope_assertion_failures
        e inter_cycle_oscillations al registro; re-correr.
-  [ ] SR-009 / SC-PERT-03: fine-tune + correr el brazo stall-variant; agrupar los dos
-       brazos en el driver y puntuar con criterion_eval.evaluate_labelled (ya existe).
+  [—] SR-009 / SC-PERT-03: N/A para la acción solo-dirección — el test negativo de stall
+       requiere control de throttle (M-P6≡0 by construction, reward-injection inerte; D-49).
+       Brazo vivo M-S2-monitoring cubierto; test bien-puesto diferido a la acción 2-D de Isaac.
   [ ] Resolver la decisión de métrica QED (D-17/D-21/D-22) si aplica a §8.6
   [ ] (Pendiente análisis estadístico §8.2.5: como M-S2=0 in-ODD en ambos modos,
        los tests χ²/Welch sobre el delta son degenerados; documentar o aplicar
        solo al contraste frontier)
 
 E4 / track 'E' (campaña GE4 cámara, §8.9):
-  [x] Ejecutar la campaña-E (1660 runs, seed 2024, checkpoint 139k_peak, cage 0.6.1);
-       roll-up campaign_e/campaign_report.json (0 errores)
-  [x] Desglose por-cláusula + invariante de seguridad: tools/campaign_e_failure_modes.py
-       + failure_mode_breakdown.json (0 contactos de borde; vetos = paradas seguras)
-  [x] §8.9 redactada (latente→activa; F4↔E contrast); veredictos E-track en docs/07
-  --- PENDIENTE / decisión abierta (G4-cámara no pasado hasta ≥ a–c) ---
-  [ ] (a) Reconciliación de criterio propio SR-012/SR-001-cámara (à la D-39): re-puntuar
-       sobre M-S1≤d_max ∧ M-S2=0, tratando las paradas controladas como SR-013. DECISIÓN.
-  [ ] (b) Cablear evaluate_labelled para SC-PERT-03/05 (criterio low:/high:); re-puntuar.
-  [ ] (c) SC-EDGE-05 (operandos ausentes del esquema, host Ubuntu); cobertura D-29 SR-012/013.
+  [x] Campaña-E V1 sobre 297k (1940 runs) y, tras validar la library complex_b, **GE4-V2**
+       (1970 runs, seed 2024, checkpoint 297k_peak); roll-up campaign_e_v2/ (0 errores). V2 = récord.
+  [x] Desglose por-cláusula + invariante de seguridad + split in-ODD/OOD de SC-EDGE-05
+       (tools/campaign_e_failure_modes.py); figuras V2 regeneradas + fig_sr001_edge02_offset.png
+  [x] §8.9 redactada a V2 (veredicto, latente→activa, coste D-43); veredictos E-track en docs/07
+  --- CERRADO en V2 ---
+  [x] (a) Reconciliación de criterio propio aplicada: D-47 (SR-002/003/011), D-39 out-of-band (SR-006)
+  [x] (b) labelled_arms cableado (SC-PERT-05 puntúa 40/40)
+  [x] (c) SC-EDGE-05 grid de co-activación cableado + determinante (30/85 breaches in-ODD, SR-010)
+  [x] (e) Campaña GE4 re-ejecutada sobre el E-main 297k (V2); SR-001 cerrado por ruta-1 (28/30)
+  --- PENDIENTE ---
   [ ] (d) Multi-seed N=5 cámara (diferido por restricción de host ≤1 h).
+  [—] SR-009/SC-PERT-03: stall test N/A para acción solo-dirección (M-P6≡0 by construction, D-49);
+       el test bien-puesto se difiere a la acción 2-D de Isaac.
 
 Fase 6:
   [ ] Pulido de prosa; verificar coherencia cruzada con Cap.7 (§7.5/§7.6) y

@@ -1,0 +1,19 @@
+{
+  "run_id": "camp_pert02_rl_seed2024_enforcement_rep05",
+  "scenario_id": "SC-PERT-02",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-06-28T08:56:25.803197+00:00",
+  "duration_s": 40.0,
+  "git_commit": "8af9a55dfcc39c680ff80a40f0fcca62a210cc55",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "policy_checkpoint": "experiments/sim/training/ppo_newcam_complex_b_2024_1M/checkpoints_peak/cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip",
+  "policy_checkpoint_hash": "44c8e912bb4cb1de76bacbb4dc50dc1d5fc9f7aef648a9e9b108da7d295a5aee",
+  "centerline_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "scenario_yaml": "scenarios_complex_b/perturbed/sc_pert_02.yaml",
+  "scenario_yaml_hash": "16396c8b4fd2484f17bfe9c87fe08dd661e2783dd85845dd41b961d93f5f8b20",
+  "rep": 5,
+  "seed": 42,
+  "platform": "sim",
+  "status": "completed"
+}

@@ -31,6 +31,46 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [28.06.2026] — GE4-V2 campaign COMPLETE — SR-001 closed by ruta-1; global NOT SATISFIED (literal) blocking SR-002/003 only
+
+**Document(s) affected:** docs/07 (GE4 note + Last-update + note ⁷), docs/11 (§8.4 rewritten to V2), docs/DECISIONS.md (D-47/D-48 V2 outcome), manuscript ch.8 §8.9; new evidence + figures under experiments/sim/campaign_e_v2/  
+**Phase:** E4 (track-'E' GE4 evaluation)  
+**Gate context:** GE4 (camera) evaluation — verdict of record  
+**Author:** Samuel Sanchez  
+
+### Change
+
+GE4-V2 ran on the 297k E-main with the validated V2 prep (honest legacy estimator): **1970 runs, seed
+2024, 0 errors** (`experiments/sim/campaign_e_v2/`). **Global `NOT SATISFIED` (literal), blocking
+SR-CL-A SR-002/003 only.** Headline result vs V1 (which blocked SR-001/002/003 + SR-012/014
+incomplete): **SR-001 is now Satisfied** — ruta-1's in-ODD IC clip removed the 9/30 out-of-ODD
+SC-EDGE-02 spawns SR-001 must not be charged for, so SC-EDGE-02 passes **28/30** (2 residual breaches
+at the recovery-basin edge 0.118–0.121 m). **Ruta-1 alone closed SR-001; ruta-2b was unnecessary** (and
+was reverted after its closed-loop regression). **SR-012/013/014 Satisfied** (coverage closed). SR-002/003
+fail only the oval-legacy 2.0 s recovery-time clause (13/30, max M-P4 = 14.4° ≤ 25°) → reconciled
+Satisfied (D-47). So no SR-CL-A safety predicate is breached. SR-010 genuine CL-B (30/85 in-ODD
+co-activation breaches). Verdict of record (user decision): **literal NOT SATISFIED + reconciliation
+annotated** (not re-stated as SATISFIED). Regenerated V2 figures (`tools/plot_camera_comparison.py`,
+`plot_frontier.py`) + new `fig_sr001_edge02_offset.png`.
+
+### Rationale
+
+The early-output check on the first V2 launch caught the ruta-2b regression and aborted it; the relaunch
+with the legacy estimator gave the clean verdict. The result is *better* than predicted (SR-001 closes),
+showing ruta-1 (scoping the IC to the ODD) was the real fix.
+
+### Impact
+
+Verdict of record moves to V2 (`campaign_e_v2`); V1 (`campaign_e_297k`) + 139k become historical.
+docs/07, docs/11 §8.4, D-47/D-48 updated; manuscript ch.8 §8.9 updated. No CSV regen (no hazard/SR edits).
+
+### Verification
+
+`pytest` 475 passed; `check_traceability` PASS; campaign 1970/1970, 0 errors. Comparison via
+`scratchpad/compare_v1_v2.py`.
+
+---
+
 ## [27.06.2026] — ruta-2b REVERTED (conservative lane-selection); no robust single-frame fix for the H-12 under-read (D-48)
 
 **Document(s) affected:** src/cobraflex_rl/cobraflex_rl/cv_lane_estimator.py, policy/tests/test_cv_lane_estimator.py, docs/07, docs/11, docs/DECISIONS.md (D-48)  

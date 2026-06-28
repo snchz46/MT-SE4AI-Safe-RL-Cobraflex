@@ -1,0 +1,2113 @@
+{
+  "per_group": [
+    {
+      "scenario": "SC-EDGE-01",
+      "mode": "enforcement",
+      "n": 30,
+      "pass": 17,
+      "fail": 13,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 13,
+      "fraction_pass": 0.5667
+    },
+    {
+      "scenario": "SC-EDGE-01",
+      "mode": "monitoring",
+      "n": 30,
+      "pass": 28,
+      "fail": 2,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 2,
+      "fraction_pass": 0.9333
+    },
+    {
+      "scenario": "SC-EDGE-02",
+      "mode": "enforcement",
+      "n": 30,
+      "pass": 28,
+      "fail": 2,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 2,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.9333
+    },
+    {
+      "scenario": "SC-EDGE-02",
+      "mode": "monitoring",
+      "n": 30,
+      "pass": 5,
+      "fail": 25,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 25,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.1667
+    },
+    {
+      "scenario": "SC-EDGE-03",
+      "mode": "enforcement",
+      "n": 25,
+      "pass": 25,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-EDGE-03",
+      "mode": "monitoring",
+      "n": 25,
+      "pass": 25,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-EDGE-04",
+      "mode": "enforcement",
+      "n": 30,
+      "pass": 30,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-EDGE-04",
+      "mode": "monitoring",
+      "n": 30,
+      "pass": 0,
+      "fail": 30,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 30,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.0
+    },
+    {
+      "scenario": "SC-EDGE-05",
+      "mode": "enforcement",
+      "n": 100,
+      "pass": 17,
+      "fail": 83,
+      "indet": 0,
+      "fail_emergency_only": 43,
+      "fail_ms1_breach": 40,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.17
+    },
+    {
+      "scenario": "SC-EDGE-05",
+      "mode": "monitoring",
+      "n": 100,
+      "pass": 0,
+      "fail": 100,
+      "indet": 0,
+      "fail_emergency_only": 39,
+      "fail_ms1_breach": 61,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.0
+    },
+    {
+      "scenario": "SC-FRONT-01",
+      "mode": "enforcement",
+      "n": 25,
+      "pass": 0,
+      "fail": 25,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 25,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.0
+    },
+    {
+      "scenario": "SC-FRONT-01",
+      "mode": "monitoring",
+      "n": 25,
+      "pass": 0,
+      "fail": 25,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 25,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.0
+    },
+    {
+      "scenario": "SC-FRONT-02",
+      "mode": "enforcement",
+      "n": 25,
+      "pass": 25,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-FRONT-02",
+      "mode": "monitoring",
+      "n": 25,
+      "pass": 0,
+      "fail": 25,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 25,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.0
+    },
+    {
+      "scenario": "SC-FRONT-03",
+      "mode": "enforcement",
+      "n": 25,
+      "pass": 0,
+      "fail": 25,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 25,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.0
+    },
+    {
+      "scenario": "SC-FRONT-03",
+      "mode": "monitoring",
+      "n": 25,
+      "pass": 0,
+      "fail": 25,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 25,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.0
+    },
+    {
+      "scenario": "SC-FRONT-04",
+      "mode": "enforcement",
+      "n": 25,
+      "pass": 13,
+      "fail": 12,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 12,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.52
+    },
+    {
+      "scenario": "SC-FRONT-04",
+      "mode": "monitoring",
+      "n": 25,
+      "pass": 0,
+      "fail": 25,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 25,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.0
+    },
+    {
+      "scenario": "SC-FRONT-05",
+      "mode": "enforcement",
+      "n": 25,
+      "pass": 25,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-FRONT-05",
+      "mode": "monitoring",
+      "n": 25,
+      "pass": 0,
+      "fail": 25,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 25,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.0
+    },
+    {
+      "scenario": "SC-FRONT-06",
+      "mode": "enforcement",
+      "n": 25,
+      "pass": 1,
+      "fail": 24,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 24,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.04
+    },
+    {
+      "scenario": "SC-FRONT-06",
+      "mode": "monitoring",
+      "n": 25,
+      "pass": 0,
+      "fail": 25,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 25,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.0
+    },
+    {
+      "scenario": "SC-FRONT-07",
+      "mode": "enforcement",
+      "n": 25,
+      "pass": 25,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-FRONT-07",
+      "mode": "monitoring",
+      "n": 25,
+      "pass": 25,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-NOM-01",
+      "mode": "enforcement",
+      "n": 50,
+      "pass": 50,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-NOM-01",
+      "mode": "monitoring",
+      "n": 50,
+      "pass": 50,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-NOM-02",
+      "mode": "enforcement",
+      "n": 50,
+      "pass": 50,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-NOM-02",
+      "mode": "monitoring",
+      "n": 50,
+      "pass": 50,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-NOM-03",
+      "mode": "enforcement",
+      "n": 25,
+      "pass": 25,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-NOM-03",
+      "mode": "monitoring",
+      "n": 25,
+      "pass": 24,
+      "fail": 1,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 1,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.96
+    },
+    {
+      "scenario": "SC-PERT-01",
+      "mode": "enforcement",
+      "n": 60,
+      "pass": 60,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-PERT-01",
+      "mode": "monitoring",
+      "n": 60,
+      "pass": 60,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-PERT-02",
+      "mode": "enforcement",
+      "n": 40,
+      "pass": 40,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-PERT-02",
+      "mode": "monitoring",
+      "n": 40,
+      "pass": 40,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-PERT-03",
+      "mode": "enforcement",
+      "n": 40,
+      "pass": 0,
+      "fail": 0,
+      "indet": 40,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": null
+    },
+    {
+      "scenario": "SC-PERT-03",
+      "mode": "monitoring",
+      "n": 40,
+      "pass": 0,
+      "fail": 0,
+      "indet": 40,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": null
+    },
+    {
+      "scenario": "SC-PERT-04",
+      "mode": "enforcement",
+      "n": 40,
+      "pass": 40,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-PERT-04",
+      "mode": "monitoring",
+      "n": 40,
+      "pass": 24,
+      "fail": 16,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 16,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.6
+    },
+    {
+      "scenario": "SC-PERT-05",
+      "mode": "enforcement",
+      "n": 40,
+      "pass": 40,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-PERT-05",
+      "mode": "monitoring",
+      "n": 40,
+      "pass": 40,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-PERT-06",
+      "mode": "enforcement",
+      "n": 40,
+      "pass": 40,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-PERT-06",
+      "mode": "monitoring",
+      "n": 40,
+      "pass": 40,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-PERT-07",
+      "mode": "enforcement",
+      "n": 25,
+      "pass": 25,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-PERT-07",
+      "mode": "monitoring",
+      "n": 25,
+      "pass": 25,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-PERT-08",
+      "mode": "enforcement",
+      "n": 25,
+      "pass": 25,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-PERT-08",
+      "mode": "monitoring",
+      "n": 25,
+      "pass": 25,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-PERT-09",
+      "mode": "enforcement",
+      "n": 25,
+      "pass": 25,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-PERT-09",
+      "mode": "monitoring",
+      "n": 25,
+      "pass": 0,
+      "fail": 25,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 25,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.0
+    },
+    {
+      "scenario": "SC-PERT-10",
+      "mode": "enforcement",
+      "n": 25,
+      "pass": 25,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-PERT-10",
+      "mode": "monitoring",
+      "n": 25,
+      "pass": 25,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-PERT-11",
+      "mode": "enforcement",
+      "n": 30,
+      "pass": 30,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-PERT-11",
+      "mode": "monitoring",
+      "n": 30,
+      "pass": 0,
+      "fail": 30,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 30,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.0
+    },
+    {
+      "scenario": "SC-PERT-12",
+      "mode": "enforcement",
+      "n": 40,
+      "pass": 40,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-PERT-12",
+      "mode": "monitoring",
+      "n": 40,
+      "pass": 23,
+      "fail": 17,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 17,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.575
+    },
+    {
+      "scenario": "SC-PERT-13",
+      "mode": "enforcement",
+      "n": 40,
+      "pass": 40,
+      "fail": 0,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 0,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 1.0
+    },
+    {
+      "scenario": "SC-PERT-13",
+      "mode": "monitoring",
+      "n": 40,
+      "pass": 0,
+      "fail": 40,
+      "indet": 0,
+      "fail_emergency_only": 0,
+      "fail_ms1_breach": 40,
+      "fail_edge_contact": 0,
+      "fail_other": 0,
+      "fraction_pass": 0.0
+    }
+  ],
+  "cage_core_safety_enforcement": {
+    "n_runs": 985,
+    "road_edge_contacts": 117,
+    "runs_ms1_ge_dmax": 128,
+    "max_ms1_m": 0.3854,
+    "max_ms2": 10.0,
+    "ms1_ge_dmax_runs": [
+      {
+        "run_id": "camp_edge02_rl_seed2024_enforcement_rep21",
+        "scenario": "SC-EDGE-02",
+        "M-S1": 0.3085,
+        "M-S2": 8.933,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge02_rl_seed2024_enforcement_rep25",
+        "scenario": "SC-EDGE-02",
+        "M-S1": 0.3088,
+        "M-S2": 9.0,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep01",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3827,
+        "M-S2": 7.632,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep02",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3828,
+        "M-S2": 8.056,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep03",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3207,
+        "M-S2": 9.451,
+        "emergency": true,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep05",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3833,
+        "M-S2": 7.727,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep07",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3846,
+        "M-S2": 7.955,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep17",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3832,
+        "M-S2": 7.419,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep18",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.2002,
+        "M-S2": 3.0,
+        "emergency": true,
+        "road_edge_contact": false,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep19",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.2122,
+        "M-S2": 5.0,
+        "emergency": true,
+        "road_edge_contact": false,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep21",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.383,
+        "M-S2": 7.632,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep22",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3854,
+        "M-S2": 8.108,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep23",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3827,
+        "M-S2": 9.0,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep25",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3834,
+        "M-S2": 7.727,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep27",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3841,
+        "M-S2": 7.907,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep37",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.2398,
+        "M-S2": 4.286,
+        "emergency": true,
+        "road_edge_contact": false,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep38",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.1963,
+        "M-S2": 3.0,
+        "emergency": true,
+        "road_edge_contact": false,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep39",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.2133,
+        "M-S2": 5.0,
+        "emergency": true,
+        "road_edge_contact": false,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep41",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3844,
+        "M-S2": 7.692,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep42",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3828,
+        "M-S2": 8.056,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep43",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3198,
+        "M-S2": 9.457,
+        "emergency": true,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep45",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3839,
+        "M-S2": 7.674,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep47",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3847,
+        "M-S2": 8.043,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep57",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3846,
+        "M-S2": 7.419,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep58",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.2024,
+        "M-S2": 3.0,
+        "emergency": true,
+        "road_edge_contact": false,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep59",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.2058,
+        "M-S2": 5.0,
+        "emergency": true,
+        "road_edge_contact": false,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep61",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.383,
+        "M-S2": 7.692,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep62",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3841,
+        "M-S2": 8.056,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep63",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3346,
+        "M-S2": 9.462,
+        "emergency": true,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep65",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3838,
+        "M-S2": 7.727,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep67",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3828,
+        "M-S2": 7.857,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep77",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3843,
+        "M-S2": 7.419,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep78",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.198,
+        "M-S2": 3.0,
+        "emergency": true,
+        "road_edge_contact": false,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep79",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.2063,
+        "M-S2": 5.0,
+        "emergency": true,
+        "road_edge_contact": false,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep81",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.383,
+        "M-S2": 7.632,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep82",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3828,
+        "M-S2": 8.108,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep83",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3206,
+        "M-S2": 9.457,
+        "emergency": true,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep85",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3825,
+        "M-S2": 7.778,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep87",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3836,
+        "M-S2": 7.955,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep97",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.3847,
+        "M-S2": 7.419,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep98",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.2031,
+        "M-S2": 3.0,
+        "emergency": true,
+        "road_edge_contact": false,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_edge05_rl_seed2024_enforcement_rep99",
+        "scenario": "SC-EDGE-05",
+        "M-S1": 0.2096,
+        "M-S2": 5.0,
+        "emergency": true,
+        "road_edge_contact": false,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep00",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.2796,
+        "M-S2": 10.0,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep01",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.3085,
+        "M-S2": 9.667,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep02",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.3086,
+        "M-S2": 9.6,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep03",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.3087,
+        "M-S2": 10.0,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep04",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.3091,
+        "M-S2": 9.6,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep05",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.3085,
+        "M-S2": 9.6,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep06",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.3087,
+        "M-S2": 10.0,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep07",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.3087,
+        "M-S2": 9.6,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep08",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.3085,
+        "M-S2": 9.6,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep09",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.2787,
+        "M-S2": 10.0,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep10",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.3087,
+        "M-S2": 10.0,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep11",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.3088,
+        "M-S2": 9.4,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep12",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.3084,
+        "M-S2": 9.4,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep13",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.3086,
+        "M-S2": 10.0,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep14",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.2784,
+        "M-S2": 10.0,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep15",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.2787,
+        "M-S2": 10.0,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep16",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.3084,
+        "M-S2": 9.533,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep17",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.3088,
+        "M-S2": 9.533,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep18",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.2788,
+        "M-S2": 10.0,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep19",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.3085,
+        "M-S2": 9.533,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep20",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.2788,
+        "M-S2": 10.0,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep21",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.3089,
+        "M-S2": 9.867,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep22",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.3086,
+        "M-S2": 9.867,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep23",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.3088,
+        "M-S2": 9.867,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front01_rl_seed2024_enforcement_rep24",
+        "scenario": "SC-FRONT-01",
+        "M-S1": 0.3087,
+        "M-S2": 9.467,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep00",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3088,
+        "M-S2": 9.667,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep01",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3086,
+        "M-S2": 9.667,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep02",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3087,
+        "M-S2": 9.733,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep03",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3086,
+        "M-S2": 9.733,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep04",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3142,
+        "M-S2": 9.8,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep05",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3112,
+        "M-S2": 9.667,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep06",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3087,
+        "M-S2": 9.667,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep07",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3087,
+        "M-S2": 9.667,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep08",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3085,
+        "M-S2": 9.733,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep09",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3119,
+        "M-S2": 9.733,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep10",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3087,
+        "M-S2": 9.733,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep11",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3826,
+        "M-S2": 9.091,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep12",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3088,
+        "M-S2": 9.733,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep13",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3088,
+        "M-S2": 9.8,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep14",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3089,
+        "M-S2": 9.8,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep15",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3087,
+        "M-S2": 9.733,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep16",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3088,
+        "M-S2": 9.8,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep17",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3088,
+        "M-S2": 9.667,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep18",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3841,
+        "M-S2": 9.02,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep19",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3184,
+        "M-S2": 9.667,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep20",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3088,
+        "M-S2": 9.667,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep21",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3378,
+        "M-S2": 9.667,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep22",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3486,
+        "M-S2": 9.8,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep23",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3178,
+        "M-S2": 9.667,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front03_rl_seed2024_enforcement_rep24",
+        "scenario": "SC-FRONT-03",
+        "M-S1": 0.3086,
+        "M-S2": 9.733,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front04_rl_seed2024_enforcement_rep00",
+        "scenario": "SC-FRONT-04",
+        "M-S1": 0.309,
+        "M-S2": 9.2,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front04_rl_seed2024_enforcement_rep05",
+        "scenario": "SC-FRONT-04",
+        "M-S1": 0.309,
+        "M-S2": 9.133,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front04_rl_seed2024_enforcement_rep06",
+        "scenario": "SC-FRONT-04",
+        "M-S1": 0.3173,
+        "M-S2": 9.2,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front04_rl_seed2024_enforcement_rep07",
+        "scenario": "SC-FRONT-04",
+        "M-S1": 0.3087,
+        "M-S2": 9.2,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front04_rl_seed2024_enforcement_rep10",
+        "scenario": "SC-FRONT-04",
+        "M-S1": 0.3089,
+        "M-S2": 9.2,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front04_rl_seed2024_enforcement_rep16",
+        "scenario": "SC-FRONT-04",
+        "M-S1": 0.3089,
+        "M-S2": 9.2,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front04_rl_seed2024_enforcement_rep17",
+        "scenario": "SC-FRONT-04",
+        "M-S1": 0.3089,
+        "M-S2": 9.2,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front04_rl_seed2024_enforcement_rep20",
+        "scenario": "SC-FRONT-04",
+        "M-S1": 0.309,
+        "M-S2": 9.133,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front04_rl_seed2024_enforcement_rep21",
+        "scenario": "SC-FRONT-04",
+        "M-S1": 0.3089,
+        "M-S2": 9.2,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front04_rl_seed2024_enforcement_rep22",
+        "scenario": "SC-FRONT-04",
+        "M-S1": 0.3087,
+        "M-S2": 9.267,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front04_rl_seed2024_enforcement_rep23",
+        "scenario": "SC-FRONT-04",
+        "M-S1": 0.3088,
+        "M-S2": 9.2,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front04_rl_seed2024_enforcement_rep24",
+        "scenario": "SC-FRONT-04",
+        "M-S1": 0.309,
+        "M-S2": 9.2,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep00",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3177,
+        "M-S2": 9.267,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep01",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3162,
+        "M-S2": 9.267,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep02",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3848,
+        "M-S2": 8.254,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep03",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3128,
+        "M-S2": 9.4,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep04",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3786,
+        "M-S2": 8.941,
+        "emergency": true,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep05",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3834,
+        "M-S2": 8.235,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep06",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3143,
+        "M-S2": 9.267,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep07",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3828,
+        "M-S2": 8.676,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep08",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3422,
+        "M-S2": 9.267,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep09",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3827,
+        "M-S2": 8.475,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep10",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3136,
+        "M-S2": 9.333,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep11",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3138,
+        "M-S2": 9.267,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep12",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.374,
+        "M-S2": 7.843,
+        "emergency": true,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep13",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.384,
+        "M-S2": 8.364,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep14",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3838,
+        "M-S2": 8.103,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep15",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3089,
+        "M-S2": 9.333,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep16",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3089,
+        "M-S2": 9.333,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep17",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3152,
+        "M-S2": 9.333,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep18",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3746,
+        "M-S2": 8.0,
+        "emergency": true,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep19",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.309,
+        "M-S2": 9.333,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep20",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3141,
+        "M-S2": 9.333,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep22",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3152,
+        "M-S2": 9.267,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep23",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3267,
+        "M-S2": 9.333,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      },
+      {
+        "run_id": "camp_front06_rl_seed2024_enforcement_rep24",
+        "scenario": "SC-FRONT-06",
+        "M-S1": 0.3089,
+        "M-S2": 9.4,
+        "emergency": false,
+        "road_edge_contact": true,
+        "verdict": false
+      }
+    ]
+  },
+  "emergency_stop_rate_enforcement": {
+    "SC-EDGE-02": [
+      23,
+      30
+    ],
+    "SC-EDGE-04": [
+      30,
+      30
+    ],
+    "SC-EDGE-05": [
+      75,
+      100
+    ],
+    "SC-FRONT-02": [
+      25,
+      25
+    ],
+    "SC-FRONT-04": [
+      13,
+      25
+    ],
+    "SC-FRONT-05": [
+      25,
+      25
+    ],
+    "SC-FRONT-06": [
+      4,
+      25
+    ],
+    "SC-FRONT-07": [
+      25,
+      25
+    ],
+    "SC-PERT-02": [
+      1,
+      40
+    ],
+    "SC-PERT-04": [
+      16,
+      40
+    ],
+    "SC-PERT-05": [
+      20,
+      40
+    ],
+    "SC-PERT-07": [
+      25,
+      25
+    ],
+    "SC-PERT-08": [
+      1,
+      25
+    ],
+    "SC-PERT-09": [
+      25,
+      25
+    ],
+    "SC-PERT-10": [
+      1,
+      25
+    ],
+    "SC-PERT-11": [
+      30,
+      30
+    ],
+    "SC-PERT-12": [
+      18,
+      40
+    ],
+    "SC-PERT-13": [
+      40,
+      40
+    ]
+  },
+  "campaign_dir": "experiments/sim/campaign_e_v2",
+  "d_max_m": 0.16,
+  "n_runs": 1970,
+  "n_enforcement": 985,
+  "n_monitoring": 985,
+  "baseline_contrast_enforcement": {
+    "SC-EDGE-01": {
+      "f4_fraction_pass": 1.0,
+      "e_fraction_pass": 0.5667,
+      "verdict_flip": "PASS->FAIL"
+    },
+    "SC-EDGE-02": {
+      "f4_fraction_pass": 1.0,
+      "e_fraction_pass": 0.9333,
+      "verdict_flip": null
+    },
+    "SC-EDGE-03": {
+      "f4_fraction_pass": 1.0,
+      "e_fraction_pass": 1.0,
+      "verdict_flip": null
+    },
+    "SC-EDGE-04": {
+      "f4_fraction_pass": 1.0,
+      "e_fraction_pass": 1.0,
+      "verdict_flip": null
+    },
+    "SC-EDGE-05": {
+      "f4_fraction_pass": null,
+      "e_fraction_pass": 0.17,
+      "verdict_flip": null
+    },
+    "SC-FRONT-01": {
+      "f4_fraction_pass": 1.0,
+      "e_fraction_pass": 0.0,
+      "verdict_flip": "PASS->FAIL"
+    },
+    "SC-FRONT-02": {
+      "f4_fraction_pass": 1.0,
+      "e_fraction_pass": 1.0,
+      "verdict_flip": null
+    },
+    "SC-FRONT-03": {
+      "f4_fraction_pass": 1.0,
+      "e_fraction_pass": 0.0,
+      "verdict_flip": "PASS->FAIL"
+    },
+    "SC-FRONT-04": {
+      "f4_fraction_pass": 1.0,
+      "e_fraction_pass": 0.52,
+      "verdict_flip": "PASS->FAIL"
+    },
+    "SC-FRONT-05": {
+      "f4_fraction_pass": 1.0,
+      "e_fraction_pass": 1.0,
+      "verdict_flip": null
+    },
+    "SC-FRONT-06": {
+      "f4_fraction_pass": 1.0,
+      "e_fraction_pass": 0.04,
+      "verdict_flip": "PASS->FAIL"
+    },
+    "SC-NOM-01": {
+      "f4_fraction_pass": 1.0,
+      "e_fraction_pass": 1.0,
+      "verdict_flip": null
+    },
+    "SC-NOM-02": {
+      "f4_fraction_pass": 1.0,
+      "e_fraction_pass": 1.0,
+      "verdict_flip": null
+    },
+    "SC-NOM-03": {
+      "f4_fraction_pass": 1.0,
+      "e_fraction_pass": 1.0,
+      "verdict_flip": null
+    },
+    "SC-PERT-01": {
+      "f4_fraction_pass": 0.8833,
+      "e_fraction_pass": 1.0,
+      "verdict_flip": "FAIL->PASS"
+    },
+    "SC-PERT-02": {
+      "f4_fraction_pass": 1.0,
+      "e_fraction_pass": 1.0,
+      "verdict_flip": null
+    },
+    "SC-PERT-03": {
+      "f4_fraction_pass": null,
+      "e_fraction_pass": null,
+      "verdict_flip": null
+    }
+  },
+  "sc_edge05_grid_split_enforcement": {
+    "criteria": {
+      "d_odd_m": 0.1225,
+      "theta_odd_deg": 25.0,
+      "d_max_m": 0.16
+    },
+    "buckets": {
+      "in_odd": {
+        "n": 85,
+        "pass": 17,
+        "fail": 68,
+        "ms1_breach": 30
+      },
+      "ood": {
+        "n": 15,
+        "pass": 0,
+        "fail": 15,
+        "ms1_breach": 10
+      }
+    },
+    "per_anchor": {
+      "C01_C02": {
+        "n": 20,
+        "fail": 16,
+        "ms1_breach": 15,
+        "in_odd": 15
+      },
+      "C01_C02_C04": {
+        "n": 20,
+        "fail": 17,
+        "ms1_breach": 15,
+        "in_odd": 15
+      },
+      "C01_C03": {
+        "n": 20,
+        "fail": 10,
+        "ms1_breach": 10,
+        "in_odd": 20
+      },
+      "C01_C04_C06": {
+        "n": 20,
+        "fail": 20,
+        "ms1_breach": 0,
+        "in_odd": 15
+      },
+      "C04_C06": {
+        "n": 20,
+        "fail": 20,
+        "ms1_breach": 0,
+        "in_odd": 20
+      }
+    },
+    "reading": "30 in-ODD M-S1 breaches of 85 in-ODD runs (genuine SR-010 co-activation finding); 10/15 OOD (out of scope)"
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "total_steps": 71,
+  "episodes": 1,
+  "completed_laps": 0.14324721283056135,
+  "mean_ey_m": 0.022171064732104152,
+  "mean_abs_ey_m": 0.0385811650670715,
+  "max_abs_ey_m": 0.11091339131748534,
+  "mean_epsi_rad": -0.022398585367012124,
+  "mean_abs_epsi_rad": 0.07190802728215888,
+  "emergency_steps": 1,
+  "intervention_steps": 38,
+  "intervention_rate_pct": 53.521126760563384,
+  "interventions_per_rule": {
+    "C-03": 5,
+    "C-06": 37,
+    "C-04": 1,
+    "C-05": 1
+  },
+  "cycle_dt_s": 0.1,
+  "duration_s": 7.1000000000000005,
+  "run_id": "camp_edge05_rl_seed2024_enforcement_rep96",
+  "scenario_id": "SC-EDGE-05",
+  "mode": "enforcement",
+  "verdict": false,
+  "campaign": {
+    "scenario_id": "SC-EDGE-05",
+    "criterion": "joint_envelope_assertion_failures == 0 AND M-S2 == 0 AND inter_cycle_oscillations == 0",
+    "grid_point": {
+      "anchor_id": "C01_C02_C04",
+      "expected_activation": [
+        "C-01",
+        "C-02",
+        "C-04"
+      ],
+      "factor": 0.85,
+      "seed": {
+        "d_m": 0.085,
+        "theta_deg": 10.2,
+        "v_mps": 0.3825
+      }
+    },
+    "verdict": false,
+    "clauses": [
+      {
+        "clause": "joint_envelope_assertion_failures == 0",
+        "operand": "joint_envelope_assertion_failures",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 1,
+        "passed": false
+      },
+      {
+        "clause": "M-S2 == 0",
+        "operand": "M-S2",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 0.0,
+        "passed": true
+      },
+      {
+        "clause": "inter_cycle_oscillations == 0",
+        "operand": "inter_cycle_oscillations",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 0,
+        "passed": true
+      }
+    ],
+    "values": {
+      "M-P1": 0.053447150616588696,
+      "M-P4": 0.23087433591028364,
+      "M-P5": 0.07190802728215888,
+      "M-P2": 0,
+      "M-P3": 100.0,
+      "M-P6": 0.0,
+      "M-P7": 0.08587978400448086,
+      "M-S1": 0.11091339131748534,
+      "M-S2": 0.0,
+      "M-S3": 1,
+      "M-S4": null,
+      "M-I1": 53.521126760563384,
+      "M-I2": {
+        "C-03": 7.042253521126761,
+        "C-04": 1.408450704225352,
+        "C-05": 1.408450704225352,
+        "C-06": 52.11267605633803
+      },
+      "M-I3": {
+        "C-03": {
+          "count": 1,
+          "median": 5.0,
+          "p95": 5.0,
+          "max": 5.0
+        },
+        "C-04": {
+          "count": 1,
+          "median": 1.0,
+          "p95": 1.0,
+          "max": 1.0
+        },
+        "C-05": {
+          "count": 1,
+          "median": 1.0,
+          "p95": 1.0,
+          "max": 1.0
+        },
+        "C-06": {
+          "count": 15,
+          "median": 2.0,
+          "p95": 6.299999999999999,
+          "max": 7.0
+        }
+      },
+      "M-I4": {
+        "C-03": null,
+        "C-04": 0.0,
+        "C-05": null,
+        "C-06": 86.48648648648648
+      },
+      "M-I5": {
+        "steer_median": 0.012532357871532451,
+        "steer_p95": 0.7532824317683352,
+        "steer_rate_max": 0.618069671813819,
+        "steer_rate_p95": 0.15000000000000002,
+        "steer_rate_max_smoothness": 0.15000000000000002,
+        "delta_max_steer": 0.15,
+        "steer_rate_smoothness_ok": true
+      },
+      "M-C1": null,
+      "M-C2": null,
+      "emergency": true,
+      "time_to_recovery_heading": 3.2,
+      "max_excursion_m": 0.11091339131748534,
+      "road_edge_contact": false,
+      "joint_envelope_assertion_failures": 1,
+      "inter_cycle_oscillations": 0
+    },
+    "availability": {
+      "M-P3": "approx: kappa absent, v_max_straight assumed",
+      "M-P6": "exact",
+      "M-P7": "exact",
+      "M-S3": "per-run bit; M-S3 rate is aggregated across runs",
+      "M-S4": "requires per-step ttlc series (not in current record schema)",
+      "M-I4": "C-05 omitted (triggers not in record); C-03 omitted (no ttlc)",
+      "M-I5": "steering channel only (throttle correction not in record schema); steer_rate_* = per-cycle |\u0394 committed steer|, 'smoothness' arm excludes steps with a downstream safety-override rule (C-01/C-02/C-03/C-05) \u2014 see SR-006",
+      "M-C1": "not measured in sim runs",
+      "M-C2": "not measured in sim runs"
+    },
+    "termination_reason": "cage_emergency",
+    "note": null
+  }
+}

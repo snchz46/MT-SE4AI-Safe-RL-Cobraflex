@@ -1907,10 +1907,12 @@ prior GE4 write-up (CLAUDE.md), now applied with the trace evidence in hand.
   split the safety predicate from the performance overlay.
 
 **Consequences.**
-- 297k GE4 blocking SR-CL-A: **{SR-001, SR-002, SR-003} → {SR-001}**. Global stays
-  `NOT SATISFIED` (SR-001 is a genuine breach), but the finding is now single-cause and clean:
-  the camera-fed cage cannot recover a boundary-band lateral offset on complex_b (D-43 cost),
-  while heading stability and predictive lane-departure prevention **hold** under the camera.
+- V1-297k GE4 blocking SR-CL-A: {SR-001, SR-002, SR-003} → {SR-001} after this D-47. **In the V2
+  run (D-48 V2 OUTCOME) SR-001 then closed via ruta-1 (28/30), so the V2 literal blocking set is
+  {SR-002, SR-003} only** — both reconciled Satisfied here. So after D-47, *no SR-CL-A safety
+  predicate is breached* in V2; the global `NOT SATISFIED` is held purely by the SC-EDGE-01
+  recovery-time clause. Heading stability and predictive lane-departure prevention **hold** under
+  the camera.
 - The **F4→E PASS→FAIL flip list drops SC-EDGE-01**; only SC-EDGE-02 + SC-FRONT-01/03/04/06
   remain as genuine camera-cage recovery failures (all lateral, consistent with the D-43
   shared-perception mechanism — heading/TTLC are unaffected).
@@ -1972,8 +1974,10 @@ reproducible picture that **corrects the D-43 "perception loss" framing**.
   real fix needs **temporal lane tracking**, which still would not fix the SC-EDGE-02 *spawn* frame
   (no prior) and so **would not close SR-001 anyway**. **Decision:** `conservative_lane_selection`
   default **False** (legacy nearest-centre restored); kept opt-in only for the regression tests /
-  future work. **SR-001 stays a genuine fail** — the H-12 under-read is a real, un-cheaply-patchable
-  D-43 limitation (a stronger finding than a fragile "fix"). **Ruta 2a (retrain) stays out of scope.**
+  future work. *At revert time* SR-001 was expected to stay a fail (the H-12 under-read being a real,
+  un-cheaply-patchable D-43 limitation) — **but the V2 run showed ruta-1 alone closes SR-001 (28/30);
+  see the V2 OUTCOME bullet below.** The under-read remains real but is only a 2-breach boundary
+  residual once scoped to the ODD. **Ruta 2a (retrain) stays out of scope.**
 
 **Consequences / readiness.**
 - The D-43 "common cause / estimator loses the lane" narrative is corrected to an **H-12
@@ -2008,15 +2012,18 @@ reproducible picture that **corrects the D-43 "perception loss" framing**.
   would still not fire). SR-009's stall arm is satisfied-by-construction; its live arm — M-S2 under
   monitoring (H-08 adversarial-direction sub-mode) — is covered by the nominal/monitoring runs. The
   well-posed stall test is deferred to the 2-D-action Isaac work (**D-49**).
-- **GE4-V2 runs with the legacy (honest) estimator; ruta-2b reverted.** Ruta 1 (in-ODD IC), the
-  SC-PERT-08/09/10 run-count bump (SR-012/014), and the D-47/SR-006/SR-010 reconciliations stand;
-  ruta-2b is OFF (above). With the legacy estimator the cage under-reads SC-EDGE-02's in-ODD spawn,
-  so **SR-001 is expected to fail again** (the genuine D-43 finding) and the global stays
-  `NOT SATISFIED`. V2's value is the *clean* verdict on top of the in-ODD IC + the now-feasible
-  SR-012/013/014 coverage — not a SATISFIED flip. The ≈1970-run campaign is a **host job** (multi-hour),
-  re-run with the legacy estimator; pre-flight (commit/checkpoint/disk/orphans/dry-run) passed, and
-  the first launch was aborted *because* the early-output verification caught the ruta-2b regression
-  (the check working as intended).
+- **V2 OUTCOME (28.06.2026) — ruta-2b was unnecessary; SR-001 closed by ruta-1 alone.** GE4-V2 ran
+  with the legacy (honest) estimator: **1970 runs, 0 errors** (`experiments/sim/campaign_e_v2/`).
+  **SC-EDGE-02 passes 28/30 → SR-001 Satisfied.** The earlier prediction that SR-001 would "fail
+  again" was **wrong**: ruta-1 (in-ODD IC clip) removed the 9/30 out-of-ODD spawns that SR-001 must
+  not be charged for, leaving only 2 residual breaches at 0.118/0.121 m (the recovery-basin edge). So
+  the whole ruta-2b estimator effort was **not needed** — and revertng it was doubly correct (it both
+  regressed *and* was unnecessary). The literal global is `NOT SATISFIED` blocking **SR-002/003 only**
+  (the SC-EDGE-01 recovery-time clause, reconciled Satisfied by D-47), with SR-012/013/014 now covered.
+  The D-43 under-read is real but, scoped to the ODD, only a 2-breach boundary residual. The
+  early-output verification on the *first* V2 launch caught the ruta-2b regression and aborted it (the
+  check working as intended); the relaunch with the legacy estimator confirmed SC-EDGE-01 runs clean
+  150 steps. Verdict of record: literal `NOT SATISFIED` + reconciliation (docs/07, docs/11 §8.4).
 - The fix supersedes the earlier "estimator goes blind" reading; the SR-014 plausibility check
   remains blind to a *self-consistent* wrong-lock, so an SR-014 strengthening (absolute-offset
   corroboration, not temporal-jump only) and/or an explicit H-12 mitigation entry is still worth

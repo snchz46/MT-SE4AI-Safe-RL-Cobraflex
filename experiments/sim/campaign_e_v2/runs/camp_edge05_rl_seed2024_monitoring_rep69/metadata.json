@@ -1,0 +1,19 @@
+{
+  "run_id": "camp_edge05_rl_seed2024_monitoring_rep69",
+  "scenario_id": "SC-EDGE-05",
+  "mode": "monitoring",
+  "timestamp_iso": "2026-06-27T20:20:53.663133+00:00",
+  "duration_s": 4.9,
+  "git_commit": "8af9a55dfcc39c680ff80a40f0fcca62a210cc55",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "policy_checkpoint": "experiments/sim/training/ppo_newcam_complex_b_2024_1M/checkpoints_peak/cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip",
+  "policy_checkpoint_hash": "44c8e912bb4cb1de76bacbb4dc50dc1d5fc9f7aef648a9e9b108da7d295a5aee",
+  "centerline_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "scenario_yaml": "scenarios_complex_b/edge/sc_edge_05.yaml",
+  "scenario_yaml_hash": "38a6db59afb9b63fa5ca81a4e934c3e2128974f546872124acb177311ff6ecd7",
+  "rep": 69,
+  "seed": 42,
+  "platform": "sim",
+  "status": "completed"
+}

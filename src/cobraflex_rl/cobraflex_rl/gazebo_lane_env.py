@@ -8,6 +8,17 @@
   safety cage then reads the deterministic CV lane-estimator (D-43), never the
   ground truth, which remains the reward/termination/metrics oracle only.
 
+Two config-gated extensions carry the Isaac posterior track (D-49/D-50), both
+inert by default so every frozen F/E-track run is bit-identical:
+
+- **2-D action** (``action.type: steer_throttle``): the policy commands
+  steering *and* throttle; the cage's speed rules (C-04/C-05/C-06) then
+  genuinely arbitrate against the policy instead of seeing a fixed cruise
+  nominal, and SR-009's stall/liveness sub-mode becomes well-posed.
+- **Multi-circuit training** (``circuits=[...]``): one circuit is sampled per
+  episode (seeded) so the policy generalises across track shapes instead of
+  overfitting a single loop.
+
 The safety cage runs *in-process* inside :meth:`step` (D-34/TS-01) using the
 same ``SafetyCageNode``/``cage.yaml`` as deployment, in ``enforcement`` (safe
 action actuated) or ``monitoring`` (raw action actuated, cage shadow-logged)
@@ -29,8 +40,11 @@ import numpy as np
 from .cage_bridge import (
     SafetyCageNode,
     build_cage_state,
+    policy_throttle_to_cage,
     resolve_cage_yaml,
     safe_action_to_cmd,
+    safe_action_to_cmd_2d,
+    target_speed_from_throttle_2d,
 )
 from .cage_perception import CagePerceptionSupervisor
 from .cage_viz import CageViz
@@ -56,9 +70,13 @@ from .visual_domain_randomization import (
 class GazeboLaneEnv(gym.Env):
     """Lane-following env over a live Gazebo instance (see module docstring).
 
-    The policy controls steering only ([-1, 1]); throttle is a fixed cruise
-    nominal so the cage's speed rules see a realistic throttle stream
-    (Training Spec §7.2.2). All Gazebo I/O goes through ``ros_interface``.
+    Default (F/E-track verdict path): the policy controls steering only
+    ([-1, 1]); throttle is a fixed cruise nominal so the cage's speed rules see
+    a realistic throttle stream (Training Spec §7.2.2). With
+    ``action.type: steer_throttle`` (D-50, Isaac track) the policy additionally
+    commands throttle in [-1, 1], mapped to the cage's normalised u ∈ [0, 1].
+    All simulator I/O goes through ``ros_interface`` (Gazebo/ROS2 or in-process
+    Isaac — the env is transport-agnostic).
     """
 
     metadata = {"render_modes": []}
@@ -66,58 +84,118 @@ class GazeboLaneEnv(gym.Env):
     def __init__(
         self,
         ros_interface: RosGazeboInterface,
-        centerline: np.ndarray,
-        lane_width: float,
-        cfg: Mapping[str, Any],
+        centerline: Optional[np.ndarray] = None,
+        lane_width: Optional[float] = None,
+        cfg: Mapping[str, Any] = None,
         road_width: Optional[float] = None,
         road_centerline: Optional[np.ndarray] = None,
+        circuits: Optional[Any] = None,
     ) -> None:
         super().__init__()
         self.ros_interface = ros_interface
-        self.lane_width = float(lane_width)
-        # Termination at road boundary (not lane boundary) so random-policy
-        # episodes don't terminate in 1–2 steps; the cage handles lane
-        # violations within the road. Falls back to lane_width if unset.
-        self.road_width = float(road_width) if road_width is not None else float(lane_width)
         self.cfg = dict(cfg)
         self.fixed_speed = float(self.cfg.get("fixed_speed", 0.2))
         self.control_dt = float(self.cfg.get("control_dt", 0.1))
         self.max_episode_steps = int(self.cfg.get("max_episode_steps", 500))
+
+        # --- Action space (D-49/D-50) -----------------------------------------
+        # "steer" (default): the frozen 1-D steering-only contract (ED-2) — every
+        # F/E-track verdict ran on it and stays bit-identical. "steer_throttle"
+        # (Isaac posterior track): 2-D [steer, throttle] in [-1, 1]²; throttle is
+        # mapped to the cage scale u ∈ [0, 1] and actuated on the
+        # target_speed_from_throttle_2d map (up to max_speed_mps), giving the
+        # policy genuine speed authority above the C-04 ceilings so the cage's
+        # speed rules arbitrate for real (see cage_bridge for the full design).
+        action_cfg = dict(self.cfg.get("action", {}))
+        self.action_type = str(action_cfg.get("type", "steer"))
+        if self.action_type not in ("steer", "steer_throttle"):
+            raise ValueError(
+                f"action.type must be 'steer' or 'steer_throttle', got "
+                f"{self.action_type!r}"
+            )
+        self.throttle_as_action = self.action_type == "steer_throttle"
+        self.max_speed = float(action_cfg.get("max_speed_mps", 0.5))
+        self.throttle_deadband = float(action_cfg.get("throttle_deadband", 0.05))
+        # Highest speed the actuation map can command — the along-track advance
+        # bound for progress-bounded tracking below.
+        speed_ceiling = self.max_speed if self.throttle_as_action else self.fixed_speed
+
         # Progress-bounded tracking (opt-in): cap how far the centerline
         # projection may advance per control step so the ground-truth ey (and
         # thus the off-road termination) stays valid on a self-approaching
         # circuit such as complex_b — where leaving the lane otherwise lands the
         # agent near a *different* track section and collapses |ey|. Default off
         # => the convex F-track oval is unchanged. Auto cap = max along-track
-        # travel per step (fixed_speed * control_dt, the speed ceiling) with a
-        # 1.5x margin for projection discretisation; max_track_advance_m overrides.
+        # travel per step (speed ceiling * control_dt) with a 1.5x margin for
+        # projection discretisation; max_track_advance_m overrides.
         max_advance: Optional[float] = None
         if bool(self.cfg.get("progress_bounded_tracking", False)):
             max_advance = float(
                 self.cfg.get(
-                    "max_track_advance_m", 1.5 * self.fixed_speed * self.control_dt
+                    "max_track_advance_m", 1.5 * speed_ceiling * self.control_dt
                 )
             )
-        self.tracker = PolylineTracker(centerline, max_advance_m=max_advance)
         # With progress-bounded tracking the projection deliberately *lags* when
         # the agent races off the lane, so off-road is judged on the Euclidean
         # distance to the (lagging) closest point — which captures both the
         # lateral departure and the longitudinal lag — rather than the perpendicular
         # ey alone, which collapses when the lane folds back near the agent.
         self.progress_bounded = max_advance is not None
-        # Off-road geometry tracker. The reward centerline is the *right lane*
-        # (offset), but "left the painted road" is a property of the road, which
-        # is centred on the road centreline — so off-road is judged by the global
-        # distance to the road centreline vs road_width/2 (the edge). This is
-        # robust to the complex_b circuit approaching itself, where the stateful
-        # cross-track ey (and even a progress-bounded variant) collapses when the
-        # vehicle drifts near a different track section. Falls back to the reward
-        # tracker's ey when no road centreline is supplied (the F-track oval).
-        self._road_tracker = (
-            PolylineTracker(np.asarray(road_centerline, dtype=float))
-            if road_centerline is not None
-            else None
-        )
+
+        # --- Circuits (D-50 multi-track training) -----------------------------
+        # The legacy single-circuit signature (centerline/lane_width/road_width/
+        # road_centerline) is folded into a one-element circuit list; `circuits`
+        # (a sequence of mappings with keys name/centerline/lane_width/
+        # road_width/road_centerline) enables per-episode track sampling. Each
+        # circuit pre-builds its trackers once; reset() switches the active one.
+        #
+        # Off-road geometry tracker per circuit: the reward centerline is the
+        # *right lane* (offset), but "left the painted road" is a property of the
+        # road, which is centred on the road centreline — so off-road is judged
+        # by the global distance to the road centreline vs road_width/2 (the
+        # edge). This is robust to a circuit approaching itself (complex_b),
+        # where the stateful cross-track ey collapses when the vehicle drifts
+        # near a different track section. Falls back to the reward tracker's ey
+        # when no road centreline is supplied (the F-track oval).
+        if circuits is None:
+            if centerline is None or lane_width is None:
+                raise ValueError(
+                    "either (centerline, lane_width) or circuits=[...] required"
+                )
+            circuits = [{
+                "name": "circuit_0",
+                "centerline": centerline,
+                "lane_width": lane_width,
+                "road_width": road_width,
+                "road_centerline": road_centerline,
+            }]
+        self._circuits = []
+        for i, spec in enumerate(circuits):
+            spec = dict(spec)
+            c_lane = float(spec["lane_width"])
+            c_road = (
+                float(spec["road_width"])
+                if spec.get("road_width") is not None
+                else c_lane
+            )
+            c_road_cl = spec.get("road_centerline")
+            self._circuits.append({
+                "name": str(spec.get("name", f"circuit_{i}")),
+                "tracker": PolylineTracker(
+                    np.asarray(spec["centerline"], dtype=float),
+                    max_advance_m=max_advance,
+                ),
+                "road_tracker": (
+                    PolylineTracker(np.asarray(c_road_cl, dtype=float))
+                    if c_road_cl is not None
+                    else None
+                ),
+                "lane_width": c_lane,
+                "road_width": c_road,
+            })
+        self._multi_circuit = len(self._circuits) > 1
+        self._active_circuit = 0
+        self._select_circuit(0)
         # Optional RViz view of the cage/agent runtime state (off by default so
         # headless campaigns pay nothing). Publishes /cage/markers (road edges,
         # vehicle state) and /agent/obs_image each step. See cage_viz.CageViz.
@@ -128,12 +206,20 @@ class GazeboLaneEnv(gym.Env):
             # so it cannot create publishers. Skip viz with a warning there
             # rather than crashing the run — headless Isaac training has no RViz.
             if hasattr(self.ros_interface, "create_publisher"):
+                if self._multi_circuit:
+                    self.ros_interface.get_logger().warning(
+                        "viz=true with multiple circuits: RViz markers show "
+                        "circuit 0 only (static overlay)."
+                    )
+                viz_circuit = self._circuits[0]
                 self._viz = CageViz(
                     self.ros_interface,
-                    reward_centerline=np.asarray(centerline, dtype=float),
+                    reward_centerline=np.asarray(
+                        viz_circuit["tracker"].points, dtype=float
+                    ),
                     road_centerline=(
-                        np.asarray(road_centerline, dtype=float)
-                        if road_centerline is not None
+                        np.asarray(viz_circuit["road_tracker"].points, dtype=float)
+                        if viz_circuit["road_tracker"] is not None
                         else None
                     ),
                     road_width=self.road_width,
@@ -150,11 +236,13 @@ class GazeboLaneEnv(gym.Env):
         # it for free (§7.2.5, §7.5.2; reward v1.2). Kept separate from
         # prev_steer, which is the applied steering exposed in the observation.
         self.prev_policy_steer = 0.0
+        # Raw policy throttle (cage scale u ∈ [0, 1]) of the previous cycle, for
+        # the 2-D throttle smoothness term (same raw-not-post-cage rationale;
+        # D-50). Unused (stays 0.0) on the 1-D path.
+        self.prev_policy_throttle = 0.0
         self.step_count = 0
         self.last_track_state: Optional[TrackState] = None
         self._last_pose = (0.0, 0.0, 0.0)  # world (x, y, yaw), refreshed each cycle
-        # Total centerline arc length, for the closed-loop progress wrap (§7.2.3).
-        self._track_length = float(self.tracker.cumulative_lengths[-1])
         self.prev_s = 0.0
 
         # Signed-curvature preview added to the observation so the policy can
@@ -165,11 +253,20 @@ class GazeboLaneEnv(gym.Env):
         self.curv_lookahead_near = int(obs_cfg.get("curvature_lookahead_near", 3))
         self.curv_lookahead_far = int(obs_cfg.get("curvature_lookahead_far", 8))
 
-        self.action_space = spaces.Box(
-            low=np.array([-1.0], dtype=np.float32),
-            high=np.array([1.0], dtype=np.float32),
-            dtype=np.float32,
-        )
+        if self.throttle_as_action:
+            # [steer, throttle], both in [-1, 1] (symmetric Box, SB3-friendly);
+            # throttle is remapped to the cage scale u ∈ [0, 1] in step().
+            self.action_space = spaces.Box(
+                low=np.array([-1.0, -1.0], dtype=np.float32),
+                high=np.array([1.0, 1.0], dtype=np.float32),
+                dtype=np.float32,
+            )
+        else:
+            self.action_space = spaces.Box(
+                low=np.array([-1.0], dtype=np.float32),
+                high=np.array([1.0], dtype=np.float32),
+                dtype=np.float32,
+            )
         # Track 'E' (D-41/D-43): observation.type "camera" switches the policy
         # obs to the front-camera image (84×84 grayscale, docs/09 §10; frame
         # stacking k=4 is applied by the trainer via VecFrameStack). The cage's
@@ -268,6 +365,19 @@ class GazeboLaneEnv(gym.Env):
         self.spawn_heading_range = float(spawn_cfg.get("heading_rad", 0.15))
         self.spawn_lateral_range = float(spawn_cfg.get("lateral_m", 0.05))
 
+    def _select_circuit(self, index: int) -> None:
+        """Make circuit ``index`` the active geometry (trackers, widths, arc
+        length). The per-circuit trackers are pre-built at construction, so
+        switching is O(1); reset() re-arms the tracking state afterwards."""
+        circuit = self._circuits[int(index)]
+        self._active_circuit = int(index)
+        self.tracker = circuit["tracker"]
+        self._road_tracker = circuit["road_tracker"]
+        self.lane_width = float(circuit["lane_width"])
+        self.road_width = float(circuit["road_width"])
+        # Total centerline arc length, for the closed-loop progress wrap (§7.2.3).
+        self._track_length = float(self.tracker.cumulative_lengths[-1])
+
     def reset(
         self,
         *,
@@ -286,9 +396,11 @@ class GazeboLaneEnv(gym.Env):
         self.step_count = 0
         # prev_steer tracks the steering actually applied (post-cage) last cycle
         # (for the observation); prev_policy_steer tracks the raw policy command
-        # last cycle (for the smoothness reward term, §7.2.5).
+        # last cycle (for the smoothness reward term, §7.2.5). The raw policy
+        # throttle starts at 0.0 = stopped (the vehicle spawns stationary).
         self.prev_steer = 0.0
         self.prev_policy_steer = 0.0
+        self.prev_policy_throttle = 0.0
 
         # Fresh cage per episode: no latched C-05 emergency, clean rate-limiter
         # and oscillation history. Each RL episode is an independent rollout, so
@@ -304,6 +416,15 @@ class GazeboLaneEnv(gym.Env):
         # 15 deg) and/or lateral offset (`lateral_offset_m`). Absent (training /
         # nominal eval), the spawn is the first centerline point as before.
         opts = options or {}
+        # Circuit for this episode (D-50 multi-track training): pinned via
+        # options["circuit_index"] (deterministic eval), else sampled uniformly
+        # from the circuit list via the seeded np_random. Single-circuit envs
+        # skip the sampling entirely (legacy behaviour, identical RNG stream).
+        circuit_index = opts.get("circuit_index")
+        if circuit_index is not None:
+            self._select_circuit(int(circuit_index))
+        elif self._multi_circuit:
+            self._select_circuit(int(self.np_random.integers(len(self._circuits))))
         # Runtime perturbation for this episode (obs noise / latency / throttle
         # pulse). Reset the latency buffer so no command leaks across episodes.
         self._perturbation = opts.get("perturbation") or NO_PERTURBATION
@@ -536,11 +657,19 @@ class GazeboLaneEnv(gym.Env):
         half-width) or on an *enforced* C-05 emergency stop; truncates at
         ``max_episode_steps``.
         """
-        policy_steer = float(np.clip(np.asarray(action).reshape(-1)[0], -1.0, 1.0))
+        action_vec = np.asarray(action).reshape(-1)
+        policy_steer = float(np.clip(action_vec[0], -1.0, 1.0))
         prev_policy_steer = self.prev_policy_steer
+        prev_policy_throttle = self.prev_policy_throttle
+        # 2-D action (D-50): the policy's symmetric throttle in [-1, 1] becomes
+        # the cage-scale u ∈ [0, 1]. None on the 1-D path — _apply_cage then
+        # substitutes the fixed cruise nominal (the frozen ED-2 contract).
+        policy_throttle: Optional[float] = None
+        if self.throttle_as_action:
+            policy_throttle = policy_throttle_to_cage(action_vec[1])
 
         applied_steer, cmd_linear, cmd_angular, cage_info = self._apply_cage(
-            policy_steer
+            policy_steer, policy_throttle
         )
 
         # Actuation latency (SC-PERT-02): the /cmd_vel command reaches the actuator
@@ -610,10 +739,16 @@ class GazeboLaneEnv(gym.Env):
             prev_steer=prev_policy_steer,
             done=off_road,
             cfg=self.cfg,
+            throttle=policy_throttle,
+            prev_throttle=(
+                prev_policy_throttle if policy_throttle is not None else None
+            ),
         )
 
         self.prev_steer = applied_steer
         self.prev_policy_steer = policy_steer
+        if policy_throttle is not None:
+            self.prev_policy_throttle = policy_throttle
         if self.obs_type == "camera":
             observation = self._capture_camera_obs()
         else:
@@ -638,20 +773,33 @@ class GazeboLaneEnv(gym.Env):
             )
         return observation, reward, terminated, truncated, info
 
-    def _apply_cage(self, policy_steer: float):
-        """Route the raw policy steering through the safety cage in-process.
+    def _apply_cage(self, policy_steer: float, policy_throttle: Optional[float] = None):
+        """Route the raw policy action through the safety cage in-process.
 
         Returns ``(applied_steer, cmd_linear_x, cmd_angular_z, info)`` where
         ``applied_steer`` is the normalised steering actually actuated (post-cage),
         used for the reward and the ``prev_steer`` observation. When the cage is
         disabled the raw action passes through with the legacy direct actuation
         (debug fallback, Training Spec §7.2.5).
+
+        ``policy_throttle`` is the policy's cage-scale throttle u ∈ [0, 1] on the
+        2-D action path (D-50), or ``None`` on the frozen 1-D path — the cage
+        then sees the fixed cruise nominal as before (§7.2.2).
         """
         if not self.cage_enabled or self.cage is None or self.last_track_state is None:
-            # Legacy no-cage loop: angular.z = steer, linear.x = fixed_speed.
+            # Legacy no-cage loop: angular.z = steer; linear.x = fixed_speed
+            # (1-D) or the 2-D throttle map (debug fallback, no cage in loop).
+            if policy_throttle is not None:
+                raw_throttle = policy_throttle
+                cmd_linear = target_speed_from_throttle_2d(
+                    policy_throttle, self.max_speed, self.throttle_deadband
+                )
+            else:
+                raw_throttle = self.throttle_nominal
+                cmd_linear = self.fixed_speed
             return (
                 policy_steer,
-                self.fixed_speed,
+                cmd_linear,
                 policy_steer,
                 {
                     "cage_enabled": False,
@@ -662,19 +810,28 @@ class GazeboLaneEnv(gym.Env):
                     "raw_steer": policy_steer,
                     "safe_steer": policy_steer,
                     "steer_correction": 0.0,
+                    "raw_throttle": float(raw_throttle),
+                    "safe_throttle": float(raw_throttle),
+                    "throttle_correction": 0.0,
                 },
             )
 
-        # The policy controls steering only; throttle is the fixed cruise nominal
-        # so C-04/C-05/C-06 act on a realistic throttle stream (§7.2.2). A
-        # throttle-override perturbation (SC-EDGE-03) substitutes a timed pulse fed
-        # to the cage's C-04. NB the fixed-speed actuation
-        # (target_speed_from_throttle) caps the resulting speed at fixed_speed, so
-        # the *speed-excess magnitude* is limited in this env (see
-        # scenario_perturbations / experiments/README).
+        # Raw throttle stream to the cage: the policy's own command on the 2-D
+        # path (the cage speed rules then arbitrate *against* the policy, D-50),
+        # else the fixed cruise nominal so C-04/C-05/C-06 act on a realistic
+        # stream (§7.2.2). A throttle-override perturbation (SC-EDGE-03)
+        # substitutes a timed pulse in either mode — the eval stressor takes
+        # precedence over the policy. NB on the 1-D path the fixed-speed
+        # actuation (target_speed_from_throttle) caps the resulting speed at
+        # fixed_speed, so the *speed-excess magnitude* is limited there (see
+        # scenario_perturbations / experiments/README); the 2-D map has real
+        # speed authority up to max_speed instead.
         timestamp = self.step_count * self.control_dt
         override = self._perturbation.throttle_override(timestamp)
-        raw_throttle = self.throttle_nominal if override is None else float(override)
+        base_throttle = (
+            policy_throttle if policy_throttle is not None else self.throttle_nominal
+        )
+        raw_throttle = base_throttle if override is None else float(override)
         raw_action = (policy_steer, raw_throttle)
         if self.obs_type == "camera":
             state, ctx, perception_info = self._camera_cage_state(timestamp)
@@ -702,15 +859,28 @@ class GazeboLaneEnv(gym.Env):
         # only when enforcing. The shadow flag is still recorded in cage_emergency
         # so the analysis can see "the cage would have stopped here".
         apply_emergency = emergency and (self.cage_mode == "enforcement")
-        cmd_linear, cmd_angular = safe_action_to_cmd(
-            safe_steer,
-            safe_throttle,
-            apply_emergency,
-            fixed_speed=self.fixed_speed,
-            throttle_nominal=self.throttle_nominal,
-            min_speed_scale=self.min_speed_scale,
-            yaw_gain=self.yaw_gain,
-        )
+        if policy_throttle is not None:
+            # 2-D actuation map (D-50): the cage's safe throttle scales speed
+            # linearly up to max_speed (full stop below the deadband) — the
+            # cage has speed authority all the way to zero.
+            cmd_linear, cmd_angular = safe_action_to_cmd_2d(
+                safe_steer,
+                safe_throttle,
+                apply_emergency,
+                max_speed=self.max_speed,
+                throttle_deadband=self.throttle_deadband,
+                yaw_gain=self.yaw_gain,
+            )
+        else:
+            cmd_linear, cmd_angular = safe_action_to_cmd(
+                safe_steer,
+                safe_throttle,
+                apply_emergency,
+                fixed_speed=self.fixed_speed,
+                throttle_nominal=self.throttle_nominal,
+                min_speed_scale=self.min_speed_scale,
+                yaw_gain=self.yaw_gain,
+            )
         info = {
             "cage_enabled": True,
             "cage_emergency": emergency,
@@ -723,6 +893,11 @@ class GazeboLaneEnv(gym.Env):
             "raw_steer": policy_steer,
             "safe_steer": float(safe_steer),
             "steer_correction": float(safe_steer) - policy_steer,
+            # Throttle stream diagnostics (2-D: policy vs cage arbitration;
+            # 1-D: nominal/override vs cage attenuation — C-04's M-S2 signal).
+            "raw_throttle": float(raw_throttle),
+            "safe_throttle": float(safe_throttle),
+            "throttle_correction": float(safe_throttle) - float(raw_throttle),
         }
         info.update(perception_info)
         return float(safe_steer), cmd_linear, cmd_angular, info
@@ -849,7 +1024,7 @@ class GazeboLaneEnv(gym.Env):
 
     def _make_info(self, track_state: TrackState, speed: float) -> Dict[str, float]:
         x, y, yaw = self._last_pose
-        return {
+        info = {
             "ey": float(track_state.ey),
             "epsi": float(track_state.epsi),
             "s": float(track_state.s),
@@ -859,3 +1034,7 @@ class GazeboLaneEnv(gym.Env):
             "y": float(y),
             "yaw": float(yaw),
         }
+        if self._multi_circuit:
+            info["circuit_index"] = self._active_circuit
+            info["circuit_name"] = self._circuits[self._active_circuit]["name"]
+        return info

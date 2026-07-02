@@ -31,6 +31,109 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [02.07.2026] — D-50: Isaac full-authority training environment — 2-D action (steering + throttle) + multi-circuit sampling + CV-safe tracks complex_d/e
+
+**Document(s) affected:** docs/DECISIONS.md (new **D-50**); docs/13 (status, command reference, TRACK env, track presets + curvature-boundary caveat, new §"Full-authority training", complex_b preset description corrected to the committed two-lane asset); docs/14 (§1.1 future-work note → implemented D-50 contract). Code (posterior track, no verdict artefacts touched): `gazebo_lane_env.py` (config-gated `action:` block + `circuits=` per-episode sampling), `cage_bridge.py` (2-D maps `policy_throttle_to_cage` / `target_speed_from_throttle_2d` / `safe_action_to_cmd_2d`), `rewards.py` (`throttle_delta`, default 0.0), `callbacks.py` (`raw_throttle` column), `tools/isaac_scene.py` (multi-track scene, `TRACK_GAP_M` 15 m, shared DR materials, union backdrop, `load_circuits`), `tools/isaac_train.py` (defaults → `train_isaac_2d.yaml` + `complex_b,complex_d,complex_e`; circuits + action metadata), new `src/cobraflex_rl/config/train_isaac_2d.yaml`, `scripts/generate_complex_track.py` (presets `complex_d`/`complex_e`), generated track assets (`experiments/sim/tracks/complex_{a,c,d,e}/`) + config centerlines (`complex_{a,c,d,e}_{right_lane_,}centerline.yaml`). Tests: `policy/tests/test_gazebo_lane_env_2d.py` (new, 16), `test_cage_bridge.py` (+8), `test_rewards.py` (+4).
+**Phase:** posterior (Isaac / sim-to-real, D-44) — after E4/G4 close
+**Gate context:** after Gate G4 (does **not** reopen it)
+**Author:** Samuel Sanchez
+
+### Change
+
+The D-49 deferral is taken up for the Isaac track: the training environment now supports a
+**2-D action (steering + throttle)** and **multi-circuit per-episode track sampling**, both
+config-gated and **inert by default** (no `action:` block ⇒ the frozen 1-D ED-2 contract).
+The policy's throttle maps to the cage scale u ∈ [0, 1] and actuates as
+`speed = 0.5 m/s · u` (full stop below the 0.05 deadband) — 0.5 m/s = C-04 `v_max_straight`
+= ODD-1.V_MAX, so the cage speed rules **genuinely arbitrate** (the 1-D actuation capped
+speed below every ceiling ⇒ structurally latent). Reward gains a raw-delta `throttle_delta`
+term (default 0.0). `isaac_train.py` defaults to the full-authority run: camera CNN + 2-D
+action + physics/scene/visual DR on the multi-track scene `complex_b,complex_d,complex_e`
+(15 m apart = Lane-Cam far clip; one circuit sampled per episode; per-circuit YAML hashes in
+the run metadata). `complex_d`/`complex_e` are new **CV-safe presets** (driven-lane
+R_min 0.932/0.907 m ≥ the docs/12 §4.7 ~0.9 m curvature boundary); `complex_a`/`complex_c`
+assets were generated but violate that boundary (0.28/0.42 m) — reserved for
+ground-truth-cage/monitoring runs.
+
+### Rationale
+
+G4 closed with project time remaining; the scope deliberately re-expands to the most
+ambitious Isaac target (user decision 02.07.2026): a fully autonomous CobraFlex —
+steering **and** throttle, camera perception, able to follow the lane markings of any
+circuit — trained under maximum sim-to-real realism. The 2-D action makes SR-009's
+stall/liveness sub-mode well-posed (M-P6 meaningful, SC-PERT-03 exercisable) and turns the
+cage's speed rules from latent into measured behaviour; multi-circuit sampling + DR is the
+operational meaning of "any circuit" at this stage. Design details and trade-offs in D-50.
+
+### Impact
+
+Gazebo verdicts, the F/E baselines and every existing config are untouched (default action
+type `steer`; regression suite green). An Isaac-trained 2-D policy is a **new baseline** —
+its evaluation (campaign runner support for 2-D checkpoints, SC-PERT-03 negative test,
+cage speed-rule re-tuning if the C-04/C-06 interplay oscillates) is follow-on work on the
+Ubuntu + Isaac host, where the live flow (multi-track USD build, Replicator, SB3-in-Isaac)
+must be validated first (D-44 host-deferred precedent).
+
+### Verification
+
+`python tools/check_traceability.py` — PASS (no ID changes). Full pytest suite on the
+authoring host (`.venv-win`, py3.14): **498 passed, 5 skipped** (pre-existing cv2 skips),
+including the 16 new end-to-end env tests (real cage through a fake interface: C-04 fires
+on overspeed, C-06 clips throttle jumps, full brake = true stop, circuit sampling
+seed-reproducible + pinnable) and the C-06/accel alignment pin (0.5 m/s² ≤ 0.53).
+`py_compile` on `isaac_train.py`/`isaac_scene.py`. Track radii verified against the
+curvature boundary at generation time.
+
+---
+
+## [02.07.2026] — Gate G4 CLOSED — Phase-4 evaluation complete on both arms; docs synchronized to the GE4-V2 verdict of record; next phase = Isaac / sim-to-real
+
+**Document(s) affected:** docs/07 (G4 closure note + matrix rows SR-012/013/014 → GE4-V2 Satisfied + historical re-scoping of the 139k evidence block + notes ⁴/⁵/⁶) and `tools/traceability_matrix.csv` (E-track rows → satisfied on `campaign_e_v2`; SR-006 rows → satisfied per D-39); docs/05 (SC-PERT-11/12/13 + SC-FRONT-07 documented, library 24 → **28**, executed-campaign notes); docs/11 (v0.6: header/preamble to GE4-V2 + closure status); docs/12 (v0.5: H-12 under-read note in §4.4 + ruta-2b revert + head-to-head closed); docs/13–14 (E4-closed pointers); docs/DECISIONS.md (D-48 status → CLOSED); manuscript ch.7 (GE4 executed, §7.1/§7.5/§7.6/appendix) + ch.8 (intro/§8.7/§8.9.5/§8.10 to V2 + G4); README.md (results + phase table G4 complete); CLAUDE.md (phase snapshot); memory index.
+**Phase:** E4 close → posterior (Isaac / sim-to-real)
+**Gate context:** **Gate G4 closed 02.07.2026**
+**Author:** Samuel Sanchez
+
+### Change
+
+G4 (Phase-4 sim evaluation) is formally closed on the two campaign arms:
+**(i) F-track F4** (frozen 10.06.2026): 1260 runs, global **`SATISFIED`** (all 7 SR-CL-A).
+**(ii) Track-'E' GE4-V2** (verdict of record, 28.06.2026): 1970 runs, global **`NOT SATISFIED`
+(literal)** blocking SR-002/003 only — both Satisfied on their own criterion (D-47), so **no
+SR-CL-A safety predicate is breached on either arm**; SR-001 Satisfied (ruta-1), SR-012/013/014
+Satisfied. Open items are documented, CL-B and non-vetoing (D-30): the F-arm SR-009/010 TBD
+abstentions (SR-009 stall arm N/A-by-construction for the shared 1-D action, D-49; SR-010's
+co-activation question answered on the E arm by the V2 grid — 30/85 in-ODD, genuine CL-B),
+the verdict-framing decision (recorded as literal + annotation), and multi-seed N=5
+(host-deferred). All prose that still described GE4-on-297k as pending (ch.7/ch.8/README/
+CLAUDE.md/docs/12/13/14/scenarios_complex_b) is synchronized; the four complex_b-native
+scenarios run by V2 (SC-PERT-11/12/13, SC-FRONT-07) are now first-class docs/05 entries.
+
+### Rationale
+
+The GE4-V2 campaign (28.06.2026) supplied the last verdict-bearing evidence Phase 4 needed;
+what remained was documentation debt: matrix rows and CSV still scored the superseded 139k
+roll-up, docs/05 lacked the four scenarios the campaign ran, and several documents still
+called the 297k campaign "pending". Closing G4 requires the master record (docs/07), the
+scenario library and the manuscript to agree with the evidence of record.
+
+### Impact
+
+Thesis verdicts are **frozen in Gazebo**; the open thread is the posterior Isaac / sim-to-real
+track (docs/13–14, D-44): 2-D action retrain (D-49, makes SR-009 well-posed), better perception
+(temporal estimator — the honest H-12 closure), and the sim-to-real gap toward the physical
+platform (Phase 5). Isaac work does not reopen G4. No hazard / SR / cage-rule / metric IDs
+added or changed; scenario definitions added to docs/05 match the executable YAMLs already in
+`scenarios_complex_b/` (no new IDs — they existed since 24.06.2026).
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED, 0 warnings** (28 scenarios now
+defined, incl. SC-PERT-11/12/13 + SC-FRONT-07; all reference SRs). Campaign evidence
+unchanged: `experiments/sim/campaign_e_v2/` (1970/1970, 0 errors) + `experiments/sim/campaign/`
+(1260 runs). No code changes — docs/CSV only.
+
+---
+
 ## [28.06.2026] — GE4-V2 campaign COMPLETE — SR-001 closed by ruta-1; global NOT SATISFIED (literal) blocking SR-002/003 only
 
 **Document(s) affected:** docs/07 (GE4 note + Last-update + note ⁷), docs/11 (§8.4 rewritten to V2), docs/DECISIONS.md (D-47/D-48 V2 outcome), manuscript ch.8 §8.9; new evidence + figures under experiments/sim/campaign_e_v2/  

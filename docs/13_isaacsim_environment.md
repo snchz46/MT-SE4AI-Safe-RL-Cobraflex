@@ -2,12 +2,17 @@
 
 Status: URDF import + ROS2 bring-up working (verified headless on Isaac Sim 6.0, RTX 5060
 host, 2026-06-16). The **in-process RL training** path is authored but **host-deferred**
-(D-44) — see [RL training — in-process](#rl-training--in-process-gazebo-free-d-44).
+(D-44) — see [RL training — in-process](#rl-training--in-process-gazebo-free-d-44). Since
+02.07.2026 (G4 closed) the trainer defaults to the **full-authority D-50 configuration**:
+**2-D action (steering + throttle)** + **multi-circuit per-episode sampling** on
+`complex_b,complex_d,complex_e` — see
+[Full-authority training](#full-authority-training--2-d-action--multi-circuit-d-50).
 
 > **Scope — this is posterior work, not the thesis verdict path.** The Isaac migration is a
 > **bridge toward sim-to-real / the physical platform**; it is **orthogonal** to the F/E
 > track distinction (the Isaac trainer can carry either modality). The **E-track verdict
-> closes in Gazebo** — the 425k GE4 re-run, with evidence in [docs/11](11_camera_rl_training.md),
+> closed in Gazebo** — GE4-V2 on the complex_b 297k E-main (28.06.2026; **G4 closed
+> 02.07.2026**), with evidence in [docs/11](11_camera_rl_training.md) §8.4,
 > [docs/07](07_traceability_matrix.md) and ch.8 §8.9 — and Isaac **does not supersede** it. A
 > checkpoint trained in Gazebo is **not transferable to Isaac** (different physics + renderer;
 > see [Speed and fidelity](#speed-and-fidelity--same-logic-different-environment)), so an
@@ -72,12 +77,16 @@ ros2 run robot_state_publisher robot_state_publisher --ros-args -p use_sim_time:
 ros2 run rviz2 rviz2 -d src/cobraflex/rviz/<config>.rviz --ros-args -p use_sim_time:=true
 
 # ── In-process RL training (no ROS, no bring-up) ───────────────────────────────
-# Track-E camera PPO on complex_b is now the DEFAULT (train_ppo_camera.yaml + complex_b
-# lane/road centerlines + --track complex_b all default in). First run only: re-import the USD.
-BRINGUP_REIMPORT=1 $ISAAC tools/isaac_train.py                                      # track-E camera PPO (1st run)
+# DEFAULT (D-50): full-authority 2-D action (steering + throttle) camera PPO on the
+# multi-track scene complex_b,complex_d,complex_e (train_isaac_2d.yaml; one circuit
+# sampled per episode). First run only: re-import the USD.
+BRINGUP_REIMPORT=1 $ISAAC tools/isaac_train.py                                      # full-authority 2-D run (1st run)
 $ISAAC tools/isaac_train.py                                                         # subsequent runs (USD cached)
 $ISAAC tools/isaac_train.py --resume-from policy/checkpoints/<ckpt>.zip             # resume a checkpoint
 $ISAAC tools/isaac_train.py --render gui --show-obs                                 # watch (slower)
+# 1-D single-track (the frozen Gazebo E-main recipe, for backend comparison):
+$ISAAC tools/isaac_train.py --track complex_b \
+    --train-config src/cobraflex_rl/config/train_ppo_camera.yaml
 # Other track/config: override the defaults, keeping --track in sync with the centerlines, e.g.
 $ISAAC tools/isaac_train.py --track oval \
     --train-config           src/cobraflex_rl/config/train_ppo.yaml \
@@ -91,7 +100,7 @@ bring-up and the trainer):
 | Var | Read by | Effect | Default |
 | --- | --- | --- | --- |
 | `BRINGUP_REIMPORT` | both | re-import the cached USD (do this on first run / after a URDF change) | `0` |
-| `TRACK` | both | visual track preset (`complex_a`/`b`/`c`; empty = bare ground); the trainer sets it from `--track` | bring-up `complex_a`; trainer `complex_b` |
+| `TRACK` | both | visual track preset(s) (`complex_a`..`complex_e`; empty = bare ground; a **comma list** builds a multi-track scene, D-50); the trainer sets it from `--track` | bring-up `complex_a`; trainer `complex_b,complex_d,complex_e` |
 | `TRACK_MODE` | both | track build: `geom` (USD meshes) or `texture` (baked PNG quad) | `geom` |
 | `CAM_POSE` | both | `x,y,yaw` pose for `--cam-shot` / camera-visibility checks | robot pose |
 | `WHEEL_FRICTION` / `GROUND_FRICTION` | both | skid-steer wheel/ground friction (see [physics tuning](#physics-tuning--skid-steer-turning)) | `0.05` |
@@ -103,10 +112,14 @@ bring-up and the trainer):
 
 **CLI flags** — bring-up: `--headless`, `--test`, `--turn`, `--shot PNG`, `--cam-shot PNG`
 (the last four force headless and exit). Trainer: `--train-config`, `--centerline-config`,
-`--road-centerline-config`, `--track` (visual scene, defaults to `complex_b` / the `TRACK`
-env), `--model-path`, `--run-id`, `--resume-from`, `--render {headless,gui}`, `--show-obs`,
-`--obs-preview-every N`. The trainer's geometry + `--track` defaults all pair to **complex_b
-camera**, so a bare `isaac_train.py` is a complete run.
+`--road-centerline-config`, `--track` (visual scene; a **comma list** = multi-track scene
+with per-episode circuit sampling, D-50; defaults to `complex_b,complex_d,complex_e` / the
+`TRACK` env), `--model-path`, `--run-id`, `--resume-from`, `--render {headless,gui}`,
+`--show-obs`, `--obs-preview-every N`. With a multi-track `--track` the two centerline flags
+are **ignored** — per-track geometry comes from the config-dir naming convention
+(`<name>_right_lane_centerline.yaml` + `<name>_centerline.yaml`, shifted by the scene
+offsets via `isaac_scene.load_circuits`). A bare `isaac_train.py` is the complete
+full-authority run (train_isaac_2d.yaml + the CV-safe trio).
 
 ## Why a dedicated URDF
 
@@ -433,13 +446,24 @@ Outputs (under `experiments/sim/tracks/<name>/`): `<name>.png` (texture),
 (size/centre/start-pose for placement). Presets:
 
 - `complex_a` — kidney loop with a bottom right-hand S (min radius 0.40 m).
-- `complex_b` — a ~2.8 m **pure straight** along the bottom + a tight, scalloped
-  technical run of closed left/right curves on the opposite side (min radius 0.26 m).
-  Built **single-lane** (`--lanes 1`: two edges, no centre line, 0.30 m wide) so the
-  camera-CV PD lane keeper has no adjacent lane to confuse on the tight curves; the
-  two-lane confusion (centre + opposite-lane markings) made the PD pick the wrong
-  pair and stop. `--lanes 2` (default) keeps the two-lane road.
+- `complex_b` — a ~2.8 m **pure straight** along the bottom + the softened two-hump "M"
+  technical run on the opposite side (centre R_min 0.86 m / driven right lane 0.998 m —
+  the geometry the GE4-V2 verdict ran on). The committed asset is the **two-lane** build
+  (road 0.52 m, lane 0.245 m, dashed centre; `lanes: 2` in its meta) driven on the
+  **right lane** (`complex_b_right_lane_centerline.yaml`, offset 0.1225 m).
 - `complex_c` — top sweep + right-hander + a gentle bottom chicane (0.54 m).
+- `complex_d` / `complex_e` — the **CV-safe** presets added for D-50 multi-track camera
+  training: complex_b's philosophy (long straight + wide U-turn ends + counter-steer
+  features, both handedness) with driven right-lane R_min ≥ 0.90 m, respecting the
+  monocular **curvature boundary** (docs/12 §4.7). `complex_d` = bottom straight + wide
+  single-valley "V" top (0.884 / 0.932 m); `complex_e` = top straight + soft double-dent
+  "W" bottom (0.787 / 0.907 m).
+
+> **Curvature-boundary caveat (docs/12 §4.7).** `complex_a` and `complex_c` have
+> driven-lane radii far below ~0.9 m, where the cage's monocular CV heading over-read
+> (`≈ κ·0.225`) exceeds C-02's `theta_max` and latches **false emergencies** while the
+> car tracks the lane. Use them only for ground-truth-cage (state-vector) or
+> monitoring-mode runs — the camera-track training set is `complex_b,complex_d,complex_e`.
 
 ```bash
 python scripts/generate_complex_track.py --name all   # build all presets
@@ -504,7 +528,42 @@ The exact invocations (state-vector, track-'E' camera, resume, `--render gui`) l
 missed: Isaac's bundled python must have `stable-baselines3` + `gymnasium` installed and the
 cached USD must be re-imported on first run (`BRINGUP_REIMPORT=1`); and `TRACK` selects the
 *visual* scene track while `--centerline-config` selects the env *geometry* — **they must
-correspond**.
+correspond** (multi-track runs enforce this automatically via the naming convention).
+
+### Full-authority training — 2-D action + multi-circuit (D-50)
+
+The trainer's default config ([`train_isaac_2d.yaml`](../src/cobraflex_rl/config/train_isaac_2d.yaml))
+is the **full-authority** setup — the D-49 deferral taken up now that G4 is closed:
+
+- **2-D action** (`action.type: steer_throttle`): the policy commands `[steer, throttle]`
+  in `[-1, 1]²`; throttle maps to the cage scale `u ∈ [0, 1]` and actuates as
+  `speed = 0.5 m/s · u` (full stop below the 0.05 deadband; `cage_bridge`
+  `target_speed_from_throttle_2d`). `max_speed_mps 0.5` equals C-04's `v_max_straight`
+  (= ODD-1.V_MAX), so — unlike the 1-D path, whose actuation capped speed at 0.20 m/s,
+  *below every C-04 ceiling* — the cage's speed rules (C-04 attenuation, C-05 Trigger B,
+  C-06 throttle rate) **genuinely arbitrate against the policy**. C-06 then bounds
+  commanded acceleration to 0.5 m/s² (platform limit 0.53, docs/14 §2.3). A true stop is
+  commandable, so SR-009's stall/liveness sub-mode (M-P6, SC-PERT-03) is **well-posed**
+  on this action space. Reward adds a `throttle_delta` raw-delta smoothness term
+  (longitudinal mirror of the v1.2 steering term). The frozen 1-D contract is the
+  default everywhere else — no `action:` block means `steer`, bit-identical.
+- **Multi-circuit sampling** (`--track complex_b,complex_d,complex_e`): the scene builds
+  all listed circuits **15 m apart** (`TRACK_GAP_M` = the Lane-Cam far clip, so a
+  neighbouring circuit never enters the frustum), one shared grass backdrop, and the
+  track materials at the shared DR prim paths (one `isaac_dr` draw re-colours all
+  circuits coherently). The env pre-builds per-circuit trackers and **samples one
+  circuit per episode** (seeded; `options={"circuit_index": i}` pins it for
+  deterministic eval; `info["circuit_name"]` tags every step). Per-track geometry
+  YAMLs are resolved by convention and shifted by the exact scene offsets
+  (`isaac_scene.load_circuits`), and the run metadata records per-circuit paths +
+  hashes. Training across three track shapes + physics/scene/visual DR is what "follows
+  the lane markings of *any* circuit" operationally means for this stage.
+
+A policy trained here is a **new baseline** (new action space, simulator and circuits) —
+it does not reopen the Gazebo verdicts (D-49/D-50). Unit coverage on the authoring host:
+16 env tests drive the real cage through a fake interface (C-04 fires on overspeed, C-06
+clips throttle jumps, stall reachable, sampling reproducible); the live Isaac flow stays
+host-deferred like the rest of this section.
 
 ### Domain randomization (sim-to-real)
 

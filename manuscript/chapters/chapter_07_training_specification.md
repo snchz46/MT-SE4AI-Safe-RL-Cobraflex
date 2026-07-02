@@ -1,12 +1,13 @@
 # Capítulo 7 — Training Specification y Entrenamiento PPO
 
 <!--
-Estado: E-track PRIMARIO (2026-06-22). El capítulo reporta el track 'E'
-(cámara end-to-end, D-41/D-43) como sistema principal; el track 'F'
-(vector de estado) queda como LÍNEA BASE / brazo de control ("coste de la
-percepción por cámara"), no se elimina. F quedará formalmente superado por
-E cuando se ejecute la campaña GE4 sobre el E-main 297k (hoy E tiene eval
-nominal; la campaña de 24 escenarios sobre 297k está pendiente, §8.9).
+Estado: E-track PRIMARIO (2026-06-22; GE4-V2 cerrada 2026-06-28). El capítulo
+reporta el track 'E' (cámara end-to-end, D-41/D-43) como sistema principal; el
+track 'F' (vector de estado) queda como LÍNEA BASE / brazo de control ("coste
+de la percepción por cámara"), no se elimina. La campaña GE4 sobre el E-main
+297k está EJECUTADA (V2, 1970 runs, veredicto de récord; §8.9, docs/11 §8.4):
+el track 'E' es la evidencia de veredicto de cámara y G4 está cerrado
+(02.07.2026, docs/07).
 
 Convención de figuras: las figuras primarias E llevan sufijo `_newcam`
 (generadas del run complex_b 297k por `tools/plot_f3_figures.py`); las
@@ -32,10 +33,10 @@ determinista** (D-43). El agente de **vector de estado** (track 'F') se
 conserva como **línea base / brazo de control**: comparte toda la Training
 Specification salvo la observación, de modo que el delta de resultados
 **aísla el coste de la percepción por cámara**. El track 'F' está
-plenamente caracterizado (campaña G4, global `SATISFIED`); el track 'E'
-**superará** a 'F' como evidencia de cierre **una vez se ejecute la campaña
-GE4 sobre el E-main de cámara** (hoy con evaluación nominal; §7.5, §8.9). El
-capítulo reporta 'E' como primario y 'F' como baseline.
+plenamente caracterizado (campaña F4, global `SATISFIED`); el track 'E'
+tiene su **campaña GE4 ejecutada y cerrada** sobre el E-main de cámara
+(V2, 1970 runs, 28.06.2026; §7.5, §8.9) y es la evidencia de veredicto del
+brazo de cámara. El capítulo reporta 'E' como primario y 'F' como baseline.
 
 La Training Specification no es un resultado experimental: es un
 *meta-diseño* que precede al primer entrenamiento y determina qué puede
@@ -491,15 +492,15 @@ Tres observaciones del log por-paso (`cage_status.csv`):
    sin dañar la precisión (el \|ey\| de enforcement es incluso ligeramente
    mejor que el de monitoring).
 
-> **Alcance: eval nominal, no campaña GE4.** Esta evaluación establece la
-> **competencia in-ODD** del E-main de cámara. El head-to-head bajo
-> perturbación/degradación (la campaña GE4 de 24 escenarios) **no** se ha
-> re-ejecutado sobre el 297k: el §8.9 del Cap. 8 y `docs/07` reportan todavía
-> la campaña GE4 sobre el checkpoint **139k** (política superada). La
-> propiedad de **seguridad** de la cage (0 salidas de carril → parada segura)
-> es independiente de la policy; la **magnitud del coste de disponibilidad**
-> bajo perturbación queda por medir sobre 297k — el paso de cierre que
-> formalmente hará que el track 'E' supere al 'F'.
+> **Alcance: esta sección es la eval nominal; la campaña GE4 está cerrada.**
+> Esta evaluación establece la **competencia in-ODD** del E-main de cámara. La
+> campaña GE4 completa sobre el 297k se ejecutó y cerró como **V2** (1970 runs,
+> 28 escenarios × {enf, mon}, 28.06.2026, veredicto de récord): el §8.9 del
+> Cap. 8 y `docs/07` la reportan — global `NOT SATISFIED` *literal* bloqueado
+> solo por la cláusula recovery-time de SR-002/003 (reconciliados vía D-47),
+> **sin brecha de ningún predicado de seguridad SR-CL-A** y con SR-001
+> cumplido. Con ella el track 'E' es la evidencia de veredicto del brazo de
+> cámara y **G4 queda cerrado** (02.07.2026, docs/07).
 
 <img src="../figures/fig_7_7_gazebo_capture.png" alt="Figura 7.7 — Captura de la evaluación en Gazebo bajo el cage." width="640"/>
 
@@ -595,12 +596,11 @@ la policy converja en entrenamiento no valida que cumpla los Safety
 Requirements: esa validación es el objeto del Capítulo 8, que introduce la
 *scenario library* como instrumento — la policy se evalúa sobre todos los
 escenarios (SC-NOM/EDGE/PERT/FRONT) con las métricas M-S/M-P/M-I/M-C de
-`docs/06`. La campaña **GE4 sobre el E-main de cámara 297k** es el paso de
-cierre pendiente: cuando se ejecute, el track 'E' superará formalmente al
-'F' como evidencia de veredicto (hoy el §8.9 reporta la campaña GE4 sobre el
-checkpoint 139k). La comparación sistemática RL+cage vs CV+cage —y el
-contraste E↔F como coste de la percepción— es el resultado experimental
-central de la tesis.
+`docs/06`. La campaña **GE4 sobre el E-main de cámara 297k está ejecutada y
+cerrada** (V2, 1970 runs, 28.06.2026): el §8.9 la reporta como veredicto de
+récord del brazo de cámara, y con ella G4 queda cerrado (docs/07). La
+comparación sistemática RL+cage vs CV+cage —y el contraste E↔F como coste de
+la percepción— es el resultado experimental central de la tesis.
 
 ---
 
@@ -612,9 +612,10 @@ E-track (primario):
       (enf+mon) — cage latente, bate al baseline CV (§7.4–7.5)
   [x] Figuras E (convergencia, co-adaptación, salud PPO, acción, trayectoria,
       tracking) generadas del run complex_b (sufijo _newcam)
-  [ ] Campaña GE4 sobre el E-main 297k (24 escenarios) — pendiente; al
-      ejecutarse, track 'E' supera a 'F' como evidencia de veredicto (§8.9)
-  [ ] Multi-seed N=5 de cámara — diferido (restricción de tiempo-real, §7.2.8)
+  [x] Campaña GE4 sobre el E-main 297k — EJECUTADA Y CERRADA (V2, 1970 runs,
+      28 escenarios, 28.06.2026; §8.9, docs/11 §8.4); G4 cerrado 02.07.2026
+  [ ] Multi-seed N=5 de cámara — diferido (restricción de tiempo-real, §7.2.8;
+      2/5 hechas, trabajo posterior)
 
 Baseline F (conservado):
   [x] Caracterizado: 200k estado, N=5 semillas, campaña G4 SATISFIED

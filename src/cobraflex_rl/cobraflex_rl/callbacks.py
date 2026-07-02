@@ -214,12 +214,16 @@ class LearningCurveCallback(BaseCallback):
 
 
 class ActionSampleCallback(BaseCallback):
-    """Subsample the policy's steering command during rollout collection to a CSV
-    ``[timestep, raw_steer]`` for the action-distribution figure (early- vs
-    late-training; plan §11.1 Fig. 6). One row every ``sample_every`` env steps,
-    reading the applied raw policy steering from the env ``info`` (``raw_steer``,
-    set by ``GazeboLaneEnv`` on both the caged and debug paths). Subsampling keeps
-    the file small (≈ total_timesteps / sample_every rows).
+    """Subsample the policy's action during rollout collection to a CSV
+    ``[timestep, raw_steer]`` (+ ``raw_throttle`` on the 2-D action path, D-50)
+    for the action-distribution figure (early- vs late-training; plan §11.1
+    Fig. 6). One row every ``sample_every`` env steps, reading the raw policy
+    action from the env ``info`` (``raw_steer``/``raw_throttle``, set by
+    ``GazeboLaneEnv`` on both the caged and debug paths). Subsampling keeps
+    the file small (≈ total_timesteps / sample_every rows). The throttle
+    column is appended only when the env supplies it (older envs did not);
+    readers (tools/plot_f3_figures.py) select columns by name, so both
+    schemas stay readable.
     """
 
     def __init__(self, csv_path, sample_every: int = 10, verbose: int = 0) -> None:
@@ -237,18 +241,29 @@ class ActionSampleCallback(BaseCallback):
         if self._step % self.sample_every != 0:
             return True
         rows = [
-            (self.num_timesteps, float(info["raw_steer"]))
+            (
+                self.num_timesteps,
+                float(info["raw_steer"]),
+                float(info["raw_throttle"]) if "raw_throttle" in info else None,
+            )
             for info in (self.locals.get("infos") or ())
             if isinstance(info, Mapping) and "raw_steer" in info
         ]
         if not rows:
             return True
+        with_throttle = rows[0][2] is not None
         write_header = not self.csv_path.exists() and not self._header_written
         with self.csv_path.open("a", newline="", encoding="utf-8") as handle:
             writer = csv.writer(handle)
             if write_header:
-                writer.writerow(["timestep", "raw_steer"])
-            for timestep, steer in rows:
-                writer.writerow([timestep, f"{steer:.6f}"])
+                header = ["timestep", "raw_steer"]
+                if with_throttle:
+                    header.append("raw_throttle")
+                writer.writerow(header)
+            for timestep, steer, throttle in rows:
+                row = [timestep, f"{steer:.6f}"]
+                if with_throttle and throttle is not None:
+                    row.append(f"{throttle:.6f}")
+                writer.writerow(row)
         self._header_written = True
         return True

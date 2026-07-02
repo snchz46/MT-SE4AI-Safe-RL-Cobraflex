@@ -118,6 +118,81 @@ def test_build_cage_state_clamps_distance_at_zero():
     assert state.distance_right == pytest.approx(0.55)
 
 
+# --- 2-D action mapping (D-50, Isaac posterior track) --------------------------
+
+MAX_SPEED = 0.5          # = C-04 v_max_straight = ODD-1.V_MAX
+DEADBAND = 0.05
+
+
+def _speed2d(throttle):
+    return cage_bridge.target_speed_from_throttle_2d(throttle, MAX_SPEED, DEADBAND)
+
+
+def test_policy_throttle_maps_symmetric_to_cage_scale():
+    # a ∈ [-1, 1] -> u ∈ [0, 1]: -1 -> 0 (stop), 0 -> 0.5, +1 -> 1 (full)
+    assert cage_bridge.policy_throttle_to_cage(-1.0) == pytest.approx(0.0)
+    assert cage_bridge.policy_throttle_to_cage(0.0) == pytest.approx(0.5)
+    assert cage_bridge.policy_throttle_to_cage(1.0) == pytest.approx(1.0)
+
+
+def test_policy_throttle_clips_out_of_range():
+    assert cage_bridge.policy_throttle_to_cage(-3.0) == 0.0
+    assert cage_bridge.policy_throttle_to_cage(3.0) == 1.0
+
+
+def test_speed2d_is_linear_up_to_max_speed():
+    assert _speed2d(1.0) == pytest.approx(MAX_SPEED)
+    assert _speed2d(0.5) == pytest.approx(0.25)
+    # genuine speed authority ABOVE the 1-D cruise cap (0.20) and C-04's curve
+    # ceiling (0.25) — the structural change that un-latches the speed rules.
+    assert _speed2d(1.0) > 0.25
+
+
+def test_speed2d_deadband_commands_a_true_stop():
+    # below the deadband the command is a full stop (stall must be commandable
+    # for SR-009's liveness sub-mode to be well-posed)
+    assert _speed2d(0.0) == 0.0
+    assert _speed2d(DEADBAND / 2.0) == 0.0
+    assert _speed2d(DEADBAND) == pytest.approx(MAX_SPEED * DEADBAND)
+
+
+def test_speed2d_has_no_lower_speed_clamp():
+    # unlike the 1-D deployment map (floor min_speed_scale·cruise = 0.07), the
+    # 2-D map lets the cage attenuate speed all the way toward zero
+    low = _speed2d(0.10)
+    assert low == pytest.approx(0.05)
+    assert 0.0 < low < MIN_SPEED_SCALE * FIXED_SPEED
+
+
+def test_safe_action_to_cmd_2d_emergency_is_full_stop():
+    linear, angular = cage_bridge.safe_action_to_cmd_2d(
+        0.7, 0.9, True,
+        max_speed=MAX_SPEED, throttle_deadband=DEADBAND, yaw_gain=YAW_GAIN,
+    )
+    assert (linear, angular) == (0.0, 0.0)
+
+
+def test_safe_action_to_cmd_2d_applies_yaw_gain_and_speed_map():
+    linear, angular = cage_bridge.safe_action_to_cmd_2d(
+        0.5, 0.8, False,
+        max_speed=MAX_SPEED, throttle_deadband=DEADBAND, yaw_gain=YAW_GAIN,
+    )
+    assert linear == pytest.approx(0.8 * MAX_SPEED)
+    assert angular == pytest.approx(0.5 * 0.8)
+
+
+def test_c06_bounds_2d_commanded_acceleration_to_platform_limit():
+    # C-06's throttle rate limit (0.10/cycle) on the 2-D map at 10 Hz bounds
+    # commanded acceleration to max_speed * 0.10 / 0.1 s = 0.5 m/s² — within the
+    # platform's measured 0.53 m/s² (docs/14 §2.3). Pin the arithmetic so a
+    # max_speed change that breaks the alignment fails loudly here.
+    delta_max_throttle = 0.10
+    control_dt = 0.10
+    accel = MAX_SPEED * delta_max_throttle / control_dt
+    assert accel == pytest.approx(0.5)
+    assert accel <= 0.53
+
+
 def test_lane_violation_triggers_c01_correction():
     """End-to-end: a lateral offset beyond C-01's d_max drives the cage to
     correct the steering, using the same SafetyCageNode + cage.yaml as

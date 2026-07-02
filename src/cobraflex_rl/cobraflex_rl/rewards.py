@@ -8,7 +8,7 @@ and Training Spec Ch.7 §7.2.3.
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from typing import Any, Mapping, Optional
 
 from .polyline_tracker import TrackState
 
@@ -20,11 +20,13 @@ def compute_reward(
     prev_steer: float,
     done: bool,
     cfg: Mapping[str, Any],
+    throttle: Optional[float] = None,
+    prev_throttle: Optional[float] = None,
 ) -> float:
     """One control-cycle reward (Training Spec §7.2.3).
 
         r = w_fwd·max(progress, 0) − w_ey·|ey| − w_eps·|epsi|
-            − w_ds·|Δsteer| − w_term·[done]
+            − w_ds·|Δsteer| − w_dt·|Δthrottle| − w_term·[done]
 
     ``progress`` is the *normalised* advance along the lane centerline this cycle
     (≈1.0 at nominal cruise; the env handles the closed-loop arc-length wrap),
@@ -43,7 +45,14 @@ def compute_reward(
     so measuring the post-cage delta makes the penalty toothless (the F3 eval saw
     the policy drive C-06 to its limit ~89% of steps for free; §7.5.2). Penalising
     the raw delta makes the policy pay for its own jerk. All other terms stay on
-    the safe action / resulting state."""
+    the safe action / resulting state.
+
+    ``throttle``/``prev_throttle`` (2-D action, D-50) are the **raw policy**
+    normalised throttle u ∈ [0, 1] of this and the previous cycle — same
+    raw-not-post-cage rationale as the steering term (C-06 rate-limits throttle
+    too, so a post-cage delta would again be toothless). Both ``None`` on the
+    legacy 1-D steering-only path, and the ``throttle_delta`` weight defaults
+    to 0.0, so every existing config/return is bit-identical."""
     reward_cfg = cfg.get("reward", cfg)
 
     lateral_penalty = float(reward_cfg.get("lateral_error", 1.0)) * abs(track_state.ey)
@@ -53,11 +62,19 @@ def compute_reward(
     steer_penalty = float(reward_cfg.get("steer_delta", 0.1)) * abs(
         float(steer) - float(prev_steer)
     )
+    throttle_penalty = 0.0
+    if throttle is not None and prev_throttle is not None:
+        throttle_penalty = float(reward_cfg.get("throttle_delta", 0.0)) * abs(
+            float(throttle) - float(prev_throttle)
+        )
     forward_reward = float(reward_cfg.get("forward_progress", 1.0)) * max(
         float(progress), 0.0
     )
 
-    reward = forward_reward - lateral_penalty - heading_penalty - steer_penalty
+    reward = (
+        forward_reward - lateral_penalty - heading_penalty - steer_penalty
+        - throttle_penalty
+    )
     if done:
         reward -= float(reward_cfg.get("termination", 10.0))
 

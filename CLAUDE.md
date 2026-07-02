@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 > Keep lean (<250 lines). Move detail into linked docs rather than inflating this file.
-> Last reviewed: 2026-06-12.
+> Last reviewed: 2026-07-02.
 
 ## What this repo is
 
@@ -25,18 +25,19 @@ script reports orphans on either side.
 ## Phase status (snapshot)
 
 > **Two orthogonal axes — don't conflate them.** *Observation:* **F-track** (state-vector,
-> frozen baseline) vs **E-track** (camera, active). *Simulator:* **Gazebo** carries every
-> result and **all thesis verdicts** (incl. the pending E-track GE4 re-run on the complex_b 297k E-main); **Isaac**
+> frozen baseline) vs **E-track** (camera, verdict closed). *Simulator:* **Gazebo** carries every
+> result and **all thesis verdicts** — the E verdict **closed in Gazebo** with GE4-V2 on the
+> complex_b 297k E-main (28.06.2026) and **G4 closed 02.07.2026** (docs/07); **Isaac**
 > (D-44) is **posterior work** — a sim-to-real / physical-platform bridge, **not the E
 > verdict**. Gazebo checkpoints don't transfer to Isaac, so an Isaac E-policy is a *future
-> retrain*, not a re-do of the 297k E-main. E verdict closes in Gazebo (docs/11, docs/07, ch.8 §8.9);
-> Isaac lives in docs/13–14 (note: `E4: Migration to Isaac Sim` commits tag this posterior
+> retrain* (with the 2-D action expansion, D-49), not a re-do of the 297k E-main. Isaac lives
+> in docs/13–14 (note: `E4: Migration to Isaac Sim` commits tag this posterior
 > work under the E gate, but its eval is not GE4).
 
 - **Single trunk since 2026-06-11:** `e2e-camera` merged into `main`. The F-track results are
   **frozen as the ground-truth baseline** (control arm for "what does camera perception cost");
   track 'E' (end-to-end front camera) continues on top. Totals: **12 hazards, 14 SR, 6 cage rules,
-  24 scenarios, 19 metrics** (check_traceability PASS).
+  28 scenarios, 19 metrics** (check_traceability PASS; SC-PERT-11/12/13 + SC-FRONT-07 documented in docs/05 02.07.2026).
 - **F-track ground state — F4 Sim eval, campaign closed (2026-06-10). G3 passed 2026-06-03.**
   Scenario library **24 scenarios**; ODD-2 adverse profiles closed (D-33); campaign runner +
   pure-Python verdict spine (D-29/D-30) built and unit-tested. **Gazebo executor is live** —
@@ -53,29 +54,29 @@ script reports orphans on either side.
   its committed-steer rate metric via `tools/sr006_smoothness.py`: 559/559 enforcement vs
   67.6% monitoring; no C-06 defect — large jumps are correct downstream safety overrides).
   Aggregator indeterminate→fail collapse **reconciled (D-38)**.
-  **Remaining F4 work (needs Ubuntu re-run):** SR-010 — SC-EDGE-05 induced **zero
-  co-activation** as-run (parameterised_grid ICs not injected by the runner) + add its two
-  counters to the run-record, then re-run; SR-009 — run SC-PERT-03's stall-variant arm +
-  group the two arms in the driver (`criterion_eval.evaluate_labelled` already exists).
-  Follow-up (here): re-point SR-006 in `run_campaign.aggregate_sr` so `campaign_report.json`
-  stops reading `failed` (CL-B; global unaffected). Plus the QED-metric decision
-  (D-17/D-21/D-22); G4 is **not yet formally passed** pending the two TBDs. See CHANGELOG 03.06–10.06 "F4".
-- **Track 'E' (camera) — GE4 (eval) campaign closed 2026-06-12; global `NOT SATISFIED` (availability cost, not a safety breach).**
+  The two F-arm CL-B TBDs (SR-009/010) closed at G4 as **documented non-vetoing abstentions**
+  (D-30), materially answered on the E arm: SR-009's stall arm is **N/A-by-construction** for the
+  shared 1-D steering-only action (M-P6 ≡ 0, D-49) and SR-010's co-activation question was answered
+  by GE4-V2's wired SC-EDGE-05 grid (30/85 in-ODD breaches, genuine CL-B finding). The F-arm
+  SC-EDGE-05 grid re-run stays optional/historical. See CHANGELOG 03.06–10.06 "F4" + 02.07 "G4".
+- **Track 'E' (camera) — GE4-V2 verdict of record (2026-06-28); G4 CLOSED 02.07.2026 (docs/07).**
   D-41 architecture; the cage reads a **dedicated deterministic CV lane-estimator** (D-43), not the camera.
-  139k-peak checkpoint (`cobraflex_ppo_cam_lane_2024_139k_peak`, §7.7.7). **E-campaign: 1660 runs**
-  (seed 2024, 24 scenarios × {enforcement, monitoring}, cage v0.6.1, 0 errors;
-  `experiments/sim/campaign_e/campaign_report.json`). **`NOT SATISFIED`** but the cage's core safety
-  holds: across all 830 enforcement runs **0 road-edge contacts**, M-S1 < d_max in-ODD (the 9 exceptions
-  are SC-FRONT-01 out-of-ODD spawns *at* d_max). The 3 SR-CL-A vetoes (SR-001/SC-EDGE-02, SR-012+SR-014/SC-PERT-04)
-  are **safe controlled stops** scored as fails by the scenarios' `emergency == False` clause (13/13 + 20/20
-  enforcement fails are emergency-only). **Central finding: the cage flips latent→active under the camera** —
-  the SR-013/Trigger-8 stop becomes the in-ODD safety mechanism (cleanest contrast SC-PERT-07: enf 20/20 vs
-  mon 0/20, real M-S1 breaches prevented). Breakdown `failure_mode_breakdown.json` (`tools/campaign_e_failure_modes.py`).
-  Indeterminate (D-38 class): SC-EDGE-05 (schema), SC-PERT-03/05 (labelled `low:/high:` criterion unwired);
-  SR-006 'failed' = same D-39 aggregator artifact (CL-B). **GE4 not formally passed** pending: (a) own-criterion
-  reconciliation à la D-39 (re-score SR-012/SR-001-camera on M-S1≤d_max ∧ M-S2=0 — **flagged decision, NOT applied**);
-  (b) wire `evaluate_labelled`; (c) SC-EDGE-05 grid; (d) multi-seed N=5 (host-deferred). See CHANGELOG 12.06
-  'E4/GE4' + docs/07 E-track evidence + ch.8 §8.9.
+  **GE4-V2 on the 297k E-main: 1970 runs** (seed 2024, 28 complex_b scenarios × {enforcement, monitoring},
+  0 errors; `experiments/sim/campaign_e_v2/campaign_report.json` + `failure_mode_breakdown.json` + 7 figures).
+  **Global `NOT SATISFIED` (literal), blocking SR-002/003 only** — both fail *only* SC-EDGE-01's oval-legacy
+  2.0 s recovery-time clause (max M-P4 = 14.4° ≤ 25°, 0 emergency) and are **Satisfied on their own criterion
+  (D-47)** → no SR-CL-A safety predicate breached; verdict recorded as literal + reconciliation annotated
+  (user decision). **SR-001 Satisfied** — ruta-1 clipped SC-EDGE-02's IC to the ODD (V1 spilled 9/30 spawns
+  out-of-ODD) → 28/30; the 2 residuals are the **D-43/H-12 confident under-read** at the recovery-basin edge
+  (~0.120 m). Ruta-2b (conservative lane-selection) was **unnecessary + reverted** after closed-loop
+  regression (D-48; opt-in flag kept, default False — docs/12 §4.4). **SR-012/013/014 Satisfied** (D-29
+  coverage closed); SR-010 **genuine CL-B** (30/85 in-ODD co-activation grid breaches); SR-009 stall arm
+  N/A-by-construction (D-49). In-ODD safety holds: 0 in-ODD road-edge contacts; the cage **removes**
+  perception-degradation failures the bare policy commits (PERT-04/09/11/12/13 enf PASS vs mon FAIL;
+  cleanest SC-PERT-13 40/40 vs 0/40) — the latent→active flip is now measured on the E-main. The 117 enf
+  road-edge contacts are all out-of-ODD (SC-FRONT-* + OOD grid points). Historical: V1 297k
+  (`campaign_e_297k/`) and the 139k campaign (`campaign_e/`, 1660 runs, availability-cost reading).
+  Deferred to posterior work: multi-seed N=5. See CHANGELOG 27–28.06 + docs/11 §8.4 + ch.8 §8.9.
 - **Track 'E' E-main predecessor — 425k oval peak (2026-06-15, superseded by 297k on 2026-06-22; detail docs/11 §8.3).**
   Lane-Cam retrain `ppo_newcam_train_2024_750k` → `cobraflex_ppo_newcam_lane_2024_425k_peak.zip` (peak 335.6 @ ≈425k);
   nominal `rl_cam_eval_2024_425k_4k4` = 11.16 laps, |ey| 12.4 mm, 0 emergencies, cage latent. Its GE4 re-run was
@@ -90,8 +91,12 @@ script reports orphans on either side.
   `rl_newcam_eval_2024_cb297k_4k4` = **4.88 laps, mean |ey| 10.9 mm, 0 emergencies** (43.5% C-06 only); monitoring `…_mon`
   = 4.89 laps, 12.9 mm, 0 emerg. **Cage latent in-ODD both modes** (no C-01/02/03/05, F-track signature; 139k curve-apex stop
   gone). **RL beats the CV baseline on the same track** (10.9 vs 17.2 mm |ey|), reversing the oval finding. Laps NOT comparable
-  across tracks (~94 m ≈ the 425k's 98 m). **Only nominal done; GE4 campaign NOT re-run on 297k** — docs/07 + §8.9 + `campaign_e/`
-  per-SR verdicts still score the superseded 139k; GE4-on-297k is the open closure step.
+  across tracks (~94 m ≈ the 425k's 98 m). GE4 closure on this checkpoint = the **GE4-V2 campaign above** (verdict of record);
+  docs/07 matrix rows, ch.8 §8.9 and the traceability CSV all read V2 now.
+- **Next phase — Isaac Sim / sim-to-real (posterior track, docs/13–14).** With G4 closed, the open thread is the
+  D-44 Isaac bridge: URDF import + ROS2 bring-up + in-process RL training (docs/13), the handover spec (docs/14),
+  the **2-D action (steering + throttle) retrain** that makes SR-009's stall test well-posed (D-49), and the
+  sim-to-real gap characterisation toward the physical CobraFlex (Phase 5). Isaac work does not reopen G4.
 - **F2 evidence:** `ros_run_20260523T153003Z` — 9.91 laps, 845 s,
   0 emergencies, cage v0.5.1, PD v0.8.0.
 - **F3 evidence (closed):** main run `ppo_train_2024_200k` (seed 2024, 200k, reward v1.2,

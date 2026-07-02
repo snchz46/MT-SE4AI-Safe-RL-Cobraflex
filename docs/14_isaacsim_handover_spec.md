@@ -24,16 +24,19 @@ Exact topic names and frame ids below.
 - Map to 4 wheels: `wheel_radius 0.03725`, `wheel_separation 0.154`, left =
   `front_left + rear_left`, right = `front_right + rear_right`.
 
-> **Future work — 2-D action (steering + throttle), D-49.** The Gazebo E-track policy is
-> **steering-only** (`ACT_DIM = 1`, throttle fixed at cruise; ED-2 in `docs/09` §3). The natural
-> Isaac extension is a **2-D action** that also commands throttle/speed. It is deferred to Isaac (not
-> Gazebo) because it requires a full E-main retrain + cage speed-rule (C-04/C-05/C-06) re-calibration
-> and would invalidate the frozen F-vs-E baseline — so it belongs to the posterior sim-to-real track,
-> after E4 closes for Gazebo. Payoff: it makes **SR-009's liveness/stall sub-mode well-posed** (M-P6
-> becomes meaningful; the SC-PERT-03 negative test becomes exercisable) and genuinely exercises the
-> cage speed rules. The throttle→speed plumbing already exists (`linear.x` above; the cage already
-> modulates speed via `clamp(throttle/throttle_nominal, [0.35, 1])`), so the cost is the retrain +
-> re-baseline, not the interface. See D-49.
+> **2-D action (steering + throttle) — IMPLEMENTED for Isaac, D-50 (02.07.2026).** The Gazebo
+> E-track policy stays **steering-only** (`ACT_DIM = 1`, throttle fixed at cruise; ED-2/D-49 —
+> the frozen verdict contract). The Isaac in-process trainer now defaults to the **2-D action**
+> (`action.type: steer_throttle` in `train_isaac_2d.yaml`): the policy's throttle maps to the
+> cage scale `u ∈ [0, 1]` and actuates as `linear.x = max_speed_mps · u` with
+> `max_speed_mps = 0.5` (= C-04 `v_max_straight` = ODD-1.V_MAX) and a full stop below the
+> 0.05 deadband — **no** `[0.35, 1]` lower clamp on this path, so the cage has speed authority
+> to zero. `|linear.x|` on this contract therefore reaches **0.5 m/s** (not just cruise 0.20)
+> and the cage speed rules (C-04/C-05-B/C-06) genuinely arbitrate; C-06 bounds commanded
+> acceleration to 0.5 m/s² (≤ the 0.53 platform limit, §2.3). SR-009's liveness/stall
+> sub-mode (M-P6, SC-PERT-03) is **well-posed** on this action space. The wheel mapping above
+> is unchanged. See D-50 (design) and docs/13 (usage); an Isaac-trained 2-D policy is a new
+> baseline and does not reopen the Gazebo verdicts.
 
 ### 1.2 `/odom_truth` (publish)
 

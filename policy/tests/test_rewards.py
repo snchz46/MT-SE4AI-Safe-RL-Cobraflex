@@ -142,3 +142,44 @@ def test_train_yaml_has_complete_reward_block():
     # tuned experimentally ([provisional, M-P1..M-P4], §7.2.3).
     assert set(reward_cfg) == set(WEIGHTS)
     assert all(float(reward_cfg[k]) > 0.0 for k in WEIGHTS)
+
+
+# --- 2-D action: raw-throttle smoothness term (D-50) ---------------------------
+
+ISAAC_2D_YAML = _PKG_PARENT / "config" / "train_isaac_2d.yaml"
+
+
+def test_throttle_args_are_inert_without_weight():
+    # Passing throttle/prev_throttle with no `throttle_delta` weight in the
+    # config must not change the return (weight defaults to 0.0) — the frozen
+    # 1-D configs stay bit-identical even if a caller supplies throttle.
+    assert compute_reward(
+        track_state=_ts(), progress=NOMINAL, steer=0.0, prev_steer=0.0,
+        done=False, cfg=CFG, throttle=1.0, prev_throttle=0.0,
+    ) == pytest.approx(_reward())
+
+
+def test_throttle_none_is_the_default_legacy_path():
+    # Omitting the args entirely (every existing call site) is the 1-D path.
+    assert _reward() == pytest.approx(1.0 * NOMINAL)
+
+
+def test_throttle_delta_penalises_change_not_magnitude():
+    cfg = {"reward": dict(WEIGHTS, throttle_delta=0.10)}
+    kw = dict(track_state=_ts(), progress=NOMINAL, steer=0.0, prev_steer=0.0,
+              done=False, cfg=cfg)
+    # a full-range jump (0 -> 1 on the cage scale) costs w_dt * 1.0
+    assert compute_reward(**kw, throttle=1.0, prev_throttle=0.0) == pytest.approx(
+        NOMINAL - 0.10 * 1.0
+    )
+    # holding the same throttle costs nothing
+    assert compute_reward(**kw, throttle=0.7, prev_throttle=0.7) == pytest.approx(
+        NOMINAL
+    )
+
+
+def test_isaac_2d_yaml_reward_block_extends_v12_with_throttle_delta():
+    with ISAAC_2D_YAML.open(encoding="utf-8") as handle:
+        reward_cfg = yaml.safe_load(handle)["reward"]
+    assert set(reward_cfg) == set(WEIGHTS) | {"throttle_delta"}
+    assert all(float(v) > 0.0 for v in reward_cfg.values())

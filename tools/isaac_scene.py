@@ -70,6 +70,13 @@ LANE_CAM_HFOV = 1.5707963        # rad (90 deg)
 LANE_CAM_W = 640
 LANE_CAM_H = 360
 
+# Gap between adjacent circuits in a multi-track scene (D-50). Set to the Lane
+# Cam far-clip distance (15 m, cf. make_camera_prim's clipping range): a
+# neighbouring circuit is therefore never inside the camera frustum from any
+# driving position on the active one, so each circuit renders exactly as it
+# would alone.
+TRACK_GAP_M = 15.0
+
 # --- Paths / stage layout -----------------------------------------------------
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 URDF = os.path.join(REPO, "src/cobraflex/urdf/cobraflex_isaac.urdf")
@@ -198,18 +205,23 @@ def _ribbon_mesh(stage, path, inner, outer, z, mtl):
     return m
 
 
-def _add_track_geometry(stage, meta, tdir):
+def _add_track_geometry(stage, meta, tdir, offset=(0.0, 0.0)):
     """Build the road + lane lines as USD geometry (crisp at any zoom, no texture
-    aliasing) from the centreline. Better than a baked texture for Isaac."""
+    aliasing) from the centreline, shifted by ``offset`` (multi-track scenes,
+    D-50). Better than a baked texture for Isaac. The green off-road backdrop is
+    NOT built here — one union quad covers all circuits (see
+    ``_add_offroad_backdrop``)."""
     import numpy as np
     import yaml
     from pxr import UsdGeom
 
     cl = yaml.safe_load(open(os.path.join(tdir, f"{meta['name']}_centerline.yaml")))
     P = np.array(cl["centerline"]["points"], dtype=float)
+    P = P + np.asarray(offset, dtype=float)
     rw = float(meta.get("road_width", 0.52))
     two_lane = int(meta.get("lanes", 2)) == 2
     lw = 0.01                                  # line width (m)
+    scope = f"/World/Track/{meta['name']}"     # per-track prim scope
 
     t = np.roll(P, -1, 0) - np.roll(P, 1, 0)
     t /= (np.linalg.norm(t, axis=1, keepdims=True) + 1e-9)
@@ -217,23 +229,15 @@ def _add_track_geometry(stage, meta, tdir):
     left = P + (rw / 2.0) * nrm
     right = P - (rw / 2.0) * nrm
 
+    # Materials live at the FIXED paths shared by every circuit (idempotent
+    # re-define), so isaac_dr's colour jitter applies to all of them at once.
     asphalt = _flat_material(stage, TRACK_ASPHALT_MATERIAL, (0.0, 0.0, 0.0))
     white = _flat_material(stage, TRACK_LINE_MATERIAL, (0.9, 0.9, 0.9))
-    grass = _flat_material(stage, TRACK_GRASS_MATERIAL, (0.32, 0.42, 0.24))
 
-    # Off-road backdrop (one big quad just under the asphalt).
-    x0, y0, x1, y1 = meta["world_bbox"]
-    g = UsdGeom.Mesh.Define(stage, "/World/Track/Offroad")
-    g.CreatePointsAttr([(x0, y0, 0.0006), (x1, y0, 0.0006),
-                        (x1, y1, 0.0006), (x0, y1, 0.0006)])
-    g.CreateFaceVertexCountsAttr([4])
-    g.CreateFaceVertexIndicesAttr([0, 1, 2, 3])
-    _bind(g.GetPrim(), grass)
-
-    _ribbon_mesh(stage, "/World/Track/Asphalt", left, right, 0.0010, asphalt)
-    _ribbon_mesh(stage, "/World/Track/EdgeL",
+    _ribbon_mesh(stage, scope + "/Asphalt", left, right, 0.0010, asphalt)
+    _ribbon_mesh(stage, scope + "/EdgeL",
                  left + (lw / 2) * nrm, left - (lw / 2) * nrm, 0.0030, white)
-    _ribbon_mesh(stage, "/World/Track/EdgeR",
+    _ribbon_mesh(stage, scope + "/EdgeR",
                  right + (lw / 2) * nrm, right - (lw / 2) * nrm, 0.0030, white)
 
     if two_lane:                               # dashed centre line, one mesh of quads
@@ -255,23 +259,45 @@ def _add_track_geometry(stage, meta, tdir):
             counts.append(4)
             k += 4
             pos += dash + gap
-        m = UsdGeom.Mesh.Define(stage, "/World/Track/Centre")
+        m = UsdGeom.Mesh.Define(stage, scope + "/Centre")
         m.CreatePointsAttr(pts)
         m.CreateFaceVertexCountsAttr(counts)
         m.CreateFaceVertexIndicesAttr(idx)
         _bind(m.GetPrim(), white)
     print(f"[scene] track '{meta['name']}' built as geometry "
           f"({meta['size_m'][0]:.1f}x{meta['size_m'][1]:.1f} m, "
-          f"{'2-lane' if two_lane else '1-lane'})")
+          f"{'2-lane' if two_lane else '1-lane'}, "
+          f"offset ({offset[0]:+.1f}, {offset[1]:+.1f}))")
 
 
-def _add_track_texture(stage, meta, tdir):
+def _add_offroad_backdrop(stage, world_bboxes, margin: float = 20.0):
+    """One green quad under ALL circuits (union bbox + margin) so everything a
+    pitched camera sees to the horizon is grass, exactly like a single-track
+    scene — including the inter-track gaps."""
+    from pxr import UsdGeom
+
+    x0 = min(b[0] for b in world_bboxes) - margin
+    y0 = min(b[1] for b in world_bboxes) - margin
+    x1 = max(b[2] for b in world_bboxes) + margin
+    y1 = max(b[3] for b in world_bboxes) + margin
+    grass = _flat_material(stage, TRACK_GRASS_MATERIAL, (0.32, 0.42, 0.24))
+    g = UsdGeom.Mesh.Define(stage, "/World/Track/Offroad")
+    g.CreatePointsAttr([(x0, y0, 0.0006), (x1, y0, 0.0006),
+                        (x1, y1, 0.0006), (x0, y1, 0.0006)])
+    g.CreateFaceVertexCountsAttr([4])
+    g.CreateFaceVertexIndicesAttr([0, 1, 2, 3])
+    _bind(g.GetPrim(), grass)
+
+
+def _add_track_texture(stage, meta, tdir, offset=(0.0, 0.0)):
     from pxr import Gf, Sdf, UsdGeom, UsdShade
     png = os.path.join(tdir, meta["texture"])
     cx, cy = meta["center_m"]
+    cx, cy = cx + float(offset[0]), cy + float(offset[1])
     w, h = meta["size_m"]
     hw, hh = w / 2.0, h / 2.0
-    quad = UsdGeom.Mesh.Define(stage, "/World/Track")
+    scope = f"/World/Track/{meta['name']}"
+    quad = UsdGeom.Mesh.Define(stage, scope)
     quad.CreatePointsAttr([(-hw, -hh, 0), (hw, -hh, 0), (hw, hh, 0), (-hw, hh, 0)])
     quad.CreateFaceVertexCountsAttr([4])
     quad.CreateFaceVertexIndicesAttr([0, 1, 2, 3])
@@ -279,14 +305,14 @@ def _add_track_texture(stage, meta, tdir):
         "st", Sdf.ValueTypeNames.TexCoord2fArray, UsdGeom.Tokens.varying)
     st.Set([(0, 0), (1, 0), (1, 1), (0, 1)])
     UsdGeom.Xformable(quad.GetPrim()).AddTranslateOp().Set(Gf.Vec3d(cx, cy, 0.0015))
-    mtl = UsdShade.Material.Define(stage, "/World/Track/Mat")
-    surf = UsdShade.Shader.Define(stage, "/World/Track/Mat/Surface")
+    mtl = UsdShade.Material.Define(stage, scope + "/Mat")
+    surf = UsdShade.Shader.Define(stage, scope + "/Mat/Surface")
     surf.CreateIdAttr("UsdPreviewSurface")
     surf.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.9)
-    streader = UsdShade.Shader.Define(stage, "/World/Track/Mat/St")
+    streader = UsdShade.Shader.Define(stage, scope + "/Mat/St")
     streader.CreateIdAttr("UsdPrimvarReader_float2")
     streader.CreateInput("varname", Sdf.ValueTypeNames.Token).Set("st")
-    tex = UsdShade.Shader.Define(stage, "/World/Track/Mat/Tex")
+    tex = UsdShade.Shader.Define(stage, scope + "/Mat/Tex")
     tex.CreateIdAttr("UsdUVTexture")
     tex.CreateInput("file", Sdf.ValueTypeNames.Asset).Set(png)
     tex.CreateInput("sourceColorSpace", Sdf.ValueTypeNames.Token).Set("sRGB")
@@ -297,29 +323,143 @@ def _add_track_texture(stage, meta, tdir):
     mtl.CreateSurfaceOutput().ConnectToSource(surf.ConnectableAPI(), "surface")
     _bind(quad.GetPrim(), mtl)
     print(f"[scene] track '{meta['name']}' loaded as texture "
-          f"({w:.1f}x{h:.1f} m)")
+          f"({w:.1f}x{h:.1f} m, offset ({offset[0]:+.1f}, {offset[1]:+.1f}))")
+
+
+def track_offsets(metas):
+    """World offset (dx, dy) per track for a multi-track scene: the first track
+    keeps its native coordinates (existing single-track runs are unchanged) and
+    each subsequent one is laid out to +X with a TRACK_GAP_M gap between
+    bounding boxes. Single source for the scene builder AND the trainer (which
+    must shift the matching centerline configs by the same offsets)."""
+    offsets = []
+    cursor = None
+    for meta in metas:
+        x0, _y0, x1, _y1 = meta["world_bbox"]
+        if cursor is None:
+            offsets.append((0.0, 0.0))
+        else:
+            dx = cursor + TRACK_GAP_M - x0
+            offsets.append((dx, 0.0))
+        cursor = x1 + offsets[-1][0]
+    return offsets
+
+
+def parse_track_names(raw=None):
+    """TRACK env (or an explicit string) → list of track names. Accepts a
+    comma-separated list for multi-track scenes: TRACK=complex_b,complex_d."""
+    if raw is None:
+        raw = os.environ.get("TRACK", "complex_a")
+    return [t.strip() for t in str(raw).split(",") if t.strip()]
+
+
+def load_circuits(track_names, track_metas, config_dir=None):
+    """Multi-track env geometry (D-50): for each scene track, load the two
+    centerline YAMLs by the config-dir naming convention
+    (``<name>_right_lane_centerline.yaml`` = reward lane,
+    ``<name>_centerline.yaml`` = road centre) and shift their points by the
+    world offset the scene builder applied (``meta["offset_xy"]``), so the env
+    geometry and the rendered track coincide exactly.
+
+    Returns ``(circuits, circuits_meta)`` — the ``GazeboLaneEnv(circuits=...)``
+    input and the reproducibility record (paths + sha256 hashes). Pure
+    python/numpy/yaml — usable (and unit-testable) off the Isaac host.
+    """
+    import hashlib
+
+    import numpy as np
+    import yaml
+
+    def _sha256(path):
+        h = hashlib.sha256()
+        with open(path, "rb") as fh:
+            for chunk in iter(lambda: fh.read(65536), b""):
+                h.update(chunk)
+        return h.hexdigest()
+
+    if config_dir is None:
+        config_dir = os.path.join(REPO, "src", "cobraflex_rl", "config")
+    meta_by_name = {m["name"]: m for m in track_metas}
+    circuits, circuits_meta = [], []
+    for name in track_names:
+        meta = meta_by_name.get(name)
+        if meta is None:
+            raise RuntimeError(
+                f"scene did not build track '{name}' (missing assets under "
+                f"experiments/sim/tracks/{name}/ — run "
+                f"scripts/generate_complex_track.py --name {name})")
+        lane_path = os.path.join(config_dir, f"{name}_right_lane_centerline.yaml")
+        road_path = os.path.join(config_dir, f"{name}_centerline.yaml")
+        for path in (lane_path, road_path):
+            if not os.path.isfile(path):
+                raise RuntimeError(
+                    f"missing centerline config {path} for track '{name}' "
+                    "(derive it with scripts/offset_lane_centerline.py)")
+        with open(lane_path, "r", encoding="utf-8") as fh:
+            lane_cfg = yaml.safe_load(fh)
+        with open(road_path, "r", encoding="utf-8") as fh:
+            road_cfg = yaml.safe_load(fh)
+        offset = np.asarray(meta.get("offset_xy", (0.0, 0.0)), dtype=float)
+        lane_width = float(lane_cfg["lane_width"])
+        circuits.append({
+            "name": name,
+            "centerline": np.asarray(
+                lane_cfg["centerline"]["points"], dtype=float) + offset,
+            "lane_width": lane_width,
+            "road_width": float(lane_cfg.get("road_width", lane_width)),
+            "road_centerline": np.asarray(
+                road_cfg["centerline"]["points"], dtype=float) + offset,
+        })
+        circuits_meta.append({
+            "name": name,
+            "offset_xy": [float(offset[0]), float(offset[1])],
+            "lane_centerline_yaml": lane_path,
+            "lane_centerline_hash": _sha256(lane_path),
+            "road_centerline_yaml": road_path,
+            "road_centerline_hash": _sha256(road_path),
+        })
+    return circuits, circuits_meta
 
 
 def add_track(stage):
-    """Build a generated track (scripts/generate_complex_track.py). Geometry by
-    default (crisp vector lines); TRACK_MODE=texture for the baked PNG. Returns the
-    track meta dict (start pose etc.) or None. TRACK env selects the track dir."""
+    """Build the generated track(s) (scripts/generate_complex_track.py).
+    Geometry by default (crisp vector lines); TRACK_MODE=texture for the baked
+    PNG. The TRACK env selects the track dir(s) — a comma-separated list builds
+    a multi-track scene (D-50) with TRACK_GAP_M between circuits and one shared
+    off-road backdrop. Returns a list of meta dicts (possibly empty), each with
+    ``offset_xy`` added and ``start_xy``/``world_bbox`` shifted to world
+    coordinates."""
     import yaml
 
-    track = os.environ.get("TRACK", "complex_a")
-    if not track:
-        return None
-    tdir = os.path.join(REPO, "experiments/sim/tracks", track)
-    meta_path = os.path.join(tdir, f"{track}_meta.yaml")
-    if not os.path.exists(meta_path):
-        print(f"[scene] no track '{track}' at {meta_path}, skipping")
-        return None
-    meta = yaml.safe_load(open(meta_path))
-    if os.environ.get("TRACK_MODE", "geom") == "texture":
-        _add_track_texture(stage, meta, tdir)
-    else:
-        _add_track_geometry(stage, meta, tdir)
-    return meta
+    names = parse_track_names()
+    loaded = []
+    for name in names:
+        tdir = os.path.join(REPO, "experiments/sim/tracks", name)
+        meta_path = os.path.join(tdir, f"{name}_meta.yaml")
+        if not os.path.exists(meta_path):
+            print(f"[scene] no track '{name}' at {meta_path}, skipping")
+            continue
+        loaded.append((yaml.safe_load(open(meta_path)), tdir))
+    if not loaded:
+        return []
+
+    offsets = track_offsets([meta for meta, _ in loaded])
+    texture_mode = os.environ.get("TRACK_MODE", "geom") == "texture"
+    metas = []
+    for (meta, tdir), (dx, dy) in zip(loaded, offsets):
+        if texture_mode:
+            _add_track_texture(stage, meta, tdir, offset=(dx, dy))
+        else:
+            _add_track_geometry(stage, meta, tdir, offset=(dx, dy))
+        out = dict(meta)
+        out["offset_xy"] = [dx, dy]
+        out["start_xy"] = [meta["start_xy"][0] + dx, meta["start_xy"][1] + dy]
+        x0, y0, x1, y1 = meta["world_bbox"]
+        out["world_bbox"] = [x0 + dx, y0 + dy, x1 + dx, y1 + dy]
+        out["center_m"] = [meta["center_m"][0] + dx, meta["center_m"][1] + dy]
+        metas.append(out)
+    _add_offroad_backdrop(stage, [m["world_bbox"] for m in metas])
+    return metas
 
 
 def find_prim(stage, name: str) -> str:
@@ -392,9 +532,11 @@ def build_world():
     friction) shared by the bring-up and the trainer. Does **not** add ROS2
     sensor graphs — that stays in the bring-up.
 
-    Robot spawn: ``CAM_POSE="x,y,yaw"`` if set, else the track start line, else
-    the origin (the per-episode RL teleport overrides this immediately). Returns
-    ``(world, track_meta)``.
+    Robot spawn: ``CAM_POSE="x,y,yaw"`` if set, else the FIRST track's start
+    line, else the origin (the per-episode RL teleport overrides this
+    immediately). Returns ``(world, track_metas)`` where ``track_metas`` is the
+    (possibly empty) list from :func:`add_track` — one meta per circuit, offsets
+    baked in.
     """
     import omni.usd
     from isaacsim.core.api import World
@@ -422,7 +564,7 @@ def build_world():
                            dynamic_friction=GROUND_FRICTION, restitution=0.0)
     GroundPlane("/World/groundPlane", z_position=0.0, physics_material=gmat)
 
-    track_meta = add_track(stage)
+    track_metas = add_track(stage)
 
     usd_path = ensure_robot_usd()
     add_reference_to_stage(usd_path, ROBOT_PATH)
@@ -432,9 +574,9 @@ def build_world():
         quat = Gf.Rotation(Gf.Vec3d(0, 0, 1), math.degrees(yaw)).GetQuat()
         SingleXFormPrim(ROBOT_PATH, position=(sx, sy, SPAWN_Z),
                         orientation=(quat.GetReal(), *quat.GetImaginary()))
-    elif track_meta:
-        sx, sy = track_meta["start_xy"]
-        yaw = float(track_meta["start_yaw"])
+    elif track_metas:
+        sx, sy = track_metas[0]["start_xy"]
+        yaw = float(track_metas[0]["start_yaw"])
         quat = Gf.Rotation(Gf.Vec3d(0, 0, 1), math.degrees(yaw)).GetQuat()
         SingleXFormPrim(ROBOT_PATH, position=(sx, sy, SPAWN_Z),
                         orientation=(quat.GetReal(), *quat.GetImaginary()))
@@ -446,4 +588,4 @@ def build_world():
     print(f"[scene] velocity drives on {nd} wheel joints; friction "
           f"{WHEEL_FRICTION} (combine=min) on {nm} wheel colliders, "
           f"ground {GROUND_FRICTION}")
-    return world, track_meta
+    return world, track_metas

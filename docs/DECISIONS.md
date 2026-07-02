@@ -1927,8 +1927,8 @@ prior GE4 write-up (CLAUDE.md), now applied with the trace evidence in hand.
 | Field | Value |
 | --- | --- |
 | Section | `scenarios_complex_b/edge/sc_edge_02.yaml`; `src/cobraflex_rl/cobraflex_rl/cv_lane_estimator.py` (target); `docs/07` GE4 note; `docs/11` §8.4; H-12 / SR-014 (`docs/02`/`docs/03`) |
-| Status | OPEN (V2 prep — ruta 1 + ruta 2b applied & perception-validated; V2 campaign not re-run) |
-| Date | track 'E' / GE4-V2 validation (27.06.2026) |
+| Status | CLOSED (V2 ran 28.06.2026: ruta-1 alone closed SR-001 28/30; ruta-2b reverted after closed-loop regression — see the V2 OUTCOME bullet; residual = 2 boundary-edge breaches, carried) |
+| Date | track 'E' / GE4-V2 validation (27.06.2026; outcome 28.06.2026) |
 
 **Context.** SR-001 is the **only** blocking SR-CL-A in the 297k GE4 V1 verdict (D-47), carried
 entirely by SC-EDGE-02 (SC-NOM-01/02 pass clean). Trace analysis of the 297k V1 run gives a sharp,
@@ -2069,3 +2069,87 @@ one CL-B SR that resolves cleanly as N/A (note ⁸).
   modulates speed), so the cost is the **retrain + re-baseline**, not the wiring. Captured in
   `docs/13`/`docs/14` as a posterior-work item, to be taken up after E4 closes for Gazebo.
   Cites ED-2 (`docs/09`), D-44 (Isaac), D-47, D-48; SR-009, H-08.
+
+---
+
+### D-50 — Isaac full-authority training environment: 2-D action (steering + throttle) + multi-circuit per-episode sampling
+
+| Field | Value |
+| --- | --- |
+| Section | `gazebo_lane_env.py` (`action:` block, `circuits=`), `cage_bridge.py` (2-D maps), `rewards.py` (`throttle_delta`), `tools/isaac_scene.py` (multi-track scene, `load_circuits`), `tools/isaac_train.py` (defaults), `src/cobraflex_rl/config/train_isaac_2d.yaml`, `scripts/generate_complex_track.py` (`complex_d`/`complex_e`) |
+| Status | AUTHORED (design + code + unit tests on the Windows host; live Isaac validation host-deferred, cf. D-44) |
+| Date | Isaac posterior track (02.07.2026, G4 closed) |
+
+**Decision.** The Isaac posterior track (D-44) takes up the D-49 deferral: the training environment
+now supports a **config-gated 2-D action** — `action.type: steer_throttle` — and **multi-circuit
+per-episode track sampling**, both **inert by default** so every frozen F/E-track config, run and
+verdict stays bit-identical (the default `action.type` is `steer`, the 1-D ED-2 contract; regression
+suite 498-green). `tools/isaac_train.py` defaults to the new
+[`train_isaac_2d.yaml`](../src/cobraflex_rl/config/train_isaac_2d.yaml) on the multi-track scene
+`complex_b,complex_d,complex_e` — a bare `isaac_train.py` is the full-authority camera run.
+
+**Design (2-D action).**
+- The policy emits `[steer, throttle] ∈ [-1, 1]²` (symmetric Box, SB3-friendly); throttle maps to the
+  **cage scale** `u = (a+1)/2 ∈ [0, 1]` (`policy_throttle_to_cage`). The cage rules already operate on
+  a `(steering, throttle)` tuple on exactly this scale — C-04 attenuates throttle at
+  `k_throttle_per_mps = 5.0` per m/s excess, C-06 rate-limits it at `0.10`/cycle — so **no cage code or
+  cage.yaml change** is needed; `cage.yaml` 0.6.1 is consumed as-is (thresholds stay
+  `[provisional]`, now actually exercised).
+- Actuation uses a new linear map (`target_speed_from_throttle_2d`):
+  `speed = max_speed_mps · u`, **full stop below `throttle_deadband` (0.05)** and **no lower speed
+  clamp** — unlike the 1-D deployment map (floor `0.35·cruise`), the cage's attenuation has authority
+  all the way to zero. `max_speed_mps = 0.5` **= C-04's `v_max_straight` = ODD-1.V_MAX**: the 1-D
+  actuation capped speed at `fixed_speed = 0.20` **below every C-04 ceiling** (curve floor 0.25), which
+  is why the speed rules were *structurally latent* (M-S2 ≡ 0 in-ODD, F4/GE4 central finding). With
+  0.5 m/s authority the policy can genuinely exceed the curve ceiling and C-05's high-energy warning
+  band (`v_warning` 0.4), so **the cage speed rules arbitrate against the policy for real** — the
+  richer safety question D-49 anticipated.
+- C-06's throttle rate limit then bounds commanded acceleration to
+  `max_speed · 0.10 / control_dt = 0.5 m/s²` at 10 Hz — inside the platform's measured 0.53 m/s²
+  (docs/14 §2.3); the alignment is pinned by a unit test.
+- **Reward** gains a `throttle_delta` term (weight default **0.0** → legacy returns bit-identical) on
+  the **raw policy** throttle delta — the longitudinal mirror of the v1.2 steering-smoothness
+  rationale (C-06 absorbs post-cage deltas for free, §7.5.2). `fixed_speed` stays the progress
+  normaliser (≈1.0 per cruise step); the `[-2, 2]` progress clip deliberately caps the speed incentive
+  at 2·cruise = 0.4 m/s = `v_warning`, so reward alone never pushes past the warning band — ceilings
+  are probed by exploration, answered by the cage.
+- SC-EDGE-03's throttle-override perturbation keeps precedence over the policy throttle (eval
+  stressor); `raw_throttle`/`safe_throttle`/`throttle_correction` are logged in `info` on both paths
+  and `action_samples.csv` gains a `raw_throttle` column (readers are column-name based).
+
+**Design (multi-circuit).** `GazeboLaneEnv(circuits=[...])` pre-builds per-circuit trackers and
+samples one circuit per episode via the seeded `np_random` (`options["circuit_index"]` pins it for
+deterministic eval; `info` carries `circuit_index`/`circuit_name`). `isaac_scene.add_track` accepts a
+comma-separated `TRACK` list and lays the circuits out with **`TRACK_GAP_M = 15 m`** between bounding
+boxes — the Lane-Cam far-clip distance, so a neighbouring circuit is never inside the frustum and each
+circuit renders exactly as it would alone. Track materials stay at the **shared fixed prim paths**, so
+`isaac_dr`'s scene randomization re-colours all circuits coherently per episode; one union grass
+backdrop covers the gaps. `isaac_scene.load_circuits` resolves per-track env geometry from the
+config-dir naming convention (`<name>_right_lane_centerline.yaml` + `<name>_centerline.yaml`) and
+shifts it by the same scene offsets — geometry and rendering cannot drift. Run metadata records
+per-circuit YAML paths + hashes.
+
+**New tracks.** `complex_a`/`complex_c` (existing presets, now generated) violate the monocular
+**curvature boundary** (docs/12 §4.7: driven-lane R < ~0.9 m ⇒ false C-02/C-05 emergencies), so they
+suit only ground-truth-cage or monitoring runs. Two new **CV-safe presets** were designed against that
+boundary for the camera training set: `complex_d` (bottom straight + wide single-valley "V" top;
+centre/driven-lane R_min 0.884/0.932 m) and `complex_e` (top straight + soft double-dent "W" bottom;
+0.787/0.907 m) — complex_b, the proven GE4-V2 circuit, is 0.876/0.998 m. All 2-lane, 0.52 m road,
+right-lane driven, both handedness.
+
+**Consequences.**
+- SR-009's stall/liveness sub-mode is **well-posed** on this action space (a true stop is
+  commandable; M-P6 becomes meaningful) and SC-PERT-03 becomes exercisable — on the *Isaac* policy,
+  as posterior work; **G4 and the Gazebo verdicts are not reopened** (D-49 stands for track E).
+- A policy trained under this config is a **new baseline** (new action space, new simulator, new
+  circuits) — never comparable run-for-run with the 297k E-main.
+- C-04/C-05/C-06 speed parameters remain `[provisional]`; first 2-D pilots should watch the
+  C-04-attenuation/C-06-rate interplay (5.0 per-m/s gain over a 0.5 m/s span is a strong proportional
+  correction) and re-tune via the cage.yaml update procedure if it oscillates — that is now a
+  *measurable* behaviour instead of a latent one.
+- Host-deferred (per D-44 precedent): `py_compile` + rclpy-free imports + 498 unit tests pass on the
+  authoring host (incl. 16 end-to-end env tests driving the real cage through a fake interface: C-04
+  fires on overspeed, C-06 clips throttle jumps, stall reachable, circuit sampling reproducible);
+  the live Isaac flow (USD multi-track build, Replicator, SB3-in-Isaac) must be confirmed on the
+  Ubuntu + Isaac host.
+  Cites D-44, D-49, ED-2 (`docs/09`); SR-004, SR-009, H-03, H-08; docs/12 §4.7.

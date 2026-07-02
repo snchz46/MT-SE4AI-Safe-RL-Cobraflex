@@ -450,10 +450,15 @@ SR-006 cierra sobre su propia métrica (nota ¹, D-39); **dos** SR-CL-B quedan e
   en el runner, y sus dos contadores no están en el esquema de registro (§8.4). No es
   un fallo de composición.
 
-Cerrar los dos TBD requiere, antes de G4: ejecutar el brazo stall de SC-PERT-03 +
-agrupar brazos; e inyectar las IC del grid de SC-EDGE-05 + añadir sus contadores,
-re-corriendo ambos en el host Ubuntu.
-`tools/check_traceability.py` confirma que no quedan SRs huérfanos a ningún lado.
+**Resolución al cierre de G4 (02.07.2026, docs/07).** Los dos TBD del brazo F quedan
+como **abstenciones documentadas y no-vetantes** (D-30), pero ambos quedaron
+*materialmente* respondidos por el track 'E': el brazo stall de SR-009 es **N/A por
+construcción** para el espacio de acción solo-dirección que comparten ambos tracks
+(M-P6 ≡ 0; la inyección de reward de SC-PERT-03 es inerte — D-49; el test bien-puesto
+se difiere a la acción 2-D de Isaac), y la pregunta de co-activación de SR-010 la
+respondió el grid de SC-EDGE-05 **cableado en GE4-V2** (30/85 breaches in-ODD, hallazgo
+CL-B genuino, §8.9). `tools/check_traceability.py` confirma que no quedan SRs huérfanos
+a ningún lado.
 
 ---
 
@@ -464,9 +469,9 @@ re-corriendo ambos en el host Ubuntu.
 La campaña (1260 runs, seed principal 2024) cierra con **veredicto global
 `SATISFIED`**: las 7 SR-CL-A satisfechas con margen —la desviación lateral máxima
 se mantuvo en torno a 1/7 del umbral de 0.16 m en nominal y por debajo de él
-incluso en los escenarios límite—, y SR-011 también satisfecha. Tres SR-CL-B
-quedan en TBD por abstención (huecos de instrumentación y una agregación gruesa),
-no por fallo de seguridad (§8.7).
+incluso en los escenarios límite—, y SR-011 también satisfecha. Dos SR-CL-B
+(SR-009/SR-010) quedan en TBD por abstención (huecos de instrumentación, resueltos
+materialmente en el track 'E': D-49 y el grid V2, §8.7), no por fallo de seguridad.
 
 El resultado se lee en dos planos:
 
@@ -552,16 +557,18 @@ dimensiones (la policy F-track). El track 'E' sustituye esa entrada por una
 la cage (C-01..C-06, v0.6.1), la *scenario library* y el *spine* de veredicto. Es,
 por diseño, un **brazo de control de tronco único** (D-41): la única variable que
 cambia frente al baseline F4 es la fuente de percepción, de modo que el delta de
-resultados *mide el coste de la percepción por cámara*. La policy es el checkpoint
-de pico `cobraflex_ppo_cam_lane_2024_139k_peak` (§7.7.7).
+resultados *mide el coste de la percepción por cámara*. La policy es el E-main
+**complex_b 297k peak** (`cobraflex_ppo_newcam_complex_b_2024_297k_peak`, §7.4/§7.5;
+la campaña original corrió sobre el predecesor `cobraflex_ppo_cam_lane_2024_139k_peak`,
+hoy histórico).
 
-> **Campaña GE4 actualizada — V2 sobre el E-main 297k (28.06.2026).** La campaña GE4
-> original descrita abajo se ejecutó sobre el checkpoint **139k**, hoy superado por el
-> **complex_b 297k peak** (§7.7.8 / docs/11 §8). La campaña se re-ejecutó sobre 297k
-> —primero V1, luego **V2** tras validar la librería de escenarios complex_b— y **V2 es
-> el veredicto de récord** (`experiments/sim/campaign_e_v2/`; detalle en docs/11 §8.4).
-> El §8.9.1 siguiente reporta **V2**; §8.9.2–8.9.5 conservan la lectura *cualitativa*
-> (cage latente→activa, coste de cámara) con números 139k en migración a V2.
+> **Campaña GE4 — V2 sobre el E-main 297k (28.06.2026, veredicto de récord).** La campaña
+> GE4 original se ejecutó sobre el checkpoint **139k**, superado por el **complex_b 297k
+> peak** (docs/11 §8). La campaña se re-ejecutó sobre 297k —primero V1, luego **V2** tras
+> validar la librería de escenarios complex_b (recorte in-ODD de SC-EDGE-02, ruta-1)— y
+> **V2 es el veredicto de récord** (`experiments/sim/campaign_e_v2/`; detalle en docs/11
+> §8.4). Todo el §8.9 (§8.9.1–8.9.5) reporta **V2**; los números 139k que se citan quedan
+> marcados como contraste histórico. Con V2, **G4 queda cerrado** (02.07.2026, docs/07).
 
 **La campaña (V2).** Mismo runner y matriz que F4, con `--train-config
 train_ppo_camera.yaml` y el checkpoint **297k**, sobre la librería complex_b completa
@@ -623,7 +630,11 @@ Donde F4 medía el valor de la cage solo en la frontier (la seed cage-dependent 
 §8.6), el track 'E' lo mide **dentro del ODD** sobre la propia policy principal: bajo
 degradación de percepción la cage convierte en **parada controlada** (M-S1 acotado)
 lo que sin ella es una salida de carril. (SC-PERT-07/10 pasan ahora en ambos modos
-25/25 — la policy 297k aguanta esos estresores sin necesitar la parada.)
+25/25 — la policy 297k aguanta esos estresores sin necesitar la parada.) Figuras
+`fig_cam_cage_value.png`, `fig_cam_failure_modes.png` y `fig_cam_cage_regimes.png`
+(descomposición V2), y `fig_cam_cost_of_camera.png` (contraste F-vs-E por escenario,
+con la cautela de que mezcla el cambio de pista con el de percepción), en
+`experiments/sim/campaign_e_v2/figures/`.
 
 ### 8.9.3 Lo que se sostiene, y los huecos de instrumentación
 
@@ -737,9 +748,12 @@ comparación de vueltas justa. Evidencia:
 `experiments/sim/runs/rl_newcam_eval_2024_cb297k_4k4{,_mon}/` y la comparación
 consolidada `experiments/sim/runs/baseline_cv_vs_rl_nominal.json`.
 
-> **Alcance: eval nominal, no campaña GE4.** Este contraste establece la competencia
-> in-ODD del E-main 297k; el head-to-head bajo perturbación/degradación (la campaña
-> GE4 de 24 escenarios) **no** se ha re-ejecutado sobre 297k (§8.9.1, §8.9.4).
+> **Alcance: este contraste es la eval nominal.** Establece la competencia in-ODD del
+> E-main 297k contra el baseline clásico. La campaña GE4 completa sobre 297k **sí** está
+> ejecutada y cerrada (V2, 1970 runs; §8.9.1–8.9.4): el comportamiento del agente bajo
+> perturbación/degradación es el reportado allí. El head-to-head *CV-vs-RL* bajo
+> degradación (correr el baseline CV por la librería SC-PERT) queda como extensión
+> posible, no requerida por ningún SR.
 
 **Nota de medición (corrección de geometría).** El `summary.json` original del run
 reportaba 1,68 m de media \|ey\| y 1,73 vueltas: **artefacto del scoring, no fallo del
@@ -776,13 +790,20 @@ Esta campaña convierte la *scenario library* en evidencia estructurada: cada SR
 queda verificado (o no) contra runs logueados y reproducibles, y la contribución
 de la cage queda **medida**, no postulada. La evaluación tiene **dos brazos sobre
 el mismo tronco**: el *baseline* F-track (estado ground-truth, §8.3–8.8, global
-`SATISFIED`) y el track 'E' de cámara (§8.9, global `NOT SATISFIED`). Leídos juntos
-cierran el argumento central: la cage es **latente** cuando la policy respeta las
-restricciones (F4 in-ODD) y se vuelve el mecanismo de seguridad **activo y medible**
-cuando la percepción se degrada (cámara) o el sistema sale del ODD (frontier); y el
-`NOT SATISFIED` del brazo de cámara es un coste de **disponibilidad** (paradas
-controladas seguras), no una brecha de seguridad (0 contactos de borde, M-S1 <
-`d_max` en enforcement). Con ello se cierra la rama derecha del V-Model en simulación.
+`SATISFIED`) y el track 'E' de cámara (§8.9, GE4-V2, global `NOT SATISFIED`
+*literal*). Leídos juntos cierran el argumento central: la cage es **latente**
+cuando la policy respeta las restricciones (F4 in-ODD, y también el 297k en
+nominal) y se vuelve el mecanismo de seguridad **activo y medible** cuando la
+percepción se degrada (cámara: SC-PERT-13 40/40 enf vs 0/40 mon) o el sistema sale
+del ODD (frontier); y el `NOT SATISFIED` del brazo de cámara descansa **enteramente
+en la cláusula recovery-time heredada del óvalo** (SR-002/003, reconciliados en su
+criterio propio, D-47) — **ningún predicado de seguridad SR-CL-A se incumple en
+ninguno de los dos brazos** (SR-001 cumplido, 0 contactos de borde in-ODD, M-S1 <
+`d_max` en enforcement), con dos residuos documentados: los 2 breaches de borde de
+SC-EDGE-02 (el under-read D-43/H-12) y el hallazgo CL-B de co-activación SR-010.
+Con ello **G4 queda cerrado** (docs/07, 02.07.2026) y la rama derecha del V-Model
+se cierra en simulación; el trabajo posterior —Isaac Sim, acción 2-D (D-49) y el
+gap sim-to-real hacia la plataforma física— parte de estos veredictos congelados.
 
 El Capítulo 9 lleva el subconjunto físico de la library (`docs/05`, §"Subset for
 physical deployment": SC-NOM-01, SC-NOM-02, SC-EDGE-01) a la plataforma
@@ -808,10 +829,11 @@ F4 (campaña):
        re-apuntar SR-006 en run_campaign.aggregate_sr para que campaign_report.json
        deje de leer 'failed' (CL-B; no cambia el global).
   [x] Reconciliar run_campaign.py vs verdict_aggregation.py (indeterminado) — D-38.
-  --- PENDIENTE (necesita host Ubuntu / re-run) ---
-  [ ] SR-010 / SC-EDGE-05: cablear inyección de IC de parameterised_grid en el runner
-       (as-run = 0 co-activación); añadir contadores joint_envelope_assertion_failures
-       e inter_cycle_oscillations al registro; re-correr.
+  --- PENDIENTE (no bloqueó G4: cerrado 02.07.2026 como abstención documentada, D-30) ---
+  [ ] SR-010 / SC-EDGE-05 (brazo F, óvalo): cablear inyección de IC de parameterised_grid
+       en el runner F4 (as-run = 0 co-activación); añadir contadores. NOTA: la pregunta de
+       co-activación quedó respondida en el brazo E (grid V2 cableado, 30/85 in-ODD, §8.9);
+       el re-run F es opcional/histórico.
   [—] SR-009 / SC-PERT-03: N/A para la acción solo-dirección — el test negativo de stall
        requiere control de throttle (M-P6≡0 by construction, reward-injection inerte; D-49).
        Brazo vivo M-S2-monitoring cubierto; test bien-puesto diferido a la acción 2-D de Isaac.

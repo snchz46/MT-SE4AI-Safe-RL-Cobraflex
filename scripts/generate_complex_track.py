@@ -69,6 +69,40 @@ TRACKS = {
         (-3.3, 0.3), (-2.7, 1.5), (-0.9, 1.9), (1.0, 1.7), (2.6, 0.9),
         (3.2, -0.4), (2.2, -1.3), (0.6, -1.0), (-0.9, -1.5), (-2.7, -1.3),
     ],
+    # --- CV-safe presets (D-50 multi-track camera training) -------------------
+    # complex_a/complex_c violate the monocular curvature boundary (docs/12
+    # §4.7: driven-lane R < ~0.9 m ⇒ the cage's CV heading over-read exceeds
+    # C-02's theta_max ⇒ false emergencies while tracking to mm), so they suit
+    # only ground-truth-cage / monitoring runs. The two presets below keep the
+    # complex_b philosophy (long straight + wide U-turn ends + counter-steer
+    # features, both handedness) with driven right-lane R_min ≥ 0.90 m, so the
+    # camera-track cage stays honest:
+    #   complex_d  R_min centre 0.884 / driven right lane 0.932 m
+    #   complex_e  R_min centre 0.787 / driven right lane 0.907 m
+    # (complex_b, the proven GE4-V2 circuit, is 0.876 / 0.998 m.)
+    #
+    # complex_d — long bottom straight; the top is a single wide, shallow
+    # central valley (a "V", vs complex_b's two-hump "M"): one pronounced
+    # right-hand counter-steer between the two left U-turns.
+    "complex_d": [
+        (-3.0, -1.6), (-1.5, -1.6), (0.0, -1.6), (1.5, -1.6), (3.0, -1.6),
+        (3.9, -0.9), (4.1, 0.2), (3.4, 1.1),
+        (2.2, 1.55), (1.1, 1.25),
+        (0.0, 0.95),
+        (-1.1, 1.25), (-2.2, 1.55),
+        (-3.4, 1.1), (-4.1, 0.2), (-3.9, -0.9),
+    ],
+    # complex_e — mirrored philosophy: the long straight is on TOP and the
+    # bottom carries two very gentle inward dents (a soft "W"), so the
+    # straight→technical-section order the agent meets per lap differs from
+    # complex_b/d. Counter-clockwise like the others (right lane outside the
+    # U-turns — what keeps the driven radius ≥ 0.9 m).
+    "complex_e": [
+        (-3.8, 0.95), (-4.1, 0.0), (-3.5, -1.0),
+        (-1.5, -1.35), (0.0, -1.65), (1.5, -1.35),
+        (3.5, -1.0), (4.1, 0.0), (3.8, 0.95),
+        (3.0, 1.6), (1.5, 1.6), (0.0, 1.6), (-1.5, 1.6), (-3.0, 1.6),
+    ],
 }
 
 

@@ -3,7 +3,7 @@
 | Field | Value |
 | --- | --- |
 | Artifact | Track 'E' training implementation (the camera counterpart of `docs/09`) |
-| Version | **0.4** (2026-06-22 — complex_b 297k is now the E-main camera policy; SC-NOM-01 eval done: cage latent in-ODD, RL beats the CV baseline on tracking. 425k/139k demoted to predecessors) |
+| Version | **0.6** (2026-06-28 — **GE4-V2 verdict of record** on the 297k E-main, §8.4: 1970 runs, global `NOT SATISFIED` literal blocking SR-002/003 only (D-47 reconciled); SR-001 closed by ruta-1, ruta-2b reverted (D-48). G4 closed 02.07.2026, docs/07) |
 | Phase / Gate | F3 training infrastructure, reused by track 'E' (GE3 train, GE4 eval) |
 | Author | Samuel Sanchez |
 | Date | 2026-06-22 |
@@ -21,11 +21,12 @@
 > baseline.
 
 > **This is the verdict-bearing E-track path, in Gazebo.** The E-track evaluation that
-> closes the thesis verdict (GE4, the 425k re-run) runs on **this** Gazebo stack —
-> `docs/07` and ch.8 §8.9 score it. The Isaac-Sim migration
+> closes the thesis verdict — **GE4-V2 on the 297k E-main, complete 28.06.2026 (§8.4)** — ran on
+> **this** Gazebo stack; `docs/07` and ch.8 §8.9 score it, and **G4 is closed** on it (docs/07,
+> 02.07.2026). The Isaac-Sim migration
 > ([docs/13](13_isaacsim_environment.md)) is a **separate, posterior** thread (a sim-to-real
 > bridge) that **does not supersede** these results; a Gazebo checkpoint does not transfer to
-> Isaac, so any Isaac E-policy is a future retrain, not a re-do of the 425k run documented here.
+> Isaac, so any Isaac E-policy is a future retrain, not a re-do of the 297k campaign documented here.
 
 ---
 
@@ -626,12 +627,14 @@ and `tools/plot_camera_comparison.py`): `fig_frontier_excursion.png` + `fig_fron
 change**); `fig_sr001_edge02_offset.png` (SC-EDGE-02 spawn-offset vs verdict — the ruta-1 in-ODD clip
 and the 2 boundary-edge residuals). Captions read "297k / 1970 / complex_b (V2)".
 
-**Open / not formally GE4-closed:** (a) the **verdict-framing** decision (literal `NOT SATISFIED` vs
-SATISFIED-after-D-47) — reported here as literal NOT SATISFIED + reconciliation (§8.4.3); (b) SC-PERT-03
-indeterminate (negative *stall* test, N/A for the steering-only action space, D-49); (c) SR-010's
-in-ODD co-activation breaches (a real CL-B finding to carry, plausibly improved by better perception);
-(d) multi-seed N=5 is host-deferred (this is the seed-2024 run). SR-012/013/014 are **no longer
-INCOMPLETE** (coverage closed by the SC-PERT-08/09/10 run bump).
+**GE4 closure status (G4 closed 02.07.2026, docs/07).** The verdict-framing decision is
+**resolved as recorded**: literal `NOT SATISFIED` + reconciliation annotated (§8.4.3; user decision,
+CHANGELOG 28.06). SC-PERT-03 is **N/A** for the steering-only action space (D-49), not a gap.
+SR-012/013/014 are **no longer INCOMPLETE** (coverage closed by the SC-PERT-08/09/10 run bump).
+Carried into the posterior work, documented and non-vetoing: (a) SR-010's in-ODD co-activation
+breaches (a real CL-B finding, plausibly improved by better perception); (b) multi-seed N=5
+(host-deferred; this is the seed-2024 run); (c) the D-43 under-read closure via better perception —
+a temporal estimator or the 2-D-action Isaac retrain (D-49, docs/13–14).
 
 **Command summary** (detail + rationale below; all on **Ubuntu 24.04 + ROS2 Jazzy**, source
 ROS2 first). `CFG=$(ros2 pkg prefix cobraflex_rl)/share/cobraflex_rl/config`:
@@ -850,6 +853,17 @@ multi-seed N=5 confirmation is the planned robustness check).
 
 ## Version log
 
+- **v0.6 (2026-06-28; annotated 02.07.2026):** **§8.4 rewritten to GE4-V2 — the verdict of
+  record** (supersedes the V1 text of v0.5): 1970 runs, 0 errors, global **`NOT SATISFIED`
+  (literal), blocking SR-002/003 only** (their SC-EDGE-01 fails are the oval-legacy 2.0 s
+  recovery-time clause; Satisfied on own criterion, D-47). **SR-001 closed by ruta-1** (SC-EDGE-02
+  in-ODD IC clip → 28/30; the ruta-2b conservative lane-selection was unnecessary and reverted
+  after a closed-loop regression, D-48); SR-012/013/014 Satisfied (D-29 coverage closed);
+  SR-010 genuine CL-B (30/85 in-ODD grid breaches). §8.4.1–8.4.3 added (V1→V2 delta, the D-43
+  under-read mechanism, per-SR reconciliation). V2 figures regenerated under
+  `experiments/sim/campaign_e_v2/figures/` (+ `fig_sr001_edge02_offset.png`). **G4 closed
+  02.07.2026** on F4 + GE4-V2 (docs/07); next thread is the Isaac / sim-to-real posterior work
+  (docs/13–14, D-44/D-49).
 - **v0.5 (2026-06-27):** **§8.4 — GE4 evaluation verdict on the 297k E-main** (complex_b,
   1940 runs, 0 errors). Global **`NOT SATISFIED`**: in-ODD (NOM+PERT) clean and the cage adds
   value, but the camera cage cannot recover deep out-of-ODD lateral starts (**125 enf road-edge

@@ -125,7 +125,7 @@ The thesis's **primary** system is the **end-to-end front-camera** policy (track
 
 **Evaluation** (`rl_newcam_eval_2024_cb297k_4k4`, scenario `SC-NOM-01`) — the camera policy holds **10.9 mm** mean lateral error against **17.2 mm** for the deterministic CV controller on the same circuit (~37 % tighter), with **0 emergencies** and the cage **latent in-ODD** (no lane-boundary / heading / TTLC intervention — only the benign C-06 rate-limiter). This **reverses the oval finding** (where the classical baseline was the more accurate): on the tight `complex_b` geometry the learned agent earns its keep. Multi-seed **N = 5 in progress** (2/5 done — 2024, 42 — both *constraint-respecting*).
 
-> **Scope.** This is the nominal evaluation; the full 24-scenario **GE4 campaign on the 297 k policy is wired and pending** (Ubuntu + Gazebo). The per-SR camera verdicts in `docs/07` + ch. 8 §8.9 still reflect the **superseded 139 k** campaign until that re-run lands.
+> **Scope.** Beyond this nominal evaluation, the full **GE4 campaign ran on the 297 k policy** (V2, **1970 runs**, 28 scenarios × {enforcement, monitoring}, 0 errors — `experiments/sim/campaign_e_v2/`). Verdict of record: global `NOT SATISFIED` *literal*, blocked only by an oval-legacy recovery-time clause on SR-002/003 (both Satisfied on their own criterion, D-47) — **no safety predicate breached**; **SR-001 and the camera SRs (SR-012/013/014) are Satisfied**, and under camera degradation the cage measurably prevents the excursions the bare policy commits (e.g. SC-PERT-13: 40/40 with cage vs 0/40 without). `docs/07` + ch. 8 §8.9 score this campaign; **G4 closed 02.07.2026**.
 
 **Baseline / control arm (track 'F' — state-vector, oval, frozen).** To isolate *the cost of camera perception*, the same cage + PPO recipe runs on a privileged 6-D ground-truth state on the oval: `ppo_train_2024_200k` drives **11.2 continuous laps** at **9.9 mm** mean error (vs **23 mm** for the PD baseline), 0 emergencies, 0 % cage intervention — a fully-characterised, G4-`SATISFIED` campaign (4/5 seeds *constraint-respecting*). Laps are **not** comparable across circuits (oval 8.8 m vs `complex_b` 19.2 m); the like-for-like contrast is the same-circuit CV baseline above.
 
@@ -151,8 +151,8 @@ The work advances through gated phases. Each Gate is blocked until traceability 
 | **F1** | Hazard analysis + safety requirements (9 H / 11 SR) | G1 | complete |
 | **F2** | Safety cage (`C-01…C-06`) + ROS 2 pipeline | G2 | complete |
 | **F3** | PPO training & policy | G3 | complete |
-| **F4** | Simulation-based scenario evaluation | G4 | Evaluation campaign pending |
-| F5 | Physical CobraFlex platform | G5 | planned |
+| **F4** | Simulation-based scenario evaluation (F-track `SATISFIED` + camera GE4-V2) | G4 | **complete** (02.07.2026) |
+| F5 | Physical CobraFlex platform (via Isaac Sim sim-to-real bridge, docs/13–14) | G5 | planned — next |
 | F6 | Closure & defence | G6 | planned |
 
 ---

@@ -3,7 +3,7 @@
 | Field | Value |
 | --- | --- |
 | Artifact | The logical (non-learned) camera lane-keeper: deployment node + shared control law + CV estimator |
-| Version | **0.4** (2026-06-19 — authoritative complex_b + Lane Cam baseline run §7.5; PolylineTracker lap-seam fix) |
+| Version | **0.5** (2026-07-02 — H-12 confident under-read documented in §4.4 + ruta-2b `conservative_lane_selection` revert (D-48); RL-vs-CV head-to-head closed: 297k RL beats this baseline 10.9 vs 17.2 mm) |
 | Phase / Gate | Track 'E' (camera) — the fair baseline for the RL camera agent (GE4 eval) |
 | Author | Samuel Sanchez |
 | Date | 2026-06-19 |
@@ -202,6 +202,23 @@ vehicle, `X=0`). Among **adjacent pairs** whose separation matches the ODD-1 lan
 width (`0.245 ± 0.10 m`), pick the pair whose centre is **nearest the vehicle** —
 the driven lane.
 
+> **Known limitation — the H-12 confident under-read (D-48, GE4-V2 finding).** When the
+> vehicle departs its lane past ~half a lane width, a neighbouring-lane line forms a
+> *competing* plausible pair whose centre is marginally nearer: nearest-centre selection
+> then reports the vehicle near-centred in the **wrong** lane (`cv_ey ≈ 0.04 m` while true
+> `ey` → 0.30 m, `cv_ok` True), so C-01/C-05 are never triggered — a self-consistent wrong
+> estimate SR-014's plausibility check cannot catch. An opt-in
+> `conservative_lane_selection` rule (pick the larger-offset interpretation when two
+> plausible pairs straddle the vehicle) was implemented as **ruta-2b** and **reverted to
+> default `False`**: a single frame cannot distinguish a genuinely off-centre vehicle from
+> a *centred* one under a small heading error (both split into the same opposite-sign
+> pairs), so it fires spurious C-01/C-05 emergencies on centred / recovering / curving
+> views (closed-loop smoke: SC-EDGE-01 emergency at step 8; SC-NOM-02 regressed). There is
+> **no robust single-frame fix**; the honest closure is temporal lane tracking or the Isaac
+> retrain (D-49). Scoped to the ODD (ruta-1's SC-EDGE-02 IC clip) the under-read costs only
+> 2/30 boundary-edge breaches in GE4-V2 — SR-001 still closes. The flag is kept True-capable
+> for the opt-in regression tests (`policy/tests/test_cv_lane_estimator.py`).
+
 ### 4.5 State
 The lane-centre polynomial is the mean of the selected pair's fits; the state is
 read off it at the vehicle (`X=0`):
@@ -357,9 +374,11 @@ to ~17 mm mean lateral error (max 57 mm, well under `d_max`) with 0 emergencies 
 markedly twistier circuit than the oval; fewer laps (4.85 in 440 s) only because the
 perimeter is longer at fixed speed. Re-run live with the tracker fix in place (seed
 2024 → near-identical trajectory; the native `summary.json` matches the offline
-re-derivation to 4 decimals). The RL-vs-CV head-to-head on `complex_b` is
-**pending** the RL camera agent's eval on the same track (prepared + dry-run-validated,
-not yet launched; see CLAUDE.md track-'E' status).
+re-derivation to 4 decimals). The RL-vs-CV head-to-head on `complex_b` is **closed
+(2026-06-22)**: the 297k E-main beats this baseline on tracking (mean |ey| **10.9 vs
+17.2 mm**, same track/camera/seed/horizon, 0 emergencies both), reversing the oval
+finding — see ch.8 §8.9.5 and `experiments/sim/runs/rl_newcam_eval_2024_cb297k_4k4{,_mon}/`
++ `baseline_cv_vs_rl_nominal.json`.
 
 > **Measurement note (geometry fix).** This run's original `summary.json` reported
 > 1.68 m mean \|ey\| and 1.73 laps — a **scoring artifact, not a controller failure**.
@@ -542,6 +561,17 @@ reads centreline-derived state (baseline); track-E cage reads the CV estimator
 
 ## Version log
 
+- **v0.5 (2026-07-02):** §4.4 gains the **H-12 confident under-read** note (D-48, the
+  GE4-V2 SR-001 mechanism): nearest-centre lane selection locks onto a neighbouring-lane
+  pair when the vehicle departs past ~half a lane, feeding the cage a falsely-centred
+  state. Documents the **ruta-2b revert** — `conservative_lane_selection` exists in
+  `CvLaneEstimatorConfig` but defaults **False** (spurious C-01/C-05 on centred/recovering/
+  curving views; no robust single-frame fix; temporal tracking / Isaac retrain is the real
+  closure, D-49). §7.5 head-to-head updated: **closed 2026-06-22**, the 297k RL camera agent
+  beats this baseline (10.9 vs 17.2 mm mean |ey|), reversing the oval finding (ch.8 §8.9.5).
+- **v0.4 (2026-06-19):** authoritative complex_b + Lane Cam baseline run (§7.5) and the
+  `PolylineTracker` lap-seam fix (measurement note): auto-close loops whose endpoints sit
+  within ~one segment; clean live re-run confirmed against the offline re-derivation.
 - **v0.3 (2026-06-18):** §3 control law **switched PD + curvature-feedforward →
   pure-pursuit look-ahead** (the FF needed an unrecoverable monocular curvature
   estimate and under-steered tight curves; pure pursuit reads the lane-centre

@@ -1,7 +1,7 @@
 # Traceability Matrix
 
 **Status:** Living document — Phase 0 baseline, refined through every phase, closed at G6  
-**Last update:** 28.06.2026 (**GE4-V2 campaign COMPLETE** — 1970 runs, global `NOT SATISFIED` (literal), blocking SR-CL-A **SR-002/003 only**; both fail *only* SC-EDGE-01's oval-legacy 2.0 s recovery-time clause and are Satisfied on their own criterion (D-47), so no safety predicate is breached. **SR-001 now Satisfied** (ruta-1 in-ODD IC clip → SC-EDGE-02 28/30; 2 boundary-edge residuals; the abandoned ruta-2b estimator change was unnecessary + reverted, D-48). SR-012/013/014 Satisfied (coverage closed). SR-010 genuine CL-B in-ODD co-activation. See the GE4-V2 note below + docs/11 §8.4. V1 (campaign_e_297k) + the 139k block are historical. F4 sim verdicts frozen)  
+**Last update:** 02.07.2026 (**Gate G4 closed** — Phase-4 evaluation complete on both arms; see the G4 closure note below. F-track F4: global `SATISFIED`, frozen. Track-'E' GE4-V2 (28.06.2026, verdict of record): 1970 runs, global `NOT SATISFIED` (literal), blocking SR-CL-A **SR-002/003 only**; both fail *only* SC-EDGE-01's oval-legacy 2.0 s recovery-time clause and are Satisfied on their own criterion (D-47), so no safety predicate is breached. **SR-001 Satisfied** (ruta-1 in-ODD IC clip → SC-EDGE-02 28/30; 2 boundary-edge residuals; the abandoned ruta-2b estimator change was unnecessary + reverted, D-48). SR-012/013/014 Satisfied — the matrix rows now read GE4-V2. SR-010 genuine CL-B in-ODD co-activation; SR-009 stall arm N/A-by-construction (D-49). Next: Isaac / sim-to-real posterior work (docs/13–14, D-44/D-49). See the GE4-V2 note below + docs/11 §8.4. V1 (campaign_e_297k) + the 139k block are historical)  
 **Approved at Gate:** every Gate (incrementally)  
 
 ## Purpose
@@ -47,11 +47,11 @@ The full matrix is in `tools/traceability_matrix.csv`. The summary below shows t
 | H-07 | SR-008 | C-05 (external-stop trigger) | SC-NOM-03, SC-EDGE-04 | M-S3 | **Satisfied** |
 | H-08 | SR-009 | training | SC-NOM-01, SC-NOM-02, SC-NOM-03, SC-PERT-03 | M-P6, M-S2 (monitoring) | TBD ² |
 | H-09 | SR-010 | arbiter | SC-EDGE-04, SC-EDGE-05 | M-S2, M-I3 | TBD ³ |
-| H-10 | SR-012 | C-01, C-02, C-03 (over CV state) + training | SC-NOM-01, SC-PERT-04, SC-PERT-05, SC-PERT-06, SC-PERT-09, SC-PERT-10, SC-PERT-11, SC-PERT-12, SC-PERT-13 | M-S1, M-S2 | **Not satisfied** (track 'E') ⁴ ⁶ |
-| H-11 | SR-013 | C-05 (CV-estimator health → controlled stop) | SC-NOM-01, SC-PERT-07, SC-PERT-13 | M-S3 | **Satisfied** on SC-PERT-07 (20/20); D-29 under-covered in 139k, closed in library by D-46 (track 'E') ⁵ ⁶ |
-| H-12 | SR-014 | C-05 (plausibility check → controlled stop) | SC-NOM-01, SC-PERT-08, SC-PERT-04..06, SC-PERT-09..10, SC-PERT-11..13 | M-S1, M-S3 | **Not satisfied** (track 'E') ⁴ ⁶ |
+| H-10 | SR-012 | C-01, C-02, C-03 (over CV state) + training | SC-NOM-01, SC-PERT-04, SC-PERT-05, SC-PERT-06, SC-PERT-09, SC-PERT-10, SC-PERT-11, SC-PERT-12, SC-PERT-13 | M-S1, M-S2 | **Satisfied** (track 'E', GE4-V2; D-29 coverage closed) ⁴ ⁶ |
+| H-11 | SR-013 | C-05 (CV-estimator health → controlled stop) | SC-NOM-01, SC-PERT-07, SC-PERT-13 | M-S3 | **Satisfied** (track 'E', GE4-V2; SC-PERT-07 25/25 + SC-PERT-13 40/40; D-29 closed by D-46) ⁵ ⁶ |
+| H-12 | SR-014 | C-05 (plausibility check → controlled stop) | SC-NOM-01, SC-PERT-08, SC-PERT-04..06, SC-PERT-09..10, SC-PERT-11..13 | M-S1, M-S3 | **Satisfied** (track 'E', GE4-V2; SC-PERT-08 false-lane 25/25) ⁴ ⁶ |
 
-The last three rows (**H-10 / H-11 / H-12 → SR-012 / SR-013 / SR-014**) belong to the parallel **track 'E'** (end-to-end front-camera, **D-41 / D-43**): the cage's state comes from its **own deterministic CV lane-estimator** (D-43, supersedes D-42), separate from the policy's CNN, so it generalises to any road with visible lines and still reuses C-01..C-06 unchanged. H-12 (cage lane-misdetection) is the new failure mode that the CV estimator introduces. Since E2 (10.06.2026) the implementation chain is **live**: SC-PERT-04..10 are full schema-valid YAMLs (`docs/05`; 09/10 are the world-variant pair added 11.06.2026), the C-05 **Trigger 8** path is implemented (cage 0.6.1, `docs/04`) and the estimator is validated against the sim ground-truth oracle (`experiments/sim/runs/cv_estimator_val_*`). The per-SR verdicts are now filled from the **GE4 camera campaign** (the *E-track sim evidence* block below); they are *not* part of the F-track G4 verdict above, which stays **frozen** as the ground-truth-state baseline.
+The last three rows (**H-10 / H-11 / H-12 → SR-012 / SR-013 / SR-014**) belong to the parallel **track 'E'** (end-to-end front-camera, **D-41 / D-43**): the cage's state comes from its **own deterministic CV lane-estimator** (D-43, supersedes D-42), separate from the policy's CNN, so it generalises to any road with visible lines and still reuses C-01..C-06 unchanged. H-12 (cage lane-misdetection) is the new failure mode that the CV estimator introduces. Since E2 (10.06.2026) the implementation chain is **live**: SC-PERT-04..10 are full schema-valid YAMLs (`docs/05`; 09/10 are the world-variant pair added 11.06.2026), the C-05 **Trigger 8** path is implemented (cage 0.6.1, `docs/04`) and the estimator is validated against the sim ground-truth oracle (`experiments/sim/runs/cv_estimator_val_*`). The per-SR verdicts are now filled from the **GE4-V2 camera campaign** (the GE4-V2 note below; `experiments/sim/campaign_e_v2/campaign_report.json` — the *E-track sim evidence* block further down is the historical 139k roll-up); they are *not* part of the F-track G4 verdict above, which stays **frozen** as the ground-truth-state baseline.
 
 **Sim evidence (10.06.2026).** The verdicts above come from the end-of-campaign
 roll-up `experiments/sim/campaign/campaign_report.json` (1260 runs, main seed
@@ -81,24 +81,27 @@ One SR-CL-B verdict (**SR-006**) is now resolved by a dedicated metric analysis
   `campaign_report.json` still reads `failed` from the superseded `ALL` inheritance;
   re-pointing SR-006 to this metric in `run_campaign.py` is a flagged follow-up
   (D-39) and does not change the global verdict (CL-B).
-- **² SR-009 (liveness) — needs re-run.** Nominal liveness (SC-NOM-01/02/03) passes;
-  the verdict is driven by **SC-PERT-03**, a two-arm failure-injection meta-test
-  (released vs stall-variant). The multi-arm evaluator already exists
-  (`criterion_eval.evaluate_labelled`); the gap is that (a) the **stall-variant arm
-  was never executed** (the 40 logged runs are a single arm) and (b) the campaign
-  driver does not yet *group* the two arms' values before calling it. Closing it
-  needs the stall fine-tune + run and the driver grouping (Ubuntu). Not a liveness
-  failure.
-- **³ SR-010 (cage-rule composition) — needs scenario fix + re-run.** SC-EDGE-04
-  passes. SC-EDGE-05's per-run predicate references operands
+- **² SR-009 (liveness) — TBD abstention; resolved N/A-by-construction at G4 (D-49).**
+  Nominal liveness (SC-NOM-01/02/03) passes; the verdict is driven by **SC-PERT-03**,
+  a two-arm failure-injection meta-test (released vs stall-variant). The multi-arm
+  evaluator already exists (`criterion_eval.evaluate_labelled`); the gap was that (a)
+  the **stall-variant arm was never executed** and (b) the campaign driver does not
+  *group* the two arms. At G4 close this resolved differently: the stall sub-mode is
+  **ill-posed for the steering-only action space both tracks share** (M-P6 ≡ 0 by
+  construction; the reward injection is inert — D-49), so the negative test is N/A,
+  and the live M-S2-monitoring arm is covered by the nominal family. The well-posed
+  stall test moves to the 2-D-action Isaac work. Not a liveness failure.
+- **³ SR-010 (cage-rule composition) — TBD abstention on the F arm; answered on the E
+  arm at G4.** SC-EDGE-04 passes. SC-EDGE-05's per-run predicate references operands
   (`joint_envelope_assertion_failures`, `inter_cycle_oscillations`) **absent from
   the run-record schema**, *and*, more fundamentally, the scenario **as-run induced
   zero rule co-activation** — 0 interventions across all 100 runs, the vehicle drove
   nominally (max |d| ≈ 0.02 m) — because the `parameterised_grid` initial conditions
-  are **not injected by the runner**. So SR-010 cannot be verified from these logs
-  regardless of the counters: the scenario must first actually stress co-activation
-  (wire the grid-IC injection), then re-run with the two counters added (Ubuntu).
-  Not a composition failure.
+  were **not injected by the runner**. The grid-IC injection was subsequently **wired
+  for the E-track campaigns**, and GE4-V2 scored SC-EDGE-05 determinately (30/85
+  in-ODD co-activation breaches — a genuine CL-B finding, note ⁸), answering the
+  composition question on the camera arm. The F-arm (oval, ground-truth state) re-run
+  stays optional/historical. Not a composition failure.
 
 > **Aggregator reconciliation (D-38).** The campaign runner now treats an
 > *indeterminate* (`None`) per-run verdict the same way as the unit-tested D-29/D-30
@@ -141,14 +144,35 @@ One SR-CL-B verdict (**SR-006**) is now resolved by a dedicated metric analysis
 > breaches** (genuine CL-B, SR-010) + 10/15 OOD; SC-FRONT-07 (flip generalization) **passes**. The CL-B GE4 readings (SR-006/009/010/011) do
 > not gate the global verdict and are reconciled / characterised in **note ⁸**.
 
-**E-track sim evidence (12.06.2026).** The camera-track verdicts (H-10/11/12 →
-SR-012/013/014) come from the GE4 roll-up `experiments/sim/campaign_e/campaign_report.json`
+> **Gate G4 — CLOSED (02.07.2026).** Phase-4 (sim evaluation) is complete on both arms and the
+> gate closes on this evidence base:
+> **(i) F-track F4** (ground-truth state, frozen 10.06.2026): 1260 runs, global **`SATISFIED`** —
+> all 7 SR-CL-A pass, cage latent in-ODD, protective value shown out-of-ODD (D-35 frontier).
+> **(ii) Track-'E' GE4-V2** (camera, verdict of record 28.06.2026): 1970 runs, global
+> **`NOT SATISFIED` (literal)** blocking SR-002/003 only — both Satisfied on their own criterion
+> (D-47), so **no SR-CL-A safety predicate is breached on either arm**; SR-001 and the three
+> camera SRs (SR-012/013/014) are Satisfied.
+> Open items are **documented, CL-B, and non-vetoing (D-30)**: the F-track SR-009/SR-010 TBD
+> abstentions (SR-009's stall arm is additionally N/A-by-construction for the shared 1-D action
+> space, D-49; SR-010's co-activation question is now answered on the E arm by the V2 grid);
+> the E-track SR-010 in-ODD co-activation finding (a result to carry, not a gap); the
+> verdict-framing decision (literal vs D-47-restated global — recorded as literal + annotation);
+> and multi-seed N=5 (host-deferred, posterior work). The mechanical gate
+> (`tools/check_traceability.py`) passes with no orphans. **Phase 4 closes; the thesis verdicts
+> are frozen in Gazebo. Next: the Isaac Sim / sim-to-real posterior track** (docs/13–14, D-44) —
+> physical-platform bridge, 2-D action retrain (D-49) and the sim-to-real gap study; it does not
+> reopen G4.
+
+**E-track sim evidence — historical 139k campaign (12.06.2026; superseded by GE4-V2
+above).** The matrix verdicts for H-10/11/12 → SR-012/013/014 now read **GE4-V2**
+(`experiments/sim/campaign_e_v2/campaign_report.json`); this block records the *first*
+GE4 roll-up, kept as the policy-evolution contrast: `experiments/sim/campaign_e/campaign_report.json`
 (**1660 runs**, seed 2024, checkpoint `cobraflex_ppo_cam_lane_2024_139k_peak.zip`,
 cage 0.6.1; enforcement + monitoring; 0 errors), with the clause-level breakdown
 `experiments/sim/campaign_e/failure_mode_breakdown.json` (regenerable via
-`tools/campaign_e_failure_modes.py`). The **global camera-track verdict is
-`NOT SATISFIED`** (D-30): SR-001, SR-012, SR-014 fail their scenario criteria and
-SR-013 is D-29 under-covered. Two facts qualify it:
+`tools/campaign_e_failure_modes.py`). The 139k **global camera-track verdict was
+`NOT SATISFIED`** (D-30): SR-001, SR-012, SR-014 failed their scenario criteria and
+SR-013 was D-29 under-covered. Two facts qualified it:
 
 - **The cage's core safety property holds under the camera.** Across all 830
   enforcement runs there are **0 road-edge contacts**, and M-S1 < `d_max` in every
@@ -164,8 +188,10 @@ SR-013 is D-29 under-covered. Two facts qualify it:
 The F-track SR verdicts (SR-001..011) above are **unaffected** — the F4 evidence is
 frozen; the E re-runs of F-track scenarios are reported only as a contrast in §8.9.
 
-> ⁴ **SR-012 / SR-014 (camera lane-keeping / estimator plausibility) — Not satisfied
-> as-scored; own-criterion reconciliation flagged.** Both veto via the same two
+> ⁴ **SR-012 / SR-014 (camera lane-keeping / estimator plausibility) — GE4-V2: Satisfied**
+> (SC-PERT-04..13 pass in enforcement, SC-PERT-08 false-lane 25/25, D-29 coverage closed by
+> the SC-PERT-08/09/10 rep bump; D-45 criteria). *Historical 139k reading:* Not satisfied
+> as-scored; own-criterion reconciliation flagged. Both vetoed via the same two
 > scenarios. SC-EDGE-02 (**13/13** enforcement fails) and SC-PERT-04 (**20/20**) fail
 > *only* on the `emergency == False` clause: M-S1 < `d_max`, no road-edge contact —
 > the cage executed its SR-013 controlled stop on a camera-degraded percept and the
@@ -182,13 +208,13 @@ frozen; the E re-runs of F-track scenarios are reported only as a contrast in §
 > `criterion_eval.labelled_arms`), so the 297k run scores it. SC-PERT-03 (finetune arms,
 > not level-resolvable) stays grouped by the driver (separate item).
 >
-> ⁵ **SR-013 (safe degradation on perception loss) — verified on its scenario, D-29
-> under-covered.** SC-PERT-07 passes **20/20** in enforcement: the open-loop stop
-> fires within budget, M-S1 < `d_max`, no edge contact — the behaviour is cleanly
-> demonstrated. The roll-up still lists SR-013 INCOMPLETE because a single adverse
-> scenario/family does not meet the CL-A D-29 gate (≥ 25 runs in a nominal *and* an
-> adverse family). Not a failure: it needs broader coverage (or a CL re-classification),
-> a GE4 follow-up.
+> ⁵ **SR-013 (safe degradation on perception loss) — GE4-V2: Satisfied** (SC-PERT-07
+> 25/25 + SC-PERT-13 40/40 in enforcement; the D-46 two-sided coverage closes the D-29
+> gate). *Historical 139k reading:* verified on its scenario, D-29 under-covered —
+> SC-PERT-07 passed **20/20** in enforcement (the open-loop stop fired within budget,
+> M-S1 < `d_max`, no edge contact) but the roll-up listed SR-013 INCOMPLETE because a
+> single adverse scenario/family did not meet the CL-A D-29 gate (≥ 25 runs in a nominal
+> *and* an adverse family). Not a failure: it needed the broader coverage V2 supplied.
 >
 > ⁶ **SC-PERT-11 / 12 / 13 (markings / image / combined camera degradation) — added
 > 2026-06-24, not yet run.** New complex_b camera scenarios (`scenarios_complex_b/`):
@@ -197,11 +223,12 @@ frozen; the E re-runs of F-track scenarios are reported only as a contrast in §
 > both compounded. They broaden the SR-012 / SR-014 adverse family and give **SR-013 a
 > second adverse scenario** (SC-PERT-13), addressing the ⁵ adverse-side under-coverage.
 > All three score under degraded markings as a face of **H-10** (in-ODD per ODD-2 §5.4).
-> **No campaign evidence yet** — the verdicts above are the 139k roll-up; these are scored
-> when the 297k GE4 campaign runs. The nominal-family gap for SR-012/013/014 is now closed
-> by **D-46**: SC-NOM-01 (clean input) is their nominal family — the no-false-trigger /
-> baseline-competence arm — with SC-PERT-04..13 the adverse arm, so all three are
-> D-29-feasible (pending the 297k run that scores them).
+> **Scored in GE4-V2**: SC-PERT-11 **30/30**, SC-PERT-12 **40/40**, SC-PERT-13 **40/40**
+> in enforcement — vs monitoring 0/30, 23/40 and 0/40, the cleanest in-ODD measure of the
+> cage's value under camera degradation (the SR-013/Trigger-8 stop prevents the excursions
+> the bare policy commits). The nominal-family gap for SR-012/013/014 is closed by
+> **D-46**: SC-NOM-01 (clean input) is their nominal family — the no-false-trigger /
+> baseline-competence arm — with SC-PERT-04..13 the adverse arm, so all three meet D-29.
 >
 > ⁷ **SR-002 / SR-003 (heading stability / predictive TTLC) — Satisfied on own criterion; the
 > SC-EDGE-01 "fail" is an oval-legacy performance bar (D-39 class, D-47).** SC-EDGE-01 (15°

@@ -3,10 +3,14 @@
 Run with Isaac Sim's bundled python (which must also have stable-baselines3 +
 gymnasium installed):
 
-    # Track-E camera PPO on complex_b is now the DEFAULT (train_ppo_camera.yaml +
-    # complex_b lane/road centerlines + --track complex_b). 1st run: re-import USD.
+    # DEFAULT (D-50): full-authority 2-D action (steering + throttle) camera PPO
+    # on the multi-circuit scene complex_b,complex_d,complex_e
+    # (train_isaac_2d.yaml). 1st run: re-import USD.
     BRINGUP_REIMPORT=1 ~/isaacsim/python.sh tools/isaac_train.py
-    # F3 state-vector on the oval — override the defaults:
+    # Single-track 1-D camera PPO (the frozen Gazebo E-main recipe):
+    ~/isaacsim/python.sh tools/isaac_train.py --track complex_b \\
+        --train-config src/cobraflex_rl/config/train_ppo_camera.yaml
+    # F3 state-vector on the oval — override everything:
     ~/isaacsim/python.sh tools/isaac_train.py --track oval \\
         --train-config      src/cobraflex_rl/config/train_ppo.yaml \\
         --centerline-config src/cobraflex_rl/config/oval_right_lane_centerline.yaml \\
@@ -24,9 +28,15 @@ decoupled (they share only the physics scene, ``tools/isaac_scene.py``).
 The SB3 wiring (PPO, frame-stack for the camera obs, callbacks, reproducibility
 metadata) mirrors ``cobraflex_rl/train_ppo.py`` so checkpoints are comparable.
 
-NB: ``--track`` (or the ``TRACK`` env) selects the *visual* scene track
-(isaac_scene.build_world) and ``--centerline-config`` selects the env's *geometry*
-— they must correspond; the defaults pair them for complex_b.
+Track selection: ``--track`` (or the ``TRACK`` env) selects the *visual* scene
+track(s) (isaac_scene.build_world). A comma-separated list builds a multi-track
+scene and the env samples one circuit per episode (D-50); the per-track env
+geometry is then resolved BY CONVENTION from
+``src/cobraflex_rl/config/<name>_right_lane_centerline.yaml`` (reward lane) +
+``<name>_centerline.yaml`` (road centre, off-road check), shifted by the same
+world offsets the scene applied. With a single track the explicit
+``--centerline-config``/``--road-centerline-config`` flags select the geometry
+as before — they must correspond to the track.
 """
 import argparse
 import os
@@ -203,24 +213,31 @@ class ObsPreviewCallback(BaseCallback):
 
 def parse_args(argv):
     p = argparse.ArgumentParser(description="In-process Isaac-Sim PPO trainer.")
-    # Track 'E' (camera) is the active track; its config carries the PPO stability
-    # keys (target_kl, lr_schedule, normalize_reward, clip_range_vf). train_ppo.yaml
-    # is the old state-vector (F-track) config and lacks them.
+    # The Isaac 2-D full-authority config (D-50) is the default; it carries the
+    # PPO stability keys (target_kl, lr_schedule, normalize_reward,
+    # clip_range_vf) plus the `action: steer_throttle` block. Override with
+    # train_ppo_camera.yaml (frozen 1-D E-main recipe) or train_ppo.yaml (F3
+    # state-vector, no stability keys).
     p.add_argument("--train-config", type=str,
-                   default=os.path.join(REPO, "src/cobraflex_rl/config/train_ppo_camera.yaml"))
-    # complex_b is the active camera track; pair its lane + road centerlines by
-    # default. Run a different track with TRACK=<scene> and matching centerlines.
+                   default=os.path.join(REPO, "src/cobraflex_rl/config/train_isaac_2d.yaml"))
+    # Single-track geometry flags. With a multi-track --track (comma list) these
+    # are IGNORED — the per-track geometry comes from the config-dir naming
+    # convention instead (see module docstring).
     p.add_argument("--centerline-config", type=str,
                    default=os.path.join(
                        REPO, "src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml"))
     p.add_argument("--road-centerline-config", type=str,
                    default=os.path.join(REPO, "src/cobraflex_rl/config/complex_b_centerline.yaml"),
                    help="Road-centre centerline YAML for off-road geometry "
-                        "(self-approaching circuits, e.g. complex_b).")
-    p.add_argument("--track", type=str, default=os.environ.get("TRACK", "complex_b"),
-                   help="Visual scene track for isaac_scene.build_world (sets the "
-                        "TRACK env). Defaults to the TRACK env if set, else complex_b. "
-                        "Must match the --centerline-config geometry.")
+                        "(self-approaching circuits, e.g. complex_b). Single-track only.")
+    p.add_argument("--track", type=str,
+                   default=os.environ.get("TRACK", "complex_b,complex_d,complex_e"),
+                   help="Visual scene track(s) for isaac_scene.build_world (sets "
+                        "the TRACK env). A comma-separated list builds a "
+                        "multi-track scene with per-episode circuit sampling "
+                        "(D-50). Defaults to the TRACK env if set, else the "
+                        "CV-safe trio complex_b,complex_d,complex_e. A single "
+                        "name must match the --centerline-config geometry.")
     p.add_argument("--model-path", type=str, default=None)
     p.add_argument("--run-id", type=str, default=None)
     p.add_argument("--resume-from", type=str, default=None)
@@ -271,7 +288,7 @@ def build_isaac_interface(train_cfg, render_always: bool = False, seed: int = 0)
     obs_cfg = dict(train_cfg.get("observation", {}))
     camera_obs = str(obs_cfg.get("type", "state")) == "camera"
 
-    world, _track_meta = isaac_scene.build_world()
+    world, track_metas = isaac_scene.build_world()
     stage = omni.usd.get_context().get_stage()
 
     # The Lane Cam USD prim is a stage edit — do it before world.reset(). The
@@ -340,11 +357,11 @@ def build_isaac_interface(train_cfg, render_always: bool = False, seed: int = 0)
     # Warm-up: settle physics + populate the first camera frame before training.
     for _ in range(5):
         interface.wait_for_initial_data()
-    return interface, camera_obs
+    return interface, camera_obs, track_metas
 
 
 def write_metadata(run_dir, run_id, seed, train_cfg, centerline_path, cage_yaml,
-                   model_path, total_timesteps, status):
+                   model_path, total_timesteps, status, circuits_meta=None):
     metadata = {
         "run_id": run_id,
         "scenario_id": SCENARIO_ID,
@@ -353,7 +370,12 @@ def write_metadata(run_dir, run_id, seed, train_cfg, centerline_path, cage_yaml,
         "git_commit": git_commit(run_dir),
         "cage_yaml": str(cage_yaml),
         "cage_yaml_hash": sha256_file(cage_yaml),
-        "scenario_yaml_hash": sha256_file(centerline_path),
+        # Single-track runs: hash of the one centerline YAML (legacy field).
+        # Multi-track runs record per-circuit paths + hashes in "circuits".
+        "scenario_yaml_hash": (
+            sha256_file(centerline_path) if circuits_meta is None else None
+        ),
+        "circuits": circuits_meta,
         "policy_checkpoint": str(resolve_save_path(model_path)),
         "policy_checkpoint_hash": sha256_file(resolve_save_path(model_path)),
         "seed": seed,
@@ -377,6 +399,7 @@ def write_metadata(run_dir, run_id, seed, train_cfg, centerline_path, cage_yaml,
         },
         "policy": str(train_cfg.get("policy", "MlpPolicy")),
         "observation": dict(train_cfg.get("observation", {})),
+        "action": dict(train_cfg.get("action", {})),
         "domain_randomization": dict(train_cfg.get("domain_randomization", {})),
         "dynamics_randomization": dict(train_cfg.get("dynamics_randomization", {})),
         "scene_randomization": dict(train_cfg.get("scene_randomization", {})),
@@ -394,7 +417,12 @@ def main(argv):
     # is coherent (complex_b), not isaac_scene's bare complex_a fallback.
     os.environ["TRACK"] = cli.track
     train_cfg = load_yaml(cli.train_config)
-    centerline_cfg = load_yaml(cli.centerline_config)
+    track_names = isaac_scene.parse_track_names(cli.track)
+    multi_track = len(track_names) > 1
+    if multi_track:
+        print(f"[isaac_train] multi-track scene {track_names}: per-episode "
+              "circuit sampling; --centerline-config/--road-centerline-config "
+              "ignored (config-dir naming convention applies).")
 
     seed = int(train_cfg.get("seed", 42))
     total_timesteps = int(train_cfg.get("total_timesteps", 50000))
@@ -408,30 +436,41 @@ def main(argv):
     model_path = model_path.expanduser()
     model_path.parent.mkdir(parents=True, exist_ok=True)
 
-    road_centerline_points = None
-    if cli.road_centerline_config:
-        road_centerline_points = np.asarray(
-            load_yaml(cli.road_centerline_config)["centerline"]["points"], dtype=float)
-
     status = "failed"
+    circuits_meta = None
     env = None
     interface = None
     try:
-        interface, camera_obs = build_isaac_interface(
+        interface, camera_obs, track_metas = build_isaac_interface(
             train_cfg, render_always=(cli.render == "gui"), seed=seed)
 
-        centerline_points = np.asarray(centerline_cfg["centerline"]["points"], dtype=float)
-        lane_width = float(centerline_cfg["lane_width"])
-        road_width = float(centerline_cfg.get("road_width", lane_width))
-
-        env = GazeboLaneEnv(
-            ros_interface=interface,
-            centerline=centerline_points,
-            lane_width=lane_width,
-            road_width=road_width,
-            cfg=train_cfg,
-            road_centerline=road_centerline_points,
-        )
+        if multi_track:
+            circuits, circuits_meta = isaac_scene.load_circuits(
+                track_names, track_metas)
+            env = GazeboLaneEnv(
+                ros_interface=interface,
+                cfg=train_cfg,
+                circuits=circuits,
+            )
+        else:
+            centerline_cfg = load_yaml(cli.centerline_config)
+            road_centerline_points = None
+            if cli.road_centerline_config:
+                road_centerline_points = np.asarray(
+                    load_yaml(cli.road_centerline_config)["centerline"]["points"],
+                    dtype=float)
+            centerline_points = np.asarray(
+                centerline_cfg["centerline"]["points"], dtype=float)
+            lane_width = float(centerline_cfg["lane_width"])
+            road_width = float(centerline_cfg.get("road_width", lane_width))
+            env = GazeboLaneEnv(
+                ros_interface=interface,
+                centerline=centerline_points,
+                lane_width=lane_width,
+                road_width=road_width,
+                cfg=train_cfg,
+                road_centerline=road_centerline_points,
+            )
         check_env(env, warn=True, skip_render_check=True)
 
         policy_name = str(train_cfg.get("policy", "MlpPolicy"))
@@ -525,7 +564,8 @@ def main(argv):
         if interface is not None:
             interface.destroy_node()
         write_metadata(run_dir, run_id, seed, train_cfg, Path(cli.centerline_config),
-                       cage_yaml, model_path, total_timesteps, status)
+                       cage_yaml, model_path, total_timesteps, status,
+                       circuits_meta=circuits_meta)
     return 0 if status == "completed" else 1
 
 

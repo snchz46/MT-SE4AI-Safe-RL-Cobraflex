@@ -1,0 +1,20 @@
+name: complex_c
+texture: complex_c.png
+px_per_m: 500
+lanes: 2
+road_width: 0.52
+size_m:
+- 8.2292
+- 5.166
+center_m:
+- -0.0454
+- 0.1853
+world_bbox:
+- -4.16
+- -2.3978
+- 4.0692
+- 2.7683
+start_xy:
+- -3.3
+- 0.3
+start_yaw: 1.5537

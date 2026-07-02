@@ -5,12 +5,15 @@ circuit. The E-main policy `cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip` w
 trained on complex_b and must be evaluated there. The oval set in `../scenarios/`
 is **frozen F4 / 139k-campaign evidence and is left untouched**.
 
-> **GE4-on-297k campaign DONE (2026-06-27).** 1940 runs, seed 2024, 28 scenarios ×
-> {enf, mon}, 0 errors → `experiments/sim/campaign_e_297k/`. **Global `NOT SATISFIED`**:
-> in-ODD (NOM+PERT) clean and the cage adds value, but the camera cage cannot recover
-> deep out-of-ODD lateral starts (125 enf road-edge contacts, all in SC-EDGE-02/05 +
-> SC-FRONT-01/03/04/06; D-43 cost). SC-EDGE-05 determinate, SC-FRONT-07 flip PASS. Full
-> verdict: docs/11 §8.4, docs/07. The "STILL OPEN" items below are now resolved/historical.
+> **GE4-V2 campaign = the verdict of record (2026-06-28).** 1970 runs, seed 2024, 28
+> scenarios × {enf, mon}, 0 errors → `experiments/sim/campaign_e_v2/`. **Global
+> `NOT SATISFIED` (literal), blocking SR-002/003 only** (the SC-EDGE-01 oval-legacy 2.0 s
+> recovery-time clause; Satisfied on own criterion, D-47) — no safety predicate breached.
+> **SR-001 Satisfied** (ruta-1: SC-EDGE-02 IC clipped to the ODD `[0.10, 0.1225]` → 28/30);
+> SR-012/013/014 Satisfied; SC-EDGE-05 grid split 30/85 in-ODD (SR-010, genuine CL-B);
+> SC-FRONT-07 flip PASS. **G4 closed 02.07.2026.** V1 (`campaign_e_297k/`, 1940 runs,
+> 2026-06-27, blocked SR-001/002/003) is historical. Full verdict: docs/11 §8.4, docs/07.
+> The "STILL OPEN" items below are now resolved/historical.
 
 ## What is done (mechanical, correct)
 Every scenario's `track:` block is re-pointed to complex_b:
@@ -31,10 +34,10 @@ SC-EDGE-03, SC-PERT-01, SC-PERT-02, SC-PERT-04, SC-PERT-06, SC-PERT-09, SC-PERT-
 so the run passes if the safety limit held (`M-S1 < 0.16`, plus `road_edge_contact ==
 False` where present). A real breach (`M-S1 >= d_max` / road-edge) still fails.
 SC-PERT-07 (SR-013, stop *required*: `emergency == True`) and the nominal scenarios
-(gated by `M-P2 == 1`) are unchanged. This clears the SR-CL-A vetoes behind the 139k
-`NOT SATISFIED`, but is **not** sufficient for `SATISFIED`: SR-013's D-29 family
-coverage gap and the SC-PERT-05 / SC-EDGE-05 indeterminates remain. See
-`docs/DECISIONS.md` D-45.
+(gated by `M-P2 == 1`) are unchanged. This cleared the SR-CL-A vetoes behind the 139k
+`NOT SATISFIED`; the then-remaining gaps (SR-013's D-29 family coverage, the SC-PERT-05
+/ SC-EDGE-05 indeterminates) all closed by GE4-V2 (rep bump 20→25, `labelled_arms`
+wired, grid ICs injected). See `docs/DECISIONS.md` D-45.
 
 ## Geometry pass (start points) — DONE; confirmed via GE4-297k traces
 Static analysis of `complex_b_right_lane_centerline.yaml` (closed loop, perimeter

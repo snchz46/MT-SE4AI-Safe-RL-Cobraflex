@@ -11,20 +11,20 @@ H-02,SR-003,C-03,cage_rule,SC-EDGE-01,M-S4,satisfied,tbd,experiments/sim/campaig
 H-03,SR-004,C-04,cage_rule,SC-NOM-02,M-P3,satisfied,tbd,experiments/sim/campaign/campaign_report.json,speed compliance
 H-03,SR-004,C-04,cage_rule,SC-EDGE-03,M-P3,satisfied,tbd,experiments/sim/campaign/campaign_report.json,speed compliance under perturbation
 H-04,SR-005,C-05,cage_rule,SC-EDGE-04,M-S3,satisfied,tbd,experiments/sim/campaign/campaign_report.json,emergency mode for compound state
-H-05,SR-006,C-06,cage_rule,SC-NOM-01,M-I5,tbd,tbd,experiments/sim/campaign/campaign_report.json,actuator smoothness (rate limiter always active); SR-006 verdict held TBD — see docs/07 note 1
-H-05,SR-006,C-06,cage_rule,SC-NOM-02,M-I5,tbd,tbd,experiments/sim/campaign/campaign_report.json,actuator smoothness; SR-006 verdict held TBD — see docs/07 note 1
+H-05,SR-006,C-06,cage_rule,SC-NOM-01,M-I5,satisfied,tbd,experiments/sim/campaign/campaign_report.json,actuator smoothness scored on its own metric (tools/sr006_smoothness.py; D-39) — see docs/07 note 1
+H-05,SR-006,C-06,cage_rule,SC-NOM-02,M-I5,satisfied,tbd,experiments/sim/campaign/campaign_report.json,actuator smoothness scored on its own metric (D-39) — see docs/07 note 1
 H-06,SR-007,C-05,cage_rule,SC-PERT-02,M-S3,satisfied,tbd,experiments/sim/campaign/campaign_report.json,state validity triggers
 H-07,SR-005,C-05,cage_rule,SC-EDGE-04,M-S3,satisfied,tbd,experiments/sim/campaign/campaign_report.json,emergency mode partial coverage
 H-07,SR-008,C-05,cage_rule,SC-NOM-03,M-S3,satisfied,tbd,experiments/sim/campaign/campaign_report.json,controlled stop
 H-07,SR-008,C-05,cage_rule,SC-EDGE-04,M-S3,satisfied,tbd,experiments/sim/campaign/campaign_report.json,controlled stop
-H-10,SR-012,C-01,cage_rule,SC-PERT-04,M-S1,tbd,tbd,,track E (D-43); cage on CV state; E-eval campaign pending
-H-10,SR-012,C-02,cage_rule,SC-PERT-05,M-S1,tbd,tbd,,track E (D-43); cage on CV state; E-eval campaign pending
-H-10,SR-012,C-03,cage_rule,SC-PERT-06,M-S2,tbd,tbd,,track E (D-43); cage on CV state; E-eval campaign pending
-H-10,SR-012,,training,SC-PERT-04,M-S2,tbd,tbd,,track E (D-43); H-10 visual domain randomization (training-side)
-H-10,SR-012,C-01,cage_rule,SC-PERT-09,M-S1,tbd,tbd,,track E (D-43); world-variant appearance shift (worn)
-H-10,SR-012,C-01,cage_rule,SC-PERT-10,M-S1,tbd,tbd,,track E (D-43); world-variant appearance shift (wet)
-H-11,SR-013,C-05,cage_rule,SC-PERT-07,M-S3,tbd,tbd,,track E (D-43); CV-estimator health -> open-loop stop (Trigger 8)
-H-12,SR-014,C-05,cage_rule,SC-PERT-08,M-S1,tbd,tbd,,track E (D-43); cage CV-misdetection (false lane)
-H-12,SR-014,C-05,cage_rule,SC-PERT-08,M-S3,tbd,tbd,,track E (D-43); plausibility check -> controlled stop
-H-12,SR-014,C-05,cage_rule,SC-PERT-09,M-S3,tbd,tbd,,track E (D-43); plausibility under texture clutter (worn)
-H-12,SR-014,C-05,cage_rule,SC-PERT-10,M-S3,tbd,tbd,,track E (D-43); plausibility under texture clutter (wet)
+H-10,SR-012,C-01,cage_rule,SC-PERT-04,M-S1,satisfied,tbd,experiments/sim/campaign_e_v2/campaign_report.json,track E (D-43); GE4-V2 (297k E-main); cage on CV state
+H-10,SR-012,C-02,cage_rule,SC-PERT-05,M-S1,satisfied,tbd,experiments/sim/campaign_e_v2/campaign_report.json,track E (D-43); GE4-V2; labelled low:/high: arms wired
+H-10,SR-012,C-03,cage_rule,SC-PERT-06,M-S2,satisfied,tbd,experiments/sim/campaign_e_v2/campaign_report.json,track E (D-43); GE4-V2; cage on CV state
+H-10,SR-012,,training,SC-PERT-04,M-S2,satisfied,tbd,experiments/sim/campaign_e_v2/campaign_report.json,track E (D-43); GE4-V2; H-10 visual domain randomization (training-side)
+H-10,SR-012,C-01,cage_rule,SC-PERT-09,M-S1,satisfied,tbd,experiments/sim/campaign_e_v2/campaign_report.json,track E (D-43); GE4-V2; world-variant appearance shift (worn); enf 25/25 vs mon 0/25
+H-10,SR-012,C-01,cage_rule,SC-PERT-10,M-S1,satisfied,tbd,experiments/sim/campaign_e_v2/campaign_report.json,track E (D-43); GE4-V2; world-variant appearance shift (wet)
+H-11,SR-013,C-05,cage_rule,SC-PERT-07,M-S3,satisfied,tbd,experiments/sim/campaign_e_v2/campaign_report.json,track E (D-43); GE4-V2; CV-estimator health -> open-loop stop (Trigger 8); 25/25
+H-12,SR-014,C-05,cage_rule,SC-PERT-08,M-S1,satisfied,tbd,experiments/sim/campaign_e_v2/campaign_report.json,track E (D-43); GE4-V2; cage CV-misdetection (false lane); 25/25
+H-12,SR-014,C-05,cage_rule,SC-PERT-08,M-S3,satisfied,tbd,experiments/sim/campaign_e_v2/campaign_report.json,track E (D-43); GE4-V2; plausibility check -> controlled stop
+H-12,SR-014,C-05,cage_rule,SC-PERT-09,M-S3,satisfied,tbd,experiments/sim/campaign_e_v2/campaign_report.json,track E (D-43); GE4-V2; plausibility under texture clutter (worn)
+H-12,SR-014,C-05,cage_rule,SC-PERT-10,M-S3,satisfied,tbd,experiments/sim/campaign_e_v2/campaign_report.json,track E (D-43); GE4-V2; plausibility under texture clutter (wet)

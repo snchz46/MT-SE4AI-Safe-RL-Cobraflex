@@ -40,6 +40,52 @@ LANE_USEFUL_M = 0.245
 MARGIN_M = 0.6                 # off-road border around the loop
 SAMPLE_SPACING_M = 0.05        # centreline resample spacing
 
+def _complex_e_cw_waypoints(step=0.25, r_end=1.4, cx=2.9, cy=0.2, y_top=1.6,
+                            amp=0.145, half_period=1.305, w_halfspan=2.61):
+    """complex_e v2 (D-51): the CLOCKWISE member of the CV-safe trio.
+
+    Mirrored handedness vs complex_b/d (both CCW), so the multi-track trainer
+    sees right-turn-dominant laps too. CW means the driven right lane runs
+    INSIDE the end U-turns, so the ends must be wide: semicircles R=1.4 m
+    centred (±cx, cy) leave a driven radius ≈ 1.28 m. The bottom is a cosine
+    "W" (lows at ±half_period, central counter-steer crest at 0; nominal
+    κ_max = amp·(π/half_period)² → R 1.19 m) joined to the arc bottoms through
+    short straight buffers at y = cy − r_end (the joins land on horizontal-
+    tangent cosine peaks). Measured on the resampled centreline: R_min
+    1.079 m centre / 0.956 m driven right lane — above the docs/12 §4.7
+    ~0.9 m monocular boundary.
+
+    Sampled ANALYTICALLY every ~step m (not sparse hand points) because
+    Catmull-Rom through sparse waypoints kinks wherever curvature flips sign:
+    every sparse variant of this shape measured R_min ~0.5–0.8 m at the
+    arc→W joins; through ~0.25 m samples the spline follows the analytic
+    curve to ~1 %.
+    """
+    pts = []
+    n = int(round(2 * cx / step))                      # top straight, L -> R
+    for i in range(n):
+        pts.append((-cx + i * (2 * cx / n), y_top))
+    n = int(round(math.pi * r_end / step))             # right end, +90 -> -90 deg
+    for i in range(n):
+        a = math.pi / 2 - i * math.pi / n
+        pts.append((cx + r_end * math.cos(a), cy + r_end * math.sin(a)))
+    y0 = cy - r_end                                    # W join level (arc bottom)
+    nb = max(1, int(round((cx - w_halfspan) / step)))  # straight buffer, in
+    for i in range(nb):
+        pts.append((cx - i * (cx - w_halfspan) / nb, y0))
+    n = int(round(2 * w_halfspan / step))              # cosine W, R -> L
+    for i in range(n):
+        x = w_halfspan - i * (2 * w_halfspan / n)
+        pts.append((x, y0 - amp + amp * math.cos(math.pi * x / half_period)))
+    for i in range(nb):                                # straight buffer, out
+        pts.append((-w_halfspan - i * (cx - w_halfspan) / nb, y0))
+    n = int(round(math.pi * r_end / step))             # left end, -90 -> +90 deg
+    for i in range(n):
+        a = -math.pi / 2 - i * math.pi / n
+        pts.append((-cx + r_end * math.cos(a), cy + r_end * math.sin(a)))
+    return pts
+
+
 # Closed-loop waypoint presets (metres). Catmull-Rom through them, so colinear
 # runs render as straights and the curvature (handedness + radius) varies.
 TRACKS = {
@@ -77,9 +123,9 @@ TRACKS = {
     # complex_b philosophy (long straight + wide U-turn ends + counter-steer
     # features, both handedness) with driven right-lane R_min ≥ 0.90 m, so the
     # camera-track cage stays honest:
-    #   complex_d  R_min centre 0.884 / driven right lane 0.932 m
-    #   complex_e  R_min centre 0.787 / driven right lane 0.907 m
-    # (complex_b, the proven GE4-V2 circuit, is 0.876 / 0.998 m.)
+    #   complex_d  R_min centre 0.884 / driven right lane 0.932 m  (CCW)
+    #   complex_e  R_min centre 1.079 / driven right lane 0.956 m  (CW, v2 D-51)
+    # (complex_b, the proven GE4-V2 circuit, is 0.876 / 0.998 m, CCW.)
     #
     # complex_d — long bottom straight; the top is a single wide, shallow
     # central valley (a "V", vs complex_b's two-hump "M"): one pronounced
@@ -92,17 +138,16 @@ TRACKS = {
         (-1.1, 1.25), (-2.2, 1.55),
         (-3.4, 1.1), (-4.1, 0.2), (-3.9, -0.9),
     ],
-    # complex_e — mirrored philosophy: the long straight is on TOP and the
-    # bottom carries two very gentle inward dents (a soft "W"), so the
-    # straight→technical-section order the agent meets per lap differs from
-    # complex_b/d. Counter-clockwise like the others (right lane outside the
-    # U-turns — what keeps the driven radius ≥ 0.9 m).
-    "complex_e": [
-        (-3.8, 0.95), (-4.1, 0.0), (-3.5, -1.0),
-        (-1.5, -1.35), (0.0, -1.65), (1.5, -1.35),
-        (3.5, -1.0), (4.1, 0.0), (3.8, 0.95),
-        (3.0, 1.6), (1.5, 1.6), (0.0, 1.6), (-1.5, 1.6), (-3.0, 1.6),
-    ],
+    # complex_e v2 (D-51) — the CLOCKWISE circuit: complex_b and complex_d are
+    # both CCW (driven turning arc ~13 m left vs ~2 m right EACH), so the
+    # original CCW complex_e made the whole training trio left-turn-dominant
+    # (8:1). This one is driven clockwise — top straight L->R, wide R=1.4 m
+    # end U-turns (the driven right lane is now INSIDE them), cosine-"W"
+    # bottom with a central counter-steer crest — flipping every lap to
+    # right-turn-dominant (driven arc 2.6 m left / 10.5 m right; trio balance
+    # now ~2:1). Waypoints come from the analytic builder above (dense
+    # sampling — sparse Catmull-Rom kinks at curvature sign flips).
+    "complex_e": _complex_e_cw_waypoints(),
 }
 
 

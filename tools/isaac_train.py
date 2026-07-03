@@ -537,8 +537,10 @@ def main(argv):
                 csv_path=run_dir / "action_samples.csv",
                 sample_every=int(train_cfg.get("action_sample_every", 10)),
             ),
+            # Per-run checkpoint prefix: the old fixed "cobraflex_ppo_lane" made
+            # every run overwrite the previous run's same-step checkpoints.
             CheckpointCallback(save_freq=checkpoint_freq, save_path=str(checkpoints_dir),
-                               name_prefix="cobraflex_ppo_lane",
+                               name_prefix=run_id,
                                save_vecnormalize=normalize_reward),
         ]
         if cli.show_obs:

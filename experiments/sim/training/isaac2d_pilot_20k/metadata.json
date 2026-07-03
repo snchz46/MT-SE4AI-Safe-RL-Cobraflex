@@ -1,0 +1,125 @@
+{
+  "run_id": "isaac2d_pilot_20k",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-07-03T07:34:40.347082+00:00",
+  "git_commit": "6e1e9f614fc9b3940033cbe47fd204fee6d56667",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "scenario_yaml_hash": null,
+  "circuits": [
+    {
+      "name": "complex_b",
+      "offset_xy": [
+        0.0,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml",
+      "lane_centerline_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_centerline.yaml",
+      "road_centerline_hash": "90367eae02a204834bedfb737c0dbebe4fe4b30e1be75ca2c52d37411408bd55"
+    },
+    {
+      "name": "complex_d",
+      "offset_xy": [
+        24.7655,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_d_right_lane_centerline.yaml",
+      "lane_centerline_hash": "61f587eea1127e0bc640c6173d118eb62feb00f46cc7ba92de49a6f0938aa297",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_d_centerline.yaml",
+      "road_centerline_hash": "41a808eddae82604e5c74c0fed8cd3098d3e10680a11503b1734eced5260ab22"
+    },
+    {
+      "name": "complex_e",
+      "offset_xy": [
+        49.724,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_e_right_lane_centerline.yaml",
+      "lane_centerline_hash": "3418bc66ccd40d03dc884d917115cbae64d0221b2a1dd0437f1a93f04be7be41",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_e_centerline.yaml",
+      "road_centerline_hash": "bf7ebe81dbc19b76c63072c4892d01987180f4f8da72d537c73160f221dd0e9e"
+    }
+  ],
+  "policy_checkpoint": "policy/checkpoints/cobraflex_ppo_isaac2d_pilot_20k.zip",
+  "policy_checkpoint_hash": "9a375c52b91f07533efe803dbc67d86c6a3f778276c63e9f4866b57321d2d0d3",
+  "seed": 2024,
+  "platform": "sim-isaac",
+  "total_timesteps": 20000,
+  "hyperparameters": {
+    "learning_rate": 0.0003,
+    "lr_schedule": "linear",
+    "gamma": 0.99,
+    "n_steps": 1024,
+    "batch_size": 64,
+    "n_epochs": 10,
+    "gae_lambda": 0.95,
+    "clip_range": 0.2,
+    "ent_coef": 0.0,
+    "vf_coef": 0.5,
+    "max_grad_norm": 0.5,
+    "target_kl": 0.5,
+    "clip_range_vf": 0.2,
+    "normalize_reward": true
+  },
+  "policy": "CnnPolicy",
+  "observation": {
+    "type": "camera",
+    "camera": {
+      "topic": "/camera/image_raw_lane",
+      "width": 84,
+      "height": 84,
+      "grayscale": true,
+      "frame_stack": 4
+    }
+  },
+  "action": {
+    "type": "steer_throttle",
+    "max_speed_mps": 0.5,
+    "throttle_deadband": 0.05
+  },
+  "domain_randomization": {
+    "enabled": true,
+    "p_degrade": 0.5,
+    "level_range": [
+      0.2,
+      0.8
+    ]
+  },
+  "dynamics_randomization": {
+    "enabled": true,
+    "friction_range": [
+      0.04,
+      0.07
+    ],
+    "mass_scale_range": [
+      0.85,
+      1.15
+    ],
+    "yaw_scale_range": [
+      0.8,
+      1.2
+    ],
+    "latency_steps_range": [
+      0,
+      2
+    ]
+  },
+  "scene_randomization": {
+    "enabled": true,
+    "dome_intensity_scale": [
+      0.6,
+      1.4
+    ],
+    "sun_intensity_scale": [
+      0.5,
+      1.5
+    ],
+    "light_tint": 0.1,
+    "asphalt_jitter": 0.08,
+    "line_jitter": 0.15,
+    "grass_jitter": 0.1
+  },
+  "status": "completed"
+}

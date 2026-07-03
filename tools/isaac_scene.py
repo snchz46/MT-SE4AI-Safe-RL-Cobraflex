@@ -21,6 +21,7 @@ owns ``SimulationApp``; importing this module is therefore always safe.
 """
 import math
 import os
+import shutil
 
 # --- Drivetrain (matches src/cobraflex/urdf/robot.gazebo and the handover spec) -
 WHEEL_RADIUS = 0.03725          # m
@@ -109,6 +110,14 @@ def ensure_robot_usd() -> str:
     if os.path.exists(out) and os.environ.get("BRINGUP_REIMPORT", "0") == "0":
         return out
     os.makedirs(USD_OUT, exist_ok=True)
+    # The Isaac 6 importer refuses to overwrite an existing package and writes
+    # a suffixed cobraflex_isaac_1/ beside it instead — that run then uses the
+    # suffixed copy while the canonical (git-tracked) package and every later
+    # cached run silently keep the stale USD. Remove it so BRINGUP_REIMPORT=1
+    # genuinely replaces the canonical package.
+    pkg_dir = os.path.dirname(out)
+    if os.path.isdir(pkg_dir):
+        shutil.rmtree(pkg_dir)
     cfg = URDFImporterConfig(urdf_path=URDF, usd_path=USD_OUT,
                              merge_fixed_joints=False, merge_mesh=False, fix_base=False)
     return URDFImporter(cfg).import_urdf()

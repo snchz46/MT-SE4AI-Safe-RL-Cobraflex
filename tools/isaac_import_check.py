@@ -10,6 +10,7 @@ Writes the converted asset under src/cobraflex/urdf/isaac_usd/ and exits non-zer
 on any failure.
 """
 import os
+import shutil
 import sys
 
 from isaacsim import SimulationApp
@@ -54,6 +55,12 @@ def main() -> int:
     print(f"[check] URDF: {URDF}")
     print(f"[check] exists: {os.path.exists(URDF)}")
     os.makedirs(USD_OUT, exist_ok=True)
+    # Isaac 6's importer suffixes (cobraflex_isaac_1/) instead of overwriting;
+    # remove the existing package so this check refreshes the canonical USD
+    # in place (same replace-not-suffix contract as isaac_scene.ensure_robot_usd).
+    pkg_dir = os.path.join(USD_OUT, "cobraflex_isaac")
+    if os.path.isdir(pkg_dir):
+        shutil.rmtree(pkg_dir)
 
     cfg = URDFImporterConfig(
         urdf_path=URDF,

@@ -31,6 +31,202 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [03.07.2026] — Pre-1M checkpoint hygiene: `checkpoint_freq: 25000` in train_isaac_2d.yaml + per-run checkpoint prefix in isaac_train.py
+
+**Document(s) affected:** `src/cobraflex_rl/config/train_isaac_2d.yaml` (new `checkpoint_freq` key + corrected duration comment); `tools/isaac_train.py` (CheckpointCallback `name_prefix` = run id).
+**Phase:** posterior (Isaac / sim-to-real, D-44/D-50) — tooling, before the 1M run
+**Gate context:** after Gate G4
+**Author:** Samuel Sanchez
+
+### Change
+
+Two checkpoint-hygiene fixes ahead of the 1M full-authority run: (1) `checkpoint_freq: 25000`
+in `train_isaac_2d.yaml` — unset it fell back to `n_steps` (1024), which at 1M steps means
+~976 × 20 MB ≈ **20 GB** of rollout checkpoints; 25000 gives 40 (~800 MB) while keeping enough
+granularity for a 297k-style peak rescue. (2) The CheckpointCallback prefix was the fixed
+string `cobraflex_ppo_lane`, so **every run overwrote the previous run's same-step
+checkpoints** (observed live: the D-51 pilot clobbered the morning pilot's rollout ckpts);
+the prefix is now the run id. Also corrected the config's duration comment (~11 h at the
+measured ~25 env-steps/s on the multi-track + DR 2-D scene, not 8.5 h at 33).
+
+### Rationale
+
+Both surfaced during the 03.07.2026 live validation; neither touches the training math
+(same PPO, same env) — pure artefact hygiene for the long run.
+
+### Impact
+
+Checkpoints land as `<run_id>_<steps>_steps.zip` (+ matching `_vecnormalize_*.pkl`);
+`--resume-from` is unaffected (explicit path). Existing checkpoints keep their old names.
+
+### Verification
+
+Live micro-run on the Isaac host (`total_timesteps` 2048, `checkpoint_freq` 1024):
+completed, produced `<run_id>_1024/2048_steps.zip` + VecNormalize pkls with the run-id
+prefix, honoring the YAML key (smoke artefacts removed afterwards). pytest — 503 passed;
+`check_traceability` — PASS.
+
+---
+
+## [03.07.2026] — D-51: complex_e re-cut CLOCKWISE — steering-handedness balance for the Isaac multi-track training trio
+
+**Document(s) affected:** docs/DECISIONS.md (new **D-51**; annotation in D-50 "New tracks"); docs/13 (preset list, full-authority offset note); `scripts/generate_complex_track.py` (new analytic builder `_complex_e_cw_waypoints()` + `TRACKS["complex_e"]` + CV-safe comment block); **regenerated assets**: `experiments/sim/tracks/complex_e/` (PNG + centerline + meta) and `src/cobraflex_rl/config/complex_e_centerline.yaml` + `complex_e_right_lane_centerline.yaml`.
+**Phase:** posterior (Isaac / sim-to-real, D-44/D-50) — before the 1M full-authority run
+**Gate context:** after Gate G4 (does **not** reopen it; Gazebo artefacts untouched)
+**Author:** Samuel Sanchez
+
+### Change
+
+`complex_e` is re-cut as the **clockwise** circuit of the CV-safe trio (it was CCW like
+complex_b/d, and visually a near-twin of complex_d). Same design family — top straight,
+wide end U-turns, "W" bottom with a central counter-steer crest — but driven the other
+way: per-lap driven turning arc flips from 10.9 m left / 0.6 m right to **2.6 m left /
+10.4 m right**. Geometry: R = 1.4 m semicircular ends (the driven right lane runs
+**inside** the U-turns on a CW circuit), analytic cosine-W bottom (amplitude 0.145 m,
+half-period 1.305 m), straight buffers at the arc→W joins; waypoints generated densely
+(0.25 m) by `_complex_e_cw_waypoints()` because sparse Catmull-Rom kinks at curvature
+sign flips (twelve sparse candidates measured R_min 0.44–0.89 m — under the boundary).
+Full design + trade-offs in **D-51**.
+
+### Rationale
+
+User direction 03.07.2026: with all three circuits CCW the trio's driven lane
+accumulated **36.5 m of left-turning arc vs 4.5 m right (8.1:1)** — the 2-D policy would
+overfit left-steer commands; invert one circuit so the opposite steering trains. A plain
+mirror is NOT CV-safe: CW puts the driven lane inside the U-turns (driven R = centre −
+0.1225 m), and mirrored-old-complex_e measured 0.667 m driven — under the docs/12 §4.7
+~0.9 m monocular boundary. Hence the widened re-design.
+
+### Impact
+
+Trio steering balance now **28.3 m left / 14.2 m right ≈ 2:1**, with ~⅓ of episodes on a
+right-turn-dominant circuit. Shipped complex_e: perimeter 20.55 m, centre R_min 1.08 m,
+**driven right-lane R_min 0.956 m** (design estimator; 0.904 m on the rounded YAML, vs
+complex_d's 0.895 m on the same yardstick) — the most comfortable CV margin of the trio.
+Scene offset of complex_e shifts +49.72 → **+49.92 m** (auto from the new bbox). The 20k
+pilot `isaac2d_pilot_20k` ran on the OLD CCW complex_e (its metadata hashes are that
+snapshot); the 1M run trains on the CW geometry. complex_a–d untouched.
+
+### Verification
+
+Generator: 411 points, perimeter 20.55 m, R_min 1.08 m, left+right turns TRUE. Shipped
+YAMLs re-measured: CW signed area; driven R_min + arc balance as above. pytest — 503
+passed. `python tools/check_traceability.py` — PASS (no ID changes). Live Isaac re-render:
+three-circuit aerial (offsets +0 / +24.766 / +49.915, gaps + union grass hold) and
+lane-cam from the new start (−2.9, 1.6, yaw 0.027 local) — only the own circuit in frame.
+**Second 20k pilot on the CW trio** (`isaac2d_pilot_20k_d51`, seed 2024): status
+`completed`; metadata records the NEW complex_e lane hash (`a271bc48ef…`) at offset
++49.9151 alongside the unchanged b/d hashes; episodes healthy (ep_len_mean 15–25, no
+spawn deaths), cage live (C-04 0.8–1.6 %/step, emergencies ≈4–5 %), `raw_throttle`
+logged; final model `policy/checkpoints/cobraflex_ppo_isaac2d_pilot_20k_d51.zip`
+(hash `638e8029…`); scene renders archived under the run's `validation/`. End-of-run
+reward 13.6 vs the pre-D-51 pilot's 28.5 — expected at a 20k budget with ~⅓ of episodes
+on an unseen opposite-handed circuit; not a health signal.
+
+---
+
+## [03.07.2026] — Isaac USD re-import now replaces the canonical package (importer suffixed `cobraflex_isaac_1/` instead of overwriting)
+
+**Document(s) affected:** `tools/isaac_scene.py` (`ensure_robot_usd`), `tools/isaac_import_check.py`.
+**Phase:** posterior (Isaac / sim-to-real, D-44/D-50) — tooling fix
+**Gate context:** after Gate G4
+**Author:** Samuel Sanchez
+
+### Change
+
+The Isaac 6 URDF importer refuses to overwrite an existing output package and writes a
+suffixed `cobraflex_isaac_1/`, `_2/`… beside it instead. `BRINGUP_REIMPORT=1` therefore
+used the fresh suffixed copy for that run only, while the canonical
+`src/cobraflex/urdf/isaac_usd/cobraflex_isaac/` — git-tracked, and what every cached run
+loads — silently kept the stale USD. (The committed package's own `doc` header shows the
+same had happened on PC CAST: it was composed from a `cobraflex_isaac_3/`.) Both import
+paths now remove the canonical package directory before importing, so a re-import
+genuinely replaces it and leaves no suffixed droppings.
+
+### Rationale
+
+Surfaced by the D-50 live validation (03.07.2026): the first `BRINGUP_REIMPORT=1` runs
+left `cobraflex_isaac_1/`/`_2/` untracked droppings without refreshing the canonical
+package. Harmless while the URDF is unchanged (identical content), but a silent trap for
+the first real URDF edit (e.g. the pending zedm inertia fix).
+
+### Impact
+
+`BRINGUP_REIMPORT=1` (and every `isaac_import_check.py` run) now rewrites the tracked
+package in place. **Note:** the importer embeds its random `/tmp/…` staging paths in the
+USD `doc` metadata, so a re-import is never byte-identical — expect a git diff on the 9
+package files after any re-import; commit it when the URDF actually changed, discard it
+otherwise.
+
+### Verification
+
+`isaac_import_check.py` on the Isaac host after the fix: **PASS**, output at the
+canonical path, `isaac_usd/` contains only `cobraflex_isaac/` (no suffixed dirs), stage
+walk unchanged (articulation root, 17 frames, 9 meshes, 4 wheel revolute joints).
+
+---
+
+## [03.07.2026] — D-50 live validation on the Ubuntu + Isaac host — full-authority env verified end-to-end (URDF→USD, three-circuit scene, Lane-Cam isolation, 20k 2-D pilot); host-deferral closed
+
+**Document(s) affected:** docs/DECISIONS.md (D-50 Status → VERIFIED + closure note); docs/13 (status header, full-authority section, RL-training host-deferred note → validated, measured multi-track throughput). **No code or config changes.** New evidence: `experiments/sim/training/isaac2d_pilot_20k/` (learning curve, action samples, metadata, final checkpoint `policy/checkpoints/cobraflex_ppo_isaac2d_pilot_20k.zip` hash `9a375c52…`) + `…/isaac2d_pilot_20k/validation/` (5 scene/camera renders, C-04/C-06 throttle-probe CSV, one-off probe scripts).
+**Phase:** posterior (Isaac / sim-to-real, D-44/D-50) — after E4/G4 close
+**Gate context:** after Gate G4 (does **not** reopen it; no Gazebo verdict artefact touched)
+**Author:** Samuel Sanchez
+
+### Change
+
+The D-50 host-deferral is closed: the full-authority environment was validated live on the
+Ubuntu + Isaac 6 host (the only step D-50 left open). Performed, in order: (1) sanity —
+`check_traceability` PASS, pytest **503 passed** on this host, Isaac python has sb3 2.8.0 /
+gymnasium 1.2.3 / torch cu130 + CUDA; (2) scene smokes — `isaac_import_check.py` PASS
+(exit 0); three-circuit scene `complex_b,complex_d,complex_e` builds at the designed
+offsets (+0.0 / **+24.766** / **+49.724** m, 15 m bbox gaps, one union grass backdrop,
+complex_b in native coordinates); per-circuit Lane-Cam renders from each start line show
+**only the own circuit** (far-clip isolation holds, incl. the tightest case complex_e →
+complex_d, ~16.2 m); (3) **20k full-authority pilot** `isaac2d_pilot_20k` (seed 2024,
+`train_isaac_2d.yaml` verbatim except `total_timesteps: 20000`, final model via
+`--model-path` into `policy/checkpoints/`): status `completed`, episodes survive the
+spawn CV/cage priming (`ep_len_mean` 13.5 → **35.6**, never the 1–2-step failure mode),
+`ep_rew_mean` 7.8 → **28.5** (explained_variance 0.85), `metadata.json` records
+`platform: sim-isaac`, the `action` block and the 3-entry `circuits` block with
+per-circuit YAML hashes, `action_samples.csv` carries `raw_throttle`; (4) **C-04/C-06
+interplay probe** (scripted full-throttle, DR off — `validation/throttle_probe.csv`).
+
+### Rationale
+
+D-44/D-50 precedent: authored + unit-tested offline on the Windows host, the live Isaac
+flow (USD multi-track build, Replicator annotator, SB3-in-Isaac-python) had to be
+confirmed on the Isaac host before the 1M training is launched. This entry records that
+confirmation and the first live measurements of the D-50 design predictions.
+
+### Impact
+
+The cage speed rules are now **measured, not latent**: C-04 fires on 0.7–1.8 % of training
+steps (emergencies ≤ 6.5 %, C-06 ~93–95 % on the noisy early policy). The probe shows
+acceleration is slip-limited by the 0.05 sim friction to ~0.49 m/s² (numerically
+coincident with C-06's 0.5 m/s² commanded bound); the straight ceiling (~0.49 of
+0.5 m/s) is reached with zero speed-rule chatter, and a dropping contextual ceiling
+escalates C-04 → C-05 emergency within one cycle — **no C-04/C-06 sawtooth; no cage.yaml
+re-tune needed** (thresholds stay `[provisional]`). The **1M main run is ready but NOT
+launched on this host** (≤1 h host rule): on PC CAST run
+`BRINGUP_REIMPORT=1 $ISAAC tools/isaac_train.py --run-id ppo_isaac2d_2024_1M --model-path
+policy/checkpoints/cobraflex_ppo_isaac2d_lane_2024_1M` (defaults carry the config + CV-safe
+trio; geometry track mode needs no PNGs; PC CAST's Isaac python needs sb3 + gymnasium).
+Two sizing notes for that run: measured throughput on this scene is **~25 env-steps/s**
+(RTX 5060, headless) — below the ~33 single-track 1-D figure, so ~11 h, not 8.5 h, on this
+GPU class; and `checkpoint_freq` defaults to `n_steps` (1024) → ~976 × 20 MB ≈ **20 GB** of
+checkpoints for 1M (consider `checkpoint_freq: 25000` in the config — left untouched here).
+
+### Verification
+
+`python tools/check_traceability.py` — PASS (no ID changes). pytest — 503 passed (this
+host). Smoke exit codes 0; scene offsets asserted against `track_offsets` output; pilot
+artefacts verified (metadata status/hashes/blocks, CSV schemas, 20 rollout checkpoints +
+final model). Renders + probe CSV archived under
+`experiments/sim/training/isaac2d_pilot_20k/validation/`.
+
+---
+
 ## [02.07.2026] — D-50: Isaac full-authority training environment — 2-D action (steering + throttle) + multi-circuit sampling + CV-safe tracks complex_d/e
 
 **Document(s) affected:** docs/DECISIONS.md (new **D-50**); docs/13 (status, command reference, TRACK env, track presets + curvature-boundary caveat, new §"Full-authority training", complex_b preset description corrected to the committed two-lane asset); docs/14 (§1.1 future-work note → implemented D-50 contract). Code (posterior track, no verdict artefacts touched): `gazebo_lane_env.py` (config-gated `action:` block + `circuits=` per-episode sampling), `cage_bridge.py` (2-D maps `policy_throttle_to_cage` / `target_speed_from_throttle_2d` / `safe_action_to_cmd_2d`), `rewards.py` (`throttle_delta`, default 0.0), `callbacks.py` (`raw_throttle` column), `tools/isaac_scene.py` (multi-track scene, `TRACK_GAP_M` 15 m, shared DR materials, union backdrop, `load_circuits`), `tools/isaac_train.py` (defaults → `train_isaac_2d.yaml` + `complex_b,complex_d,complex_e`; circuits + action metadata), new `src/cobraflex_rl/config/train_isaac_2d.yaml`, `scripts/generate_complex_track.py` (presets `complex_d`/`complex_e`), generated track assets (`experiments/sim/tracks/complex_{a,c,d,e}/`) + config centerlines (`complex_{a,c,d,e}_{right_lane_,}centerline.yaml`). Tests: `policy/tests/test_gazebo_lane_env_2d.py` (new, 16), `test_cage_bridge.py` (+8), `test_rewards.py` (+4).

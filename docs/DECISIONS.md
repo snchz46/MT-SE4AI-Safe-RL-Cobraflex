@@ -2077,7 +2077,7 @@ one CL-B SR that resolves cleanly as N/A (note ⁸).
 | Field | Value |
 | --- | --- |
 | Section | `gazebo_lane_env.py` (`action:` block, `circuits=`), `cage_bridge.py` (2-D maps), `rewards.py` (`throttle_delta`), `tools/isaac_scene.py` (multi-track scene, `load_circuits`), `tools/isaac_train.py` (defaults), `src/cobraflex_rl/config/train_isaac_2d.yaml`, `scripts/generate_complex_track.py` (`complex_d`/`complex_e`) |
-| Status | AUTHORED (design + code + unit tests on the Windows host; live Isaac validation host-deferred, cf. D-44) |
+| Status | VERIFIED on the Ubuntu + Isaac host 03.07.2026 (URDF→USD PASS; multi-circuit scene + Lane-Cam far-clip isolation confirmed by renders; 20k full-authority pilot `isaac2d_pilot_20k` completed end-to-end; C-04/C-06 interplay probed, no oscillation — closure note below. Authored 02.07.2026: design + code + unit tests on the Windows host) |
 | Date | Isaac posterior track (02.07.2026, G4 closed) |
 
 **Decision.** The Isaac posterior track (D-44) takes up the D-49 deferral: the training environment
@@ -2135,7 +2135,8 @@ suit only ground-truth-cage or monitoring runs. Two new **CV-safe presets** were
 boundary for the camera training set: `complex_d` (bottom straight + wide single-valley "V" top;
 centre/driven-lane R_min 0.884/0.932 m) and `complex_e` (top straight + soft double-dent "W" bottom;
 0.787/0.907 m) — complex_b, the proven GE4-V2 circuit, is 0.876/0.998 m. All 2-lane, 0.52 m road,
-right-lane driven, both handedness.
+right-lane driven, both handedness. *(complex_e re-cut **clockwise** 03.07.2026: D-51 supersedes
+its geometry — R_min 1.079/0.956 m.)*
 
 **Consequences.**
 - SR-009's stall/liveness sub-mode is **well-posed** on this action space (a true stop is
@@ -2152,4 +2153,75 @@ right-lane driven, both handedness.
   fires on overspeed, C-06 clips throttle jumps, stall reachable, circuit sampling reproducible);
   the live Isaac flow (USD multi-track build, Replicator, SB3-in-Isaac) must be confirmed on the
   Ubuntu + Isaac host.
+- **Host-deferral CLOSED 03.07.2026 — live-validated on the Ubuntu + Isaac 6 host.** pytest 503-green
+  there too; `isaac_import_check.py` PASS; the three-circuit scene builds at the exact designed
+  offsets (+0.0 / +24.766 / +49.724 m, 15 m bbox gaps, one union grass backdrop) and per-circuit
+  Lane-Cam renders confirm the far-clip isolation (no neighbour in frame, incl. the tightest case:
+  complex_e's start looking at complex_d's bbox ~16.2 m away). 20k full-authority pilot
+  `experiments/sim/training/isaac2d_pilot_20k/` (seed 2024, config = `train_isaac_2d.yaml` with
+  `total_timesteps: 20000` only) completed: `ep_len_mean` 13.5 → 35.6 (episodes survive spawn
+  priming), `ep_rew_mean` 7.8 → 28.5, `raw_throttle` logged, per-circuit hashes + `action` block in
+  the metadata, **C-04 active on 0.7–1.8 % of steps** (the latent→measured flip this decision
+  predicted; emergencies ≤ 6.5 %). **C-04/C-06 interplay probed** (scripted full-throttle run,
+  `isaac2d_pilot_20k/validation/throttle_probe.csv`): acceleration is slip-limited by the 0.05 sim
+  friction to ~0.49 m/s² (numerically coincident with C-06's 0.5 m/s² commanded bound); the straight
+  ceiling is reached with **zero speed-rule chatter**, and when the contextual ceiling drops below
+  the commanded speed C-04 escalates within one cycle to a C-05 emergency stop (safe u = −0.5) —
+  **no C-04/C-06 sawtooth observed; no cage.yaml re-tune needed** (thresholds stay `[provisional]`).
+  Throughput on this scene (multi-track + full DR + 2-D, RTX 5060): ~25 env-steps/s steady-state
+  headless → budget ~11 h for the 1M run on this GPU class.
   Cites D-44, D-49, ED-2 (`docs/09`); SR-004, SR-009, H-03, H-08; docs/12 §4.7.
+
+### D-51 — complex_e re-cut clockwise: steering-handedness balance for the Isaac multi-track trio
+
+| Field | Value |
+| --- | --- |
+| Section | `scripts/generate_complex_track.py` (`_complex_e_cw_waypoints()`, `TRACKS["complex_e"]`); regenerated `experiments/sim/tracks/complex_e/`; `src/cobraflex_rl/config/complex_e_centerline.yaml` + `complex_e_right_lane_centerline.yaml` |
+| Status | ACCEPTED — regenerated + live-verified on the Isaac host 03.07.2026 |
+| Date | Isaac posterior track (03.07.2026) |
+
+**Decision.** The D-50 CV-safe trio was steering-imbalanced: all three circuits were
+counter-clockwise, so the driven right lane accumulated **36.5 m of left-turning arc vs 4.5 m
+right (8.1:1)** across the trio — a camera policy trained on it would overfit left-steer
+commands (user direction 03.07.2026: invert one circuit so the opposite steering commands get
+trained; visually complex_d/complex_e were also near-identical silhouettes). `complex_e` is
+re-cut as the **clockwise** member — same design family (top straight, wide U-turn ends, "W"
+bottom with a central counter-steer crest) driven the other way round: per-lap driven turning
+arc **2.6 m left / 10.4 m right**; trio balance now **28.3 m / 14.2 m ≈ 2:1**, with ~⅓ of
+episodes fully immersed in a right-turn-dominant circuit.
+
+**Why a re-design, not a plain mirror.** Handedness flips which side of the U-turns the driven
+right lane takes: CCW puts it OUTSIDE (driven R = centre + 0.1225 m — how the old
+0.787-m-centre complex_e was CV-safe at 0.907 m driven), CW puts it INSIDE (driven = centre −
+0.1225 m). The plain mirror measured **0.667 m driven** — well under the docs/12 §4.7 ~0.9 m
+monocular boundary (false C-02/C-05 emergencies). So the end U-turns widened to **R = 1.4 m
+semicircles** (driven ≈ 1.28 m) and the bottom became an analytic **cosine W** (amplitude
+0.145 m, half-period 1.305 m → nominal extremum R 1.19 m centre / ≈1.06 m driven at the two
+lows), joined to the arc bottoms through short straight buffers landing on horizontal-tangent
+cosine peaks.
+
+**Catmull-Rom lesson (why the preset is a dense analytic builder, not hand waypoints).** Twelve
+sparse-waypoint candidates all failed the boundary (measured R_min 0.44–0.89 m): uniform
+Catmull-Rom kinks wherever curvature flips sign (tangent magnitude ∝ neighbour spacing →
+overshoot at the joins) and a 3-point curved feature runs ~2–3× tighter than its circumradius.
+`_complex_e_cw_waypoints()` therefore samples the analytic composite (straight + circle arcs +
+cosine W) every 0.25 m — the spline then follows it to ~1 %.
+
+**Verified.** Generator: 411 points, perimeter 20.55 m, centre R_min 1.08 m, both handedness
+TRUE. Shipped YAMLs: clockwise (negative signed area); driven R_min 0.956 m (design estimator)
+/ 0.904 m on the rounded YAML — complex_d reads 0.895 m on the same yardstick. pytest 503
+green; `check_traceability` PASS; live Isaac multi-track scene re-rendered + lane-cam from the
+new start (scene offset shifts +49.72 → +49.92 m; Lane-Cam far-clip isolation still holds).
+A second 20k full-authority pilot on the CW trio completed end-to-end
+(`experiments/sim/training/isaac2d_pilot_20k_d51/`, seed 2024: metadata records the NEW
+complex_e lane hash `a271bc48ef…` at offset +49.9151; episodes healthy throughout — ep_len_mean
+15–25, no spawn deaths; cage live, C-04 0.8–1.6 %/step; scene renders archived under its
+`validation/`). Its end-of-run reward (13.6) sits below the pre-D-51 pilot's (28.5) — expected
+at a 20k budget now that ~⅓ of episodes land on an unseen opposite-handed circuit; not a
+health signal.
+
+**Consequences.** The D-50 20k pilot (`isaac2d_pilot_20k`) ran on the ORIGINAL CCW complex_e —
+its per-circuit metadata hashes are a historical snapshot; the 1M full-authority run trains on
+the CW geometry. D-50's complex_e description is superseded (annotated in place);
+complex_a–complex_d assets untouched; Gazebo verdicts untouched.
+Cites D-50; docs/12 §4.7; docs/13.

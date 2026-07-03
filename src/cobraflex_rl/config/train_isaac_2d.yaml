@@ -11,7 +11,10 @@
 # NB the Gazebo E verdict (GE4-V2) stays frozen on the 1-D steering-only action
 # (ED-2/D-49); a policy trained with this config is a NEW baseline, never a
 # re-run of the 297k E-main.
-total_timesteps: 1000000  # ~8.5 h at the measured ~33 env-steps/s headless (docs/13)
+total_timesteps: 1000000  # ~11 h at the ~25 env-steps/s measured on the multi-track+DR
+                          # 2-D scene (RTX 5060, headless — docs/13; the ~33 figure was
+                          # the single-track 1-D pilot)
+checkpoint_freq: 25000    # 40 ckpts/1M (~800 MB). Unset = n_steps (1024) -> ~20 GB/1M.
 learning_rate: 0.0003
 lr_schedule: linear       # constant | linear (anneal to 0)
 target_kl: 0.5            # trust-region KL early-stop; null disables

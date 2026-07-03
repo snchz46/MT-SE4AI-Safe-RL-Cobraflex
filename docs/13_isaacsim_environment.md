@@ -1,11 +1,13 @@
 # 13 — Isaac Sim utilities: building, driving & training the CobraFlex env
 
 Status: URDF import + ROS2 bring-up working (verified headless on Isaac Sim 6.0, RTX 5060
-host, 2026-06-16). The **in-process RL training** path is authored but **host-deferred**
-(D-44) — see [RL training — in-process](#rl-training--in-process-gazebo-free-d-44). Since
+host, 2026-06-16). The **in-process RL training** path is **live-validated on the Isaac host**
+(03.07.2026, D-44 deferral closed) — see
+[RL training — in-process](#rl-training--in-process-gazebo-free-d-44). Since
 02.07.2026 (G4 closed) the trainer defaults to the **full-authority D-50 configuration**:
 **2-D action (steering + throttle)** + **multi-circuit per-episode sampling** on
-`complex_b,complex_d,complex_e` — see
+`complex_b,complex_d,complex_e` — **live-validated end-to-end 03.07.2026** with the 20k pilot
+`experiments/sim/training/isaac2d_pilot_20k/` — see
 [Full-authority training](#full-authority-training--2-d-action--multi-circuit-d-50).
 
 > **Scope — this is posterior work, not the thesis verdict path.** The Isaac migration is a
@@ -456,8 +458,13 @@ Outputs (under `experiments/sim/tracks/<name>/`): `<name>.png` (texture),
   training: complex_b's philosophy (long straight + wide U-turn ends + counter-steer
   features, both handedness) with driven right-lane R_min ≥ 0.90 m, respecting the
   monocular **curvature boundary** (docs/12 §4.7). `complex_d` = bottom straight + wide
-  single-valley "V" top (0.884 / 0.932 m); `complex_e` = top straight + soft double-dent
-  "W" bottom (0.787 / 0.907 m).
+  single-valley "V" top (0.884 / 0.932 m), CCW like complex_b. `complex_e` (v2, **D-51**)
+  = the **clockwise** member: top straight, wide R = 1.4 m end U-turns (the driven right
+  lane runs INSIDE them on a CW circuit), cosine-"W" bottom (1.079 / 0.956 m) — it flips
+  the per-lap steering handedness so the trio trains right-turn-dominant laps too
+  (driven turning arc balance 28.3 m left / 14.2 m right ≈ 2:1; it was 8:1 when all
+  three were CCW). Waypoints come from the analytic dense builder
+  `_complex_e_cw_waypoints()` (sparse Catmull-Rom kinks at curvature sign flips — D-51).
 
 > **Curvature-boundary caveat (docs/12 §4.7).** `complex_a` and `complex_c` have
 > driven-lane radii far below ~0.9 m, where the cage's monocular CV heading over-read
@@ -562,8 +569,20 @@ is the **full-authority** setup — the D-49 deferral taken up now that G4 is cl
 A policy trained here is a **new baseline** (new action space, simulator and circuits) —
 it does not reopen the Gazebo verdicts (D-49/D-50). Unit coverage on the authoring host:
 16 env tests drive the real cage through a fake interface (C-04 fires on overspeed, C-06
-clips throttle jumps, stall reachable, sampling reproducible); the live Isaac flow stays
-host-deferred like the rest of this section.
+clips throttle jumps, stall reachable, sampling reproducible). **Live-validated on the
+Ubuntu + Isaac host (03.07.2026):** the three-circuit scene builds at offsets
+(+0.0 / +24.766 / +49.724 m at pilot time; the D-51 complex_e re-cut shifts its offset
+to +49.92 m — the 15 m bbox gaps and one union grass backdrop hold) and per-circuit
+Lane-Cam renders confirm the far-clip isolation (no neighbour in frame, including the
+tightest case — complex_e's start looking at complex_d's bbox ~16.2 m away). The 20k
+full-authority pilot `isaac2d_pilot_20k` (seed 2024) completed end-to-end: per-circuit
+YAML hashes + the `action` block in `metadata.json`, `raw_throttle` in
+`action_samples.csv`, episodes well past spawn priming (`ep_len_mean` 13.5 → 35.6), and
+the cage speed rules **measurably active in-training** (C-04 on 0.7–1.8 % of steps —
+the structurally-latent-in-1-D finding flips exactly as D-50 predicted). Measured
+throughput on this scene (multi-track + physics/scene/visual DR + 2-D action, RTX 5060):
+**~25 env-steps/s** steady-state headless — below the ~33 of the single-track 1-D pilot
+(table below), so budget **~11 h for the 1M run** on this class of GPU.
 
 ### Domain randomization (sim-to-real)
 
@@ -630,12 +649,13 @@ Outputs mirror the Gazebo trainer: `experiments/sim/training/<run_id>/` (learnin
 action samples, `metadata.json` with `platform: sim-isaac`) + periodic checkpoints under
 `policy/checkpoints/`. No ROS, no `gz` CLI — training never needs a running bring-up.
 
-> **Host-deferred (not yet run on Isaac).** Authored on a Windows host without Isaac:
-> `py_compile` + an rclpy-free import check pass, but the live `world.step` /
-> `set_world_pose` / `get_linear_velocity` / Replicator annotator flow and
-> SB3-in-Isaac-python must be confirmed on the Ubuntu + Isaac host. The in-process camera
-> renders once per control step (~10 Hz at `control_dt` 0.10), which is what the env
-> samples (below the ≥20 Hz steady-state target the ROS bridge publishes).
+> **Validated on the Isaac host (03.07.2026; previously host-deferred).** The live
+> `world.step` / `set_world_pose` / `get_linear_velocity` / Replicator annotator flow and
+> SB3-in-Isaac-python (sb3 2.8.0, gymnasium 1.2.3, torch cu130) are confirmed on the
+> Ubuntu + Isaac 6 host — the D-50 full-authority 20k pilot (`isaac2d_pilot_20k`) ran
+> end-to-end with status `completed`. The in-process camera renders once per control step
+> (~10 Hz at `control_dt` 0.10), which is what the env samples (below the ≥20 Hz
+> steady-state target the ROS bridge publishes).
 
 ### Speed and fidelity — same logic, different environment
 

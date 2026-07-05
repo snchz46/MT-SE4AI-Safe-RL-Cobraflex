@@ -1,0 +1,214 @@
+{
+  "controller": "ppo",
+  "cv_speed_mps": null,
+  "checkpoint": "policy/checkpoints/ppo_isaac2d_v5_2024_1M_850000_steps.zip",
+  "checkpoint_hash": "0fff27bfca5797eddaec392a2b890d25e1282cb97a5c549df318e3cae65673da",
+  "train_config": "experiments/sim/eval_isaac/eval_stage1_on_d55_config.yaml",
+  "mode": "enforcement",
+  "track": "complex_b,complex_d,complex_e",
+  "episodes_per_circuit": 3,
+  "max_steps": 2200,
+  "seed": 2024,
+  "nominal": true,
+  "platform": "sim-isaac",
+  "timestamp_iso": "2026-07-05T08:46:50.151524+00:00",
+  "git_commit": "e51984f6135f4a241ddfea414bec762ebe593da3",
+  "circuits": [
+    {
+      "name": "complex_b",
+      "offset_xy": [
+        0.0,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml",
+      "lane_centerline_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_centerline.yaml",
+      "road_centerline_hash": "90367eae02a204834bedfb737c0dbebe4fe4b30e1be75ca2c52d37411408bd55"
+    },
+    {
+      "name": "complex_d",
+      "offset_xy": [
+        24.7655,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_d_right_lane_centerline.yaml",
+      "lane_centerline_hash": "61f587eea1127e0bc640c6173d118eb62feb00f46cc7ba92de49a6f0938aa297",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_d_centerline.yaml",
+      "road_centerline_hash": "41a808eddae82604e5c74c0fed8cd3098d3e10680a11503b1734eced5260ab22"
+    },
+    {
+      "name": "complex_e",
+      "offset_xy": [
+        49.915099999999995,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_e_right_lane_centerline.yaml",
+      "lane_centerline_hash": "a271bc48ef2abb3cb5f1cd7a0862c5ef50e824511e9d15a7310baf911c9a2bf0",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_e_centerline.yaml",
+      "road_centerline_hash": "96aa7cf61f77c4b9a06155e4f59daad24692143e5a5a1ed9570169f513776d79"
+    }
+  ],
+  "results": [
+    {
+      "circuit": "complex_b",
+      "episode": 0,
+      "steps": 227,
+      "termination": "cage_emergency",
+      "laps": 0.25,
+      "progress_m": 5.0,
+      "mean_abs_ey_mm": 43.2,
+      "max_abs_ey_mm": 77.4,
+      "mean_speed_mps": 0.221,
+      "reward_sum": 205.9,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 164
+      }
+    },
+    {
+      "circuit": "complex_b",
+      "episode": 1,
+      "steps": 104,
+      "termination": "off_road",
+      "laps": 0.097,
+      "progress_m": 1.94,
+      "mean_abs_ey_mm": 71.2,
+      "max_abs_ey_mm": 278.2,
+      "mean_speed_mps": 0.21,
+      "reward_sum": 45.3,
+      "emergency_steps": 0,
+      "interventions_per_rule": {
+        "C-06": 27
+      }
+    },
+    {
+      "circuit": "complex_b",
+      "episode": 2,
+      "steps": 384,
+      "termination": "cage_emergency",
+      "laps": 0.254,
+      "progress_m": 5.08,
+      "mean_abs_ey_mm": 47.8,
+      "max_abs_ey_mm": 79.0,
+      "mean_speed_mps": 0.133,
+      "reward_sum": 182.4,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 170
+      }
+    },
+    {
+      "circuit": "complex_d",
+      "episode": 0,
+      "steps": 302,
+      "termination": "cage_emergency",
+      "laps": 0.273,
+      "progress_m": 5.71,
+      "mean_abs_ey_mm": 53.8,
+      "max_abs_ey_mm": 118.6,
+      "mean_speed_mps": 0.19,
+      "reward_sum": 222.6,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 147
+      }
+    },
+    {
+      "circuit": "complex_d",
+      "episode": 1,
+      "steps": 563,
+      "termination": "cage_emergency",
+      "laps": 0.031,
+      "progress_m": 0.65,
+      "mean_abs_ey_mm": 92.3,
+      "max_abs_ey_mm": 100.1,
+      "mean_speed_mps": 0.012,
+      "reward_sum": -224.8,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-01": 398,
+        "C-03": 1,
+        "C-05": 1,
+        "C-06": 427
+      }
+    },
+    {
+      "circuit": "complex_d",
+      "episode": 2,
+      "steps": 250,
+      "termination": "cage_emergency",
+      "laps": 0.258,
+      "progress_m": 5.4,
+      "mean_abs_ey_mm": 51.8,
+      "max_abs_ey_mm": 95.4,
+      "mean_speed_mps": 0.217,
+      "reward_sum": 215.8,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 157
+      }
+    },
+    {
+      "circuit": "complex_e",
+      "episode": 0,
+      "steps": 16,
+      "termination": "cage_emergency",
+      "laps": 0.01,
+      "progress_m": 0.19,
+      "mean_abs_ey_mm": 18.5,
+      "max_abs_ey_mm": 222.4,
+      "mean_speed_mps": 0.311,
+      "reward_sum": -17.5,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 13
+      }
+    },
+    {
+      "circuit": "complex_e",
+      "episode": 1,
+      "steps": 94,
+      "termination": "cage_emergency",
+      "laps": 0.059,
+      "progress_m": 1.16,
+      "mean_abs_ey_mm": 21.1,
+      "max_abs_ey_mm": 334.8,
+      "mean_speed_mps": 0.168,
+      "reward_sum": 20.9,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 54
+      }
+    },
+    {
+      "circuit": "complex_e",
+      "episode": 2,
+      "steps": 125,
+      "termination": "cage_emergency",
+      "laps": 0.143,
+      "progress_m": 2.84,
+      "mean_abs_ey_mm": 24.5,
+      "max_abs_ey_mm": 301.4,
+      "mean_speed_mps": 0.256,
+      "reward_sum": 94.9,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 111
+      }
+    }
+  ]
+}

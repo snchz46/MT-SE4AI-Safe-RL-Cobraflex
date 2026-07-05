@@ -24,7 +24,11 @@ n_steps: 1024
 batch_size: 64
 n_epochs: 10
 clip_range: 0.2
-ent_coef: 0.0
+ent_coef: 0.01           # D-52: run 1 (ppo_isaac2d_2024_1M) collapsed exploration by 36%
+                          # (policy std 0.99 -> 0.023) into a crawl-and-die local optimum
+                          # (nominal eval: <= 0.45 laps, 15/18 cage emergencies); entropy
+                          # bonus keeps the 2-D action stochastic long enough to discover
+                          # the full-lap mode. Was 0.0 (the 1-D Gazebo recipe).
 vf_coef: 0.5
 max_grad_norm: 0.5
 normalize_reward: true    # VecNormalize(norm_reward=True, norm_obs=False)
@@ -108,15 +112,23 @@ reward:
   # post-cage delta would be toothless). [provisional: first 2-D pilot]
   throttle_delta: 0.10
   forward_progress: 1.0
+  # D-56: make the degenerate "park" optimum strictly unprofitable — the v5
+  # evals showed 1747-2200-step idles at 0.005-0.03 m/s exploiting the D-55
+  # blind-stretch budgets. Charged per step while normalised progress
+  # < stall_progress_min (0.25 = 0.05 m/s at cruise 0.2); slow-but-driving
+  # (>= 0.05 m/s) is never charged. [provisional: first D-56 run]
+  stall_penalty: 0.5
+  stall_progress_min: 0.25
   termination: 25.0
 
 cage:
   enabled: true
   mode: enforcement
-  yaml_path: ""          # empty -> path-walk to repo-root cage/cage.yaml (0.6.1)
+  yaml_path: "cage/cage_isaac.yaml"  # D-55: Isaac cage variant (theta_max 40 deg — renderer over-read)
+  perception_min_invalid_cycles: 12   # D-55 [provisional, Isaac]: supervisor invalid-persistence (was 4, Gazebo-tuned)
   lookahead_segments: 5
   throttle_nominal: 0.5  # 1-D fallback / SC-EDGE-03 override scale (unused as cruise here)
-  yaw_gain: 0.8
+  yaw_gain: 2.4          # D-54: Isaac skid-steer delivers ~18% of commanded yaw; 0.8 capped achievable yaw below every curve requirement (CV parity probes 04.07.2026)
   min_speed_scale: 0.35  # 1-D map only; the 2-D map has no lower speed clamp
 
 spawn_perturbation:

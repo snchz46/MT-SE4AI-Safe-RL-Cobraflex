@@ -282,7 +282,24 @@ class GazeboLaneEnv(gym.Env):
             self.camera_pipeline = CameraPipeline(
                 obs_width=obs_w, obs_height=obs_h, grayscale=grayscale
             )
-            self.cage_perception = CagePerceptionSupervisor()
+            # Optional Isaac-calibration override (D-55): the supervisor's
+            # invalid-persistence budget was live-tuned on GAZEBO frames
+            # (min_invalid_cycles=4 bridges its ~2-cycle dash gaps). The Isaac
+            # renderer has ONE longer genuinely-blind stretch (U-turn exit,
+            # lane leaves the image) that needs a wider bridge. Unset -> the
+            # tuned default, bit-identical for every Gazebo config.
+            invalid_cycles = dict(self.cfg.get("cage", {}) or {}).get(
+                "perception_min_invalid_cycles")
+            if invalid_cycles is not None:
+                from .perception_health import PerceptionHealthMonitor
+                self.cage_perception = CagePerceptionSupervisor(
+                    health=PerceptionHealthMonitor(
+                        min_confidence=0.10,
+                        min_invalid_cycles=int(invalid_cycles),
+                    )
+                )
+            else:
+                self.cage_perception = CagePerceptionSupervisor()
             self.observation_space = spaces.Box(
                 low=0,
                 high=255,

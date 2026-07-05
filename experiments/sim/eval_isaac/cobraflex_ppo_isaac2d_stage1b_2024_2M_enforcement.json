@@ -1,0 +1,210 @@
+{
+  "checkpoint": "policy/checkpoints/cobraflex_ppo_isaac2d_stage1b_2024_2M.zip",
+  "checkpoint_hash": "65d9c1a58d4aad8910d8cd9b7fb9df0dfced7087c515f154058a93200ff1bcfb",
+  "train_config": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/train_isaac_2d.yaml",
+  "mode": "enforcement",
+  "track": "complex_b,complex_d,complex_e",
+  "episodes_per_circuit": 3,
+  "max_steps": 1024,
+  "seed": 2024,
+  "nominal": true,
+  "platform": "sim-isaac",
+  "timestamp_iso": "2026-07-04T15:02:27.046854+00:00",
+  "git_commit": "e51984f6135f4a241ddfea414bec762ebe593da3",
+  "circuits": [
+    {
+      "name": "complex_b",
+      "offset_xy": [
+        0.0,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml",
+      "lane_centerline_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_centerline.yaml",
+      "road_centerline_hash": "90367eae02a204834bedfb737c0dbebe4fe4b30e1be75ca2c52d37411408bd55"
+    },
+    {
+      "name": "complex_d",
+      "offset_xy": [
+        24.7655,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_d_right_lane_centerline.yaml",
+      "lane_centerline_hash": "61f587eea1127e0bc640c6173d118eb62feb00f46cc7ba92de49a6f0938aa297",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_d_centerline.yaml",
+      "road_centerline_hash": "41a808eddae82604e5c74c0fed8cd3098d3e10680a11503b1734eced5260ab22"
+    },
+    {
+      "name": "complex_e",
+      "offset_xy": [
+        49.915099999999995,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_e_right_lane_centerline.yaml",
+      "lane_centerline_hash": "a271bc48ef2abb3cb5f1cd7a0862c5ef50e824511e9d15a7310baf911c9a2bf0",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_e_centerline.yaml",
+      "road_centerline_hash": "96aa7cf61f77c4b9a06155e4f59daad24692143e5a5a1ed9570169f513776d79"
+    }
+  ],
+  "results": [
+    {
+      "circuit": "complex_b",
+      "episode": 0,
+      "steps": 933,
+      "termination": "cage_emergency",
+      "laps": 0.625,
+      "progress_m": 12.49,
+      "mean_abs_ey_mm": 24.9,
+      "max_abs_ey_mm": 74.1,
+      "mean_speed_mps": 0.134,
+      "reward_sum": 499.8,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-02": 33,
+        "C-05": 1,
+        "C-06": 622
+      }
+    },
+    {
+      "circuit": "complex_b",
+      "episode": 1,
+      "steps": 402,
+      "termination": "cage_emergency",
+      "laps": 0.375,
+      "progress_m": 7.5,
+      "mean_abs_ey_mm": 43.7,
+      "max_abs_ey_mm": 92.0,
+      "mean_speed_mps": 0.185,
+      "reward_sum": 298.9,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 272
+      }
+    },
+    {
+      "circuit": "complex_b",
+      "episode": 2,
+      "steps": 309,
+      "termination": "cage_emergency",
+      "laps": 0.322,
+      "progress_m": 6.43,
+      "mean_abs_ey_mm": 16.2,
+      "max_abs_ey_mm": 35.2,
+      "mean_speed_mps": 0.208,
+      "reward_sum": 285.8,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 244
+      }
+    },
+    {
+      "circuit": "complex_d",
+      "episode": 0,
+      "steps": 1015,
+      "termination": "cage_emergency",
+      "laps": 0.637,
+      "progress_m": 13.31,
+      "mean_abs_ey_mm": 14.4,
+      "max_abs_ey_mm": 65.3,
+      "mean_speed_mps": 0.132,
+      "reward_sum": 561.6,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-02": 2,
+        "C-05": 1,
+        "C-06": 734
+      }
+    },
+    {
+      "circuit": "complex_d",
+      "episode": 1,
+      "steps": 527,
+      "termination": "cage_emergency",
+      "laps": 0.377,
+      "progress_m": 7.88,
+      "mean_abs_ey_mm": 11.6,
+      "max_abs_ey_mm": 37.6,
+      "mean_speed_mps": 0.151,
+      "reward_sum": 340.1,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 447
+      }
+    },
+    {
+      "circuit": "complex_d",
+      "episode": 2,
+      "steps": 212,
+      "termination": "off_road",
+      "laps": 0.233,
+      "progress_m": 4.88,
+      "mean_abs_ey_mm": 36.9,
+      "max_abs_ey_mm": 167.5,
+      "mean_speed_mps": 0.239,
+      "reward_sum": 187.0,
+      "emergency_steps": 0,
+      "interventions_per_rule": {
+        "C-06": 167
+      }
+    },
+    {
+      "circuit": "complex_e",
+      "episode": 0,
+      "steps": 258,
+      "termination": "cage_emergency",
+      "laps": 0.304,
+      "progress_m": 6.01,
+      "mean_abs_ey_mm": 47.0,
+      "max_abs_ey_mm": 61.6,
+      "mean_speed_mps": 0.233,
+      "reward_sum": 256.7,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-02": 2,
+        "C-05": 1,
+        "C-06": 171
+      }
+    },
+    {
+      "circuit": "complex_e",
+      "episode": 1,
+      "steps": 100,
+      "termination": "cage_emergency",
+      "laps": 0.096,
+      "progress_m": 1.91,
+      "mean_abs_ey_mm": 51.9,
+      "max_abs_ey_mm": 114.9,
+      "mean_speed_mps": 0.192,
+      "reward_sum": 73.0,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-05": 1,
+        "C-06": 68
+      }
+    },
+    {
+      "circuit": "complex_e",
+      "episode": 2,
+      "steps": 274,
+      "termination": "cage_emergency",
+      "laps": 0.304,
+      "progress_m": 6.02,
+      "mean_abs_ey_mm": 40.7,
+      "max_abs_ey_mm": 62.9,
+      "mean_speed_mps": 0.22,
+      "reward_sum": 254.9,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-02": 2,
+        "C-05": 1,
+        "C-06": 165
+      }
+    }
+  ]
+}

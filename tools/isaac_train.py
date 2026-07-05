@@ -211,6 +211,27 @@ class ObsPreviewCallback(BaseCallback):
                 pass
 
 
+class StopFileCallback(BaseCallback):
+    """Graceful early stop: `touch <run_dir>/STOP` ends learn() at the next
+    check, so the final model save + metadata write in main() still run.
+    Needed because SIGINT hard-kills the kit process before any Python
+    `finally` executes (verified 03.07.2026 on the 1M run: no metadata, no
+    final save) — signals are NOT a usable stop mechanism under Isaac."""
+
+    def __init__(self, stop_file, check_every: int = 256) -> None:
+        super().__init__()
+        self.stop_file = Path(stop_file)
+        self.check_every = max(1, int(check_every))
+
+    def _on_step(self) -> bool:
+        if self.num_timesteps % self.check_every == 0 and self.stop_file.exists():
+            print(f"[isaac_train] STOP file {self.stop_file} found -> ending "
+                  "training gracefully (model + metadata will be written)",
+                  flush=True)
+            return False
+        return True
+
+
 def parse_args(argv):
     p = argparse.ArgumentParser(description="In-process Isaac-Sim PPO trainer.")
     # The Isaac 2-D full-authority config (D-50) is the default; it carries the
@@ -530,7 +551,9 @@ def main(argv):
             )
 
         checkpoint_freq = int(train_cfg.get("checkpoint_freq", train_cfg.get("n_steps", 1024)))
+        stop_file = run_dir / "STOP"
         callbacks = [
+            StopFileCallback(stop_file),
             ProgressBarCallback(total_timesteps=total_timesteps, tty_fallback=True),
             LearningCurveCallback(csv_path=run_dir / "learning_curve.csv"),
             ActionSampleCallback(
@@ -554,7 +577,9 @@ def main(argv):
         model.learn(total_timesteps=total_timesteps, callback=callback,
                     reset_num_timesteps=not cli.resume_from)
         model.save(str(model_path))
-        status = "completed"
+        # A STOP-file stop still saves the model and full metadata, but the
+        # run record must say so (297k precedent: interrupted, peak rescued).
+        status = "interrupted" if stop_file.exists() else "completed"
         print(f"[isaac_train] saved PPO model to {resolve_save_path(model_path)}")
         print(f"[isaac_train] learning curve + metadata under {run_dir}")
     finally:

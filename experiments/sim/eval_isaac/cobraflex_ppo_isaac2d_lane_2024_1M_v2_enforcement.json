@@ -1,0 +1,160 @@
+{
+  "checkpoint": "policy/checkpoints/cobraflex_ppo_isaac2d_lane_2024_1M_v2.zip",
+  "checkpoint_hash": "5159d48b40d3c6ea093803571bb57e5c44d643f58c2ebd8e1a9f5ef983383fed",
+  "train_config": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/train_isaac_2d.yaml",
+  "mode": "enforcement",
+  "track": "complex_b,complex_d,complex_e",
+  "episodes_per_circuit": 2,
+  "max_steps": 1024,
+  "seed": 2024,
+  "nominal": true,
+  "platform": "sim-isaac",
+  "timestamp_iso": "2026-07-04T03:07:37.053409+00:00",
+  "git_commit": "e51984f6135f4a241ddfea414bec762ebe593da3",
+  "circuits": [
+    {
+      "name": "complex_b",
+      "offset_xy": [
+        0.0,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml",
+      "lane_centerline_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_centerline.yaml",
+      "road_centerline_hash": "90367eae02a204834bedfb737c0dbebe4fe4b30e1be75ca2c52d37411408bd55"
+    },
+    {
+      "name": "complex_d",
+      "offset_xy": [
+        24.7655,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_d_right_lane_centerline.yaml",
+      "lane_centerline_hash": "61f587eea1127e0bc640c6173d118eb62feb00f46cc7ba92de49a6f0938aa297",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_d_centerline.yaml",
+      "road_centerline_hash": "41a808eddae82604e5c74c0fed8cd3098d3e10680a11503b1734eced5260ab22"
+    },
+    {
+      "name": "complex_e",
+      "offset_xy": [
+        49.915099999999995,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_e_right_lane_centerline.yaml",
+      "lane_centerline_hash": "a271bc48ef2abb3cb5f1cd7a0862c5ef50e824511e9d15a7310baf911c9a2bf0",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_e_centerline.yaml",
+      "road_centerline_hash": "96aa7cf61f77c4b9a06155e4f59daad24692143e5a5a1ed9570169f513776d79"
+    }
+  ],
+  "results": [
+    {
+      "circuit": "complex_b",
+      "episode": 0,
+      "steps": 31,
+      "termination": "cage_emergency",
+      "laps": 0.037,
+      "progress_m": 0.74,
+      "mean_abs_ey_mm": 54.7,
+      "max_abs_ey_mm": 144.3,
+      "mean_speed_mps": 0.25,
+      "reward_sum": 0.1,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-01": 4,
+        "C-03": 12,
+        "C-05": 1,
+        "C-06": 30
+      }
+    },
+    {
+      "circuit": "complex_b",
+      "episode": 1,
+      "steps": 485,
+      "termination": "cage_emergency",
+      "laps": 0.045,
+      "progress_m": 0.89,
+      "mean_abs_ey_mm": 112.0,
+      "max_abs_ey_mm": 128.2,
+      "mean_speed_mps": 0.021,
+      "reward_sum": -150.3,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-01": 455,
+        "C-03": 11,
+        "C-05": 1,
+        "C-06": 482
+      }
+    },
+    {
+      "circuit": "complex_d",
+      "episode": 0,
+      "steps": 8,
+      "termination": "cage_emergency",
+      "laps": 0.011,
+      "progress_m": 0.22,
+      "mean_abs_ey_mm": 33.2,
+      "max_abs_ey_mm": 63.1,
+      "mean_speed_mps": 0.308,
+      "reward_sum": 8.2,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 7
+      }
+    },
+    {
+      "circuit": "complex_d",
+      "episode": 1,
+      "steps": 8,
+      "termination": "cage_emergency",
+      "laps": 0.009,
+      "progress_m": 0.18,
+      "mean_abs_ey_mm": 7.4,
+      "max_abs_ey_mm": 12.5,
+      "mean_speed_mps": 0.251,
+      "reward_sum": 7.3,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-02": 1,
+        "C-03": 1,
+        "C-05": 1,
+        "C-06": 7
+      }
+    },
+    {
+      "circuit": "complex_e",
+      "episode": 0,
+      "steps": 47,
+      "termination": "cage_emergency",
+      "laps": 0.054,
+      "progress_m": 1.08,
+      "mean_abs_ey_mm": 27.6,
+      "max_abs_ey_mm": 254.6,
+      "mean_speed_mps": 0.315,
+      "reward_sum": 19.9,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 42
+      }
+    },
+    {
+      "circuit": "complex_e",
+      "episode": 1,
+      "steps": 77,
+      "termination": "off_road",
+      "laps": 0.022,
+      "progress_m": 0.43,
+      "mean_abs_ey_mm": 24.4,
+      "max_abs_ey_mm": 198.9,
+      "mean_speed_mps": 0.088,
+      "reward_sum": -12.3,
+      "emergency_steps": 0,
+      "interventions_per_rule": {
+        "C-06": 29
+      }
+    }
+  ]
+}

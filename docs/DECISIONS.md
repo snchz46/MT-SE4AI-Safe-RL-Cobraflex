@@ -2225,3 +2225,213 @@ its per-circuit metadata hashes are a historical snapshot; the 1M full-authority
 the CW geometry. D-50's complex_e description is superseded (annotated in place);
 complex_a–complex_d assets untouched; Gazebo verdicts untouched.
 Cites D-50; docs/12 §4.7; docs/13.
+
+### D-52 — Isaac 2-D training iteration 2: entropy bonus (ent_coef 0.01) after run-1 exploration collapse; STOP-file graceful stop; in-process nominal evaluator
+
+| Field | Value |
+| --- | --- |
+| Section | `src/cobraflex_rl/config/train_isaac_2d.yaml` (`ent_coef` 0.0 → 0.01); `tools/isaac_train.py` (`StopFileCallback`); new `tools/isaac_eval.py`; run records `experiments/sim/training/ppo_isaac2d_2024_1M/` + `experiments/sim/eval_isaac/` |
+| Status | ACCEPTED — run 2 (`ppo_isaac2d_v2_2024_1M`) launched 03.07.2026 23:46 on this basis |
+| Date | Isaac posterior track (03.07.2026) |
+
+**Run-1 outcome (the evidence).** `ppo_isaac2d_2024_1M` (seed 2024, commit `e51984f6`, the D-50
+full-authority config on the D-51 trio) was stopped at **~88 % (880k)** after `ep_rew_mean`
+peaked at **61.5 @ ~208k** and decayed to a noisy 20–40 plateau. PPO health shows the mechanism:
+the policy std fell **0.99 → 0.095 by 36 % → 0.023 by 88 %** (entropy +2.8 → −1.86) with
+`ent_coef 0.0` — **exploration collapse**, the same failure family as the Gazebo 1M (D-46 era),
+now on a much harder task (2-D action + three circuits incl. opposite handedness + full DR).
+**Nominal eval** (new `tools/isaac_eval.py`, DR/spawn-perturbation off, deterministic, 3 ep ×
+3 circuits, enforcement): the **225k peak checkpoint** manages ≤ **0.45 laps** (crawl speeds
+0.09–0.25 m/s, 7/9 episodes end in a C-05 cage emergency); the **875k final** is *worse*
+(mostly 25–80 steps, 8/9 emergencies, faster-but-blinder) — the plateau decay was real
+capability loss, so the peak-rescue playbook (297k precedent) applies but the rescued policy
+is nowhere near robust. The cage held throughout: only 2/18 nominal episodes ended off-road.
+
+**Decision.** Iteration 2 changes **one substantive lever**: `ent_coef 0.0 → 0.01` — an entropy
+bonus sized to keep the 2-D Gaussian stochastic long enough to discover the full-lap mode
+instead of freezing into crawl-and-die. Everything else (reward weights, DR, v3 stability
+stack, circuits, seed 2024) stays identical for attributability. Two tooling fixes ride along:
+(1) **`StopFileCallback`** — `touch <run_dir>/STOP` ends `learn()` gracefully (model + metadata
+written, status `interrupted`); needed because SIGINT hard-kills the kit process before any
+Python `finally` (verified on run 1: its metadata had to be reconstructed post-hoc, 297k
+precedent). (2) **`tools/isaac_eval.py`** — the in-process nominal evaluator used above
+(per-circuit laps via arc-length unwrap, |ey|, speed, per-rule interventions, emergencies;
+JSON record with ckpt hash + git commit), the D-50 "follow-on eval tooling" first slice.
+
+**Exit criteria for iteration 2.** Watch std (should stabilise ≫ 0.1) and `ep_rew_mean`; a
+healthy run should show nominal-eval laps ≥ 1 on complex_b/d and ≥ 0.5 on complex_e at its
+peak checkpoint. If run 2 still collapses or plateaus lap-less, next levers (in order):
+reward rebalance (termination penalty vs progress incentive), DR curriculum (start narrow,
+widen), longer horizon (>1M).
+Cites D-49, D-50, D-51; docs/10; docs/13; §7.7.8 (Gazebo 1M sawtooth/collapse precedent).
+
+### D-53 — Isaac 2-D training iteration 3: DR curriculum (stage 1 = visual-only DR) after run 2 falsified the exploration hypothesis
+
+| Field | Value |
+| --- | --- |
+| Section | new `src/cobraflex_rl/config/train_isaac_2d_stage1.yaml`; run records `experiments/sim/training/ppo_isaac2d_v2_2024_1M/` + `experiments/sim/eval_isaac/` |
+| Status | ACCEPTED — stage-1 run (`ppo_isaac2d_stage1_2024_1M`) launched 04.07.2026 05:09 |
+| Date | Isaac posterior track (04.07.2026) |
+
+**Run-2 outcome (the evidence).** `ppo_isaac2d_v2_2024_1M` (D-52: `ent_coef 0.01`, all else =
+run 1) did what the lever promised — std decayed ~5× slower (0.79 @ 103k, 0.34 @ 206k,
+0.12 @ 411k, 0.094 @ 516k vs run 1's 0.095 by 360k) — and **still never found the lap mode**:
+`ep_rew_mean` peaked lower (43.5 @ 258k vs 61.5) and plateaued in the 18–32 band. Stopped at
+**52 % (518k)** by the pre-declared rule via the new STOP file (first live use: graceful end,
+model + metadata written, `status: interrupted`). **Nominal eval:** the 250k peak checkpoint is
+*worse* than run 1's (6/6 C-05 emergencies, ≤ 0.25 laps — either 5–29-step dashes or a
+920-step crawl at 0.058 m/s); the final model is degenerate (8-step dashes or a **0.021 m/s
+stall-crawl** at |ey| 112 mm until C-05 fires — the SR-009/M-P6 stall mode is now an observed
+behaviour on the 2-D action, not a hypothetical).
+
+**Decision.** Exploration was the wrong (or at least insufficient) bottleneck — with sustained
+exploration the policy still cannot master even the nominal slice while training under the
+FULL sim-to-real DR (dynamics + scene + visual) from step 0. Iteration 3 therefore switches
+lever to the **DR curriculum**: **stage 1** trains with **visual (H-10) DR only** — exactly the
+proven Gazebo E-main recipe, which reached 4.88 laps — on the D-51 trio, via the new
+`train_isaac_2d_stage1.yaml` (deltas vs `train_isaac_2d.yaml`: `dynamics_randomization` +
+`scene_randomization` OFF, own `model_path`; `ent_coef 0.01` kept — harmless, and D-52's
+attribution chain stays clean). **Stage 2** (once stage 1 produces a lap-completing champion):
+`--resume-from` that checkpoint under the full-DR `train_isaac_2d.yaml` to re-widen toward
+sim-to-real.
+
+**Exit criteria for stage 1.** Nominal-eval laps ≥ 1 on complex_b/d and ≥ 0.5 on complex_e at
+the peak checkpoint. **Watch item:** if stage 1 also converges to crawl/stall (its final-model
+signature above), the DR was never the binding constraint and the next lever is the **reward
+rebalance** — a stall penalty below `throttle_deadband` and/or a higher `forward_progress`
+weight (docs/10 procedure).
+Cites D-50, D-51, D-52; SR-009 (M-P6); docs/10; docs/11 (E-main recipe).
+
+### D-54 — Isaac yaw-authority calibration: cage `yaw_gain` 0.8 → 2.4 (CV-parity feasibility campaign)
+
+| Field | Value |
+| --- | --- |
+| Section | `src/cobraflex_rl/config/train_isaac_2d.yaml` + `train_isaac_2d_stage1.yaml` (`cage.yaw_gain`); `tools/isaac_eval.py` (`--controller cv`, `--cv-speed`, `--cv-yaw-boost`, `--dump-frames`); probes under `experiments/sim/eval_isaac/` |
+| Status | ACCEPTED — validated by CV parity probes 04.07.2026; v4 training launched on it |
+| Date | Isaac posterior track (04.07.2026) |
+
+**Finding.** After stages 1/1b plateaued at ~0.63 laps, the control experiment that
+discriminates RL-vs-environment ran: the **non-learned CVLaneController** (pure pursuit on
+the D-43 estimator — 4.85 laps / 17 mm on Gazebo complex_b) was driven through the SAME
+in-process Isaac env (`isaac_eval --controller cv`). Result: it **dies at the first curve it
+meets on every circuit** (complex_b 45 steps, complex_d 42; complex_e tracks its long
+straight at |ey| 3.8 mm then dies at its first turn). Cause: the Isaac skid-steer delivers
+only **~18 % of commanded yaw** at the calibrated friction 0.05 (docs/13 `--turn` test:
+2.9 rad/s commanded → 0.53 achieved), and `yaw_gain 0.8` caps the command itself — the
+achievable yaw sits below the requirement of every curve (v/R ≈ 0.17 rad/s at cruise).
+Every controller — CV and all three RL runs — was walled by actuation, not by learning.
+
+**Decision.** Raise the Isaac configs' `cage.yaw_gain` to **2.4** (3× command headroom; the
+plant's attenuation then leaves ~0.4–0.5 rad/s achievable). Boost sweep on complex_b
+(`--cv-yaw-boost` k∈{2,3,4,5}): k=2 → 0.27 laps; **k≥3 saturates at 0.42–0.44 laps with
+mm-clean tracking (|ey| 13–14 mm)** — a 10× track-coverage gain that then exposed the
+SECOND wall (D-55). Speed (0.09–0.19 m/s) and friction (0.03/0.05) sweeps left the second
+wall's location invariant — confirming the yaw fix is the right and complete actuation-side
+correction. Gazebo configs untouched (their plant delivers commanded yaw ~1:1).
+Cites D-43, D-50, D-53; docs/12 §7.5 (CV baseline); docs/13 (physics tuning, --turn).
+
+### D-55 — Isaac cage variant `cage/cage_isaac.yaml`: C-02 heading thresholds re-calibrated for the Isaac renderer; residual localized perception failure documented
+
+| Field | Value |
+| --- | --- |
+| Section | new `cage/cage_isaac.yaml` (theta_max 25°→40°, theta_warning 20°→35°, both `[provisional, Isaac]`); Isaac train configs (`cage.yaml_path`); post-mortem evidence `experiments/sim/eval_isaac/cv_controller_0.2mps_frames/` + parity JSONs |
+| Status | ACCEPTED — canonical `cage/cage.yaml` (Gazebo, verdicts) UNTOUCHED |
+| Date | Isaac posterior track (04.07.2026) |
+
+**Finding (the second wall).** With yaw fixed (D-54), every CV probe still died by
+**C-05 at one fixed location** (complex_b s ≈ 8.3–8.5 m, the right-U-turn exit), invariant
+to speed and friction, while driving mm-clean: the dumped trace shows TRUE ey −27 mm /
+epsi −6.4° at the kill, killed by `C-02|C-05`. The cage's own estimate at that moment:
+**`cv_epsi` over-reads by ~+19° persistently on curves** on Isaac pixels (measured −0.30 rad
+at true +0.03) — the docs/12 §4.7 monocular over-read, re-based by the Isaac renderer, which
+pushes complex_b's knife-edge geometry (driven R_min 0.998 vs boundary ~0.9) over the 25°
+Gazebo-calibrated `theta_max`. The dumped death frame shows the lane fleeing the image at
+the U-turn exit.
+
+**Decision.** A dedicated **`cage/cage_isaac.yaml`** (selected via the Isaac configs'
+`cage.yaml_path`) carries `theta_max` **40°** / `theta_warning` **35°**, `[provisional,
+Isaac renderer calibration]` — sized as Gazebo 25° + measured over-read ~19° − margin.
+C-01 (lane boundary) and C-03 (TTLC) keep full sensitivity, so real departures remain
+guarded; C-02 at 40° still catches genuine heading runaway (H-02) net of the over-read.
+Threshold escalation beyond 40° is **futile and refused**: at 45° the kill becomes pure
+C-05 with no C-02 — the D-43 supervisor rejects the wild fits at that viewpoint and the
+**missing-state budget** (5 cycles) stops the run, i.e. the cage correctly refuses
+prolonged blind driving. **Residual (documented, accepted):** at that ONE viewpoint the
+fixed-line CV controller is a coin flip — 0.971 laps (one C-03-working, zero-emergency
+near-lap) vs ~0.45 across repeats; an RL policy can learn lines/speeds that keep the
+estimator plausible (operationally, CV-safe driving), which the fixed controller cannot.
+The deep fix — supervisor/estimator re-calibration for the Isaac renderer — is future
+work (D-43 territory), required before any Isaac EVALUATION verdict; for TRAINING the
+residual is acceptable noise.
+Cites D-43, D-54; docs/12 §4.7; H-02, H-12, SR-002.
+
+### D-56 — reward `stall_penalty`: the 2-D action's degenerate "park" optimum made unprofitable
+
+| Field | Value |
+| --- | --- |
+| Section | `src/cobraflex_rl/cobraflex_rl/rewards.py` (new `stall_penalty` / `stall_progress_min` keys, default 0.0 → bit-identical); `policy/tests/test_rewards.py` (+3); Isaac configs (`stall_penalty: 0.5`, `stall_progress_min: 0.25`, `[provisional]`) |
+| Status | ACCEPTED — v6 (`ppo_isaac2d_v6_2024_1M`) launched 05.07.2026 10:48 on it |
+| Date | Isaac posterior track (05.07.2026) |
+
+**Evidence.** v5 (full 1M on the D-54/55 env + widened budgets) trained to the loop's
+all-time reward record (227.8 @ 844k, ep_len 389) — but its nominal evals expose the
+inflation: alongside honest 0.6-lap drives sit **1747–2200-step idles at 0.005–0.03 m/s**
+(truncation without progress). The park mode is the mirror of v4's fast-and-reckless
+optimum: near-zero progress collects ~0/step but avoids the −25 termination AND — with the
+D-55 blind-stretch budgets — the cage no longer executes a stopped vehicle promptly. The
+reward's "each on-track step net-positive" design (D-34) closed the die-early incentive
+but left not-driving free. SR-009's stall concern (M-P6), observed twice (run-2 final,
+v5), is now a measured training attractor.
+
+**Decision.** New reward term: a per-step `stall_penalty` charged while normalised
+progress < `stall_progress_min` (0.25 ≈ 0.05 m/s at cruise — slow-but-driving at
+≥ 0.05 m/s is never charged; parking for an episode now costs ~−0.5 × steps, strictly
+worse than any driving-and-failing trajectory). Default weight 0.0 → every pre-D-56
+config/return bit-identical (pytest 506, incl. 3 new pins). v6 = v5 + this term (single
+attributable delta).
+Cites D-34 (§7.2.3 net-positive design), D-50, D-53 (pre-declared reward-rebalance lever),
+D-55; SR-009 (M-P6); docs/10.
+
+**Addendum (05.07.2026) — blind-stretch budgets widened; threshold/budget levers now
+exhausted.** Two further `[provisional, Isaac]` calibrations after v4's results:
+(1) `cage_isaac.yaml` `n_missing_max_cycles` 5→13 + `staleness_max_s` 0.5→1.3 (Trigger 5/3);
+(2) new config-gated env key `cage.perception_min_invalid_cycles` (unset = the Gazebo-tuned
+supervisor default 4, bit-identical; Isaac configs set 12) so the D-43 supervisor's
+invalid-persistence bridges the blind stretch instead of latching Trigger 8. Validation:
+the wider budgets do NOT rescue estimator-consuming controllers — the CV now drives blind
+into a real off-road (0.488 laps) and the pre-fix stage-1 champion stays at ~0.64 (its
+learned line still dies there) — but they change what a policy TRAINED under them can
+learn: the cage no longer executes a mid-line vehicle 0.4–0.5 s into the blind stretch, so
+estimator-friendly lines are explorable. v4 (trained pre-widening) confirmed the training
+coupling matters: it converged fast-and-reckless (0.30–0.35 m/s, killed at first-curve
+entry, ≤0.31 laps nominal — worse than stage-1 despite the fixed plant). v5 = v4 + these
+budgets (single delta) launched 05.07.2026 02:53. If v5 still caps below a lap, the next
+lever is the deep one: estimator/renderer investigation at the failing viewpoint (frames
+archived under `experiments/sim/eval_isaac/cv_controller_0.2mps_frames/`).
+
+**Stage-1/1b CLOSURE (04.07.2026).** Stage 1b (+1M resume) plateaued below stage-1's band
+(no new records in 519k extension steps; stopped by rule via STOP file at 1.52M) and its
+best checkpoints eval at the same **~0.63-lap wall** as stage-1's. The wall was then
+root-caused NOT to RL at all — see **D-54/D-55**: the non-learned CV reference controller
+(4.85 laps on Gazebo complex_b) dies at the FIRST curve in Isaac (yaw-authority ceiling)
+and, once yaw-boosted, at one fixed track location (perception failure on the Isaac
+renderer). Iterations 1–3's lap ceiling was an environment defect, not a training defect.
+
+**Stage-1 RESULT (04.07.2026) — curriculum hypothesis CONFIRMED; extended +1M (stage 1b).**
+`ppo_isaac2d_stage1_2024_1M` completed the full 1M healthy: records almost to the end
+(`ep_rew_mean` 10 → 223.4 peak @ 747k, final band 150–190; `ep_len_mean` peak 334; std annealed
+0.73 → 0.034 WITHOUT collapse — reward kept rising as std fell; emergencies 0.1–1 %). At the
+same 53k mark where runs 1–2 sat at 20–22 reward, stage 1 was at 52.3 — the removed
+dynamics/scene DR was the binding constraint, as D-53 predicted. **Nominal eval:** the FINAL
+model (not an earlier peak — no late capability decay this time) is the overall champion:
+complex_b 0.46–0.63 laps (618–888 steps), complex_d 0.37–0.63 (405–934), complex_e 0.02–0.31;
+episodes now reach the ~800-step/lap scale (user calibration 04.07.2026) at conservative
+speeds (0.14–0.19 m/s). Failure signature is localised, not diffuse: **exactly one C-05 per
+episode** ends an otherwise-clean run (C-02 nearly absent; C-06 smooths 70–80 % of steps);
+|ey| 15–58 mm. The 725k near-peak checkpoint evals slightly worse — training-reward peak ≠
+nominal champion. Still short of the ≥ 1-lap criterion → per the user's instruction (extend
+steps if 1M falls short with slope remaining), **stage 1b launched 04.07.2026 13:03**:
+`--resume-from` the stage-1 final under the same stage-1 config (+1M → 2M total; SB3
+`reset_num_timesteps=False` adds the config's budget; LR resumes at ~1.5e-4 annealing to 0;
+`ent_coef 0.01` carried inside the checkpoint), run `ppo_isaac2d_stage1b_2024_1M`. Stage 2
+(full-DR fine-tune) queues behind whichever stage-1x checkpoint first meets the lap criterion.

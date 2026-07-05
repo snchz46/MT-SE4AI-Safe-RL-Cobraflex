@@ -183,3 +183,26 @@ def test_isaac_2d_yaml_reward_block_extends_v12_with_throttle_delta():
         reward_cfg = yaml.safe_load(handle)["reward"]
     assert set(reward_cfg) == set(WEIGHTS) | {"throttle_delta"}
     assert all(float(v) > 0.0 for v in reward_cfg.values())
+
+
+def test_stall_penalty_inert_by_default():
+    # No stall_penalty key (every pre-D-56 config): parked progress just earns
+    # zero forward reward — bit-identical returns.
+    assert _reward(progress=0.0) == pytest.approx(0.0)
+
+
+def test_stall_penalty_fires_below_progress_threshold():
+    cfg = {"reward": dict(WEIGHTS, stall_penalty=0.5, stall_progress_min=0.25)}
+    kw = dict(track_state=_ts(), steer=0.0, prev_steer=0.0, done=False, cfg=cfg)
+    # Parked (progress 0): pay the stall penalty every step.
+    assert compute_reward(progress=0.0, **kw) == pytest.approx(-0.5)
+    # Semi-stall crawl below the threshold still pays.
+    assert compute_reward(progress=0.1, **kw) == pytest.approx(0.1 - 0.5)
+
+
+def test_stall_penalty_not_charged_while_driving():
+    cfg = {"reward": dict(WEIGHTS, stall_penalty=0.5, stall_progress_min=0.25)}
+    kw = dict(track_state=_ts(), steer=0.0, prev_steer=0.0, done=False, cfg=cfg)
+    # Slow-but-driving (progress 0.6 = 0.12 m/s at cruise 0.2) is NOT a stall.
+    assert compute_reward(progress=0.6, **kw) == pytest.approx(0.6)
+    assert compute_reward(progress=NOMINAL, **kw) == pytest.approx(NOMINAL)

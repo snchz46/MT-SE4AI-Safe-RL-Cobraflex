@@ -71,9 +71,24 @@ def compute_reward(
         float(progress), 0.0
     )
 
+    # Stall penalty (D-56): the 2-D action space has a degenerate "park"
+    # optimum — near-zero progress avoids the termination penalty and (with
+    # the D-55 blind-stretch budgets) the cage's missing-state stop, so a
+    # policy afraid of a hard section can idle profitably (observed on the v5
+    # evals: 1747–2200-step episodes at 0.005–0.03 m/s). A per-step penalty
+    # whenever normalised progress sits below ``stall_progress_min`` makes
+    # parking strictly worse than driving-and-failing. Weight defaults to 0.0
+    # so every existing config/return stays bit-identical.
+    stall_penalty = 0.0
+    stall_weight = float(reward_cfg.get("stall_penalty", 0.0))
+    if stall_weight > 0.0 and max(float(progress), 0.0) < float(
+        reward_cfg.get("stall_progress_min", 0.25)
+    ):
+        stall_penalty = stall_weight
+
     reward = (
         forward_reward - lateral_penalty - heading_penalty - steer_penalty
-        - throttle_penalty
+        - throttle_penalty - stall_penalty
     )
     if done:
         reward -= float(reward_cfg.get("termination", 10.0))

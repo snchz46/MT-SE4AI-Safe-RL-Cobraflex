@@ -1,0 +1,217 @@
+{
+  "checkpoint": "policy/checkpoints/ppo_isaac2d_2024_1M_875000_steps.zip",
+  "checkpoint_hash": "38e2d9edb6eaa0561e05fde01b5958c6ac1a2a79dd9c9e348eb82703683b3ab5",
+  "train_config": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/train_isaac_2d.yaml",
+  "mode": "enforcement",
+  "track": "complex_b,complex_d,complex_e",
+  "episodes_per_circuit": 3,
+  "max_steps": 1024,
+  "seed": 2024,
+  "nominal": true,
+  "platform": "sim-isaac",
+  "timestamp_iso": "2026-07-03T21:45:23.106998+00:00",
+  "git_commit": "e51984f6135f4a241ddfea414bec762ebe593da3",
+  "circuits": [
+    {
+      "name": "complex_b",
+      "offset_xy": [
+        0.0,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml",
+      "lane_centerline_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_centerline.yaml",
+      "road_centerline_hash": "90367eae02a204834bedfb737c0dbebe4fe4b30e1be75ca2c52d37411408bd55"
+    },
+    {
+      "name": "complex_d",
+      "offset_xy": [
+        24.7655,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_d_right_lane_centerline.yaml",
+      "lane_centerline_hash": "61f587eea1127e0bc640c6173d118eb62feb00f46cc7ba92de49a6f0938aa297",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_d_centerline.yaml",
+      "road_centerline_hash": "41a808eddae82604e5c74c0fed8cd3098d3e10680a11503b1734eced5260ab22"
+    },
+    {
+      "name": "complex_e",
+      "offset_xy": [
+        49.915099999999995,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_e_right_lane_centerline.yaml",
+      "lane_centerline_hash": "a271bc48ef2abb3cb5f1cd7a0862c5ef50e824511e9d15a7310baf911c9a2bf0",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_e_centerline.yaml",
+      "road_centerline_hash": "96aa7cf61f77c4b9a06155e4f59daad24692143e5a5a1ed9570169f513776d79"
+    }
+  ],
+  "results": [
+    {
+      "circuit": "complex_b",
+      "episode": 0,
+      "steps": 245,
+      "termination": "cage_emergency",
+      "laps": 0.262,
+      "progress_m": 5.25,
+      "mean_abs_ey_mm": 67.2,
+      "max_abs_ey_mm": 102.6,
+      "mean_speed_mps": 0.215,
+      "reward_sum": 208.7,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 69
+      }
+    },
+    {
+      "circuit": "complex_b",
+      "episode": 1,
+      "steps": 31,
+      "termination": "cage_emergency",
+      "laps": 0.034,
+      "progress_m": 0.69,
+      "mean_abs_ey_mm": 38.4,
+      "max_abs_ey_mm": 138.7,
+      "mean_speed_mps": 0.234,
+      "reward_sum": -0.1,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-01": 4,
+        "C-03": 8,
+        "C-05": 1,
+        "C-06": 27
+      }
+    },
+    {
+      "circuit": "complex_b",
+      "episode": 2,
+      "steps": 25,
+      "termination": "cage_emergency",
+      "laps": 0.024,
+      "progress_m": 0.47,
+      "mean_abs_ey_mm": 15.6,
+      "max_abs_ey_mm": 68.5,
+      "mean_speed_mps": 0.202,
+      "reward_sum": 18.2,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-03": 2,
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 24
+      }
+    },
+    {
+      "circuit": "complex_d",
+      "episode": 0,
+      "steps": 30,
+      "termination": "cage_emergency",
+      "laps": 0.027,
+      "progress_m": 0.57,
+      "mean_abs_ey_mm": 20.7,
+      "max_abs_ey_mm": 80.0,
+      "mean_speed_mps": 0.201,
+      "reward_sum": 22.4,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-03": 2,
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 27
+      }
+    },
+    {
+      "circuit": "complex_d",
+      "episode": 1,
+      "steps": 73,
+      "termination": "off_road",
+      "laps": 0.056,
+      "progress_m": 1.18,
+      "mean_abs_ey_mm": 58.6,
+      "max_abs_ey_mm": 137.7,
+      "mean_speed_mps": 0.164,
+      "reward_sum": 13.8,
+      "emergency_steps": 0,
+      "interventions_per_rule": {
+        "C-01": 19,
+        "C-03": 11,
+        "C-06": 63
+      }
+    },
+    {
+      "circuit": "complex_d",
+      "episode": 2,
+      "steps": 26,
+      "termination": "cage_emergency",
+      "laps": 0.023,
+      "progress_m": 0.47,
+      "mean_abs_ey_mm": 17.8,
+      "max_abs_ey_mm": 77.9,
+      "mean_speed_mps": 0.195,
+      "reward_sum": 18.3,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-03": 3,
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 24
+      }
+    },
+    {
+      "circuit": "complex_e",
+      "episode": 0,
+      "steps": 80,
+      "termination": "cage_emergency",
+      "laps": 0.087,
+      "progress_m": 1.72,
+      "mean_abs_ey_mm": 30.5,
+      "max_abs_ey_mm": 202.0,
+      "mean_speed_mps": 0.267,
+      "reward_sum": 47.3,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 64
+      }
+    },
+    {
+      "circuit": "complex_e",
+      "episode": 1,
+      "steps": 231,
+      "termination": "cage_emergency",
+      "laps": 0.275,
+      "progress_m": 5.43,
+      "mean_abs_ey_mm": 6.4,
+      "max_abs_ey_mm": 10.7,
+      "mean_speed_mps": 0.236,
+      "reward_sum": 252.3,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 203
+      }
+    },
+    {
+      "circuit": "complex_e",
+      "episode": 2,
+      "steps": 228,
+      "termination": "cage_emergency",
+      "laps": 0.274,
+      "progress_m": 5.41,
+      "mean_abs_ey_mm": 6.4,
+      "max_abs_ey_mm": 9.3,
+      "mean_speed_mps": 0.239,
+      "reward_sum": 254.6,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 193
+      }
+    }
+  ]
+}

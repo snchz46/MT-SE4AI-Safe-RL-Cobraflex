@@ -1,0 +1,215 @@
+{
+  "checkpoint": "policy/checkpoints/cobraflex_ppo_isaac2d_stage1_2024_1M.zip",
+  "checkpoint_hash": "c61d4a7eb0e3d5ad31a04beab610b42f4bf317bb072d130ce40b7c6898a9befe",
+  "train_config": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/train_isaac_2d.yaml",
+  "mode": "enforcement",
+  "track": "complex_b,complex_d,complex_e",
+  "episodes_per_circuit": 3,
+  "max_steps": 1024,
+  "seed": 2024,
+  "nominal": true,
+  "platform": "sim-isaac",
+  "timestamp_iso": "2026-07-04T11:00:56.131030+00:00",
+  "git_commit": "e51984f6135f4a241ddfea414bec762ebe593da3",
+  "circuits": [
+    {
+      "name": "complex_b",
+      "offset_xy": [
+        0.0,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml",
+      "lane_centerline_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_centerline.yaml",
+      "road_centerline_hash": "90367eae02a204834bedfb737c0dbebe4fe4b30e1be75ca2c52d37411408bd55"
+    },
+    {
+      "name": "complex_d",
+      "offset_xy": [
+        24.7655,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_d_right_lane_centerline.yaml",
+      "lane_centerline_hash": "61f587eea1127e0bc640c6173d118eb62feb00f46cc7ba92de49a6f0938aa297",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_d_centerline.yaml",
+      "road_centerline_hash": "41a808eddae82604e5c74c0fed8cd3098d3e10680a11503b1734eced5260ab22"
+    },
+    {
+      "name": "complex_e",
+      "offset_xy": [
+        49.915099999999995,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_e_right_lane_centerline.yaml",
+      "lane_centerline_hash": "a271bc48ef2abb3cb5f1cd7a0862c5ef50e824511e9d15a7310baf911c9a2bf0",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_e_centerline.yaml",
+      "road_centerline_hash": "96aa7cf61f77c4b9a06155e4f59daad24692143e5a5a1ed9570169f513776d79"
+    }
+  ],
+  "results": [
+    {
+      "circuit": "complex_b",
+      "episode": 0,
+      "steps": 888,
+      "termination": "cage_emergency",
+      "laps": 0.627,
+      "progress_m": 12.54,
+      "mean_abs_ey_mm": 38.6,
+      "max_abs_ey_mm": 87.9,
+      "mean_speed_mps": 0.14,
+      "reward_sum": 466.0,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-02": 3,
+        "C-05": 1,
+        "C-06": 620
+      }
+    },
+    {
+      "circuit": "complex_b",
+      "episode": 1,
+      "steps": 756,
+      "termination": "cage_emergency",
+      "laps": 0.626,
+      "progress_m": 12.51,
+      "mean_abs_ey_mm": 48.4,
+      "max_abs_ey_mm": 88.7,
+      "mean_speed_mps": 0.164,
+      "reward_sum": 473.7,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-02": 7,
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 509
+      }
+    },
+    {
+      "circuit": "complex_b",
+      "episode": 2,
+      "steps": 618,
+      "termination": "cage_emergency",
+      "laps": 0.46,
+      "progress_m": 9.19,
+      "mean_abs_ey_mm": 53.3,
+      "max_abs_ey_mm": 85.5,
+      "mean_speed_mps": 0.147,
+      "reward_sum": 326.9,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-02": 23,
+        "C-05": 1,
+        "C-06": 409
+      }
+    },
+    {
+      "circuit": "complex_d",
+      "episode": 0,
+      "steps": 934,
+      "termination": "cage_emergency",
+      "laps": 0.629,
+      "progress_m": 13.15,
+      "mean_abs_ey_mm": 17.1,
+      "max_abs_ey_mm": 65.9,
+      "mean_speed_mps": 0.142,
+      "reward_sum": 552.2,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-02": 2,
+        "C-05": 1,
+        "C-06": 736
+      }
+    },
+    {
+      "circuit": "complex_d",
+      "episode": 1,
+      "steps": 405,
+      "termination": "cage_emergency",
+      "laps": 0.374,
+      "progress_m": 7.81,
+      "mean_abs_ey_mm": 24.7,
+      "max_abs_ey_mm": 66.1,
+      "mean_speed_mps": 0.194,
+      "reward_sum": 334.3,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 339
+      }
+    },
+    {
+      "circuit": "complex_d",
+      "episode": 2,
+      "steps": 443,
+      "termination": "cage_emergency",
+      "laps": 0.38,
+      "progress_m": 7.94,
+      "mean_abs_ey_mm": 15.3,
+      "max_abs_ey_mm": 44.0,
+      "mean_speed_mps": 0.18,
+      "reward_sum": 348.0,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 350
+      }
+    },
+    {
+      "circuit": "complex_e",
+      "episode": 0,
+      "steps": 22,
+      "termination": "cage_emergency",
+      "laps": 0.018,
+      "progress_m": 0.36,
+      "mean_abs_ey_mm": 31.6,
+      "max_abs_ey_mm": 333.5,
+      "mean_speed_mps": 0.368,
+      "reward_sum": -12.1,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-03": 1,
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 16
+      }
+    },
+    {
+      "circuit": "complex_e",
+      "episode": 1,
+      "steps": 252,
+      "termination": "cage_emergency",
+      "laps": 0.307,
+      "progress_m": 6.07,
+      "mean_abs_ey_mm": 70.4,
+      "max_abs_ey_mm": 86.9,
+      "mean_speed_mps": 0.241,
+      "reward_sum": 244.4,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-02": 2,
+        "C-05": 1,
+        "C-06": 187
+      }
+    },
+    {
+      "circuit": "complex_e",
+      "episode": 2,
+      "steps": 207,
+      "termination": "cage_emergency",
+      "laps": 0.29,
+      "progress_m": 5.74,
+      "mean_abs_ey_mm": 27.4,
+      "max_abs_ey_mm": 42.5,
+      "mean_speed_mps": 0.278,
+      "reward_sum": 253.1,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-04": 1,
+        "C-05": 1,
+        "C-06": 185
+      }
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "controller": "cv",
+  "cv_speed_mps": 0.2,
+  "checkpoint": null,
+  "checkpoint_hash": null,
+  "train_config": "experiments/sim/eval_isaac/probe_yawcal_config.yaml",
+  "mode": "monitoring",
+  "track": "complex_b",
+  "episodes_per_circuit": 1,
+  "max_steps": 1024,
+  "seed": 2024,
+  "nominal": true,
+  "platform": "sim-isaac",
+  "timestamp_iso": "2026-07-04T16:07:54.182829+00:00",
+  "git_commit": "e51984f6135f4a241ddfea414bec762ebe593da3",
+  "circuits": [
+    {
+      "name": "complex_b",
+      "offset_xy": [
+        0.0,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml",
+      "lane_centerline_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_centerline.yaml",
+      "road_centerline_hash": "90367eae02a204834bedfb737c0dbebe4fe4b30e1be75ca2c52d37411408bd55"
+    }
+  ],
+  "results": [
+    {
+      "circuit": "complex_b",
+      "episode": 0,
+      "steps": 498,
+      "termination": "off_road",
+      "laps": 0.468,
+      "progress_m": 9.35,
+      "mean_abs_ey_mm": 21.3,
+      "max_abs_ey_mm": 141.0,
+      "mean_speed_mps": 0.189,
+      "reward_sum": 398.7,
+      "emergency_steps": 41,
+      "interventions_per_rule": {
+        "C-02": 3,
+        "C-03": 4,
+        "C-05": 41,
+        "C-06": 17
+      },
+      "cv_detected_frac": 0.992
+    }
+  ]
+}

@@ -1,0 +1,112 @@
+{
+  "controller": "cv",
+  "cv_speed_mps": 0.2,
+  "checkpoint": null,
+  "checkpoint_hash": null,
+  "train_config": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/train_isaac_2d.yaml",
+  "mode": "enforcement",
+  "track": "complex_b,complex_d,complex_e",
+  "episodes_per_circuit": 1,
+  "max_steps": 800,
+  "seed": 2024,
+  "nominal": true,
+  "platform": "sim-isaac",
+  "timestamp_iso": "2026-07-04T16:02:15.768442+00:00",
+  "git_commit": "e51984f6135f4a241ddfea414bec762ebe593da3",
+  "circuits": [
+    {
+      "name": "complex_b",
+      "offset_xy": [
+        0.0,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml",
+      "lane_centerline_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_centerline.yaml",
+      "road_centerline_hash": "90367eae02a204834bedfb737c0dbebe4fe4b30e1be75ca2c52d37411408bd55"
+    },
+    {
+      "name": "complex_d",
+      "offset_xy": [
+        24.7655,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_d_right_lane_centerline.yaml",
+      "lane_centerline_hash": "61f587eea1127e0bc640c6173d118eb62feb00f46cc7ba92de49a6f0938aa297",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_d_centerline.yaml",
+      "road_centerline_hash": "41a808eddae82604e5c74c0fed8cd3098d3e10680a11503b1734eced5260ab22"
+    },
+    {
+      "name": "complex_e",
+      "offset_xy": [
+        49.915099999999995,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_e_right_lane_centerline.yaml",
+      "lane_centerline_hash": "a271bc48ef2abb3cb5f1cd7a0862c5ef50e824511e9d15a7310baf911c9a2bf0",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_e_centerline.yaml",
+      "road_centerline_hash": "96aa7cf61f77c4b9a06155e4f59daad24692143e5a5a1ed9570169f513776d79"
+    }
+  ],
+  "results": [
+    {
+      "circuit": "complex_b",
+      "episode": 0,
+      "steps": 45,
+      "termination": "cage_emergency",
+      "laps": 0.041,
+      "progress_m": 0.82,
+      "mean_abs_ey_mm": 47.2,
+      "max_abs_ey_mm": 129.2,
+      "mean_speed_mps": 0.188,
+      "reward_sum": 30.3,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-01": 3,
+        "C-03": 8,
+        "C-05": 1,
+        "C-06": 8
+      },
+      "cv_detected_frac": 1.0
+    },
+    {
+      "circuit": "complex_d",
+      "episode": 0,
+      "steps": 42,
+      "termination": "cage_emergency",
+      "laps": 0.036,
+      "progress_m": 0.76,
+      "mean_abs_ey_mm": 52.9,
+      "max_abs_ey_mm": 137.8,
+      "mean_speed_mps": 0.188,
+      "reward_sum": 1.8,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-01": 4,
+        "C-03": 8,
+        "C-05": 1,
+        "C-06": 6
+      },
+      "cv_detected_frac": 0.952
+    },
+    {
+      "circuit": "complex_e",
+      "episode": 0,
+      "steps": 306,
+      "termination": "cage_emergency",
+      "laps": 0.306,
+      "progress_m": 6.06,
+      "mean_abs_ey_mm": 3.8,
+      "max_abs_ey_mm": 23.5,
+      "mean_speed_mps": 0.198,
+      "reward_sum": 297.9,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-02": 6,
+        "C-05": 1,
+        "C-06": 3
+      },
+      "cv_detected_frac": 1.0
+    }
+  ]
+}

@@ -35,6 +35,7 @@ tools that run it, and the command to launch each.
 | `tools/isaac_scene.py` | **shared** physics-scene builder (URDF→USD, track, robot, wheel drives/materials + drivetrain constants); imported, not run | `import isaac_scene` |
 | `tools/isaac_ros2_bringup.py` | drive over the **ROS2 bridge** — same nodes as Gazebo (SLAM, perception, teleop, RViz, eval) | `~/isaacsim/python.sh tools/isaac_ros2_bringup.py` |
 | `tools/isaac_train.py` | **in-process** RL (PPO) training — drives the gym env directly, no ROS | `~/isaacsim/python.sh tools/isaac_train.py …` |
+| `tools/isaac_eval.py` | **in-process** nominal evaluator (laps / \|ey\| / per-rule interventions / emergencies) + CV-parity probes (`--controller cv`, D-52/D-54) | `~/isaacsim/python.sh tools/isaac_eval.py …` |
 | `tools/isaac_dr.py` | per-episode **physics + scene domain randomization** (sim-to-real levers #2/#3/#4); attached by the trainer on each reset | `import isaac_dr` |
 | `src/cobraflex_rl/cobraflex_rl/isaac_interface.py` | `IsaacSimInterface`: in-process env I/O (teleport / step / camera + latency buffer) | imported by `isaac_train.py` |
 
@@ -89,11 +90,29 @@ $ISAAC tools/isaac_train.py --render gui --show-obs                             
 # 1-D single-track (the frozen Gazebo E-main recipe, for backend comparison):
 $ISAAC tools/isaac_train.py --track complex_b \
     --train-config src/cobraflex_rl/config/train_ppo_camera.yaml
+# Hard-section spawn curriculum (D-58): 2-D + yaw 0.8 champion recipe + random_start_s,
+# single complex_b — practises the under-visited U-turn from step 0 (cracked the wall):
+$ISAAC tools/isaac_train.py --track complex_b \
+    --train-config src/cobraflex_rl/config/train_isaac_kin2_curric.yaml
 # Other track/config: override the defaults, keeping --track in sync with the centerlines, e.g.
 $ISAAC tools/isaac_train.py --track oval \
     --train-config           src/cobraflex_rl/config/train_ppo.yaml \
     --centerline-config      src/cobraflex_rl/config/oval_right_lane_centerline.yaml \
     --road-centerline-config ''                                                     # F3 state-vector on the oval
+```
+
+**In-process eval + CV-parity probes** (`tools/isaac_eval.py`, no ROS, no bring-up; D-52/D-54):
+
+```bash
+# Nominal eval of a checkpoint (deterministic, DR + spawn-perturbation off):
+$ISAAC tools/isaac_eval.py --checkpoint policy/checkpoints/<ckpt>.zip \
+    --track complex_b,complex_d,complex_e --episodes 3 --mode enforcement    # laps / |ey| / per-rule / emergencies
+# CV baseline (non-learned pure-pursuit) through the SAME in-process env — the RL-vs-environment control:
+$ISAAC tools/isaac_eval.py --controller cv --track complex_b --cv-speed 0.2
+# Yaw-authority / perception probe: boost the CV yaw command, dump the death frames (D-54/D-55):
+$ISAAC tools/isaac_eval.py --controller cv --track complex_b --cv-yaw-boost 3 --dump-frames 200
+# Graceful early stop of a TRAINING run (SIGINT hard-kills the kit before Python's finally, D-52):
+touch experiments/sim/training/<run_id>/STOP    # ends learn() at the next rollout — model + metadata saved
 ```
 
 **Environment variables** (`isaac_scene.py` is shared, so its vars apply to **both** the
@@ -121,7 +140,9 @@ with per-episode circuit sampling, D-50; defaults to `complex_b,complex_d,comple
 are **ignored** — per-track geometry comes from the config-dir naming convention
 (`<name>_right_lane_centerline.yaml` + `<name>_centerline.yaml`, shifted by the scene
 offsets via `isaac_scene.load_circuits`). A bare `isaac_train.py` is the complete
-full-authority run (train_isaac_2d.yaml + the CV-safe trio).
+full-authority run (train_isaac_2d.yaml + the CV-safe trio). Evaluator (`isaac_eval.py`):
+`--checkpoint`, `--controller {ppo,cv}`, `--cv-speed`, `--cv-yaw-boost`, `--dump-frames N`,
+`--train-config`, `--track`, `--episodes`, `--mode {enforcement,monitoring}`, `--seed`, `--out`.
 
 ## Why a dedicated URDF
 

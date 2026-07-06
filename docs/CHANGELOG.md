@@ -31,6 +31,128 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [06.07.2026] — D-59: Gazebo 2-D action config (`train_ppo_camera_2d.yaml`) + docs/11/13 command updates — Isaac 2-D findings ported where backend-agnostic
+
+**Document(s) affected:** new `src/cobraflex_rl/config/train_ppo_camera_2d.yaml` (Gazebo 2-D camera PPO config); docs/11 §9 (2-D launch + eval note + "2-D posterior variant" paragraph); docs/13 (`isaac_eval.py` tool-table row + in-process eval / CV-parity command block + kin2 spawn-curriculum command + STOP-file stop + evaluator CLI-flag line); docs/DECISIONS.md (new **D-59**). **No code changed** — the 2-D path is shared `GazeboLaneEnv` / `cage_bridge` / `rewards` and `RosGazeboInterface.send_action` already publishes a variable `linear.x` (D-50).
+**Phase:** posterior (Isaac / sim-to-real, D-44/D-50..D-58)
+**Gate context:** after Gate G4 (additive; the frozen 1-D E-main configs untouched → GE4-V2 bit-identical)
+**Author:** Samuel Sanchez
+
+### Change
+
+Wired the 2-D action (steering + throttle) for the **Gazebo** camera trainer as a new config
+`train_ppo_camera_2d.yaml`, launchable through the existing two-step camera path
+(`--train-config` swap only). The config = `train_ppo_camera.yaml` (frozen Gazebo E-main) +
+the **backend-agnostic** Isaac 2-D findings [2-D action D-50, `ent_coef 0.01` D-52,
+`throttle_delta` / `stall_penalty` D-50/D-56], with the Isaac-renderer/kinematic calibrations
+**dropped** [`yaw_gain 2.4` D-54, `cage_isaac.yaml` 40° D-55, heading de-bias D-57] — Gazebo
+keeps the canonical cage + `yaw_gain 0.8` (DiffDrive is ~1:1). docs/11 gains the launch/eval
+commands + a rationale paragraph; docs/13 gains the `isaac_eval` command block (nominal eval +
+CV-parity probes), the kin2 spawn-curriculum command (D-58), and the STOP-file graceful stop.
+Full kept/dropped decision table in **D-59**.
+
+### Rationale
+
+User request, while the Isaac host is busy. A clean Gazebo counterpart to the Isaac 2-D track:
+Gazebo's ~1:1 yaw and Gazebo-calibrated estimator isolate the 2-D action + reward shaping +
+spawn curriculum WITHOUT the Isaac yaw-authority / renderer-perception confounds (D-54/55/57)
+that dominated the U-turn diagnostic. The docs were stale on the new Isaac evaluator, the
+curriculum config and the STOP mechanism.
+
+### Impact
+
+Purely additive. The 1-D configs have no `action:` block → the env falls to the frozen 1-D
+contract, bit-identical (`test_default_config_keeps_the_frozen_1d_contract`); GE4-V2 and every
+F/E artefact untouched, no re-runs. A policy trained with the new config is a **new posterior
+baseline** (D-49), evaluated with the same config via `eval_policy`. The deployed
+`vehicle_control_node` ROS graph (F2 demo) stays 1-D — 2-D is in-process training/eval only.
+
+### Verification
+
+`pytest policy/tests/test_gazebo_lane_env_2d.py policy/tests/test_rewards.py policy/tests/test_cage_bridge.py` → **52 passed**; a YAML-load smoke builds a valid 2-D env with the real cage (action_space `Box(2,)`; full throttle → 0.5 m/s; zero throttle → full stop; `stall_penalty` active). `tools/check_traceability.py` → **All checks PASSED, 0 warnings** (no ID changes).
+
+---
+
+## [06.07.2026] — D-58: hard-section spawn curriculum (`random_start_s`) — reusable training technique from the Isaac U-turn diagnostic
+
+**Document(s) affected:** docs/DECISIONS.md (new **D-58**); docs/13 (new "Hard-section spawn curriculum" subsection); code: `src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py` (config-gated `spawn_perturbation.random_start_s`, default False → bit-identical); Isaac configs set it true; run `experiments/sim/training/ppo_isaac2d_kin2_2024_1M/`.
+**Phase:** posterior (Isaac / sim-to-real, D-44..D-57)
+**Gate context:** after Gate G4 (default-off → Gazebo/F-E verdicts bit-identical; pytest 508)
+**Author:** Samuel Sanchez
+
+### Change
+
+The T1–T6 diagnostic ladder + the perfect-state test (T5) traced the Isaac ~0.4–0.6-lap wall
+to a **chicken-and-egg exploration gap** at the tight complex_b U-turn: it is reached only
+after the policy survives the preceding track, so early training rarely visits it → no
+gradient at the hardest section → it never learns the slow-and-turn. New env feature
+`random_start_s`: spawn at a uniform random arc-length along the driven centreline so every
+part (incl. the hard corner) is practised from step 0. General reusable curriculum lever
+(cheaper than reward shaping; composes with DR + multi-circuit). Default off; deterministic
+eval / F4 scenarios (explicit start_s) unaffected.
+
+### Rationale
+
+Documenting a reusable technique the user flagged for future trainings (hard corners on other
+circuits / the physical platform). The finding — under-visited hard sections need spawn
+diversity — stands on the ladder evidence regardless of kin2's final lap number.
+
+### Impact
+
+Isaac training configs gain the flag; kin2 (2-D + yaw 0.8 champion recipe + `random_start_s`)
+shows the strongest Isaac training signal yet (ep_len_mean 269, ~0 % emergencies @220k) —
+**nominal-eval lap verdict PENDING** (do not treat as confirmed). **Caveat recorded:** the flag
+shifts the training episode-length/return distribution → judge only by deterministic nominal
+eval, never training curves.
+
+### Verification
+
+pytest — 508 passed (flag inert by default). `python tools/check_traceability.py` — PASS
+(no ID change). kin2 confirmed stepping with the flag active.
+
+---
+
+## [06.07.2026] — Isaac U-turn root-cause diagnostic (T1–T6 ladder) + kin2 breakthrough; session checkpoint
+
+**Document(s) affected:** memory `isaac-diagnostic-ladder.md` (consolidated results table + root cause + next-session plan); docs/DECISIONS.md (D-54..D-58 capture the pieces); diagnostic configs `src/cobraflex_rl/config/train_isaac_{T2_1d,T3_floor,T4_yaw,T5_state,kin_1M,kin2_curric}.yaml`; evals `experiments/sim/eval_isaac/*.json`.
+**Phase:** posterior (Isaac / sim-to-real, D-44..D-58)
+**Gate context:** after Gate G4 (no verdict artefacts touched; pytest 508)
+**Author:** Samuel Sanchez
+
+### Change
+
+Systematic single-variable diagnostic of the Isaac ~0.4–0.6-lap wall (RL policy drove worse
+than the hand-coded CV baseline, 0.63 vs 0.97). Ladder (all complex_b, nominal-eval laps):
+T1 3→1 circuit 0.34 (dilution not it); T2 2-D→1-D 0.44; T3 −DR=Gazebo-recipe 0.43 (task
+complexity not it); T4 +yaw 2.4 0.14 (yaw backfires); **T5 perfect-state 0.45 (perception
+DEFINITIVELY not it)**; kin 2-D+yaw1.5 0.47. **Root cause = KINEMATIC + under-visited hard
+section:** the U-turn (R 0.97 m) at cruise needs 0.206 rad/s but the Isaac skid-steer at
+yaw 0.8 gives ~0.144 (Gazebo DiffDrive gives ~1:1) → must SLOW (2-D), and the policy only
+learns it if it practises there. **D-58 `random_start_s` spawn curriculum** cracked it:
+**kin2 (2-D + yaw 0.8 + random-s spawn) hit 0.76 laps @293k** (truncated, still driving,
+slowed to 0.15 m/s at the U-turn), beating the champion, first clean U-turn crossing.
+
+### Rationale
+
+User goal: iterate/fix until a robust policy, understanding the root. The ladder isolated the
+kinematic + exploration root the config levers (D-52..D-57) could never move; the curriculum
+is the discovery-based fix.
+
+### Impact
+
+Best-so-far policy: kin2 (0.76, inconsistent — 2/3 eval episodes still die at the U-turn),
+resumed with max_episode_steps 1024→2048 toward reliability/full laps. Champion of record
+stays `cobraflex_ppo_isaac2d_stage1_2024_1M.zip` (0.63). Gazebo (E-main 4.88 laps on
+complex_b) is the proven fallback if kin2 stalls. Session paused here; next-session plan in
+the ladder memory.
+
+### Verification
+
+pytest — 508 passed; `check_traceability` — PASS (no ID changes). kin2 293k eval JSONs +
+all diagnostic evals archived under `experiments/sim/eval_isaac/`.
+
+---
+
 ## [05.07.2026] — v5 result (training record 227.8 but stall-inflated; nominal ≤0.62 + park exploit) → D-56: reward `stall_penalty`; v6 launched
 
 **Document(s) affected:** docs/DECISIONS.md (new **D-56**); `src/cobraflex_rl/cobraflex_rl/rewards.py` (config-gated `stall_penalty`/`stall_progress_min`, default 0.0 bit-identical); `policy/tests/test_rewards.py` (+3, suite 506); Isaac configs (`stall_penalty: 0.5`, `stall_progress_min: 0.25` `[provisional]`). Runs: `ppo_isaac2d_v5_2024_1M/` (completed; loop record 227.8 @ 844k / ep_len 389) + `ppo_isaac2d_v6_2024_1M/` (launched 05.07 10:48). Evals: v5 final/775k/850k under `experiments/sim/eval_isaac/`.
@@ -4894,84 +5016,3 @@ Phase 1 partial closure of the ODD-Spec TBDs against the actual `src/cobraflex` 
 - The Phase 1 closure criterion of `experiments/odd_inspection/README.md` is now satisfied: every TBD is either *resolved* (Q1, Q2, Q3) or *explicitly deferred via a registered decision* (Q4–Q12 via D-33).
 
 ---
-<!-- Subsequent entries appended below -->
-
----
-
-## [06.07.2026] — D-58: hard-section spawn curriculum (`random_start_s`) — reusable training technique from the Isaac U-turn diagnostic
-
-**Document(s) affected:** docs/DECISIONS.md (new **D-58**); docs/13 (new "Hard-section spawn curriculum" subsection); code: `src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py` (config-gated `spawn_perturbation.random_start_s`, default False → bit-identical); Isaac configs set it true; run `experiments/sim/training/ppo_isaac2d_kin2_2024_1M/`.
-**Phase:** posterior (Isaac / sim-to-real, D-44..D-57)
-**Gate context:** after Gate G4 (default-off → Gazebo/F-E verdicts bit-identical; pytest 508)
-**Author:** Samuel Sanchez
-
-### Change
-
-The T1–T6 diagnostic ladder + the perfect-state test (T5) traced the Isaac ~0.4–0.6-lap wall
-to a **chicken-and-egg exploration gap** at the tight complex_b U-turn: it is reached only
-after the policy survives the preceding track, so early training rarely visits it → no
-gradient at the hardest section → it never learns the slow-and-turn. New env feature
-`random_start_s`: spawn at a uniform random arc-length along the driven centreline so every
-part (incl. the hard corner) is practised from step 0. General reusable curriculum lever
-(cheaper than reward shaping; composes with DR + multi-circuit). Default off; deterministic
-eval / F4 scenarios (explicit start_s) unaffected.
-
-### Rationale
-
-Documenting a reusable technique the user flagged for future trainings (hard corners on other
-circuits / the physical platform). The finding — under-visited hard sections need spawn
-diversity — stands on the ladder evidence regardless of kin2's final lap number.
-
-### Impact
-
-Isaac training configs gain the flag; kin2 (2-D + yaw 0.8 champion recipe + `random_start_s`)
-shows the strongest Isaac training signal yet (ep_len_mean 269, ~0 % emergencies @220k) —
-**nominal-eval lap verdict PENDING** (do not treat as confirmed). **Caveat recorded:** the flag
-shifts the training episode-length/return distribution → judge only by deterministic nominal
-eval, never training curves.
-
-### Verification
-
-pytest — 508 passed (flag inert by default). `python tools/check_traceability.py` — PASS
-(no ID change). kin2 confirmed stepping with the flag active.
-
----
-
-## [06.07.2026] — Isaac U-turn root-cause diagnostic (T1–T6 ladder) + kin2 breakthrough; session checkpoint
-
-**Document(s) affected:** memory `isaac-diagnostic-ladder.md` (consolidated results table + root cause + next-session plan); docs/DECISIONS.md (D-54..D-58 capture the pieces); diagnostic configs `src/cobraflex_rl/config/train_isaac_{T2_1d,T3_floor,T4_yaw,T5_state,kin_1M,kin2_curric}.yaml`; evals `experiments/sim/eval_isaac/*.json`.
-**Phase:** posterior (Isaac / sim-to-real, D-44..D-58)
-**Gate context:** after Gate G4 (no verdict artefacts touched; pytest 508)
-**Author:** Samuel Sanchez
-
-### Change
-
-Systematic single-variable diagnostic of the Isaac ~0.4–0.6-lap wall (RL policy drove worse
-than the hand-coded CV baseline, 0.63 vs 0.97). Ladder (all complex_b, nominal-eval laps):
-T1 3→1 circuit 0.34 (dilution not it); T2 2-D→1-D 0.44; T3 −DR=Gazebo-recipe 0.43 (task
-complexity not it); T4 +yaw 2.4 0.14 (yaw backfires); **T5 perfect-state 0.45 (perception
-DEFINITIVELY not it)**; kin 2-D+yaw1.5 0.47. **Root cause = KINEMATIC + under-visited hard
-section:** the U-turn (R 0.97 m) at cruise needs 0.206 rad/s but the Isaac skid-steer at
-yaw 0.8 gives ~0.144 (Gazebo DiffDrive gives ~1:1) → must SLOW (2-D), and the policy only
-learns it if it practises there. **D-58 `random_start_s` spawn curriculum** cracked it:
-**kin2 (2-D + yaw 0.8 + random-s spawn) hit 0.76 laps @293k** (truncated, still driving,
-slowed to 0.15 m/s at the U-turn), beating the champion, first clean U-turn crossing.
-
-### Rationale
-
-User goal: iterate/fix until a robust policy, understanding the root. The ladder isolated the
-kinematic + exploration root the config levers (D-52..D-57) could never move; the curriculum
-is the discovery-based fix.
-
-### Impact
-
-Best-so-far policy: kin2 (0.76, inconsistent — 2/3 eval episodes still die at the U-turn),
-resumed with max_episode_steps 1024→2048 toward reliability/full laps. Champion of record
-stays `cobraflex_ppo_isaac2d_stage1_2024_1M.zip` (0.63). Gazebo (E-main 4.88 laps on
-complex_b) is the proven fallback if kin2 stalls. Session paused here; next-session plan in
-the ladder memory.
-
-### Verification
-
-pytest — 508 passed; `check_traceability` — PASS (no ID changes). kin2 293k eval JSONs +
-all diagnostic evals archived under `experiments/sim/eval_isaac/`.

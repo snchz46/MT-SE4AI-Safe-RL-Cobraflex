@@ -2549,3 +2549,52 @@ Inconsistent (2/3 episodes still die at the U-turn) → resumed with `max_episod
 toward reliability + full laps. The finding
 (under-visited hard sections need spawn diversity) stands on the T1–T6 + T5 evidence.
 Cites D-54 (yaw), D-57 (perception), the T1–T6 ladder; SR-... none (posterior, no ID change).
+
+### D-59 — Gazebo 2-D action config: which Isaac 2-D findings port to Gazebo (backend-agnostic vs renderer/kinematic-specific)
+
+| Field | Value |
+| --- | --- |
+| Section | new `src/cobraflex_rl/config/train_ppo_camera_2d.yaml`; docs/11 §9 + docs/13 command reference (isaac_eval / kin2 curriculum / STOP) |
+| Status | ACCEPTED — additive, no code change (the 2-D path is shared, D-50); pytest 52 (2-D env / rewards / cage_bridge) + a YAML-load smoke green; check_traceability PASS |
+| Date | Isaac posterior track (06.07.2026) |
+
+**Context.** The 2-D action (steering + throttle) was built for the Isaac in-process trainer
+(D-50) but lives entirely in **shared** code: `GazeboLaneEnv` parses `action.type`, `cage_bridge`
+maps throttle → cage `u` → speed (`policy_throttle_to_cage` / `target_speed_from_throttle_2d`),
+`rewards` carries `throttle_delta` / `stall_penalty`, and `RosGazeboInterface.send_action`
+already publishes a variable `linear.x`. So a Gazebo 2-D run needs only a **config**, not new
+code. Motivation: a clean Gazebo counterpart to the Isaac 2-D track — Gazebo's DiffDrive
+delivers ~1:1 yaw and its CV estimator is Gazebo-calibrated, so it isolates the 2-D action +
+reward shaping + spawn curriculum WITHOUT the Isaac yaw-authority and renderer-perception
+confounds (D-54/D-55/D-57) that dominated the Isaac U-turn diagnostic.
+
+**Decision — the finding filter.** `train_ppo_camera_2d.yaml` = `train_ppo_camera.yaml` (the
+frozen Gazebo E-main) + only the Isaac 2-D findings that are properties of the **action space /
+reward** (backend-agnostic), and NONE of the Isaac-renderer/kinematic calibrations:
+
+| Isaac finding | Port to Gazebo? | Why |
+| --- | --- | --- |
+| 2-D action, `max_speed_mps 0.5` (D-50) | **KEEP** | action-space design; cage speed rules (C-04/C-05/C-06) arbitrate, a true stop is commandable (SR-009 well-posed) |
+| `ent_coef 0.0 → 0.01` (D-52) | **KEEP** | the 2-D Gaussian collapses exploration regardless of backend |
+| `reward.throttle_delta 0.10` (D-50) | **KEEP** | longitudinal smoothness, mirror of `steer_delta` |
+| `reward.stall_penalty 0.5` (D-56) | **KEEP** | the degenerate "park" optimum is a reward/action property — it will appear in Gazebo too |
+| `cage.yaw_gain 2.4` (D-54) | **DROP → 0.8** | Isaac skid-steer delivers ~18 % of commanded yaw (needed a 3× boost); Gazebo DiffDrive ~1:1 → 2.4 would oversteer |
+| `cage_isaac.yaml` θ_max 40° (D-55) | **DROP → canonical 25°** | the 40° absorbed the Isaac RTX heading over-read; Gazebo's estimator is 25°-calibrated |
+| `perception_heading_bias_rad 0.084` (D-57) | **DROP → 0.0** | Gazebo is the calibration reference — no renderer bias to remove |
+| `perception_min_invalid_cycles 12` (D-55) | **DROP → default 4** | the widened blind-stretch budget was for the Isaac renderer |
+
+`random_start_s` (D-58) is exposed but default **False** (clean attribution + comparability;
+flip it if the Gazebo 2-D run also caps at complex_b's U-turn). The `stall_penalty 0.5` carries
+a caveat: in Isaac v6 it overcorrected to fast-and-reckless, but that was entangled with the
+D-55 *loosened* Isaac cage (blind-stretch budgets that stopped executing a stalled car
+promptly); Gazebo runs the canonical **tight** cage, so re-check and lower toward 0.2 if the
+2-D policy goes reckless.
+
+**Consequences.** Purely **additive** — the 1-D configs (`train_ppo_camera.yaml`,
+`train_ppo.yaml`) have no `action:` block, so the env falls to the frozen 1-D contract,
+bit-identical (`test_default_config_keeps_the_frozen_1d_contract`); GE4-V2 and every F/E
+artefact are untouched, no re-runs. A policy trained here is a **new posterior baseline**, not a
+re-run of the frozen GE4-V2 1-D verdict (D-49); it evaluates with the same config via
+`eval_policy`. The deployed `vehicle_control_node` ROS graph (the F2 demo) stays 1-D — 2-D is
+in-process training/eval only, mirroring Isaac (out of scope). Only `--train-config` selects it.
+Cites D-49, D-50, D-52, D-54, D-55, D-56, D-57, D-58; docs/11 §9; docs/13.

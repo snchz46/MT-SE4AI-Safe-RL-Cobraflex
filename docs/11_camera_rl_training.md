@@ -654,6 +654,13 @@ ros2 run cobraflex_rl train_ppo \
   --road-centerline-config $CFG/complex_b_centerline.yaml \
   --world-name lane_following_complex_b --run-id ppo_newcam_complex_b_2024
 
+# ── Track-'E' 2-D camera PPO (posterior; steering + throttle) — same two-step, 2-D config ─
+ros2 run cobraflex_rl train_ppo \
+  --train-config           $CFG/train_ppo_camera_2d.yaml \
+  --centerline-config      $CFG/complex_b_right_lane_centerline.yaml \
+  --road-centerline-config $CFG/complex_b_centerline.yaml \
+  --world-name lane_following_complex_b --run-id ppo_gz2d_complex_b_2024
+
 # ── Resume a checkpoint (adds the config's total_timesteps on top, §2) ───────────────
 ros2 run cobraflex_rl train_ppo --train-config $CFG/train_ppo_camera.yaml \
   --resume-from policy/checkpoints/<ckpt>.zip --run-id <run>
@@ -661,6 +668,7 @@ ros2 run cobraflex_rl train_ppo --train-config $CFG/train_ppo_camera.yaml \
 # ── Evaluate a specific checkpoint on SC-NOM-01 (deterministic, DR off; ~11-lap horizon) ─
 #    Bring up Gazebo first (the camera two-step above), then point --model-path at the .zip.
 #    Same scored harness as the CV baseline — see docs/12 §8 for the CV-vs-RL pairing.
+#    (2-D checkpoint: swap --train-config to $CFG/train_ppo_camera_2d.yaml — same env.)
 ros2 run cobraflex_rl eval_policy \
   --train-config           $CFG/train_ppo_camera.yaml \
   --centerline-config      $CFG/complex_b_right_lane_centerline.yaml \
@@ -678,6 +686,20 @@ ros2 run rviz2 rviz2 -d src/cobraflex/rviz/cage_viz.rviz --ros-args -p use_sim_t
 > closing the GUI tears down the bridge/`robot_state_publisher` and orphans `gz sim -s`,
 > starving the env's `/odom_truth` wait. For the Isaac (Gazebo-free) trainer, see
 > [docs/13 §Command reference](13_isaacsim_environment.md#command-reference-what-launches-what).
+
+**2-D posterior variant (`train_ppo_camera_2d.yaml`).** Swaps the frozen 1-D steering-only
+action for the full-authority 2-D `[steer, throttle]` (throttle → cage scale `u` →
+`speed = 0.5·u`, so the cage speed rules C-04/C-05/C-06 arbitrate for real and a true stop is
+commandable — SR-009 well-posed). It ports only the **backend-agnostic** Isaac 2-D findings —
+the 2-D action (D-50), `ent_coef 0.01` (D-52), and the `throttle_delta` / `stall_penalty`
+reward terms (D-50/D-56) — and deliberately **drops** the Isaac-renderer/kinematic
+calibrations (`yaw_gain 2.4` D-54, `cage_isaac.yaml` 40° D-55, heading de-bias D-57): Gazebo's
+DiffDrive delivers ~1:1 yaw and its CV estimator is 25°-calibrated, so it keeps the **canonical
+cage + `yaw_gain 0.8`**. Same two-step launch (Gazebo up, then the node) and same eval harness —
+only `--train-config` changes. A policy trained with it is a **new posterior baseline**, not a
+re-run of the frozen GE4-V2 verdict (D-49); the config header enumerates each kept/dropped
+finding. It is the clean Gazebo counterpart to the Isaac 2-D track (no yaw/perception confounds),
+useful for isolating the 2-D action + reward shaping + spawn curriculum.
 
 **Why the camera run is two-step** (the commands are in the summary above).
 `train_lane.launch.py` defaults to the **complex_b** circuit and wires the three things that

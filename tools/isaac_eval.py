@@ -191,7 +191,17 @@ def main() -> int:
         # frame, at a fixed cruise (throttle = 2·v/max_speed − 1 on the 2-D map;
         # steer = angular/yaw_gain inverts safe_action_to_cmd_2d).
         from cobraflex_rl.cv_lane_controller import CVLaneController
-        controller = CVLaneController(speed=float(ARGS.cv_speed))
+        # Match the env's cage estimator: apply the D-57 Isaac heading-bias
+        # calibration if the config sets it, so the CV baseline reads the same
+        # de-biased perception the trained policy's cage does.
+        _hb = float(cfg.get("cage", {}).get("perception_heading_bias_rad", 0.0))
+        _est = None
+        if _hb != 0.0:
+            from cobraflex_rl.cv_lane_estimator import (
+                CvLaneEstimator, CvLaneEstimatorConfig)
+            _est = CvLaneEstimator(
+                config=CvLaneEstimatorConfig(heading_bias_rad=_hb))
+        controller = CVLaneController(speed=float(ARGS.cv_speed), estimator=_est)
         cv_throttle = float(np.clip(2.0 * ARGS.cv_speed / max_speed - 1.0, -1.0, 1.0))
         subject = f"cv_controller_{ARGS.cv_speed:g}mps"
         print(f"[isaac_eval] CV controller @ {ARGS.cv_speed} m/s | mode {ARGS.mode} | "

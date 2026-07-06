@@ -1,0 +1,104 @@
+{
+  "controller": "ppo",
+  "cv_speed_mps": null,
+  "checkpoint": "policy/checkpoints/ppo_isaac2d_kin2_2024_1M_275000_steps.zip",
+  "checkpoint_hash": "68f481b6fdf121af4f2e9f956cc9643ac665273a99150f7c0997041286f63cf2",
+  "train_config": "src/cobraflex_rl/config/train_isaac_kin2_curric.yaml",
+  "mode": "enforcement",
+  "track": "complex_b",
+  "episodes_per_circuit": 4,
+  "max_steps": 2048,
+  "seed": 2024,
+  "nominal": true,
+  "platform": "sim-isaac",
+  "timestamp_iso": "2026-07-06T12:25:04.030814+00:00",
+  "git_commit": "7b6282cd51d6da62d5d848a6c5b36531e8131c60",
+  "circuits": [
+    {
+      "name": "complex_b",
+      "offset_xy": [
+        0.0,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml",
+      "lane_centerline_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_centerline.yaml",
+      "road_centerline_hash": "90367eae02a204834bedfb737c0dbebe4fe4b30e1be75ca2c52d37411408bd55"
+    }
+  ],
+  "results": [
+    {
+      "circuit": "complex_b",
+      "episode": 0,
+      "steps": 1223,
+      "termination": "cage_emergency",
+      "laps": 0.952,
+      "progress_m": 19.04,
+      "mean_abs_ey_mm": 30.9,
+      "max_abs_ey_mm": 104.7,
+      "mean_speed_mps": 0.157,
+      "reward_sum": 778.9,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-02": 2,
+        "C-05": 1,
+        "C-06": 735
+      }
+    },
+    {
+      "circuit": "complex_b",
+      "episode": 1,
+      "steps": 37,
+      "termination": "cage_emergency",
+      "laps": 0.023,
+      "progress_m": 0.45,
+      "mean_abs_ey_mm": 26.7,
+      "max_abs_ey_mm": 85.3,
+      "mean_speed_mps": 0.131,
+      "reward_sum": 12.9,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-02": 3,
+        "C-03": 2,
+        "C-05": 1,
+        "C-06": 32
+      }
+    },
+    {
+      "circuit": "complex_b",
+      "episode": 2,
+      "steps": 616,
+      "termination": "cage_emergency",
+      "laps": 0.447,
+      "progress_m": 8.93,
+      "mean_abs_ey_mm": 32.3,
+      "max_abs_ey_mm": 101.5,
+      "mean_speed_mps": 0.147,
+      "reward_sum": 358.1,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-02": 2,
+        "C-05": 1,
+        "C-06": 322
+      }
+    },
+    {
+      "circuit": "complex_b",
+      "episode": 3,
+      "steps": 734,
+      "termination": "cage_emergency",
+      "laps": 0.618,
+      "progress_m": 12.36,
+      "mean_abs_ey_mm": 34.6,
+      "max_abs_ey_mm": 106.1,
+      "mean_speed_mps": 0.17,
+      "reward_sum": 501.8,
+      "emergency_steps": 1,
+      "interventions_per_rule": {
+        "C-02": 2,
+        "C-05": 1,
+        "C-06": 432
+      }
+    }
+  ]
+}

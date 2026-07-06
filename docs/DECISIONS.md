@@ -2392,6 +2392,75 @@ attributable delta).
 Cites D-34 (§7.2.3 net-positive design), D-50, D-53 (pre-declared reward-rebalance lever),
 D-55; SR-009 (M-P6); docs/10.
 
+### D-57 — perception fix: estimator heading de-bias for the Isaac renderer (the binding constraint, attacked directly)
+
+| Field | Value |
+| --- | --- |
+| Section | `cv_lane_estimator.py` (new `heading_bias_rad`, default 0.0 → Gazebo bit-identical); `gazebo_lane_env.py` + `tools/isaac_eval.py` (config-gated `cage.perception_heading_bias_rad`); `policy/tests/test_cv_lane_estimator.py` (+2); Isaac configs; new `train_isaac_2d_d57.yaml` |
+| Status | ACCEPTED — CV-validated; v7 (`ppo_isaac2d_d57_2024_1M`) launched 05.07.2026 19:59 |
+| Date | Isaac posterior track (05.07.2026) |
+
+**Root-cause measurement.** The D-56 conclusion (config levers exhausted; wall = perception)
+was acted on, not deferred. Instrumenting the CV controller's per-step cage estimate on
+complex_b (`…/cv_controller_0.2mps_frames/trace.csv`) shows `cv_epsi` carries a **systematic
+negative bias vs true heading**: mean **−4.8°** on the straight, heading-≈0 stretches
+(correlation with true only +0.47), worsening to **−13 to −17°** at the complex_b U-turn exit
+(s≈8.4 m) where the IPM shear compounds it. This is a **camera-extrinsic calibration mismatch**:
+`camera_geometry`'s IPM (pitch 0.30 rad, height 0.077 m) is Gazebo-calibrated, and the Isaac
+RTX render of the same URDF yields a rotated near-field lane slope. It is the exact quantity
+that trips C-02/C-05 at that viewpoint and caps every controller.
+
+**Decision.** A config-gated `heading_bias_rad` subtracts the calibrated offset from the
+estimator's heading (`heading -= heading_bias_rad`), so a straight-ahead vehicle reads epsi ≈ 0.
+Default 0.0 → the Gazebo estimator and every D-43 verdict are bit-identical (2 new unit tests
+pin inert-at-0 + exact-shift); the Isaac path sets **+0.084** (the measured straight bias),
+threaded via `cage.perception_heading_bias_rad` into both the env's cage supervisor and the CV
+baseline. This is calibration, not masking: C-01 (offset), health and plausibility keep full
+sensitivity; only the heading readout is de-biased.
+
+**CV validation (partial — honest).** With the de-bias the CV reference reaches **0.977 laps**
+on complex_b (vs 0.45 typical / 0.97 once pre-fix), but 2/3 episodes still die at the U-turn:
+the static offset removes the dominant systematic component, **not** the curve-compounded IPM
+shear (a full fix needs pitch/height re-calibration of `camera_geometry` for Isaac — deeper
+D-43 work, future). But a *trained* policy — unlike the fixed-line CV — can learn a line/speed
+that keeps the de-biased estimator plausible through the U-turn. **v7 tests exactly this:** the
+champion **stage-1 recipe** (visual-DR-only, yaw 0.8, canonical 25° cage, ent 0.01, no D-54/55/56
+env deltas — the recipe that produced the 0.63 champion) **+ the D-57 de-bias only** (single
+attributable delta vs the champion). Success criterion: nominal-eval laps > 0.63 (beats the
+standing champion) toward ≥ 1.
+Cites D-43 (estimator), D-54/55/56 (levers now behind the perception fix); H-02, SR-002;
+docs/12 §4.7.
+
+**v6 RESULT + config-lever exhaustion (05.07.2026).** v6 removed the park exploit (0 stall
+episodes in eval, vs v5's) but **overcorrected to v4's fast-and-reckless mode**: at
+`stall_penalty 0.5` the policy floors the throttle and dies at the FIRST curve (nominal
+eval: complex_b/d 0.04 laps / 36–45 steps at 0.19–0.21 m/s; peak-550k *worse* than final).
+This closes the config-lever campaign (D-52..D-56) with a clear, non-obvious finding:
+
+| iter | delta vs prev | nominal champion (laps) | failure |
+| --- | --- | --- | --- |
+| stage-1 | curriculum (visual-DR-only, yaw 0.8, canonical cage) | **0.63** | perception wall @ s≈8.4 m |
+| v4 | +yaw 2.4, +cage_isaac 40° | 0.31 | first-curve (speed) |
+| v5 | +wide blind budgets | 0.62 *but stall-inflated* | park exploit + perception wall |
+| v6 | +stall_penalty 0.5 | 0.31 | first-curve (speed, overcorrected) |
+
+**The env "fixes" (D-54/55/56) each helped the hand-tuned CV controller drive farther yet
+made the RL OUTCOME worse or no better** — the champion across all 6 iterations remains
+**stage-1** (0.63 laps, hash `c61d4a7e`), trained on the *un-fixed* env. Interpretation: the
+extra yaw authority + widened budgets expand the action/□tolerance space into regions PPO
+exploits badly (oversteer → C-02/C-05; idle → park), while the one thing that stops even the
+clean stage-1 driver — the **monocular estimator's persistent ~+19° over-read at the
+complex_b U-turn exit (s≈8.4 m)** — is untouched by any of these levers. Both the CV
+reference (0.45 typical, 0.97 once) and every RL policy cap at this viewpoint. **Config-space
+is exhausted; the binding constraint is proven to be perception.** The pre-declared next
+lever is therefore the deep one (D-43 territory): estimator/renderer re-calibration for the
+Isaac RTX pixels at the failing viewpoint (frames + per-step cv_ey/cv_epsi traces archived
+under `experiments/sim/eval_isaac/cv_controller_0.2mps_frames/`), which is **required before
+any Isaac evaluation verdict** regardless. Until then the Isaac champion is stage-1 — a caged
+2-D camera policy that drives ~⅔ of a lap under full H-10 visual DR on three circuits
+(incl. one opposite-handed) it never memorised — a legitimate sim-to-real demonstrator, not
+a verdict.
+
 **Addendum (05.07.2026) — blind-stretch budgets widened; threshold/budget levers now
 exhausted.** Two further `[provisional, Isaac]` calibrations after v4's results:
 (1) `cage_isaac.yaml` `n_missing_max_cycles` 5→13 + `staleness_max_s` 0.5→1.3 (Trigger 5/3);
@@ -2435,3 +2504,48 @@ steps if 1M falls short with slope remaining), **stage 1b launched 04.07.2026 13
 `reset_num_timesteps=False` adds the config's budget; LR resumes at ~1.5e-4 annealing to 0;
 `ent_coef 0.01` carried inside the checkpoint), run `ppo_isaac2d_stage1b_2024_1M`. Stage 2
 (full-DR fine-tune) queues behind whichever stage-1x checkpoint first meets the lap criterion.
+
+### D-58 — hard-section spawn curriculum: `spawn_perturbation.random_start_s` (reusable training technique)
+
+| Field | Value |
+| --- | --- |
+| Section | `src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py` (new `random_start_s` flag, default False → bit-identical); Isaac configs (`spawn_perturbation.random_start_s: true`); run `ppo_isaac2d_kin2_2024_1M` |
+| Status | CONFIRMED (06.07.2026) — cracked the U-turn: kin2 cracked the U-turn: 275k peak 0.95 laps (near-full), 386k consistent 0.63 ×3/4 clean — both >= 0.63 champion, all cross the U-turn (slow to ~0.15 m/s). Consistency-vs-peak tradeoff; next: more steps/tune then curriculum up |
+| Date | Isaac posterior track (06.07.2026) |
+
+**Motivation (diagnostic finding).** The Isaac U-turn diagnostic (D-54..D-57 + the T1–T6
+ladder) traced the ~0.4–0.6-lap wall to a **chicken-and-egg exploration gap**, not to the
+task, the action dim, perception, or the cage: the tight complex_b U-turn (driven R ≈ 0.97 m)
+is reached only *after* the policy survives the whole preceding straight, so early in training
+it almost never gets there → **no gradient at the hardest section → it never learns the
+slow-and-turn**, dies there, and the loop repeats. Every controller (2-D, 1-D, even the
+perfect-state T5) capped at the U-turn; only the hand-coded CV (0.97) cleared it.
+
+**Technique.** `spawn_perturbation.random_start_s` (config-gated, default **False** → every
+existing config/RNG stream and all Gazebo/F-E verdicts bit-identical): when set, an episode
+with no explicit `start_s` in `reset(options)` spawns at a **uniform random arc-length** along
+the driven centreline (via `tracker.pose_at_arclength`, aligned to the local track heading +
+the usual spawn perturbation) instead of always the start line. The policy then practises
+**every part of the track — including the hard section — from step 0**, breaking the
+chicken-egg. Deterministic eval and F4 scenario spawns are untouched (they pass an explicit
+`start_s`/`circuit_index`, which takes precedence). 508 pytest green.
+
+**Reusable beyond this case.** This is a general curriculum lever for any circuit with a
+section the policy rarely reaches under start-line spawning (tight apex, chicane, adverse
+camber). It is cheaper and less intrusive than reward shaping or per-section fine-tuning: one
+config flag, no reward/geometry change, and it composes with DR and multi-circuit sampling.
+Future trainings on harder circuits (complex_a/c, the CV-unsafe tight ones) or on the physical
+platform's hard corners should reach for this first. **Caveat:** it changes the training-time
+episode-length/return distribution (episodes start mid-track), so those training curves are
+NOT comparable across the flag — judge only by deterministic nominal eval (laps from the start
+line), never by training `ep_rew_mean`/`ep_len_mean`.
+
+**Status note.** As of 06.07.2026 kin2 (2-D + yaw 0.8 champion recipe + `random_start_s`,
+complex_b, 1M) shows the strongest Isaac training signal yet (ep_len_mean 269 with ~0 % cage
+emergencies at 220k) but has NOT yet been nominal-evaluated; the lap verdict came in POSITIVE: kin2 @293k (vs champion 1M) hit **0.76 laps enforcement**
+(truncated at the episode cap, still driving at 0.15 m/s — it learned to SLOW for the U-turn),
+beating the 0.63 champion and clearing the U-turn for the first time; monitoring 0.55/0.66/0.47.
+Inconsistent (2/3 episodes still die at the U-turn) → resumed with `max_episode_steps` 1024→2048
+toward reliability + full laps. The finding
+(under-visited hard sections need spawn diversity) stands on the T1–T6 + T5 evidence.
+Cites D-54 (yaw), D-57 (perception), the T1–T6 ladder; SR-... none (posterior, no ID change).

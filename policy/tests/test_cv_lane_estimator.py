@@ -361,3 +361,22 @@ def test_offcenter_legacy_rule_mislocks_to_neighbour(cam):
     est = legacy.estimate(render_lane(cam, _three_line_offcenter(ey=0.14)))
     assert est.ok, est.reason
     assert est.ey < 0.0, f"legacy should mis-lock to the wrong sign, got {est.ey:.3f}"
+
+
+def test_heading_bias_inert_by_default(cam):
+    # heading_bias_rad defaults to 0.0 → every Gazebo estimate is bit-identical.
+    base = CvLaneEstimator(cam)
+    biased_zero = CvLaneEstimator(cam, config=CvLaneEstimatorConfig(heading_bias_rad=0.0))
+    img = render_lane(cam, centered_lane(yaw=0.12))
+    assert base.estimate(img).epsi == pytest.approx(biased_zero.estimate(img).epsi)
+
+
+def test_heading_bias_shifts_epsi_by_the_calibration(cam):
+    # A straight, centred lane reads epsi ≈ 0; applying heading_bias_rad=b must
+    # shift the reported epsi by exactly +b (epsi = -(heading - b)). This is the
+    # D-57 Isaac renderer de-bias: it cancels a systematic heading offset.
+    b = 0.084
+    est0 = CvLaneEstimator(cam, config=CvLaneEstimatorConfig())
+    estb = CvLaneEstimator(cam, config=CvLaneEstimatorConfig(heading_bias_rad=b))
+    img = render_lane(cam, centered_lane(yaw=0.0))
+    assert estb.estimate(img).epsi == pytest.approx(est0.estimate(img).epsi + b, abs=1e-6)

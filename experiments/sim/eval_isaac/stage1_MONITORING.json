@@ -1,0 +1,155 @@
+{
+  "controller": "ppo",
+  "cv_speed_mps": null,
+  "checkpoint": "policy/checkpoints/cobraflex_ppo_isaac2d_stage1_2024_1M.zip",
+  "checkpoint_hash": "c61d4a7eb0e3d5ad31a04beab610b42f4bf317bb072d130ce40b7c6898a9befe",
+  "train_config": "experiments/sim/eval_isaac/eval_stage1_on_d55_config.yaml",
+  "mode": "monitoring",
+  "track": "complex_b,complex_d,complex_e",
+  "episodes_per_circuit": 2,
+  "max_steps": 2400,
+  "seed": 2024,
+  "nominal": true,
+  "platform": "sim-isaac",
+  "timestamp_iso": "2026-07-05T18:36:01.380217+00:00",
+  "git_commit": "7b6282cd51d6da62d5d848a6c5b36531e8131c60",
+  "circuits": [
+    {
+      "name": "complex_b",
+      "offset_xy": [
+        0.0,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml",
+      "lane_centerline_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_centerline.yaml",
+      "road_centerline_hash": "90367eae02a204834bedfb737c0dbebe4fe4b30e1be75ca2c52d37411408bd55"
+    },
+    {
+      "name": "complex_d",
+      "offset_xy": [
+        24.7655,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_d_right_lane_centerline.yaml",
+      "lane_centerline_hash": "61f587eea1127e0bc640c6173d118eb62feb00f46cc7ba92de49a6f0938aa297",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_d_centerline.yaml",
+      "road_centerline_hash": "41a808eddae82604e5c74c0fed8cd3098d3e10680a11503b1734eced5260ab22"
+    },
+    {
+      "name": "complex_e",
+      "offset_xy": [
+        49.915099999999995,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_e_right_lane_centerline.yaml",
+      "lane_centerline_hash": "a271bc48ef2abb3cb5f1cd7a0862c5ef50e824511e9d15a7310baf911c9a2bf0",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_e_centerline.yaml",
+      "road_centerline_hash": "96aa7cf61f77c4b9a06155e4f59daad24692143e5a5a1ed9570169f513776d79"
+    }
+  ],
+  "results": [
+    {
+      "circuit": "complex_b",
+      "episode": 0,
+      "steps": 160,
+      "termination": "off_road",
+      "laps": 0.207,
+      "progress_m": 4.13,
+      "mean_abs_ey_mm": 44.7,
+      "max_abs_ey_mm": 248.3,
+      "mean_speed_mps": 0.272,
+      "reward_sum": 152.4,
+      "emergency_steps": 0,
+      "interventions_per_rule": {
+        "C-06": 104
+      }
+    },
+    {
+      "circuit": "complex_b",
+      "episode": 1,
+      "steps": 2200,
+      "termination": "truncated",
+      "laps": 0.448,
+      "progress_m": 8.96,
+      "mean_abs_ey_mm": 70.1,
+      "max_abs_ey_mm": 90.2,
+      "mean_speed_mps": 0.042,
+      "reward_sum": -48.4,
+      "emergency_steps": 1993,
+      "interventions_per_rule": {
+        "C-04": 1,
+        "C-05": 1993,
+        "C-06": 312
+      }
+    },
+    {
+      "circuit": "complex_d",
+      "episode": 0,
+      "steps": 235,
+      "termination": "off_road",
+      "laps": 0.266,
+      "progress_m": 5.55,
+      "mean_abs_ey_mm": 46.6,
+      "max_abs_ey_mm": 257.9,
+      "mean_speed_mps": 0.244,
+      "reward_sum": 206.4,
+      "emergency_steps": 0,
+      "interventions_per_rule": {
+        "C-06": 156
+      }
+    },
+    {
+      "circuit": "complex_d",
+      "episode": 1,
+      "steps": 126,
+      "termination": "off_road",
+      "laps": 0.126,
+      "progress_m": 2.64,
+      "mean_abs_ey_mm": 65.8,
+      "max_abs_ey_mm": 194.8,
+      "mean_speed_mps": 0.228,
+      "reward_sum": 73.8,
+      "emergency_steps": 0,
+      "interventions_per_rule": {
+        "C-06": 67
+      }
+    },
+    {
+      "circuit": "complex_e",
+      "episode": 0,
+      "steps": 8,
+      "termination": "off_road",
+      "laps": 0.005,
+      "progress_m": 0.09,
+      "mean_abs_ey_mm": 25.6,
+      "max_abs_ey_mm": 195.9,
+      "mean_speed_mps": 0.38,
+      "reward_sum": -22.1,
+      "emergency_steps": 0,
+      "interventions_per_rule": {
+        "C-06": 6
+      }
+    },
+    {
+      "circuit": "complex_e",
+      "episode": 1,
+      "steps": 318,
+      "termination": "off_road",
+      "laps": 0.334,
+      "progress_m": 6.6,
+      "mean_abs_ey_mm": 65.8,
+      "max_abs_ey_mm": 389.0,
+      "mean_speed_mps": 0.214,
+      "reward_sum": 210.0,
+      "emergency_steps": 91,
+      "interventions_per_rule": {
+        "C-01": 16,
+        "C-02": 16,
+        "C-04": 30,
+        "C-05": 91,
+        "C-06": 181
+      }
+    }
+  ]
+}

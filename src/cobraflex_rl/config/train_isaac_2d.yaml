@@ -125,6 +125,7 @@ cage:
   enabled: true
   mode: enforcement
   yaml_path: "cage/cage_isaac.yaml"  # D-55: Isaac cage variant (theta_max 40 deg — renderer over-read)
+  perception_heading_bias_rad: 0.084   # D-57 [provisional, Isaac]: de-bias estimator heading (renderer calibration)
   perception_min_invalid_cycles: 12   # D-55 [provisional, Isaac]: supervisor invalid-persistence (was 4, Gazebo-tuned)
   lookahead_segments: 5
   throttle_nominal: 0.5  # 1-D fallback / SC-EDGE-03 override scale (unused as cruise here)

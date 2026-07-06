@@ -1,0 +1,91 @@
+{
+  "run_id": "ppo_isaac2d_kin2_2024_1M",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-07-06T12:21:58.845337+00:00",
+  "git_commit": "7b6282cd51d6da62d5d848a6c5b36531e8131c60",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "scenario_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "circuits": null,
+  "policy_checkpoint": "policy/checkpoints/cobraflex_ppo_isaac2d_kin2_2024_1M.zip",
+  "policy_checkpoint_hash": "d9759d47b6329861d058ee64b993018935a6dd29a21e11796965e2e7f814ed64",
+  "seed": 2024,
+  "platform": "sim-isaac",
+  "total_timesteps": 1000000,
+  "hyperparameters": {
+    "learning_rate": 0.0003,
+    "lr_schedule": "linear",
+    "gamma": 0.99,
+    "n_steps": 1024,
+    "batch_size": 64,
+    "n_epochs": 10,
+    "gae_lambda": 0.95,
+    "clip_range": 0.2,
+    "ent_coef": 0.01,
+    "vf_coef": 0.5,
+    "max_grad_norm": 0.5,
+    "target_kl": 0.5,
+    "clip_range_vf": 0.2,
+    "normalize_reward": true
+  },
+  "policy": "CnnPolicy",
+  "observation": {
+    "type": "camera",
+    "camera": {
+      "topic": "/camera/image_raw_lane",
+      "width": 84,
+      "height": 84,
+      "grayscale": true,
+      "frame_stack": 4
+    }
+  },
+  "action": {
+    "type": "steer_throttle",
+    "max_speed_mps": 0.5,
+    "throttle_deadband": 0.05
+  },
+  "domain_randomization": {
+    "enabled": false,
+    "p_degrade": 0.5,
+    "level_range": [
+      0.2,
+      0.8
+    ]
+  },
+  "dynamics_randomization": {
+    "enabled": false,
+    "friction_range": [
+      0.04,
+      0.07
+    ],
+    "mass_scale_range": [
+      0.85,
+      1.15
+    ],
+    "yaw_scale_range": [
+      0.8,
+      1.2
+    ],
+    "latency_steps_range": [
+      0,
+      2
+    ]
+  },
+  "scene_randomization": {
+    "enabled": false,
+    "dome_intensity_scale": [
+      0.6,
+      1.4
+    ],
+    "sun_intensity_scale": [
+      0.5,
+      1.5
+    ],
+    "light_tint": 0.1,
+    "asphalt_jitter": 0.08,
+    "line_jitter": 0.15,
+    "grass_jitter": 0.1
+  },
+  "status": "interrupted"
+}

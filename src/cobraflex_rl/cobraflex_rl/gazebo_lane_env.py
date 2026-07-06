@@ -288,18 +288,22 @@ class GazeboLaneEnv(gym.Env):
             # renderer has ONE longer genuinely-blind stretch (U-turn exit,
             # lane leaves the image) that needs a wider bridge. Unset -> the
             # tuned default, bit-identical for every Gazebo config.
-            invalid_cycles = dict(self.cfg.get("cage", {}) or {}).get(
-                "perception_min_invalid_cycles")
+            _cage_cfg = dict(self.cfg.get("cage", {}) or {})
+            invalid_cycles = _cage_cfg.get("perception_min_invalid_cycles")
+            # Isaac heading-bias calibration (D-57): de-bias the estimator's
+            # heading for the Isaac renderer. Unset/0.0 -> the Gazebo estimator,
+            # bit-identical (D-43 verdicts untouched).
+            heading_bias = float(_cage_cfg.get("perception_heading_bias_rad", 0.0))
+            sup_kwargs = {}
+            if heading_bias != 0.0:
+                from .cv_lane_estimator import CvLaneEstimator, CvLaneEstimatorConfig
+                sup_kwargs["estimator"] = CvLaneEstimator(
+                    config=CvLaneEstimatorConfig(heading_bias_rad=heading_bias))
             if invalid_cycles is not None:
                 from .perception_health import PerceptionHealthMonitor
-                self.cage_perception = CagePerceptionSupervisor(
-                    health=PerceptionHealthMonitor(
-                        min_confidence=0.10,
-                        min_invalid_cycles=int(invalid_cycles),
-                    )
-                )
-            else:
-                self.cage_perception = CagePerceptionSupervisor()
+                sup_kwargs["health"] = PerceptionHealthMonitor(
+                    min_confidence=0.10, min_invalid_cycles=int(invalid_cycles))
+            self.cage_perception = CagePerceptionSupervisor(**sup_kwargs)
             self.observation_space = spaces.Box(
                 low=0,
                 high=255,
@@ -381,6 +385,14 @@ class GazeboLaneEnv(gym.Env):
         self.spawn_perturb_enabled = bool(spawn_cfg.get("enabled", True))
         self.spawn_heading_range = float(spawn_cfg.get("heading_rad", 0.15))
         self.spawn_lateral_range = float(spawn_cfg.get("lateral_m", 0.05))
+        # Random along-track spawn (curriculum, isaac-diagnostic): when set, an
+        # episode with no explicit start_s in reset(options) spawns at a uniform
+        # random arc-length instead of always the start line. This gives the
+        # policy experience of EVERY part of the track — notably the tight U-turn
+        # it otherwise rarely reaches (it dies there → no gradient there → never
+        # learns the slow-and-turn). Default False → deterministic eval and every
+        # existing config/RNG stream are bit-identical.
+        self.random_start_s = bool(spawn_cfg.get("random_start_s", False))
 
     def _select_circuit(self, index: int) -> None:
         """Make circuit ``index`` the active geometry (trackers, widths, arc
@@ -453,6 +465,11 @@ class GazeboLaneEnv(gym.Env):
         kappa_seed = opts.get("kappa_seed_rad_m")
         if kappa_seed is not None:
             start_s = self.tracker.arclength_at_curvature(float(kappa_seed))
+        # Curriculum: uniform random along-track spawn (only when no explicit
+        # start_s / kappa_seed was requested, so eval/scenarios are unaffected).
+        if start_s is None and self.random_start_s:
+            start_s = float(self.np_random.uniform(
+                0.0, float(self.tracker.cumulative_lengths[-1])))
         if start_s is not None:
             base_x, base_y, base_heading = self.tracker.pose_at_arclength(
                 float(start_s), float(opts.get("lateral_offset_m", 0.0) or 0.0)

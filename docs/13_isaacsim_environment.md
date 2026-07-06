@@ -584,6 +584,20 @@ throughput on this scene (multi-track + physics/scene/visual DR + 2-D action, RT
 **~25 env-steps/s** steady-state headless — below the ~33 of the single-track 1-D pilot
 (table below), so budget **~11 h for the 1M run** on this class of GPU.
 
+### Hard-section spawn curriculum — `random_start_s` (D-58)
+
+`spawn_perturbation.random_start_s` (config-gated, default **False** → bit-identical) makes a
+training episode with no explicit `start_s` spawn at a **uniform random arc-length** along the
+driven centreline instead of always the start line. Rationale (Isaac U-turn diagnostic): a
+tight section reached only after surviving the preceding track gets almost no early-training
+visits → **no gradient at the hardest corner → the policy never learns it** (chicken-and-egg).
+Random along-track spawn practises every part — including that corner — from step 0. General,
+reusable curriculum lever (any circuit with an under-visited apex/chicane); composes with DR
+and multi-circuit sampling; cheaper than reward shaping. **Judge only by deterministic nominal
+eval (laps from the start line)** — the flag shifts the training-time episode-length/return
+distribution, so `ep_rew_mean`/`ep_len_mean` are NOT comparable across it. Deterministic eval
+and F4 scenarios (explicit `start_s`/`circuit_index`) are unaffected. See D-58.
+
 ### Domain randomization (sim-to-real)
 
 Beyond the image-level visual degradation (`domain_randomization` — the H-10 trio that

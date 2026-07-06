@@ -1,0 +1,87 @@
+{
+  "controller": "ppo",
+  "cv_speed_mps": null,
+  "checkpoint": "policy/checkpoints/cobraflex_ppo_isaac2d_T6_2d_yaw15_2024.zip",
+  "checkpoint_hash": "633bcf392a9a49251887945b1e9c38217bbd4de110e3b0a47bbe045025ed9f43",
+  "train_config": "src/cobraflex_rl/config/train_isaac_T6_2d_yaw15.yaml",
+  "mode": "monitoring",
+  "track": "complex_b",
+  "episodes_per_circuit": 3,
+  "max_steps": 2400,
+  "seed": 2024,
+  "nominal": true,
+  "platform": "sim-isaac",
+  "timestamp_iso": "2026-07-06T00:45:23.781191+00:00",
+  "git_commit": "7b6282cd51d6da62d5d848a6c5b36531e8131c60",
+  "circuits": [
+    {
+      "name": "complex_b",
+      "offset_xy": [
+        0.0,
+        0.0
+      ],
+      "lane_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml",
+      "lane_centerline_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+      "road_centerline_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_centerline.yaml",
+      "road_centerline_hash": "90367eae02a204834bedfb737c0dbebe4fe4b30e1be75ca2c52d37411408bd55"
+    }
+  ],
+  "results": [
+    {
+      "circuit": "complex_b",
+      "episode": 0,
+      "steps": 35,
+      "termination": "off_road",
+      "laps": 0.036,
+      "progress_m": 0.71,
+      "mean_abs_ey_mm": 38.4,
+      "max_abs_ey_mm": 141.8,
+      "mean_speed_mps": 0.217,
+      "reward_sum": -2.3,
+      "emergency_steps": 7,
+      "interventions_per_rule": {
+        "C-01": 3,
+        "C-02": 5,
+        "C-03": 9,
+        "C-05": 7,
+        "C-06": 29
+      }
+    },
+    {
+      "circuit": "complex_b",
+      "episode": 1,
+      "steps": 234,
+      "termination": "off_road",
+      "laps": 0.304,
+      "progress_m": 6.07,
+      "mean_abs_ey_mm": 29.9,
+      "max_abs_ey_mm": 138.1,
+      "mean_speed_mps": 0.262,
+      "reward_sum": 223.4,
+      "emergency_steps": 87,
+      "interventions_per_rule": {
+        "C-02": 7,
+        "C-03": 7,
+        "C-04": 16,
+        "C-05": 87,
+        "C-06": 188
+      }
+    },
+    {
+      "circuit": "complex_b",
+      "episode": 2,
+      "steps": 132,
+      "termination": "off_road",
+      "laps": 0.186,
+      "progress_m": 3.71,
+      "mean_abs_ey_mm": 62.8,
+      "max_abs_ey_mm": 137.8,
+      "mean_speed_mps": 0.283,
+      "reward_sum": 122.2,
+      "emergency_steps": 0,
+      "interventions_per_rule": {
+        "C-06": 81
+      }
+    }
+  ]
+}

@@ -181,7 +181,10 @@ def test_throttle_delta_penalises_change_not_magnitude():
 def test_isaac_2d_yaml_reward_block_extends_v12_with_throttle_delta():
     with ISAAC_2D_YAML.open(encoding="utf-8") as handle:
         reward_cfg = yaml.safe_load(handle)["reward"]
-    assert set(reward_cfg) == set(WEIGHTS) | {"throttle_delta"}
+    # v1.2 base + throttle_delta (D-50) + stall_penalty/stall_progress_min (D-56).
+    assert set(reward_cfg) == set(WEIGHTS) | {
+        "throttle_delta", "stall_penalty", "stall_progress_min"
+    }
     assert all(float(v) > 0.0 for v in reward_cfg.values())
 
 

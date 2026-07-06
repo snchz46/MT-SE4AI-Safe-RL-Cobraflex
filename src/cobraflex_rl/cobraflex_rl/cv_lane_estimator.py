@@ -90,6 +90,19 @@ class CvLaneEstimatorConfig:
     # tracked to mm). Swept on the cv_ctrl_eval_20260618T182017Z apex frames:
     # 0.15 keeps |cv_epsi| ≤ 0.31, i.e. 0.13 rad under theta_max (0.4363).
     heading_window_m: float = 0.15
+    # Heading-bias correction (D-57, Isaac). The camera_geometry IPM extrinsics
+    # (pitch 0.30 rad, height 0.077 m) are calibrated for the GAZEBO render; the
+    # Isaac RTX camera reproduces the same URDF but its rendered lane geometry
+    # carries a systematic near-field-slope offset → a constant epsi bias
+    # (measured −4.8° on straight, heading-≈0 stretches; up to −13° at the
+    # complex_b U-turn exit where the IPM shear compounds it). Subtracted from the
+    # estimated heading so epsi is unbiased: `heading -= heading_bias_rad`.
+    # Default 0.0 → every Gazebo config/estimate bit-identical (D-43 verdicts
+    # untouched). The Isaac perception path sets +0.084 (the measured straight
+    # bias). This is a calibration, not a mask: C-01 (lane offset) and the
+    # plausibility/health checks keep full sensitivity; only the heading readout
+    # is de-biased.
+    heading_bias_rad: float = 0.0
     # Single-line fallback (mirrors the proven lane_keeper_gazebo_node
     # single-side mode): when no plausible pair exists, infer the lane centre
     # from the nearest single line + the running lane-width estimate, at
@@ -390,7 +403,9 @@ class CvLaneEstimator:
         # vehicle) rather than the full-band slope c1, which a tight curve fit
         # biases toward the curve direction.
         c1_heading = self._near_field_slope(right, left, c1)
-        heading = float(np.arctan(c1_heading))
+        # Subtract the calibrated heading bias (D-57, Isaac renderer; 0.0 on
+        # Gazebo → unchanged) so a straight-ahead vehicle reads epsi ≈ 0.
+        heading = float(np.arctan(c1_heading)) - cfg.heading_bias_rad
         ey = -float(c0)
         epsi = -heading
         lane_width = float((left["c0"] - right["c0"]) * np.cos(heading))

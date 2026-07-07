@@ -809,6 +809,15 @@ shaping o constrained RL), esta separación no sería posible.
 
 ## 5.7 Arquitectura ROS2  [BORRADOR D23]
 
+> **Nota de vigencia (track 'E', 2026-07).** Las subsecciones 5.7.1–5.7.3
+> describen el **pipeline de nodos ROS2 del track de estado 'F'** tal como se
+> construyó en Fase 2 (demo F2, brazo de control F3/F4). Es hoy la
+> **arquitectura baseline, superada como sistema de récord**: el sistema
+> primario de la tesis (track 'E', cámara end-to-end) no usa
+> `lane_perception_node` ni `/state_obs` — colapsa policy y cage dentro del
+> proceso del entorno (§5.7.4). La descomposición en nodos sigue siendo el
+> plano de referencia para el despliegue físico (F5).
+
 ### 5.7.1 Descomposición en nodos
 
 La arquitectura del sistema se descompone en cinco nodos ROS2
@@ -943,6 +952,47 @@ de la cage con mediana y P95 de 50.0 ms (máximo 62 ms, un único ciclo
 atribuido a jitter del scheduler de Linux no realtime); el desglose de
 la latencia por etapa requiere instrumentación adicional de timestamps
 y se difiere a F3.
+
+### 5.7.4 Arquitectura del track 'E' (sistema de récord): cámara end-to-end con cage in-process
+
+El track primario de cámara (D-41) sustituye el grafo de nodos anterior por un
+**bucle in-process** dentro de `GazeboLaneEnv` —el mismo entorno para
+entrenamiento y evaluación (`docs/11` §3)—. Los cinco nodos no desaparecen del
+proyecto: siguen siendo el plano del despliegue físico. Pero en el bucle de
+récord el papel de cada uno lo asume una función dentro del proceso, en
+beneficio del determinismo (paso de gym ↔ paso de Gazebo en lockstep, a 10 Hz,
+`control_dt = 0.1 s` — no los 20 Hz del pipeline F2 de §5.7.3) y de la
+reproducibilidad de campaña:
+
+- **Percepción (policy).** No hay estado construido a mano: la imagen nativa de
+  la cámara frontal llega por el bridge ROS↔Gazebo (`/camera/image_raw_lane`) y
+  `CameraPipeline.to_observation()` la reduce a **84×84 en escala de grises**;
+  un stack temporal de **4 frames** (`VecFrameStack`) recupera las señales de
+  velocidad/deriva que un frame único pierde. Esa es la única entrada de la CNN
+  (SB3 `CnnPolicy`, extractor NatureCNN).
+- **Percepción (cage, D-43).** La misma frame nativa —**degradada una sola vez,
+  antes de la bifurcación** (la garantía de causa común de D-43)— alimenta el
+  **estimador CV de carril determinista** (`CvLaneEstimator` bajo
+  `CagePerceptionSupervisor`), que reconstruye el estado abstracto (`ey`,
+  `epsi`) sobre el que razonan C-01..C-06. Ni ground truth ni la CNN: un
+  pipeline clásico auditable, separado de la red aprendida.
+- **Cage.** `_apply_cage()` invoca el mismo núcleo puro (`SafetyCageNode`,
+  orden C-06→C-04→C-02→C-03→C-01→C-05) que `cage_ros_node` envuelve en
+  despliegue; en *enforcement* la acción segura es la que se actúa, en
+  *monitoring* se registra en la sombra. La pérdida de percepción válida
+  dispara la **parada controlada open-loop** (Trigger 8 de C-05, SR-013).
+- **Veredicto sobre la verdad.** El canal ground-truth no desaparece: deja de
+  alimentar el control y queda **solo para puntuar**. La recompensa (docs/10) y
+  las métricas de seguridad (M-S1, contacto con el borde de la vía) se miden
+  sobre la pose verdadera, de modo que "salir del carril" siga siendo un hecho
+  físico y no un artefacto del estimador.
+
+La consecuencia arquitectónica clave frente a la Figura 5.1: **policy y cage
+comparten ahora el sensor** (la cámara), así que la independencia que antes
+aportaba el ground truth se sustituye por independencia *algorítmica* (CNN
+aprendida vs CV clásico determinista) más el tratamiento explícito de la causa
+común como hazards H-10..H-12 con sus SR-012..014 (§5.2.3; detalle en
+`docs/04`, nota de percepción del cage, y `docs/11` §1).
 
 ---
 

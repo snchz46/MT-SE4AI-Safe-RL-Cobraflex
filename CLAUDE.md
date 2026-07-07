@@ -221,7 +221,7 @@ Full loop: `ros2 launch cobraflex lane_keeper_gazebo.launch.py`. The ROS2 nodes 
 | --- | --- |
 | Methodology overview | [docs/00_v_model_adapted.md](docs/00_v_model_adapted.md) |
 | ID rules | [docs/01_id_conventions.md](docs/01_id_conventions.md) |
-| Hazards (H-01..H-09) | [docs/02_hazard_register.md](docs/02_hazard_register.md) |
+| Hazards (H-01..H-12) | [docs/02_hazard_register.md](docs/02_hazard_register.md) |
 | Safety Requirements | [docs/03_safety_requirements.md](docs/03_safety_requirements.md) |
 | Cage rule specs | [docs/04_cage_specification.md](docs/04_cage_specification.md) |
 | Scenarios | [docs/05_scenario_library.md](docs/05_scenario_library.md) |

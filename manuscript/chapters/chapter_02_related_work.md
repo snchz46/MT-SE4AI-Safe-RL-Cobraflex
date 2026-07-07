@@ -82,6 +82,27 @@ sólidos. Para tareas con horizontes largos y dominios abiertos, la
 comunidad reconoce que DRL puro es insuficiente sin mecanismos adicionales
 de garantía.
 
+La variante **end-to-end con visión** —mapear la imagen de la cámara
+directamente a la acción de control, sin un estado intermedio construido a
+mano— tiene un linaje propio que esta tesis retoma en su track primario.
+ALVINN (Pomerleau, 1989) demostró el concepto con una red minúscula sobre
+30×32 píxeles; PilotNet/DAVE-2 (Bojarski et al., 2016) lo escaló a una CNN
+entrenada por clonación de comportamiento capaz de mantener el carril en
+carretera real; y Kendall et al. (2019) cerraron el círculo con DRL,
+entrenando *lane following* end-to-end desde imagen monocular en un vehículo
+real con episodios contados en minutos. En paralelo, la **aleatorización de
+dominio** —visual (Tobin et al., 2017) y de dinámica (Peng et al., 2018)— se
+consolidó como mitigación estándar de la fragilidad de la percepción
+aprendida: entrenar bajo apariencias aleatorizadas (iluminación, textura,
+color) para que la política generalice a condiciones no vistas. El track 'E'
+de esta tesis se sitúa en esa línea (imagen → dirección con PPO y una CNN,
+robustecida con aleatorización visual), pero su aportación no es el conductor
+end-to-end en sí, sino la **instrumentación de seguridad** a su alrededor: la
+envolvente runtime no comparte la red aprendida —razona sobre un estimador de
+carril CV clásico y determinista, independiente por algoritmo (D-43)— y la
+degradación visual se convierte en un eje de evaluación controlado por
+escenario, no solo en ruido de entrenamiento (Cap. 5, Cap. 8).
+
 El problema estructural compartido por todos estos trabajos es el mismo: el
 comportamiento de la *policy* aprendida no es derivable de una especificación
 escrita a priori, lo que rompe el supuesto fundacional sobre el que descansan

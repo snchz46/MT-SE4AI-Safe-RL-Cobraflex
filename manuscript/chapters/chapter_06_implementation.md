@@ -37,8 +37,13 @@ comparación con el RL del Capítulo 7. La sección 6.5 desarrolla la
 estrategia de testing en sus tres niveles (unitarios por regla, de
 propiedades, de integración) y reporta los resultados. La sección 6.6
 documenta la validación end-to-end con métricas preliminares
-medidas con el PD circulando en Gazebo. La sección 6.7 cierra el
-capítulo y articula la transición al Capítulo 7.
+medidas con el PD circulando en Gazebo. La sección 6.7 documenta la
+implementación del **track 'E'** (cámara end-to-end, D-41/D-43), el
+sistema de récord de la tesis, que **reutiliza y supera** la
+infraestructura de las secciones anteriores: las secciones 6.2–6.6
+describen la materialización F2 del track de estado, hoy congelada como
+brazo baseline. La sección 6.8 cierra el capítulo y articula la
+transición al Capítulo 7.
 
 Una decisión transversal merece comentario antes de entrar en detalle.
 Una de las tentaciones de un capítulo de implementación es convertirse
@@ -762,7 +767,61 @@ Capítulo 8 cuando se compare contra el RL.
 
 ---
 
-## 6.7 Síntesis y transición al Capítulo 7  [BORRADOR D35]
+## 6.7 Implementación del track 'E': cámara end-to-end  [ACTUALIZACIÓN D-41/D-43]
+
+El sistema de récord de la tesis no añade nodos: **especializa el entorno**. El
+mismo `GazeboLaneEnv` sirve a ambos tracks y la rama de cámara se activa con un
+único conmutador de configuración (`observation.type == "camera"`,
+`train_ppo_camera.yaml`). Esta sección documenta las cuatro decisiones técnicas
+no triviales de esa especialización; el detalle de ingeniería vive en
+`docs/11_camera_rl_training.md` (entrenamiento y entorno) y
+`docs/12_cv_lane_keeper.md` (el estimador CV), fieles a la filosofía de §6.1.
+
+**El pipeline de cámara compartido.** La imagen nativa llega por el bridge
+ROS↔Gazebo (`/camera/image_raw_lane`) y atraviesa `CameraPipeline` una vez por
+ciclo: el *injector* de degradación visual del escenario se aplica **antes** de
+la bifurcación, y la misma frame degradada alimenta (a) el estimador CV del
+cage a resolución nativa y (b) `to_observation()`, que la reduce a 84×84 en
+escala de grises para la policy. Aplicar la degradación una sola vez antes del
+split es la **garantía de causa común** de D-43: policy y cage ven el mismo
+mundo, también cuando ese mundo está degradado (H-10). Un hallazgo de
+implementación con consecuencia directa: el renderizado de cámara en Gazebo
+está ligado a tiempo real, así que el reloj de simulación corre a factor 1 en
+el track de cámara (el track de estado corría "as fast as possible") — el coste
+en tiempo de campaña se presupuesta en el Capítulo 8.
+
+**El estimador CV del cage (D-43).** `CvLaneEstimator`, bajo el supervisor de
+salud `CagePerceptionSupervisor`, es un pipeline de visión **clásico y
+determinista** (umbralizado, extracción de líneas, geometría de carril;
+`docs/12`) que reconstruye `ey`/`epsi` para C-01..C-06. Su validación es
+propia y previa al veredicto (campaña-oráculo GE2): detección al 100% con
+sesgo de `|ey|` ≤ 32 mm bajo los niveles de glare que después usa la campaña
+de escenarios. Cuando el supervisor declara la percepción inválida, C-05
+ejecuta la parada controlada open-loop (Trigger 8, SR-013) — el mecanismo que
+la campaña GE4-V2 midió como el valor del cage bajo degradación (Cap. 8).
+
+**Los mundos `complex_b`.** El track de récord se valida sobre el circuito
+sinuoso y auto-aproximante `complex_b` (perímetro 19,22 m, 2,2× el óvalo) y
+sus variantes de estrés de mundo (marcado con huecos `gaps`, desgaste
+`worn_50`, partículas). La auto-aproximación forzó un cambio de
+implementación en la contención: el criterio perpendicular de salida de vía
+del óvalo colapsa cuando dos tramos de la pista quedan a menos de un ancho de
+vía, así que el off-road se juzga por **distancia global al eje de la vía**
+(centerline de vía separado del centerline de carril; `docs/11` §3.5),
+manteniendo el comportamiento legacy intacto para el brazo F.
+
+**Aleatorización visual de dominio (H-10).** El entrenamiento aplica
+degradaciones visuales aleatorias dentro del envelope de H-10 como mitigación
+de robustez; en evaluación la aleatorización se **desactiva** y el único
+estresor visual es el del escenario, para que cada corrida sea atribuible a su
+perturbación declarada. La suite de tests de `policy/tests` cubre el pipeline
+de cámara, el estimador CV, la geometría de proyección y los modos de
+degradación (Cap. 6 §6.5 se queda como está: la estrategia de testing es la
+misma, la superficie crece).
+
+---
+
+## 6.8 Síntesis y transición al Capítulo 7  [BORRADOR D35]
 
 Este capítulo ha completado la materialización ejecutable de la rama
 izquierda inferior del V-Model adaptado para el caso lane-following.
@@ -773,6 +832,9 @@ parámetros versionados y sus modos de operación; la suite de tests
 (unitarios, de propiedades, de integración) verifica el cumplimiento
 de la especificación; el baseline PD valida el pipeline end-to-end y
 proporciona los primeros datos de log para los scripts de análisis.
+Sobre esa base, la sección 6.7 documenta la especialización de cámara
+del track 'E' —el sistema que porta el veredicto de la tesis—, que
+reutiliza el entorno y la cage sin tocar su especificación.
 
 La pasada del Gate 2 marca el primer hito sustancial de la tesis y
 señala una transición importante en el modo de trabajo. Hasta este

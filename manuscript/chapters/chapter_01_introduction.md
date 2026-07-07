@@ -328,9 +328,13 @@ a ese bloque son:
   medir el **coste de la percepción por cámara** (el delta E↔F). La cage es
   **agnóstica al origen del estado** (C-01..C-06 idénticas en ambos tracks) y los
   veredictos de seguridad se miden sobre la pose verdadera —salir del carril es un
-  hecho físico, no un artefacto—. El track 'F' está plenamente caracterizado
-  (campaña G4, global `SATISFIED`); el track 'E' lo **superará como evidencia de
-  cierre** cuando se ejecute su campaña GE4 sobre el E-main de cámara (Capítulo 8).
+  hecho físico, no un artefacto—. El track 'F' quedó plenamente caracterizado
+  (campaña F4, global `SATISFIED`, cage latente in-ODD) y el track 'E' **ya lo
+  superó como evidencia de cierre**: la campaña **GE4-V2** sobre el E-main de
+  cámara (`complex_b`, 297k; 1970 runs, 28.06.2026) es el **veredicto de récord**
+  —global `NOT SATISFIED` *literal*, imputable solo a la cláusula legacy de tiempo
+  de recuperación de SR-002/003, **sin ningún predicado de seguridad SR-CL-A
+  incumplido** (D-47)— y el Gate **G4 cerró el 02.07.2026** (Capítulo 8).
 
 - **Velocidad longitudinal fija.** El componente aprendido controla únicamente la
   dirección; la velocidad se mantiene constante. Esto reduce el problema de

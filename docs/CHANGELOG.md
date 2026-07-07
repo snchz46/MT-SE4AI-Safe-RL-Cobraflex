@@ -31,6 +31,43 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [07.07.2026] — Manuscript + satellite-README sweep: track 'E' as evidence of record, F-track framed as superseded baseline
+
+**Document(s) affected:** `manuscript/chapters/chapter_01_introduction.md` (stale future-tense verdict bullet → GE4-V2 as verdict of record, G4 closed), `chapter_02_related_work.md` (§2.2: new end-to-end-vision lineage block — ALVINN/PilotNet/Kendall, domain randomisation — and the thesis's positioning around it), `chapter_03_methodology.md` (same future-tense fix, names `complex_b`, notes the SR register growth to SR-014/H-12), `chapter_05_architecture_and_cage.md` (§5.7 vigencia note: node graph = F-track baseline; new §5.7.4 documents the track-'E' in-process wiring — CameraPipeline split, CV-estimator cage state, 10 Hz lockstep, verdict on true pose), `chapter_06_implementation.md` (new §6.7 "Implementación del track 'E'"; synthesis renumbered 6.7→6.8; §6.1 structure updated), `experiments/README.md` + `tools/README.md` + `scenarios/README.md` (all three pre-dated the E evaluation: campaign map now leads with `campaign_e_v2` as verdict of record, E-era tools documented, oval library marked frozen with pointer to `scenarios_complex_b/`), `docs/01_id_conventions.md` (E-track paragraph: merged single-trunk, prefixes E2/E4/E5, E = system of record), `docs/10_reward_function.md` (header row: reused unchanged by camera training), root `README.md` ("The idea" section now leads with the track-'E' in-process dataflow — camera → CV-estimator/CNN split → cage — and demotes the five-node ROS 2 graph to the physical/baseline pipeline; multi-seed N=5 corrected from "in progress" to deferred-posterior; phase table annotated with the register growth, the E-N/GE-N note and the E5 Isaac status; repo layout gains `scenarios_complex_b/`; ID table gains the `E-X`/`GE-X` row; figure credit covers the camera plotters; reading order gains docs/12), `CLAUDE.md` (hazard row H-01..H-09 → H-01..H-12). **No hazard/SR table row, CSV, code, cage constant or scenario criterion changed.**
+**Phase:** track 'E' (posterior documentation, after Gate G4)
+**Gate context:** after Gate G4 — documentation reconciliation only; no verdict or threshold touched
+**Author:** Samuel Sanchez
+
+### Change
+
+Audit + fix of every doc/manuscript location that still presented the F-track
+(ground-truth state vector) as the current system or the GE4 camera campaign as
+future work. The documentation now consistently evidences the track-'E' end-to-end
+camera system as the system of record (GE4-V2, 1970 runs, 28.06.2026; G4 closed
+02.07.2026) and frames the F-track as the frozen, superseded baseline/control arm.
+
+### Rationale
+
+User review (07.07.2026): chapters 1–6 all pre-dated the GE4-V2 verdict (ch.1/3
+said 'E' *will* supersede 'F' "cuando se ejecute la campaña GE4"; ch.5/ch.6 only
+described the F2 node pipeline; ch.2 lacked the end-to-end-vision related work),
+and the experiments/tools/scenarios READMEs still described the F4 campaign as
+"in progress" with perturbations "pending validation". Chapters 7–8 and the
+2026-07-07 living-doc sweep (docs/00–16) were already current.
+
+### Impact
+
+Manuscript cross-references to the old ch.6 §6.7 (synthesis) now point to §6.8;
+checked: the only such reference was ch.6's own §6.1 intro (updated). No generated
+artifact (CSV/figure) depends on the edited prose.
+
+### Verification
+
+`python tools/check_traceability.py` — PASS (see below); hazard/SR sync not
+required (no machine-readable table touched).
+
+---
+
 ## [07.07.2026] — Living-doc sweep: F-track archived, current-state framing added to docs/00/02/03/04/06/10
 
 **Document(s) affected:** `docs/00_v_model_adapted.md`, `docs/02_hazard_register.md`, `docs/03_safety_requirements.md`, `docs/04_cage_specification.md`, `docs/06_metrics_catalogue.md`, `docs/10_reward_function.md`. No machine-readable table, CSV, code, cage constant or scenario criterion changed.

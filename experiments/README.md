@@ -2,22 +2,48 @@
 
 Experimental data and analysis scripts.
 
+> **Status (2026-07).** The evidence of record is the **track-'E' end-to-end camera
+> campaign** `sim/campaign_e_v2/` (GE4-V2, 1970 runs, 28.06.2026; G4 closed
+> 02.07.2026). The F-track state-vector campaigns (`sim/campaign/`,
+> `sim/campaign_frontier/`) are **frozen as the ground-truth baseline** — the
+> control arm for "what does camera perception cost" — and are not re-run.
+> Next phase: Isaac Sim / sim-to-real (`sim/eval_isaac/`, docs/13–14).
+
 ## Organisation
 
-- `sim/` — simulation experiments. One subdirectory per `(scenario, mode)` combination, with one subdirectory per run.
-- `physical/` — physical experiments on the CobraFlex 1:14 platform.
-- `analysis/` — scripts and notebooks that compute metrics and produce figures.
+- `sim/runs/` — single evaluation runs: F2 PD closed-loop (`ros_run_*`), F3 state
+  evals (`rl_eval_*`), track-'E' camera evals (`rl_cam_eval_*`, `rl_newcam_eval_*`),
+  CV-estimator oracle validation (`cv_estimator_val_*`).
+- `sim/training/` — training runs with metadata + learning curves (`ppo_train_*`
+  F-track; `ppo_newcam_*` track 'E'; peak checkpoints under `checkpoints_peak/`).
+- `sim/campaign_e_v2/` — **GE4-V2, the verdict of record** (track 'E', complex_b
+  297k E-main): `campaign_report.json` (per-scenario/per-SR/global roll-up),
+  `campaign_runs.csv`, `failure_mode_breakdown.json` (failure classes + pass-mode
+  split: emergency-stop pass vs overcame-the-perturbation pass) and figures.
+- `sim/campaign_e_297k/` — GE4-V1 (superseded by V2: ruta-1 IC clip, D-45 scoring).
+- `sim/campaign_e/` — historical 139k camera campaign (availability-cost reading).
+- `sim/campaign/` — **F4 verdict campaign, frozen baseline** (1260 runs, seed 2024,
+  global `SATISFIED`, cage latent in-ODD).
+- `sim/campaign_frontier/` — F4 out-of-ODD cage-efficacy contrast (D-35).
+- `sim/tracks/` — track sources (complex_b centerlines etc.).
+- `sim/eval_isaac/` — Isaac Sim posterior-track evals (D-44/D-50; not GE4 evidence).
+- `physical/` — physical CobraFlex experiments (F5, pending).
+- `calibration/`, `odd_inspection/` — M-1/M-2 calibration data, ODD TBD closures.
+- `analysis/` — metric/figure scripts and notebooks.
 
 ## Naming convention
 
+Campaign cells are written by `tools/run_campaign.py` as one directory per
+(scenario, mode, rep):
+
 ```
-experiments/sim/SC-NOM-01_enforcement/run_007/
-    state_obs.csv
-    raw_action.csv
-    safe_action.csv
-    cage_status.csv
+experiments/sim/campaign_e_v2/runs/camp_pert04_rl_seed2024_enforcement_rep00/
+    summary.json          # per-run metrics + three-valued verdict + criterion clauses
+    cage_status.csv       # per-step trace (ey, epsi, actions, interventions, emergency)
     metadata.json
 ```
+
+Single evals under `sim/runs/<run_id>/` follow the same file schema.
 
 ## metadata.json schema
 
@@ -47,116 +73,58 @@ The `metadata.json` is what makes a run reproducible: with the same git commit, 
 
 ## Phase status
 
-- **Phases 2–3 (done):** F2 PD-baseline closed-loop runs (`sim/runs/ros_run_*`) and the F3
-  PPO training (`sim/training/ppo_train_*`) + evaluation (`sim/runs/rl_eval_*`) cycles are
-  logged here.
-- **Phase 4 (in progress):** the Gazebo executor (`tools/run_campaign.py::execute_run`) is
-  **live** — it drives `eval_scenario_batch.launch.py` per (scenario, mode, rep) cell. A
-  **pilot** frontier cage-efficacy campaign has run (`sim/campaign_frontier/`, rep00, seeds
-  123 & 2024). The remaining F4 run is the full verdict-bearing campaign (~1100 runs across
-  the 11 NOM/EDGE/PERT scenarios × modes) that fills the per-SR sim verdicts in `docs/07`.
-  See "Running the F4 campaign" below.
-- **Phase 5 (planned):** physical CobraFlex experiments, ~30–60 runs across selected
-  scenarios; `physical/runs/` is currently empty.
+- **F2–F4 (closed, frozen baseline):** PD pipeline validation, PPO state-vector
+  training (seed 2024 main, multi-seed N=5) and the F4 verdict campaign
+  (`sim/campaign/`, global `SATISFIED`, 2026-06-10). Not re-run; serves as the
+  control arm.
+- **Track 'E' (closed, verdict of record):** camera training on complex_b
+  (`ppo_newcam_complex_b_2024_1M`, 297k peak) and the GE4-V2 campaign
+  (`sim/campaign_e_v2/`, 1970 runs, 0 errors). Global `NOT SATISFIED` *literal*
+  — blocking SR-002/003 on the oval-legacy recovery-time clause only, Satisfied
+  on their own criterion (D-47); no SR-CL-A safety predicate breached. G4 closed
+  02.07.2026. See `docs/11` §8 and `docs/07`.
+- **Isaac / sim-to-real (open, posterior):** URDF import, in-process RL training,
+  2-D action retrain (D-49/D-50). Does not reopen G4.
+- **F5 (planned):** physical CobraFlex experiments; `physical/runs/` empty.
 
-## Running the F4 campaign (Ubuntu + Jazzy)
+## Running a campaign (Ubuntu + Jazzy host)
 
-The campaign executor needs the ROS2 + Gazebo host — it cannot run on the figure/Windows
-host. Pre-flight verified 08.06.2026: launch arg contract matches `execute_run`, `eval_policy`
-entry point registered, all 17 scenarios on `lane_following_oval.world`, checkpoints present,
-dry-run D-29-feasible, and the pilot frontier campaign already produced valid runs.
+The executor drives Gazebo and needs the ROS2 host (build/source per
+`CLAUDE.md`). Validate any invocation with `--dry-run` first (pure plan + D-29
+feasibility, runs anywhere).
 
-**1. Build & source the workspace** (once per shell):
-
-```bash
-source /opt/ros/jazzy/setup.bash
-cd <repo>
-pip install -e .                     # so the nodes + runner can import `cage`
-rosdep install --from-paths src --ignore-src -r -y
-./scripts/download_meshes.sh         # 87 MB lidar mesh (gitignored)
-colcon build --symlink-install
-source install/setup.bash
-```
-
-**2. Validate the plan** (no Gazebo, runs anywhere) — every SR must read `[OK]`:
-
-```bash
-python tools/run_campaign.py --seeds 2024 --dry-run
-```
-
-**3. Smoke-test the host end-to-end** before committing hours (expect 2 runs PASS/FAIL, *not*
-ERROR, and a `summary.json` under `runs/<run_id>/`):
-
-```bash
-python tools/run_campaign.py --scenarios SC-NOM-01 --seeds 2024 \
-    --modes enforcement --reps 2 --out experiments/sim/campaign
-```
-
-**3b. Smoke-test the newly-wired perturbations** before trusting them — they are unit-tested but
-**not yet Gazebo-validated**. Confirm the stressor actually fires: each `summary.json` carries a
-`"perturbation"` block recording the level, and the perturbed runs should differ from nominal
-(SC-PERT-02 → more cage activity / different |ey|; SC-PERT-01 → noisy intervention pattern):
-
-```bash
-python tools/run_campaign.py --scenarios SC-PERT-01,SC-PERT-02,SC-EDGE-03 --seeds 2024 \
-    --modes enforcement --reps 2 --out experiments/sim/campaign
-```
-
-**4a. Verdict-bearing campaign — Gazebo-proven scenarios** (the initial-condition scenarios;
-fills the SR verdicts these cover). Once 3b passes on the host, add
-`SC-PERT-01,SC-PERT-02,SC-EDGE-03` to `--scenarios`:
+**Track-'E' camera campaign** (the GE4-V2 form of record):
 
 ```bash
 python tools/run_campaign.py \
-  --scenarios SC-NOM-01,SC-NOM-02,SC-NOM-03,SC-EDGE-01,SC-EDGE-02,SC-EDGE-04 \
+  --scenario-dir scenarios_complex_b \
+  --model-path experiments/sim/training/ppo_newcam_complex_b_2024_1M/checkpoints_peak/cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip \
+  --train-config $(ros2 pkg prefix cobraflex_rl)/share/cobraflex_rl/config/train_ppo_camera.yaml \
   --seeds 2024 --modes enforcement,monitoring \
-  --resume --out experiments/sim/campaign
+  --resume --out experiments/sim/campaign_e_v2
 ```
 
-> **Runtime perturbations now wired (validate on the host first) — SC-PERT-01, SC-PERT-02,
-> SC-EDGE-03.** Observation noise, actuation latency and the throttle pulse are injected from the
-> `perturbations:` block (unit-tested; **not yet Gazebo-validated** — smoke-test per step 3b
-> before adding to 4a). **Still unwired (different mechanisms): SC-EDGE-05** (initial-condition
-> grid) and **SC-PERT-03** (pre-run stall-variant checkpoint) — see the coverage note below.
-
-**4b. Frontier cage-efficacy study** — the D-35 paired contrast (6 × 25 × 2 modes × 2 seeds);
-auto-renders the figures on exit:
+Post-hoc analysis (pure Python, any host):
 
 ```bash
-python tools/run_campaign.py \
-  --scenarios SC-FRONT-01,SC-FRONT-02,SC-FRONT-03,SC-FRONT-04,SC-FRONT-05,SC-FRONT-06 \
-  --seeds 2024,123 --modes enforcement,monitoring \
-  --resume --out experiments/sim/campaign_frontier
+python tools/campaign_e_failure_modes.py --campaign-dir experiments/sim/campaign_e_v2
 ```
 
-**Before you start — known limits:**
+**F-track baseline form** (historical; kept for reproducibility of
+`sim/campaign/`): same runner without `--scenario-dir`/`--model-path`, oval
+scenario library `scenarios/`.
 
-- **Scenario execution coverage.** The runtime perturbation injection
-  (`scenario_perturbations.py` → `scenario_runner` → `gazebo_lane_env`) reads the
-  `perturbations:` block and applies observation noise, actuation latency and the throttle pulse;
-  the verdict is still measured on the *true* pose. Status:
-  - **Proven (Gazebo):** SC-NOM-01/02/03, SC-EDGE-01/02/04, SC-FRONT-01..06.
-  - **Wired, pending Gazebo smoke-test (step 3b):** SC-PERT-01 (noise), SC-PERT-02 (latency),
-    SC-EDGE-03 (throttle pulse — but the fixed-speed actuation caps speed at `fixed_speed`
-    ≈ 0.2 m/s < `v_max` 0.5 m/s, so the override reaches C-04 yet drives little real over-speed;
-    SR-004's strength here is limited until variable-speed actuation is added).
-  - **Still unwired (different mechanisms):** SC-EDGE-05 (initial-condition grid expansion in the
-    runner) and SC-PERT-03 (a fine-tuned stall-variant checkpoint + two-arm eval).
-  - **`--dry-run` "D-29-feasible" counts runs, not whether a stressor fires** — validate the
-    perturbed scenarios per 3b before trusting their verdicts.
-  - **Latency granularity:** at 10 Hz control, `actuation_latency` resolves in whole control
-    periods — 100 ms = 1 step, 50 ms is sub-cycle (≈ 0). Documented in `scenario_perturbations`.
-- **Serial + long.** Runs are strictly serial (one Gazebo at a time); budget tens of hours for
-  4a. `--resume` skips cells whose `summary.json` already exists, so it survives interruptions;
-  `--settle 3` + per-run `GZ_PARTITION` + orphan-`gz` reaping keep memory bounded. Run each
-  invocation under `--dry-run` first to see its exact run count.
-- **RL only.** `execute_run` drives the PPO policy; the PD-baseline arm is **not** wired
-  (`--controllers pd` raises `NotImplementedError`). The PD comparison uses the existing F2/F3
-  eval runs (`sim/runs/ros_run_*`, `rl_eval_*`), not this campaign.
-- **Seed split is deliberate.** The verdict campaign (4a) uses only seed 2024 (the main policy);
-  seed 123 (the cage-dependent outlier) appears **only** in the frontier contrast (4b), per D-35.
-- **Figures.** If matplotlib is absent on the ROS host, 4b prints the `plot_frontier.py` command
-  to render `fig_frontier_*` on the figure host instead (see `tools/README.md`).
+Operational notes (both forms):
+
+- **Serial + long.** One Gazebo at a time; `--resume` skips completed cells,
+  `--settle` + per-run `GZ_PARTITION` + orphan-`gz` reaping keep memory bounded.
+- **Camera runs are real-time-bound** (sim clock factor 1): budget accordingly
+  (~40 s scenarios × ~2000 cells for the full E matrix).
+- **RL only.** The PD arm is not wired into the runner; PD evidence lives in the
+  F2/F3 runs under `sim/runs/`.
+- **Perturbation status:** all scenario mechanisms of the E library are wired and
+  Gazebo-validated (runtime visual degradation, world variants, IC grids;
+  SC-PERT-03's two-arm stall design is recorded indeterminate per D-38/D-49).
 
 ## Data not in version control
 

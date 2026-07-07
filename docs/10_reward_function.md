@@ -4,7 +4,7 @@
 | --- | --- |
 | Artifact | Output of days **D38–D39** (Phase 3, Week 8) — see `docs/.phases/Fase 3/fase_3_detallada.md` §4 (local plan) |
 | Weights version | **v1.2** (forward-driver v1.1 + raw-smoothness v1.2; provisional, subject to experimental tuning) |
-| Phase / Gate | F3 (PPO training), after G2 |
+| Phase / Gate | F3 (PPO training), after G2 — **reused unchanged by the track-'E' camera training** (GE3 train / GE4 eval, the system of record): the reward scores the **ground-truth** state regardless of what the policy observes (docs/11 §3.4) |
 | Author | Samuel Sanchez |
 | Date | 2026-05-29 |
 | Status | CONFIRMED — implemented in `cobraflex_rl/rewards.py`; tests in `policy/tests/test_rewards.py` |

@@ -598,9 +598,11 @@ H↔SR↔C↔SC↔M no cambia. El coste que el track asume es el otro motivo de 
 mayor tamaño de conjunto de entrenamiento del end-to-end (Shalev-Shwartz y
 Shashua, 2016)—, presupuestado en el entrenamiento (Cap. 7). El **track de estado
 'F' se conserva como línea base / brazo de control** —arquitectura modular y
-evidencia F2/F3/F4 intactas— para **aislar el coste de la percepción por cámara**
-(el delta E↔F); 'F' será superado por 'E' como evidencia de cierre cuando se
-ejecute la campaña GE4 de cámara (Cap. 8).
+evidencia F2/F3/F4 intactas, **congeladas**— para **aislar el coste de la
+percepción por cámara** (el delta E↔F); 'E' **ya superó a 'F' como evidencia de
+cierre**: la campaña **GE4-V2** (28.06.2026; 1970 runs sobre el circuito
+**`complex_b`**, E-main de 297k) es el veredicto de récord y el Gate **G4 cerró
+el 02.07.2026** (Cap. 8).
 
 ### 3.5.2 Mapeo del framework al caso
 
@@ -608,7 +610,9 @@ La tabla siguiente proyecta cada nivel del V-Model adaptado sobre el
 artefacto específico que lo materializa en el proyecto. Los
 identificadores quedaron cerrados al término de la Fase 1 con los
 valores definitivos `SR-001..SR-008` para los Safety Requirements y
-`C-01..C-06` para las cage rules; la estructura del mapeo había
+`C-01..C-06` para las cage rules (el registro creció después **sin
+renumerar**: SR-009..011 en F4 y SR-012..014 con los hazards de percepción
+H-10..H-12 del track 'E' de cámara); la estructura del mapeo había
 quedado fijada desde D9 y los rangos numéricos definitivos al cierre
 del HARA (D13) y de la Cage Specification (D19).
 

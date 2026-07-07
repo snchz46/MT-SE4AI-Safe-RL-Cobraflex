@@ -31,6 +31,63 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [07.07.2026] — Environment Design (docs/09) retargeted to track 'E' + Lane Cam + 2-D posterior (v0.5 → v0.6)
+
+**Document(s) affected:** `docs/09_environment_design.md` (restructured, v0.6). No code or other doc edited.
+**Phase:** track 'E' (posterior documentation, after Gate G4)
+**Gate context:** after Gate G4 — the doc still led with the F-track state-vector environment (§1–§9) with the camera track as a §10 appendix, and named the legacy ZED as the source camera.
+**Author:** Samuel Sanchez
+
+### Change
+
+Retargeted the RL training-environment design doc to **track 'E' as the sole subject**:
+
+- **Track E is now the body** (§1–§9: camera observation, action, wrapper, reset/episode,
+  actuation, visual degradation, cage-on-CV). The **F-track state-vector environment is
+  compressed to a baseline / provenance note** (§10) — kept only as the frozen control arm
+  for the E↔F "cost of camera" comparison, per the user's "keep only track E".
+- **Source camera corrected: legacy ZED → dedicated Lane Cam (IMX219-160 mirror).** §2.1
+  adds the full sensor table from `src/cobraflex/urdf/robot.gazebo`: 640×360 R8G8B8, HFOV
+  1.5707963 (90°), 20 Hz, clip 0.1/15 m, topic `camera/image_raw_lane`, mount joint
+  `camera_link_lane` at pitch **0.30 rad** down, h ≈ 0.077 m. The ZED Mini stereo pair
+  stays on the platform for other purposes but is **not** what the track-'E' policy/cage
+  read. (The earlier draft's "ZEDm 640×480, HFOV 1.3962634, `camera/image_raw`, pitch
+  0.25 rad" was a stale carry-over.)
+- **2-D action (steering + throttle) posterior design added (D-50).** §3.2 + §6: the policy
+  emits `[steer, throttle]`; throttle → cage scale `u = (a+1)/2` → `speed = max_speed_mps·u`
+  (full stop below `throttle_deadband = 0.05`); `max_speed_mps = 0.5 = ODD-1.V_MAX`, so the
+  cage speed rules C-04/C-05/C-06 arbitrate for real and SR-009's stall test becomes
+  well-posed. Config-gated and **inert by default** (default `action.type: steer`, the ED-2
+  1-D contract, D-49 keeps the Gazebo verdict frozen). Records both config surfaces
+  (`train_isaac_2d.yaml` Isaac in-process + `train_ppo_camera_2d.yaml` Gazebo counterpart),
+  the training levers `ent_coef 0.01` (D-52) / `stall_penalty` (D-56), and multi-circuit
+  per-episode sampling on the CV-safe trio `complex_b,complex_d,complex_e` (§5.3, D-50/D-51).
+- ED decision table reworked to a track-'E' basis (new **ED-11** camera obs / **ED-12** cage
+  on CV / **ED-13** 2-D posterior; ED-1/ED-7 marked superseded-on-E for provenance).
+
+### Rationale
+
+The doc had drifted: it led with the state-vector (baseline) environment and named the ZED
+as the camera, neither of which is the verdict-of-record system. Track 'E' (camera, on the
+Lane Cam) is the thesis's primary system; the 2-D action is the live posterior thread
+(D-49→D-50) that makes the cage speed rules non-latent. User asked to focus the doc on
+track E, add the 2-D decision, and fix the camera.
+
+### Impact
+
+Documentation-only; no reward weight, cage constant, action-space default or scenario
+criterion changes (the 2-D action is inert-by-default and the Gazebo E verdict stays frozen
+on 1-D, D-49). Consistent with `docs/08` §4.6 (camera interfaces), `docs/11` (camera
+training), `docs/12` §5 (Lane-Cam geometry) and `docs/13`/`docs/14` (Isaac 2-D). No re-runs.
+
+### Verification
+
+`tools/check_traceability.py` → **All checks PASSED. 0 warning(s).** Confirmed no residual
+ZED-as-source-camera claim remains (only the deliberate "replaces the legacy ZED" notes);
+Lane-Cam specs cross-checked against `robot.gazebo` and the URDF mount.
+
+---
+
 ## [07.07.2026] — ODD Specification (docs/08) rewritten to the track-'E' / G4-closed reality (v0.6 → v0.7)
 
 **Document(s) affected:** `docs/08_odd_specification.md` (full rewrite, v0.7). No other document edited; every `ODD-N.<PARAM>` identifier cited by `docs/03` (SRS), `cage/cage.yaml`, `docs/04`, `docs/16` and the manuscript is preserved.

@@ -1,385 +1,259 @@
-# Environment Design v0.1 — RL Training Environment (CobraFlex / F3)
+# Environment Design — RL Training Environment (Track 'E', end-to-end camera)
 
 | Field | Value |
 | --- | --- |
-| Artifact | Output of day **D36** (Phase 3, Week 8) — see `docs/.phases/Fase 3/fase_3_detallada.md` §4 (local plan) |
-| Version | **0.2** (2026-06-01 — post-first-run reconciliation with §7.2/§7.3; v0.1 was the pre-first-run freeze) |
-| Phase / Gate | F3 (PPO training), after G2 |
+| Artifact | The RL **training environment** of the thesis's primary system: the end-to-end front-camera policy (track 'E'). Camera counterpart of the training loop; sibling of `docs/11` (training) and `docs/10` (reward). |
+| Version | **0.6** (2026-07-07 — retargeted to **track 'E' as the sole subject**: the camera observation is the body of the document, the F-track state-vector env is compressed to a baseline note (§10); the source camera is corrected from the legacy ZED to the dedicated **Lane Cam (IMX219-160 mirror)**; and the **2-D action (steering + throttle)** posterior design (D-50) is added to §3/§6. 0.5 = E2 camera freeze; 0.1–0.4 = F3 state-vector history.) |
+| Phase / Gate | Track 'E' (camera) — training infrastructure reused from F3; GE3 train, GE4 eval (verdict of record). G4 closed 02.07.2026. |
 | Author | Samuel Sanchez |
-| Date | 2026-06-01 (v0.2) · 2026-05-29 (v0.1) |
-| Status | CONFIRMED — implemented in `GazeboLaneEnv` |
-| Normative spec | Training Specification §7.2–§7.3 (Chapter 7). **This document is supporting rationale, not the normative source**: on any numeric discrepancy, §7.2 prevails. |
-| Decisions cited | D-07 (artifact A1), D-34 (cage during training), D-32 (external drivers) |
-| Spanish working copy | `docs/.phases/Fase 3/environment_design_v0.1.md` (local, gitignored) |
+| Date | 2026-07-07 (v0.6) |
+| Status | CONFIRMED — implemented in the camera branch of `GazeboLaneEnv`; the 2-D posterior is implemented + host-tested and live-validated on the Isaac host (D-50). |
+| Normative spec | Training Specification Ch.7 §7.2 (loop) + §7.7 (camera track). **This document is supporting rationale, not the normative source**: on any numeric discrepancy, §7.2/§7.7 prevails. |
+| Decisions cited | D-41 (end-to-end camera, supersedes D-01/ED-1), D-43 (cage on its own CV estimator, supersedes D-42), D-34 (cage in the training loop), D-49 (verdict action stays 1-D steering-only), D-50 (Isaac 2-D action + multi-circuit, posterior), D-52 (2-D `ent_coef`), D-56 (2-D `stall_penalty`), D-32 (external drivers) |
 
-> Purpose: document *what* the RL training environment is and, above all, *why*
-> it was designed this way, including the rejected alternatives and a bank of
-> defense questions. It complements the thesis prose (Ch. 7) with the
-> engineering detail the committee may ask for.
+> Purpose: document *what* the end-to-end camera RL training environment is and,
+> above all, *why* it is designed this way — the camera observation, the action
+> space (the frozen 1-D verdict action and the 2-D posterior extension), the
+> wrapper, reset/episode logic, actuation, visual degradation, and the cage's own
+> CV state source — including the rejected alternatives and a defense-question
+> bank. It complements the thesis prose (Ch.7 §7.7) with the engineering detail
+> the committee may ask for.
 
-> **Track framing (2026-06-22).** This document specifies the **state-vector**
-> training environment (F3), now the **baseline / control arm**. The thesis's
-> **primary** system is the **end-to-end camera** track (track 'E', D-41/D-43):
-> its environment — image observation, camera pipeline, visual domain
-> randomisation, and the cage's own CV estimator — is specified in **§10** here
-> and, normatively, in `docs/11_camera_rl_training.md` and Chapter 7. The only
-> delta between the two environments is the **perception source**; that delta is
-> exactly what measures the cost of camera perception (E↔F).
+> **Track framing.** Track 'E' (D-41/D-43) is the thesis's **primary** system: an
+> end-to-end front-camera policy whose safety cage reads its own deterministic CV
+> lane-estimator. This document specifies **that** environment. The F-track
+> state-vector environment (a 6-D ground-truth observation, `MlpPolicy`) is the
+> **frozen baseline / control arm** — the reference for "what does camera
+> perception cost" — and is compressed to a short provenance note in §10; its full
+> historical specification is in the v0.1–v0.4 history and Training Spec §7.2–§7.3.
+> The only delta between the two environments is the **perception source**; that
+> delta is exactly what the E↔F comparison measures.
 
 ---
 
-## 1. Origin of the decisions (D36 morning analysis)
+## 1. What the environment is, in one paragraph
 
-The design starts from the analysis of the Phase 2 PD logs
-(`experiments/sim/runs/ros_run_20260523T153003Z`, 9.91 laps, 0 emergencies).
-From that run and §6.6.2, the **actual operating ranges** of the system on the
-nominal oval are:
-
-| Variable | Observed range (PD, F2) | Design implication |
-| --- | --- | --- |
-| `ey` (lateral offset) | ≈ [−0.12, +0.12] m | Key observation; the reward's main penalty |
-| `epsi` (heading error) | ≈ [−0.4, +0.4] rad | Secondary observation |
-| `speed` | ≈ 0.2 m/s (cruise) | Justifies **fixed speed** in training |
-| Cage interventions | 0.047 % of cycles | The nominal space is "easy"; the challenge is in the perturbed scenarios (F4) |
-
-The D36 conclusion is that the nominal problem is **lateral regulation at fixed
-speed**: neither speed control nor rich perception is needed to learn the base
-task. That fixes the minimal observation and action spaces.
+The training environment is `GazeboLaneEnv` in **camera mode** (`observation.type == "camera"`): a Gym env that maps a policy steering command to a Gazebo control cycle and returns the next front-camera frame plus a ground-truth-scored reward. Each cycle, one native Lane-Cam frame is (optionally) degraded, then split to **two parallel consumers** — the policy's CNN (downsampled to 84×84, frame-stacked) and the cage's own deterministic CV lane-estimator (D-43). The policy emits an action; the in-process safety cage (`SafetyCageNode`, D-34) filters it against C-01..C-06 on the CV-derived state; the safe action is actuated as `/cmd_vel`; the sim advances one control cycle. Ground truth survives **only** as the training reward signal and as the oracle that validates the CV estimator — never as an input to the policy or the cage at runtime. Everything the camera policy learns, it learns from pixels.
 
 ---
 
 ## 2. Observation space
 
 ```text
-obs = [ey, epsi, speed, prev_steer, kappa_near, kappa_far]   (Box, float32, dim 6)
-low  = [-inf, -π, 0.0, -1.0, -inf, -inf]
-high = [+inf, +π, +inf, 1.0, +inf, +inf]
+policy obs = front-camera frame     (Box, uint8, shape (84, 84, 1) grayscale; frame-stacked ×4 → 84×84×4)
+cage obs   = CvLaneEstimate(ey, epsi, lane_width, curvature, confidence)   (D-43; from the same frame)
 ```
 
-| Component | Meaning | Why it is here |
+The policy observes the **image**; the cage observes the **CV lane-estimate** derived from the same image. They are disjoint pipelines fed by a **common camera** (the D-43 common-cause design, §8).
+
+### 2.1 The source camera — the dedicated **Lane Cam** (IMX219-160 mirror)
+
+The observation comes from the **dedicated front Lane Cam**, a Gazebo `camera` sensor that mirrors the real **IMX219-160** wide-angle module as consumed by the hardware lane-keeper (`lane_keeper_node.py`). This **replaces the legacy ZED reference** of earlier drafts — the ZED Mini stereo pair remains on the platform for other purposes, but the track-'E' policy and the cage read the Lane Cam, not the ZED.
+
+| Sensor parameter | Value | Source / note |
 | --- | --- | --- |
-| `ey` | lateral offset to the lane centre (+ left) | Main controlled variable |
-| `epsi` | heading error vs the lane tangent (+ counter-clockwise) | Anticipates lateral drift; stabilises control |
-| `speed` | scalar speed (m/s) | Needed to calibrate the heading correction on curves |
-| `prev_steer` | steering **applied** (post-cage) last cycle, [−1,1] | First-order memory → regularises steering without a recurrent net |
-| `kappa_near` | signed centerline curvature, near look-ahead (3 segments) | Curve preview — lets the policy *anticipate* the bend (ED-7) |
-| `kappa_far` | signed centerline curvature, far look-ahead (8 segments) | Longer-horizon preview for bend entry/exit (ED-7) |
+| Model mirrored | IMX219-160 (wide-angle) | HW capture 1280×720@60; only the **processed** stream matters |
+| Resolution (rendered) | **640×360** R8G8B8 | `robot.gazebo` Lane Cam sensor |
+| Horizontal FOV | **1.5707963 rad (90°)** | effective processed HFOV on HW |
+| Update rate | 20 Hz | sensor `<update_rate>` |
+| Clip near / far | 0.1 m / 15 m | frustum |
+| Sensor noise | Gaussian σ = 0.007 | rendered noise |
+| Topic | `camera/image_raw_lane` | bridged in `gz_bridge.yaml` |
+| Mount (joint `camera_link_lane`) | front of body, **pitch 0.30 rad down** (`rpy="0 0.30 0"`), height **h ≈ 0.077 m** above ground | the geometry `camera_geometry.py` / the CV estimator project against (docs/12 §5) |
 
-`speed` is bounded to ≥ 0 in code (`low=0.0`); §7.2.1 describes it as
-`[-∞,+∞]` for simplicity. The effective operating range is narrow
-(ey ∈ [−0.12,0.12], epsi ∈ [−0.4,0.4], |kappa| ≤ 1.25 rad/m for R=0.8 m);
-the infinite bounds only avoid truncating outlier observations during
-exploration. The two curvature components were added in the F3 first-run
-revision (ED-7) after the original 4-dim, purely-reactive observation
-blocked learning on the bend.
+The **pitch of 0.30 rad down** is load-bearing: a flat mount swept the near curves out of the FOV, and an earlier 0.25 rad value systematically biased the CV estimator's metric `ey` (corrected to 0.30 rad to match the URDF mount — docs/12 §5). Native 640×360 frames are area-downsampled (`INTER_AREA`) to the policy obs in the shared `CameraPipeline`, the single degradation point before both consumers.
 
-**Ground-truth state, not raw perception.** In simulation, `ey/epsi/speed` come
-from the ground-truth pose (`/odom_truth`) projected by `PolylineTracker` onto
-the centerline — the same state abstraction the cage and the PD consume in F2.
-This keeps RL and PD comparable and isolates learning from perception noise
-(which is deliberately introduced as a stressor in F4).
+### 2.2 Fixed observation parameters (E2)
+
+`84×84` **grayscale**, frame stack **k = 4**:
+
+- **Grayscale** — the lane cue is white-on-asphalt luminance; colour adds 3× input for no lane information and would invite reliance on the very appearance axis the H-10 domain randomisation varies (§7).
+- **84×84** — the SB3 `CnnPolicy` / NatureCNN native input, at which the ~0.01 m-wide rendered lane lines stay ≥ 1 px in the near field.
+- **k = 4** — a single frame is Markov-incomplete (no velocity/rate cue, and the camera obs has **no `prev_steer` channel**); the stack recovers motion/rate from the temporal difference. `VecFrameStack` stacks in the trainer; the env emits single frames. SB3 then adds `VecTransposeImage` (channels-first), so the network input is 4×84×84.
+
+Constants in `cobraflex_rl/camera_pipeline.py`; config `train_ppo_camera.yaml`. The policy network is SB3 `CnnPolicy` (NatureCNN feature extractor). The F-track curvature-preview scalars (`kappa_near/far`, ED-7) are **not** in the camera obs — the policy must infer bend geometry from the image (the harder perception problem D-41 accepts; budget the larger training set, Shalev-Shwartz & Shashua 2016).
 
 ---
 
 ## 3. Action space
 
+The action space has a **frozen verdict form** (1-D, the GE4-V2 evidence) and a **posterior extension** (2-D, Isaac).
+
+### 3.1 Verdict action — 1-D steering-only (ED-2, D-49)
+
 ```text
-action = [steering]            (Box, float32, dim 1, in [-1, 1])
-speed  = fixed (fixed_speed = 0.2 m/s); the agent does NOT control throttle
+action = [steering]     (Box, float32, dim 1, in [-1, 1])
+speed  = fixed (fixed_speed = 0.20 m/s); the policy does NOT control throttle
 ```
 
-`steering` is a normalised command; actuation converts it to a yaw rate
-(`angular.z = steering · yaw_gain`, §6). Fixed speed reduces the learning
-problem's dimensionality: the PD is already stable at constant speed (F2), so
-there is no evidence the RL needs throttle for the nominal scenario. If the F4
-perturbed scenarios require it, the Training Specification is revised (§7.2.2).
+`steering` is a normalised yaw-rate command (`angular.z = steering · yaw_gain`, §6). Fixed speed lowers the learning dimensionality; the classical CV baseline is stable at fixed speed, so there is no evidence the nominal task needs throttle. **The whole track-'E' Gazebo verdict (GE4-V2, 297k E-main) runs on this 1-D action** — decision **D-49** keeps it frozen so the F-vs-E "cost of camera" comparison stays on the same action, the cage speed rules keep their exogenous-throttle assumption, and no GE4 campaign has to be re-run. `ODD-1.ACT_DIM = 1`.
+
+### 3.2 Posterior action — 2-D steering + throttle (D-50)
+
+The 2-D action was **deferred, then implemented as posterior work** (D-49 → D-50), because SR-009's stall/liveness sub-mode (M-P6) and its negative test SC-PERT-03 are ill-posed for a steering-only policy: with no speed authority the policy cannot converge to inaction. Giving the policy throttle makes them well-posed and is closer to real driving. It is **config-gated and inert by default** — the default `action.type` is `steer` (the 1-D ED-2 contract), so every frozen F/E run and verdict stays bit-identical.
+
+```text
+action = [steer, throttle]   (Box, float32, dim 2, in [-1, 1]²)     # action.type: steer_throttle
+throttle → cage scale  u = (throttle + 1) / 2 ∈ [0, 1]              # cage_bridge.policy_throttle_to_cage
+speed    = max_speed_mps · u   (full stop below throttle_deadband = 0.05; no lower clamp)
+```
+
+- **`max_speed_mps = 0.5` = C-04's `v_max_straight` = `ODD-1.V_MAX`.** The 1-D actuation capped speed at `fixed_speed = 0.20` — *below every C-04 ceiling* (curve floor 0.25), which is exactly why the cage speed rules were **structurally latent** in-ODD (M-S2 ≡ 0, the F4/GE4 central finding). With 0.5 m/s authority the policy can genuinely exceed the curve ceiling and C-05's high-energy warning band (`v_warning = 0.4`), so **the cage speed rules C-04/C-05/C-06 arbitrate against the policy for real** — the richer safety question D-49 anticipated, and SR-009's stall test becomes well-posed (a true stop is commandable).
+- **No cage change.** The cage rules already operate on a `(steering, throttle)` tuple on the `u ∈ [0,1]` scale — C-04 attenuates throttle, C-06 rate-limits it at `0.10`/cycle — so `cage.yaml` 0.6.1 is consumed as-is (thresholds stay `[provisional]`, now actually exercised). C-06's throttle rate limit bounds commanded acceleration to `max_speed · 0.10 / control_dt = 0.5 m/s²` at 10 Hz — inside the platform's measured 0.53 m/s² (docs/14).
+- **Reward adds a longitudinal smoothness + liveness pair** (in `rewards.py`; D-50/D-56 — `docs/10` documents the 1-D reward, these 2-D terms are posterior): `throttle_delta` (weight 0.10, on the **raw** policy throttle delta — the mirror of the v1.2 `steer_delta` rationale) and `stall_penalty` (0.5 below `stall_progress_min = 0.25`, D-56) to make the degenerate "park" optimum unprofitable. Both default to weights that leave legacy returns bit-identical when 1-D.
+
+**Two config surfaces, one env.** The 2-D action is backend-agnostic:
+
+- `train_isaac_2d.yaml` — the **Isaac in-process** full-authority config (D-50; `tools/isaac_train.py` default), on the **multi-circuit** CV-safe trio `complex_b,complex_d,complex_e` (§5.3), with `ent_coef 0.01` (D-52, after run-1 exploration collapse).
+- `train_ppo_camera_2d.yaml` — the **Gazebo** counterpart, the clean 2-D run without the Isaac renderer/kinematic confounds (keeps the canonical cage + `yaw_gain 0.8`); same two-step Gazebo camera launch, same env/cage/reward.
+
+**A policy trained under either is a new posterior baseline** — new action space, new circuits (and, for Isaac, new simulator) — **never** a re-run of the frozen 297k E-main, and it **does not reopen G4** (D-49 stands for the track-'E' verdict).
 
 ---
 
-## 4. Wrapper structure
+## 4. Wrapper structure (camera mode)
 
-`GazeboLaneEnv(gym.Env)` (`src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py`)
-orchestrates three pure/ROS collaborators:
+`GazeboLaneEnv(gym.Env)` (`src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py`) orchestrates:
 
-- `RosGazeboInterface` — publishes `/cmd_vel`, reads `/odom_truth`, teleports
-  via the `gz set_pose` service, advances the sim with `step_ros`.
-- `PolylineTracker` — projects the pose to `(ey, epsi, s, curvature)` on the
-  centerline (`oval_right_lane_centerline.yaml`).
-- `SafetyCageNode` (in-process, D-34) — the safety cage; see §5.
+- `RosGazeboInterface` — publishes `/cmd_vel`, reads `/odom_truth` (sim oracle) and the Lane-Cam frame (`camera/image_raw_lane`), teleports via the `gz set_pose` service, advances the sim with `step_ros`.
+- `CameraPipeline` (`camera_pipeline.py`) — applies the per-episode degradation injector once to the native frame, then returns `(consumer_frame, observation)`: the native-resolution (possibly degraded) frame for the cage's CV estimator and the 84×84 policy observation. Hosts the proven `decode_image()` shared by the ROS node and the env.
+- `CvLaneEstimator` + `CagePerceptionSupervisor` (`cv_lane_estimator.py`, `cage_perception.py`) — the cage's deterministic state source (D-43, §8), with the SR-013 health / SR-014 plausibility checks.
+- `SafetyCageNode` (in-process, D-34) — the safety cage; C-01..C-06 on the CV-derived state.
 
-**`step` loop (one control cycle, `control_dt = 0.10 s`):**
+**`step` loop (one control cycle, `control_dt = 0.10 s` → 10 Hz):**
 
 ```text
-policy action (steering)
-   └─> raw_action = (steering, throttle_nominal)
-        └─> cage.step(state, raw_action)  →  safe_action, emergency   [D-34]
-             └─> safe_action_to_cmd(...)  →  /cmd_vel                 [mirror of vehicle_control_node]
-                  └─> step_ros(control_dt)  →  new state
-                       └─> reward(state, safe_action)                [§7.2.3]
+policy action (steering [, throttle])
+   └─> raw_action = (steering, throttle)          # 1-D: throttle = throttle_nominal; 2-D: from the policy
+        └─> cage.step(cv_state, raw_action) → safe_action, emergency      [D-34, cage on CV state D-43]
+             └─> safe_action_to_cmd(...) → /cmd_vel                        [mirror of vehicle_control_node]
+                  └─> step_ros(control_dt) → next frame + ground-truth pose
+                       └─> reward(ground_truth_state, raw policy delta)    [docs/10; sim-only]
 ```
 
-The `prev_steer` observation and most reward terms use the **safe** (post-cage)
-action, not the raw one: from the agent's viewpoint, the cage is part of the
-environment dynamics (§7.2.5). **Exception (reward v1.2): the smoothness term
-`w_ds·|Δsteer|` uses the raw policy delta** (ED-10), because C-06 masks raw
-bang-bang into a near-identical post-cage signal and a post-cage smoothness
-penalty never bites.
+Most reward terms use the **safe** (post-cage) action — from the agent's viewpoint the cage is part of the environment dynamics — **except** the smoothness terms (`steer_delta`, and 2-D `throttle_delta`), which use the **raw** policy delta (ED-10): C-06 masks raw bang-bang into a near-identical post-cage signal, so a post-cage smoothness penalty never bites.
 
 ---
 
 ## 5. Reset and episode
 
-Per-episode `reset()`:
+### 5.1 Per-episode `reset()`
 
-1. `set_vehicle_pose` — teleports the vehicle to spawn via
-   `/world/lane_following_oval/set_pose`.
-2. `tracker.reset_tracking()` — drops the cached segment neighbourhood (avoids
-   locking onto a stale segment after the jump).
-3. sends a zero action, waits for `/odom_truth`, `step_ros(0.1)`,
-   `calibrate_pose_offset` — fixes the constant odom→world offset.
-4. **fresh cage**: a new `SafetyCageNode` is instantiated every episode (no
-   latched C-05, no rate-limiter/oscillation history carried across rollouts).
+1. `set_vehicle_pose` — teleports the vehicle to spawn via the `gz set_pose` service (hardened: timeout 3500 ms, 4 retries — the camera reset path is slower than the state env's).
+2. `tracker.reset_tracking()` — drops the cached segment neighbourhood (avoids locking onto a stale segment after the jump).
+3. sends a zero action, waits for `/odom_truth`, `step_ros(0.1)`, `calibrate_pose_offset`.
+4. **fresh cage** — a new `SafetyCageNode` per episode (no latched C-05, no rate-limiter/oscillation history carried across rollouts).
+5. **CV supervisor priming (camera-specific)** — the perception supervisor is run on the settled spawn view until it accepts one frame, so the cage's first cycle starts from an accepted state. Without priming, one bad first frame put the cage on its no-state-ever path → instant emergency → 1-step episodes (a live E2 bug).
 
-**Termination** `|ey| > road_width / 2` (the policy leaves the **road**).
-**Truncation** `step_count ≥ max_episode_steps` (500 → 50 s ≈ 1.14 laps).
+### 5.2 Termination and truncation
 
-> Note: §7.2.4 phrases termination as `|ey| > lane_width/2`; the code terminates
-> at `road_width/2` (deliberate, commented in the wrapper): with the cage
-> handling **lane** departures within the road, terminating at the **road** edge
-> prevents the random policy from dying in 1–2 steps at the start of training.
-> Pending: reconcile the §7.2.4 wording.
+**Termination = off-road.** On the convex F-track oval this is the perpendicular `|ey| > road_width/2`. On the **self-approaching `complex_b`** the perpendicular test folds back where the road passes near itself, so the camera env judges off-road by the **global** distance from the vehicle to the **road-centre** centerline vs `road_width/2` (docs/11 §3.5; `PolylineTracker.distance_to`, a stateless full sweep). The reward centerline stays the **right lane** (offset) — reward target and containment edge play different roles. Both are opt-in / gated, so the oval is byte-for-byte unchanged. **Truncation** at `step_count ≥ max_episode_steps`.
 
-**Random spawn perturbation (§7.3, implemented).** Each episode perturbs the
-spawn heading by ±0.15 rad and the lateral position by ±0.05 m
-(`spawn_perturbation` block in `train_ppo.yaml`, ranges `[provisional, M-P5]`)
-for start-state diversity; `eval_policy` disables it for a deterministic,
-comparable start.
+### 5.3 Spawn perturbation and multi-circuit sampling
+
+**Random spawn perturbation** (`spawn_perturbation`, ranges `[provisional, M-P5]`) perturbs the spawn heading/lateral for start-state diversity; `eval_policy` disables it for a deterministic, comparable start.
+
+**Multi-circuit per-episode sampling (2-D posterior, D-50).** For the Isaac full-authority track the env is built with `circuits=[complex_b, complex_d, complex_e]` — a CV-safe trio (each designed against the docs/12 §4.7 monocular curvature boundary; `complex_e` re-cut clockwise for steering-handedness balance, D-51). One circuit is sampled per episode via the seeded `np_random` (`options["circuit_index"]` pins it for deterministic eval; `info` carries `circuit_index`/`circuit_name`). The scene lays the circuits out 15 m apart (the Lane-Cam far-clip distance) so a neighbour never enters the frustum. Run metadata records per-circuit YAML paths + hashes. Single-circuit runs (the frozen verdict) are unaffected.
 
 ---
 
 ## 6. Actuation mapping (mirror of `vehicle_control_node`)
 
-Because the environment publishes `/cmd_vel` directly (no `vehicle_control_node`
-in the training graph), it replicates that node's mapping so the policy trains
-against the **same** actuation it will face at deployment:
+The env publishes `/cmd_vel` directly, replicating `vehicle_control_node`'s mapping so the policy trains against the **same** actuation it faces at deployment. The pure logic lives in `cobraflex_rl/cage_bridge.py`.
 
-| Quantity | Mapping | Constant |
+| Quantity | 1-D verdict mapping | 2-D posterior mapping (D-50) |
 | --- | --- | --- |
-| `linear.x` | `fixed_speed · scale`, `scale = clamp(throttle/throttle_nominal, [0.35, 1])` | `throttle_nominal=0.5`, `min_speed_scale=0.35` |
-| `angular.z` | `steering · yaw_gain` | `yaw_gain=0.8` |
-| Emergency | `cmd_vel = (0, 0)` (controlled stop) | — |
+| `linear.x` | `fixed_speed · clamp(throttle/throttle_nominal, [0.35, 1])`, throttle held at `throttle_nominal` | `max_speed_mps · u`, `u = (throttle+1)/2`; **full stop below `throttle_deadband = 0.05`, no lower clamp** |
+| `angular.z` | `steering · yaw_gain` (`yaw_gain = 0.8`) | same |
+| Emergency | `cmd_vel = (0, 0)` (controlled stop) | same |
 
-These constants **duplicate** the `vehicle_control_node` defaults and must be
-kept in sync (declared in `train_ppo.yaml`, `cage:` block). The pure logic lives
-in `cobraflex_rl/cage_bridge.py`.
+The 1-D map floors speed at `0.35·cruise`; the 2-D map gives the cage's attenuation authority **all the way to zero** (so C-04/C-05 can actually stop the car). Constants duplicate the `vehicle_control_node` defaults and must be kept in sync (declared in the train config `cage:` block).
 
 ---
 
-## 7. Design decisions and rejected alternatives
+## 7. Visual degradation and domain randomisation (H-10 / SR-012)
+
+The one **additive** element of camera training, applied to the **camera frame before both consumers** (D-43 common-cause), so a camera fault can blind policy and cage at once and the designed answer is the cage's controlled stop.
+
+**Training-time domain randomisation.** At each `reset()`, `VisualDomainRandomizer.sample()` draws a per-episode `(mode, level)` with `p_degrade = 0.5`, `level_range = [0.2, 0.8]`, from the **H-10 trio** (`visual_degradation.MODES`, deterministic numpy kernels): `glare_overexposure`, `low_light_underexposure`, `motion_blur`. The draw is **per-episode** (a degradation persists across an episode the way a real condition would) and **disabled at evaluation** (a harsh spawn draw would blind perception before the run starts).
+
+**Why only these three at training.** `occlusion` (SC-PERT-07, H-11) and `false_lane` (SC-PERT-08, H-12) are **eval-only** (`EVAL_ONLY_MODES`): training the policy to "see through" them would teach it to ignore exactly the cues whose loss must trigger the SR-013/SR-014 controlled stop — the cage's job, not the policy's.
+
+Pure transforms in `cobraflex_rl/visual_degradation.py` and `visual_domain_randomization.py` (numpy, host-testable); the Gazebo camera plug-in and runtime injector are the Ubuntu part. The eval stressor scenarios (SC-PERT-04..13, world variants) are specified in `docs/05` and `docs/08` §5.5.
+
+---
+
+## 8. Cage state from a deterministic CV estimator (D-43)
+
+The cage no longer reads ground truth or the policy's CNN. It reads its **own deterministic classical-CV lane estimator** on the camera frame (`CvLaneEstimator`, `docs/12` §4), separate from the policy — so the cage generalises to any road with visible lines (like the policy) yet stays independent of the *learned* policy and fully auditable. Per cycle the supervisor:
+
+- samples the freshest frame (so the cage is not one control cycle behind — a live E2 bug that tripped C-05's staleness trigger),
+- runs the SR-013 health + SR-014 plausibility / temporal-consistency checks,
+- on a trustworthy estimate builds a cage `State` stamped with the frame's **age** (so C-05's staleness trigger measures real latency in episode time); otherwise passes `state=None` + `perception_invalid=True`, so the cage takes its missing-state path and, once persistence elapses, fires **C-05 Trigger 8** (the open-loop controlled stop — needs no perception).
+
+**Trade-off (accepted, D-43).** A camera fault now blinds policy and cage alike (common-cause); the residual safety is the controlled stop (SR-013 / SR-014). A confidently *wrong* CV estimate is the new hazard **H-12** (the GE4-V2 under-read, docs/12 §4.4 / docs/08 §12.2), backstopped by SR-014 where the estimate is self-inconsistent. **Ground truth survives in simulation only**, as (a) the reward signal and (b) the oracle that validates the CV estimator's error (`experiments/sim/runs/cv_estimator_val_*`); neither policy nor cage consumes it at runtime.
+
+---
+
+## 9. Design decisions and rejected alternatives
 
 | # | Decision | Rejected alternative | Why |
 | --- | --- | --- | --- |
-| ED-1 | Abstract 6-dim obs (ey, epsi, speed, prev_steer, kappa_near, kappa_far) | Image / LiDAR point cloud as obs | The sim uses ground-truth perception (F2); abstract obs keeps RL↔PD comparable and isolates from sensor noise (an F4 stressor). Curvature added in F3 — see ED-7 |
-| ED-2 | Action = steering only, fixed speed | 2D action (steering + throttle) | PD stable at fixed speed; lower dimensionality speeds up learning (§7.2.2) |
-| ED-3 | Cage **in-process** during training | Cage over topics `/raw_action`→`/safe_action` | Determinism (fixed seed), no asynchrony, identical cage behaviour; see **D-34** |
-| ED-4 | Termination at `road_width/2`; plus C-05 emergency (ED-8) | Termination at `lane_width/2` (§7.2.4 text) | The random policy would die in 1–2 steps; the cage handles the lane within the road |
-| ED-5 | Pose from `/odom_truth` (ground truth) | Encoder `/odom` (DiffDrive dead-reckoning) | The encoder does not reflect the reset teleport → corrupted the pose every episode |
-| ED-6 | Fresh cage per episode | Single cage for the whole run | Each RL episode is an independent rollout; avoids carrying a latched C-05 |
-| ED-7 | Signed-curvature preview in obs (`kappa_near`, `kappa_far`) | Reactive 4-dim obs (ey, epsi, speed, prev_steer) | F3 first run: without preview the policy could not anticipate the R=0.8 m bend, drifted, the cage took over and emergency-stopped → `explained_variance ≈ 0`, flat learning. The cage already used `curvature_ahead`; exposing it to the policy unblocked learning (laps completed) |
-| ED-8 | Episode ends on a C-05 emergency, **penalty-free** | Run the frozen post-emergency car to the horizon; or end with the `w_term` penalty | A latched C-05 freezes the car → remaining steps carry no signal and burn wall-clock. Ending early avoids that; making it penalty-free keeps the cage's action as dynamics, not punishment (D-34). Only off-road incurs `w_term` |
-| ED-9 | Forward reward = normalised **progress** (Δs along centerline) | `w_fwd · speed` (instantaneous, cage-fixed ≈ const) | F3 first run: constant speed made the forward term non-discriminating → the return barely depended on the policy (`explained_variance ≈ 0`). Progress rewards surviving + advancing and keeps each on-track step net-positive, closing the penalty-free-emergency perverse incentive. See `docs/10_reward_function.md` |
-| ED-10 | Smoothness term `w_ds·\|Δsteer\|` on the **raw** policy delta, `w_ds` 0.10→0.20 (reward v1.2) | Δsteer on the post-cage applied delta (v1.0/v1.1) | F3 reward-v1.0 eval: C-06 absorbs raw bang-bang for free, so a post-cage smoothness penalty is toothless (policy drove C-06 to its limit ~89% of steps unpenalised; §7.5.2). Measuring the raw delta makes the policy pay for its own jerk. Deliberate, scoped exception to the reward-on-safe-action rule (this term only). **Confirmed** by the seed-2024/200k definitive run: native smooth raw steering (sign-flips 1.1%, mean \|Δraw\|≈0.030 < C-06's 0.15) and **0% cage** (zero interventions) in nominal (§7.5.2); weights still `[provisional, M-P4]` pending Ch.8. See `docs/10_reward_function.md` |
+| ED-2 | Verdict action = **steering only, fixed speed** (`ACT_DIM = 1`) | 2-D action for the verdict | Lower dimensionality, faster learning; keeps the F↔E comparison and the cage's exogenous-throttle assumption on one action. Kept frozen for the whole Gazebo E verdict by **D-49**; 2-D is posterior work (ED-13) |
+| ED-3 | Cage **in-process** during training | Cage over ROS topics | Determinism (fixed seed), no asynchrony, identical cage behaviour; **D-34** |
+| ED-4 | Termination at the **road edge** (off-road), plus C-05 emergency (ED-8) | Termination at the lane edge | A random policy would die in 1–2 steps; the cage handles lane departures *within* the road. On `complex_b` the off-road test is the global road-centre distance (§5.2) |
+| ED-5 | Ground-truth pose from `/odom_truth` as the sim oracle | Encoder `/odom` (dead-reckoning) | The encoder does not reflect the reset teleport → corrupted pose every episode. (Ground truth is oracle-only on track 'E' — never a policy/cage input, D-43) |
+| ED-6 | Fresh cage per episode | Single cage for the whole run | Each rollout is independent; avoids carrying a latched C-05 |
+| ED-8 | Episode ends on a C-05 emergency, **penalty-free** | Run the frozen post-emergency car to the horizon; or end with `w_term` | A latched C-05 freezes the car → remaining steps carry no signal; ending early avoids that, penalty-free keeps the cage as dynamics not punishment (D-34). Only off-road incurs `w_term` |
+| ED-9 | Forward reward = normalised **progress** (Δs along centerline) | `w_fwd · speed` (const at fixed speed) | Constant speed made a speed term non-discriminating (`explained_variance ≈ 0`); progress rewards surviving + advancing. See `docs/10` |
+| ED-10 | Smoothness term on the **raw** policy delta (`steer_delta`; 2-D adds `throttle_delta`) | Δ on the post-cage applied delta | C-06 absorbs raw bang-bang for free, so a post-cage smoothness penalty is toothless; measuring the raw delta makes the policy pay for its own jerk. See `docs/10` |
+| **ED-11** | **Observation = front-camera image** (Lane Cam, 84×84×4), CNN policy | Abstract state vector (ED-1, F-track) | **D-41 supersedes ED-1/D-01 for track 'E'**: the policy *learns* perception from pixels — the thesis's primary system and its generality claim. Source = the dedicated **Lane Cam (IMX219-160 mirror)**, not the legacy ZED (§2.1) |
+| **ED-12** | **Cage state from a dedicated deterministic CV estimator** | Cage on ground truth (D-42) or on the policy's CNN | **D-43**: "any road, sees lines → drives" needs the cage to key on visible lines too, without an authored centerline, while staying independent of the *learned* policy and auditable. Accepts the common-cause trade-off (§8) |
+| **ED-13** | **2-D action (steering + throttle) as posterior work**, config-gated + inert by default | Expand to 2-D for the verdict; or never | **D-49 → D-50**: makes SR-009's stall test well-posed and lets the cage speed rules arbitrate for real (`max_speed = V_MAX`), but doing it in the verdict would invalidate the frozen baseline and force a full retrain + GE4 re-run. So it is a **new posterior baseline** (Isaac `train_isaac_2d.yaml` + Gazebo `train_ppo_camera_2d.yaml`), not a re-run of the 297k E-main |
+
+*(ED-1 "abstract obs" and ED-7 "curvature preview in obs" were F-track decisions, superseded on track 'E' by the camera observation — the policy infers bend geometry from the image. They remain in the v0.1–v0.4 history for provenance.)*
 
 ---
 
-## 8. Traceability
+## 10. Baseline (F-track) note — provenance and the E↔F comparison
 
-- **Spec:** Training Specification §7.2 (obs/action), §7.3 (environment).
-- **Decision:** D-34 (cage in enforcement during training, in-process).
-- **Safety:** SR-009 (policy evaluated under the same constraints as deployment)
-  → satisfied because the cage in training is the same class and config as in
-  deployment.
-- **Reward:** see the sibling document `docs/10_reward_function.md`.
-- **Code:** `gazebo_lane_env.py`, `ros_interface.py`, `polyline_tracker.py`,
-  `cage_bridge.py`; config `train_ppo.yaml`.
+The **F-track** state-vector environment is the frozen **baseline / control arm**, not the deployable artefact. It is identical to the camera environment above **except the perception source**: the policy observes a 6-D ground-truth vector `[ey, epsi, speed, prev_steer, kappa_near, kappa_far]` (`MlpPolicy`), and the cage reads ground-truth-derived state (`PolylineTracker` on `/odom_truth`) rather than the CV estimator. It runs on the oval, needs a prior map + privileged pose (hence "known-track baseline"), and its F4 results are frozen. It exists so the E↔F difference isolates **the cost of camera perception**; its full specification lives in this document's v0.1–v0.4 history and Training Spec §7.2–§7.3. Nothing in it is reopened by track 'E' or by the 2-D posterior.
+
+---
+
+## 11. Traceability
+
+- **Spec:** Training Specification §7.2 (loop) + §7.7 (camera track); `docs/11` (camera training, normative); `docs/10` (reward); `docs/12` (the CV baseline + estimator); `docs/08` (ODD — camera interfaces §4.6, stressor profiles §5.5).
+- **Decisions:** D-41 (camera, supersedes ED-1/D-01), D-43 (cage on CV estimator, supersedes D-42), D-34 (cage in the loop), D-49 (verdict 1-D), D-50 (2-D + multi-circuit), D-52/D-56 (2-D training levers), D-32 (external drivers).
+- **Safety:** SR-009 (policy evaluated under the same cage as deployment — satisfied because the training cage is the deployment class/config); SR-012/SR-013/SR-014 (H-10/H-11/H-12, camera hazards).
+- **Code (host-testable):** `camera_pipeline.py`, `camera_geometry.py`, `visual_degradation.py`, `visual_domain_randomization.py`, `cv_lane_estimator.py`, `perception_health.py`, `lane_plausibility.py`, `cage_perception.py`, `cage_bridge.py`, `polyline_tracker.py`. **(sim loop):** camera mode in `gazebo_lane_env.py` + image subscription in `ros_interface.py`. **(2-D posterior):** `tools/isaac_train.py`, `tools/isaac_scene.py`, configs `train_ppo_camera.yaml` / `train_ppo_camera_2d.yaml` / `train_isaac_2d.yaml`.
 
 ---
 <!--
-## 9. Anticipated defense questions
+## 12. Anticipated defense questions
 
-**Q1. Why fixed speed if a real car modulates its speed?**
-Because F3's goal is to learn *lateral regulation* in the nominal ODD, where the
-PD already demonstrated stability at 0.2 m/s. Adding throttle would double the
-action dimension with no evidence of benefit. It is a revisable decision for F4
-(perturbed scenarios), documented in §7.2.2.
+**Q1. The policy trains from ground-truth-scored reward — isn't a "camera" agent that reads ground truth cheating?**
+No. The reward is a *training-time* signal that exists only in simulation; it is never an input to the policy. At evaluation there is no reward and no ground truth in the loop — the policy drives from the Lane-Cam image alone and the cage from its CV estimate. Ground truth's only runtime role is the metrics oracle that scores the verdict.
 
-**Q2. Why 6 observations — and why was curvature added?**
-The first four (lateral error, heading error, speed, previous steering) are the
-abstract control state the cage and the PD also use, which keeps the RL↔PD
-comparison clean. Curvature (`kappa_near`, `kappa_far`) was **added in the F3
-first run** (ED-7): the original 4-dim observation was purely reactive, so the
-policy could not anticipate the R=0.8 m bend — it drifted until the cage took
-over and emergency-stopped, leaving `explained_variance ≈ 0` and no learning.
-The cage already consumed `curvature_ahead` internally; exposing the same signed
-preview to the policy unblocked learning (the agent began completing laps). It
-remains an *abstract* preview (two scalars from the known centerline), not raw
-perception, so the F2 ground-truth assumption (Q3) is unchanged.
+**Q2. Why a CNN over a frame stack rather than a recurrent policy?**
+A 4-frame stack supplies the short temporal window (motion/rate cues) at a fraction of the cost and instability of a recurrent net, and keeps the architecture comparable to the well-understood Atari-CNN baseline. The camera obs has no `prev_steer` channel, so the stack is where the steering-rate cue must come from.
 
-**Q3. Isn't training on ground-truth state cheating w.r.t. sim-to-real?**
-In F3 ground truth is used, exactly like the F2 PD, to isolate the control
-problem from the perception problem. The perception gap (noise, OOD, latency) is
-introduced as a controlled stressor in F4, where its impact is measured.
-Separating the two error sources is an explicit methodological decision, not an
-omission.
+**Q3. The cage reads a CV estimator that the same frame can fool — isn't that a single point of failure?**
+It is a deliberate, documented common cause (D-43): on a real road the cage cannot have privileged ground truth, so it must perceive from the same sensor. The mitigation is a redundant *response*, not a redundant input — when perception is untrustworthy the cage does not trust a possibly-wrong estimate, it executes the open-loop controlled stop (SR-013/SR-014 → C-05 Trigger 8). The eval-only occlusion/false-lane stressors verify that response.
 
-**Q4. Why is the cage active during training?**
-So the policy learns under the same envelope that governs it at deployment
-(SR-009): what it learns is what gets deployed, with no distribution shift at
-the cage boundaries. See D-34. The cage is invoked in-process with the same
-class and `cage.yaml` as the deployment node.
+**Q4. Why keep the verdict on a 1-D action if the 2-D action is "closer to real driving"?**
+Because expanding to 2-D in the verdict would invalidate the frozen F-track baseline and the controlled F↔E comparison (both on the 1-D action), force a full E-main retrain, require re-calibrating the cage speed rules, and re-run every GE4 campaign — disproportionate to closing one CL-B SR that resolves cleanly as N/A for a steering-only action (D-49). The 2-D action is done as posterior work (D-50), where it makes SR-009's stall test well-posed and the cage speed rules arbitrate for real, as a new baseline that does not reopen G4.
 
-**Q5. Why terminate at the road edge and not the lane edge?**
-A pragmatic training decision: an initial random policy would leave the lane in
-1–2 steps and never accumulate useful experience. The cage corrects lane
-violations *within* the road; terminating at the road edge marks the "cage could
-not prevent it" case. (Wording discrepancy with §7.2.4 pending reconciliation.)
+**Q5. The source camera changed from the ZED to the Lane Cam — does that invalidate earlier camera evidence?**
+No. The Lane Cam (IMX219-160 mirror, 640×360, 90° HFOV, pitch 0.30 rad) is the camera the whole track-'E' verdict (GE4-V2, 297k E-main) trained and evaluated on; the ZED reference in earlier drafts was a documentation carry-over from the platform's stereo suite, not what the policy read. The 0.30 rad pitch and the IMX219 geometry are the values `camera_geometry.py` and the CV estimator are calibrated to (docs/12 §5).
 
-**Q6. The environment runs at 10 Hz (`control_dt=0.1`) but the cage is specified
-at 20 Hz (`cycle_period_ms=50`). Is that a problem?**
-It is a known open point. C-06's *per-cycle* limits (`delta_max_*_per_cycle`)
-are interpreted per environment step. They are marked
-`[provisional, M-5 + F3 prototype]` and will be recalibrated against the policy's
-real action distribution after the first prototype. If cadence matters,
-`control_dt` will be aligned with the cage cycle or the deltas rescaled.
-
----
 --->
-## 10. Track E — end-to-end camera observation variant (D-41 / D-43)
-
-> Parallel track 'E' (branch `e2e-camera`). This section specifies how the F3
-> environment above changes for the **end-to-end front-camera** policy. Everything
-> not listed here is **unchanged** — that minimal delta is the point of D-43 (which refines
-> D-42's cage independence into a deterministic vision lane-estimator for generalisation).
-
-**What changes: the observation only.** ED-1 rejected an image observation *for F3*
-(to keep RL↔PD comparable and isolate perception). **D-41 supersedes that choice for
-track 'E'**: the observation becomes the front-camera image; the policy *learns*
-perception.
-
-```text
-obs    = front-camera frame      (Box, uint8, shape (84, 84, 1) grayscale — FIXED at E2, inside the v0.3 envelope)
-action = [steering]              (UNCHANGED: Box float32 dim 1; fixed speed 0.2 m/s)
-```
-
-- **Fixed observation parameters (E2).** 84×84 **grayscale**, frame stack **k=4**
-  (`VecFrameStack` in the trainer; the env emits single frames). Grayscale because the
-  lane cue is white-on-asphalt luminance — colour adds 3× input for no lane information
-  and would invite reliance on the very appearance axis the H-10 domain randomisation
-  varies; 84×84 is the SB3 `CnnPolicy`/NatureCNN native input, at which the ~0.01 m-wide
-  rendered lane lines remain ≥1 px in the near field; k=4 (envelope upper end) because
-  steering-rate cues must come entirely from the stack — the camera obs has no
-  `prev_steer` channel. Constants in `cobraflex_rl/camera_pipeline.py`; config
-  `train_ppo_camera.yaml`.
-- **Source camera:** the existing `ZEDm Cam` Gazebo sensor (640×480 RGB @ 20 Hz, HFOV
-  1.3962634, topic `camera/image_raw`, bridged in `gz_bridge.yaml`), **pitched down
-  0.25 rad** (E2: flat-mounted, the R=0.80 m curve swept out of the FOV — evidence in
-  `experiments/sim/e_cam_visibility/`). Native frames are area-downsampled to the obs
-  in the shared `CameraPipeline` (one degradation point before both consumers, D-43).
-- **Policy network:** SB3 `CnnPolicy` (NatureCNN feature extractor) replaces the MLP
-  over the 6-dim vector. The curvature-preview scalars (`kappa_near/far`, ED-7) are
-  **not** in the obs — the policy must infer bend geometry from the image (the harder
-  perception problem D-41 accepts; budget the larger training set, Shalev-Shwartz &
-  Shashua 2016).
-
-**Training-world diversity (decided: oval first).** The first camera-policy prototype trains
-on the **current oval** (`lane_following_oval`) — now with **visible lane lines** rendered for
-the camera — to validate that a CNN can drive from the camera at all. World diversity
-(varied geometries / appearances, for the "any road with visible lines" generalisation goal)
-is added **after** that first result; the appearance axis is already covered by the
-visual-degradation domain randomisation below.
-
-**What does NOT change.**
-
-- **Action / actuation** (§3, §6): steering-only, fixed speed, same `cmd_vel` mapping.
-- **Reward** (`docs/10`): computed on ground-truth state + progress, hence
-  **observation-agnostic** → carries over unchanged (smoothness term still on the raw
-  policy steering delta).
-- **Cage:** `SafetyCageNode` still evaluates C-01..C-06 **unchanged**, but its `state` now
-  comes from a **dedicated deterministic CV lane-estimator** (D-43, supersedes D-42) — not
-  from `PolylineTracker(/odom_truth)` and not from the policy's CNN. The cage thus generalises
-  to any road with visible lines, like the policy, and stays independent of the *learned*
-  policy and auditable. **Trade-off:** a camera fault now blinds policy and cage alike
-  (common-cause) → residual safety is the open-loop controlled stop (SR-013 / SR-014). Ground
-  truth survives **in sim only**, as the reward signal and an **oracle** to validate the CV
-  estimator's error.
-- **Reset / episode / termination** (§5).
-
-**Visual-degradation stressors (SC-PERT-04..06 → SR-012 → H-10).** Applied to the **camera
-frame** before it reaches *both* consumers — the policy's CNN **and** the cage's CV detector
-(common-cause, D-43) — glare/over-exposure, low-light/under-exposure, motion blur,
-contrast/shadow. The pure transforms live in `cobraflex_rl/visual_degradation.py` (numpy,
-host-testable); the Gazebo camera plug-in and the runtime injector are the Ubuntu part. Domain
-randomisation over the same envelope (`cobraflex_rl/visual_domain_randomization.py`,
-host-testable) is the training-side mitigation of H-10.
-
-**Perception loss & misdetection (SC-PERT-07/08 → SR-013/SR-014 → H-11/H-12).** The cage's
-**CV-estimator health check** raises the C-05 controlled-stop trigger (Trigger 8, `docs/04`)
-on either a lost lane (occlusion / absent features / stale-or-dropped frame, H-11) or a
-suspect estimate failing the plausibility / temporal-consistency check (false lane, H-12). The
-stop is open-loop (needs no perception). The health / plausibility logic is host-testable
-(`cobraflex_rl/perception_health.py`); the camera subscription and the CV detector are the
-Ubuntu part.
-
-**Cage state source.** The cage runs a **deterministic classical-CV lane estimator** on the
-camera (D-43), separate from the policy's CNN. In simulation, ground truth is used to (a)
-compute the reward and (b) **validate** the CV estimator's error (an oracle). The same CV
-estimator transfers to E-physical with no ground truth required.
-
-**Implementation status (E2, 2026-06-10).** The "deferred to Ubuntu" list is built and
-live: the camera sensor publishes headless and the lane lines are evidence-verified
-(`experiments/sim/e_cam_visibility/`); `gazebo_lane_env` has the camera observation mode
-(`observation.type: camera` — image obs via the shared `CameraPipeline`, cage state via
-`CagePerceptionSupervisor`); the runtime degradation injectors run per episode from
-`reset(options)` (scenario stressors) or from the in-env H-10 domain randomisation
-(`domain_randomization` config block, per-episode draw via the seeded `np_random`); the
-deterministic CV lane-estimator + SR-013/SR-014 supervision feed C-05 Trigger 8 (cage
-YAML 0.6.0). Estimator-vs-oracle accuracy per D-43's plan:
-`experiments/sim/runs/cv_estimator_val_*`. Remaining for later E-phases: the CNN
-training runs themselves and the eval campaign.
-
-**Traceability.** Spec: this §10 + Training Spec (E-design, pending). Decisions: D-41
-(supersedes ED-1/D-01 for track 'E'), **D-43** (cage on a deterministic CV estimator,
-supersedes D-42); D-34 (cage in enforcement during training) carries over. Safety: SR-012,
-SR-013, SR-014 (H-10/H-11/H-12). Code (host): `visual_degradation.py`,
-`visual_domain_randomization.py`, `perception_health.py`, `lane_plausibility.py`,
-`camera_geometry.py`, `cv_lane_estimator.py`, `cage_perception.py`, `camera_pipeline.py`;
-(sim loop): camera mode in `gazebo_lane_env.py` + image subscription in
-`ros_interface.py`; (tools): `validate_cv_estimator.py`, `capture_camera_frames.py`.
-
----
 
 ## Version log
 
-- **v0.1 (2026-05-29):** first freeze, consistent with the TS-01 cage wiring
-  (D-34) and Training Specification §7.2–§7.3.
-- **v0.2 (2026-06-01):** post-first-run reconciliation with §7.2/§7.3 — truncation
-  horizon `max_episode_steps = 500` (50 s ≈ 1.14 laps; was 400 / 40 s / 0.47 laps)
-  and the random spawn perturbation marked **implemented** (§7.3,
-  `train_ppo.yaml`). Design rationale unchanged; numeric values realigned to the
-  Training Specification.
-- **v0.3 (2026-06-09):** added §10 (Track E — end-to-end camera observation variant,
-  D-41/D-42): the observation becomes the front-camera image (CNN policy), while the
-  action, reward, cage and episode logic are unchanged. F-track design (v0.2) untouched.
-- **v0.4 (2026-06-09):** §10 revised for **D-43** (supersedes D-42): the cage's state now
-  comes from a dedicated deterministic CV lane-estimator (not ground truth), for
-  generalisation to any road with visible lines; common-cause trade-off + the new H-12/SR-014
-  (cage misdetection) recorded; training-world diversity decided as **oval-first**; ground
-  truth retained in sim only as reward + CV-estimator oracle.
-- **v0.5 (2026-06-10, E2):** §10 reconciled to the implementation. Provisional obs
-  choices **fixed inside the v0.3 envelope**: 84×84 **grayscale**, frame stack **k=4**
-  (rationale in §10; no new D-NN — the envelope was the decided design, this freezes the
-  point). Source camera documented (ZEDm 640×480@20 Hz, pitch 0.25 rad, E2 evidence);
-  the "deferred to Ubuntu" list replaced by the implementation-status block (camera obs
-  mode + in-env H-10 domain randomisation + CV estimator/supervisor → C-05 Trigger 8,
-  cage YAML 0.6.0; oracle validation runs under `experiments/sim/runs/cv_estimator_val_*`).
-  F-track design (§1–§9) untouched.
+- **v0.1 (2026-05-29):** first freeze — F3 state-vector environment, TS-01 cage wiring (D-34), Training Spec §7.2–§7.3.
+- **v0.2 (2026-06-01):** post-first-run reconciliation — truncation horizon `max_episode_steps = 500`; spawn perturbation marked implemented.
+- **v0.3 (2026-06-09):** added §10 (Track E — camera observation variant, D-41/D-42): image observation, CNN policy; action/reward/cage/episode unchanged.
+- **v0.4 (2026-06-09):** §10 revised for **D-43** (supersedes D-42): cage state from a dedicated deterministic CV estimator; common-cause trade-off + H-12/SR-014; oval-first training; ground truth as sim-only reward + oracle.
+- **v0.5 (2026-06-10, E2):** §10 reconciled to the implementation — 84×84 grayscale, k=4 fixed; camera obs mode + in-env H-10 DR + CV estimator/supervisor → C-05 Trigger 8 (cage YAML 0.6.0).
+- **v0.6 (2026-07-07):** **retargeted to track 'E' as the sole subject.** The camera environment is now the body of the document (§1–§9); the F-track state-vector env is compressed to a baseline note (§10). The **source camera is corrected from the legacy ZED to the dedicated Lane Cam (IMX219-160 mirror, 640×360, 90° HFOV, pitch 0.30 rad, topic `camera/image_raw_lane`)** with the full sensor table (§2.1). The **2-D action (steering + throttle) posterior design (D-50)** is added to §3.2 / §6 (throttle → cage scale `u` → `speed = max_speed·u`, `max_speed = V_MAX`, so the cage speed rules arbitrate for real and SR-009's stall test is well-posed), inert by default (D-49 keeps the verdict 1-D), with the Isaac (`train_isaac_2d.yaml`) and Gazebo (`train_ppo_camera_2d.yaml`) config surfaces, `ent_coef 0.01` (D-52) and `stall_penalty` (D-56), and multi-circuit per-episode sampling (§5.3, D-50/D-51). ED table reworked to a track-'E' basis (new ED-11/12/13). No reward/cage/scenario constant changed.

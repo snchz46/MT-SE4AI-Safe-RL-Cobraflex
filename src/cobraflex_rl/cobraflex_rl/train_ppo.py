@@ -180,6 +180,7 @@ def _write_training_metadata(
     run_id: str,
     seed: int,
     train_cfg: Dict[str, Any],
+    train_cfg_path: Path,
     centerline_path: Path,
     cage_yaml: Path,
     model_path: Path,
@@ -193,6 +194,8 @@ def _write_training_metadata(
         "mode": str(train_cfg.get("cage", {}).get("mode", "enforcement")),
         "timestamp_iso": datetime.now(timezone.utc).isoformat(),
         "git_commit": git_commit(run_dir),
+        "train_config": str(train_cfg_path),
+        "train_config_hash": sha256_file(train_cfg_path),
         "cage_yaml": str(cage_yaml),
         "cage_yaml_hash": sha256_file(cage_yaml),
         "scenario_yaml_hash": sha256_file(centerline_path),
@@ -221,6 +224,11 @@ def _write_training_metadata(
         # class, observation type, frame stack and the H-10 DR envelope.
         "policy": str(train_cfg.get("policy", "MlpPolicy")),
         "observation": dict(train_cfg.get("observation", {})),
+        # Action contract + reward weights (D-50/D-59): without these a 2-D
+        # steer+throttle run's metadata is indistinguishable from a frozen
+        # 1-D run's ({} = config predates the block → 1-D steering-only).
+        "action": dict(train_cfg.get("action", {})),
+        "reward": dict(train_cfg.get("reward", {})),
         "domain_randomization": dict(train_cfg.get("domain_randomization", {})),
         "status": status,
     }
@@ -463,6 +471,7 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             run_id=run_id,
             seed=seed,
             train_cfg=train_cfg,
+            train_cfg_path=train_cfg_path,
             centerline_path=centerline_path,
             cage_yaml=cage_yaml,
             model_path=model_path,

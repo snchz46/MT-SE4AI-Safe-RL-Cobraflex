@@ -381,14 +381,16 @@ def build_isaac_interface(train_cfg, render_always: bool = False, seed: int = 0)
     return interface, camera_obs, track_metas
 
 
-def write_metadata(run_dir, run_id, seed, train_cfg, centerline_path, cage_yaml,
-                   model_path, total_timesteps, status, circuits_meta=None):
+def write_metadata(run_dir, run_id, seed, train_cfg, train_cfg_path, centerline_path,
+                   cage_yaml, model_path, total_timesteps, status, circuits_meta=None):
     metadata = {
         "run_id": run_id,
         "scenario_id": SCENARIO_ID,
         "mode": str(train_cfg.get("cage", {}).get("mode", "enforcement")),
         "timestamp_iso": datetime.now(timezone.utc).isoformat(),
         "git_commit": git_commit(run_dir),
+        "train_config": str(train_cfg_path),
+        "train_config_hash": sha256_file(train_cfg_path),
         "cage_yaml": str(cage_yaml),
         "cage_yaml_hash": sha256_file(cage_yaml),
         # Single-track runs: hash of the one centerline YAML (legacy field).
@@ -421,6 +423,9 @@ def write_metadata(run_dir, run_id, seed, train_cfg, centerline_path, cage_yaml,
         "policy": str(train_cfg.get("policy", "MlpPolicy")),
         "observation": dict(train_cfg.get("observation", {})),
         "action": dict(train_cfg.get("action", {})),
+        # Reward weights (docs/10 + the D-50/D-56 2-D terms) — kept in lockstep
+        # with train_ppo._write_training_metadata.
+        "reward": dict(train_cfg.get("reward", {})),
         "domain_randomization": dict(train_cfg.get("domain_randomization", {})),
         "dynamics_randomization": dict(train_cfg.get("dynamics_randomization", {})),
         "scene_randomization": dict(train_cfg.get("scene_randomization", {})),
@@ -590,9 +595,9 @@ def main(argv):
                 pass
         if interface is not None:
             interface.destroy_node()
-        write_metadata(run_dir, run_id, seed, train_cfg, Path(cli.centerline_config),
-                       cage_yaml, model_path, total_timesteps, status,
-                       circuits_meta=circuits_meta)
+        write_metadata(run_dir, run_id, seed, train_cfg, Path(cli.train_config),
+                       Path(cli.centerline_config), cage_yaml, model_path,
+                       total_timesteps, status, circuits_meta=circuits_meta)
     return 0 if status == "completed" else 1
 
 

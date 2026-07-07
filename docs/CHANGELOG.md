@@ -31,6 +31,60 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [07.07.2026] — Training metadata now records the action contract, reward weights and train-config hash (Gazebo + Isaac trainers)
+
+**Document(s) affected:** `src/cobraflex_rl/cobraflex_rl/train_ppo.py` (`_write_training_metadata`), `tools/isaac_train.py` (`write_metadata`), `experiments/README.md` (metadata.json schema — training-run extras noted). No living-doc table, CSV, cage constant or scenario criterion changed.
+**Phase:** posterior (Isaac / sim-to-real, D-44/D-50..D-59)
+**Gate context:** after Gate G4 — reproducibility-metadata hardening ahead of the first 2-D training runs; no verdict artefact touched.
+**Author:** Samuel Sanchez
+
+### Change
+
+Both trainers' `metadata.json` gains three provenance fields:
+
+- `action` — the D-50/D-59 action contract (`type` / `max_speed_mps` /
+  `throttle_deadband`); `{}` for a config that predates the block (frozen 1-D
+  steering-only contract, ED-2).
+- `reward` — the docs/10 shaping weights the run actually trained under
+  (including the 2-D `throttle_delta` / `stall_penalty` terms).
+- `train_config` + `train_config_hash` — path + sha256 of the train-config YAML
+  itself, threaded into `_write_training_metadata` / `write_metadata`
+  (mirrors the existing `cage_yaml` / `policy_checkpoint` path+hash convention).
+
+`tools/isaac_train.py` already recorded `action` (D-50) but neither `reward` nor
+the config hash; the two writers are back in lockstep.
+
+### Rationale
+
+With the Gazebo 2-D config (`train_ppo_camera_2d.yaml`, D-59) live, a 2-D run's
+`metadata.json` was indistinguishable from a 1-D run's except via
+run_id/model_path: the recorded fields (observation, DR envelope,
+hyperparameters) are near-identical across the two configs, while the action
+mapping and reward weights — which define what optimum was trained — were not
+recorded at all. The config hash pins the exact YAML the run trained under
+(CLAUDE.md "Reproducibility metadata"), the same way the cage YAML and the
+checkpoint are pinned.
+
+### Impact
+
+Purely additive, code-only. Existing runs' `metadata.json` keep their shape —
+the new keys simply were not recorded at the time (absent ≠ changed); no
+re-runs, no reader/aggregator depends on the new keys. Every future training
+run (Gazebo 1-D/2-D, Isaac) records them automatically.
+
+### Verification
+
+Full host suite `pytest` → **507 passed, 5 skipped** (Windows `.venv-win`).
+Functional smoke of both writers (ROS-stubbed import of `train_ppo`;
+AST-extracted `isaac_train.write_metadata`) against
+`train_ppo_camera_2d.yaml` / `train_ppo_camera.yaml` / `train_isaac_2d.yaml`:
+the 2-D configs record `steer_throttle` + the full reward block, the frozen 1-D
+config records `action: {}`, and `train_config_hash` matches an independently
+computed sha256. `tools/check_traceability.py` → **All checks PASSED, 0
+warnings** (no ID changes).
+
+---
+
 ## [07.07.2026] — Manuscript + satellite-README sweep: track 'E' as evidence of record, F-track framed as superseded baseline
 
 **Document(s) affected:** `manuscript/chapters/chapter_01_introduction.md` (stale future-tense verdict bullet → GE4-V2 as verdict of record, G4 closed), `chapter_02_related_work.md` (§2.2: new end-to-end-vision lineage block — ALVINN/PilotNet/Kendall, domain randomisation — and the thesis's positioning around it), `chapter_03_methodology.md` (same future-tense fix, names `complex_b`, notes the SR register growth to SR-014/H-12), `chapter_05_architecture_and_cage.md` (§5.7 vigencia note: node graph = F-track baseline; new §5.7.4 documents the track-'E' in-process wiring — CameraPipeline split, CV-estimator cage state, 10 Hz lockstep, verdict on true pose), `chapter_06_implementation.md` (new §6.7 "Implementación del track 'E'"; synthesis renumbered 6.7→6.8; §6.1 structure updated), `experiments/README.md` + `tools/README.md` + `scenarios/README.md` (all three pre-dated the E evaluation: campaign map now leads with `campaign_e_v2` as verdict of record, E-era tools documented, oval library marked frozen with pointer to `scenarios_complex_b/`), `docs/01_id_conventions.md` (E-track paragraph: merged single-trunk, prefixes E2/E4/E5, E = system of record), `docs/10_reward_function.md` (header row: reused unchanged by camera training), root `README.md` ("The idea" section now leads with the track-'E' in-process dataflow — camera → CV-estimator/CNN split → cage — and demotes the five-node ROS 2 graph to the physical/baseline pipeline; multi-seed N=5 corrected from "in progress" to deferred-posterior; phase table annotated with the register growth, the E-N/GE-N note and the E5 Isaac status; repo layout gains `scenarios_complex_b/`; ID table gains the `E-X`/`GE-X` row; figure credit covers the camera plotters; reading order gains docs/12), `CLAUDE.md` (hazard row H-01..H-09 → H-01..H-12). **No hazard/SR table row, CSV, code, cage constant or scenario criterion changed.**

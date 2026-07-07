@@ -71,6 +71,13 @@ Every run produces a `metadata.json` with at minimum:
 
 The `metadata.json` is what makes a run reproducible: with the same git commit, same hashes, same seed, the run can be reproduced.
 
+Training runs (`sim/training/<run_id>/`) additionally record the training-config
+provenance: `train_config` + `train_config_hash` (sha256 of the train YAML),
+the `action` contract (`{}` = the frozen 1-D steering-only contract; the D-50/D-59
+2-D runs record `steer_throttle` + `max_speed_mps`/`throttle_deadband`), the
+`reward` weights and the PPO `hyperparameters`. Runs recorded before 07.07.2026
+lack the `train_config*`/`action`/`reward` keys.
+
 ## Phase status
 
 - **F2–F4 (closed, frozen baseline):** PD pipeline validation, PPO state-vector

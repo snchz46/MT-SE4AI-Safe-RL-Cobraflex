@@ -52,7 +52,8 @@
       "Bash(xargs kill -9)",
       "Bash(pkill -f \"lane_following.launch.py\\\\|cage_ros_node\\\\|cage_logger_node\\\\|pd_baseline_node\\\\|vehicle_control_node\\\\|lane_perception_node\")",
       "Bash(pkill -f \"gz sim\\\\|gz_sim\\\\|gz server\\\\|cage_ros_node\\\\|cage_logger_node\\\\|pd_baseline_node\\\\|vehicle_control_node\\\\|lane_perception_node\\\\|safety_cage\\\\|cobraflex_rl\\\\|robot_state_publisher\\\\|ekf_filter_node\\\\|ros_gz\\\\|parameter_bridge\")",
-      "Bash(python -)"
+      "Bash(python -)",
+      "PowerShell(& B:\\\\SE4AI\\\\thesis_repo\\\\.venv-win\\\\Scripts\\\\python.exe -m pytest policy/tests/test_gazebo_lane_env_2d.py policy/tests/test_rewards.py policy/tests/test_cage_bridge.py -q --no-header 2>$null)"
     ]
   }
 }

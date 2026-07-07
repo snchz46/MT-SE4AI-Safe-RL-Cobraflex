@@ -31,6 +31,114 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [07.07.2026] — ODD Specification (docs/08) rewritten to the track-'E' / G4-closed reality (v0.6 → v0.7)
+
+**Document(s) affected:** `docs/08_odd_specification.md` (full rewrite, v0.7). No other document edited; every `ODD-N.<PARAM>` identifier cited by `docs/03` (SRS), `cage/cage.yaml`, `docs/04`, `docs/16` and the manuscript is preserved.
+**Phase:** track 'E' (posterior documentation, after Gate G4)
+**Gate context:** after Gate G4 (closed 02.07.2026) — the doc was signed off at G4 but had drifted to the F-track (state-vector / oval) era; this brings it to the GE4-V2 verdict of record. Standing "do not rewrite doc 08" note overridden by explicit user request.
+**Author:** Samuel Sanchez
+
+### Change
+
+Retargeted the ODD specification's concrete realisation from the **F-track state-vector
+policy on the oval** to the **track-'E' front-camera policy on `complex_b`** (the GE4-V2
+verdict of record). Specifically:
+
+- **Sensor/actuation interfaces (§4.6)** rewritten for the front **Lane Cam** (IMX219-160
+  mirror, 640×360, HFOV 90°, h≈0.077 m, pitch 0.30 rad) feeding the policy CNN (84×84×4),
+  with the cage on its **own deterministic CV lane-estimator** (D-43); the F-track 6-D
+  ground-truth state vector retained as the frozen **baseline** (control arm).
+- **ODD-2 / ODD-4 adverse axis (§5, §7)** re-specified from state-vector sensor-noise +
+  latency + obstacles to **camera-perception degradation**: visual degradation (glare /
+  low-light / motion-blur = **H-10**), perception loss (occlusion = **H-11**) and cage
+  lane-misdetection (false-lane = **H-12**), with the H-10 domain-randomisation trio + the
+  SC-PERT-04..13 eval stressors + the worn/wet/gaps world variants as the named profiles.
+  The F4 obstacle profile is **retired** (no observation channel; no verdict scenario).
+- **Geometry (§6)** moved oval → `complex_b`: `ODD-1.ROAD_WIDTH` 0.50 → **0.52 m** (road
+  edge 0.25 → **0.26 m**, recorded as the new `*.ROAD_EDGE`), perimeter 8.79 → **19.22 m**
+  (centre) / **19.93 m** (driven), `ODD-3.KAPPA_MAX` 1.25 → **1.14 m⁻¹** (centre R_min
+  0.876 m; driven 0.998 m). The monocular curvature boundary (docs/12 §4.7) promoted to an
+  explicit ODD-3 constraint.
+- **Action** kept **1-D steering-only** (D-49); the ODD-3/ODD-4 2-D speed envelope declared
+  a coverage gap and forwarded to the **Isaac 2-D posterior retrain** (§8; D-50).
+- **§8** expanded from a skeletal F5 forward-reference to include the **Isaac Sim
+  sim-to-real** posterior bridge (docs/13–14, D-44/D-49/D-50); Isaac noted as a distinct
+  simulator whose checkpoints do not transfer (a future retrain, not a re-do of the 297k
+  E-main).
+- **§12** rewritten from the F4 single-oval reconciliation (D-37) to the **GE4-V2 complex_b
+  realisation** (1970 runs); coverage table + declared gaps updated (2-D speed envelope,
+  the D-43/H-12 under-read residual, multi-seed, Q10).
+- **§11 TBDs**: Q4/Q5/Q7/Q8/Q9/Q12 re-targeted to their track-'E' closures, Q6 retired;
+  **Q10** remains the sole open TBD (physical `A_LAT_MAX`, deferred to M-4 / F5).
+
+### Rationale
+
+The document had become "totally outdated and obsolete" (user): it still described a 5-D
+state-vector observation, the oval world, an `ACT_DIM=2` speed envelope and F4 obstacle
+profiles — none of which is the verdict of record. The GE4-V2 campaign (297k E-main,
+complex_b, 28.06.2026) and the G4 closure (02.07.2026) made the camera track the
+authoritative realisation, so the ODD spec that the SRS / cage / scenarios trace to needed
+to reflect it. Single-sourcing is preserved by keeping every cited `ODD-N.<PARAM>` ID.
+
+### Impact
+
+No SR threshold, cage constant or scenario criterion changes — this is a documentation
+retarget, not a re-derivation (the doc states this in §12). Downstream docs that cite
+`ODD-N.<PARAM>` IDs (`docs/03`, `cage/cage.yaml`, `docs/04`, `docs/16`, manuscript ch.3/4)
+remain valid: all cited IDs verified present, including the wildcard-covered `*.FRICTION`
+and the explicit `ODD-3.FRICTION` named for SR-004. `d_max = 0.16 m` is unchanged (the
+margin Δ becomes 0.10 m on the 0.52 m road). No re-runs required.
+
+### Verification
+
+`tools/check_traceability.py` → **All checks PASSED. 0 warning(s).** All 20 externally-cited
+`ODD-N.<PARAM>` identifiers confirmed present in the rewritten doc.
+
+---
+
+## [07.07.2026] — Pass-mode split: campaign reports now say *how* a run passed (overcame vs emergency stop)
+
+**Document(s) affected:** `tools/campaign_e_failure_modes.py` (per-group `pass_clean` / `pass_with_emergency` counters + a "Pass modes" console section; `campaign_dir` recorded as posix), `tools/run_campaign.py` (`n_pass_emergency` in the per-scenario report; `emergency` column in `campaign_runs.csv` for future campaigns), regenerated `experiments/sim/campaign_e_v2/failure_mode_breakdown.json` (additive — every pre-existing number byte-identical, verified by field-by-field diff), new `policy/tests/test_failure_modes_pass_modes.py` (3 tests) + 1 test in `test_run_campaign.py` + header assertion extended. **No scenario, criterion, threshold or verdict changed.**
+**Phase:** posterior (evaluation tooling, after Gate G4)
+**Gate context:** after Gate G4 — additive analysis; the GE4-V2 verdict of record is untouched (`campaign_report.json` / `campaign_runs.csv` of the v2 campaign not regenerated)
+**Author:** Samuel Sanchez
+
+### Change
+
+Since D-45 dropped `emergency == False` from the adverse pass criteria, a per-run PASS
+covers two distinct behaviours that no report distinguished: the policy **overcame** the
+stressor and kept driving, or the cage flagged emergency with the safety limits held (in
+enforcement, the SR-013 controlled stop). The per-run `summary.json` already records the
+flag (`campaign.values.emergency`); the breakdown tool now splits every (scenario, mode)
+group's pass count into `pass_clean` + `pass_with_emergency` (invariant: they sum to
+`pass`), and the campaign runner reports `n_pass_emergency` per scenario and an
+`emergency` per-run CSV column so future campaigns carry the split natively. In
+monitoring the flag is the shadow cage's *un-enforced* request, kept per-mode.
+
+### Rationale
+
+User question on the GE4-V2 PERT results: a PASS by controlled stop (availability lost,
+safety kept) and a PASS by driving through the perturbation are different findings; the
+roll-up's bare pass fraction conflates them. Regenerating the v2 breakdown shows the split
+is material: SC-PERT-07/-09/-11/-13 enforcement pass **entirely via emergency stop**
+(25/25, 25/25, 30/30, 40/40), SC-PERT-04/-05/-12 are mixed (16/40, 20/40, 18/40 via
+stop), SC-PERT-02/-08/-10 pass almost entirely clean (1/40, 1/25, 1/25 via stop).
+
+### Impact
+
+`failure_mode_breakdown.json` gains two fields per group (additive; all pre-existing
+values verified identical). Future `campaign_report.json` / `campaign_runs.csv` gain
+`n_pass_emergency` / `emergency`. Historical artifacts (F4 campaign, 139k `campaign_e`,
+v2 report+CSV) intentionally not regenerated. No docs/05 criteria touched.
+
+### Verification
+
+`pytest` 507 passed + 5 skipped (was 503; +4 new). `tools/check_traceability.py`: all
+checks PASSED, 0 warnings. Old-vs-new breakdown diff: no pre-existing field changed;
+`pass_clean + pass_with_emergency == pass` holds in all 56 groups.
+
+---
+
 ## [07.07.2026] — Defense-preparation documentation: docs/15 (implementation inventory) + docs/16 (defense compendium); stale docs/READMEs reconciled
 
 **Document(s) affected:** new `docs/15_implementation_inventory.md` (full module/script/config/test inventory with test→SR mapping and the run→verdict evidence spine); new `docs/16_defense_compendium.md` (index of all per-doc defense-question banks; PPO/NatureCNN deep dive with hyperparameter provenance; Gazebo wiring narrative; cage lineage — Simplex/RTA/shielding — and the full threshold-provenance table; CV-estimator defense essentials; evaluation-methodology summary; 12 cross-cutting Q&As; reference shelf). Updated: `docs/04` §Unit tests (stale "90 tests / 10 files, YAML 0.4.0" table refreshed to the actual 17 files / 139 tests at YAML 0.6.1; deferred `test_evaluation_order.py` note resolved to the landed `test_joint_envelope.py`); `cage/README.md` + `policy/README.md` (both pre-F2-stale: wrong file lists, wrong phase status, `cage_node.py` mislabelled as a ROS2 node); `CLAUDE.md` "Where to look first" (two new rows). **No code, config, scenario or threshold changed.**

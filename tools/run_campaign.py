@@ -735,9 +735,19 @@ def aggregate_campaign(
         verdicts = [o.verdict for o in group]  # three-valued: True | False | None
         result = aggregate_scenario(scen, mode, verdicts)
         n_error = sum(1 for o in group if o.error is not None)
+        # D-45 made a safe controlled stop a passing outcome on the adverse
+        # criteria, so a bare n_pass conflates two behaviours; n_pass_emergency
+        # counts the passes where the cage flagged emergency (enforcement: the
+        # SR-013 controlled stop) vs those that overcame the scenario without it.
+        n_pass_emergency = sum(
+            1 for o in group
+            if o.verdict is True and bool(
+                ((o.summary.get("campaign") or {}).get("values") or {}).get("emergency"))
+        )
         per_scenario_report.append({
             "scenario": sid, "mode": mode, "n_runs": result.n_runs,
-            "n_pass": result.n_pass, "n_fail": result.n_fail,
+            "n_pass": result.n_pass, "n_pass_emergency": n_pass_emergency,
+            "n_fail": result.n_fail,
             "n_indeterminate": result.n_indeterminate,
             "fraction_pass": (round(result.fraction_pass, 4)
                               if result.fraction_pass is not None else None),
@@ -782,11 +792,16 @@ def write_report(report: Dict[str, object], outcomes: Sequence[RunOutcome], out_
         json.dump(report, handle, indent=2)
     with (out_dir / "campaign_runs.csv").open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
-        writer.writerow(["scenario", "mode", "controller", "seed", "rep", "verdict", "error"])
+        writer.writerow(["scenario", "mode", "controller", "seed", "rep",
+                         "verdict", "emergency", "error"])
         for o in outcomes:
             rs = o.run_spec
+            # How a pass happened (D-45): verdict=True + emergency=True is the
+            # cage's controlled stop; verdict=True + emergency=False overcame the
+            # scenario. Empty when the run has no metric record (e.g. errored).
+            vals = (o.summary.get("campaign") or {}).get("values") or {}
             writer.writerow([rs.scenario_id, rs.mode, rs.controller, rs.seed, rs.rep,
-                             o.verdict, o.error or ""])
+                             o.verdict, vals.get("emergency", ""), o.error or ""])
 
 
 # --------------------------------------------------------------------------- #

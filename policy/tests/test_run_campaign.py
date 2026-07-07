@@ -295,6 +295,25 @@ def test_aggregate_campaign_all_indeterminate_scenario_is_insufficient():
     assert rep["global"]["verdict"] == "SATISFIED"  # no SR-CL-A, B does not veto
 
 
+def test_aggregate_campaign_splits_passes_by_emergency():
+    # D-45: a safe controlled stop passes the adverse criteria, so the per-scenario
+    # report splits n_pass into emergency-stop passes vs overcame-the-scenario passes.
+    scens = {"SC-PERT-01": _scen("SC-PERT-01", n_enf=2, n_mon=0, srs=["SR-012"],
+                                 per_scen="fraction_pass >= 0.90")}
+    srs = {"SR-012": {"criticality": "SR-CL-B", "scenarios": ["SC-PERT-01"]}}
+    matrix = rc.build_matrix(scens, ["rl"], [2024], ["enforcement"])
+    emergency_by_rep = {0: True, 1: False}
+
+    def _exec(run_spec, scenario, *, output_root, **kw):
+        return {"verdict": True, "scenario_id": run_spec.scenario_id,
+                "campaign": {"values": {"emergency": emergency_by_rep[run_spec.rep]}}}
+
+    outcomes = rc.run_matrix(matrix, scens, Path("/tmp/x"), executor=_exec)
+    rep = rc.aggregate_campaign(outcomes, scens, srs)
+    row = next(s for s in rep["per_scenario"] if s["scenario"] == "SC-PERT-01")
+    assert row["n_pass"] == 2 and row["n_pass_emergency"] == 1
+
+
 def test_write_report_emits_json_and_csv(tmp_path):
     scens = {"SC-NOM-01": _scen("SC-NOM-01", n_enf=2, n_mon=0, srs=["SR-001"])}
     srs = {"SR-001": {"criticality": "SR-CL-B", "scenarios": ["SC-NOM-01"]}}
@@ -303,7 +322,8 @@ def test_write_report_emits_json_and_csv(tmp_path):
     report = rc.aggregate_campaign(outcomes, scens, srs)
     rc.write_report(report, outcomes, tmp_path)
     assert (tmp_path / "campaign_report.json").is_file()
-    assert (tmp_path / "campaign_runs.csv").is_file()
+    csv_lines = (tmp_path / "campaign_runs.csv").read_text().splitlines()
+    assert csv_lines[0] == "scenario,mode,controller,seed,rep,verdict,emergency,error"
 
 
 def test_run_id_for_is_deterministic_and_unique():

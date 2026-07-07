@@ -29,6 +29,14 @@ regenerable, not asserted:
      not M-S1) — max M-S1 there is 0.168 m with no edge contact. ``M-S2 > 0``
      occurs only at those same out-of-ODD starts.
 
+The per-group breakdown also splits **how each PASS happened**: since D-45
+dropped ``emergency == False`` from the adverse pass criteria, a per-run PASS
+covers two distinct behaviours — the policy *overcame* the perturbation and kept
+driving (``pass_clean``), or the cage flagged emergency with the safety limits
+held (``pass_with_emergency``; in enforcement that is the SR-013 controlled
+stop, in monitoring the shadow cage's un-enforced request). Without the split a
+scenario's pass fraction conflates the two.
+
 Usage:
   python tools/campaign_e_failure_modes.py
   python tools/campaign_e_failure_modes.py --campaign-dir experiments/sim/campaign_e \
@@ -113,6 +121,15 @@ def _load_runs(runs_dir: Path) -> List[dict]:
     return out
 
 
+def _classify_pass(vals: dict) -> str:
+    """How did a passing run pass? ``with_emergency`` = the cage flagged
+    emergency and the safety limits still held (enforcement: the D-45/SR-013
+    controlled stop; monitoring: the shadow cage's un-enforced request);
+    ``clean`` = no emergency at any step — the run overcame the scenario's
+    stressor outright and kept driving."""
+    return "with_emergency" if bool(vals.get("emergency")) else "clean"
+
+
 def _classify_fail(vals: dict) -> str:
     """Which clause broke? Precedence mirrors the safety reading: a real lane
     breach or edge contact dominates; otherwise an emergency-only stop."""
@@ -131,7 +148,8 @@ def _classify_fail(vals: dict) -> str:
 def analyse(runs: List[dict]) -> dict:
     """Group runs by (scenario, mode) and classify each failure's mode."""
     groups: Dict[tuple, dict] = defaultdict(lambda: {
-        "n": 0, "pass": 0, "fail": 0, "indet": 0,
+        "n": 0, "pass": 0, "pass_clean": 0, "pass_with_emergency": 0,
+        "fail": 0, "indet": 0,
         "fail_emergency_only": 0, "fail_ms1_breach": 0,
         "fail_edge_contact": 0, "fail_other": 0,
         "fraction_pass": None,
@@ -147,6 +165,7 @@ def analyse(runs: List[dict]) -> dict:
         g["n"] += 1
         if verdict is True:
             g["pass"] += 1
+            g[f"pass_{_classify_pass(vals)}"] += 1
         elif verdict is False:
             g["fail"] += 1
             g[f"fail_{_classify_fail(vals)}"] += 1
@@ -233,7 +252,9 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     runs = _load_runs(args.campaign_dir / "runs")
     report = analyse(runs)
-    report["campaign_dir"] = str(args.campaign_dir.relative_to(REPO))
+    # as_posix: keep the recorded path platform-independent (the artifact is
+    # regenerable on both the Linux campaign host and the Windows analysis host).
+    report["campaign_dir"] = args.campaign_dir.relative_to(REPO).as_posix()
     report["d_max_m"] = D_MAX_M
     report["n_runs"] = len(runs)
     report["n_enforcement"] = sum(1 for r in runs if r.get("mode") == "enforcement")
@@ -261,6 +282,15 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"  {g['scenario']:12} {g['mode']:11} {fr:>6} {g['fail']:>4} "
               f"{g['fail_emergency_only']:>7} {g['fail_ms1_breach']:>6} "
               f"{g['fail_edge_contact']:>4} {g['indet']:>5}")
+    print("\nPass modes - how each PASS happened (D-45: an emergency stop with the "
+          "safety limits held\nis a pass; 'clean' = overcame the stressor, no emergency):")
+    print(f"  {'scenario':12} {'mode':11} {'pass':>5} {'viaEmg':>6} {'clean':>6}")
+    for g in report["per_group"]:
+        if g["pass_with_emergency"] == 0:
+            continue
+        print(f"  {g['scenario']:12} {g['mode']:11} {g['pass']:>5} "
+              f"{g['pass_with_emergency']:>6} {g['pass_clean']:>6}")
+    print("  (groups not listed passed clean only - no emergency in any passing run)")
     print("\nCage core-safety invariant (enforcement, all runs):")
     print(f"  road-edge contacts        : {inv['road_edge_contacts']}")
     print(f"  runs with M-S1 >= d_max   : {inv['runs_ms1_ge_dmax']} "

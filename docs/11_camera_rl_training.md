@@ -19,7 +19,6 @@
 > prose (Ch.7 §7.7) with the engineering detail the committee may ask for. The
 > companion `docs/12` documents the deterministic CV controller used as the fair
 > baseline.
-
 > **This is the verdict-bearing E-track path, in Gazebo.** The E-track evaluation that
 > closes the thesis verdict — **GE4-V2 on the 297k E-main, complete 28.06.2026 (§8.4)** — ran on
 > **this** Gazebo stack; `docs/07` and ch.8 §8.9 score it, and **G4 is closed** on it (docs/07,

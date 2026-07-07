@@ -51,7 +51,8 @@
       "Bash(pkill -9 -f \"safety_cage\\\\|lane_following\\\\|gz sim\\\\|gazebo\\\\|cobraflex\\\\|ekf_node\\\\|robot_state_pub\\\\|parameter_bridge\\\\|rviz2\")",
       "Bash(xargs kill -9)",
       "Bash(pkill -f \"lane_following.launch.py\\\\|cage_ros_node\\\\|cage_logger_node\\\\|pd_baseline_node\\\\|vehicle_control_node\\\\|lane_perception_node\")",
-      "Bash(pkill -f \"gz sim\\\\|gz_sim\\\\|gz server\\\\|cage_ros_node\\\\|cage_logger_node\\\\|pd_baseline_node\\\\|vehicle_control_node\\\\|lane_perception_node\\\\|safety_cage\\\\|cobraflex_rl\\\\|robot_state_publisher\\\\|ekf_filter_node\\\\|ros_gz\\\\|parameter_bridge\")"
+      "Bash(pkill -f \"gz sim\\\\|gz_sim\\\\|gz server\\\\|cage_ros_node\\\\|cage_logger_node\\\\|pd_baseline_node\\\\|vehicle_control_node\\\\|lane_perception_node\\\\|safety_cage\\\\|cobraflex_rl\\\\|robot_state_publisher\\\\|ekf_filter_node\\\\|ros_gz\\\\|parameter_bridge\")",
+      "Bash(python -)"
     ]
   }
 }

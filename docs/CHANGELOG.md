@@ -31,6 +31,51 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [07.07.2026] — Defense-preparation documentation: docs/15 (implementation inventory) + docs/16 (defense compendium); stale docs/READMEs reconciled
+
+**Document(s) affected:** new `docs/15_implementation_inventory.md` (full module/script/config/test inventory with test→SR mapping and the run→verdict evidence spine); new `docs/16_defense_compendium.md` (index of all per-doc defense-question banks; PPO/NatureCNN deep dive with hyperparameter provenance; Gazebo wiring narrative; cage lineage — Simplex/RTA/shielding — and the full threshold-provenance table; CV-estimator defense essentials; evaluation-methodology summary; 12 cross-cutting Q&As; reference shelf). Updated: `docs/04` §Unit tests (stale "90 tests / 10 files, YAML 0.4.0" table refreshed to the actual 17 files / 139 tests at YAML 0.6.1; deferred `test_evaluation_order.py` note resolved to the landed `test_joint_envelope.py`); `cage/README.md` + `policy/README.md` (both pre-F2-stale: wrong file lists, wrong phase status, `cage_node.py` mislabelled as a ROS2 node); `CLAUDE.md` "Where to look first" (two new rows). **No code, config, scenario or threshold changed.**
+**Phase:** posterior (documentation; defense preparation)
+**Gate context:** after Gate G4 (additive, non-normative — docs/15/16 explicitly defer to docs/00–14 and DECISIONS.md on any conflict)
+**Author:** Samuel Sanchez
+
+### Change
+
+Added the two cross-cutting defense-preparation documents and reconciled the stale
+documentation found while compiling them. docs/15 answers "what is it / where does it live /
+which test proves it" for every module, tool script, config and test file in the repo
+(inventory verified against a live run: 503 passed + 5 skipped; traceability PASS, 0
+warnings, 2026-07-07). docs/16 answers "how does it work / why this design / says who":
+the exact CNN (SB3 `CnnPolicy` = NatureCNN 32/64/64+512 over 4×84×84 grayscale), the PPO
+hyperparameter provenance table (SB3 defaults vs the three incident-driven E-track
+stability levers), the step-by-step Gazebo wiring, the cage's architecture lineage and a
+per-parameter provenance table for every `cage.yaml` threshold, plus external anchors
+(Simplex, ASTM F3269 RTA, shielding/safe-RL, TTLC/ISO 11270, ISO 26262/21448/UL 4600,
+Mnih 2015, Schulman 2017, Raffin 2021, Tobin/Peng DR).
+
+### Rationale
+
+User request (defense preparation): consolidate everything built — much of it via
+agentic coding — into documentation the author can study and defend question-by-question,
+with values reasoned and referenced to standards/literature where such support exists.
+The per-topic docs (00–14) already carry Q&A banks; what was missing was the single index,
+the parameter-provenance consolidation, the complete script/test inventory, and the
+external-literature grounding.
+
+### Impact
+
+None on any verdict, config or code path. docs/15 §6 test counts and the traceability
+baseline should be re-verified (one `pytest` + one `check_traceability.py` run) before a
+Gate review or defense rehearsal. The §8 reference details in docs/16 must be verified
+against the originals before importing any of them into the manuscript bibliography.
+
+### Verification
+
+`pytest` (Windows host, `.venv-win`): **503 passed, 5 skipped**.
+`python tools/check_traceability.py`: **All checks PASSED, 0 warnings** (12 hazards /
+14 SRs / 6 cage rules / all scenarios+metrics linked).
+
+---
+
 ## [06.07.2026] — D-59: Gazebo 2-D action config (`train_ppo_camera_2d.yaml`) + docs/11/13 command updates — Isaac 2-D findings ported where backend-agnostic
 
 **Document(s) affected:** new `src/cobraflex_rl/config/train_ppo_camera_2d.yaml` (Gazebo 2-D camera PPO config); docs/11 §9 (2-D launch + eval note + "2-D posterior variant" paragraph); docs/13 (`isaac_eval.py` tool-table row + in-process eval / CV-parity command block + kin2 spawn-curriculum command + STOP-file stop + evaluator CLI-flag line); docs/DECISIONS.md (new **D-59**). **No code changed** — the 2-D path is shared `GazeboLaneEnv` / `cage_bridge` / `rewards` and `RosGazeboInterface.send_action` already publishes a variable `linear.x` (D-50).

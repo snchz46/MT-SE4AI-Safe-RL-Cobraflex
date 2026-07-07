@@ -1,30 +1,49 @@
 # Policy
 
-Reinforcement learning policy implementation and training pipeline.
+Reinforcement learning policy: PD baseline, PPO training artifacts and the
+checkpoint registry. **The live training/eval code moved to the ROS2 package
+`src/cobraflex_rl/`** (this directory keeps the pure-Python pieces + evidence).
 
 ## Files
 
-- `train.py` — PPO training script (Phase 3).
-- `policy_node.py` — ROS2 node that wraps the trained policy for online inference.
-- `reward.py` — reward function specification (per Training Specification).
-- `env_wrapper.py` — Gymnasium-compatible environment wrapper around the simulator.
-- `checkpoints/` — trained policy checkpoints (large binary; tracked via registry CSV).
+- `baseline_pd.py` — pure-Python PD controller (F2 baseline; gains in
+  `baseline_pd.yaml`). The known-competent control arm that validated the
+  F2 pipeline and calibrated the reward (docs/10 §7).
+- `train.py` — thin historical shim; the real trainer is
+  `src/cobraflex_rl/cobraflex_rl/train_ppo.py`
+  (`ros2 launch cobraflex_rl train.launch.py`). The env is
+  `cobraflex_rl/gazebo_lane_env.py`, the reward `cobraflex_rl/rewards.py`.
+- `checkpoints/` — trained checkpoints (`.zip`, gitignored binaries) +
+  `checkpoint_registry.csv` (seed, steps, timestamp, git commit, cage-YAML
+  hash per row — the reproducibility ledger).
+- `tests/` — the 357-test pure-Python suite covering the whole
+  `cobraflex_rl` package (reward, cage bridge, camera/CV perception, scenario
+  + campaign spine). Test-to-artifact map: `docs/15_implementation_inventory.md` §6.2.
 
 ## Algorithm
 
-PPO via Stable-Baselines3 is the primary algorithm. PPO-Lagrangian is a Phase 3 contingency if needed; SAC may be added for contextual comparison if budget allows.
+PPO via Stable-Baselines3 (decisions D-14/D-15). F-track: `MlpPolicy` over the
+6-dim state vector. Track 'E': `CnnPolicy` (NatureCNN) over 4 stacked 84×84
+grayscale camera frames. Full deep dive (architecture, hyperparameter
+provenance, Gazebo wiring): `docs/16_defense_compendium.md` §3;
+training operations: `docs/11_camera_rl_training.md`.
 
 ## Training Specification
 
-The Training Specification is part of the V-Model adaptation A1. It is documented in the manuscript (Chapter 6, Pragmatic Aspects). The reward function, hyperparameters, and termination criteria are specified there before training begins.
+Normative source: Training Specification, manuscript Chapter 7 (§7.2–§7.5).
+Supporting rationale: `docs/09_environment_design.md` (env) and
+`docs/10_reward_function.md` (reward v1.2).
 
 ## Cage during training
 
-The cage is active during training (in enforcement mode by default). The rationale and the implications for the reward design are discussed in the Training Specification.
+The cage is active in enforcement mode during training, invoked **in-process**
+with the same `SafetyCageNode` class and `cage.yaml` as deployment (D-34 /
+TS-01). Cage interventions are never penalised by the reward; the one
+deliberate exception is the smoothness term on the *raw* steering delta
+(reward v1.2, docs/10 §5).
 
-## Phase status
+## Status
 
-Phase 0: directory created.
-Phase 2: env_wrapper.py implemented.
-Phase 3: train.py implemented; first policy trained. **Currently this is the next phase.**
-Phase 4 onwards: trained policy used in experiments.
+F3 closed (main run `ppo_train_2024_200k`, seed study N=5). Track 'E' closed
+at G4 (E-main `cobraflex_ppo_newcam_complex_b_2024_297k_peak`, GE4-V2 verdict
+of record). Posterior: Isaac 2-D retrain (D-49/D-50, `docs/13`–`14`).

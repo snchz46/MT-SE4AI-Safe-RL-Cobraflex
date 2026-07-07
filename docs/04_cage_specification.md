@@ -313,7 +313,7 @@ The mode is set at launch and recorded in `metadata.json` of every run.
 
 ## Unit tests
 
-Each rule has a dedicated test file under `cage/tests/`. Current status (cage YAML 0.4.0, 90 tests passing):
+Each rule has a dedicated test file under `cage/tests/`. Current status (cage YAML 0.6.1, **139 tests passing**, verified 2026-07-07):
 
 | File | Coverage |
 | ---- | -------- |
@@ -323,12 +323,19 @@ Each rule has a dedicated test file under `cage/tests/`. Current status (cage YA
 | [test_c04_speed_ceiling.py](../cage/tests/test_c04_speed_ceiling.py) | `v_max(κ)`, throttle reduction, curvature behaviour |
 | [test_c05_emergency.py](../cage/tests/test_c05_emergency.py) | Triggers 1, 3, 4, 6; persistence; reset semantics; freeze steering |
 | [test_c05_triggers_extended.py](../cage/tests/test_c05_triggers_extended.py) | Trigger 2 (high-energy); Trigger 5 (missing-state via ctx) |
+| [test_c05_perception_trigger.py](../cage/tests/test_c05_perception_trigger.py) | Trigger 8 (perception invalid, track 'E'); `perception_trigger_enabled` back-compat gate |
 | [test_c06_rate_limiter.py](../cage/tests/test_c06_rate_limiter.py) | Per-component clipping, boundary, disable |
 | [test_cage_node.py](../cage/tests/test_cage_node.py) | Chain composition, modes, prev_action tracking, emergency override |
 | [test_cage_node_missing_state.py](../cage/tests/test_cage_node_missing_state.py) | Missing-state counter, no-state-ever safe-stop |
+| [test_joint_envelope.py](../cage/tests/test_joint_envelope.py) | SR-010 Part 1: per-rule envelope predicates, post-chain assertion → C-05 Trigger 7, rule pairs/triples |
+| [test_oscillation.py](../cage/tests/test_oscillation.py) | SR-010 Part 2: alternation-rate window, persistence → emergency, stale-timestamp filter (0.5.1 regression) |
+| [test_integration_chain.py](../cage/tests/test_integration_chain.py) | End-to-end synthetic trajectory across all six rules (Phase-2 plan §13(5)) |
+| [test_pipeline.py](../cage/tests/test_pipeline.py) | PD → cage → logger 200-cycle pipeline (pure-Python M1-demo analogue) |
+| [test_logger.py](../cage/tests/test_logger.py) | CSV schema stability of the cage log |
 | [test_cage_rules.py](../cage/tests/test_cage_rules.py) | YAML load + per-rule smoke tests |
+| [test_sr_spec_version_check.py](../cage/tests/test_sr_spec_version_check.py) | `IncompatibleCageConfigError` on missing/unknown `compatible_sr_spec_version` |
 
-The integration tests in `test_cage_node.py` exercise rule interaction (composition and override semantics); a dedicated `test_evaluation_order.py` covering rule-pair conflicts at the level of detail required for SR-010 will land alongside the joint-envelope assertion (Trigger 7 of C-05) when that work is taken up.
+The rule-pair conflict coverage originally deferred to a future `test_evaluation_order.py` landed as `test_joint_envelope.py` (together with Trigger 7 of C-05) plus the cross-rule `test_integration_chain.py`. The complete repo-wide test inventory, with each file mapped to the SR/artifact it evidences, is in [docs/15_implementation_inventory.md](15_implementation_inventory.md) §6.
 
 The full suite is run before any commit to `main` and before any Gate review.
 

@@ -1,10 +1,23 @@
 # Safety Requirements Specification
 
-**Status:** Living document — Phase 1 deliverable  
-**Last update:** 13.05.2026  
-**Approved at Gate:** G1 (pending)  
+**Status:** Living document — Phase 1 deliverable (G1 approved; SR-012/013/014 added for track 'E')  
+**Last update:** 07.07.2026 (current-state framing note added; SR-012/013/014 were added 09.06.2026)  
+**Approved at Gate:** G1 (approved); **verified at G4 (02.07.2026)** — verdicts in `docs/07`  
 
 ## Purpose
+
+> **Current-state framing (G4 closed, 02.07.2026).** This document is the SR **specification**;
+> the per-SR **verdicts** are recorded in `docs/07` (Traceability Matrix), not here — so the
+> `Status: Open` column of the machine-readable table below is the *spec* status, not the
+> verification outcome. At **G4** (02.07.2026): the **F-track** arm closed `SATISFIED` (frozen
+> baseline) and the **track-'E' GE4-V2** camera campaign is the **verdict of record** — every
+> SR-CL-A *safety predicate* holds; the literal global `NOT SATISFIED` is held **only** by
+> SR-002/003's oval-legacy 2.0 s recovery-time clause (both Satisfied on their own criterion,
+> **D-47**), **SR-001 Satisfied** (ruta-1, D-48), SR-012/013/014 Satisfied. Two SR notes carry
+> forward as documented, non-vetoing items: **SR-009**'s stall sub-mode is **N/A-by-construction**
+> for the frozen 1-D steering-only action (**D-49**; it becomes well-posed on the 2-D Isaac
+> posterior action, D-50), and **SR-010** is a genuine CL-B in-ODD co-activation finding. See
+> `docs/07` + `docs/11` §8.4.
 
 This document specifies the Safety Requirements (SRs) derived from the Hazard Register. Each SR satisfies four criteria:
 

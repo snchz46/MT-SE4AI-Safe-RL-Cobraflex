@@ -1,7 +1,7 @@
 # Metrics Catalogue
 
-**Status:** Living document — Phase 0 baseline, refined through Phase 1; M-S5 added in F4  
-**Last update:** 08.06.2026  
+**Status:** Living document — Phase 0 baseline, refined through Phase 1; M-S5 added in F4; **verified at G4**  
+**Last update:** 07.07.2026 (current-state framing note added)  
 **Approved at Gate:** G1  
 
 ## Purpose
@@ -9,6 +9,17 @@
 This document defines the metrics computed on every experimental run. Each metric has a unique identifier, a precise definition, the units in which it is expressed, the computation procedure, and the SRs to which it contributes evidence.
 
 A companion CSV (`docs/data/metrics.csv`) is generated automatically.
+
+> **Current-state framing (G4 closed, 02.07.2026).** The metrics are **track-neutral** and
+> computed identically for the archived F-track baseline and the **track-'E' verdict of record**
+> (GE4-V2, `docs/07`). One metric carries a track-specific caveat worth preserving: **M-P6
+> (stall rate)** is **N/A-by-construction on the frozen 1-D steering-only action** — with no
+> speed authority the policy cannot converge to inaction, so M-P6 ≡ 0 and its negative test
+> SC-PERT-03 is inert (**D-49**). M-P6 becomes **well-posed only on the 2-D action** (steering +
+> throttle) of the Isaac posterior track, where a true stop is commandable (**D-50**; SR-009's
+> liveness sub-mode is then genuinely testable). **M-S5 (road-edge departure)** is the headline
+> metric of the out-of-ODD Frontier cage-efficacy study (paired enforcement-vs-monitoring
+> contrast, not folded into the global verdict — D-35).
 
 ## Categories
 

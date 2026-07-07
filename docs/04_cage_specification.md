@@ -1,13 +1,40 @@
 # Cage Specification
 
-**Status:** Living document — Phase 2 deliverable  
-**Last update:** 10.06.2026 (track 'E': C-05 Trigger 8 implemented; cage state source = CV lane-estimator per D-43)  
-**Approved at Gate:** G2 (pending)  
-**Cage YAML version:** 0.6.0 (`cage/cage.yaml`).
+**Status:** Living document — Phase 2 deliverable (G2 approved; **verified at G4, 02.07.2026**)  
+**Last update:** 07.07.2026 (current-state framing note added; cage YAML 0.6.0 → **0.6.1** — C-05 Trigger 3 staleness budget aligned to the 10 Hz control rate)  
+**Approved at Gate:** G2 (approved)  
+**Cage YAML version:** **0.6.1** (`cage/cage.yaml`).
 
 ## Purpose
 
 This document specifies the runtime safety cage as an explicitly designed engineering artefact. It defines the architecture, the rules, the parameters, the evaluation order, the operating modes, and the interface to the rest of the system.
+
+> **Current-state framing (G4 closed, 02.07.2026).** The cage rules C-01..C-06 and
+> `cage.yaml` are **shared, unchanged, across both tracks** — only the *source* of the
+> `state` differs (F-track: ground truth via `PolylineTracker`; track 'E': the cage's own
+> deterministic CV lane-estimator, **D-43**, the Track-E note below). The verdict of record is
+> the **track-'E' GE4-V2** campaign (`docs/07`, `docs/11` §8.4). Three findings from that
+> campaign belong here, so the knowledge is preserved:
+>
+> 1. **The cage is *latent* in-ODD but a safety asset.** At the fixed 0.20 m/s operating point
+>    it never fires C-01/C-02/C-03/C-05 on clean nominal driving, yet it **removes the
+>    perception-degradation failures the bare policy commits** (glare/worn/gaps: enforcement
+>    PASS vs monitoring FAIL) via the SR-013/Trigger-8 controlled stop — the in-ODD cage-value
+>    result under the camera.
+> 2. **The speed rules C-04/C-05 were *structurally latent*** because the 1-D verdict caps
+>    speed at 0.20 m/s, below every C-04 ceiling (M-S2 ≡ 0 in-ODD, the F4/GE4 central finding).
+>    The **2-D action posterior** (D-50, `max_speed = V_MAX = 0.5 m/s`) makes them **arbitrate
+>    for real** — the D-50 Isaac pilot measures C-04 active on 0.7–1.8 % of steps, the
+>    latent→measured flip. `cage.yaml` is consumed **as-is** for the 2-D action (the throttle
+>    maps onto the `u ∈ [0,1]` scale the rules already use — no cage change).
+> 3. **The H-12 confident under-read** (§Track-E note; docs/12 §4.4) is the one real residual:
+>    an off-centre CV estimate that locks onto a neighbour-lane pair is *self-consistent*, so
+>    SR-014's plausibility check cannot reject it and C-01 never fires. Boundary-marginal
+>    in-ODD (2/30 SC-EDGE-02); the honest closure is better perception, not a single-frame
+>    rule (the ruta-2b patch was reverted, D-48).
+>
+> The parameters below stay `[provisional]` pending the physical calibrations (M-1..M-5); the
+> 2-D posterior is the first context that actually exercises the speed thresholds.
 
 The cage is implemented as a ROS2 node under `cage/`. Its parameters are externalised in `cage/cage.yaml`, version-controlled, and referenced by hash in the metadata of every experimental run.
 
@@ -55,7 +82,7 @@ On the parallel **track 'E'** (end-to-end front-camera policy, D-41) the cage's 
 
 This keeps the cage independent of the **learned policy** and **auditable** (a classical CV algorithm is inspectable, unlike the CNN), so the A2 "independently-verifiable cage" property still holds; and it lets the cage generalise to **any road with visible lane lines**, like the policy. The honest trade-off (D-43): policy and cage now both rely on the camera, so a camera fault (H-10/H-11) can blind **both** at once (common-cause) — the residual safety is the open-loop **controlled stop** (SR-013 / C-05, which needs no perception: "no lines ⇒ stop"). A confidently *wrong* CV estimate is a new hazard, **H-12** (cage lane-misdetection), mitigated by **SR-014** (estimator plausibility / temporal-consistency check + conservative fall-back to C-05). Still **no new numbered cage rule**: SR-012 by C-01/C-02/C-03 over the CV state + a training constraint, and SR-013 / SR-014 by C-05 (Trigger 8 below).
 
-**Implemented (E2, cage YAML 0.6.0).** The CV estimator and its supervision are built and host-tested: `cobraflex_rl/cv_lane_estimator.py` (HSV white mask with vegetation-hue exclusion → per-row white-run candidates → metric ground-frame projection via the closed-form pitch-only camera model `camera_geometry.py` → polynomial line clustering → driven-lane pair selection → `ey/epsi/lane-width/curvature` at the vehicle), wrapped by `cage_perception.CagePerceptionSupervisor` (health per SR-013 + plausibility per SR-014 → cage `state` or `perception_invalid`). In the training/eval loop (`gazebo_lane_env`, camera mode) the cage consumes **only** this estimate; ground truth keeps driving reward, termination and metrics (the oracle role). Estimator-vs-oracle accuracy: `experiments/sim/runs/cv_estimator_val_*` (GE2 evidence).
+**Implemented (E2, cage YAML 0.6.0; staleness budget refined in 0.6.1).** The CV estimator and its supervision are built and host-tested: `cobraflex_rl/cv_lane_estimator.py` (HSV white mask with vegetation-hue exclusion → per-row white-run candidates → metric ground-frame projection via the closed-form pitch-only camera model `camera_geometry.py` → polynomial line clustering → driven-lane pair selection → `ey/epsi/lane-width/curvature` at the vehicle), wrapped by `cage_perception.CagePerceptionSupervisor` (health per SR-013 + plausibility per SR-014 → cage `state` or `perception_invalid`). In the training/eval loop (`gazebo_lane_env`, camera mode) the cage consumes **only** this estimate; ground truth keeps driving reward, termination and metrics (the oracle role). Estimator-vs-oracle accuracy: `experiments/sim/runs/cv_estimator_val_*` (GE2 evidence).
 
 ## Rules
 

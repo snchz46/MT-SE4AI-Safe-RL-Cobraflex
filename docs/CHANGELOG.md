@@ -31,6 +31,75 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [07.07.2026] — Living-doc sweep: F-track archived, current-state framing added to docs/00/02/03/04/06/10
+
+**Document(s) affected:** `docs/00_v_model_adapted.md`, `docs/02_hazard_register.md`, `docs/03_safety_requirements.md`, `docs/04_cage_specification.md`, `docs/06_metrics_catalogue.md`, `docs/10_reward_function.md`. No machine-readable table, CSV, code, cage constant or scenario criterion changed.
+**Phase:** track 'E' (posterior documentation, after Gate G4)
+**Gate context:** after Gate G4 (closed 02.07.2026) — several living docs still carried pre-G4 / F-track-primary framing.
+**Author:** Samuel Sanchez
+
+### Change
+
+Reviewed the remaining living docs for F-track staleness and brought each to the current
+state (track 'E' = verdict of record, F-track = archived baseline, G4 closed), **preserving**
+the historical obstacles that led here rather than deleting them:
+
+- **docs/00 (V-Model):** the Track-'E' section said "'F' superseded by 'E' *once the GE4
+  campaign runs* (camera eval to date is nominal)" — factually stale. Updated: the **GE4-V2
+  campaign has run** (297k E-main, 1970 runs, 28.06.2026) and **G4 closed 02.07.2026**;
+  literal `NOT SATISFIED` held only by the SR-002/003 recovery-time clause (D-47), SR-001 +
+  SR-012/013/014 Satisfied; Isaac is the posterior thread. A5 "provisional principal evidence"
+  clarified (provisional only vs the posterior Isaac stage). Scenario list SC-PERT-04..10 →
+  04..13, SC-FRONT-01..06 → 01..07.
+- **docs/02 (Hazards):** stale header (`G1 pending`, `13.05.2026`) fixed; added a current-state
+  note — all 12 hazard mitigations verified at G4 (F4 + GE4-V2), the in-ODD cage-latent-but-asset
+  result and the **H-12 confident under-read** residual recorded so the knowledge is kept; noted
+  the `Status: Open` column is hazard *registration*, verdicts live in docs/07. Machine-readable
+  table untouched (CSV byte-identical).
+- **docs/03 (SRs):** stale header fixed; added a current-state note — spec vs verdict split
+  (verdicts in docs/07), the D-47 SR-002/003 reconciliation, **SR-009 N/A-by-construction on the
+  1-D action (D-49) / well-posed on the 2-D Isaac action (D-50)**, SR-010 genuine CL-B. Table
+  untouched.
+- **docs/04 (Cage):** cage YAML version corrected **0.6.0 → 0.6.1** (header + Track-E note);
+  added a current-state note with three preserved findings — the cage is latent in-ODD yet
+  removes perception-degradation failures; the speed rules C-04/C-05 were structurally latent
+  (0.20 m/s < ceilings) and the **2-D posterior (D-50, max_speed = V_MAX)** makes them arbitrate
+  for real (latent→measured flip); the H-12 under-read residual.
+- **docs/06 (Metrics):** header updated; added a note — metrics are track-neutral; **M-P6 (stall)
+  is N/A on the 1-D action (D-49), well-posed only on the 2-D action (D-50)**; M-S5 is the
+  frontier headline metric.
+- **docs/10 (Reward):** added the track-framing note (this v1.2 reward is the verdict-of-record
+  reward, F-track shares it, archived); split §10 into §10.1 (1-D camera verdict, reward
+  unchanged — now *confirmed* by the GE4-V2 outcome) and **§10.2 — the 2-D posterior** (D-50):
+  the added `throttle_delta` (0.10) and `stall_penalty` (0.5) terms, inert-by-default, with the
+  crawl-and-die exploration-collapse obstacle (fixed by `ent_coef 0.01` D-52 + the stall penalty)
+  recorded.
+
+Docs already current were verified and left unchanged: **05** (scenario library, GE4-V2),
+**07** (traceability, G4 closed), **11** (camera training v0.6), **12** (CV baseline v0.5),
+**13/14** (Isaac — the Lane Cam is correctly the RL camera, the ZED Mini is the auxiliary
+platform suite Isaac reproduces), **15** (inventory — F=oval / E=complex_b labelled), **16**
+(defense compendium — GE4-V2 / 297k / literal verdicts), **01** (structural IDs).
+
+### Rationale
+
+With the track-'E' eval closed (GE4-V2) and G4 signed off, the F-track is archived; the living
+docs must show the current state and keep the past obstacles (perception under-read, speed-rule
+latency, exploration collapse) documented so the knowledge is not lost. User request.
+
+### Impact
+
+Documentation-only. No hazard/SR machine-readable table, generated CSV, cage constant, reward
+weight or scenario criterion changed — only prose headers and current-state framing notes were
+added above the tables. Consistent with the docs/08 and docs/09 rewrites earlier today.
+
+### Verification
+
+`tools/check_traceability.py` → **All checks PASSED. 0 warning(s).** `sync_hazard_register.py`
+and `sync_safety_requirements.py` re-run: 12 hazards / 14 SRs, CSVs unchanged (tables untouched).
+
+---
+
 ## [07.07.2026] — Environment Design (docs/09) retargeted to track 'E' + Lane Cam + 2-D posterior (v0.5 → v0.6)
 
 **Document(s) affected:** `docs/09_environment_design.md` (restructured, v0.6). No code or other doc edited.

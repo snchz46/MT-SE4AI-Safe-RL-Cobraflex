@@ -1,12 +1,26 @@
 # Hazard Register
 
-**Status:** Living document — Phase 1 deliverable  
-**Last update:** 13.05.2026  
-**Approved at Gate:** G1 (pending)  
+**Status:** Living document — Phase 1 deliverable (G1 approved; extended for track 'E' at E0/E1)  
+**Last update:** 07.07.2026 (current-state framing note added; H-10/H-11/H-12 were added 09.06.2026 for the camera track)  
+**Approved at Gate:** G1 (approved); mitigations **verified at G4 (02.07.2026)** — see below  
 
 ## Purpose
 
 This document is the canonical record of the hazards identified for the lane-following function within its declared ODD. It is produced through a simplified HARA following the structure of ISO 26262, complemented by a lightweight STPA pass on selected hazards.
+
+> **Current-state framing (G4 closed, 02.07.2026).** All twelve hazards' mitigations are
+> now **verified**: the F-track (H-01..H-09) at F4 (global `SATISFIED`, frozen baseline) and
+> the camera track (**H-10/H-11/H-12**) at **GE4-V2** — the **verdict of record** (297k
+> E-main, `docs/07`, `docs/11` §8.4). Two findings from that campaign are worth recording
+> here so the knowledge is not lost: **(a)** in-ODD the cage stays *latent* under the camera
+> yet **removes the perception-degradation failures the bare policy commits** (H-10 face:
+> glare/worn/gaps), so H-10/H-11's C=2 controllability claim held empirically; **(b)** the
+> **H-12 confident under-read** (the cage's CV estimator locking onto a neighbour-lane pair
+> off-centre, a *self-consistent* wrong estimate SR-014 cannot catch) is a real,
+> boundary-marginal residual (2/30 SC-EDGE-02 breaches; docs/12 §4.4) whose honest closure is
+> better perception (temporal estimator / the 2-D Isaac retrain), not a single-frame patch.
+> The **`Status: Open`** column below is the hazard's *registration* state (a hazard persists
+> after mitigation); per-SR **verdicts** live in `docs/07`, not here.
 
 The format is structured to enable mechanical extraction into the Traceability Matrix. A companion CSV (`docs/data/hazard_register.csv`) is generated automatically from this Markdown by `tools/sync_hazard_register.py`.
 

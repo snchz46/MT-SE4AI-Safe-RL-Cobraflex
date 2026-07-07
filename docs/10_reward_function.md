@@ -16,6 +16,15 @@
 > rationale for each decision — at the level the committee may ask about.
 > Includes a bank of defense questions.
 
+> **Track framing (current state).** This reward was authored for F3 but is
+> **observation-agnostic** (it scores the ground-truth state + the raw policy delta,
+> §10), so the **same v1.2 reward is the verdict-of-record reward of track 'E'** — the
+> primary system, whose GE4-V2 camera campaign (297k E-main, G4 closed 02.07.2026) ran on
+> it unchanged. The F-track (state-vector baseline) is **archived / frozen**; it shares this
+> reward. The one place the reward is *extended* is the **2-D action posterior work** (D-50),
+> which adds a longitudinal-smoothness + anti-stall pair — documented in §10.2, inert by
+> default so the frozen 1-D returns stay bit-identical.
+
 ---
 
 ## 1. Formula
@@ -235,20 +244,44 @@ lane-following and makes attributing effects harder. The "reward = quality, cage
 
 ---
 --->
-## 10. Track E — reward unchanged (D-41 / D-43)
+## 10. Track E and the 2-D posterior — what carries over, what extends
 
-The end-to-end front-camera variant (track 'E', `docs/09` §10) leaves this reward
+### 10.1 Track E (camera, verdict of record) — reward unchanged (D-41 / D-43)
+
+The end-to-end front-camera variant (track 'E', `docs/09`) leaves this reward
 **unchanged**. The reward is a function of the resulting **ground-truth state**
 (`ey`, `epsi`, `progress`) and the **raw policy steering delta** — none of which
 depend on the observation modality. The camera changes what the *policy sees*, not
 what the *environment measures* to score it. The reward's `ey/epsi/progress` come from the
 simulator's **ground truth** — a training-time signal available in sim exactly as in F3,
-and independent of whether the *cage* uses ground truth (F-track) or its own CV estimate
-(track 'E', D-43). There is **no reward at evaluation**: the trained policy drives from the
-camera alone. Consequently the §1 formula, the §3 weights and the §7 unit tests all carry
-over, and **no new reward term is introduced for the camera track**. (If E-training
-reveals a camera-specific pathology — e.g. the policy exploiting a visual artefact to
-gain reward — a revision would be recorded here as v2.x; none is assumed at E-design.)
+and independent of whether the *cage* uses ground truth (F-track, archived) or its own CV
+estimate (track 'E', D-43). There is **no reward at evaluation**: the trained policy drives
+from the camera alone. Consequently the §1 formula, the §3 weights and the §7 unit tests all
+carry over, and **no new reward term is introduced for the 1-D camera verdict**. This is
+confirmed by the outcome: the GE4-V2 297k E-main trained on this exact v1.2 reward and drives
+the lane cleanly (nominal |ey| 10.9 mm, beating the CV baseline; `docs/11` §8.2). *(No
+camera-specific reward pathology surfaced — the v2.x contingency anticipated at E-design was
+not needed.)*
+
+### 10.2 The 2-D action posterior — two added terms (D-50 / D-56)
+
+The **only** extension of this reward is for the **2-D action (steering + throttle)**
+posterior work (D-50, `docs/09` §3.2) — deferred out of the frozen Gazebo verdict by D-49
+and taken up on the Isaac track. Because the policy now commands throttle, the reward gains
+a **longitudinal** mirror of the existing terms, both **weight-defaulted to leave the 1-D
+returns bit-identical**:
+
+| Term | Weight (2-D) | Rationale |
+| --- | --- | --- |
+| `throttle_delta` (raw policy throttle delta) | 0.10 | Longitudinal twin of the v1.2 raw `steer_delta` (§10 above): C-06 rate-limits throttle too, so a post-cage penalty would be toothless — measuring the raw delta makes the policy pay for its own jerk |
+| `stall_penalty` (below `stall_progress_min = 0.25`) | 0.5 | **The 2-D-only failure mode:** with speed authority the policy can converge to a degenerate "park" optimum (throttle → 0, collect the survival/centring reward without moving). The penalty makes standing still unprofitable, so SR-009's liveness sub-mode is well-posed (D-56) |
+
+The `stall_penalty` is the knowledge worth preserving from the 2-D pilots: the **first**
+Isaac 2-D run's `ep_rew_mean` peaked then decayed into a *crawl-and-die* regime as the
+policy over-annealed — an exploration collapse fixed by `ent_coef 0.01` (D-52), while
+`stall_penalty` removes the standing-still attractor the added speed dimension created.
+Neither exists on the 1-D verdict reward. A policy trained with these terms is a **new
+posterior baseline**, never a re-run of the 297k E-main.
 
 ---
 
@@ -276,3 +309,12 @@ gain reward — a revision would be recorded here as v2.x; none is assumed at E-
   end-to-end camera variant (D-41/D-43); it is observation-agnostic (computed on
   ground-truth state + progress + raw steering delta, a sim training signal). No
   formula/weight change.
+- **current-state framing (2026-07-07):** added the track-framing note (this v1.2
+  reward is the **verdict-of-record** reward of track 'E' — the GE4-V2 297k E-main ran on
+  it unchanged; the F-track that shares it is **archived/frozen**). Split §10 into §10.1
+  (1-D camera verdict — reward unchanged, now *confirmed* by the GE4-V2 outcome) and
+  **§10.2 — the 2-D action posterior** (D-50): the two added longitudinal terms
+  `throttle_delta` (0.10, raw) and `stall_penalty` (0.5 below `stall_progress_min = 0.25`,
+  D-56), both inert-by-default so the 1-D returns stay bit-identical, with the exploration-
+  collapse / crawl-and-die obstacle (fixed by `ent_coef 0.01`, D-52 + the stall penalty)
+  recorded so the knowledge is not lost. No 1-D formula/weight change.

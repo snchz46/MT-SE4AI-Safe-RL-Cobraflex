@@ -503,10 +503,11 @@ without hurting accuracy (enforcement |ey| is even slightly *better* than
 monitoring).
 
 > **Scope: this is the nominal eval, not the GE4 campaign.** It establishes the
-> in-ODD competence of the E-main policy. The 24-scenario GE4 campaign (the
-> perturbation/degradation verdicts) has **not** been re-run on 297k — `docs/07`
-> and Ch.8 §8.9 still carry the **139k** campaign verdict (now scoring a
-> superseded policy; §8.3). Re-running GE4 on 297k is the open closure step.
+> in-ODD competence of the E-main policy; the full perturbation/degradation/edge
+> verdicts come from the **GE4-V2 campaign on this same 297k policy** (§8.4) —
+> **1970 runs, the verdict of record**, scored in `docs/07` and Ch.8 §8.9, on which
+> **G4 closed 02.07.2026**. The 139k campaign this replaces is retained only as
+> history (§8.3).
 
 ### 8.3 Superseded predecessors (oval 425k, 139k)
 
@@ -753,9 +754,9 @@ The GE4 (track-'E') verdict campaign scores the 297k E-main over the whole
 `scenarios_complex_b/` library (28 scenarios × {enforcement, monitoring}) through the
 pure-Python driver + Gazebo executor (`tools/run_campaign.py`; see
 [`scenarios_complex_b/README.md`](../scenarios_complex_b/README.md) for the per-scenario
-status). Before committing the ~1600-run campaign, run a **visual pilot** (`--gui`, 1–2
-reps/scenario) to eyeball that every scenario spawns on-lane, the camera bridges, and the
-cage behaves.
+status). Before committing the full campaign (~1970 runs at the recommended reps), run a
+**visual pilot** (`--gui`, 1–2 reps/scenario) to eyeball that every scenario spawns on-lane,
+the camera bridges, and the cage behaves.
 
 ```bash
 cd <repo> && source /opt/ros/jazzy/setup.bash && export DISPLAY=:0
@@ -805,15 +806,16 @@ for d in sorted(glob.glob("/tmp/pilot_297k/runs/*/")):
 EOF
 ```
 
-**Full verdict campaign** (the ~1600-run run — host it **off this machine** per the ≤1 h
-rule): drop `--gui`, run both modes, with `--resume` so an interrupted run continues. The
-per-scenario reps come from each scenario's `n_runs_recommended` (`--reps` only *caps* them
-for a subset).
+**Full verdict campaign** (the run of record was **1970 runs** — host it **off this machine**
+per the ≤1 h rule): drop `--gui`, run both modes, with `--resume` so an interrupted run
+continues. The per-scenario reps come from each scenario's `n_runs_recommended` (`--reps` only
+*caps* them for a subset). The verdict-of-record output lives in `campaign_e_v2/`; the earlier
+V1 attempt (1940 runs) is retained at `campaign_e_297k/` (§8.4.1 V1→V2 delta).
 
 ```bash
 python3 tools/run_campaign.py --scenario-dir scenarios_complex_b --model-path "$PEAK" \
   --train-config "$TRAINCFG" --seeds 2024 --modes enforcement,monitoring \
-  --resume --out experiments/sim/campaign_e_297k
+  --resume --out experiments/sim/campaign_e_v2
 ```
 
 The frontier scenarios are scored as a paired enforcement-vs-monitoring contrast (the cage
@@ -874,6 +876,12 @@ multi-seed N=5 confirmation is the planned robustness check).
 
 ## Version log
 
+- **v0.6.1 (2026-07-07):** doc-consistency pass — reconciled two stale run-data references left
+  from before the §8.4 GE4-V2 rewrite. §8.2's scope note claimed the GE4 campaign had **not**
+  been re-run on 297k and that `docs/07` / Ch.8 §8.9 still carried the 139k verdict; it now
+  points forward to the GE4-V2 verdict of record (§8.4, 1970 runs, G4 closed 02.07.2026). §9.2's
+  full-campaign figures updated to the actual run of record (~1970 runs, `--out campaign_e_v2`;
+  V1's `campaign_e_297k` noted as the retained predecessor). No verdict changed.
 - **v0.6 (2026-06-28; annotated 02.07.2026):** **§8.4 rewritten to GE4-V2 — the verdict of
   record** (supersedes the V1 text of v0.5): 1970 runs, 0 errors, global **`NOT SATISFIED`
   (literal), blocking SR-002/003 only** (their SC-EDGE-01 fails are the oval-legacy 2.0 s

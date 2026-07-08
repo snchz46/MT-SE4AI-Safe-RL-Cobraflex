@@ -61,8 +61,10 @@ device: auto              # CnnPolicy benefits from CUDA when present
 service_timeout_ms: 3500
 seed: 2024                # cross-backend parity with train_isaac_2d.yaml (D-36 main-seed);
                           # makes the Gazebo-vs-Isaac 2-D comparison seed-aligned (docs/13).
-max_episode_steps: 1024   # frozen-config parity (E-main trained at 1024). If the 2-D policy's
-                          # curve-slowing truncates a lap, bump toward 1536/2048 (D-58 precedent).
+max_episode_steps: 2048   # D-58/kin2 lesson (user-directed 08.07.2026): with random_start_s
+                          # on and a 2-D policy that slows for curves, 1024 truncates before a
+                          # full lap and the policy never learns past it (Isaac kin2 had to be
+                          # resumed 1024→2048). E-main frozen parity was 1024.
 control_dt: 0.10
 # fixed_speed stays the CRUISE REFERENCE: the progress-reward normaliser
 # (~1.0 == one cruise-speed step; docs/10) and the 1-D fallback speed. The 2-D
@@ -73,6 +75,9 @@ viz: true                 # Gazebo CAN publish the cage/agent RViz view (unlike 
                           # Isaac) — useful to watch the 2-D throttle slow for curves.
                           # Set false for long headless runs (§9.1).
 model_path: cobraflex_ppo_gz2d_lane
+checkpoint_freq: 25000    # periodic-ckpt cadence; without it train_ppo falls back to
+                          # n_steps (1024) → ~20 GB over 1M (the Isaac gotcha, fixed
+                          # there 03.07.2026 — same fix here). 40 ckpts/1M ≈ 800 MB.
 sim_real_time_factor: 1   # camera rendering is real-time-bound in Gazebo
 
 policy: CnnPolicy

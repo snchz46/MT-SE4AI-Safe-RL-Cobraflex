@@ -439,7 +439,10 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             CheckpointCallback(
                 save_freq=checkpoint_freq,
                 save_path=str(checkpoints_dir),
-                name_prefix="cobraflex_ppo_lane",
+                # Periodic ckpts are named by run so concurrent/sequential runs
+                # never overwrite each other in the shared policy/checkpoints
+                # (mirror of the isaac_train fix, 03.07.2026).
+                name_prefix=run_id,
                 # Persist the VecNormalize running stats alongside each checkpoint
                 # (needed only to *resume* a normalized run; deterministic eval
                 # with norm_obs=False does not need them).

@@ -1,0 +1,37 @@
+%% SR derivation procedure (Fig. 4.3) — from hazard to falsifiable requirement.
+%% Canonical figure source. Render to the SVG name the chapter placeholder
+%% expects (Phase 6 / POLISH):
+%%   mmdc -i sr_derivation.mmd -o sr_derivation.svg -b transparent -w 1100
+%% (mmdc = mermaid-cli, https://github.com/mermaid-js/mermaid-cli)
+%%
+%% The four-step derivation of Cap. 4 §4.6.1, aligned with ISO 26262-4 and
+%% ISO/IEC TR 5469. Two guards make the result defensible: thresholds come
+%% from ODD physics (ODD-N.PARAM identifiers), never from the trained policy's
+%% observed performance (anti-tautology); and every SR must be falsifiable
+%% (observable variable, numeric threshold, bounded validity, at least one
+%% scenario + metric — §4.6.2). D-25 splits the implementation route into
+%% numbered cage rule / training constraint / arbiter property; D-28 requires
+%% every SR-CL-A to land on a deterministic rule C-01..C-06.
+%% WIRED (10.07.2026): Cap. 4 §4.6.1 as Figura 4.3, mermaid inline — keep the
+%% inline copy in sync with this file.
+
+flowchart TD
+    HZ[("Hazard H-XX<br/>from Hazard Register")]
+    P1["1 &middot; Formulate observable system property<br/>whose violation materialises the hazard<br/>+ validity condition (within applicable ODD)"]
+    P2["2 &middot; Fix numeric threshold from ODD physics<br/>cited as ODD-N.PARAM &mdash; never from the<br/>trained policy's performance (anti-tautology)"]
+    P3["3 &middot; Write in falsifiable form<br/>(i) observable variable &middot; (ii) numeric threshold<br/>(iii) bounded validity &middot; (iv) &ge;1 scenario + &ge;1 metric"]
+    P4["4 &middot; Assign in traceability matrix<br/>hazards &harr; SR &harr; implementation route (D-25:<br/>cage rule C-XX / training / arbiter) &harr; scenarios SC-*"]
+    CL["Criticality assignment<br/>SR-CL-A &rArr; deterministic rule C-01..C-06 (D-28)<br/>SR-CL-B &rArr; statistical / compositional evidence"]
+    SRS[("SRS &mdash; 14 Safety Requirements<br/>SR-001..011 (F-track) + SR-012..014 (track E)<br/>docs/03 + CSV")]
+    GUARD["Scope guard: safety vs performance<br/>only properties whose violation yields S &ge; S2<br/>enter the SRS; performance targets go to Cap. 7/8"]
+
+    HZ --> P1 --> P2 --> P3 --> P4 --> SRS
+    CL -. "labels each SR" .-> P4
+    GUARD -. "filters candidates" .-> P1
+
+    classDef step fill:#EEEDFE,stroke:#534AB7,color:#26215C,stroke-width:1.2px;
+    classDef aux  fill:#E1F5EE,stroke:#0F6E56,color:#04342C,stroke-width:1.2px;
+    classDef out  fill:#FAECE7,stroke:#993C1D,color:#4A1B0C,stroke-width:1.2px;
+    class P1,P2,P3,P4 step;
+    class CL,GUARD aux;
+    class HZ,SRS out;

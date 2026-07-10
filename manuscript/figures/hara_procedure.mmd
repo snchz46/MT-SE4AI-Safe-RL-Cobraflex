@@ -1,0 +1,36 @@
+%% HARA procedure as applied (Fig. 4.2) — simplified ISO 26262-3, five steps.
+%% Canonical figure source. Render to the SVG name the chapter placeholder
+%% expects (Phase 6 / POLISH):
+%%   mmdc -i hara_procedure.mmd -o hara_procedure.svg -b transparent -w 1100
+%% (mmdc = mermaid-cli, https://github.com/mermaid-js/mermaid-cli)
+%%
+%% The five-step HARA of Cap. 4 §4.4.1: functions -> failure modes (qualitative
+%% FMEA + RL-for-driving literature) -> system-level hazards (conditions, not
+%% component faults) -> S/E/C rating under the declared qualitative rubrics
+%% (D-26: severity rated by homothety, as if the 1:14 platform were full-size;
+%% criticality is qualitative, no formal ASIL) -> consequence + root-cause
+%% hypothesis bridging into SR derivation. The STPA-light pass (D-27) refines
+%% three hazards selectively. Output: Hazard Register H-01..H-12 (docs/02).
+%% WIRED (10.07.2026): Cap. 4 §4.4.1 as Figura 4.2, mermaid inline — keep the
+%% inline copy in sync with this file.
+
+flowchart TD
+    S1["1 &middot; Enumerate system functions<br/>perceive lane-relative state &middot; decide action<br/>actuate on vehicle &middot; runtime monitoring"]
+    S2["2 &middot; Derive failure modes per function<br/>qualitative FMEA + literature on recurrent<br/>RL-for-driving failures"]
+    S3["3 &middot; Consolidate into system-level hazards<br/>hazard = observable dangerous condition,<br/>not a component fault"]
+    S4["4 &middot; Rate S / E / C per declared rubrics<br/>S1&ndash;S3 &middot; E1&ndash;E4 &middot; C1&ndash;C3 &rarr; qualitative criticality<br/>(D-26 homothety &middot; no formal ASIL)"]
+    S5["5 &middot; Document consequence +<br/>root-cause hypothesis per hazard<br/>(bridge to SR derivation, §4.6)"]
+    STPA["STPA-light complement (D-27)<br/>selective pass on H-01, H-02, H-04<br/>control structure + UCA sweep"]
+    REG[("Hazard Register<br/>H-01..H-12 &middot; docs/02 + CSV")]
+    SRD["SR derivation (§4.6)<br/>14 Safety Requirements"]
+
+    S1 --> S2 --> S3 --> S4 --> S5 --> REG
+    STPA -. "refines constraints" .-> REG
+    REG --> SRD
+
+    classDef step fill:#EEEDFE,stroke:#534AB7,color:#26215C,stroke-width:1.2px;
+    classDef aux  fill:#E1F5EE,stroke:#0F6E56,color:#04342C,stroke-width:1.2px;
+    classDef out  fill:#FAECE7,stroke:#993C1D,color:#4A1B0C,stroke-width:1.2px;
+    class S1,S2,S3,S4,S5 step;
+    class STPA aux;
+    class REG,SRD out;

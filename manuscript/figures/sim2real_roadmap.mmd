@@ -1,0 +1,53 @@
+%% Sim-to-real roadmap — Gazebo (verdicts, closed) -> Isaac (posterior bridge) -> physical CobraFlex.
+%% Canonical figure source. Render to PNG (Phase 6 / POLISH):
+%%   mmdc -i sim2real_roadmap.mmd -o sim2real_roadmap.png -b transparent -w 1800
+%% (mmdc = mermaid-cli, https://github.com/mermaid-js/mermaid-cli)
+%%
+%% Pre-empts the "and the real car?" defense question. All thesis verdicts
+%% closed in Gazebo (F4 global SATISFIED; GE4-V2 verdict of record; G4 closed
+%% 02.07.2026). Isaac (D-44) is posterior work: URDF import + ROS2 bring-up +
+%% in-process RL (docs/13), and the 2-D action retrain (steer + throttle,
+%% D-49/D-50) that makes SR-009's stall test well-posed. What transfers is the
+%% code and the specs (duck-typed env interface, pure-Python cage + cage.yaml,
+%% scenario/SR artefacts, handover spec docs/14); policy checkpoints do NOT
+%% transfer — an Isaac E-policy is a future retrain, not a re-do of the 297k
+%% E-main, and Isaac work does not reopen G4.
+%% WIRED (10.07.2026): Cap. 8 §8.10 as Figura 8.2, mermaid inline — keep the
+%% inline copy in sync with this file. Also a defense slide.
+
+flowchart LR
+    subgraph GZB ["Gazebo &mdash; all thesis verdicts (closed)"]
+        direction TB
+        F["F-track (state obs)<br/>F4 campaign: 1260 runs, seed 2024<br/>global <b>SATISFIED</b> &middot; frozen baseline"]
+        E["E-track (front camera)<br/>GE4-V2: 1970 runs on 297k E-main<br/>verdict of record &middot; <b>G4 closed 02.07.2026</b>"]
+    end
+
+    subgraph ISC ["Isaac Sim &mdash; posterior bridge (D-44)"]
+        direction TB
+        I1["URDF import + ROS2 bring-up<br/>+ in-process RL training &amp; DR<br/><i>docs/13</i>"]
+        I2["2-D action retrain: steer + throttle<br/>multi-circuit env (D-49 / D-50)<br/>makes SR-009 stall test well-posed"]
+    end
+
+    subgraph PHY ["Physical CobraFlex 1:14 &mdash; Phase 5"]
+        direction TB
+        P1["ODD-PHYS-1 + scenario subset<br/>sim-to-real gap characterisation<br/>differential / skid-steer platform"]
+    end
+
+    GZB --> ISC --> PHY
+
+    T["<b>Transfers:</b> GazeboLaneEnv (duck-typed interface) &middot; pure-Python cage + cage.yaml<br/>scenario &amp; SR specs &middot; handover spec <i>docs/14</i>"]
+    NT["<b>Does not transfer:</b> policy checkpoints &mdash; Isaac E-policy = future retrain<br/>(not a re-do of the 297k E-main; Isaac does not reopen G4)"]
+
+    T -.-> ISC
+    NT -.-> ISC
+
+    classDef closed  fill:#E1F5EE,stroke:#0F6E56,color:#04342C,stroke-width:1.2px;
+    classDef post    fill:#EEEDFE,stroke:#534AB7,color:#26215C,stroke-width:1.2px;
+    classDef future  fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A,stroke-width:1.2px;
+    classDef note_ok fill:#E1F5EE,stroke:#0F6E56,color:#04342C,stroke-width:1px;
+    classDef note_no fill:#FAECE7,stroke:#993C1D,color:#4A1B0C,stroke-width:1px;
+    class F,E closed;
+    class I1,I2 post;
+    class P1 future;
+    class T note_ok;
+    class NT note_no;

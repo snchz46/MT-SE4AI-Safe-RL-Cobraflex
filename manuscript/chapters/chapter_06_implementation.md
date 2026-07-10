@@ -363,6 +363,40 @@ class LaneBoundaryRule:
         )
 ```
 
+```mermaid
+%% Fuente canónica: manuscript/figures/control_cycle_sequence.mmd
+sequenceDiagram
+    autonumber
+    participant GZ as Gazebo (DiffDrive)
+    participant PER as lane_perception_node
+    participant POL as policy node (F2 PD / F3 RL)
+    participant CAGE as cage_ros_node
+    participant VC as vehicle_control_node
+    participant LOG as cage_logger_node
+
+    GZ->>PER: /odom (nav_msgs/Odometry)
+    PER->>POL: /state_obs (Float64MultiArray, 7 fields)
+    PER->>CAGE: /state_obs
+    POL->>CAGE: /raw_action (Twist)
+    activate CAGE
+    Note over CAGE: evaluate C-06, C-04, C-02, C-03, C-01, C-05<br/>+ end-of-cycle joint-envelope assertion (SR-010)
+    CAGE->>VC: /safe_action (Twist) + /emergency (latch)
+    CAGE->>LOG: /cage_status (CageStatus: rules_triggered,<br/>action_raw vs action_safe, yaml_version)
+    deactivate CAGE
+    VC->>GZ: /cmd_vel (geometry_msgs/Twist)
+    LOG->>LOG: append CSV row (+ metadata.json per run)
+    Note over GZ,LOG: one cycle — 20 Hz target, 50 ms end-to-end budget<br/>aux signals (not in cycle): /external_stop, /cage_reset, /experiment_tag
+```
+
+**Figura 6.2 — Un ciclo de control completo del pipeline F2 (vista de
+secuencia).** El nodo cage es event-driven: se ejecuta al recibir cada
+`/raw_action`, de modo que la frecuencia efectiva del bucle es la del nodo
+más lento (§5.7.3). El presupuesto end-to-end es 50 ms; la caracterización de
+§6.6.2 midió mediana y P95 de exactamente 50.0 ms sobre el run definitivo
+pre-F3. El track 'E' de récord sustituye este grafo por el bucle in-process a
+10 Hz (§5.7.4); este diagrama documenta la arquitectura baseline F2, que
+sigue siendo el plano del despliegue físico (F5).
+
 ### 6.3.5 Logger node (D30)
 
 El nodo Logger se suscribe a todos los topics relevantes y escribe los
@@ -886,9 +920,9 @@ Fase 6 (consolidación):
        académicos, eliminar referencias a días concretos como D27)
   [ ] Sustituir [COMPLETAR FASE 2] por valores definitivos
   [ ] Verificar formato bibliográfico
-  [ ] Decisión: ¿incluir un diagrama de secuencia (sequence diagram)
-       de un ciclo de control completo en §6.3.4 para ilustrar el
-       flujo Cage?
+  [x] Decisión resuelta (10.07.2026): diagrama de secuencia del ciclo
+       de control completo añadido en §6.3.4 como Figura 6.2 (fuente
+       canónica manuscript/figures/control_cycle_sequence.mmd).
   [ ] Decisión: ¿añadir tabla resumen de la suite de tests con
        columnas (regla, propósito, casos cubiertos) al final de §6.5?
 -->

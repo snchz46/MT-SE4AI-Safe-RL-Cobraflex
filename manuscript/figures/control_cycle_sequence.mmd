@@ -1,0 +1,36 @@
+%% One complete control cycle of the F2 ROS2 pipeline (sequence view).
+%% Canonical figure source. Render to PNG (Phase 6 / POLISH):
+%%   mmdc -i control_cycle_sequence.mmd -o control_cycle_sequence.png -b transparent -w 1600
+%% (mmdc = mermaid-cli, https://github.com/mermaid-js/mermaid-cli)
+%%
+%% Answers the open item in Cap. 6 §6.3.4 ("sequence diagram of a full control
+%% cycle"). WIRED (10.07.2026): Cap. 6 §6.3.4 as Figura 6.2, mermaid inline —
+%% keep the inline copy in sync with this file. Five nodes, 20 Hz target (50 ms budget; §6.6.2 measured median =
+%% P95 = 50.0 ms). The cage is event-driven: it runs on each /raw_action
+%% received, so the effective loop rate is that of the slowest node. The
+%% track-'E' system of record replaces this graph with an in-process loop at
+%% 10 Hz (§5.7.4 / etrack_camera_control_loop.mmd); this figure documents the
+%% F2 baseline architecture, which remains the blueprint for the physical
+%% deployment (F5).
+
+sequenceDiagram
+    autonumber
+    participant GZ as Gazebo (DiffDrive)
+    participant PER as lane_perception_node
+    participant POL as policy node (F2 PD / F3 RL)
+    participant CAGE as cage_ros_node
+    participant VC as vehicle_control_node
+    participant LOG as cage_logger_node
+
+    GZ->>PER: /odom (nav_msgs/Odometry)
+    PER->>POL: /state_obs (Float64MultiArray, 7 fields)
+    PER->>CAGE: /state_obs
+    POL->>CAGE: /raw_action (Twist)
+    activate CAGE
+    Note over CAGE: evaluate C-06, C-04, C-02, C-03, C-01, C-05<br/>+ end-of-cycle joint-envelope assertion (SR-010)
+    CAGE->>VC: /safe_action (Twist) + /emergency (latch)
+    CAGE->>LOG: /cage_status (CageStatus: rules_triggered,<br/>action_raw vs action_safe, yaml_version)
+    deactivate CAGE
+    VC->>GZ: /cmd_vel (geometry_msgs/Twist)
+    LOG->>LOG: append CSV row (+ metadata.json per run)
+    Note over GZ,LOG: one cycle — 20 Hz target, 50 ms end-to-end budget<br/>aux signals (not in cycle): /external_stop, /cage_reset, /experiment_tag

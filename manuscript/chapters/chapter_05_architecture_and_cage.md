@@ -316,23 +316,34 @@ emergencia, el sistema permanece allí hasta que se cumplan condiciones
 de salida. Tres preguntas hay que decidir: cuándo entra, qué hace
 mientras está en emergencia, y cómo sale.
 
-La elección adoptada para la entrada es la disyunción de varias
-condiciones, agrupables en tres familias. Primero, fallo compuesto:
-offset y heading exceden simultáneamente sus umbrales de aviso durante
-más de un tiempo de persistencia, lo cual indica que el sistema está
-fuera del régimen donde las reglas individuales pueden corregir; existe
-una variante de baja energía y una de alta energía (cuando además la
-velocidad supera un umbral), esta última con persistencia más corta
-porque a mayor energía el margen cinemático para absorber la excursión
-es menor. Segundo, estado inválido o no disponible: el mensaje
-`/state_obs` es demasiado viejo (staleness por encima del umbral), está
-fuera de rangos físicamente plausibles, o ha estado ausente durante más
-de cinco ciclos consecutivos; esto materializa el hazard H-06
-(operación con estado corrupto). Tercero, señales externas o de
-composición: una parada externa publicada en `/external_stop`
-(`std_msgs/Bool`, opcional para testing) o la detección de oscilación
-inter-ciclo sostenida entre reglas que afectan al steering (SR-010
-Parte 2).
+La elección adoptada para la entrada es la disyunción de un conjunto de
+triggers numerados (T1–T8 en la Cage Specification, `docs/04`, cage YAML
+0.6.0), agrupables en cuatro familias más un check de oscilación tratado
+aparte. Primero, fallo compuesto: offset y heading exceden
+simultáneamente sus umbrales de aviso durante más de un tiempo de
+persistencia, lo cual indica que el sistema está fuera del régimen donde
+las reglas individuales pueden corregir; existe una variante de baja
+energía (T1) y una de alta energía (T2, cuando además la velocidad supera
+un umbral), esta última con persistencia más corta porque a mayor energía
+el margen cinemático para absorber la excursión es menor. Segundo, estado
+inválido o no disponible: el mensaje `/state_obs` es demasiado viejo (T3,
+staleness por encima del umbral), está fuera de rangos físicamente
+plausibles (T4), o ha estado ausente durante más de cinco ciclos
+consecutivos (T5); esto materializa el hazard H-06 (operación con estado
+corrupto). Tercero, señales externas y de composición: una parada externa
+publicada en `/external_stop` (`std_msgs/Bool`, opcional para testing)
+(T6), y la aserción de envolvente conjunta de fin de ciclo, que transita a
+emergencia cuando la corrección compuesta del ciclo viola el predicado de
+envolvente segura de alguna regla activa (T7, SR-010 Parte 1). Cuarto,
+sólo en el track 'E' (cámara frontal, decisión D-43): percepción inválida
+(T8), cuando el estimador de carril CV determinista de la cage reporta
+pérdida de carril válido o falla un chequeo de plausibilidad/consistencia
+temporal, materializando SR-013 y SR-014 y mitigando H-11 y H-12; este
+trigger está gobernado por la clave YAML
+`c05_emergency.perception_trigger_enabled`. Fuera de estos ocho triggers,
+como mecanismo de monitorización separado, la cage detecta además la
+oscilación inter-ciclo sostenida entre reglas que afectan al steering
+(SR-010 Parte 2).
 
 La elección adoptada para el comportamiento durante la emergencia es
 deceleración controlada con steering congelado en el valor del instante
@@ -456,6 +467,40 @@ es C-06, C-04, C-02, C-03, C-01, C-05; el orden de numeración es C-01,
 C-02, ..., C-06 por convención de lectura. Esta separación entre orden
 de evaluación y orden de numeración es deliberada y se documenta
 explícitamente en la Cage Specification para evitar confusión.
+
+```mermaid
+%% Fuente canónica: manuscript/figures/cage_rule_chain.mmd
+flowchart LR
+    RAW["raw_action<br/>policy steering + throttle"]
+    C06["C-06 rate limiter<br/>SR-006 &middot; always active<br/>&Delta;steer &le; 0.15, &Delta;thr &le; 0.10 / cycle"]
+    C04["C-04 speed ceiling<br/>SR-004 &middot; throttle channel<br/>v &le; v_max(&kappa;): 0.5 / 0.25 m/s"]
+    C02["C-02 heading limit<br/>SR-002 &middot; reactive<br/>|&theta;| &le; 0.44 rad (25&deg;), hyst. 2&deg;"]
+    C03["C-03 predictive TTLC<br/>SR-003 &middot; predictive<br/>TTLC &ge; 1.0 s (zero-action projection)"]
+    C01["C-01 lane boundary<br/>SR-001 &middot; reactive<br/>|d| &le; 0.16 m, hyst. 0.02 m"]
+    C05["C-05 emergency mode<br/>SR-005/007/008/013/014<br/>8 triggers &middot; substitution: brake &ge; 0.3 m/s&sup2;,<br/>steering frozen, latched until reset"]
+    JEA["Joint-envelope assertion<br/>SR-010 &middot; end of cycle<br/>violated envelope &rarr; C-05 Trigger 7"]
+    SAFE["safe_action &rarr; /cmd_vel<br/>+ per-cycle /cage_status log"]
+
+    RAW --> C06 --> C04 --> C02 --> C03 --> C01 --> C05 --> JEA --> SAFE
+
+    classDef policy fill:#EEEDFE,stroke:#534AB7,color:#26215C,stroke-width:1.2px;
+    classDef cage   fill:#FAECE7,stroke:#993C1D,color:#4A1B0C,stroke-width:1.2px;
+    classDef emerg  fill:#FAECE7,stroke:#993C1D,color:#4A1B0C,stroke-width:2.4px;
+    classDef sim    fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A,stroke-width:1.2px;
+    class RAW policy;
+    class C06,C04,C02,C03,C01,JEA cage;
+    class C05 emerg;
+    class SAFE sim;
+```
+
+**Figura 5.1 — Cadena de reglas en orden de evaluación.** La acción cruda de
+la policy atraviesa la tubería determinista de una sola pasada en criticidad
+ascendente: cada regla consume el `safe_action` de la anterior y lo deja pasar
+o lo corrige. C-06 sanea primero el comando (delta acotado); C-05 va última
+para que su acción sustituida (steering congelado + frenado) prevalezca sobre
+toda corrección upstream. La aserción de envolvente conjunta de fin de ciclo
+(SR-010) puede aún escalar a emergencia (Trigger 7). Umbrales del `cage.yaml`
+vigente; especificación completa en §5.5 y `docs/04`.
 
 ---
 
@@ -608,20 +653,31 @@ filtrada y no aplica filtros propios sobre la entrada.
 
 ### 5.5.5 C-05 — Emergency Mode
 
-Implementa el SR-005 (primariamente) y, parcialmente, SR-007 y SR-008.
-Mitiga los hazards H-04, H-06 y H-07. Las variables observadas son todas
-las relevantes (offset, heading, speed, validez y frescura del estado),
-más señales de contexto (parada externa, detección de oscilación).
+Implementa el SR-005 (primariamente) y, parcialmente, SR-007 y SR-008;
+en el track 'E' implementa además SR-013 y SR-014 (vía el trigger de
+percepción T8). Mitiga los hazards H-04, H-06 y H-07 —y, en el track 'E',
+H-11 y H-12—. Las variables observadas son todas las relevantes (offset,
+heading, speed, validez y frescura del estado), más señales de contexto
+(parada externa, detección de oscilación, y salud de percepción del
+estimador de carril CV en el track 'E').
 
 La lógica de entrada es la disyunción del conjunto de triggers descrito
-en §5.3.6. En la versión actual de la cage (YAML 0.5.1) están activos
-seis: (1) fallo compuesto de baja energía, (2) fallo compuesto de alta
-energía, (3) estado obsoleto (*stale*), (4) campo de estado inválido,
-(5) estado ausente, y (6) parada externa; a estos se añade (7) la
-oscilación inter-ciclo sostenida (SR-010 Parte 2). Un octavo trigger
-—la aserción de envolvente conjunta de fin de ciclo (SR-010 Parte 1)—
-queda diferido a la espera de la API `safe_envelope_predicate_holds` en
-el contrato de regla.
+en §5.3.6. En la versión actual de la cage (YAML 0.6.0) están
+implementados ocho triggers numerados: (T1) fallo compuesto de baja
+energía, (T2) fallo compuesto de alta energía, (T3) estado obsoleto
+(*stale*), (T4) campo de estado inválido, (T5) estado ausente, (T6)
+parada externa, (T7) fallo de la aserción de envolvente conjunta de fin
+de ciclo (SR-010 Parte 1) y (T8) percepción inválida del track 'E'
+(cámara frontal, D-43): pérdida de carril o fallo de plausibilidad
+reportados por el estimador de carril CV determinista de la cage
+(SR-013/SR-014, mitigando H-11/H-12), gobernado por la clave YAML
+`c05_emergency.perception_trigger_enabled` (activa en el YAML 0.6.0,
+inerte en YAMLs anteriores). A estos ocho triggers se añade, como check
+de monitorización separado, la detección de oscilación inter-ciclo
+sostenida entre reglas de steering (SR-010 Parte 2). La aserción de
+envolvente conjunta (T7) —que en la iteración 0.5.1 quedaba diferida a la
+espera de la API `safe_envelope_predicate_holds` del contrato de regla—
+está ahora implementada y cubierta por `cage/tests/test_joint_envelope.py`.
 
 Los parámetros relevantes son `theta_warning_rad = 0.3491 rad` (20°),
 `d_warning_m = 0.12 m`, `delta_t_max_s = 0.2 s` (persistencia del fallo
@@ -649,6 +705,43 @@ posterior; el motivo concreto de cada activación (qué trigger disparó)
 se registra en `/cage_status`. Una entrada en emergencia por una causa
 distinta de la esperada (ej. estado inválido en lugar de fallo
 compuesto) es señal de alarma para el experimentador.
+
+```mermaid
+%% Fuente canónica: manuscript/figures/c05_emergency_states.mmd
+stateDiagram-v2
+    direction LR
+    [*] --> Nominal
+
+    Nominal --> Emergency: T1 compound low-energy (|θ|>20° and |d|>0.12 m, >0.2 s)
+    Nominal --> Emergency: T2 compound high-energy (T1 and v>0.4 m/s, >0.1 s)
+    Nominal --> Emergency: T3 stale state (>0.2 s) · T4 field out of range · T5 missing state (5 cycles)
+    Nominal --> Emergency: T6 external stop · T7 joint-envelope failure (SR-010)
+    Nominal --> Emergency: T8 perception invalid — CV health / plausibility (track E, SR-013/014)
+    Nominal --> Emergency: sustained rule oscillation >5 Hz for >3 s (SR-010 Part 2)
+
+    Emergency --> Nominal: explicit reset AND condition cleared
+
+    note right of Emergency
+        Substitution, latched:
+        brake >= 0.3 m/s²
+        steering frozen at transition
+        emergency published on /cage_status
+    end note
+
+    note left of Nominal
+        Pipeline C-06..C-01 active
+        C-05 evaluated last:
+        override semantics guaranteed
+    end note
+```
+
+**Figura 5.2 — Máquina de estados del modo emergencia (C-05).** Dos estados
+con semántica de latch: cualquier trigger lleva a `Emergency`, y la salida
+exige reset explícito **y** condición subyacente despejada — no hay
+recuperación automática. La figura refleja el conjunto de triggers de la Cage
+Specification vigente (`docs/04`, cage YAML 0.6.0): incluye la aserción de
+envolvente conjunta como Trigger 7 y el trigger de percepción del track 'E'
+(Trigger 8, D-43), en línea con la prosa de esta subsección.
 
 ### 5.5.6 C-06 — Actuator Rate Limit
 
@@ -853,7 +946,7 @@ reset manual del modo emergencia, `/external_stop` (`std_msgs/Bool`)
 para una señal de parada externa, y `/experiment_tag` (tipo string) que
 se publica al inicio de cada corrida para marcar los logs.
 
-**Figura 5.1 — Arquitectura ROS2 del pipeline lane-following.** Cinco
+**Figura 5.3 — Arquitectura ROS2 del pipeline lane-following.** Cinco
 nodos principales (líneas continuas = camino de control; líneas
 discontinuas = señales auxiliares de parada/reset). El nodo cage ocupa
 la posición central y aplica las seis reglas en el orden de evaluación
@@ -987,7 +1080,7 @@ reproducibilidad de campaña:
   sobre la pose verdadera, de modo que "salir del carril" siga siendo un hecho
   físico y no un artefacto del estimador.
 
-La consecuencia arquitectónica clave frente a la Figura 5.1: **policy y cage
+La consecuencia arquitectónica clave frente a la Figura 5.3: **policy y cage
 comparten ahora el sensor** (la cámara), así que la independencia que antes
 aportaba el ground truth se sustituye por independencia *algorítmica* (CNN
 aprendida vs CV clásico determinista) más el tratamiento explícito de la causa

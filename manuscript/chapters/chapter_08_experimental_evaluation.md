@@ -460,6 +460,46 @@ respondió el grid de SC-EDGE-05 **cableado en GE4-V2** (30/85 breaches in-ODD, 
 CL-B genuino, §8.9). `tools/check_traceability.py` confirma que no quedan SRs huérfanos
 a ningún lado.
 
+```mermaid
+%% Fuente canónica: manuscript/figures/traceability_case_sr001.mmd
+flowchart LR
+    H["H-01<br/>Unintended lane exit<br/>S3/E3/C2 &middot; High<br/><i>docs/02</i>"]
+    SR["SR-001<br/>|d| &lt; 0.16 m<br/>within applicable ODD<br/><i>docs/03</i>"]
+    C["C-01<br/>lane-boundary hard limit<br/>d_max 0.16 m &middot; hyst. 0.02 m<br/><i>docs/04 + cage.yaml</i>"]
+    SC["SC-EDGE-02<br/>initial lateral perturbation<br/>30 spawns, IC clipped to ODD (ruta-1)<br/><i>docs/05 + scenarios/edge/</i>"]
+    M["M-S1<br/>max lateral offset<br/>scored on ground-truth pose<br/><i>docs/06</i>"]
+    EV["Logged evidence<br/>campaign_e_v2/campaign_report.json<br/>1970 runs &middot; seed 2024 &middot; 0 errors<br/><i>experiments/sim/</i>"]
+    V["Verdict: <b>Satisfied</b><br/>GE4-V2 &middot; 28/30<br/>2 residuals = H-12 confident under-read<br/>at recovery-basin edge<br/><i>docs/07</i>"]
+    CHK["check_traceability.py &mdash; machine-checked before every Gate:<br/>no orphans in either direction, on any link"]
+
+    H --> SR --> C --> SC --> M --> EV --> V
+    CHK -.-> H
+    CHK -.-> SR
+    CHK -.-> C
+    CHK -.-> SC
+    CHK -.-> M
+    CHK -.-> V
+
+    classDef hazard fill:#FAECE7,stroke:#993C1D,color:#4A1B0C,stroke-width:1.2px;
+    classDef spec   fill:#EEEDFE,stroke:#534AB7,color:#26215C,stroke-width:1.2px;
+    classDef evid   fill:#E1F5EE,stroke:#0F6E56,color:#04342C,stroke-width:1.2px;
+    classDef tool   fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A,stroke-width:1.2px;
+    class H hazard;
+    class SR,C,SC spec;
+    class M,EV,V evid;
+    class CHK tool;
+```
+
+**Figura 8.1 — La cadena de trazabilidad instanciada de punta a punta sobre un
+caso real cerrado.** El compromiso definitorio de la tesis —`Hazard → SR →
+Cage Rule → Scenario → Metric → Logged Evidence → Verdict`— materializado con
+los artefactos del requisito más importante, sobre el brazo E (GE4-V2,
+veredicto de récord): SC-EDGE-02 con las condiciones iniciales recortadas al
+ODD por la ruta-1 pasa 28/30, y los 2 residuos son el *under-read* confiado
+del estimador CV (D-43/H-12) en el borde de la cuenca de recuperación. Cada
+eslabón es un ID en un artefacto Markdown versionado, verificado sin huérfanos
+por `check_traceability.py` antes de cada Gate.
+
 ---
 
 ## 8.8 Discusión y amenazas a la validez
@@ -804,6 +844,55 @@ SC-EDGE-02 (el under-read D-43/H-12) y el hallazgo CL-B de co-activación SR-010
 Con ello **G4 queda cerrado** (docs/07, 02.07.2026) y la rama derecha del V-Model
 se cierra en simulación; el trabajo posterior —Isaac Sim, acción 2-D (D-49) y el
 gap sim-to-real hacia la plataforma física— parte de estos veredictos congelados.
+
+```mermaid
+%% Fuente canónica: manuscript/figures/sim2real_roadmap.mmd
+flowchart LR
+    subgraph GZB ["Gazebo &mdash; all thesis verdicts (closed)"]
+        direction TB
+        F["F-track (state obs)<br/>F4 campaign: 1260 runs, seed 2024<br/>global <b>SATISFIED</b> &middot; frozen baseline"]
+        E["E-track (front camera)<br/>GE4-V2: 1970 runs on 297k E-main<br/>verdict of record &middot; <b>G4 closed 02.07.2026</b>"]
+    end
+
+    subgraph ISC ["Isaac Sim &mdash; posterior bridge (D-44)"]
+        direction TB
+        I1["URDF import + ROS2 bring-up<br/>+ in-process RL training &amp; DR<br/><i>docs/13</i>"]
+        I2["2-D action retrain: steer + throttle<br/>multi-circuit env (D-49 / D-50)<br/>makes SR-009 stall test well-posed"]
+    end
+
+    subgraph PHY ["Physical CobraFlex 1:14 &mdash; Phase 5"]
+        direction TB
+        P1["ODD-PHYS-1 + scenario subset<br/>sim-to-real gap characterisation<br/>differential / skid-steer platform"]
+    end
+
+    GZB --> ISC --> PHY
+
+    T["<b>Transfers:</b> GazeboLaneEnv (duck-typed interface) &middot; pure-Python cage + cage.yaml<br/>scenario &amp; SR specs &middot; handover spec <i>docs/14</i>"]
+    NT["<b>Does not transfer:</b> policy checkpoints &mdash; Isaac E-policy = future retrain<br/>(not a re-do of the 297k E-main; Isaac does not reopen G4)"]
+
+    T -.-> ISC
+    NT -.-> ISC
+
+    classDef closed  fill:#E1F5EE,stroke:#0F6E56,color:#04342C,stroke-width:1.2px;
+    classDef post    fill:#EEEDFE,stroke:#534AB7,color:#26215C,stroke-width:1.2px;
+    classDef future  fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A,stroke-width:1.2px;
+    classDef note_ok fill:#E1F5EE,stroke:#0F6E56,color:#04342C,stroke-width:1px;
+    classDef note_no fill:#FAECE7,stroke:#993C1D,color:#4A1B0C,stroke-width:1px;
+    class F,E closed;
+    class I1,I2 post;
+    class P1 future;
+    class T note_ok;
+    class NT note_no;
+```
+
+**Figura 8.2 — Hoja de ruta sim-to-real desde los veredictos congelados.**
+Todos los veredictos de la tesis cierran en Gazebo; Isaac Sim (D-44) es
+trabajo posterior —incluido el retrain con acción 2-D (D-49/D-50) que hace
+bien-puesto el test de stall de SR-009— y no reabre G4. Transfieren el código
+del entorno (interfaz duck-typed), la cage pura + `cage.yaml` y las
+especificaciones (handover en `docs/14`); **no** transfieren los checkpoints
+de policy: una E-policy en Isaac es un retrain futuro, no una repetición del
+E-main de 297k.
 
 El Capítulo 9 lleva el subconjunto físico de la library (`docs/05`, §"Subset for
 physical deployment": SC-NOM-01, SC-NOM-02, SC-EDGE-01) a la plataforma

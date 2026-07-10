@@ -1,0 +1,54 @@
+%% Reduced ODD taxonomy + four stratified domains (Fig. 4.1).
+%% Canonical figure source. Render to the SVG name the chapter placeholder
+%% expects (Phase 6 / POLISH):
+%%   mmdc -i odd_taxonomy_reduced.mmd -o odd_taxonomy_reduced.svg -b transparent -w 1500
+%% (mmdc = mermaid-cli, https://github.com/mermaid-js/mermaid-cli)
+%%
+%% Left: the PAS 1883 / ISO 34503 dimensions retained for this thesis (each ODD
+%% is described in these five blocks plus explicit exclusions and ODD-exit
+%% assumptions — Cap. 4 §4.3.2). Right: the 2x2 stratification whose diadic
+%% contrasts let Cap. 8 attribute effects to a single complexity axis: ODD-1
+%% vs ODD-2 isolates adverse stressors on straight geometry; ODD-1 vs ODD-3
+%% isolates geometric complexity under nominal conditions; ODD-3 vs ODD-4
+%% adds stressors on curved geometry. ODD-2/ODD-4 are formally ODD-1/ODD-3
+%% plus named adverse scenario profiles (attributes vs stressors, §4.3.3);
+%% ODD-PHYS-1 (F5) is deferred until the physical platform is instrumented.
+%% WIRED (10.07.2026): Cap. 4 §4.3.2 as Figura 4.1, mermaid inline — keep the
+%% inline copy in sync with this file.
+
+flowchart LR
+    subgraph TAX ["Taxonomy retained (PAS 1883 / ISO 34503, ASAM OpenODD semantics)"]
+        direction TB
+        T0["Intended function +<br/>subject-vehicle assumptions"]
+        T1["Scenery<br/>drivable area type &amp; geometry, lane spec,<br/>edges &amp; surface, structures"]
+        T2["Environmental conditions<br/>illumination, weather,<br/>particulates, connectivity"]
+        T3["Dynamic elements<br/>other actors and<br/>permitted states"]
+        T4["Subject-vehicle dynamic envelope +<br/>sensor / actuation interfaces"]
+        T5["Explicit exclusions +<br/>ODD-exit assumptions"]
+        T0 --- T1 --- T2 --- T3 --- T4 --- T5
+    end
+
+    subgraph DOM ["Four stratified operational domains (2x2)"]
+        direction TB
+        O1["ODD-1<br/>straight lane &middot; nominal"]
+        O2["ODD-2<br/>= ODD-1 + named<br/>adverse profiles"]
+        O3["ODD-3<br/>curvy closed loop &middot; nominal"]
+        O4["ODD-4<br/>= ODD-3 + named<br/>adverse profiles"]
+        O1 -- "adverse stressors<br/>(straight)" --> O2
+        O1 -- "geometric complexity<br/>(nominal)" --> O3
+        O3 -- "adverse stressors<br/>(curved)" --> O4
+    end
+
+    PHYS["ODD-PHYS-1 (F5, deferred)<br/>hardware analogue of ODD-1:<br/>same scenery, exclusions, exit assumptions;<br/>envelope + interfaces re-measured"]
+
+    TAX -- "describes each domain" --> DOM
+    DOM -.-> PHYS
+
+    classDef tax  fill:#E1F5EE,stroke:#0F6E56,color:#04342C,stroke-width:1.2px;
+    classDef nom  fill:#EEEDFE,stroke:#534AB7,color:#26215C,stroke-width:1.2px;
+    classDef adv  fill:#FAECE7,stroke:#993C1D,color:#4A1B0C,stroke-width:1.2px;
+    classDef defr fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A,stroke-width:1.2px;
+    class T0,T1,T2,T3,T4,T5 tax;
+    class O1,O3 nom;
+    class O2,O4 adv;
+    class PHYS defr;

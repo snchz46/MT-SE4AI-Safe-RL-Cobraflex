@@ -217,6 +217,55 @@ actores y sus estados permitidos; envelope dinámico del vehículo subjetivo
 e interfaces de sensores y actuadores. Cada dominio cierra con
 exclusiones explícitas y suposiciones de salida del ODD.
 
+```mermaid
+%% Fuente canónica: manuscript/figures/odd_taxonomy_reduced.mmd
+flowchart LR
+    subgraph TAX ["Taxonomy retained (PAS 1883 / ISO 34503, ASAM OpenODD semantics)"]
+        direction TB
+        T0["Intended function +<br/>subject-vehicle assumptions"]
+        T1["Scenery<br/>drivable area type &amp; geometry, lane spec,<br/>edges &amp; surface, structures"]
+        T2["Environmental conditions<br/>illumination, weather,<br/>particulates, connectivity"]
+        T3["Dynamic elements<br/>other actors and<br/>permitted states"]
+        T4["Subject-vehicle dynamic envelope +<br/>sensor / actuation interfaces"]
+        T5["Explicit exclusions +<br/>ODD-exit assumptions"]
+        T0 --- T1 --- T2 --- T3 --- T4 --- T5
+    end
+
+    subgraph DOM ["Four stratified operational domains (2x2)"]
+        direction TB
+        O1["ODD-1<br/>straight lane &middot; nominal"]
+        O2["ODD-2<br/>= ODD-1 + named<br/>adverse profiles"]
+        O3["ODD-3<br/>curvy closed loop &middot; nominal"]
+        O4["ODD-4<br/>= ODD-3 + named<br/>adverse profiles"]
+        O1 -- "adverse stressors<br/>(straight)" --> O2
+        O1 -- "geometric complexity<br/>(nominal)" --> O3
+        O3 -- "adverse stressors<br/>(curved)" --> O4
+    end
+
+    PHYS["ODD-PHYS-1 (F5, deferred)<br/>hardware analogue of ODD-1:<br/>same scenery, exclusions, exit assumptions;<br/>envelope + interfaces re-measured"]
+
+    TAX -- "describes each domain" --> DOM
+    DOM -.-> PHYS
+
+    classDef tax  fill:#E1F5EE,stroke:#0F6E56,color:#04342C,stroke-width:1.2px;
+    classDef nom  fill:#EEEDFE,stroke:#534AB7,color:#26215C,stroke-width:1.2px;
+    classDef adv  fill:#FAECE7,stroke:#993C1D,color:#4A1B0C,stroke-width:1.2px;
+    classDef defr fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A,stroke-width:1.2px;
+    class T0,T1,T2,T3,T4,T5 tax;
+    class O1,O3 nom;
+    class O2,O4 adv;
+    class PHYS defr;
+```
+
+**Figura 4.1 — Taxonomía ODD retenida y estructura de cuatro dominios
+operacionales.** A la izquierda, las dimensiones de PAS 1883 / ISO 34503
+conservadas para esta tesis, con las que se describe cada dominio (más las
+exclusiones explícitas y las suposiciones de salida). A la derecha, la
+estratificación 2×2 cuyos contrastes diádicos permiten al Capítulo 8 atribuir
+efectos a un único eje de complejidad; ODD-2 y ODD-4 se definen formalmente
+como ODD-1 y ODD-3 más perfiles adversos con nombre (§4.3.3). ODD-PHYS-1 se
+difiere a la Fase 5 (§4.3.4).
+
 ### 4.3.3 Distinción entre atributos del ODD y estresores de escenario
 
 La tesis preserva una distinción metodológica entre *atributos del ODD*
@@ -306,6 +355,37 @@ cumplir sin necesidad de inspeccionar el interior de la policy. Esta
 elección está alineada con el espíritu de ISO/IEC TR 5469:2024, que
 trata el componente AI como una caja cuyo comportamiento debe acotarse
 desde la envoltura del sistema.
+
+```mermaid
+%% Fuente canónica: manuscript/figures/hara_procedure.mmd
+flowchart TD
+    S1["1 &middot; Enumerate system functions<br/>perceive lane-relative state &middot; decide action<br/>actuate on vehicle &middot; runtime monitoring"]
+    S2["2 &middot; Derive failure modes per function<br/>qualitative FMEA + literature on recurrent<br/>RL-for-driving failures"]
+    S3["3 &middot; Consolidate into system-level hazards<br/>hazard = observable dangerous condition,<br/>not a component fault"]
+    S4["4 &middot; Rate S / E / C per declared rubrics<br/>S1&ndash;S3 &middot; E1&ndash;E4 &middot; C1&ndash;C3 &rarr; qualitative criticality<br/>(D-26 homothety &middot; no formal ASIL)"]
+    S5["5 &middot; Document consequence +<br/>root-cause hypothesis per hazard<br/>(bridge to SR derivation, §4.6)"]
+    STPA["STPA-light complement (D-27)<br/>selective pass on H-01, H-02, H-04<br/>control structure + UCA sweep"]
+    REG[("Hazard Register<br/>H-01..H-12 &middot; docs/02 + CSV")]
+    SRD["SR derivation (§4.6)<br/>14 Safety Requirements"]
+
+    S1 --> S2 --> S3 --> S4 --> S5 --> REG
+    STPA -. "refines constraints" .-> REG
+    REG --> SRD
+
+    classDef step fill:#EEEDFE,stroke:#534AB7,color:#26215C,stroke-width:1.2px;
+    classDef aux  fill:#E1F5EE,stroke:#0F6E56,color:#04342C,stroke-width:1.2px;
+    classDef out  fill:#FAECE7,stroke:#993C1D,color:#4A1B0C,stroke-width:1.2px;
+    class S1,S2,S3,S4,S5 step;
+    class STPA aux;
+    class REG,SRD out;
+```
+
+**Figura 4.2 — Procedimiento HARA aplicado.** Los cinco pasos de la versión
+simplificada de ISO 26262-3 descrita en esta sección, con la pasada STPA
+ligera (D-27) como complemento selectivo sobre H-01, H-02 y H-04. El rating
+S/E/C usa las rúbricas cualitativas de §4.4.2 bajo la convención de homotecia
+D-26 (sin emisión de ASIL formal); el resultado es el Hazard Register
+(`docs/02`), del que §4.6 deriva los Safety Requirements.
 
 ### 4.4.2 Rúbricas para severidad, exposición y controlabilidad
 
@@ -650,6 +730,38 @@ exclusivamente Safety Requirements; los requirements de rendimiento se
 articulan en el Capítulo 7 como objetivos de entrenamiento y en el
 Capítulo 8 como criterios de evaluación, pero no participan en la matriz
 de trazabilidad de seguridad ni se vinculan a cage rules.
+
+```mermaid
+%% Fuente canónica: manuscript/figures/sr_derivation.mmd
+flowchart TD
+    HZ[("Hazard H-XX<br/>from Hazard Register")]
+    P1["1 &middot; Formulate observable system property<br/>whose violation materialises the hazard<br/>+ validity condition (within applicable ODD)"]
+    P2["2 &middot; Fix numeric threshold from ODD physics<br/>cited as ODD-N.PARAM &mdash; never from the<br/>trained policy's performance (anti-tautology)"]
+    P3["3 &middot; Write in falsifiable form<br/>(i) observable variable &middot; (ii) numeric threshold<br/>(iii) bounded validity &middot; (iv) &ge;1 scenario + &ge;1 metric"]
+    P4["4 &middot; Assign in traceability matrix<br/>hazards &harr; SR &harr; implementation route (D-25:<br/>cage rule C-XX / training / arbiter) &harr; scenarios SC-*"]
+    CL["Criticality assignment<br/>SR-CL-A &rArr; deterministic rule C-01..C-06 (D-28)<br/>SR-CL-B &rArr; statistical / compositional evidence"]
+    SRS[("SRS &mdash; 14 Safety Requirements<br/>SR-001..011 (F-track) + SR-012..014 (track E)<br/>docs/03 + CSV")]
+    GUARD["Scope guard: safety vs performance<br/>only properties whose violation yields S &ge; S2<br/>enter the SRS; performance targets go to Cap. 7/8"]
+
+    HZ --> P1 --> P2 --> P3 --> P4 --> SRS
+    CL -. "labels each SR" .-> P4
+    GUARD -. "filters candidates" .-> P1
+
+    classDef step fill:#EEEDFE,stroke:#534AB7,color:#26215C,stroke-width:1.2px;
+    classDef aux  fill:#E1F5EE,stroke:#0F6E56,color:#04342C,stroke-width:1.2px;
+    classDef out  fill:#FAECE7,stroke:#993C1D,color:#4A1B0C,stroke-width:1.2px;
+    class P1,P2,P3,P4 step;
+    class CL,GUARD aux;
+    class HZ,SRS out;
+```
+
+**Figura 4.3 — Procedimiento de derivación de Safety Requirements.** Los
+cuatro pasos de §4.6.1 con sus dos guardas: el umbral numérico procede de la
+física del ODD (identificadores `ODD-N.<PARAM>`), nunca del rendimiento
+observado de la policy (anti-tautología), y solo entran en la SRS propiedades
+cuya violación produce un hazard con S ≥ S2. La asignación de criticidad
+sigue D-28 (todo SR-CL-A aterriza en una regla determinista C-01..C-06) y la
+vía de implementación sigue la taxonomía D-25.
 
 ### 4.6.2 Falsabilidad como criterio de calidad
 
@@ -1250,14 +1362,17 @@ REFERENCIAS USADAS EN ESTE CAPÍTULO (D11):
   - Kootbally et al., 2024 (NIST IR 8527 — performance metrics)
 
 REFERENCIAS A FIGURAS (placeholders explícitos):
-  - Figura 4.1 (pendiente): figures/odd_taxonomy_reduced.svg —
-       taxonomía PAS 1883 reducida a las dimensiones usadas
-  - Figura 4.2 (pendiente): figures/hara_procedure.svg —
-       diagrama de flujo del procedimiento HARA aplicado
-  - Figura 4.3 (pendiente): figures/sr_derivation.svg —
-       procedimiento de derivación SR desde hazards
+  - Figura 4.1 (cableada 10.07.2026, mermaid inline en §4.3.2; fuente
+       canónica figures/odd_taxonomy_reduced.mmd — render SVG final
+       pendiente de mmdc en POLISH): taxonomía PAS 1883 reducida +
+       cuatro dominios operacionales
+  - Figura 4.2 (cableada 10.07.2026, mermaid inline en §4.4.1; fuente
+       figures/hara_procedure.mmd): flujo del procedimiento HARA aplicado
+  - Figura 4.3 (cableada 10.07.2026, mermaid inline en §4.6.1; fuente
+       figures/sr_derivation.mmd): derivación SR desde hazards
   - Figura 4.4 (pendiente): figures/traceability_matrix_heatmap.svg —
-       matriz H ↔ SR como heatmap con marcas de cobertura
+       matriz H ↔ SR como heatmap con marcas de cobertura (prompt con
+       los datos reales listo en figures/DESIGN_PROMPTS.md, §P5)
 
 DECISIONES REGISTRADAS EN ESTE CAPÍTULO:
   (Las decisiones D-01 (anti-end-to-end) y D-12 (simulador Gazebo)

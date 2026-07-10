@@ -1,0 +1,38 @@
+%% Safety-cage rule chain — fixed deterministic evaluation order (single pass per cycle).
+%% Canonical figure source. Render to PNG (Phase 6 / POLISH):
+%%   mmdc -i cage_rule_chain.mmd -o cage_rule_chain.png -b transparent -w 1800
+%% (mmdc = mermaid-cli, https://github.com/mermaid-js/mermaid-cli)
+%%
+%% The raw policy action enters a single-pass pipeline in ascending criticality:
+%% C-06 -> C-04 -> C-02 -> C-03 -> C-01 -> C-05. Each rule consumes the previous
+%% rule's safe_action as its raw_action and either passes it through or corrects
+%% it. C-06 first sanitises the command into a feasible baseline; C-05 last so
+%% its substituted action (frozen steering + brake) overrides every upstream
+%% correction. The end-of-cycle joint-envelope assertion (SR-010) can still
+%% escalate to emergency (C-05 Trigger 7). Steering corrections compose by
+%% additive merge (C-01 + C-02) and max-merge (C-01 / C-03); C-04 acts on the
+%% independent throttle channel. Source of truth: docs/04 "Evaluation order".
+%% WIRED (10.07.2026): Cap. 5 §5.4.3 as Figura 5.1, mermaid inline — keep the
+%% inline copy in sync with this file. Also a defense slide.
+
+flowchart LR
+    RAW["raw_action<br/>policy steering + throttle"]
+    C06["C-06 rate limiter<br/>SR-006 &middot; always active<br/>&Delta;steer &le; 0.15, &Delta;thr &le; 0.10 / cycle"]
+    C04["C-04 speed ceiling<br/>SR-004 &middot; throttle channel<br/>v &le; v_max(&kappa;): 0.5 / 0.25 m/s"]
+    C02["C-02 heading limit<br/>SR-002 &middot; reactive<br/>|&theta;| &le; 0.44 rad (25&deg;), hyst. 2&deg;"]
+    C03["C-03 predictive TTLC<br/>SR-003 &middot; predictive<br/>TTLC &ge; 1.0 s (zero-action projection)"]
+    C01["C-01 lane boundary<br/>SR-001 &middot; reactive<br/>|d| &le; 0.16 m, hyst. 0.02 m"]
+    C05["C-05 emergency mode<br/>SR-005/007/008/013/014<br/>8 triggers &middot; substitution: brake &ge; 0.3 m/s&sup2;,<br/>steering frozen, latched until reset"]
+    JEA["Joint-envelope assertion<br/>SR-010 &middot; end of cycle<br/>violated envelope &rarr; C-05 Trigger 7"]
+    SAFE["safe_action &rarr; /cmd_vel<br/>+ per-cycle /cage_status log"]
+
+    RAW --> C06 --> C04 --> C02 --> C03 --> C01 --> C05 --> JEA --> SAFE
+
+    classDef policy fill:#EEEDFE,stroke:#534AB7,color:#26215C,stroke-width:1.2px;
+    classDef cage   fill:#FAECE7,stroke:#993C1D,color:#4A1B0C,stroke-width:1.2px;
+    classDef emerg  fill:#FAECE7,stroke:#993C1D,color:#4A1B0C,stroke-width:2.4px;
+    classDef sim    fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A,stroke-width:1.2px;
+    class RAW policy;
+    class C06,C04,C02,C03,C01,JEA cage;
+    class C05 emerg;
+    class SAFE sim;

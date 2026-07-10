@@ -119,9 +119,20 @@ def resolve_load_path(path: Path) -> Path:
 
 
 def _disable_spawn_perturbation(train_cfg: Dict[str, Any]) -> None:
-    """Force a deterministic spawn for eval (random spawn is training-only)."""
+    """Force a deterministic spawn for eval (random spawn is training-only).
+
+    Two independent spawn-randomisers must both be silenced: ``enabled`` gates
+    the heading/lateral jitter (``_perturbed_spawn``), while ``random_start_s``
+    (D-58, the 2-D curriculum lever) is read by the env *independently* of that
+    flag and, on the nominal path (no scenario ⇒ ``start_s`` is None), draws a
+    uniform along-track spawn. Left on, a run labelled SC-NOM-01 would start at a
+    random arc-length — silently non-reproducible and not comparable to the frozen
+    *_4k4 nominal evals. Scenario/campaign runs are already safe (they always pass
+    an explicit ``start_s_m``), but zero it here so every eval path is deterministic.
+    """
     spawn_cfg = dict(train_cfg.get("spawn_perturbation", {}))
     spawn_cfg["enabled"] = False
+    spawn_cfg["random_start_s"] = False
     train_cfg["spawn_perturbation"] = spawn_cfg
 
 
@@ -142,6 +153,14 @@ def _record_from_info(episode: int, step: int, info: Dict[str, Any]) -> Dict[str
         "raw_steer": float(info.get("raw_steer", 0.0)),
         "safe_steer": float(info.get("safe_steer", 0.0)),
         "steer_correction": float(info.get("steer_correction", 0.0)),
+        # Longitudinal (throttle) channel — the 2-D action's new evidence: the
+        # cage's speed rules (C-04 attenuation, C-05-B, C-06 rate limit) arbitrate
+        # the policy's throttle, so the correction magnitude is the SR-CL / SR-009
+        # signal. Present as 0-correction on the frozen 1-D path (throttle is the
+        # fixed nominal there), so the schema stays backward-compatible.
+        "raw_throttle": float(info.get("raw_throttle", 0.0)),
+        "safe_throttle": float(info.get("safe_throttle", 0.0)),
+        "throttle_correction": float(info.get("throttle_correction", 0.0)),
         "interventions": list(info.get("cage_interventions", [])),
         "emergency": bool(info.get("cage_emergency", False)),
         # SR-010 / SC-EDGE-05 per-cycle cage co-activation flags (0/False on every
@@ -171,6 +190,7 @@ def _write_cage_status_csv(path: Path, records: List[Dict[str, Any]]) -> None:
     fields = [
         "episode", "step", "x", "y", "yaw", "ey", "epsi", "s", "speed",
         "raw_steer", "safe_steer", "steer_correction",
+        "raw_throttle", "safe_throttle", "throttle_correction",
         "interventions", "emergency",
         "joint_envelope_violated", "oscillation_persistent",
         "cv_ok", "cv_state_available", "cv_perception_invalid",
@@ -187,6 +207,9 @@ def _write_cage_status_csv(path: Path, records: List[Dict[str, Any]]) -> None:
                 f"{r['ey']:.6f}", f"{r['epsi']:.6f}", f"{r['s']:.6f}",
                 f"{r['speed']:.6f}", f"{r['raw_steer']:.6f}",
                 f"{r['safe_steer']:.6f}", f"{r['steer_correction']:.6f}",
+                f"{r.get('raw_throttle', 0.0):.6f}",
+                f"{r.get('safe_throttle', 0.0):.6f}",
+                f"{r.get('throttle_correction', 0.0):.6f}",
                 ";".join(r["interventions"]), int(r["emergency"]),
                 int(r.get("joint_envelope_violated", False)),
                 int(r.get("oscillation_persistent", False)),
@@ -340,6 +363,25 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         # back-to-back runs of a campaign (the "CUDA out of memory" on the 4th
         # consecutive run that defaulting to the GPU caused).
         model = PPO.load(str(resolve_load_path(model_path)), device="cpu")
+
+        # Guard against an action-dim mismatch between the checkpoint and the
+        # --train-config. The 1-D and 2-D camera configs share an identical
+        # (84,84,4) observation space, so SB3 does NOT catch a mispairing: a 2-D
+        # [steer, throttle] checkpoint evaluated under the 1-D config would have
+        # its throttle element silently dropped (gazebo_lane_env only reads
+        # action_vec[0] on the 1-D path) and be scored as a 1-D policy driving at
+        # the wrong fixed speed. Fail loudly instead — pass the matching config.
+        model_act = getattr(model.action_space, "shape", None)
+        env_act = getattr(env.action_space, "shape", None)
+        if model_act != env_act:
+            raise RuntimeError(
+                f"Action-space mismatch: checkpoint action_space {model_act} != "
+                f"env action_space {env_act} (from --train-config "
+                f"{train_cfg_path.name}, action.type "
+                f"{train_cfg.get('action', {}).get('type', 'steer')!r}). A 2-D "
+                f"steer_throttle checkpoint must be evaluated with a "
+                f"steer_throttle config (train_ppo_camera_2d.yaml), and vice versa."
+            )
 
         last_terminated = False
         last_info: Dict[str, Any] = {}

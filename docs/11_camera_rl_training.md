@@ -646,20 +646,22 @@ ros2 launch cobraflex_rl train_lane.launch.py            # complex_b, STATE conf
 # ── Track-'E' camera PPO — two-step: own Gazebo, then the node (see §9 for why) ──────
 ros2 launch cobraflex gazebo_mesh.launch.py world:=lane_following_oval_complex gui:=false
 
-export CFG=$PWD/src/cobraflex_rl/config     # PC CAST  
+export CFG=/home/admit/Samuel/thesis_repo/src/cobraflex_rl/config     # PC CAST  
 
 ros2 run cobraflex_rl train_ppo \
-  --train-config           $CFG/train_ppo_camera.yaml \
+  --train-config           $CFG/train_ppo_camera_s123.yaml \
   --centerline-config      $CFG/complex_b_right_lane_centerline.yaml \
   --road-centerline-config $CFG/complex_b_centerline.yaml \
-  --world-name lane_following_complex_b --run-id ppo_newcam_complex_b_2024
+  --world-name lane_following_complex_b \
+  --run-id     ppo_newcam_complex_b_123 \
+  --model-path policy/checkpoints/cobraflex_ppo_newcam_lane_123
 
 # ── Track-'E' 2-D camera PPO (posterior; steering + throttle) — same two-step, 2-D config ─
 ros2 run cobraflex_rl train_ppo \
   --train-config           $CFG/train_ppo_camera_2d.yaml \
   --centerline-config      $CFG/complex_b_right_lane_centerline.yaml \
   --road-centerline-config $CFG/complex_b_centerline.yaml \
-  --world-name lane_following_complex_b --run-id ppo_gz2d_complex_b_2024
+  --world-name lane_following_complex_b --run-id ppo_gz2d_complex_b_123
 
 # ── Resume a checkpoint (adds the config's total_timesteps on top, §2) ───────────────
 ros2 run cobraflex_rl train_ppo --train-config $CFG/train_ppo_camera.yaml \

@@ -166,9 +166,11 @@ spawn_perturbation:
   enabled: true
   heading_rad: 0.15
   lateral_m: 0.05
-  # D-58 curriculum lever (default off → clean attribution + comparability). Flip
-  # to true if the Gazebo 2-D run also caps at complex_b's U-turn for lack of
-  # visits: it spawns at a uniform random arc-length so every section — incl. the
-  # hard corner — is practised from step 0. Judge only by deterministic nominal
-  # eval, never by training curves (the flag shifts the episode-length distribution).
-  random_start_s: false
+  # D-58 curriculum lever, ON (user-directed 08.07.2026): uniform random
+  # along-track spawn so every section — incl. the U-turn — is practised from
+  # step 0. This is THE Isaac finding that cracked complex_b's U-turn (kin2:
+  # 0.63 → 0.95 peak laps); the under-visited hard corner gets gradient early
+  # instead of never being reached from the start line. Judge only by
+  # deterministic nominal eval, never by training curves (the flag shifts the
+  # episode-length distribution).
+  random_start_s: true

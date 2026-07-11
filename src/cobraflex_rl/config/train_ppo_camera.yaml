@@ -20,7 +20,7 @@ n_steps: 1024
 batch_size: 64
 n_epochs: 10
 clip_range: 0.2
-ent_coef: 0.0
+ent_coef: 0.005
 vf_coef: 0.5
 max_grad_norm: 0.5        # gradient clip; bounds per-step policy movement (SB3 default)
 # Value-function stabilization (root-cause fix for the sawtooth seen in the
@@ -38,7 +38,7 @@ device: auto              # CNN benefits from CUDA when present; falls back to c
 # gz set_pose/set_physics CLI timeout (ms). Raised 2000->3500: the CLI does
 # service discovery per call and occasionally times out under reset load.
 service_timeout_ms: 3500
-seed: 666                  # E-main seed mirrors the F-track main run (D-36 precedent)
+seed: 23                  # E-main seed mirrors the F-track main run (D-36 precedent)
 max_episode_steps: 1024
 control_dt: 0.10
 fixed_speed: 0.20

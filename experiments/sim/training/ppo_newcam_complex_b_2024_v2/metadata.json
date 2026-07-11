@@ -1,0 +1,61 @@
+{
+  "run_id": "ppo_newcam_complex_b_2024_v2",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-07-11T19:13:42.635082+00:00",
+  "git_commit": "09cf4392fad8f6ca164520bc49daf6849c347df2",
+  "train_config": "/home/admit/Samuel/thesis_repo/src/cobraflex_rl/config/train_ppo_camera.yaml",
+  "train_config_hash": "93f5d108d0a9d17584d9e7153cce3f6821a539bac12e519ca4fd90b3f15bb3e4",
+  "cage_yaml": "/home/admit/Samuel/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "scenario_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "policy_checkpoint": "policy/checkpoints/cobraflex_ppo_newcam_lane_2024_v2.zip",
+  "policy_checkpoint_hash": null,
+  "seed": 2024,
+  "platform": "sim",
+  "total_timesteps": 1000000,
+  "hyperparameters": {
+    "learning_rate": 0.0003,
+    "lr_schedule": "linear",
+    "gamma": 0.99,
+    "n_steps": 1024,
+    "batch_size": 64,
+    "n_epochs": 10,
+    "gae_lambda": 0.95,
+    "clip_range": 0.2,
+    "ent_coef": 0.005,
+    "vf_coef": 0.5,
+    "max_grad_norm": 0.5,
+    "target_kl": 0.5,
+    "clip_range_vf": 0.2,
+    "normalize_reward": true
+  },
+  "policy": "CnnPolicy",
+  "observation": {
+    "type": "camera",
+    "camera": {
+      "topic": "/camera/image_raw_lane",
+      "width": 84,
+      "height": 84,
+      "grayscale": true,
+      "frame_stack": 4
+    }
+  },
+  "action": {},
+  "reward": {
+    "lateral_error": 2.5,
+    "heading_error": 0.75,
+    "steer_delta": 0.2,
+    "forward_progress": 1.0,
+    "termination": 25.0
+  },
+  "domain_randomization": {
+    "enabled": true,
+    "p_degrade": 0.5,
+    "level_range": [
+      0.2,
+      0.8
+    ]
+  },
+  "status": "failed"
+}

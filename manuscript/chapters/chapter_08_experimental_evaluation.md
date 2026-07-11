@@ -715,7 +715,8 @@ SC-PERT-08/09/10 (20→25) cerró el gate D-29 que dejaba SR-012/014 INCOMPLETE 
 (D-47 SR-002/003/011; D-39 out-of-band SR-006); (b) `labelled_arms` cableado
 (SC-PERT-05); (c) IC del grid de SC-EDGE-05 inyectadas + contadores; (e) **campaña GE4
 re-ejecutada sobre el E-main 297k** (V2, 1970 runs, `campaign_e_v2`). Pendiente: (d)
-multi-seed N=5 (diferido por restricción de host); SC-PERT-03 = N/A por espacio de
+multi-seed N=5 (**4/5 entrenadas** — E5, §7.5.3; evals de 123/666 + semilla 23
+diferidos por restricción de host); SC-PERT-03 = N/A por espacio de
 acción solo-dirección (D-49). El **hallazgo de tronco** se mantiene: bajo cámara la
 cage **no** deja salir el sistema del carril in-ODD (0 contactos, M-S1 < d_max) —
 convierte la degradación de percepción en **parada controlada**, no en excursión, y
@@ -943,7 +944,7 @@ E4 / track 'E' (campaña GE4 cámara, §8.9):
   [x] (c) SC-EDGE-05 grid de co-activación cableado + determinante (30/85 breaches in-ODD, SR-010)
   [x] (e) Campaña GE4 re-ejecutada sobre el E-main 297k (V2); SR-001 cerrado por ruta-1 (28/30)
   --- PENDIENTE ---
-  [ ] (d) Multi-seed N=5 cámara (diferido por restricción de host ≤1 h).
+  [~] (d) Multi-seed N=5 cámara — 4/5 entrenadas (2024/42/123/666, picos rescatados, §7.5.3); evals de 123/666 + semilla 23 diferidos (restricción de host ≤1 h).
   [—] SR-009/SC-PERT-03: stall test N/A para acción solo-dirección (M-P6≡0 by construction, D-49);
        el test bien-puesto se difiere a la acción 2-D de Isaac.
 

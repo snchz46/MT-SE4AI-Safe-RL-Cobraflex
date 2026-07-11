@@ -9,8 +9,8 @@
   "cage_yaml": "/home/admit/Samuel/thesis_repo/cage/cage.yaml",
   "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
   "scenario_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
-  "policy_checkpoint": "policy/checkpoints/cobraflex_ppo_newcam_lane_123.zip",
-  "policy_checkpoint_hash": null,
+  "policy_checkpoint": "experiments/sim/training/ppo_newcam_complex_b_123/checkpoints_peak/ppo_newcam_complex_b_123_139264_steps.zip",
+  "policy_checkpoint_hash": "a7069ffea794b9b9d309b33002fc6e67cdd686589f7f2e2f54326e7f25bd7fd6",
   "seed": 123,
   "platform": "sim",
   "total_timesteps": 1000000,
@@ -57,5 +57,16 @@
       0.8
     ]
   },
-  "status": "failed"
+  "status": "failed",
+  "policy_checkpoint_source": "operator-rescued max-reward peak; the zip's num_timesteps==139264 == the ep_rew_mean peak row of learning_curve.csv (checkpoint saved on the peak)",
+  "checkpoint_selection": "checkpoint-on-peak",
+  "peak_checkpoint_timestep": 139264,
+  "peak_ep_rew_mean": 787.1,
+  "curve_peak": {
+    "ep_rew_mean": 787.1,
+    "timestep": 139264
+  },
+  "last_logged_timestep": 197632,
+  "stop_reason": "manual stop ~198k of the 1M plan: did not converge to a stable 1M policy. ep_rew_mean peaked 787.1 @ 139k and was still on the healthy plateau at stop (721.4 @ 198k, -8% off peak) with exploration contracting (std 1.00->0.11); same exploration-collapse signature as seeds 2024/42/666 -> checkpoint-on-peak selection. Constraint-respecting throughout (int_rate C-01/C-03/C-05 ~ 0; only C-06 active, ~85% healthy mean).",
+  "metadata_note": "trainer wrote status:failed; peak block added post-hoc (E5 Gazebo 1-D multiseed, 11.07.2026). Reproducibility pins (git_commit, hashes) are the trainer's."
 }

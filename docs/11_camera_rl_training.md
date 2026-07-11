@@ -633,7 +633,8 @@ CHANGELOG 28.06). SC-PERT-03 is **N/A** for the steering-only action space (D-49
 SR-012/013/014 are **no longer INCOMPLETE** (coverage closed by the SC-PERT-08/09/10 run bump).
 Carried into the posterior work, documented and non-vetoing: (a) SR-010's in-ODD co-activation
 breaches (a real CL-B finding, plausibly improved by better perception); (b) multi-seed N=5
-(host-deferred; this is the seed-2024 run); (c) the D-43 under-read closure via better perception —
+(**4/5 seeds now trained** — E5, 11.07.2026, ch.7 §7.5.3 + Fig. 7.8; the verdict of record stays
+the seed-2024 run; the 123/666 nominal evals and seed 23 remain host-deferred); (c) the D-43 under-read closure via better perception —
 a temporal estimator or the 2-D-action Isaac retrain (D-49, docs/13–14).
 
 **Command summary** (detail + rationale below; all on **Ubuntu 24.04 + ROS2 Jazzy**, source
@@ -872,7 +873,8 @@ One `seed` seeds Python/NumPy/Torch, the action space, the env's spawn
 perturbation, and the DR draw; `metadata.json` pins the git commit and the
 cage/scenario/checkpoint hashes. Two runs with the same seed and commit reproduce
 the same learning curve up to Gazebo's own timing nondeterminism (the reason a
-multi-seed N=5 confirmation is the planned robustness check).
+multi-seed N=5 confirmation is the planned robustness check — 4/5 seeds trained as
+of E5, ch.7 §7.5.3; all four collapse late and none converge to 1M).
 
 --->
 

@@ -31,6 +31,60 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [11.07.2026] — Gazebo 1-D multi-seed: seeds 123 & 666 trained (peaks rescued), Fig 7.8 + §7.5.3 table updated
+
+**Document(s) affected:** `manuscript/chapters/chapter_07_training_specification.md` (§7.2.7, §7.5.3 table + prose + Fig 7.8 caption, internal appendix), `manuscript/chapters/chapter_08_experimental_evaluation.md` (GE4-closure pending-list (d) + appendix), `docs/11_camera_rl_training.md` (posterior-work list, Q6), `tools/plot_f3_figures.py` (`fig_multiseed` peak markers), `manuscript/figures/fig_7_8_multiseed_newcam.png` (regenerated, 4 seeds), `experiments/sim/training/ppo_newcam_complex_b_{123,666}/metadata.json` (rescued-peak block). No hazard/SR/cage/scenario/metric criterion changed; no CSV regenerated.
+**Phase:** posterior (E5 — camera 1-D multi-seed robustness; the N=5 check deferred at G4)
+**Gate context:** after Gate G4 (closed 02.07.2026). Robustness/reproducibility evidence for the E-main; does **not** reopen G4 — the verdict of record stays GE4-V2 on the seed-2024 297k E-main.
+**Author:** Samuel Sanchez
+
+### Change
+
+Seeds **123** and **666** of the camera E-main battery ({2024, 42, 23, 666, 123}) were
+trained on `complex_b` (steering-only "1-D" action, same config as the seed-2024 E-main)
+and **stopped before the 1M plan without converging**. Both peaks were rescued and the
+run-records completed:
+
+- seed **123** — `ep_rew_mean` peak **787,1 @ 139 264** steps; stopped ~198k still on the
+  healthy plateau (−8%); checkpoint `ppo_newcam_complex_b_123_139264_steps.zip`
+  (sha256 `a7069ffe…`).
+- seed **666** — `ep_rew_mean` peak **713,2 @ 226 304** steps; decayed −36% to ~458 @ 341k
+  before manual stop; checkpoint `ppo_newcam_complex_b_666_226304_steps.zip`
+  (sha256 `07166beb…`).
+
+`metadata.json` for both gains the seed-42-style rescued-peak block (`peak_ep_rew_mean`,
+`curve_peak`, `peak_checkpoint_timestep`, `last_logged_timestep`, `stop_reason`,
+`checkpoint_selection: checkpoint-on-peak`, corrected `policy_checkpoint` path + hash).
+`tools/plot_f3_figures.py:fig_multiseed` now marks each seed's reward peak (● + peak
+value/timestep in the legend); **Fig 7.8** (`fig_7_8_multiseed_newcam.png`) regenerated
+with all **4** trained seeds. §7.5.3 fills the training rows for 123/666 (eval rows stay
+`pend.`); prose/caption/§7.2.7 notes move from "2/5" to "4/5 trained".
+
+### Rationale
+
+Advances the N=5 robustness check deferred at G4 to 4/5 on the training side. Central
+finding: the **exploration-collapse is seed-independent** — all four seeds rise → peak →
+decay (`std` over-anneals) and **none converges over the 1M plan**, with peak height
+∈ [713, 823] and peak step ∈ [120k, 297k]. This validates **checkpoint-on-peak** as the
+correct selection protocol for this configuration, not a patch for one bad run. All four
+are **constraint-respecting** on the training cage signal (C-01/C-03/C-05 ≈ 0; only C-06
+active); notably seed **123**, *cage-dependent* on the F baseline (58,8%), does **not**
+reproduce that basin under camera (jerkiest — C-06 ~85% — but safe).
+
+### Impact
+
+E-main verdict of record unchanged (GE4-V2, seed 2024). Remaining for a full N=5: the
+**nominal SC-NOM-01 evals of the 123/666 peaks** and **training seed 23** (host-deferred,
+Gazebo real-time limit). No traceability artefact (H/SR/C/SC/M) affected.
+
+### Verification
+
+`python tools/check_traceability.py` → PASS (documentation/figure/metadata change only;
+the H→SR→C→SC→M→verdict graph is untouched). Figure re-render confirmed visually (4 peaks
+marked; every curve peaks then decays).
+
+---
+
 ## [07.07.2026] — Training metadata now records the action contract, reward weights and train-config hash (Gazebo + Isaac trainers)
 
 **Document(s) affected:** `src/cobraflex_rl/cobraflex_rl/train_ppo.py` (`_write_training_metadata`), `tools/isaac_train.py` (`write_metadata`), `experiments/README.md` (metadata.json schema — training-run extras noted). No living-doc table, CSV, cage constant or scenario criterion changed.

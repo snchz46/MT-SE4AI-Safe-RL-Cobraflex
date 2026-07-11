@@ -256,9 +256,10 @@ Semilla principal **2024** en ambos tracks (precedente D-36). El **baseline
 F** está caracterizado con **N = 5** (seeds 42, 123, 2024, 23, 666), que
 revela dos cuencas de convergencia (*constraint-respecting* vs
 *cage-dependent*, §7.5.3). El **E-main de cámara** se reporta sobre la
-semilla 2024; su **multi-seed N=5** (misma batería) está **en curso — 2 de 5
-hechas (2024, 42), 3 pendientes** (coste de cómputo por el límite de tiempo-real
-de la cámara, §7.2.8). El contraste por-semilla se desarrolla en §7.5.3.
+semilla 2024; su **multi-seed N=5** (misma batería) está **en curso — 4 de 5
+entrenadas (2024, 42, 123, 666), falta la 23; evals de 123/666 pendientes** (coste
+de cómputo por el límite de tiempo-real de la cámara, §7.2.8). El contraste
+por-semilla se desarrolla en §7.5.3.
 
 ### 7.2.8 Checkpoints y registro
 
@@ -510,27 +511,53 @@ depende del checkpoint.*
 
 ### 7.5.3 Variabilidad entre semillas (track 'E' cámara — en curso; baseline F)
 
-**Multi-seed de cámara (en curso, N = 5 previsto).** Replicando el protocolo del
-baseline F, el E-main se entrena sobre la batería **{2024, 42, 23, 666, 123}**
-(la misma que F, para que el contraste E↔F sea comparable, §7.2.7). Hechas **2 de
-5** (2024, 42); faltan 3. Ambas semillas **colapsan tarde por contracción de
-exploración** (2024 tras ~490k, 42 tras ~410k) → selección por
-**checkpoint-en-pico**, con notable **variabilidad de semilla en la altura y el
-momento del pico** (2024: 822,9 @ ~297k; 42: 720,2 @ ~120k). El **eval nominal
-SC-NOM-01** de cada peak fija las columnas de evaluación; **2024 y 42 están
-evaluadas** (enforcement; faltan las 3 restantes, pendientes de Gazebo).
+**Multi-seed de cámara (N = 5 previsto; 4/5 entrenadas).** Replicando el protocolo
+del baseline F, el E-main se entrena sobre la batería **{2024, 42, 23, 666, 123}**
+(la misma que F, para que el contraste E↔F sea comparable, §7.2.7). **Entrenadas 4
+de 5** (2024, 42, 123, 666); falta la 23. **Las cuatro semillas colapsan tarde por
+contracción de exploración y ninguna converge al plan de 1M**: se detienen entre
+~198k (123) y ~663k (2024) → selección por **checkpoint-en-pico** en todas. Hay
+**notable variabilidad de semilla en la altura y el momento del pico**
+(pico `ep_rew_mean` ∈ [713, 823], paso del pico ∈ [120k, 297k]; Fig. 7.8), pero la
+**firma es idéntica** en las cuatro: subida → pico → decaimiento por sobre-recocido
+de `std`. El **eval nominal SC-NOM-01** de cada peak fija las columnas de
+evaluación: **2024 y 42 están evaluadas** (enforcement); **123 y 666 tienen el pico
+entrenado y rescatado (hash en su `metadata.json`), con eval nominal pendiente de
+Gazebo**; la 23 está sin entrenar.
 
 | Métrica (track 'E', `complex_b`) | Seed 2024 | Seed 42 | Seed 23 | Seed 666 | Seed 123 |
 | --- | --- | --- | --- | --- | --- |
-| **Cuenca** | c-respecting | c-respecting | TBD | TBD | TBD |
-| `ep_rew_mean` (pico) | **822,9** | **720,2** | TBD | TBD | TBD |
-| Paso del checkpoint | 296 960 | 124 928 | TBD | TBD | TBD |
-| Intervención (fin sano, C-06) | ~40 % (@450k) | ~41 % (@400k) | TBD | TBD | TBD |
-| Intervención cage (**eval**) | 43,5 % (solo C-06) | 64,9 % (solo C-06) | TBD | TBD | TBD |
-| `mean \|ey\|` (**eval**) | 10,9 mm | 13,3 mm | TBD | TBD | TBD |
-| `max \|ey\|` (**eval**) | 48,2 mm | 41,6 mm | TBD | TBD | TBD |
-| Emergencias C-05 (**eval**) | 0 | 0 | TBD | TBD | TBD |
-| Vueltas (**eval**) | 4,88 | 4,91 | TBD | TBD | TBD |
+| **Cuenca** | c-respecting | c-respecting | TBD | c-resp. (curva)¹ | c-resp. (curva)¹ |
+| `ep_rew_mean` (pico) | **822,9** | **720,2** | TBD | **713,2** | **787,1** |
+| Paso del checkpoint | 296 960 | 124 928 | TBD | 226 304 | 139 264 |
+| Intervención (fin sano, C-06) | ~40 % (@450k) | ~41 % (@400k) | TBD | ~55 % (@226k) | ~85 % (@139k) |
+| Intervención cage (**eval**) | 43,5 % (solo C-06) | 64,9 % (solo C-06) | TBD | pend. | pend. |
+| `mean \|ey\|` (**eval**) | 10,9 mm | 13,3 mm | TBD | pend. | pend. |
+| `max \|ey\|` (**eval**) | 48,2 mm | 41,6 mm | TBD | pend. | pend. |
+| Emergencias C-05 (**eval**) | 0 | 0 | TBD | pend. | pend. |
+| Vueltas (**eval**) | 4,88 | 4,91 | TBD | pend. | pend. |
+
+¹ Cuenca de 666/123 clasificada por la **señal de cage en entrenamiento**
+(int_rate C-01/C-03/C-05 ≈ 0 en toda la curva; solo C-06 interviene); la
+confirmación por eval nominal está pendiente de Gazebo. Nótese que la 123 **era
+*cage-dependent* en el baseline F** (58,8 %, tabla inferior) y **bajo cámara no
+reproduce esa cuenca** (es la más a tirones, C-06 ~85 %, pero segura).
+
+**Lectura de las curvas (4/5 entrenadas).** Las cuatro semillas comparten la
+**misma firma de seguridad en entrenamiento**: la cage queda **latente**
+(int_rate C-01/C-03/C-05 ≈ 0 en toda la curva) y **solo C-06** —el rate-limiter de
+suavidad— interviene. **Ninguna cae en la cuenca *cage-dependent*** bajo cámara; en
+particular la **123**, que **sí** era *cage-dependent* en el baseline F (58,8 % de
+intervención, |ey| 90,7 mm), bajo percepción de cámara es *constraint-respecting*,
+aunque **la más a tirones** de las cuatro (C-06 ~85 % vs ~40–55 % de las demás),
+coherente con que su pico alto (787) se sostiene con mucho trabajo del limitador.
+La cuenca *cage-dependent* del baseline F **no se reproduce** en el track de cámara.
+Lo que varía entre semillas es la **altura/momento del pico** y la **carga de
+suavizado de C-06**, no la seguridad. Corolario metodológico: el **colapso por
+contracción de exploración es sistemático —independiente de la semilla— y ninguna
+de las cuatro converge al plan de 1M** (Fig. 7.8); la selección **checkpoint-en-pico**
+no es un parche para una corrida mala sino el protocolo correcto para esta
+configuración, y que las cuatro exhiban el mismo patrón lo confirma.
 
 **Lectura (2024 vs 42).** Las dos semillas evaluadas **confirman
 *constraint-respecting***: 0 emergencias, **sin C-01/C-03/C-05** (cage latente en
@@ -547,13 +574,17 @@ semilla más a tirones, sin dejar de ser una salvaguarda de seguridad **latente*
 (0 emergencias, sin C-01/C-03). La cuenca se mantiene estable entre semillas en lo
 que importa para seguridad; lo que varía es cuánto trabajo de suavizado hace C-06.
 
-<img src="../figures/fig_7_8_multiseed_newcam.png" alt="Figura 7.8 — Comparación multi-semilla del track de cámara (seeds 2024 y 42)." width="560"/>
+<img src="../figures/fig_7_8_multiseed_newcam.png" alt="Figura 7.8 — Comparación multi-semilla del track de cámara (seeds 2024, 42, 123, 666)." width="640"/>
 
-*Figura 7.8 — Multi-semilla del **track de cámara** (seeds 2024 y 42; recortadas
-en su tramo sano ~450k / ~400k): `ep_rew_mean` (arriba) e intervención del cage
-(abajo) vs timesteps. Ambas son *constraint-respecting* en seguridad (C-01/C-03
-≈ 0; la intervención es C-06). Pendientes las 3 semillas restantes; la tabla se
-completará con sus evals. Generada por `tools/plot_f3_figures.py --seed-runs`.*
+*Figura 7.8 — Multi-semilla del **track de cámara** (4/5 semillas: 2024, 42, 123,
+666; curva completa hasta la parada): `ep_rew_mean` (arriba, con el **pico** de cada
+semilla marcado ●) e intervención del cage (abajo) vs timesteps. Las cuatro
+**suben → pican → decaen** (contracción de exploración; **ninguna converge al plan
+de 1M**) y son *constraint-respecting* en seguridad (C-01/C-03/C-05 ≈ 0; la
+intervención es **solo C-06**, el rate-limiter — la 123 es la más a tirones). El
+pico marcado es el checkpoint rescatado (selección checkpoint-en-pico). Falta la
+semilla 23 (sin entrenar); 123/666 con eval nominal pendiente. Generada por
+`tools/plot_f3_figures.py --seed-runs`.*
 
 **Línea base (track 'F', estado) — la referencia que estableció las cuencas.**
 Las cinco semillas del baseline F revelan **dos cuencas**: cuatro
@@ -614,8 +645,9 @@ E-track (primario):
       tracking) generadas del run complex_b (sufijo _newcam)
   [x] Campaña GE4 sobre el E-main 297k — EJECUTADA Y CERRADA (V2, 1970 runs,
       28 escenarios, 28.06.2026; §8.9, docs/11 §8.4); G4 cerrado 02.07.2026
-  [ ] Multi-seed N=5 de cámara — diferido (restricción de tiempo-real, §7.2.8;
-      2/5 hechas, trabajo posterior)
+  [~] Multi-seed N=5 de cámara — 4/5 entrenadas (2024/42/123/666; picos
+      rescatados, §7.5.3 + Fig. 7.8); faltan la 23 y los evals de 123/666
+      (restricción de tiempo-real, §7.2.8; trabajo posterior)
 
 Baseline F (conservado):
   [x] Caracterizado: 200k estado, N=5 semillas, campaña G4 SATISFIED

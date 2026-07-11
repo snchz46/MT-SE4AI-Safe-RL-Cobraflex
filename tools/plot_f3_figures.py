@@ -407,11 +407,20 @@ def fig_multiseed(train_runs: List[Path], out: Path) -> None:
     colors = plt.cm.tab10.colors
     for i, (seed, ts, rew, iv) in enumerate(series):
         c = colors[i % 10]
+        # mark the ep_rew_mean peak — the checkpoint-on-peak selection point,
+        # since these runs collapse late (exploration contraction) and never
+        # converge over the full 1M plan.
+        pk = int(np.nanargmax(rew))
         ax1.plot(ts, rew, color=c, alpha=0.25, lw=1)
-        ax1.plot(ts, _smooth(rew), color=c, lw=2, label=f"seed {seed}")
+        ax1.plot(ts, _smooth(rew), color=c, lw=2,
+                 label=f"seed {seed} (pico {rew[pk]:.0f} @{ts[pk]/1000:.0f}k)")
+        ax1.plot(ts[pk], rew[pk], marker="o", color=c, ms=7,
+                 mec="black", mew=0.8, zorder=5)
         if iv is not None:
             ax2.plot(ts, iv, color=c, alpha=0.25, lw=1)
             ax2.plot(ts, _smooth(iv), color=c, lw=2, label=f"seed {seed}")
+            ax2.plot(ts[pk], iv[pk], marker="o", color=c, ms=6,
+                     mec="black", mew=0.8, zorder=5)
     ax1.set_ylabel("ep_rew_mean")
     ax1.set_title("Fig. 7.8 — Multi-seed comparison (reward + cage intervention)")
     ax1.legend(fontsize=8)

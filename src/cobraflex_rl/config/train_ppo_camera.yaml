@@ -38,7 +38,7 @@ device: auto              # CNN benefits from CUDA when present; falls back to c
 # gz set_pose/set_physics CLI timeout (ms). Raised 2000->3500: the CLI does
 # service discovery per call and occasionally times out under reset load.
 service_timeout_ms: 3500
-seed: 123                  # E-main seed mirrors the F-track main run (D-36 precedent)
+seed: 666                  # E-main seed mirrors the F-track main run (D-36 precedent)
 max_episode_steps: 1024
 control_dt: 0.10
 fixed_speed: 0.20

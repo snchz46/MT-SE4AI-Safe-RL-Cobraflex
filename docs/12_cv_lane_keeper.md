@@ -3,7 +3,7 @@
 | Field | Value |
 | --- | --- |
 | Artifact | The logical (non-learned) camera lane-keeper: deployment node + shared control law + CV estimator |
-| Version | **0.5** (2026-07-02 — H-12 confident under-read documented in §4.4 + ruta-2b `conservative_lane_selection` revert (D-48); RL-vs-CV head-to-head closed: 297k RL beats this baseline 10.9 vs 17.2 mm) |
+| Version | **0.6** (2026-07-13 — §4.4: both estimator limitations **measured in-situ** by the 420-pose weak-section oracle probe: the H-12 flip quantified (≈ −1 lane width at ey ≈ +0.12, everywhere) + NEW confident heading over-read in tight curves (−0.2…−0.45 rad on a centred car → crosses the 25° envelope); mechanisms of the E5 multi-seed / 2-D enforcement stops) |
 | Phase / Gate | Track 'E' (camera) — the fair baseline for the RL camera agent (GE4 eval) |
 | Author | Samuel Sanchez |
 | Date | 2026-06-19 |
@@ -218,6 +218,38 @@ the driven lane.
 > retrain (D-49). Scoped to the ODD (ruta-1's SC-EDGE-02 IC clip) the under-read costs only
 > 2/30 boundary-edge breaches in GE4-V2 — SR-001 still closes. The flag is kept True-capable
 > for the opt-in regression tests (`policy/tests/test_cv_lane_estimator.py`).
+>
+> **Quantified in-situ (13.07.2026 probe — `experiments/sim/runs/cv_probe_weak_sections_20260713T084230Z/`,
+> 420-pose oracle grid on `complex_b` with the Lane Cam;** `tools/validate_cv_estimator.py
+> --s-range` section mode). The flip fires **anywhere on the circuit** once the vehicle sits
+> ≈ +0.12 m outward (over the dashed centre line) and is **gated by heading, not section**:
+> nose-inward (−0.1 rad) it **never** fires (0/35 poses), straight-ahead 17/35, nose-outward
+> (+0.1 rad) 30/35 — i.e. exactly the departing-vehicle geometry. Error is ≈ **−1 lane
+> width** (ey_true +0.120 → est −0.135 ± 0.005, `n_lines` 3, confidence 0.46–0.52, `cv_ok`
+> True); at ey ≤ +0.06 the read is clean (≤ ~25 mm), so the good/flipped boundary sits
+> between +0.06 and +0.12. The saved frames show the geometry: at +0.12 the camera sits over
+> the centre line and pair selection latches the centre line + the *left* lane's outer line.
+> **Offline replay of the 105 saved +0.12 frames confirms the D-48 revert quantitatively:**
+> `conservative_lane_selection: true` fixes only 4 of the 47 baseline flips (43 persist) —
+> in most flipped frames only *one* plausible pair survives (the wrong one), so there is no
+> opposite-sign ambiguity for the rule to resolve. This is the measured mechanism behind the
+> E5 multi-seed enforcement stops of seeds 23/666 (drift past +0.10 with the nose outward →
+> the cage believes ey ≈ −0.13 → C-02/C-03 steer *outward* → runaway → C-05; docs/11 §8.5,
+> ch.7 §7.5.3 note ¹).
+>
+> **Second, distinct limitation — confident heading over-read in tight curves (same probe).**
+> In the tight-curve section (s ≈ 8.0–9.8 of `complex_b`) the estimator reads **epsi −0.11 …
+> −0.36 rad (mean −0.22) on a *centred*, straight vehicle** (true epsi ≈ 0) with **high**
+> confidence (mean 0.77), and curvature 0.8–1.5 (true ≈ 1.0); the control straight reads
+> 0.000 under the identical protocol. The strongly curved boundary line dominates the
+> near-field rows and its local tangent is read as heading error (the curve-geometry
+> counterpart of the known mid-curve kappa over-read, §5). With a real outward heading
+> offset (−0.1 rad) the centred-car estimate reaches **−0.45 rad, past the 25° (0.436 rad)
+> C-02/C-05 envelope** — the measured mechanism of the false C-05 beliefs / stops at
+> s ≈ 8.8 (seed-23 monitoring flags + its r2 stop) and of the 2-D enforcement stops at
+> speed (docs/11 §8.5). Section B's gentler curve shows the same effect milder (mean +0.05,
+> worst ±0.24). Like the flip, this is confident-and-wrong (SR-014 cannot gate it); the
+> closure is the same temporal estimator (D-49 posterior).
 
 ### 4.5 State
 The lane-centre polynomial is the mean of the selected pair's fits; the state is

@@ -18,6 +18,13 @@ estimator's error before the cage is allowed to rely on it. This tool:
 Run with the sim up (e.g. via tools/cam_evidence_session-style launch):
     ros2 launch cobraflex gazebo_mesh.launch.py gui:=false rviz:=false &
     python3 tools/validate_cv_estimator.py --out-root experiments/sim/runs
+
+Targeted section-probe mode (13.07.2026, E5): `--s-range MIN:MAX` (repeatable)
++ `--s-step` restrict the sweep to specific arc-length sections; `--centerline`
+/ `--world` / `--world-name` / `--camera-topic` retarget it to complex_b and
+the Lane Cam; `--skip-degraded` probes clean frames only; `--save-frames`
+dumps the probed frames (gitignored raw_logs/). Used to characterise the
+confident CV misreads behind the seed-23/666 enforcement stops (docs/11 §8.5).
 """
 from __future__ import annotations
 
@@ -76,16 +83,20 @@ def git_commit() -> str:
     ).stdout.strip()
 
 
-def pose_grid(tracker: PolylineTracker, n_s: int, offsets, headings):
-    """(x, y, yaw, s, ey_cmd, epsi_cmd) teleport targets along the centerline."""
+def pose_grid(tracker: PolylineTracker, n_s: int, offsets, headings, s_values=None):
+    """(x, y, yaw, s, ey_cmd, epsi_cmd) teleport targets along the centerline.
+
+    ``s_values`` (optional) overrides the uniform ``n_s`` spacing with an
+    explicit list of arc-lengths — used by the targeted section probes."""
     total = float(tracker.cumulative_lengths[-1])
+    if s_values is None:
+        s_values = [total * i / n_s for i in range(n_s)]
     targets = []
-    for i in range(n_s):
-        s = total * i / n_s
+    for s in s_values:
         for ey in offsets:
             for dpsi in headings:
-                x, y, heading = tracker.pose_at_arclength(s, float(ey))
-                targets.append((x, y, heading + dpsi, s, float(ey), float(dpsi)))
+                x, y, heading = tracker.pose_at_arclength(float(s), float(ey))
+                targets.append((x, y, heading + dpsi, float(s), float(ey), float(dpsi)))
     return targets
 
 
@@ -127,33 +138,68 @@ def main() -> int:
     parser.add_argument("--n-s", type=int, default=20, help="arc-length samples (clean grid)")
     parser.add_argument("--n-s-degraded", type=int, default=6)
     parser.add_argument("--camera-topic", default="/camera/image_raw")
+    parser.add_argument("--centerline", default=str(CENTERLINE),
+                        help="driven-lane centerline YAML (default: oval right lane)")
+    parser.add_argument("--world", default=str(WORLD),
+                        help="world file the sim was launched with (metadata hash only)")
+    parser.add_argument("--world-name", default="lane_following_oval",
+                        help="SDF world name (namespaces the gz set_pose service)")
+    parser.add_argument("--s-range", action="append", default=None, metavar="MIN:MAX",
+                        help="probe only this arc-length section (repeatable); "
+                             "overrides --n-s together with --s-step")
+    parser.add_argument("--s-step", type=float, default=0.2,
+                        help="arc-length step inside --s-range sections (m)")
+    parser.add_argument("--offsets", default=None,
+                        help="comma-separated lateral offsets (m); default -0.06,0,0.06")
+    parser.add_argument("--headings", default=None,
+                        help="comma-separated heading errors (rad); default -0.15,0,0.15")
+    parser.add_argument("--skip-degraded", action="store_true",
+                        help="clean-frame grid only (targeted section probes)")
+    parser.add_argument("--run-prefix", default="cv_estimator_val",
+                        help="run-id prefix (e.g. cv_probe_weak_sections)")
+    parser.add_argument("--save-frames", action="store_true",
+                        help="dump each probed frame as PNG under <run>/raw_logs/frames/ "
+                             "(gitignored)")
     args = parser.parse_args()
 
-    cfg = yaml.safe_load(CENTERLINE.read_text())
+    centerline_path = Path(args.centerline)
+    world_path = Path(args.world)
+    cfg = yaml.safe_load(centerline_path.read_text())
     points = np.asarray(cfg["centerline"]["points"], dtype=float)
     tracker = PolylineTracker(points)
 
-    run_id = "cv_estimator_val_" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    run_id = args.run_prefix + "_" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     out_dir = Path(args.out_root) / run_id
     out_dir.mkdir(parents=True, exist_ok=True)
+    frames_dir = out_dir / "raw_logs" / "frames"
+    if args.save_frames:
+        frames_dir.mkdir(parents=True, exist_ok=True)
 
     rclpy.init()
-    iface = RosGazeboInterface(camera_topic=args.camera_topic)
+    iface = RosGazeboInterface(world_name=args.world_name, camera_topic=args.camera_topic)
     if not iface.wait_for_initial_data(timeout_sec=15.0):
         print("ERROR: no /odom_truth data; is the sim running?", file=sys.stderr)
         return 1
 
     estimator = CvLaneEstimator(CameraModel())
 
-    offsets = (-0.06, 0.0, 0.06)
-    headings = (-0.15, 0.0, 0.15)
-    clean_grid = pose_grid(tracker, args.n_s, offsets, headings)
+    offsets = (tuple(float(v) for v in args.offsets.split(","))
+               if args.offsets else (-0.06, 0.0, 0.06))
+    headings = (tuple(float(v) for v in args.headings.split(","))
+                if args.headings else (-0.15, 0.0, 0.15))
+    s_values = None
+    if args.s_range:
+        s_values = []
+        for spec in args.s_range:
+            lo, hi = (float(v) for v in spec.split(":"))
+            s_values.extend(np.arange(lo, hi + 1e-9, args.s_step).round(3).tolist())
+    clean_grid = pose_grid(tracker, args.n_s, offsets, headings, s_values=s_values)
     degr_grid = pose_grid(tracker, args.n_s_degraded, (0.0,), (0.0,))
 
     rows = []
-    conditions = [("clean", 0.0, clean_grid)] + [
-        (mode, level, degr_grid) for mode, level in DEGRADATIONS
-    ]
+    conditions = [("clean", 0.0, clean_grid)]
+    if not args.skip_degraded:
+        conditions += [(mode, level, degr_grid) for mode, level in DEGRADATIONS]
     t_start = time.monotonic()
     for mode, level, grid in conditions:
         for x, y, yaw, s, ey_cmd, dpsi_cmd in grid:
@@ -171,11 +217,20 @@ def main() -> int:
             if mode != "clean":
                 frame = degrade(frame, mode, level)
             est = estimator.estimate(frame)
+            if args.save_frames:
+                import cv2
+                cv2.imwrite(
+                    str(frames_dir / f"{mode}_{level}_s{s:0.2f}_ey{ey_cmd:+.3f}"
+                                     f"_dpsi{dpsi_cmd:+.2f}.png"),
+                    frame,
+                )
             rows.append(
                 dict(
                     mode=mode,
                     level=level,
                     s=round(s, 3),
+                    ey_cmd=round(ey_cmd, 4),
+                    dpsi_cmd=round(dpsi_cmd, 4),
                     ey_true=round(float(truth.ey), 5),
                     epsi_true=round(float(truth.epsi), 5),
                     ok=int(est.ok),
@@ -228,10 +283,11 @@ def main() -> int:
         run_id=run_id,
         purpose="D-43 CV lane-estimator validation vs ground-truth oracle (GE2 evidence)",
         git_commit=git_commit(),
-        world=str(WORLD.relative_to(REPO)),
-        world_sha256=sha256_file(WORLD),
-        centerline=str(CENTERLINE.relative_to(REPO)),
-        centerline_sha256=sha256_file(CENTERLINE),
+        world=str(world_path.relative_to(REPO)) if world_path.is_relative_to(REPO) else str(world_path),
+        world_sha256=sha256_file(world_path),
+        world_name=args.world_name,
+        centerline=str(centerline_path.relative_to(REPO)) if centerline_path.is_relative_to(REPO) else str(centerline_path),
+        centerline_sha256=sha256_file(centerline_path),
         cage_yaml_sha256=sha256_file(CAGE_YAML),
         camera_model=vars(CameraModel()) if hasattr(CameraModel(), "__dict__") else
             dict(height_m=CameraModel().height_m, pitch_rad=CameraModel().pitch_rad,
@@ -239,8 +295,10 @@ def main() -> int:
                  height_px=CameraModel().height_px),
         estimator_config=vars(estimator.config),
         grid=dict(n_s=args.n_s, n_s_degraded=args.n_s_degraded,
-                  offsets=list(offsets), headings=list(headings)),
-        degradations=[list(d) for d in DEGRADATIONS],
+                  offsets=list(offsets), headings=list(headings),
+                  s_ranges=args.s_range, s_step=args.s_step,
+                  skip_degraded=bool(args.skip_degraded)),
+        degradations=[] if args.skip_degraded else [list(d) for d in DEGRADATIONS],
         timestamp_utc=datetime.now(timezone.utc).isoformat(),
     )
     (out_dir / "summary.json").write_text(

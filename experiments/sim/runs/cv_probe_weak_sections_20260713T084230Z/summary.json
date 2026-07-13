@@ -1,0 +1,90 @@
+{
+  "metadata": {
+    "run_id": "cv_probe_weak_sections_20260713T084230Z",
+    "purpose": "D-43 CV lane-estimator validation vs ground-truth oracle (GE2 evidence)",
+    "git_commit": "5a14a9155425f825a95b03b27ab617ec8560d126",
+    "world": "src/cobraflex/worlds/lane_following_oval_complex.world",
+    "world_sha256": "3b218c07104b70ae6e914265c489d81364ead8098ae823792314112256d2e06e",
+    "world_name": "lane_following_complex_b",
+    "centerline": "src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml",
+    "centerline_sha256": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+    "cage_yaml_sha256": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+    "camera_model": {
+      "height_m": 0.07725,
+      "pitch_rad": 0.3,
+      "hfov_rad": 1.5707963,
+      "width_px": 640,
+      "height_px": 360
+    },
+    "estimator_config": {
+      "white_sat_max": 30,
+      "white_val_min": 150,
+      "vegetation_hue_range": [
+        35,
+        85
+      ],
+      "vegetation_sat_min": 8,
+      "near_distance_m": 0.15,
+      "far_distance_m": 1.0,
+      "n_scan_rows": 24,
+      "min_marking_width_m": 0.004,
+      "max_marking_width_m": 0.1,
+      "cluster_tol_m": 0.08,
+      "min_points_per_line": 4,
+      "lane_width_nominal_m": 0.245,
+      "lane_width_tol_m": 0.1,
+      "min_rows_for_curvature": 8,
+      "max_abs_y_m": 1.5,
+      "heading_window_m": 0.15,
+      "heading_bias_rad": 0.0,
+      "single_line_fallback": true,
+      "single_line_confidence_scale": 0.5,
+      "conservative_lane_selection": false,
+      "single_line_side_slack_m": 0.12
+    },
+    "grid": {
+      "n_s": 20,
+      "n_s_degraded": 6,
+      "offsets": [
+        -0.06,
+        0.0,
+        0.06,
+        0.12
+      ],
+      "headings": [
+        -0.1,
+        0.0,
+        0.1
+      ],
+      "s_ranges": [
+        "2.0:4.0",
+        "8.0:9.8",
+        "12.0:14.6"
+      ],
+      "s_step": 0.2,
+      "skip_degraded": true
+    },
+    "degradations": [],
+    "timestamp_utc": "2026-07-13T08:47:25.847956+00:00"
+  },
+  "summary": {
+    "clean@0.0": {
+      "samples": 420,
+      "detection_rate": 1.0,
+      "ey_err": {
+        "n": 420,
+        "bias": -0.021758976190476193,
+        "mae": 0.037078738095238095,
+        "p95_abs": 0.2432145,
+        "max_abs": 0.25518
+      },
+      "epsi_err": {
+        "n": 420,
+        "bias": -0.04130971428571429,
+        "mae": 0.11028090476190476,
+        "p95_abs": 0.2946749999999999,
+        "max_abs": 0.37525
+      }
+    }
+  }
+}

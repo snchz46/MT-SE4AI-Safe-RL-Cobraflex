@@ -31,6 +31,56 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [13.07.2026] — CV weak-section probe: both estimator failure mechanisms measured in-situ (H-12 flip quantified + NEW confident heading over-read in tight curves)
+
+**Document(s) affected:** `docs/12_cv_lane_keeper.md` (§4.4 — two quantified-limitation blocks, header v0.6), `docs/11_camera_rl_training.md` (posterior item (c) pointer), `tools/validate_cv_estimator.py` (section-probe mode: `--s-range/--s-step`, `--centerline/--world/--world-name/--camera-topic` retargeting, `--offsets/--headings`, `--skip-degraded`, `--run-prefix`, `--save-frames`; `ey_cmd`/`dpsi_cmd` now recorded per sample). **New evidence:** `experiments/sim/runs/cv_probe_weak_sections_20260713T084230Z/` (420-pose oracle grid on `complex_b`, Lane Cam, clean frames; samples.csv + summary.json + probed frames under gitignored `raw_logs/frames/`). No hazard/SR/cage/scenario/metric criterion changed.
+**Phase:** posterior (E5 — perception characterisation feeding the D-49 temporal-estimator thread)
+**Gate context:** after Gate G4. Explains (does not alter) the E5 multi-seed / 2-D enforcement stops; GE4-V2 untouched.
+**Author:** Samuel Sanchez
+
+### Change
+
+`tools/validate_cv_estimator.py` (previously oval-only, full-circuit sweeps) gained a targeted
+section-probe mode and was pointed at the three sections implicated by the E5 evals: the two
+weak sections (A: s 8.0–9.8; B: s 12.0–14.6, containing the s≈13.4 stop point) plus a control
+straight (s 2.0–4.0), grid = 35 arc-lengths × offsets {−0.06, 0, +0.06, +0.12} × headings
+{−0.1, 0, +0.1}, CV estimate vs ground-truth oracle at each pose, all frames saved.
+
+### Rationale (findings)
+
+1. **The H-12 flip is now fully characterised.** It fires anywhere on the circuit at
+   ey ≈ +0.12 (camera over the dashed centre line) and is **gated by heading, not by
+   section**: nose-inward 0/35 poses, straight 17/35, nose-outward 30/35 — exactly the
+   departing-vehicle geometry. Magnitude ≈ −1 lane width (est −0.135 ± 0.005) at confidence
+   0.46–0.52, `cv_ok` True; clean (≤ ~25 mm) at ey ≤ +0.06. **Offline replay of the 105
+   saved +0.12 frames validates the D-48 revert quantitatively**: `conservative_lane_selection`
+   fixes only 4/47 flips — usually only one (wrong) plausible pair survives, no ambiguity to
+   resolve.
+2. **NEW second mechanism — confident heading over-read in tight curves.** Section A reads
+   epsi −0.11…−0.36 rad (mean −0.22) on a centred, straight car at confidence ~0.77 (control
+   straight: 0.000); with a real −0.1 rad offset it reaches −0.45 rad, **crossing the 25°
+   C-02/C-05 envelope on a centred car**. This is the measured mechanism of the seed-23
+   s≈8.8 false positives/stop and of the 2-D at-speed enforcement stops; section B shows it
+   milder (mean +0.05, worst ±0.24).
+3. Together the two mechanisms account for all the E5 nominal enforcement stops: 666/23's
+   drift stops (flip family, ey→0.12 nose-out) and the centred-car C-05s (curve over-read).
+   Both are confident-and-wrong (SR-014 cannot gate them); closure remains the D-49
+   temporal estimator / posterior retrain.
+
+### Impact
+
+docs/12 §4.4 is now the quantified reference for both limitations (v0.6); docs/11 §8.5's
+posterior item (c) points at it. The probe run is reusable (`--s-range` mode documented in
+the tool docstring) for the temporal-estimator validation when it lands. No re-runs required.
+
+### Verification
+
+`python tools/check_traceability.py` → PASS (docs/tool/evidence only). Probe completed 420/420
+poses, 0 settle failures / 0 dropped frames; the control section reproduces the known-good
+nominal accuracy (centred ey bias +10 mm, epsi 0.000), confirming the probe protocol is sound.
+
+---
+
 ## [13.07.2026] — 2-D action authority capped: `max_speed_mps` 0.5 → 0.25 (train config revision for the next 2-D run)
 
 **Document(s) affected:** `src/cobraflex_rl/config/train_ppo_camera_2d.yaml` (action block + header rationale), `docs/11_camera_rl_training.md` (2-D posterior-variant paragraph). **No cage constant, hazard/SR table, scenario criterion or code changed.**

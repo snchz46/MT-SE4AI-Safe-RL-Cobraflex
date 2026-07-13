@@ -637,7 +637,10 @@ breaches (a real CL-B finding, plausibly improved by better perception); (b) mul
 the verdict of record stays the seed-2024 run); (c) the D-43 under-read closure via better
 perception — a temporal estimator or the 2-D-action retrain (D-49, docs/13–14) — **now with two
 in-vivo nominal instances** (§8.5: the seed-23/666 stops at the s≈13.4 recovery-basin edge and
-the 2-D 500k false-belief stop).
+the 2-D 500k false-belief stop) **and both mechanisms measured in-situ by the 13.07 weak-section
+oracle probe** (420 poses; the H-12 flip is heading-gated at ey≈+0.12, and a second confident
+heading over-read lives in tight curves — full numbers in docs/12 §4.4,
+`cv_probe_weak_sections_20260713T084230Z`).
 
 ### 8.5 E5 robustness results — multi-seed N=5 and the seed-2024 variants (13.07.2026)
 

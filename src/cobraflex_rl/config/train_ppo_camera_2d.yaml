@@ -7,7 +7,9 @@
 #   ros2 run cobraflex_rl train_ppo --train-config <this> \
 #     --centerline-config      $CFG/complex_b_right_lane_centerline.yaml \
 #     --road-centerline-config $CFG/complex_b_centerline.yaml \
-#     --world-name lane_following_complex_b --run-id ppo_gz2d_complex_b_2024
+#     --world-name lane_following_complex_b --run-id ppo_gz2d_complex_b_2024_v2
+# (run-id _v2 = the 0.25-cap revision below; _2024 without suffix is the frozen
+#  full-authority 0.5 baseline run — do NOT reuse its run-id.)
 # No code change is needed: GazeboLaneEnv, cage_bridge (the throttle→cage→speed
 # maps), rewards (throttle_delta / stall_penalty) and RosGazeboInterface
 # (send_action already publishes a variable linear.x) are all shared and
@@ -19,8 +21,10 @@
 #
 # --- which Isaac findings carry over, and which DON'T --------------------------
 # KEPT (properties of the 2-D action space / reward, not of Isaac):
-#   * 2-D action block (D-50), max_speed_mps 0.5 = C-04 v_max so the cage speed
-#     rules genuinely arbitrate and a true stop is commandable (SR-009 well-posed).
+#   * 2-D action block (D-50) — a true stop is commandable (SR-009 well-posed).
+#     max_speed_mps REVISED 0.5 → 0.25 on 13.07.2026 (see the action block below):
+#     the full-authority run's evals showed no enforcement run completes under the
+#     canonical speed envelope.
 #   * reward.throttle_delta   (D-50) — longitudinal smoothness, mirror of steer_delta.
 #   * reward.stall_penalty    (D-56) — the degenerate "park" optimum (near-zero
 #     progress avoids the −termination) is a property of the 2-D action; it will
@@ -74,7 +78,8 @@ progress_bounded_tracking: false   # road-centre off-road check supersedes it
 viz: true                 # Gazebo CAN publish the cage/agent RViz view (unlike in-process
                           # Isaac) — useful to watch the 2-D throttle slow for curves.
                           # Set false for long headless runs (§9.1).
-model_path: cobraflex_ppo_gz2d_lane
+model_path: cobraflex_ppo_gz2d_lane_v2  # _v2 = 0.25-cap revision; the un-suffixed zip is
+                          # the frozen full-authority baseline's final model.
 checkpoint_freq: 25000    # periodic-ckpt cadence; without it train_ppo falls back to
                           # n_steps (1024) → ~20 GB over 1M (the Isaac gotcha, fixed
                           # there 03.07.2026 — same fix here). 40 ckpts/1M ≈ 800 MB.
@@ -86,13 +91,26 @@ policy: CnnPolicy
 # The policy commands [steer, throttle] in [-1, 1]²; throttle maps to the cage
 # scale u ∈ [0, 1] (cage_bridge.policy_throttle_to_cage) and actuates on the
 # linear map speed = max_speed_mps · u (full stop below throttle_deadband).
-# max_speed_mps 0.5 = C-04's v_max_straight = ODD-1.V_MAX: the policy can exceed
-# the curve ceiling (0.25 m/s) and the C-05 warning band (0.4 m/s), so the cage
-# speed rules (C-04/C-05-B/C-06) arbitrate for real — and a true stop is
-# commandable, making SR-009's stall/liveness sub-mode well-posed.
+#
+# max_speed_mps REVISED 0.5 → 0.25 (13.07.2026, CHANGELOG; evidence: the
+# ppo_gz2d_complex_b_2024 full-authority evals, docs/11 §8.5 / ch.7 §7.5.4).
+# The original 0.5 (= C-04 v_max_straight = ODD-1.V_MAX) was chosen so the cage
+# speed rules would "arbitrate for real" — but with the cage's speed thresholds
+# still [provisional] and calibrated at the 1-D 0.2 m/s regime, that arbitration
+# is a wall, not an arbiter: NO enforcement eval completed the horizon (4 runs:
+# 26 steps / 0.62 / 0.91 / 1.52 laps), every stop C-04+C-05 on a CENTERED car at
+# >0.25 m/s (TTLC shortens with speed, curve ceiling 0.25, fast C-05 persistence
+# above v_warning 0.4 — marginal CV reads that are harmless at 0.2 cross
+# emergency thresholds at speed). Capping the ACTION at 0.25 keeps the policy
+# inside the validated envelope by construction — no cage.yaml change (loosening
+# safety-traced thresholds to fit the policy would invert the safety logic) —
+# while preserving everything that justifies 2-D: slowing for curves (down to a
+# full stop), a commandable stop (SR-009 well-posed), and a small margin over
+# the 0.2 cruise on straights. The full-authority 0.5 variant returns AFTER the
+# cage speed-envelope calibration for the >0.2 regime (D-59 prerequisite).
 action:
   type: steer_throttle    # "steer" = the frozen 1-D contract (ED-2)
-  max_speed_mps: 0.5
+  max_speed_mps: 0.25     # was 0.5 — see revision note above
   throttle_deadband: 0.05
 
 # E-observation (docs/09 §10): 84×84 grayscale frames, stack k=4 applied by the

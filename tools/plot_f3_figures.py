@@ -413,7 +413,7 @@ def fig_multiseed(train_runs: List[Path], out: Path) -> None:
         pk = int(np.nanargmax(rew))
         ax1.plot(ts, rew, color=c, alpha=0.25, lw=1)
         ax1.plot(ts, _smooth(rew), color=c, lw=2,
-                 label=f"seed {seed} (pico {rew[pk]:.0f} @{ts[pk]/1000:.0f}k)")
+                 label=f"seed {seed} (peak {rew[pk]:.0f} @{ts[pk]/1000:.0f}k)")
         ax1.plot(ts[pk], rew[pk], marker="o", color=c, ms=7,
                  mec="black", mew=0.8, zorder=5)
         if iv is not None:
@@ -435,6 +435,46 @@ def fig_multiseed(train_runs: List[Path], out: Path) -> None:
     print(f"  wrote {out/'fig_7_8_multiseed.png'}")
 
 
+def fig_variants(specs: List[tuple], out: Path) -> None:
+    """Fig. 7.9 — training-variant comparison (same layout as Fig. 7.8, but the
+    lines are labelled config variants of one seed rather than seeds of one
+    config): ``ep_rew_mean`` (top, peaks marked) and cage intervention rate
+    (bottom) vs timesteps. ``specs`` is a list of ``(label, run_dir)``."""
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(7, 6.4), sharex=True)
+    colors = plt.cm.tab10.colors
+    for i, (label, run) in enumerate(specs):
+        rows = _read_csv(run / "learning_curve.csv")
+        if not rows:
+            print(f"  skip variant run {run} (no learning_curve.csv)")
+            continue
+        ts = _col(rows, "timestep")
+        rew = _col(rows, "ep_rew_mean")
+        iv = _col(rows, "intervention_rate") * 100.0
+        c = colors[i % 10]
+        pk = int(np.nanargmax(rew))
+        ax1.plot(ts, rew, color=c, alpha=0.25, lw=1)
+        ax1.plot(ts, _smooth(rew), color=c, lw=2,
+                 label=f"{label} (peak {rew[pk]:.0f} @{ts[pk]/1000:.0f}k)")
+        ax1.plot(ts[pk], rew[pk], marker="o", color=c, ms=7,
+                 mec="black", mew=0.8, zorder=5)
+        ax2.plot(ts, iv, color=c, alpha=0.25, lw=1)
+        ax2.plot(ts, _smooth(iv), color=c, lw=2, label=label)
+        ax2.plot(ts[pk], iv[pk], marker="o", color=c, ms=6,
+                 mec="black", mew=0.8, zorder=5)
+    ax1.set_ylabel("ep_rew_mean")
+    ax1.set_title("Fig. 7.9 — Training variants (reward + cage intervention)")
+    ax1.legend(fontsize=8)
+    ax1.grid(True, alpha=0.3)
+    ax2.set_ylabel("cage intervention rate (%)")
+    ax2.set_xlabel("timesteps")
+    ax2.legend(fontsize=8)
+    ax2.grid(True, alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(out / "fig_7_9_variants.png", dpi=150)
+    plt.close(fig)
+    print(f"  wrote {out/'fig_7_9_variants.png'}")
+
+
 def main() -> None:
     """Render the §7.4/§7.5 training-evidence figures for the pinned runs."""
     ap = argparse.ArgumentParser(description="Generate F3 (Chapter 7) figures.")
@@ -453,8 +493,20 @@ def main() -> None:
     ap.add_argument("--laps", type=float, default=2.0, help="laps to draw in Fig 7.2")
     ap.add_argument("--seed-runs", type=str, default=None,
                     help="comma-separated training run dirs for the multi-seed comparison (Fig. 7.8)")
+    ap.add_argument("--variant-runs", type=str, default=None,
+                    help="semicolon-separated label=run_dir pairs for the training-variant "
+                         "comparison (Fig. 7.9), e.g. 'v1, fixed spawn=experiments/.../run1;...' "
+                         "(labels may contain commas)")
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
+
+    if args.variant_runs:
+        specs = [(lbl.strip(), Path(p.strip()))
+                 for lbl, _, p in (s.partition("=") for s in args.variant_runs.split(";") if s.strip())]
+        print(f"variant runs: {[(l, r.name) for l, r in specs]}\nout      : {args.out}")
+        fig_variants(specs, args.out)
+        if not (args.train_run or args.rl_run or args.seed_runs):
+            return  # only the variant figure was requested
 
     if args.seed_runs:
         runs = [Path(p.strip()) for p in args.seed_runs.split(",") if p.strip()]

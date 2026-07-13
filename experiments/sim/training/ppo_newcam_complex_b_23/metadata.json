@@ -9,8 +9,8 @@
   "cage_yaml": "/home/admit/Samuel/thesis_repo/cage/cage.yaml",
   "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
   "scenario_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
-  "policy_checkpoint": "policy/checkpoints/cobraflex_ppo_newcam_lane_23.zip",
-  "policy_checkpoint_hash": null,
+  "policy_checkpoint": "experiments/sim/training/ppo_newcam_complex_b_23/checkpoints_peak/ppo_newcam_complex_b_23_350208_steps.zip",
+  "policy_checkpoint_hash": "c3c79abaeb67d2c0ab98bb0131af879ee22eaed5c2a2e6fba437e3affd06e944",
   "seed": 23,
   "platform": "sim",
   "total_timesteps": 1000000,
@@ -57,5 +57,16 @@
       0.8
     ]
   },
-  "status": "failed"
+  "status": "failed",
+  "curve_peak": {
+    "ep_rew_mean": 782.6,
+    "timestep": 350208
+  },
+  "peak_ep_rew_mean": 782.6,
+  "peak_checkpoint_timestep": 350208,
+  "last_logged_timestep": 394240,
+  "stop_reason": "manual stop ~394k of the 1M plan: did not converge to a stable 1M policy. ep_rew_mean peaked 782.6 @ 350k (the latest peak of the battery) then decayed -24% (594.0 @ 394k) as exploration contracted (std 0.99->0.03); same exploration-collapse signature as seeds 2024/42/123/666 -> checkpoint-on-peak selection. Constraint-respecting throughout (int_rate C-01/C-03/C-05 ~ 0; only C-06 active, ~65% mean).",
+  "metadata_note": "trainer wrote status:failed; peak block added post-hoc (E5 Gazebo 1-D multiseed, 13.07.2026). Reproducibility pins (git_commit, hashes) are the trainer's.",
+  "checkpoint_selection": "checkpoint-on-peak",
+  "policy_checkpoint_source": "operator-rescued max-reward peak; the zip's num_timesteps==350208 == the ep_rew_mean peak row of learning_curve.csv (checkpoint saved on the peak)"
 }

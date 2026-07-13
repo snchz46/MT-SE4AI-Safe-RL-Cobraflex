@@ -633,9 +633,64 @@ CHANGELOG 28.06). SC-PERT-03 is **N/A** for the steering-only action space (D-49
 SR-012/013/014 are **no longer INCOMPLETE** (coverage closed by the SC-PERT-08/09/10 run bump).
 Carried into the posterior work, documented and non-vetoing: (a) SR-010's in-ODD co-activation
 breaches (a real CL-B finding, plausibly improved by better perception); (b) multi-seed N=5
-(**4/5 seeds now trained** — E5, 11.07.2026, ch.7 §7.5.3 + Fig. 7.8; the verdict of record stays
-the seed-2024 run; the 123/666 nominal evals and seed 23 remain host-deferred); (c) the D-43 under-read closure via better perception —
-a temporal estimator or the 2-D-action Isaac retrain (D-49, docs/13–14).
+(**closed — 5/5 trained + per-seed nominal evals, E5 13.07.2026**, §8.5 below + ch.7 §7.5.3;
+the verdict of record stays the seed-2024 run); (c) the D-43 under-read closure via better
+perception — a temporal estimator or the 2-D-action retrain (D-49, docs/13–14) — **now with two
+in-vivo nominal instances** (§8.5: the seed-23/666 stops at the s≈13.4 recovery-basin edge and
+the 2-D 500k false-belief stop).
+
+### 8.5 E5 robustness results — multi-seed N=5 and the seed-2024 variants (13.07.2026)
+
+Posterior robustness pass on the E-main configuration; **nothing here touches the GE4-V2
+verdict of record** (seed 2024, 297k). Full numbers + per-seed footnotes: ch.7 §7.5.3
+(battery table) and §7.5.4 (variants); figures Fig. 7.8 (5 seeds) / Fig. 7.9 (variants);
+runs `experiments/sim/runs/rl_newcam_eval_{123_cb139k,666_cb226k,23_cb350k,2024v2_cb234k}_4k4{,_mon}`
+and `experiments/sim/eval_gz2d/rl_gz2d_eval_2024_{525k,500k}_4k4*` (+ `*_r2` replication
+runs for 666/23 and both 2-D ckpts, same day).
+
+- **Training (5/5):** every seed rises → peaks → decays (exploration collapse; none converge
+  over the 1M plan) — peak `ep_rew_mean` ∈ [713, 823] @ [120k, 350k]; checkpoint-on-peak is
+  the selection protocol, seed-independently. Training cage signal is C-06-only for all five.
+- **Eval verdict (SC-NOM-01, enf+mon per seed):** **3/5 constraint-respecting** (2024, 42,
+  123 — ~4.9 laps, 0 emergencies, C-06 the only material rule; C-06's tracking contribution
+  grows with seed jerkiness: 12.9→10.9 / 16.5→13.3 / 26.2→17.4 mm mon→enf). **666 =
+  cage-dependent** (the F-track basin reappears under camera, on a different seed: bare it
+  drives off-lane — mean |ey| 178.8 mm, max 312 mm — enforcement escalates C-03→C-05 into a
+  controlled stop at ey 0.122 m, no contact). **23 = cage–CV conflict, a new case**: bare it
+  drives the full horizon clean (max |ey| 53.6 mm), but enforcement *degrades* it — C-02/C-03
+  overrides on a confident-but-wrong CV read steer against the policy's corrective command in
+  the hard section until C-05 stops it (safe, but counterproductive). **Replicated 13.07
+  (r2 runs):** 666 reproduces tightly (stop s=13.5–13.7, ey 0.116–0.122 both runs; mon
+  178.3/178.8 mm — deterministic); 23 is **intermittent** — its replica drove 2.44 clean
+  laps then C-05 fired on a *centered* car at s=8.75 (true ey 0.033), the same CV false
+  positive its monitoring logs stably at that section (first flag s=8.86/8.77 across both
+  mon runs). 3 of the 4 observed 1-D stops land at **s≈13.4, ey≈0.12 m — the D-43/H-12
+  recovery-basin edge** — while the three healthy seeds clear that section ~5×/eval: the
+  section is complex_b's per-seed discriminator, and the GE4-V2 under-read residual is now
+  an *active mechanism* observed (and replicated) in nominal runs. Methodological: the
+  training curve alone misclassified both (C-06-only, "healthy") — **basin classification
+  needs the eval, not the curve** (D-36 extended).
+- **Monitoring C-05 counters are counterfactual and latch** (once flagged, they stay on):
+  report/read the *first-flag* step, not the count (666-mon first flag s=13.64 @ true
+  ey 0.110 = real drift; 23-mon first flag s=8.86 @ true ey 0.040 = CV false positive).
+- **v2 (random_start_s, D-58):** completes, constraint-respecting both modes (5.12 laps, 0
+  emergencies), but worse tracking (16.7 vs 10.9 mm) + heavier C-06 (77.6 vs 43.5 %) and a
+  lower peak (773 vs 823). D-58 is a tool for *under-visited blocking sections* (the Isaac
+  case); where fixed-spawn already learns the full circuit it buys nothing.
+- **2-D (steer+throttle):** reward peak clearly below 1-D (654 @ 510k) — throttle didn't pay
+  on complex_b (fixed 0.2 m/s is kinematically sufficient here, unlike Isaac D-54). Driving
+  competence is real and replicated (monitoring 525k: 4.66 laps, 21.0 mm, speed 0–0.38 m/s,
+  slows for curves; r2 4.52/20.0 mm same speed profile; 500k mon: 3.83 laps, 18.0 mm, slower
+  at 0.156 mean), but **no 2-D enforcement run completes the horizon** (4 runs across both
+  ckpts: 26 steps / 0.62 / 0.91 / 1.52 laps) — every stop has the C-04+C-05 signature on a
+  *centered* car (ey ≤ 0.03) at >0.25 m/s, at varying track positions. Two mechanisms, one
+  root: direct envelope crossing (525k: 0.438 m/s > v_warning 0.4 on the opening straight)
+  and C-05 fires on marginal CV reads that stay sub-threshold at 0.2 m/s (500k: stop at
+  ey 0.013; the 525k monitoring pins that false belief stably at s≈12.3–12.4) —
+  `[provisional]` thresholds calibrated for the 0.2 m/s 1-D regime. First real activation
+  of the longitudinal C-04/C-06 arbitration (285–526 throttle-corrected steps per 500k run).
+  Confirms D-59: **review the cage speed thresholds + scenario `vehicle.speed_mps`
+  assumptions before any 2-D campaign**.
 
 **Command summary** (detail + rationale below; all on **Ubuntu 24.04 + ROS2 Jazzy**, source
 ROS2 first). `CFG=$(ros2 pkg prefix cobraflex_rl)/share/cobraflex_rl/config`:
@@ -691,9 +746,12 @@ ros2 run rviz2 rviz2 -d src/cobraflex/rviz/cage_viz.rviz --ros-args -p use_sim_t
 > [docs/13 §Command reference](13_isaacsim_environment.md#command-reference-what-launches-what).
 
 **2-D posterior variant (`train_ppo_camera_2d.yaml`).** Swaps the frozen 1-D steering-only
-action for the full-authority 2-D `[steer, throttle]` (throttle → cage scale `u` →
-`speed = 0.5·u`, so the cage speed rules C-04/C-05/C-06 arbitrate for real and a true stop is
-commandable — SR-009 well-posed). It ports only the **backend-agnostic** Isaac 2-D findings —
+action for the 2-D `[steer, throttle]` (throttle → cage scale `u` →
+`speed = max_speed_mps·u`; a true stop is commandable — SR-009 well-posed).
+`max_speed_mps` was **revised 0.5 → 0.25 (13.07.2026)** after the full-authority run's
+enforcement evals never completed under the canonical (0.2-regime-calibrated,
+`[provisional]`) speed envelope (§8.5); the 0.5 full-authority variant returns after the
+D-59 speed-envelope calibration. It ports only the **backend-agnostic** Isaac 2-D findings —
 the 2-D action (D-50), `ent_coef 0.01` (D-52), and the `throttle_delta` / `stall_penalty`
 reward terms (D-50/D-56) — and deliberately **drops** the Isaac-renderer/kinematic
 calibrations (`yaw_gain 2.4` D-54, `cage_isaac.yaml` 40° D-55, heading de-bias D-57): Gazebo's
@@ -873,13 +931,24 @@ One `seed` seeds Python/NumPy/Torch, the action space, the env's spawn
 perturbation, and the DR draw; `metadata.json` pins the git commit and the
 cage/scenario/checkpoint hashes. Two runs with the same seed and commit reproduce
 the same learning curve up to Gazebo's own timing nondeterminism (the reason a
-multi-seed N=5 confirmation is the planned robustness check — 4/5 seeds trained as
-of E5, ch.7 §7.5.3; all four collapse late and none converge to 1M).
+multi-seed N=5 confirmation was run as the robustness check — closed at E5,
+13.07.2026, §8.5 + ch.7 §7.5.3: all five collapse late, none converge to 1M, and
+the per-seed nominal evals split the battery 3/5 constraint-respecting, 1/5
+cage-dependent (666), 1/5 cage–CV conflict (23)).
 
 --->
 
 ## Version log
 
+- **v0.6.2 (2026-07-13):** **§8.5 added — E5 robustness closed (verdicts replicated, `*_r2`).**
+  Multi-seed N=5 complete (5/5 trained + per-seed SC-NOM-01 evals): 3/5 constraint-respecting,
+  666 cage-dependent (F-basin reappears under camera; stop reproduces deterministically at
+  s≈13.5), 23 cage–CV conflict (first observed negative cage interference; intermittent
+  between the two CV-weak sections s≈8.8/13.4); training curves don't
+  classify the basin — the eval does. Seed-2024 variants evaluated: v2 random-start (D-58
+  buys nothing on Gazebo) and 2-D steer+throttle (competent in monitoring, stopped by the
+  canonical C-04/C-05 speed envelope in enforcement — D-59 review confirmed as prerequisite
+  for a 2-D campaign). GE4-V2 verdict of record untouched.
 - **v0.6.1 (2026-07-07):** doc-consistency pass — reconciled two stale run-data references left
   from before the §8.4 GE4-V2 rewrite. §8.2's scope note claimed the GE4 campaign had **not**
   been re-run on 297k and that `docs/07` / Ch.8 §8.9 still carried the 139k verdict; it now

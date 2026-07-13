@@ -9,8 +9,8 @@
   "cage_yaml": "/home/admit/Samuel/thesis_repo/cage/cage.yaml",
   "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
   "scenario_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
-  "policy_checkpoint": "policy/checkpoints/cobraflex_ppo_newcam_lane_2024_v2.zip",
-  "policy_checkpoint_hash": null,
+  "policy_checkpoint": "experiments/sim/training/ppo_newcam_complex_b_2024_v2/checkpoints_peak/ppo_newcam_complex_b_2024_v2_234496_steps.zip",
+  "policy_checkpoint_hash": "2813d13ea5cd3d1e2b138b17a47864dce39a277d332ef3c09569efb5567c4a73",
   "seed": 2024,
   "platform": "sim",
   "total_timesteps": 1000000,
@@ -57,5 +57,16 @@
       0.8
     ]
   },
-  "status": "failed"
+  "status": "failed",
+  "curve_peak": {
+    "ep_rew_mean": 773.2,
+    "timestep": 234496
+  },
+  "peak_ep_rew_mean": 773.2,
+  "peak_checkpoint_timestep": 234496,
+  "last_logged_timestep": 316416,
+  "stop_reason": "manual stop ~316k of the 1M plan: did not converge. ep_rew_mean peaked 773.2 @ 234k then decayed -16% (647.9 @ 316k) as exploration contracted (std 0.99->0.04); same exploration-collapse signature as the fixed-start battery -> checkpoint-on-peak selection. NB: trained with spawn_perturbation.random_start_s true (D-58), so episodes mix easy straights + hard corners and the curve is NOT 1:1 comparable with the fixed-start v1 (822.9 @ 297k); judge by nominal eval. Constraint-respecting throughout (int_rate C-01/C-03/C-05 ~ 0; only C-06 active, ~80% mean).",
+  "metadata_note": "trainer wrote status:failed; peak block added post-hoc (E5, 13.07.2026). Variant of the seed-2024 E-main with random_start_s: true; train_config_hash pins the edited YAML (the repo's train_ppo_camera.yaml keeps random_start_s: false). Reproducibility pins are the trainer's.",
+  "checkpoint_selection": "checkpoint-on-peak",
+  "policy_checkpoint_source": "operator-rescued max-reward peak; the zip's num_timesteps==234496 == the ep_rew_mean peak row of learning_curve.csv (checkpoint saved on the peak)"
 }

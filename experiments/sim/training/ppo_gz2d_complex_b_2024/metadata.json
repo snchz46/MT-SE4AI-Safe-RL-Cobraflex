@@ -9,8 +9,8 @@
   "cage_yaml": "/home/admit/Samuel/thesis_repo/cage/cage.yaml",
   "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
   "scenario_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
-  "policy_checkpoint": "policy/checkpoints/ppo_gz2d_complex_b_2024.zip",
-  "policy_checkpoint_hash": null,
+  "policy_checkpoint": "experiments/sim/training/ppo_gz2d_complex_b_2024/checkpoints_peak/ppo_gz2d_complex_b_2024_525000_steps.zip",
+  "policy_checkpoint_hash": "dadb94de9ac31db04203722f021a0fbe342d443b3cc055b218501239db28dc3c",
   "seed": 2024,
   "platform": "sim",
   "total_timesteps": 1000000,
@@ -64,5 +64,16 @@
       0.8
     ]
   },
-  "status": "failed"
+  "status": "failed",
+  "curve_peak": {
+    "ep_rew_mean": 654.4,
+    "timestep": 509952
+  },
+  "peak_ep_rew_mean": 654.4,
+  "peak_checkpoint_timestep": 525000,
+  "last_logged_timestep": 628736,
+  "stop_reason": "manual stop ~629k of the 1M plan: did not converge. ep_rew_mean peaked 654.4 @ 510k then decayed -29% (467.8 @ 629k) as exploration contracted (std 0.99->0.05); same exploration-collapse signature as the 1-D battery -> checkpoint-on-peak selection. 2-D reward peak clearly below the 1-D seed-2024 runs (654 vs 822.9 v1 fixed-start / 773.2 v2 random-start) - the throttle dimension did not pay off in reward on complex_b. Trained with random_start_s true (in the committed 2-D config), so the curve mixes spawn difficulties; judge by nominal eval.",
+  "metadata_note": "trainer wrote status:failed; peak block added post-hoc (E5 Gazebo 2-D, 13.07.2026). Periodic checkpoints bracket the curve peak (509952): 500000 (curve ~600-608 nearby) and 525000 (curve ~638-646); 525000 designated peak checkpoint, 500000 kept as contrast. Reproducibility pins are the trainer's.",
+  "checkpoint_selection": "checkpoint-on-peak",
+  "policy_checkpoint_source": "operator-rescued periodic checkpoints bracketing the ep_rew_mean peak; zips' num_timesteps==500000/525000 (checkpoint_freq 25000; no exact-peak save exists at 509952)"
 }

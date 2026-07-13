@@ -31,6 +31,130 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [13.07.2026] — 2-D action authority capped: `max_speed_mps` 0.5 → 0.25 (train config revision for the next 2-D run)
+
+**Document(s) affected:** `src/cobraflex_rl/config/train_ppo_camera_2d.yaml` (action block + header rationale), `docs/11_camera_rl_training.md` (2-D posterior-variant paragraph). **No cage constant, hazard/SR table, scenario criterion or code changed.**
+**Phase:** posterior (E5 — Gazebo 2-D baseline, D-50/D-59)
+**Gate context:** after Gate G4; design revision for the next 2-D training run (training host).
+**Author:** Samuel Sanchez
+
+### Change
+
+`action.max_speed_mps` in the Gazebo 2-D train config revised **0.5 → 0.25**. The header
+and action-block comments now carry the revision rationale; the original intent ("0.5 =
+C-04 `v_max_straight` so the cage speed rules arbitrate for real") is preserved in the
+comment as the superseded design.
+
+### Rationale
+
+The full-authority run's evals (entry below) showed that with the cage's speed thresholds
+still `[provisional]` and calibrated at the 1-D 0.2 m/s regime, the intended arbitration is
+a wall: **no 2-D enforcement eval completed** (4 runs: 26 steps / 0.62 / 0.91 / 1.52 laps),
+every stop C-04+C-05 on a *centered* car at >0.25 m/s, while monitoring showed competent
+variable-speed driving. Capping the **action** (not the cage) keeps the policy inside the
+validated envelope by construction, preserves the 2-D case for existing (slow-for-curves,
+commandable stop → SR-009), avoids loosening safety-traced thresholds to fit the policy,
+and should reduce the 2-D exploration burden (less throttle range to explore, fewer
+emergency terminations during training). The 0.5 full-authority variant returns **after**
+the D-59 speed-envelope calibration for the >0.2 regime.
+
+### Impact
+
+Next 2-D training run (training host) picks this up automatically; suggested run-id
+`ppo_gz2d_complex_b_2024_v2`. Existing `ppo_gz2d_complex_b_2024` artifacts/evals unchanged
+(they document the full-authority baseline). `metadata.json` will record the new contract
+via the `action` block + `train_config_hash` (07.07 provenance hardening).
+
+### Verification
+
+Config parses (`yaml.safe_load`); `pytest policy/tests/test_eval_policy_2d.py` → 5 passed
+(the eval action-space guard is shape-based, unaffected by the scale). No traceability
+artefact touched.
+
+---
+
+## [13.07.2026] — E5 robustness closed: multi-seed N=5 complete (5/5 + evals), seed-2024 variants (v2 random-start, 2-D) documented + evaluated
+
+**Document(s) affected:** `manuscript/chapters/chapter_07_training_specification.md` (§7.2.7, §7.5.3 table/prose/footnotes/Fig 7.8 caption, **new §7.5.4**, internal appendix), `manuscript/chapters/chapter_08_experimental_evaluation.md` (GE4-closure list: (d) closed), `docs/11_camera_rl_training.md` (**new §8.5**, posterior list (b)/(c), Q6, version log v0.6.2), `tools/plot_f3_figures.py` (legend "pico"→"peak"; **new `fig_variants` + `--variant-runs`**), `manuscript/figures/fig_7_8_multiseed_newcam.png` (regenerated, 5 seeds, English), **new `manuscript/figures/fig_7_9_variants_2024.png`**, `experiments/README.md` (`sim/eval_gz2d/`, `ppo_gz2d_*`), `experiments/sim/training/{ppo_newcam_complex_b_23,ppo_newcam_complex_b_2024_v2,ppo_gz2d_complex_b_2024,ppo_gz2d_complex_b_2024_1M}/metadata.json` (rescued-peak / superseded blocks), 6 eval-run `metadata.json` seed corrections (noted). **New evidence:** `experiments/sim/runs/rl_newcam_eval_{123_cb139k,666_cb226k,23_cb350k,2024v2_cb234k}_4k4{,_mon}` (8 runs) + `experiments/sim/eval_gz2d/rl_gz2d_eval_2024_{525k,525k_mon,500k}_4k4` (3 runs) + 8 `*_r2` replication runs (666/23 and both 2-D ckpts, enf+mon incl. the first 500k mon), all SC-NOM-01 4400 steps, dev host, 13.07.2026. No hazard/SR/cage/scenario/metric criterion changed; no CSV regenerated.
+**Phase:** posterior (E5 — camera robustness; the N=5 check deferred at G4, now closed)
+**Gate context:** after Gate G4 (closed 02.07.2026). Robustness/reproducibility evidence; does **not** reopen G4 — the verdict of record stays GE4-V2 on the seed-2024 297k E-main.
+**Author:** Samuel Sanchez
+
+### Change
+
+**Multi-seed N=5 closed.** Seed **23** trained (peak **782,6 @ 350 208**, stopped ~394k,
+−24 %; checkpoint rescued, sha256 `c3c79aba…`) — same exploration-collapse signature as the
+other four. Nominal **SC-NOM-01 evals (enforcement + monitoring) run for the three pending
+peaks (123, 666, 23)** on the dev host (Gazebo headless, 4400 steps each; `eval_policy`).
+§7.5.3 table filled; Fig 7.8 regenerated with all five seeds (peaks marked, English labels).
+
+**Seed-2024 variants documented + evaluated (new §7.5.4 / docs/11 §8.5, Fig 7.9):**
+
+- **v2 (`random_start_s`, D-58):** peak 773,2 @ 234 496 (ckpt rescued, sha256 `2813d13e…`);
+  eval enf **5,12 laps / 16,7 mm / 0 emergencies / C-06 77,6 %**, mon clean. The D-58 spawn
+  curriculum **does not improve** the Gazebo 1-D E-main (lower peak, worse tracking, heavier
+  C-06) — it is a tool for under-visited blocking sections (the Isaac case), absent here.
+- **2-D (`train_ppo_camera_2d.yaml`, D-50/D-59):** full run `ppo_gz2d_complex_b_2024` ~629k,
+  peak **654,4 @ 509 952** (periodic ckpts 500k/525k bracket it; 525k designated, sha256
+  `dadb94de…`; the ~100k dev-host pilot `…_1M` marked superseded). Reward clearly below 1-D
+  (654 vs 823/773) — **the throttle dimension did not pay on complex_b**. Eval: monitoring
+  **4,66 laps / 21,0 mm / speed 0–0,38 m/s (slows for curves)** — competent variable-speed
+  driving; enforcement **stopped by the canonical speed envelope** (525k: C-04+C-05 @ step 26
+  at 0,438 m/s > `v_warning` 0,4; 500k: 1,52 laps then C-05 on a centered car, ey 0,013 — CV
+  false belief). First real activation of the longitudinal C-04/C-06 arbitration (526
+  throttle-corrected steps @ 500k).
+
+**Replication (same day, `*_r2` runs):** the surprising verdicts were re-run end-to-end
+(666 enf+mon, 23 enf+mon, 2-D 525k/500k enf+mon — 8 runs, fresh Gazebo, brake-between-runs
+mitigation). **666 reproduces deterministically** (stop s=13.5–13.7 at ey 0.116–0.122, C-03→
+C-05, both runs; mon 178.3/178.8 mm). **23's monitoring reproduces** (4.93/4.99 clean laps;
+CV false positive stable at s=8.86/8.77) but its **enforcement outcome is intermittent**
+(replica: 2.44 clean laps, then C-05 on a *centered* car at s=8.75 — the second CV-weak
+section actuating directly, vs the s≈13.4 drift of the first run). **2-D:** monitoring
+replicates (525k r2: 4.52 laps / 20.0 mm, same speed profile; 500k mon new: 3.83 laps /
+18.0 mm at 0.156 mean); **no 2-D enforcement run completes** (4 runs: 26 steps / 0.62 /
+0.91 / 1.52 laps), every stop C-04+C-05 on a centered car at >0.25 m/s at varying positions.
+3 of the 4 observed 1-D stops land at the s≈13.4 recovery-basin edge.
+
+### Rationale
+
+Closes GE4 pending item (d) (N=5 robustness) and scores the two posterior config variants
+the user trained. **Central findings:** (1) the exploration collapse is seed-independent
+(5/5; checkpoint-on-peak validated as protocol); (2) the **eval — not the training curve —
+classifies the basin**: 666 and 23 look identical to the healthy seeds in training
+(C-06-only) yet split in eval — **666 = cage-dependent** (bare: 312 mm off-lane excursion;
+caged: controlled C-05 stop at ey 0,122 — the F-track basin reappears under camera on a
+different seed, and the cage's protective value becomes visible in nominal), **23 = cage–CV
+conflict** (bare: clean 4,99 laps, max 53,6 mm; caged: C-02/C-03 overrides on a confident
+wrong CV read steer against the policy's corrective command until C-05 stops it — the first
+observed **negative cage interference**, safe but counterproductive); (3) **both stops land
+at s≈13,4 / ey≈0,12 m — the D-43/H-12 recovery-basin edge** — making the GE4-V2 under-read
+residual an observed in-nominal mechanism; (4) monitoring C-05 counters latch (read
+first-flag, not counts); (5) the 2-D enforcement stops confirm **D-59**: cage speed
+thresholds (`[provisional]`, 0,2 m/s regime) + scenario speed assumptions must be reviewed
+before any 2-D campaign.
+
+### Impact
+
+GE4-V2 verdict of record unchanged (seed 2024; SR verdicts in docs/07 untouched — these are
+posterior robustness runs, not campaign evidence). The 23/666 findings sharpen the D-43
+under-read thread carried in the posterior list (docs/11 §8.4→§8.5). The 2-D thread now has
+a Gazebo baseline number to compare against Isaac kin2. Follow-ups (posterior, optional):
+temporal CV estimator at the s≈13,4 section; cage speed-envelope calibration for the 2-D
+regime (prerequisite for any 2-D campaign, D-59).
+
+### Verification
+
+`python tools/check_traceability.py` → PASS (no H/SR/C/SC/M artefact changed). 19 eval runs
+completed with `status: completed`; the one infra failure (stale-spawn race: a run starting
+while the previous run's vehicle still rolled) was detected (step-1 off-road termination),
+the bogus dir deleted and the run re-executed cleanly (subsequent chained runs brake the car
+via `cmd_vel` between runs). The four surprising verdicts (666, 23, 2-D×2) were **replicated
+end-to-end** the same day (`*_r2`, see Change). Figures re-rendered and visually checked
+(5 peaks marked; variant curves + peaks consistent with the tables).
+
+---
+
 ## [11.07.2026] — Gazebo 1-D multi-seed: seeds 123 & 666 trained (peaks rescued), Fig 7.8 + §7.5.3 table updated
 
 **Document(s) affected:** `manuscript/chapters/chapter_07_training_specification.md` (§7.2.7, §7.5.3 table + prose + Fig 7.8 caption, internal appendix), `manuscript/chapters/chapter_08_experimental_evaluation.md` (GE4-closure pending-list (d) + appendix), `docs/11_camera_rl_training.md` (posterior-work list, Q6), `tools/plot_f3_figures.py` (`fig_multiseed` peak markers), `manuscript/figures/fig_7_8_multiseed_newcam.png` (regenerated, 4 seeds), `experiments/sim/training/ppo_newcam_complex_b_{123,666}/metadata.json` (rescued-peak block). No hazard/SR/cage/scenario/metric criterion changed; no CSV regenerated.

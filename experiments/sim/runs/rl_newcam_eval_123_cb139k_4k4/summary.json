@@ -1,0 +1,22 @@
+{
+  "total_steps": 4400,
+  "episodes": 1,
+  "completed_laps": 4.9203514534366874,
+  "mean_ey_m": 0.014786324401720605,
+  "mean_abs_ey_m": 0.01735428561696748,
+  "max_abs_ey_m": 0.060580080471623145,
+  "mean_epsi_rad": 0.009149620945305543,
+  "mean_abs_epsi_rad": 0.043556230062788734,
+  "emergency_steps": 0,
+  "intervention_steps": 3958,
+  "intervention_rate_pct": 89.95454545454545,
+  "interventions_per_rule": {
+    "C-06": 3955,
+    "C-02": 56
+  },
+  "cycle_dt_s": 0.1,
+  "duration_s": 440.0,
+  "run_id": "rl_newcam_eval_123_cb139k_4k4",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement"
+}

@@ -1,0 +1,20 @@
+{
+  "run_id": "rl_newcam_eval_123_cb139k_4k4_mon",
+  "scenario_id": "SC-NOM-01",
+  "mode": "monitoring",
+  "timestamp_iso": "2026-07-13T06:36:05.529486+00:00",
+  "duration_s": 440.0,
+  "git_commit": "1ef6eee0478730d198df26f6ff1f538b7f268134",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "policy_checkpoint": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/experiments/sim/training/ppo_newcam_complex_b_123/checkpoints_peak/ppo_newcam_complex_b_123_139264_steps.zip",
+  "policy_checkpoint_hash": "a7069ffea794b9b9d309b33002fc6e67cdd686589f7f2e2f54326e7f25bd7fd6",
+  "centerline_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "scenario_yaml": "",
+  "scenario_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "rep": 0,
+  "seed": 123,
+  "platform": "sim",
+  "status": "completed",
+  "seed_note": "seed corrected post-hoc 23->123 (13.07.2026): eval_policy reads 'seed' from the shared train_ppo_camera.yaml, which carried seed 23 at eval time. Inert on the nominal path (deterministic policy, DR off, spawn perturbation + random_start_s disabled); the policy's training seed is authoritative."
+}

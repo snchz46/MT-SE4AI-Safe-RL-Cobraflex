@@ -15,7 +15,10 @@ Experimental data and analysis scripts.
   evals (`rl_eval_*`), track-'E' camera evals (`rl_cam_eval_*`, `rl_newcam_eval_*`),
   CV-estimator oracle validation (`cv_estimator_val_*`).
 - `sim/training/` — training runs with metadata + learning curves (`ppo_train_*`
-  F-track; `ppo_newcam_*` track 'E'; peak checkpoints under `checkpoints_peak/`).
+  F-track; `ppo_newcam_*` track 'E'; `ppo_gz2d_*` Gazebo 2-D posterior; peak
+  checkpoints under `checkpoints_peak/`).
+- `sim/eval_gz2d/` — Gazebo 2-D (steer+throttle) posterior-baseline evals
+  (`rl_gz2d_eval_*`, D-49/D-59; not GE4 evidence).
 - `sim/campaign_e_v2/` — **GE4-V2, the verdict of record** (track 'E', complex_b
   297k E-main): `campaign_report.json` (per-scenario/per-SR/global roll-up),
   `campaign_runs.csv`, `failure_mode_breakdown.json` (failure classes + pass-mode

@@ -714,9 +714,12 @@ SC-PERT-08/09/10 (20→25) cerró el gate D-29 que dejaba SR-012/014 INCOMPLETE 
 **Estado de cierre GE4 (V2, hecho):** (a) reconciliación de criterio propio aplicada
 (D-47 SR-002/003/011; D-39 out-of-band SR-006); (b) `labelled_arms` cableado
 (SC-PERT-05); (c) IC del grid de SC-EDGE-05 inyectadas + contadores; (e) **campaña GE4
-re-ejecutada sobre el E-main 297k** (V2, 1970 runs, `campaign_e_v2`). Pendiente: (d)
-multi-seed N=5 (**4/5 entrenadas** — E5, §7.5.3; evals de 123/666 + semilla 23
-diferidos por restricción de host); SC-PERT-03 = N/A por espacio de
+re-ejecutada sobre el E-main 297k** (V2, 1970 runs, `campaign_e_v2`); (d)
+**multi-seed N=5 completo** (E5, 13.07.2026 — 5/5 entrenadas + eval nominal
+enf+mon por semilla, §7.5.3: 3/5 constraint-respecting, la 666 *cage-dependent*
+—la cuenca del baseline F reaparece bajo cámara— y la 23 con **interferencia
+negativa cage–CV** en la sección dura, primera observada; el veredicto de récord
+sigue siendo la seed 2024). SC-PERT-03 = N/A por espacio de
 acción solo-dirección (D-49). El **hallazgo de tronco** se mantiene: bajo cámara la
 cage **no** deja salir el sistema del carril in-ODD (0 contactos, M-S1 < d_max) —
 convierte la degradación de percepción en **parada controlada**, no en excursión, y

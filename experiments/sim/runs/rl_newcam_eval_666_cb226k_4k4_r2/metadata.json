@@ -1,0 +1,20 @@
+{
+  "run_id": "rl_newcam_eval_666_cb226k_4k4_r2",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-07-13T07:40:50.051209+00:00",
+  "duration_s": 61.2,
+  "git_commit": "1ef6eee0478730d198df26f6ff1f538b7f268134",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "policy_checkpoint": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/experiments/sim/training/ppo_newcam_complex_b_666/checkpoints_peak/ppo_newcam_complex_b_666_226304_steps.zip",
+  "policy_checkpoint_hash": "07166bebdea30e3cf58247c249dc28cb3acfeeb7a8e16391f5d1bf6daaf5332d",
+  "centerline_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "scenario_yaml": "",
+  "scenario_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "rep": 0,
+  "seed": 666,
+  "platform": "sim",
+  "status": "completed",
+  "seed_note": "seed corrected post-hoc 23->666 (13.07.2026): eval_policy reads 'seed' from the shared train_ppo_camera.yaml (seed 23 at eval time). Inert on the nominal path; the policy's training seed is authoritative."
+}

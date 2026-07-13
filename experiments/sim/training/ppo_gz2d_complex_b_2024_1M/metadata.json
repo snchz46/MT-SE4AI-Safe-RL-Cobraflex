@@ -64,5 +64,8 @@
       0.8
     ]
   },
-  "status": "failed"
+  "status": "failed",
+  "last_logged_timestep": 100176,
+  "stop_reason": "dev-host pilot of the 2-D config (E5 Gazebo 2-D pilot, commit 37bbeb3f) stopped ~100k with the curve still rising (ep_rew_mean 76 @ 100k); superseded by the full run ppo_gz2d_complex_b_2024 on the training host. No peak rescue.",
+  "metadata_note": "superseded-by: ppo_gz2d_complex_b_2024 (same config, training host, ~629k). Note added post-hoc 13.07.2026."
 }

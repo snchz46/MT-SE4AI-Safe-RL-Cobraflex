@@ -256,10 +256,10 @@ Semilla principal **2024** en ambos tracks (precedente D-36). El **baseline
 F** está caracterizado con **N = 5** (seeds 42, 123, 2024, 23, 666), que
 revela dos cuencas de convergencia (*constraint-respecting* vs
 *cage-dependent*, §7.5.3). El **E-main de cámara** se reporta sobre la
-semilla 2024; su **multi-seed N=5** (misma batería) está **en curso — 4 de 5
-entrenadas (2024, 42, 123, 666), falta la 23; evals de 123/666 pendientes** (coste
-de cómputo por el límite de tiempo-real de la cámara, §7.2.8). El contraste
-por-semilla se desarrolla en §7.5.3.
+semilla 2024; su **multi-seed N=5** (misma batería) está **completo — 5/5
+entrenadas (2024, 42, 123, 666, 23) y evaluadas** (eval nominal SC-NOM-01
+por semilla, §7.5.3). El contraste por-semilla se desarrolla en §7.5.3; las
+variantes posteriores de la 2024 (random start y acción 2-D) en §7.5.4.
 
 ### 7.2.8 Checkpoints y registro
 
@@ -509,81 +509,107 @@ Tres observaciones del log por-paso (`cage_status.csv`):
 Gazebo (vehículo 1:14) y RViz (modelo del robot y frames TF). La vista no
 depende del checkpoint.*
 
-### 7.5.3 Variabilidad entre semillas (track 'E' cámara — en curso; baseline F)
+### 7.5.3 Variabilidad entre semillas (track 'E' cámara; baseline F)
 
-**Multi-seed de cámara (N = 5 previsto; 4/5 entrenadas).** Replicando el protocolo
-del baseline F, el E-main se entrena sobre la batería **{2024, 42, 23, 666, 123}**
-(la misma que F, para que el contraste E↔F sea comparable, §7.2.7). **Entrenadas 4
-de 5** (2024, 42, 123, 666); falta la 23. **Las cuatro semillas colapsan tarde por
-contracción de exploración y ninguna converge al plan de 1M**: se detienen entre
-~198k (123) y ~663k (2024) → selección por **checkpoint-en-pico** en todas. Hay
-**notable variabilidad de semilla en la altura y el momento del pico**
-(pico `ep_rew_mean` ∈ [713, 823], paso del pico ∈ [120k, 297k]; Fig. 7.8), pero la
-**firma es idéntica** en las cuatro: subida → pico → decaimiento por sobre-recocido
-de `std`. El **eval nominal SC-NOM-01** de cada peak fija las columnas de
-evaluación: **2024 y 42 están evaluadas** (enforcement); **123 y 666 tienen el pico
-entrenado y rescatado (hash en su `metadata.json`), con eval nominal pendiente de
-Gazebo**; la 23 está sin entrenar.
+**Multi-seed de cámara (N = 5, completo).** Replicando el protocolo del
+baseline F, el E-main se entrena sobre la batería **{2024, 42, 23, 666, 123}**
+(la misma que F, para que el contraste E↔F sea comparable, §7.2.7). **Entrenadas
+las cinco. Las cinco colapsan tarde por contracción de exploración y ninguna
+converge al plan de 1M**: se detienen entre ~198k (123) y ~663k (2024) →
+selección por **checkpoint-en-pico** en todas. Hay **notable variabilidad de
+semilla en la altura y el momento del pico** (pico `ep_rew_mean` ∈ [713, 823],
+paso del pico ∈ [120k, 350k]; Fig. 7.8), pero la **firma es idéntica** en las
+cinco: subida → pico → decaimiento por sobre-recocido de `std`. El **eval
+nominal SC-NOM-01** de cada peak (enforcement + monitoring, 4400 pasos,
+13.07.2026) fija las columnas de evaluación de la tabla.
 
 | Métrica (track 'E', `complex_b`) | Seed 2024 | Seed 42 | Seed 23 | Seed 666 | Seed 123 |
 | --- | --- | --- | --- | --- | --- |
-| **Cuenca** | c-respecting | c-respecting | TBD | c-resp. (curva)¹ | c-resp. (curva)¹ |
-| `ep_rew_mean` (pico) | **822,9** | **720,2** | TBD | **713,2** | **787,1** |
-| Paso del checkpoint | 296 960 | 124 928 | TBD | 226 304 | 139 264 |
-| Intervención (fin sano, C-06) | ~40 % (@450k) | ~41 % (@400k) | TBD | ~55 % (@226k) | ~85 % (@139k) |
-| Intervención cage (**eval**) | 43,5 % (solo C-06) | 64,9 % (solo C-06) | TBD | pend. | pend. |
-| `mean \|ey\|` (**eval**) | 10,9 mm | 13,3 mm | TBD | pend. | pend. |
-| `max \|ey\|` (**eval**) | 48,2 mm | 41,6 mm | TBD | pend. | pend. |
-| Emergencias C-05 (**eval**) | 0 | 0 | TBD | pend. | pend. |
-| Vueltas (**eval**) | 4,88 | 4,91 | TBD | pend. | pend. |
+| **Cuenca** | c-respecting | c-respecting | **conflicto cage–CV**¹ | **cage-dependent**² | c-respecting |
+| `ep_rew_mean` (pico) | **822,9** | **720,2** | **782,6** | **713,2** | **787,1** |
+| Paso del checkpoint | 296 960 | 124 928 | 350 208 | 226 304 | 139 264 |
+| Intervención (fin sano, C-06) | ~40 % (@450k) | ~41 % (@400k) | ~44 % (@350k) | ~55 % (@226k) | ~85 % (@139k) |
+| Intervención cage (**eval**) | 43,5 % (solo C-06) | 64,9 % (solo C-06) | 42,2 % (C-06 + C-02/03/05) | 56,4 % (C-06 + C-03/05) | 90,0 % (C-06; C-02 1,3 %) |
+| `mean \|ey\|` (**eval**) | 10,9 mm | 13,3 mm | 22,9 mm³ | 20,7 mm³ | 17,4 mm |
+| `max \|ey\|` (**eval**) | 48,2 mm | 41,6 mm | 117,9 mm | 122,4 mm | 60,6 mm |
+| Emergencias C-05 (**eval**) | 0 | 0 | 1 (parada) | 1 (parada) | 0 |
+| Vueltas (**eval**) | 4,88 | 4,91 | 0,67 (parada C-05) | 0,69 (parada C-05) | 4,92 |
+| `mean \|ey\|` (**monitoring**) | 12,9 mm | 16,5 mm | **18,8 mm (limpia, max 53,6)** | **178,8 mm (max 312 — fuera de vía)** | 26,2 mm |
 
-¹ Cuenca de 666/123 clasificada por la **señal de cage en entrenamiento**
-(int_rate C-01/C-03/C-05 ≈ 0 en toda la curva; solo C-06 interviene); la
-confirmación por eval nominal está pendiente de Gazebo. Nótese que la 123 **era
-*cage-dependent* en el baseline F** (58,8 %, tabla inferior) y **bajo cámara no
-reproduce esa cuenca** (es la más a tirones, C-06 ~85 %, pero segura).
+¹ La 23 es un caso **nuevo, no visto en el baseline F**: la policy *sola*
+(monitoring) conduce el horizonte completo **limpia** (4,99 vueltas, max
+|ey| 53,6 mm; réplica 4,93 / 53,1 — reproducible), pero en enforcement el
+cage la degrada y acaba deteniéndola, con **desenlace intermitente entre
+runs** (réplica del 13.07: 2,44 vueltas vs 0,67 del run citado — jitter de
+timing de Gazebo). Las dos manifestaciones observadas comparten mecanismo —
+una lectura del estimador CV **errónea pero confiada** (`cv_ok=1`) en una de
+las dos secciones CV-débiles del circuito: (a) en el run citado, en s 13,0–13,4
+la policy comanda steer correctivo hacia dentro (+0,3…+1,0) y la acción
+aplicada sale opuesta o atenuada (overrides C-02/C-03 + límite C-06), ey crece
+0,057→0,118 m y C-05 para en el borde de la cuenca de recuperación (~0,120 m,
+D-43/H-12); (b) en la réplica, tras 2,4 vueltas limpias, C-05 dispara
+directamente en s=8,75 **con el coche centrado** (ey real 0,033) — el mismo
+falso positivo que su monitoring registra de forma contrafactual y estable en
+esa sección (primer flag en s=8,86/8,77, ey real 0,040/0,036, en los dos runs
+mon). Es una **interferencia negativa cage–percepción**: segura (paradas
+controladas, sin excursión) pero contraproducente en tarea.
+² La 666 **sí reproduce bajo cámara la cuenca *cage-dependent* del baseline F**
+(allí la exhibía la 123): en monitoring comete la excursión que el cage evita
+— |ey| medio 178,8 mm, max 312 mm, conduce fuera del carril gran parte del
+horizonte — y en enforcement el cage la escala C-03 → C-05 y la detiene en
+ey = 0,122 m sin contacto. El primer flag C-05 de su monitoring (s = 13,64,
+ey = 0,110) es deriva **real**, no falso positivo. Nótese el cruce: la 123,
+*cage-dependent* en F (58,8 %), bajo cámara es *constraint-respecting* (la
+más a tirones — C-06 90 %, C-02 1,3 % — pero completa y segura).
+³ Media sobre el run truncado (la parada llega en la primera vuelta).
 
-**Lectura de las curvas (4/5 entrenadas).** Las cuatro semillas comparten la
-**misma firma de seguridad en entrenamiento**: la cage queda **latente**
-(int_rate C-01/C-03/C-05 ≈ 0 en toda la curva) y **solo C-06** —el rate-limiter de
-suavidad— interviene. **Ninguna cae en la cuenca *cage-dependent*** bajo cámara; en
-particular la **123**, que **sí** era *cage-dependent* en el baseline F (58,8 % de
-intervención, |ey| 90,7 mm), bajo percepción de cámara es *constraint-respecting*,
-aunque **la más a tirones** de las cuatro (C-06 ~85 % vs ~40–55 % de las demás),
-coherente con que su pico alto (787) se sostiene con mucho trabajo del limitador.
-La cuenca *cage-dependent* del baseline F **no se reproduce** en el track de cámara.
-Lo que varía entre semillas es la **altura/momento del pico** y la **carga de
-suavizado de C-06**, no la seguridad. Corolario metodológico: el **colapso por
-contracción de exploración es sistemático —independiente de la semilla— y ninguna
-de las cuatro converge al plan de 1M** (Fig. 7.8); la selección **checkpoint-en-pico**
-no es un parche para una corrida mala sino el protocolo correcto para esta
-configuración, y que las cuatro exhiban el mismo patrón lo confirma.
+**Lectura de las curvas (5/5).** Las cinco semillas comparten la **misma firma
+en entrenamiento**: la cage queda **latente** (int_rate C-01/C-03/C-05 ≈ 0 en
+toda la curva) y **solo C-06** —el rate-limiter de suavidad— interviene. Esa
+señal, sin embargo, **no basta para clasificar la cuenca**: el eval nominal la
+refuta en dos de las cinco (la 666, *cage-dependent*, y la 23, conflicto
+cage–CV — notas ¹/² de la tabla), pese a curvas de entrenamiento indistinguibles
+de las sanas. **El árbitro de la cuenca es el eval, no la curva** — la extensión
+natural del precedente D-36 («el mérito del checkpoint se mide por eval»). El
+corolario del colapso sí es robusto: la **contracción de exploración es
+sistemática —independiente de la semilla— y ninguna de las cinco converge al
+plan de 1M** (Fig. 7.8); la selección **checkpoint-en-pico** no es un parche
+para una corrida mala sino el protocolo correcto para esta configuración.
 
-**Lectura (2024 vs 42).** Las dos semillas evaluadas **confirman
-*constraint-respecting***: 0 emergencias, **sin C-01/C-03/C-05** (cage latente en
-seguridad) en **ambos modos**, solo C-06; y **ambas baten al CV** en tracking
-(enforcement 10,9 y 13,3 mm vs 17,2 mm). La diferencia es de **suavidad**: la 42
-dispara C-06 el **64,9 %** de los pasos (vs 43,5 % de la 2024) — más a tirones,
-coherente con su pico más bajo y temprano (720 @ ~120k vs 822 @ ~297k) y menos
-refinado. El contraste **enforcement↔monitoring** muestra que ese C-06 **no es solo
-cosmético** en la 42: sin actuar (monitoring) su `mean |ey|` sube a **16,5 mm**
-—rozando el CV (17,2)— y el limitador lo aprieta a **13,3 mm** en enforcement; en
-la 2024, más suave, el efecto es menor (10,9 enf vs 12,9 mon). Es decir, el
-rate-limiter aporta de forma **medible** (~3 mm) a la calidad de tracking de la
-semilla más a tirones, sin dejar de ser una salvaguarda de seguridad **latente**
-(0 emergencias, sin C-01/C-03). La cuenca se mantiene estable entre semillas en lo
-que importa para seguridad; lo que varía es cuánto trabajo de suavizado hace C-06.
+**Lectura por semilla (eval nominal, enforcement + monitoring).** Tres de las
+cinco (2024, 42, 123) **confirman *constraint-respecting***: 0 emergencias, sin
+C-01/C-03/C-05 en ambos modos, ~4,9 vueltas. Las dos evaluadas primero **baten
+al CV** en tracking (10,9 y 13,3 mm vs 17,2 mm); la 123 queda a la par (17,4 mm)
+y es la que **más rinde el C-06**: sin actuar (monitoring) su `mean |ey|` sube a
+**26,2 mm** y el limitador la aprieta a 17,4 — el aporte de suavizado crece con
+lo a tirones de la semilla (2024: 12,9→10,9; 42: 16,5→13,3; 123: 26,2→17,4). Las
+otras dos no completan el horizonte en enforcement, **por razones opuestas**: la
+**666** porque su policy es genuinamente peor (la excursión de 312 mm de su
+monitoring es la evidencia de utilidad del cage que en el baseline F daba la
+123 — parada segura vs abandono del carril), y la **23** porque el cage —sobre
+una lectura CV errónea pero confiada— **le estorba** en la sección dura (nota ¹).
+Las réplicas del 13.07 separan los dos casos: la parada de la **666 reproduce
+con precisión** (s = 13,5–13,7, ey 0,116–0,122, misma escalada C-03→C-05 en
+ambos runs — determinista), mientras que la de la **23 es intermitente** entre
+las dos secciones CV-débiles (s ≈ 8,8 y s ≈ 13,4; nota ¹). El punto s ≈ 13,4
+— el borde de la cuenca de recuperación del estimador (ey ≈ 0,12, D-43/H-12)
+— es donde caen tres de las cuatro paradas 1-D observadas, mientras
+2024/42/123 cruzan esa sección ~5 veces por eval sin incidente: esa sección es
+el **discriminador por semilla** de `complex_b`, y el under-read residual de
+GE4-V2 reaparece aquí como mecanismo activo. La seguridad, en el sentido
+SR-CL-A, se sostiene en los cinco casos (**ningún contacto con el borde de vía
+en enforcement**; todas las detenciones son paradas controladas C-05).
 
-<img src="../figures/fig_7_8_multiseed_newcam.png" alt="Figura 7.8 — Comparación multi-semilla del track de cámara (seeds 2024, 42, 123, 666)." width="640"/>
+<img src="../figures/fig_7_8_multiseed_newcam.png" alt="Figura 7.8 — Comparación multi-semilla del track de cámara (seeds 2024, 42, 23, 666, 123)." width="640"/>
 
-*Figura 7.8 — Multi-semilla del **track de cámara** (4/5 semillas: 2024, 42, 123,
-666; curva completa hasta la parada): `ep_rew_mean` (arriba, con el **pico** de cada
-semilla marcado ●) e intervención del cage (abajo) vs timesteps. Las cuatro
-**suben → pican → decaen** (contracción de exploración; **ninguna converge al plan
-de 1M**) y son *constraint-respecting* en seguridad (C-01/C-03/C-05 ≈ 0; la
-intervención es **solo C-06**, el rate-limiter — la 123 es la más a tirones). El
-pico marcado es el checkpoint rescatado (selección checkpoint-en-pico). Falta la
-semilla 23 (sin entrenar); 123/666 con eval nominal pendiente. Generada por
+*Figura 7.8 — Multi-semilla del **track de cámara** (N = 5: 2024, 42, 23, 666,
+123; curva completa hasta la parada): `ep_rew_mean` (arriba, con el **pico** de
+cada semilla marcado ●) e intervención del cage (abajo) vs timesteps. Las cinco
+**suben → pican → decaen** (contracción de exploración; **ninguna converge al
+plan de 1M**) y en entrenamiento solo interviene C-06 (C-01/C-03/C-05 ≈ 0) — una
+señal que el eval nominal luego matiza para 666/23 (tabla y notas ¹/² arriba: la
+curva no basta para clasificar la cuenca). El pico marcado es el checkpoint
+rescatado (selección checkpoint-en-pico). Generada por
 `tools/plot_f3_figures.py --seed-runs`.*
 
 **Línea base (track 'F', estado) — la referencia que estableció las cuencas.**
@@ -609,6 +635,73 @@ nominal, §7.5.2), protector activo cuando no. La fuerza que empuja hacia
 4/5 semillas del baseline F; el multi-seed de cámara dirá si se sostiene también
 bajo percepción. El análisis de sensibilidad de `w_ds` es del Capítulo 8 (tag
 `[provisional, M-P4]`).
+
+### 7.5.4 Variantes posteriores de la seed 2024: random start (v2) y acción 2-D  [E5]
+
+Cerrado el multi-seed, la semilla principal se re-entrenó dos veces variando
+**una** decisión de configuración por variante (Fig. 7.9; eval nominal SC-NOM-01
+del pico de cada una, 13.07.2026):
+
+**v2 — spawn aleatorio a lo largo del circuito (`random_start_s`, D-58).** El
+curriculum de spawn que en Isaac desbloqueó la curva en U (kin2, docs/13) se
+probó en Gazebo sobre la 1-D: `ppo_newcam_complex_b_2024_v2`, idéntica a la v1
+salvo el flag. Resultado: **no mejora a la v1 donde el spawn fijo ya aprende el
+circuito completo**. Pico más bajo (773,2 @ 234k vs 822,9 @ 297k — con la
+salvedad de que la curva v2 mezcla tramos fáciles y difíciles por episodio y no
+es comparable 1:1), y en eval **completa y es *constraint-respecting* en ambos
+modos** (5,12 vueltas, 0 emergencias, solo C-06) pero con **peor tracking**
+(16,7 mm vs 10,9) y **más carga de C-06** (77,6 % vs 43,5 %). Lectura: D-58 es
+una herramienta para *secciones infra-visitadas que bloquean el aprendizaje*
+(el caso Isaac); donde ese cuello no existe, diluye el refinamiento sobre la
+línea nominal sin comprar nada.
+
+**2-D — dirección + throttle (`train_ppo_camera_2d.yaml`, D-50/D-59).** El
+posterior 2-D de Gazebo (contraparte limpia del track Isaac):
+`ppo_gz2d_complex_b_2024`, ~629k de 1M, **pico 654,4 @ 510k** — claramente por
+debajo de la 1-D (823/773): **la dimensión de throttle no pagó en recompensa**
+sobre `complex_b`, donde la velocidad fija 0,2 m/s ya es cinemáticamente
+suficiente (a diferencia de Isaac, D-54). El eval del pico (ckpt 525k) separa
+dos planos:
+
+- **Competencia de conducción (monitoring):** el 2-D conduce **bien** a
+  velocidad variable — 525k: 4,66 vueltas, `mean |ey|` 21,0 mm, max 52,6 mm,
+  velocidad 0–0,38 m/s (media 0,187; **frena en las curvas**, el comportamiento
+  que motivó D-50); réplica 4,52 / 20,0 mm / mismo perfil de velocidad —
+  reproducible. El 500k conduce igual de limpio pero más lento (3,83 vueltas,
+  18,0 mm, media 0,156).
+- **Compatibilidad con la envolvente del cage (enforcement):** **ningún run
+  2-D completa el horizonte** (cuatro runs entre ambos ckpts: 26 pasos / 0,62 /
+  0,91 / 1,52 vueltas), y todas las paradas comparten la firma C-04+C-05 **con
+  el coche centrado** (ey ≤ 0,03) **a >0,25 m/s**, en posiciones variables del
+  circuito. Dos mecanismos observados de la misma raíz: el cruce directo de la
+  envolvente (525k acelera a 0,438 m/s > `v_warning` 0,4 en la recta inicial)
+  y disparos C-05 sobre lecturas CV marginales que a 0,2 m/s quedan
+  sub-umbral (p. ej. 500k: parada con ey = 0,013; el monitoring del 525k sitúa
+  esa falsa creencia establemente en s ≈ 12,3–12,4). Los umbrales de velocidad
+  (`v_warning` 0,4; techo de curva 0,25) son `[provisional]`, calibrados para
+  el régimen 0,2 m/s del 1-D. Primera activación real del **arbitraje
+  longitudinal** del cage (285–526 pasos con corrección de throttle por run
+  de 500k).
+
+Lectura conjunta: la política 2-D es **competente pero no compatible tal cual
+con la envolvente de velocidad canónica del cage** — el resultado esperado de
+D-59: los umbrales de velocidad de `cage.yaml` (y los supuestos
+`vehicle.speed_mps` de la librería de escenarios) están calibrados para el
+régimen 1-D y deben revisarse **antes** de cualquier campaña 2-D. En recompensa,
+el 2-D queda por debajo de la 1-D en `complex_b`; el caso de uso que lo
+justifica (SR-009 bien-planteado, ODD-3/4) sigue siendo el argumento, no el
+rendimiento nominal. Ambas variantes quedan como **baselines posteriores** —
+ninguna toca el E-main de récord (GE4-V2, seed 2024 297k).
+
+<img src="../figures/fig_7_9_variants_2024.png" alt="Figura 7.9 — Variantes de la seed 2024: v1 (spawn fijo), v2 (random start) y 2-D (steer+throttle)." width="640"/>
+
+*Figura 7.9 — Variantes de entrenamiento de la seed 2024 sobre `complex_b`:
+v1 (1-D, spawn fijo — el E-main), v2 (1-D, `random_start_s`, D-58) y 2-D
+(steer + throttle, D-50/D-59). Arriba `ep_rew_mean` (picos ●), abajo
+intervención del cage. Las curvas con random start (v2, 2-D) no son
+comparables 1:1 con la v1 (la mezcla de spawns cambia la distribución de
+episodios); el juicio es el eval nominal (§7.5.4). Generada por
+`tools/plot_f3_figures.py --variant-runs`.*
 
 ---
 
@@ -645,9 +738,14 @@ E-track (primario):
       tracking) generadas del run complex_b (sufijo _newcam)
   [x] Campaña GE4 sobre el E-main 297k — EJECUTADA Y CERRADA (V2, 1970 runs,
       28 escenarios, 28.06.2026; §8.9, docs/11 §8.4); G4 cerrado 02.07.2026
-  [~] Multi-seed N=5 de cámara — 4/5 entrenadas (2024/42/123/666; picos
-      rescatados, §7.5.3 + Fig. 7.8); faltan la 23 y los evals de 123/666
-      (restricción de tiempo-real, §7.2.8; trabajo posterior)
+  [x] Multi-seed N=5 de cámara — COMPLETO 13.07.2026 (5/5 entrenadas +
+      eval nominal enf+mon por semilla; §7.5.3 + Fig. 7.8). Hallazgos: 666
+      cage-dependent (la cuenca F reaparece bajo cámara), 23 conflicto
+      cage-CV (interferencia negativa, primera observada), la curva de
+      entrenamiento no clasifica la cuenca (el eval es el árbitro)
+  [x] Variantes de la 2024 — v2 random-start (D-58: no mejora en Gazebo) y
+      2-D steer+throttle (competente en mon, incompatible con la envolvente
+      de velocidad canónica en enf); §7.5.4 + Fig. 7.9
 
 Baseline F (conservado):
   [x] Caracterizado: 200k estado, N=5 semillas, campaña G4 SATISFIED

@@ -76,7 +76,10 @@ script reports orphans on either side.
   cleanest SC-PERT-13 40/40 vs 0/40) — the latent→active flip is now measured on the E-main. The 117 enf
   road-edge contacts are all out-of-ODD (SC-FRONT-* + OOD grid points). Historical: V1 297k
   (`campaign_e_297k/`) and the 139k campaign (`campaign_e/`, 1660 runs, availability-cost reading).
-  Deferred to posterior work: multi-seed N=5. See CHANGELOG 27–28.06 + docs/11 §8.4 + ch.8 §8.9.
+  Multi-seed N=5 **closed (E5, 13.07.2026)**: 5/5 trained + per-seed nominal evals — 3/5
+  constraint-respecting, 666 cage-dependent, 23 cage–CV conflict; the training curve does not
+  classify the basin (docs/11 §8.5, ch.7 §7.5.3–7.5.4; seed-2024 v2/2-D variants there too).
+  See CHANGELOG 27–28.06 + 13.07 + docs/11 §8.4 + ch.8 §8.9.
 - **Track 'E' E-main predecessor — 425k oval peak (2026-06-15, superseded by 297k on 2026-06-22; detail docs/11 §8.3).**
   Lane-Cam retrain `ppo_newcam_train_2024_750k` → `cobraflex_ppo_newcam_lane_2024_425k_peak.zip` (peak 335.6 @ ≈425k);
   nominal `rl_cam_eval_2024_425k_4k4` = 11.16 laps, |ey| 12.4 mm, 0 emergencies, cage latent. Its GE4 re-run was

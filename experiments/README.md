@@ -16,8 +16,9 @@ Experimental data and analysis scripts.
   CV-estimator oracle validation (`cv_estimator_val_*`).
 - `sim/training/` — training runs with metadata + learning curves (`ppo_train_*`
   F-track; `ppo_newcam_*` track 'E'; `ppo_gz2d_*` Gazebo 2-D posterior;
-  `{ppo,sac}_cam_pilot25k_*` + `pilot25k_ppo_vs_sac_*` the D-60 algorithm-switch
-  verification pair; peak checkpoints under `checkpoints_peak/`).
+  `{ppo,sac}_cam_pilot25k_*` / `{ppo,sac}_gz2d_pilot25k_*` + `pilot25k_ppo_vs_sac_*`
+  the D-60 algorithm-switch four-curve verification battery; peak checkpoints
+  under `checkpoints_peak/`).
 - `sim/eval_gz2d/` — Gazebo 2-D (steer+throttle) posterior-baseline evals
   (`rl_gz2d_eval_*`, D-49/D-59; not GE4 evidence).
 - `sim/campaign_e_v2/` — **GE4-V2, the verdict of record** (track 'E', complex_b

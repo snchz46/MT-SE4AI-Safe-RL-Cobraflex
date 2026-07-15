@@ -1,0 +1,69 @@
+{
+  "run_id": "ppo_gz2d_pilot25k_2024",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-07-15T18:48:37.027602+00:00",
+  "git_commit": "87af2c4399997efd66242118c2771c689d42d096",
+  "train_config": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/train_ppo_camera_2d_pilot25k.yaml",
+  "train_config_hash": "aff0f9921ebddb767649f6f24b0a03855bc54bd693a037e72ab8d281f8587420",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "scenario_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "policy_checkpoint": "policy/checkpoints/cobraflex_ppo_gz2d_pilot25k_2024.zip",
+  "policy_checkpoint_hash": "06ebaa155daa6e7b0f545a4669ad113433f6e603ecf4a1f07621884405860e48",
+  "seed": 2024,
+  "platform": "sim",
+  "total_timesteps": 25000,
+  "algorithm": "ppo",
+  "hyperparameters": {
+    "learning_rate": 0.0003,
+    "lr_schedule": "linear",
+    "gamma": 0.99,
+    "batch_size": 64,
+    "normalize_reward": true,
+    "n_steps": 1024,
+    "n_epochs": 10,
+    "gae_lambda": 0.95,
+    "clip_range": 0.2,
+    "ent_coef": 0.01,
+    "vf_coef": 0.5,
+    "max_grad_norm": 0.5,
+    "target_kl": 0.5,
+    "clip_range_vf": 0.2
+  },
+  "policy": "CnnPolicy",
+  "observation": {
+    "type": "camera",
+    "camera": {
+      "topic": "/camera/image_raw_lane",
+      "width": 84,
+      "height": 84,
+      "grayscale": true,
+      "frame_stack": 4
+    }
+  },
+  "action": {
+    "type": "steer_throttle",
+    "max_speed_mps": 0.25,
+    "throttle_deadband": 0.05
+  },
+  "reward": {
+    "lateral_error": 2.5,
+    "heading_error": 0.75,
+    "steer_delta": 0.2,
+    "throttle_delta": 0.1,
+    "forward_progress": 1.0,
+    "stall_penalty": 0.5,
+    "stall_progress_min": 0.25,
+    "termination": 25.0
+  },
+  "domain_randomization": {
+    "enabled": true,
+    "p_degrade": 0.5,
+    "level_range": [
+      0.2,
+      0.8
+    ]
+  },
+  "status": "completed"
+}

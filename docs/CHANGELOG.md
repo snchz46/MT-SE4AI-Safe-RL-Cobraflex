@@ -31,6 +31,86 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [15.07.2026] — Tuned 2-D SAC recipe (SAC-canonical values) + fifth pilot curve: the PPO-inherited values were handicapping SAC
+
+**Document(s) affected:** `docs/11_camera_rl_training.md` (§4.2 tuned-variant block, version log), `docs/15_implementation_inventory.md` (§5.3 row). Configs: `train_sac_camera_2d_tuned.yaml` (1M) + `train_sac_camera_2d_pilot25k_tuned.yaml`. **New evidence:** `experiments/sim/training/sac_gz2d_pilot25k_tuned_2024/`; the battery figure under `pilot25k_ppo_vs_sac_2024/` is now `ppo_vs_sac_pilot25k_battery.png` (5 curves).
+**Phase:** posterior (E5 — third same-day follow-on; see the two entries below)
+**Gate context:** after Gate G4; nothing frozen touched.
+**Author:** Samuel Sanchez
+
+### Change
+
+The paired SAC arms deliberately inherited the PPO-shared values for like-for-likeness; two of
+them are non-canonical for SAC (`batch_size 64` vs canonical 256; `lr_schedule: linear` vs
+canonical constant 3e-4 — the anneal switches learning off when the replay buffer is richest).
+The tuned variant restores SAC-canonical values and adds the free-compute lever: **batch 256,
+constant LR, `learning_starts` 5000, `gradient_steps` 2** (UTD 2 — the render caps collection
+at ~7 steps/s while the GPU idles, so extra updates are wall-clock-free), buffer 150k (~8.4 GB).
+The paired pilot configs stay untouched — the pair keeps answering the like-for-like question;
+the tuned config answers "how far can 2-D SAC get".
+
+### Rationale / Impact (25k tuned pilot, seed 2024)
+
+**107.4 `ep_rew_mean`** with only ~20k learning steps (5k warmup): passes the untuned SAC arm
+(90.0) around ~16k and nearly catches PPO (113.0) at cutoff with the steepest late slope of
+the battery (31 → 76 → 107 at 15k/20k/25k). `ep_len` 131 vs the untuned arm's 198 — it drives
+*faster* (PPO-like episode profile), easing the slow-but-alive concern flagged on the untuned
+arm, at the cost of a small emergency-rate rise (0.011 vs 0.0002; intervention 0.935, lowest
+of the 2-D battery). Conclusion: the PPO-inherited values were indeed handicapping SAC; the
+1M 2-D SAC run on the training host should use `train_sac_camera_2d_tuned.yaml`. Wall-clock
+~6-7 steps/s (UTD 2 nearly free, as predicted).
+
+### Verification
+
+Offline construction check (UTD 2 → 2 updates/step post-warmup confirmed; constant LR resolves
+to a float, not a schedule); pilot `status: completed`, metadata records the tuned
+hyperparameters; clean shutdown, no gz orphans; `python tools/check_traceability.py` → PASS.
+
+---
+
+## [15.07.2026] — 2-D (steer+throttle) wired for SAC + the four-curve pilot battery completed (1-D and 2-D PPO-vs-SAC pairs)
+
+**Document(s) affected:** `docs/11_camera_rl_training.md` (§4.2 extended with the 2-D pair + four-curve result, v0.6.4), `docs/15_implementation_inventory.md` (§5.3 config rows), `experiments/README.md`, `policy/README.md`. Configs (no code change — D-60's switch and D-59's 2-D action block compose orthogonally): `train_sac_camera_2d.yaml` (SAC mirror of the 0.25-cap `train_ppo_camera_2d.yaml`), `train_{ppo,sac}_camera_2d_pilot25k.yaml` (2-D pilot pair). **New evidence:** `experiments/sim/training/{ppo,sac}_gz2d_pilot25k_2024/` + the four-curve figure and extended `summary.json` under `experiments/sim/training/pilot25k_ppo_vs_sac_2024/`.
+**Phase:** posterior (E5 — algorithm study groundwork, same-day follow-on to the D-60 entry below)
+**Gate context:** after Gate G4; the frozen 1-D verdict chain and the 2-D PPO 1M baseline are untouched.
+**Author:** Samuel Sanchez
+
+### Change
+
+The D-60 `algorithm:` switch composes with the 2-D `action:` block with **zero code
+change** (both live in shared config-driven paths); verified offline (SAC over a `Box(2,)`
+action with `raw_throttle` action-sampling) and with a 600-step live-Gazebo smoke, then a
+**25k 2-D pilot pair** (seed 2024, identical configs except the switch: 0.25 m/s cap,
+`throttle_delta`/`stall_penalty` reward, `ent_coef 0.01` PPO-only, `max_episode_steps 2048`,
+`random_start_s: true` D-58 — both arms identical, curves judged within the pair).
+
+### Rationale
+
+Complete the four-curve battery (1-D PPO/SAC + 2-D PPO/SAC): the 1-D pair is the clean
+algorithm comparison; the 2-D pair asks whether SAC gets further than PPO did on the 2-D
+action, where the PPO 1M baseline underdelivered (peak 654 ≪ 1-D 823, docs/11 §8.5).
+
+### Impact
+
+**1-D pair (unchanged from the entry below):** SAC 161.7 vs PPO 131.7 `ep_rew_mean` (+23%),
+SAC overtakes from ~15k. **2-D pair (25k):** PPO 113.0 vs SAC 90.0 — but the *shapes*
+differ: PPO flattens at its 114 peak (~24.5k) while SAC is still **accelerating** (7 → 19 →
+67 → 90 at 5k/12k/20k/25k, the steepest end-slope of the four curves) and drives the longest
+episodes of the battery (`ep_len` 198 vs 154 — slower, more survivable driving; emergencies
+~0 in both, intervention ~0.96–0.98 C-06/C-04-dominated). At 25k neither 2-D arm approaches
+a "good point"; the off-policy warmup (1k random steps + auto-temperature) delays SAC's
+takeoff by design, so whether it overtakes needs a longer run — the 1M-budget config
+(`train_sac_camera_2d.yaml`, buffer 100k ≈ 5.6 GB) is ready for the training host.
+
+### Verification
+
+Offline SAC 2-D smoke (Box(2,) action, learning-curve schema, `raw_throttle` column,
+save/load) OK; 600-step live-Gazebo SAC 2-D smoke `status: completed` with the
+`steer_throttle`/0.25 action contract recorded in metadata, clean shutdown, no gz orphans;
+both 25k pilots `status: completed`; `python tools/check_traceability.py` → PASS, 0 warnings.
+
+---
+
 ## [15.07.2026] — Trainer gains a config-selected algorithm switch (`algorithm: ppo|sac`) + 25k PPO-vs-SAC verification pilot pair
 
 **Document(s) affected:** `docs/DECISIONS.md` (new **D-60** — algorithm switch as a config key, not a separate entry point), `docs/11_camera_rl_training.md` (new **§4.2** + §9 SAC command block, v0.6.3), `docs/15_implementation_inventory.md` (module rows + §5.3 config rows). Code: `src/cobraflex_rl/cobraflex_rl/train_ppo.py` (algorithm resolver, SAC branch, algorithm-aware metadata/registry/run-id), `training_metrics.py` (`SB3_SCALAR_COLUMNS_SAC` / `_BY_ALGO` — same CSV schema, SAC keys mapped), `callbacks.py` (`LearningCurveCallback` scalar-map + `min_row_interval` params, progress-bar `desc`), `eval_policy.py` (`--algorithm` / config-key resolution for loading SAC checkpoints), `launch/train_lane.launch.py` (new `train_config`, `run_id`, `model_path` launch args). Configs: `train_sac_camera.yaml` (SAC mirror of `train_ppo_camera.yaml`), `train_ppo_camera_pilot25k.yaml` + `train_sac_camera_pilot25k.yaml` (the pilot pair). **New evidence:** `experiments/sim/training/{ppo,sac}_cam_pilot25k_2024/` + `experiments/sim/training/pilot25k_ppo_vs_sac_2024/` (comparison figure + summary.json).

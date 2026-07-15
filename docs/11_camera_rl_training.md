@@ -385,18 +385,51 @@ Mechanics worth knowing:
   `model_path:=` (the algorithm is selected by pointing `train_config` at the
   SAC YAML; a bare launch is unchanged).
 
-**25k verification pilots** (complex_b, seed 2024, enforcement, DR on, 1-D):
-both learn healthily from pixels; SAC overtakes PPO from ~15k and ends
-`ep_rew_mean` **161.7 vs 131.7** (+23%), `ep_len_mean` 186 vs 162, slightly
-lower cage-intervention rate (0.85 vs 0.91, C-06-dominated as usual early),
-~0 emergencies in both, identical wall-clock (~7 steps/s — rendering-bound; the
-GPU absorbs SAC's per-step gradient update). 25k is far below the 1-D
-convergence regime (PPO ~823 @ ~297k), so this is an implementation sanity
-check + early signal, **not** an algorithm verdict. Evidence:
-`experiments/sim/training/{ppo,sac}_cam_pilot25k_2024/` + the comparison figure
-under `experiments/sim/training/pilot25k_ppo_vs_sac_2024/`. The GE4-V2 verdict
-chain and every frozen PPO artefact are untouched (`algorithm` defaults to
-`ppo`).
+**25k verification pilots — the four-curve battery** (complex_b, seed 2024,
+enforcement, DR on; two pairs, each pair's configs identical except
+`algorithm:`; reward scales comparable *within* a pair, not across — the 2-D
+family adds `throttle_delta`/`stall_penalty` terms, random spawns and a
+2048-step episode cap):
+
+- **1-D pair** (`train_{ppo,sac}_camera_pilot25k.yaml`): both learn healthily
+  from pixels; SAC overtakes PPO from ~15k and ends `ep_rew_mean` **161.7 vs
+  131.7** (+23%), `ep_len_mean` 186 vs 162, slightly lower cage-intervention
+  rate (0.85 vs 0.91, C-06-dominated as usual early), ~0 emergencies in both,
+  identical wall-clock (~7 steps/s — rendering-bound; the GPU absorbs SAC's
+  per-step gradient update).
+- **2-D pair** (`train_{ppo,sac}_camera_2d_pilot25k.yaml`; the D-60 switch and
+  the D-59 2-D `action:` block compose with zero code change): PPO ends
+  **113.0** (flattening at its 114 peak ≈24.5k) vs SAC **90.0** — but SAC is
+  still *accelerating* at cutoff (7 → 19 → 67 → 90 at 5k/12k/20k/25k, the
+  steepest end-slope of the four curves) and drives the longest episodes of
+  the battery (`ep_len` 198 vs 154 — slower, more survivable driving). The
+  off-policy warmup (1k random steps + auto-temperature) delays SAC's takeoff
+  by design; whether it eventually beats the 2-D PPO ceiling (1M baseline peak
+  654 ≪ 1-D 823, §8.5) needs a longer run — `train_sac_camera_2d.yaml` (1M
+  budget, buffer 100k ≈ 5.6 GB) is ready for the training host.
+
+- **Tuned 2-D SAC variant (fifth curve, outside the pair).** The paired SAC
+  arms inherit two PPO-shared values that are non-canonical for SAC —
+  `batch_size 64` (canonical 256) and `lr_schedule: linear` (canonical
+  constant; the anneal switches learning off when the buffer is richest).
+  `train_sac_camera_2d_tuned.yaml` (+ its 25k pilot) restores SAC-canonical
+  values and adds `gradient_steps 2` (UTD 2 — free wall-clock: the render caps
+  collection at ~7 steps/s while the GPU idles) and `learning_starts 5000`.
+  Pilot result: **107.4** with only ~20k learning steps — passes the untuned
+  arm (90.0) at ~16k, nearly catches PPO (113.0) at cutoff with the steepest
+  late slope (31 → 76 → 107 at 15k/20k/25k), and drives *faster* (`ep_len` 131
+  vs 198, PPO-like profile; emergencies up slightly, 0.011). The
+  PPO-inherited values were handicapping SAC — **use the tuned config for the
+  1M 2-D SAC run**.
+
+25k is far below the 1-D convergence regime (PPO ~823 @ ~297k), so all five
+curves are implementation sanity checks + early signal, **not** algorithm
+verdicts. Evidence: `experiments/sim/training/{ppo,sac}_cam_pilot25k_2024/`,
+`{ppo,sac}_gz2d_pilot25k_2024/` and `sac_gz2d_pilot25k_tuned_2024/` + the
+battery figure (`ppo_vs_sac_pilot25k_battery.png`) and `summary.json` under
+`experiments/sim/training/pilot25k_ppo_vs_sac_2024/`. The GE4-V2 verdict
+chain, every frozen 1-D PPO artefact and the 2-D PPO 1M baseline are untouched
+(`algorithm` defaults to `ppo`).
 
 ---
 
@@ -1014,6 +1047,14 @@ cage-dependent (666), 1/5 cage–CV conflict (23)).
 
 ## Version log
 
+- **v0.6.4 (2026-07-15):** **§4.2 extended — 2-D wired for SAC + five-curve pilot battery.**
+  The D-60 algorithm switch composes with the D-59 2-D `action:` block with zero code change;
+  new configs `train_sac_camera_2d.yaml` + `train_{ppo,sac}_camera_2d_pilot25k.yaml`. 2-D 25k
+  pair: PPO 113.0 (flattening) vs SAC 90.0 (still accelerating, longest episodes of the
+  battery); neither near a "good point" at 25k. Same-day follow-on: **tuned SAC recipe**
+  (`train_sac_camera_2d_tuned.yaml` + pilot — batch 256, constant LR, warmup 5k, UTD 2)
+  reaches 107.4 with ~20k learning steps and the steepest late slope → the PPO-inherited
+  values were handicapping SAC; the 1M 2-D SAC run should use the tuned config.
 - **v0.6.3 (2026-07-15):** **§4.2 added — `algorithm: ppo|sac` config switch (D-60).** The
   shared trainer now builds SB3 PPO *or* SAC from the same entry point (single config key;
   env/wrappers/reward/cage/seed/LR shared verbatim; SAC knobs in an optional `sac:` block,

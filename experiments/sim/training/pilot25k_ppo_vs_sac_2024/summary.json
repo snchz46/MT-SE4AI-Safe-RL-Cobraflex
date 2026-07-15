@@ -1,9 +1,11 @@
 {
-  "purpose": "25k-step PPO-vs-SAC verification pilot pair for the algorithm switch (train_ppo.py algorithm: ppo|sac)",
+  "purpose": "25k-step PPO-vs-SAC verification pilots for the algorithm switch (D-60): 1-D pair (15.07.2026) + 2-D steer+throttle pair (15.07.2026, cablea-2D goal)",
   "date": "2026-07-15",
   "configs": [
     "src/cobraflex_rl/config/train_ppo_camera_pilot25k.yaml",
-    "src/cobraflex_rl/config/train_sac_camera_pilot25k.yaml"
+    "src/cobraflex_rl/config/train_sac_camera_pilot25k.yaml",
+    "src/cobraflex_rl/config/train_ppo_camera_2d_pilot25k.yaml",
+    "src/cobraflex_rl/config/train_sac_camera_2d_pilot25k.yaml"
   ],
   "config_delta": "algorithm + sac block + model_path only; seed 2024, complex_b, enforcement, DR on for both",
   "runs": {
@@ -20,7 +22,34 @@
       "final_ep_len_mean": 185.9,
       "intervention_rate_last5": 0.851,
       "emergency_rate_last5": 0.0006
+    },
+    "ppo_2d": {
+      "run_id": "ppo_gz2d_pilot25k_2024",
+      "final_ep_rew_mean": 113.0,
+      "peak_ep_rew_mean": 114.0,
+      "final_ep_len_mean": 154.6,
+      "intervention_rate_last5": 0.964,
+      "emergency_rate_last5": 0.0039
+    },
+    "sac_2d": {
+      "run_id": "sac_gz2d_pilot25k_2024",
+      "final_ep_rew_mean": 90.0,
+      "peak_ep_rew_mean": 90.0,
+      "final_ep_len_mean": 197.8,
+      "intervention_rate_last5": 0.975,
+      "emergency_rate_last5": 0.0002
+    },
+    "sac_2d_tuned": {
+      "run_id": "sac_gz2d_pilot25k_tuned_2024",
+      "final_ep_rew_mean": 107.4,
+      "final_ep_len_mean": 131.4,
+      "intervention_rate_last5": 0.935,
+      "emergency_rate_last5": 0.0109,
+      "recipe": "SAC-canonical deltas vs the paired arm: batch 256 (was 64), constant LR (was linear), learning_starts 5000 (was 1000), gradient_steps 2 (UTD 2)"
     }
   },
-  "reading": "Both learn healthily from pixels; SAC overtakes PPO ~15k and ends +23% ep_rew_mean at the 25k budget with slightly lower cage intervention. 25k is far from the 1-D convergence regime (PPO peaks ~823 at ~297k) - a pilot sanity check, not an algorithm verdict."
+  "reading": "Both learn healthily from pixels; SAC overtakes PPO ~15k and ends +23% ep_rew_mean at the 25k budget with slightly lower cage intervention. 25k is far from the 1-D convergence regime (PPO peaks ~823 at ~297k) - a pilot sanity check, not an algorithm verdict.",
+  "reading_2d": "2-D family (0.25 cap, random_start_s, 2048-step episodes; scales NOT comparable to the 1-D column): PPO 113 vs SAC 90 at 25k, but the shapes differ - PPO flattens at the end (114 peak @ ~24.5k) while SAC is still accelerating (7@5k -> 19@12k -> 67@20k -> 90@25k, steepest end-slope of the 4 curves) with the longest episodes (ep_len 198 vs 154; slower but more survivable driving). At 25k neither 2-D arm is near a \"good point\" (the 2-D PPO 1M baseline peaked 654 @ 510k under the 0.5 cap); whether SAC overtakes needs a longer run - its off-policy warmup (1k random steps + auto-temperature) delays takeoff by design.",
+  "reading_2d_tuned": "Fifth curve (not part of the like-for-like pair): with only ~20k learning steps (5k warmup) the tuned recipe reaches 107.4 - passes the untuned SAC (90) around ~16k and nearly catches PPO (113) at cutoff with the steepest late slope (31@15k -> 76@20k -> 107@25k). ep_len 131 vs untuned 198: it drives faster (PPO-like profile), easing the slow-but-alive concern, at the cost of a higher (still small) emergency rate (0.011 vs 0.0002). The PPO-inherited values were indeed handicapping SAC; the 1M run should use train_sac_camera_2d_tuned.yaml.",
+  "figure": "ppo_vs_sac_pilot25k_battery.png (5 curves; the 1-D-only figure is ppo_vs_sac_pilot25k.png)"
 }

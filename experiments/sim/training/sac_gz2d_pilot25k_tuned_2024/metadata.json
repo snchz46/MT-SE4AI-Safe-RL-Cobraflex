@@ -1,0 +1,67 @@
+{
+  "run_id": "sac_gz2d_pilot25k_tuned_2024",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-07-15T21:24:58.728696+00:00",
+  "git_commit": "87af2c4399997efd66242118c2771c689d42d096",
+  "train_config": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/train_sac_camera_2d_pilot25k_tuned.yaml",
+  "train_config_hash": "26e30b6734fc473b3e24932681ff6e18631d3665f331905dc4c3e876c1fef67f",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "scenario_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "policy_checkpoint": "policy/checkpoints/cobraflex_sac_gz2d_pilot25k_tuned_2024.zip",
+  "policy_checkpoint_hash": "1102a72a2d7af5dddfb49169a0cdfe5f9616d130f7632d79dd31440a8466580e",
+  "seed": 2024,
+  "platform": "sim",
+  "total_timesteps": 25000,
+  "algorithm": "sac",
+  "hyperparameters": {
+    "learning_rate": 0.0003,
+    "lr_schedule": "constant",
+    "gamma": 0.99,
+    "batch_size": 256,
+    "normalize_reward": true,
+    "buffer_size": 25000,
+    "learning_starts": 5000,
+    "tau": 0.005,
+    "train_freq": 1,
+    "gradient_steps": 2,
+    "ent_coef": "auto",
+    "target_update_interval": 1
+  },
+  "policy": "CnnPolicy",
+  "observation": {
+    "type": "camera",
+    "camera": {
+      "topic": "/camera/image_raw_lane",
+      "width": 84,
+      "height": 84,
+      "grayscale": true,
+      "frame_stack": 4
+    }
+  },
+  "action": {
+    "type": "steer_throttle",
+    "max_speed_mps": 0.25,
+    "throttle_deadband": 0.05
+  },
+  "reward": {
+    "lateral_error": 2.5,
+    "heading_error": 0.75,
+    "steer_delta": 0.2,
+    "throttle_delta": 0.1,
+    "forward_progress": 1.0,
+    "stall_penalty": 0.5,
+    "stall_progress_min": 0.25,
+    "termination": 25.0
+  },
+  "domain_randomization": {
+    "enabled": true,
+    "p_degrade": 0.5,
+    "level_range": [
+      0.2,
+      0.8
+    ]
+  },
+  "status": "completed"
+}

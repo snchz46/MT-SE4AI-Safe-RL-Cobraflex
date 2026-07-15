@@ -340,6 +340,64 @@ config and honours the same levers ([docs/13](13_isaacsim_environment.md)).
 `env.reset(seed=...)` so the spawn perturbation and the per-episode domain-
 randomisation draw are reproducible (§7.2.7).
 
+### 4.2 Algorithm switch — `algorithm: ppo | sac` (posterior, 15.07.2026; D-60)
+
+The trainer is no longer PPO-only: a single **`algorithm:`** key in the training
+config selects the SB3 class (`ppo`, the default, or `sac`), keeping **everything
+else shared verbatim** — env, wrappers (`Monitor`/`VecFrameStack`/`VecNormalize`),
+reward, cage wiring, seed handling, LR (+ linear schedule), device, and the whole
+evidence pipeline. Two configs differing only in `algorithm:` are therefore a
+like-for-like algorithm comparison on the frozen 1-D camera architecture; a
+separate SAC entry point was rejected because it would duplicate (and let drift)
+that shared stack (rationale: D-60). `train_sac_camera.yaml` is the SAC mirror of
+`train_ppo_camera.yaml`; `train_{ppo,sac}_camera_pilot25k.yaml` are the 25k
+verification pair (seed 2024).
+
+Mechanics worth knowing:
+
+- **SAC block.** Off-policy knobs live in an optional `sac:` block
+  (`buffer_size`, `learning_starts`, `tau`, `train_freq`, `gradient_steps`,
+  `ent_coef: auto`, `target_update_interval`). All SB3-standard defaults except
+  `buffer_size`: one 84×84×4 uint8 transition holds ~56 KB in the replay buffer,
+  so SB3's 1M default would demand ~56 GB RAM — the trainer caps the default at
+  100k (≈5.6 GB) and camera configs must keep the key explicit. PPO-only keys
+  (`n_steps`, `clip_range`, `target_kl`, `clip_range_vf`, …) are ignored under
+  SAC (kept in the SAC configs so a diff against the PPO twin shows only the
+  switch).
+- **Wrapper-order fix (SB3 incompatibility).** With SAC + image obs +
+  `VecNormalize`, SB3 adds `VecTransposeImage` *outside* `VecNormalize`, but the
+  off-policy replay buffer stores VecNormalize's *original* (channels-last) obs
+  — a shape crash. On the SAC+camera path only, the trainer applies the
+  transpose *inside* the normalizer; the PPO wrapper stack stays byte-identical
+  to the frozen runs.
+- **Evidence schema unchanged.** `learning_curve.csv` keeps the exact PPO column
+  set under SAC (`value_loss` ← `train/critic_loss`, `entropy` ←
+  `train/ent_coef` — the auto-tuned temperature, SAC's "exploration is
+  contracting" series; `approx_kl`/`clip_fraction`/`std`/`explained_variance`
+  stay NaN), with rows throttled to one per 1024-step window (SAC ends an SB3
+  "rollout" every `train_freq` steps). Every curve reader stays
+  algorithm-agnostic. `metadata.json` records `algorithm` + the per-algorithm
+  hyperparameter block; the checkpoint registry id becomes
+  `cobraflex_<algo>_lane`.
+- **Eval.** `eval_policy` resolves the SB3 class from the config's `algorithm`
+  key (override: `--algorithm sac`) — same scored harness, same cage.
+- **Launch.** `train_lane.launch.py` now exposes `train_config:=` / `run_id:=` /
+  `model_path:=` (the algorithm is selected by pointing `train_config` at the
+  SAC YAML; a bare launch is unchanged).
+
+**25k verification pilots** (complex_b, seed 2024, enforcement, DR on, 1-D):
+both learn healthily from pixels; SAC overtakes PPO from ~15k and ends
+`ep_rew_mean` **161.7 vs 131.7** (+23%), `ep_len_mean` 186 vs 162, slightly
+lower cage-intervention rate (0.85 vs 0.91, C-06-dominated as usual early),
+~0 emergencies in both, identical wall-clock (~7 steps/s — rendering-bound; the
+GPU absorbs SAC's per-step gradient update). 25k is far below the 1-D
+convergence regime (PPO ~823 @ ~297k), so this is an implementation sanity
+check + early signal, **not** an algorithm verdict. Evidence:
+`experiments/sim/training/{ppo,sac}_cam_pilot25k_2024/` + the comparison figure
+under `experiments/sim/training/pilot25k_ppo_vs_sac_2024/`. The GE4-V2 verdict
+chain and every frozen PPO artefact are untouched (`algorithm` defaults to
+`ppo`).
+
 ---
 
 ## 5. Visual domain randomisation (H-10 mitigation, SR-012)
@@ -722,6 +780,19 @@ ros2 run cobraflex_rl train_ppo \
   --road-centerline-config $CFG/complex_b_centerline.yaml \
   --world-name lane_following_complex_b --run-id ppo_gz2d_complex_b_123
 
+# ── Track-'E' camera SAC (posterior; same frozen 1-D architecture, algorithm: sac — §4.2/D-60) ─
+#    Same two-step as the camera PPO; only the config changes. One-step alternative:
+#    the launch now takes train_config:= / run_id:= / model_path:= directly.
+ros2 run cobraflex_rl train_ppo \
+  --train-config           $CFG/train_sac_camera.yaml \
+  --centerline-config      $CFG/complex_b_right_lane_centerline.yaml \
+  --road-centerline-config $CFG/complex_b_centerline.yaml \
+  --world-name lane_following_complex_b --run-id sac_newcam_complex_b_<seed>
+ros2 launch cobraflex_rl train_lane.launch.py \
+  train_config:=$CFG/train_sac_camera.yaml run_id:=sac_newcam_complex_b_<seed>
+#    (eval: same eval_policy command below with --train-config $CFG/train_sac_camera.yaml —
+#     the SB3 class is resolved from the config's `algorithm` key, or force --algorithm sac.)
+
 # ── Resume a checkpoint (adds the config's total_timesteps on top, §2) ───────────────
 ros2 run cobraflex_rl train_ppo --train-config $CFG/train_ppo_camera.yaml \
   --resume-from policy/checkpoints/<ckpt>.zip --run-id <run>
@@ -943,6 +1014,16 @@ cage-dependent (666), 1/5 cage–CV conflict (23)).
 
 ## Version log
 
+- **v0.6.3 (2026-07-15):** **§4.2 added — `algorithm: ppo|sac` config switch (D-60).** The
+  shared trainer now builds SB3 PPO *or* SAC from the same entry point (single config key;
+  env/wrappers/reward/cage/seed/LR shared verbatim; SAC knobs in an optional `sac:` block,
+  `buffer_size` must stay explicit on camera obs). SB3 wrapper-order incompatibility (SAC +
+  image obs + VecNormalize vs the replay buffer's original-obs storage) found and fixed —
+  transpose applied inside the normalizer on the SAC path only; PPO path byte-identical.
+  §9 command block gains the SAC variant + the launch's new `train_config:=`/`run_id:=`/
+  `model_path:=` args. 25k verification pilot pair (seed 2024): SAC 161.7 vs PPO 131.7
+  `ep_rew_mean` (+23%), same wall-clock; sanity check, not an algorithm verdict. GE4-V2 and
+  all frozen PPO artefacts untouched.
 - **v0.6.2 (2026-07-13):** **§8.5 added — E5 robustness closed (verdicts replicated, `*_r2`).**
   Multi-seed N=5 complete (5/5 trained + per-seed SC-NOM-01 evals): 3/5 constraint-respecting,
   666 cage-dependent (F-basin reappears under camera; stop reproduces deterministically at

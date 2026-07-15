@@ -33,6 +33,28 @@ SB3_SCALAR_COLUMNS: tuple[tuple[str, str, float], ...] = (
     ("std", "train/std", 1.0),
 )
 
+# SAC variant of the scalar map: the CSV schema (column names/order) is kept
+# identical to the PPO one so every learning-curve reader works unchanged;
+# columns whose concept has no SAC counterpart keep an empty key and stay NaN.
+# ``value_loss`` carries SAC's critic loss (the closest health signal), and
+# ``entropy`` carries the auto-tuned entropy coefficient's current value
+# (train/ent_coef) — the SAC series that plays the "exploration is
+# contracting" role std/entropy play for PPO.
+SB3_SCALAR_COLUMNS_SAC: tuple[tuple[str, str, float], ...] = (
+    ("explained_variance", "", 1.0),
+    ("value_loss", "train/critic_loss", 1.0),
+    ("entropy", "train/ent_coef", 1.0),
+    ("approx_kl", "", 1.0),
+    ("clip_fraction", "", 1.0),
+    ("std", "", 1.0),
+)
+
+# Scalar map per algorithm (train_ppo.py's ``algorithm`` config key).
+SB3_SCALAR_COLUMNS_BY_ALGO: Dict[str, tuple[tuple[str, str, float], ...]] = {
+    "ppo": SB3_SCALAR_COLUMNS,
+    "sac": SB3_SCALAR_COLUMNS_SAC,
+}
+
 # Full ordered learning_curve.csv schema (Training Spec §7.2.8). A superset of
 # the legacy 4-column schema, so tools that read by column name (e.g.
 # tools/plot_f3_figures.py) keep working on old runs and gain the new series on

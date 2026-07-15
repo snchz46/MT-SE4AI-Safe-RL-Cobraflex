@@ -2598,3 +2598,57 @@ re-run of the frozen GE4-V2 1-D verdict (D-49); it evaluates with the same confi
 `eval_policy`. The deployed `vehicle_control_node` ROS graph (the F2 demo) stays 1-D — 2-D is
 in-process training/eval only, mirroring Isaac (out of scope). Only `--train-config` selects it.
 Cites D-49, D-50, D-52, D-54, D-55, D-56, D-57, D-58; docs/11 §9; docs/13.
+
+### D-60 — SB3 algorithm switch in the shared trainer: `algorithm: ppo|sac` config key (not a separate SAC entry point)
+
+| Field | Value |
+| --- | --- |
+| Section | `src/cobraflex_rl/cobraflex_rl/train_ppo.py` (+ `callbacks.py`, `training_metrics.py`, `eval_policy.py`, `launch/train_lane.launch.py`); new configs `train_sac_camera.yaml`, `train_{ppo,sac}_camera_pilot25k.yaml`; docs/11 §4.2 |
+| Status | ACCEPTED — pytest 517 green; offline + live-Gazebo SAC smokes; 25k verification pilot pair completed 15.07.2026 (`experiments/sim/training/pilot25k_ppo_vs_sac_2024/`) |
+| Date | posterior track (15.07.2026) |
+
+**Context.** The E-track training loop was PPO-only (`train_ppo.py` hard-constructed SB3 `PPO`).
+An off-policy, sample-efficient counterpart (SAC) is wanted for an algorithm comparison on the
+frozen 1-D camera architecture. Two candidate shapes: (a) a separate `train_sac` entry point /
+command, or (b) a config key inside the existing trainer.
+
+**Decision.** **(b) — a single `algorithm: ppo|sac` key in the training config** (default
+`ppo`), because the comparison is only meaningful if the two arms share everything but the
+update rule: env, wrappers (`Monitor`/`VecFrameStack`/`VecNormalize`), reward, cage wiring,
+seed handling, LR (+ `lr_schedule: linear`), device, evidence pipeline. A second entry point
+would have to duplicate that stack and let it drift. SAC's off-policy knobs live in an optional
+`sac:` block (`buffer_size`, `learning_starts`, `tau`, `train_freq`, `gradient_steps`,
+`ent_coef: auto`, `target_update_interval`) with SB3-standard defaults except `buffer_size`,
+capped at 100k — on the 84×84×4 uint8 camera obs a transition holds ~56 KB, so SB3's 1M
+default would demand ~56 GB RAM; the key must stay explicit in camera configs. PPO-only keys
+(`n_steps`, `clip_range`, `target_kl`, `clip_range_vf`, …) are ignored under SAC and kept in
+the SAC configs so a diff against the PPO twin shows only the switch.
+
+Implementation notes that carry design weight: (1) **SB3 wrapper-order incompatibility found
+and fixed** — with SAC + image obs + `VecNormalize`, SB3 adds `VecTransposeImage` *outside*
+`VecNormalize` while the off-policy replay buffer stores VecNormalize's *original*
+(channels-last) obs and crashes; the trainer applies the transpose *inside* the normalizer on
+the SAC+camera path only. The PPO wrapper stack is byte-identical to the frozen runs.
+(2) `learning_curve.csv` keeps the exact PPO column schema under SAC (`value_loss` ←
+`train/critic_loss`, `entropy` ← `train/ent_coef`, PPO-only columns NaN; rows throttled to one
+per 1024-step window since SAC ends a "rollout" every `train_freq` steps) — every downstream
+curve reader stays algorithm-agnostic. (3) `eval_policy` resolves the SB3 class from the
+config's `algorithm` key (or `--algorithm`); `metadata.json` records `algorithm` +
+per-algorithm hyperparameters; the checkpoint registry id becomes `cobraflex_<algo>_lane`.
+
+**Verification (25k pilot pair, complex_b, seed 2024, enforcement, DR on, 1-D).** Both learn
+healthily from pixels; SAC overtakes PPO from ~15k and ends `ep_rew_mean` **161.7 vs 131.7**
+(+23%), `ep_len_mean` 186 vs 162, slightly lower cage-intervention rate (0.85 vs 0.91,
+C-06-dominated as usual early), ~0 emergencies both; wall-clock identical (~7 steps/s,
+render-bound — the GPU absorbs SAC's per-step gradient update). 25k is far below the 1-D
+convergence regime (PPO ~823 @ ~297k): this is an implementation sanity check + early signal,
+**not** an algorithm verdict.
+
+**Consequences.** Purely **additive**: `algorithm` defaults to `ppo`, old configs load
+unchanged, and the frozen PPO artefacts (GE4-V2, E-main, multiseed) are untouched — no re-runs.
+A SAC policy is a **new posterior baseline** evaluated through the same harness; it does not
+enter the G4-closed verdict chain unless a future decision promotes an algorithm-comparison
+study. `train_lane.launch.py` now exposes `train_config:=`/`run_id:=`/`model_path:=` (needed to
+select the algorithm at launch; bare launch behaviour unchanged).
+Cites D-36 (seed), D-41/D-43 (architecture unchanged), D-49 (1-D contract); docs/11 §4.2;
+CHANGELOG 15.07.2026.

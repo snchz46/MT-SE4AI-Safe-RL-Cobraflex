@@ -1,13 +1,24 @@
-"""PPO training entry point (``ros2 launch cobraflex_rl train.launch.py``).
+"""SB3 training entry point (``ros2 launch cobraflex_rl train_lane.launch.py``).
 
 Wires the full F3/E-track training loop: loads the centerline + training
 config YAMLs, builds :class:`GazeboLaneEnv` over a live Gazebo instance,
-unthrottles the sim clock for headless runs, trains SB3 PPO (MlpPolicy on the
-state obs, CnnPolicy + VecFrameStack on the camera obs), and writes the
+unthrottles the sim clock for headless runs, trains the SB3 algorithm the
+config selects (``algorithm: ppo`` — the default — or ``sac``; MlpPolicy on
+the state obs, CnnPolicy + VecFrameStack on the camera obs), and writes the
 reproducibility evidence — ``metadata.json`` (git commit, config/cage/policy
 hashes, seed), the learning-curve/action CSVs and periodic checkpoints —
 under ``experiments/sim/training/<run_id>/``. Supports ``--resume-from`` to
 continue a saved checkpoint. Spec: Training Spec Ch.7 §7.2.
+
+The two algorithms share everything outside the update rule — env, wrappers
+(Monitor/VecFrameStack/VecNormalize), reward, cage wiring, seed, LR (+ linear
+schedule) — so a config differing only in ``algorithm:`` is a like-for-like
+comparison. PPO-only keys (``n_steps``, ``clip_range``, ``target_kl``, …) are
+ignored under SAC; SAC's off-policy knobs live in the optional ``sac:`` block
+(``buffer_size``, ``learning_starts``, ``tau``, ``train_freq``,
+``gradient_steps``, ``ent_coef``) with SB3-standard defaults sized for this
+env (buffer 100k ≈ 5.6 GB RAM on the 84×84×4 camera obs — set explicitly for
+longer runs).
 """
 
 from __future__ import annotations
@@ -23,7 +34,7 @@ from ament_index_python.packages import PackageNotFoundError, get_package_share_
 import numpy as np
 import rclpy
 from rclpy.utilities import remove_ros_args
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.monitor import Monitor
@@ -32,6 +43,7 @@ from stable_baselines3.common.vec_env import (
     VecEnv,
     VecFrameStack,
     VecNormalize,
+    VecTransposeImage,
 )
 import yaml
 
@@ -43,10 +55,15 @@ from .callbacks import (
 from .gazebo_lane_env import GazeboLaneEnv
 from .ros_interface import RosGazeboInterface
 from .run_io import git_commit, sha256_file
+from .training_metrics import SB3_SCALAR_COLUMNS_BY_ALGO
 
 
 PACKAGE_NAME = "cobraflex_rl"
 SCENARIO_ID = "SC-NOM-01"
+
+# ``algorithm:`` config key -> SB3 class. Both are actor-critic over the same
+# Box action space, so the env/wrapper stack is shared verbatim.
+ALGORITHMS = {"ppo": PPO, "sac": SAC}
 
 
 def resolve_share_directory() -> Path:
@@ -91,7 +108,10 @@ def load_yaml(path: Path) -> Dict[str, Any]:
 
 def parse_args(args: Optional[Sequence[str]] = None) -> argparse.Namespace:
     """Parse CLI args, dropping the ROS-specific ones ros2 launch appends."""
-    parser = argparse.ArgumentParser(description="Train PPO lane-following policy.")
+    parser = argparse.ArgumentParser(
+        description="Train an SB3 lane-following policy (PPO or SAC, per the "
+        "training config's `algorithm` key)."
+    )
     parser.add_argument("--centerline-config", type=str, default=None)
     parser.add_argument(
         "--road-centerline-config",
@@ -117,7 +137,8 @@ def parse_args(args: Optional[Sequence[str]] = None) -> argparse.Namespace:
         "--resume-from",
         type=str,
         default=None,
-        help="Saved PPO .zip to continue from; the run then adds the config's "
+        help="Saved SB3 .zip (matching the config's algorithm) to continue from; "
+        "the run then adds the config's "
         "total_timesteps on top of the checkpoint's step count "
         "(SB3 reset_num_timesteps=False).",
     )
@@ -175,6 +196,42 @@ def _resolve_clip_range_vf(train_cfg: Dict[str, Any]) -> Optional[float]:
     return float(value) if value is not None else None
 
 
+def _resolve_algorithm(train_cfg: Dict[str, Any]) -> str:
+    """The SB3 algorithm the config selects: ``algorithm: ppo`` (default) or
+    ``sac``. A single-key config switch — everything else (env, wrappers,
+    reward, cage, seed, LR schedule) is shared between the two."""
+    algorithm = str(train_cfg.get("algorithm", "ppo")).lower()
+    if algorithm not in ALGORITHMS:
+        raise ValueError(
+            f"Unknown algorithm '{algorithm}' (expected one of {sorted(ALGORITHMS)})"
+        )
+    return algorithm
+
+
+def _resolve_sac_kwargs(train_cfg: Dict[str, Any]) -> Dict[str, Any]:
+    """SAC's off-policy knobs from the optional ``sac:`` config block.
+
+    Defaults are SB3-standard except ``buffer_size``: SB3's 1M default would
+    hold ~56 GB of 84x84x4 uint8 transitions, so it is capped at 100k here
+    (~5.6 GB) and should be set explicitly for longer runs. ``ent_coef``
+    defaults to SAC's auto-tuned temperature. ``train_freq``/``gradient_steps``
+    of 1/1 keep the canonical one-gradient-step-per-env-step cadence.
+    """
+    sac_cfg = dict(train_cfg.get("sac", {}) or {})
+    ent_coef = sac_cfg.get("ent_coef", "auto")
+    if not isinstance(ent_coef, str):
+        ent_coef = float(ent_coef)
+    return {
+        "buffer_size": int(sac_cfg.get("buffer_size", 100_000)),
+        "learning_starts": int(sac_cfg.get("learning_starts", 1000)),
+        "tau": float(sac_cfg.get("tau", 0.005)),
+        "train_freq": int(sac_cfg.get("train_freq", 1)),
+        "gradient_steps": int(sac_cfg.get("gradient_steps", 1)),
+        "ent_coef": ent_coef,
+        "target_update_interval": int(sac_cfg.get("target_update_interval", 1)),
+    }
+
+
 def _write_training_metadata(
     run_dir: Path,
     run_id: str,
@@ -188,6 +245,29 @@ def _write_training_metadata(
     status: str,
 ) -> None:
     """Write the run's reproducibility metadata.json (also on failure)."""
+    algorithm = _resolve_algorithm(train_cfg)
+    shared_hparams = {
+        "learning_rate": float(train_cfg.get("learning_rate", 3.0e-4)),
+        "lr_schedule": str(train_cfg.get("lr_schedule", "constant")).lower(),
+        "gamma": float(train_cfg.get("gamma", 0.99)),
+        "batch_size": int(train_cfg.get("batch_size", 64)),
+        "normalize_reward": bool(train_cfg.get("normalize_reward", False)),
+    }
+    if algorithm == "sac":
+        hyperparameters = {**shared_hparams, **_resolve_sac_kwargs(train_cfg)}
+    else:
+        hyperparameters = {
+            **shared_hparams,
+            "n_steps": int(train_cfg.get("n_steps", 1024)),
+            "n_epochs": int(train_cfg.get("n_epochs", 10)),
+            "gae_lambda": float(train_cfg.get("gae_lambda", 0.95)),
+            "clip_range": float(train_cfg.get("clip_range", 0.2)),
+            "ent_coef": float(train_cfg.get("ent_coef", 0.0)),
+            "vf_coef": float(train_cfg.get("vf_coef", 0.5)),
+            "max_grad_norm": float(train_cfg.get("max_grad_norm", 0.5)),
+            "target_kl": _resolve_target_kl(train_cfg),
+            "clip_range_vf": _resolve_clip_range_vf(train_cfg),
+        }
     metadata = {
         "run_id": run_id,
         "scenario_id": SCENARIO_ID,
@@ -204,22 +284,8 @@ def _write_training_metadata(
         "seed": seed,
         "platform": "sim",
         "total_timesteps": total_timesteps,
-        "hyperparameters": {
-            "learning_rate": float(train_cfg.get("learning_rate", 3.0e-4)),
-            "lr_schedule": str(train_cfg.get("lr_schedule", "constant")).lower(),
-            "gamma": float(train_cfg.get("gamma", 0.99)),
-            "n_steps": int(train_cfg.get("n_steps", 1024)),
-            "batch_size": int(train_cfg.get("batch_size", 64)),
-            "n_epochs": int(train_cfg.get("n_epochs", 10)),
-            "gae_lambda": float(train_cfg.get("gae_lambda", 0.95)),
-            "clip_range": float(train_cfg.get("clip_range", 0.2)),
-            "ent_coef": float(train_cfg.get("ent_coef", 0.0)),
-            "vf_coef": float(train_cfg.get("vf_coef", 0.5)),
-            "max_grad_norm": float(train_cfg.get("max_grad_norm", 0.5)),
-            "target_kl": _resolve_target_kl(train_cfg),
-            "clip_range_vf": _resolve_clip_range_vf(train_cfg),
-            "normalize_reward": bool(train_cfg.get("normalize_reward", False)),
-        },
+        "algorithm": algorithm,
+        "hyperparameters": hyperparameters,
         # Track 'E' provenance (inert for the state-vector track): policy
         # class, observation type, frame stack and the H-10 DR envelope.
         "policy": str(train_cfg.get("policy", "MlpPolicy")),
@@ -237,7 +303,8 @@ def _write_training_metadata(
 
 
 def _append_checkpoint_registry(
-    seed: int, total_timesteps: int, cage_yaml: Path, run_id: str
+    seed: int, total_timesteps: int, cage_yaml: Path, run_id: str,
+    algorithm: str = "ppo",
 ) -> None:
     """Append the completed run to policy/checkpoints/checkpoint_registry.csv."""
     registry = _resolve_repo_subdir("policy", "checkpoints") / "checkpoint_registry.csv"
@@ -250,7 +317,7 @@ def _append_checkpoint_registry(
                 "timestamp", "git_commit", "cage_yaml_hash", "notes",
             ])
         writer.writerow([
-            "cobraflex_ppo_lane",
+            f"cobraflex_{algorithm}_lane",
             seed,
             total_timesteps,
             "",  # scenario_evaluated — filled in by eval_policy later
@@ -262,7 +329,7 @@ def _append_checkpoint_registry(
 
 
 def main(args: Optional[Sequence[str]] = None) -> None:
-    """Run one PPO training session end-to-end (see module docstring)."""
+    """Run one training session end-to-end (see module docstring)."""
     cli_args = parse_args(args)
     rclpy.init(args=args)
 
@@ -291,7 +358,10 @@ def main(args: Optional[Sequence[str]] = None) -> None:
 
     seed = int(train_cfg.get("seed", 42))
     total_timesteps = int(train_cfg.get("total_timesteps", 50000))
-    run_id = cli_args.run_id or "ppo_train_" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    algorithm = _resolve_algorithm(train_cfg)
+    run_id = cli_args.run_id or (
+        f"{algorithm}_train_" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    )
     run_dir = _resolve_repo_subdir("experiments", "sim", "training", run_id)
     checkpoints_dir = _resolve_repo_subdir("policy", "checkpoints")
     cage_yaml = _resolve_cage_yaml(train_cfg)
@@ -380,6 +450,15 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         if normalize_reward:
             if not isinstance(train_env, VecEnv):
                 train_env = DummyVecEnv([lambda: Monitor(env)])
+            # SAC + image obs: transpose to channels-first INSIDE VecNormalize.
+            # SB3 otherwise adds VecTransposeImage outside it, and the off-policy
+            # replay buffer — which stores VecNormalize's *original* obs
+            # (normalization is re-applied at sample time) — would receive
+            # channels-last frames into a channels-first buffer and crash.
+            # PPO stores the model-side (already transposed) obs, so its
+            # (frozen) wrapper stack stays byte-identical.
+            if algorithm == "sac" and camera_obs:
+                train_env = VecTransposeImage(train_env)
             train_env = VecNormalize(
                 train_env,
                 norm_obs=False,
@@ -388,19 +467,41 @@ def main(args: Optional[Sequence[str]] = None) -> None:
                 clip_reward=float(train_cfg.get("clip_reward", 10.0)),
             )
 
+        algo_cls = ALGORITHMS[algorithm]
         resume_from = getattr(cli_args, "resume_from", None)
         if resume_from:
-            model = PPO.load(
+            model = algo_cls.load(
                 resume_from,
                 env=train_env,
                 device=str(train_cfg.get("device", "cpu")),
                 verbose=1,
             )
-            # PPO.load restores the checkpoint's hyperparameters, so re-apply the
-            # trust-region brake from the (current) config — otherwise a resume
-            # silently keeps the checkpoint's target_kl (often None).
-            model.target_kl = _resolve_target_kl(train_cfg)
-            print(f"Resumed PPO from {resume_from} at {model.num_timesteps} steps")
+            if algorithm == "ppo":
+                # PPO.load restores the checkpoint's hyperparameters, so re-apply
+                # the trust-region brake from the (current) config — otherwise a
+                # resume silently keeps the checkpoint's target_kl (often None).
+                model.target_kl = _resolve_target_kl(train_cfg)
+            print(
+                f"Resumed {algorithm.upper()} from {resume_from} "
+                f"at {model.num_timesteps} steps"
+            )
+        elif algorithm == "sac":
+            model = SAC(
+                policy=policy_name,
+                env=train_env,
+                # Shared with PPO: LR (+ optional linear schedule), gamma,
+                # batch_size, seed, device — a config differing only in
+                # ``algorithm:`` keeps everything else identical.
+                learning_rate=_resolve_learning_rate(train_cfg),
+                gamma=float(train_cfg.get("gamma", 0.99)),
+                batch_size=int(train_cfg.get("batch_size", 64)),
+                # Off-policy knobs from the ``sac:`` block (defaults in
+                # _resolve_sac_kwargs; PPO-only keys are ignored here).
+                **_resolve_sac_kwargs(train_cfg),
+                device=str(train_cfg.get("device", "cpu")),
+                seed=seed,
+                verbose=1,
+            )
         else:
             model = PPO(
                 policy=policy_name,
@@ -429,9 +530,21 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         # §7.2.8: persist the learning curve + periodic checkpoints so the run
         # produces its §7.4 evidence automatically.
         checkpoint_freq = int(train_cfg.get("checkpoint_freq", train_cfg.get("n_steps", 1024)))
+        # SAC collects train_freq(=1) steps per "rollout", so the curve callback
+        # is throttled to one row per n_steps-equivalent window; PPO keeps its
+        # native one-row-per-rollout cadence (interval 0).
+        curve_interval = (
+            int(train_cfg.get("n_steps", 1024)) if algorithm == "sac" else 0
+        )
         callback = CallbackList([
-            ProgressBarCallback(total_timesteps=total_timesteps),
-            LearningCurveCallback(csv_path=run_dir / "learning_curve.csv"),
+            ProgressBarCallback(
+                total_timesteps=total_timesteps, desc=algorithm.upper()
+            ),
+            LearningCurveCallback(
+                csv_path=run_dir / "learning_curve.csv",
+                scalar_columns=SB3_SCALAR_COLUMNS_BY_ALGO[algorithm],
+                min_row_interval=curve_interval,
+            ),
             ActionSampleCallback(
                 csv_path=run_dir / "action_samples.csv",
                 sample_every=int(train_cfg.get("action_sample_every", 10)),
@@ -459,7 +572,7 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         )
         model.save(str(model_path))
         status = "completed"
-        print(f"Saved PPO model to {resolve_save_path(model_path)}")
+        print(f"Saved {algorithm.upper()} model to {resolve_save_path(model_path)}")
         print(f"Learning curve + metadata under {run_dir}")
     finally:
         if env is not None:
@@ -482,7 +595,9 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             status=status,
         )
         if status == "completed":
-            _append_checkpoint_registry(seed, total_timesteps, cage_yaml, run_id)
+            _append_checkpoint_registry(
+                seed, total_timesteps, cage_yaml, run_id, algorithm=algorithm
+            )
 
 
 if __name__ == "__main__":

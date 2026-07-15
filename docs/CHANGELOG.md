@@ -31,6 +31,59 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [15.07.2026] — Trainer gains a config-selected algorithm switch (`algorithm: ppo|sac`) + 25k PPO-vs-SAC verification pilot pair
+
+**Document(s) affected:** `docs/DECISIONS.md` (new **D-60** — algorithm switch as a config key, not a separate entry point), `docs/11_camera_rl_training.md` (new **§4.2** + §9 SAC command block, v0.6.3), `docs/15_implementation_inventory.md` (module rows + §5.3 config rows). Code: `src/cobraflex_rl/cobraflex_rl/train_ppo.py` (algorithm resolver, SAC branch, algorithm-aware metadata/registry/run-id), `training_metrics.py` (`SB3_SCALAR_COLUMNS_SAC` / `_BY_ALGO` — same CSV schema, SAC keys mapped), `callbacks.py` (`LearningCurveCallback` scalar-map + `min_row_interval` params, progress-bar `desc`), `eval_policy.py` (`--algorithm` / config-key resolution for loading SAC checkpoints), `launch/train_lane.launch.py` (new `train_config`, `run_id`, `model_path` launch args). Configs: `train_sac_camera.yaml` (SAC mirror of `train_ppo_camera.yaml`), `train_ppo_camera_pilot25k.yaml` + `train_sac_camera_pilot25k.yaml` (the pilot pair). **New evidence:** `experiments/sim/training/{ppo,sac}_cam_pilot25k_2024/` + `experiments/sim/training/pilot25k_ppo_vs_sac_2024/` (comparison figure + summary.json).
+**Phase:** posterior (E5 — training-infrastructure extension; algorithm study groundwork)
+**Gate context:** after Gate G4. The frozen PPO runs and GE4-V2 are untouched — `algorithm` defaults to `ppo` and the PPO code path is byte-identical.
+**Author:** Samuel Sanchez
+
+### Change
+
+`train_ppo.py` now trains SB3 **PPO or SAC** from the same entry point, selected by a single
+`algorithm:` key in the training config (default `ppo`; per-algorithm hyperparameters for SAC
+live in an optional `sac:` block — `buffer_size`, `learning_starts`, `tau`, `train_freq`,
+`gradient_steps`, `ent_coef: auto`). Env, wrappers (Monitor/VecFrameStack/VecNormalize),
+reward, cage wiring, seed and LR schedule are shared verbatim, so two configs differing only
+in `algorithm:` are a like-for-like comparison. One real incompatibility was found and fixed:
+with SAC + image obs + `VecNormalize`, SB3 puts `VecTransposeImage` *outside* `VecNormalize`
+while the off-policy replay buffer stores VecNormalize's original (untransposed) obs — the
+trainer now applies the transpose inside the normalizer on the SAC path only.
+`learning_curve.csv` keeps the exact PPO column schema for SAC runs (`value_loss` ←
+`train/critic_loss`, `entropy` ← `train/ent_coef`, PPO-only columns NaN), throttled to one
+row per 1024-step window (SAC ends a "rollout" every step). `eval_policy` resolves the SB3
+class from `--algorithm` or the config; `train_lane.launch.py` exposes
+`train_config:=`/`run_id:=`/`model_path:=`.
+
+### Rationale
+
+Algorithm-comparison groundwork (PPO vs an off-policy, sample-efficient baseline) on the
+frozen 1-D camera architecture, requested 15.07.2026; config-key switch chosen over a
+separate SAC entry point to guarantee the two arms share everything but the update rule.
+
+### Impact
+
+No hazard/SR/cage/scenario/metric artefacts touched. **25k verification pilots (complex_b,
+seed 2024, enforcement, DR on, 1-D steering):** both algorithms learn healthily from pixels —
+PPO `ep_rew_mean` 131.7 / `ep_len_mean` 162 at 25k; SAC **161.7 / 186** (+23% reward),
+overtaking PPO from ~15k, with slightly lower cage-intervention rate (0.85 vs 0.91, C-06
+dominated as usual early in training) and near-zero emergencies in both. 25k is far below the
+1-D convergence regime (PPO peaks ~823 @ ~297k) — a sanity check of the implementation, not
+an algorithm verdict. SAC wall-clock matched PPO (~7 steps/s, real-time-bound rendering; GPU
+absorbs the per-step gradient update). RAM note: SAC's replay buffer on the 84×84×4 obs is
+~56 KB/transition — `buffer_size` must stay explicit (100k ≈ 5.6 GB; SB3's 1M default would
+be ~56 GB).
+
+### Verification
+
+`pytest` 517 passed; offline SAC-path smoke (synthetic camera env, full wrapper+callback
+stack, checkpoint + save/load) OK; 600-step SAC smoke in live Gazebo OK (clean shutdown, no
+orphans); both 25k pilots `status: completed` with full reproducibility metadata; SAC
+checkpoint loads through the eval path (`SAC.load` via config resolution, deterministic
+predict OK). `python tools/check_traceability.py` → PASS, 0 warnings.
+
+---
+
 ## [13.07.2026] — CV weak-section probe: both estimator failure mechanisms measured in-situ (H-12 flip quantified + NEW confident heading over-read in tight curves)
 
 **Document(s) affected:** `docs/12_cv_lane_keeper.md` (§4.4 — two quantified-limitation blocks, header v0.6), `docs/11_camera_rl_training.md` (posterior item (c) pointer), `tools/validate_cv_estimator.py` (section-probe mode: `--s-range/--s-step`, `--centerline/--world/--world-name/--camera-topic` retargeting, `--offsets/--headings`, `--skip-degraded`, `--run-prefix`, `--save-frames`; `ey_cmd`/`dpsi_cmd` now recorded per sample). **New evidence:** `experiments/sim/runs/cv_probe_weak_sections_20260713T084230Z/` (420-pose oracle grid on `complex_b`, Lane Cam, clean frames; samples.csv + summary.json + probed frames under gitignored `raw_logs/frames/`). No hazard/SR/cage/scenario/metric criterion changed.

@@ -2,7 +2,11 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import (
+    DeclareLaunchArgument,
+    IncludeLaunchDescription,
+    OpaqueFunction,
+)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -57,6 +61,28 @@ def generate_launch_description():
         default_value="false",
         description="Launch Gazebo GUI (set true for debugging).",
     )
+    # Training config YAML — selects observation type, hyperparameters AND the
+    # algorithm (`algorithm: ppo|sac`); the default mirrors the trainer's own
+    # fallback (the F3 state-vector config) so a bare launch is unchanged.
+    train_config_arg = DeclareLaunchArgument(
+        "train_config",
+        default_value=os.path.join(
+            cobraflex_rl_share, "config", "train_ppo.yaml"
+        ),
+        description="Training config YAML (e.g. train_ppo_camera.yaml, "
+        "train_sac_camera.yaml).",
+    )
+    run_id_arg = DeclareLaunchArgument(
+        "run_id",
+        default_value="",
+        description="Run id under experiments/sim/training/ (empty -> "
+        "<algorithm>_train_<timestamp>).",
+    )
+    model_path_arg = DeclareLaunchArgument(
+        "model_path",
+        default_value="",
+        description="Final model .zip path (empty -> the config's model_path).",
+    )
 
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -68,16 +94,30 @@ def generate_launch_description():
         }.items(),
     )
 
-    train_node = Node(
-        package="cobraflex_rl",
-        executable="train_ppo",
-        output="screen",
-        arguments=[
-            "--centerline-config", LaunchConfiguration("centerline"),
-            "--road-centerline-config", LaunchConfiguration("road_centerline"),
-            "--world-name", LaunchConfiguration("world_name"),
-        ],
-    )
+    def train_node(context):
+        # Optional args (run_id/model_path) are appended only when non-empty:
+        # the trainer's own defaults (timestamped run id, config model_path)
+        # must keep applying when they are not set.
+        arguments = [
+            "--centerline-config", LaunchConfiguration("centerline").perform(context),
+            "--road-centerline-config", LaunchConfiguration("road_centerline").perform(context),
+            "--world-name", LaunchConfiguration("world_name").perform(context),
+            "--train-config", LaunchConfiguration("train_config").perform(context),
+        ]
+        run_id = LaunchConfiguration("run_id").perform(context).strip()
+        if run_id:
+            arguments += ["--run-id", run_id]
+        model_path = LaunchConfiguration("model_path").perform(context).strip()
+        if model_path:
+            arguments += ["--model-path", model_path]
+        return [
+            Node(
+                package="cobraflex_rl",
+                executable="train_ppo",
+                output="screen",
+                arguments=arguments,
+            )
+        ]
 
     return LaunchDescription([
         world_arg,
@@ -85,6 +125,9 @@ def generate_launch_description():
         road_centerline_arg,
         world_name_arg,
         gui_arg,
+        train_config_arg,
+        run_id_arg,
+        model_path_arg,
         gazebo,
-        train_node,
+        OpaqueFunction(function=train_node),
     ])

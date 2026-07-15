@@ -22,7 +22,7 @@ from ament_index_python.packages import PackageNotFoundError, get_package_share_
 import numpy as np
 import rclpy
 from rclpy.utilities import remove_ros_args
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, SAC
 import yaml
 
 from .campaign_metrics import compute_run_metrics
@@ -81,6 +81,11 @@ def parse_args(args: Optional[Sequence[str]] = None) -> argparse.Namespace:
                              "(e.g. lane_following_complex_b).")
     parser.add_argument("--train-config", type=str, default=None)
     parser.add_argument("--model-path", type=str, default=None)
+    parser.add_argument(
+        "--algorithm", type=str, default=None, choices=["ppo", "sac"],
+        help="SB3 class the checkpoint was trained with. Default: the "
+             "train config's `algorithm` key (ppo when absent).",
+    )
     parser.add_argument("--episodes", type=int, default=1)
     parser.add_argument(
         "--max-steps", type=int, default=None,
@@ -362,7 +367,13 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         # 20 Hz is ample, and it avoids GPU VRAM exhaustion across the hundreds of
         # back-to-back runs of a campaign (the "CUDA out of memory" on the 4th
         # consecutive run that defaulting to the GPU caused).
-        model = PPO.load(str(resolve_load_path(model_path)), device="cpu")
+        # The SB3 class must match the checkpoint (PPO.load on a SAC zip fails
+        # on missing policy params): --algorithm, else the config's key.
+        algorithm = (
+            cli_args.algorithm or str(train_cfg.get("algorithm", "ppo"))
+        ).lower()
+        algo_cls = {"ppo": PPO, "sac": SAC}[algorithm]
+        model = algo_cls.load(str(resolve_load_path(model_path)), device="cpu")
 
         # Guard against an action-dim mismatch between the checkpoint and the
         # --train-config. The 1-D and 2-D camera configs share an identical

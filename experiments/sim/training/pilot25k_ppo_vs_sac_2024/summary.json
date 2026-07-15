@@ -1,0 +1,26 @@
+{
+  "purpose": "25k-step PPO-vs-SAC verification pilot pair for the algorithm switch (train_ppo.py algorithm: ppo|sac)",
+  "date": "2026-07-15",
+  "configs": [
+    "src/cobraflex_rl/config/train_ppo_camera_pilot25k.yaml",
+    "src/cobraflex_rl/config/train_sac_camera_pilot25k.yaml"
+  ],
+  "config_delta": "algorithm + sac block + model_path only; seed 2024, complex_b, enforcement, DR on for both",
+  "runs": {
+    "ppo": {
+      "run_id": "ppo_cam_pilot25k_2024",
+      "final_ep_rew_mean": 131.7,
+      "final_ep_len_mean": 162.0,
+      "intervention_rate_last5": 0.914,
+      "emergency_rate_last5": 0.0027
+    },
+    "sac": {
+      "run_id": "sac_cam_pilot25k_2024",
+      "final_ep_rew_mean": 161.7,
+      "final_ep_len_mean": 185.9,
+      "intervention_rate_last5": 0.851,
+      "emergency_rate_last5": 0.0006
+    }
+  },
+  "reading": "Both learn healthily from pixels; SAC overtakes PPO ~15k and ends +23% ep_rew_mean at the 25k budget with slightly lower cage intervention. 25k is far from the 1-D convergence regime (PPO peaks ~823 at ~297k) - a pilot sanity check, not an algorithm verdict."
+}

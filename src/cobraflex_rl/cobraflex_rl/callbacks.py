@@ -50,10 +50,12 @@ class ProgressBarCallback(BaseCallback):
         total_timesteps: int,
         log_interval_steps: int = 1000,
         tty_fallback: bool = False,
+        desc: str = "PPO",
     ) -> None:
         super().__init__()
         self.total_timesteps = int(total_timesteps)
         self.log_interval_steps = int(log_interval_steps)
+        self.desc = str(desc)
         self._tty_file = None
         if tty_fallback:
             # Under Isaac, omni captures sys.stdout/stderr and re-emits them
@@ -93,7 +95,7 @@ class ProgressBarCallback(BaseCallback):
 
             self._pbar = tqdm(
                 total=self.total_timesteps,
-                desc="PPO",
+                desc=self.desc,
                 unit="step",
                 dynamic_ncols=True,
                 file=self._tty_file,  # None => tqdm's default (stderr)
@@ -119,7 +121,7 @@ class ProgressBarCallback(BaseCallback):
             self._last_log_step = self.num_timesteps
             pct = 100.0 * self.num_timesteps / max(self.total_timesteps, 1)
             print(
-                f"PPO progress: {self.num_timesteps}/{self.total_timesteps} "
+                f"{self.desc} progress: {self.num_timesteps}/{self.total_timesteps} "
                 f"({pct:.0f}%) | ep_rew_mean={mean_reward:.2f} | "
                 f"ep_len_mean={mean_length:.0f} | episodes={n_episodes} | "
                 f"fps={self._fps()}",
@@ -157,12 +159,32 @@ class LearningCurveCallback(BaseCallback):
     ``explained_variance``, kept here for every scalar). The cage rates are
     accumulated per env step from the env ``info`` dicts (``RolloutCageStats``)
     and reset every rollout.
+
+    ``scalar_columns`` selects the logger-key map (PPO default, or the SAC map
+    ``training_metrics.SB3_SCALAR_COLUMNS_SAC``); the CSV column names are the
+    same for both, so downstream readers are algorithm-agnostic.
+
+    ``min_row_interval`` throttles rows for off-policy algorithms: SB3 fires
+    ``_on_rollout_end`` after every collection phase, which for SAC with
+    ``train_freq=1`` is *every env step*. Rows are only written once at least
+    this many timesteps have passed since the last one (0 keeps the PPO
+    one-row-per-rollout behaviour); cage stats keep accumulating across the
+    skipped rollouts so the rates still cover the whole window.
     """
 
-    def __init__(self, csv_path, verbose: int = 0) -> None:
+    def __init__(
+        self,
+        csv_path,
+        verbose: int = 0,
+        scalar_columns=SB3_SCALAR_COLUMNS,
+        min_row_interval: int = 0,
+    ) -> None:
         super().__init__(verbose)
         self.csv_path = Path(csv_path)
-        self._scalars = {col: float("nan") for col, _key, _sign in SB3_SCALAR_COLUMNS}
+        self.scalar_columns = tuple(scalar_columns)
+        self.min_row_interval = int(min_row_interval)
+        self._last_row_timestep: Optional[int] = None
+        self._scalars = {col: float("nan") for col, _key, _sign in self.scalar_columns}
         self._cage = RolloutCageStats()
         self._header_written = False
 
@@ -183,8 +205,8 @@ class LearningCurveCallback(BaseCallback):
         # logger dump, so only overwrite the cached value when the key is present
         # (otherwise the last completed update's value persists — see docstring).
         name_to_value = self.model.logger.name_to_value
-        for col, key, sign in SB3_SCALAR_COLUMNS:
-            value = name_to_value.get(key)
+        for col, key, sign in self.scalar_columns:
+            value = name_to_value.get(key) if key else None
             if value is not None:
                 self._scalars[col] = sign * float(value)
         # Accumulate this step's cage activity (SB3 passes one info per parallel env).
@@ -192,13 +214,19 @@ class LearningCurveCallback(BaseCallback):
         return True
 
     def _on_rollout_end(self) -> None:
+        if (
+            self.min_row_interval > 0
+            and self._last_row_timestep is not None
+            and self.num_timesteps - self._last_row_timestep < self.min_row_interval
+        ):
+            return  # keep accumulating cage stats; write on a later rollout end
         mean_reward, mean_length = self._ep_stats()
         row = {
             "timestep": self.num_timesteps,
             "ep_rew_mean": f"{mean_reward:.6f}",
             "ep_len_mean": f"{mean_length:.3f}",
         }
-        for col, _key, _sign in SB3_SCALAR_COLUMNS:
+        for col, _key, _sign in self.scalar_columns:
             row[col] = f"{self._scalars[col]:.6f}"
         for col, value in self._cage.rates().items():
             row[col] = f"{value:.6f}"
@@ -210,6 +238,7 @@ class LearningCurveCallback(BaseCallback):
                 writer.writeheader()
             writer.writerow(row)
         self._header_written = True
+        self._last_row_timestep = self.num_timesteps
         self._cage.reset()
 
 

@@ -24,9 +24,12 @@ checkpoint registry. **The live training/eval code moved to the ROS2 package
 
 PPO via Stable-Baselines3 (decisions D-14/D-15). F-track: `MlpPolicy` over the
 6-dim state vector. Track 'E': `CnnPolicy` (NatureCNN) over 4 stacked 84×84
-grayscale camera frames. Full deep dive (architecture, hyperparameter
-provenance, Gazebo wiring): `docs/16_defense_compendium.md` §3;
-training operations: `docs/11_camera_rl_training.md`.
+grayscale camera frames. Since 15.07.2026 the trainer also builds **SAC** from
+the same entry point, selected by the training config's `algorithm: ppo|sac`
+key (D-60; posterior algorithm-comparison groundwork — every thesis verdict is
+PPO). Full deep dive (architecture, hyperparameter provenance, Gazebo wiring):
+`docs/16_defense_compendium.md` §3; training operations (+ the algorithm
+switch, `docs/11_camera_rl_training.md` §4.2).
 
 ## Training Specification
 

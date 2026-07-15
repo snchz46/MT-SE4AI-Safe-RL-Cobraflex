@@ -1,0 +1,60 @@
+{
+  "run_id": "sac_cam_pilot25k_2024",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-07-15T17:35:30.586926+00:00",
+  "git_commit": "af6dfa9faeb953ce07edb2ae88bd329da55611aa",
+  "train_config": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/train_sac_camera_pilot25k.yaml",
+  "train_config_hash": "82da41e0dce976549ce97a1578b482c0ca819b999fec8e8be83de7b19c9966b0",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "scenario_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "policy_checkpoint": "policy/checkpoints/cobraflex_sac_cam_pilot25k_2024.zip",
+  "policy_checkpoint_hash": "6cfbfbc860bd98a5674bf69157ad9b333bdc38837f01f8ca6d636875c158c845",
+  "seed": 2024,
+  "platform": "sim",
+  "total_timesteps": 25000,
+  "algorithm": "sac",
+  "hyperparameters": {
+    "learning_rate": 0.0003,
+    "lr_schedule": "linear",
+    "gamma": 0.99,
+    "batch_size": 64,
+    "normalize_reward": true,
+    "buffer_size": 25000,
+    "learning_starts": 1000,
+    "tau": 0.005,
+    "train_freq": 1,
+    "gradient_steps": 1,
+    "ent_coef": "auto",
+    "target_update_interval": 1
+  },
+  "policy": "CnnPolicy",
+  "observation": {
+    "type": "camera",
+    "camera": {
+      "topic": "/camera/image_raw_lane",
+      "width": 84,
+      "height": 84,
+      "grayscale": true,
+      "frame_stack": 4
+    }
+  },
+  "action": {},
+  "reward": {
+    "lateral_error": 2.5,
+    "heading_error": 0.75,
+    "steer_delta": 0.2,
+    "forward_progress": 1.0,
+    "termination": 25.0
+  },
+  "domain_randomization": {
+    "enabled": true,
+    "p_degrade": 0.5,
+    "level_range": [
+      0.2,
+      0.8
+    ]
+  },
+  "status": "completed"
+}

@@ -947,7 +947,10 @@ E4 / track 'E' (campaña GE4 cámara, §8.9):
   [x] (c) SC-EDGE-05 grid de co-activación cableado + determinante (30/85 breaches in-ODD, SR-010)
   [x] (e) Campaña GE4 re-ejecutada sobre el E-main 297k (V2); SR-001 cerrado por ruta-1 (28/30)
   --- PENDIENTE ---
-  [~] (d) Multi-seed N=5 cámara — 4/5 entrenadas (2024/42/123/666, picos rescatados, §7.5.3); evals de 123/666 + semilla 23 diferidos (restricción de host ≤1 h).
+  [x] (d) Multi-seed N=5 cámara — CERRADO 13.07.2026 (E5): 5/5 entrenadas + eval nominal por
+       semilla (3/5 constraint-respecting; 666 cage-dependent; 23 conflicto cage–CV, intermitente,
+       replicado). La curva de entrenamiento no clasifica la cuenca (D-36 ext.). §7.5.3–7.5.4,
+       docs/11 §8.5. No toca el veredicto GE4-V2.
   [—] SR-009/SC-PERT-03: stall test N/A para acción solo-dirección (M-P6≡0 by construction, D-49);
        el test bien-puesto se difiere a la acción 2-D de Isaac.
 

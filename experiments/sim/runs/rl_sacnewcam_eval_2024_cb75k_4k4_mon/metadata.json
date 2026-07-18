@@ -1,0 +1,19 @@
+{
+  "run_id": "rl_sacnewcam_eval_2024_cb75k_4k4_mon",
+  "scenario_id": "SC-NOM-01",
+  "mode": "monitoring",
+  "timestamp_iso": "2026-07-17T20:07:51.845209+00:00",
+  "duration_s": 440.0,
+  "git_commit": "783115f5c4d2b88b0a44dbd6ba0e62c9449e7668",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "policy_checkpoint": "policy/checkpoints/sac_newcam_complex_b_2024_1M_75000_steps.zip",
+  "policy_checkpoint_hash": "58631022115a36ff0347e8a7ed5a36c46a7182b528d9c16b7ace5cfa78a6cc07",
+  "centerline_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "scenario_yaml": "",
+  "scenario_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "rep": 0,
+  "seed": 2024,
+  "platform": "sim",
+  "status": "completed"
+}

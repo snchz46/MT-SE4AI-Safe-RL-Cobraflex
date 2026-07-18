@@ -58,7 +58,7 @@ device: auto              # CNN benefits from CUDA when present; falls back to c
 # gz set_pose/set_physics CLI timeout (ms). Raised 2000->3500: the CLI does
 # service discovery per call and occasionally times out under reset load.
 service_timeout_ms: 3500
-seed: 23                  # E-main seed mirrors the F-track main run (D-36 precedent)
+seed: 2024                # E-main seed mirrors the F-track main run (D-36 precedent)
 max_episode_steps: 1024
 control_dt: 0.10
 fixed_speed: 0.20
@@ -72,6 +72,9 @@ progress_bounded_tracking: false
 # Publish the cage/agent runtime view to RViz (/cage/markers + /agent/obs_image)
 # each step. Negligible overhead; set false for headless campaign runs.
 viz: true
+checkpoint_freq: 25000    # periodic-ckpt cadence; without it the trainer falls back to
+                          # n_steps (1024) → ~1000 ckpts over 1M (the Isaac volume gotcha,
+                          # 03.07.2026). 40 ckpts/1M; peak rescue reads these.
 model_path: cobraflex_sac_newcam_lane
 sim_real_time_factor: 1   # camera rendering is real-time-bound; see Training Spec
 

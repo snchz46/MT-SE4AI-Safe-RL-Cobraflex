@@ -422,9 +422,52 @@ family adds `throttle_delta`/`stall_penalty` terms, random spawns and a
   PPO-inherited values were handicapping SAC — **use the tuned config for the
   1M 2-D SAC run**.
 
-25k is far below the 1-D convergence regime (PPO ~823 @ ~297k), so all five
-curves are implementation sanity checks + early signal, **not** algorithm
-verdicts. Evidence: `experiments/sim/training/{ppo,sac}_cam_pilot25k_2024/`,
+- **1-D SAC 1M run (17.07.2026) — the follow-up the pilots called for.**
+  `sac_newcam_complex_b_2024_1M` (seed 2024 restored in both config twins — the
+  multiseed leftover `seed: 23` contradicted the D-36 comment — and
+  `checkpoint_freq: 25000` added to both, the 03.07 ckpt-volume lesson): peak
+  **`ep_rew_mean` 720.0 @ ~89k** (~87% of the PPO peak in ~30% of the steps),
+  slow decay, then an abrupt **entropy-collapse dip @ ~143k** (540 → 23 in ~3k
+  steps; auto-temperature ~4e-4 — the same exploration-collapse family as the
+  PPO 297k run), a genuine **recovery** to ~635 @ 262k (the replay buffer keeps
+  the good era — PPO never recovered from its 500k+ decay), then oscillation
+  540–640; stopped manually at ~307k (budget comparable to the PPO peak) and the
+  peak zone rescued to `checkpoints_peak/` (75k hash `58631022…`). Deterministic
+  SC-NOM-01 evals (4400 steps, DR off): **75k enforcement 5.12 laps / |ey|
+  19.8 mm / 0 emergencies / 48.3% C-06-only; monitoring 5.13 laps / 23.3 mm /
+  0 emergencies** → cage latent in-ODD in both modes, the E-main signature; 100k
+  (5.14 laps, 27.5 mm, 93.3% C-06) confirms 75k as peak-of-record. Reading vs
+  the PPO 297k (4.88 laps, 10.9 mm): SAC completes more laps on a tighter line
+  but with ~2× the lateral error; safety-equivalent on SC-NOM-01. Evidence:
+  `experiments/sim/training/sac_newcam_complex_b_2024_1M/` (+
+  `ppo_vs_sac_1d_1M_curve.png`), `experiments/sim/runs/rl_sacnewcam_eval_*`.
+  See CHANGELOG 17.07.
+
+- **2-D tuned SAC 1M run (18.07.2026).** `sac_gz2d_tuned_complex_b_2024_1M`
+  (tuned recipe, 0.25 cap, D-58 random spawns): **collapse-recover cycles**
+  from the same auto-temperature pinning as the 1-D run (α ≈ 7e-4 from ~62k;
+  UTD 2 adapts α twice as fast; 2-D manifestation is throttle-greedy — mean
+  raw throttle 0.86, ~25% saturated). Cycle peaks **214 @ 54k → 527 @ 154k**
+  (vs PPO 2-D 654 @ 511k — ~80% of the PPO peak with 3.3× fewer steps); cycle
+  3 never recovered → stopped at ~251k, peak flanked by the 150k/175k ckpts
+  (175k hash `e8934d51…`). Deterministic SC-NOM-01 evals: **175k
+  peak-of-record — monitoring 4.31 laps / |ey| 32.3 mm / 0 emergencies (full
+  4400, slows for curves, mean speed 0.182)**; enforcement 3.45 laps / 34.8 mm
+  then a C-02→C-05 stop on the D-43 confident curve heading over-read
+  (cv_epsi −0.45 rad, car centred); 150k flank 2.85 laps, stopped by the
+  zero-margin speed envelope (odom 0.2502 vs the 0.25 C-04 curve ceiling —
+  the action cap equals the cage ceiling; D-59 item, now quantified). Same
+  verdict pattern as 2-D PPO (mon competent / enf stopped by cage–CV or
+  speed margin), but 2.3× further in enforcement. Across both 1M runs:
+  **`ent_coef: auto` collapses in this env in both action spaces** — a fixed
+  temperature floor (`sac.ent_coef: 0.005`) is the natural next variant, not
+  launched. Evidence: `experiments/sim/training/sac_gz2d_tuned_complex_b_2024_1M/`
+  (+ `ppo_vs_sac_2d_curve.png`), `experiments/sim/runs/rl_sacgz2d_eval_*`.
+  See CHANGELOG 18.07.
+
+25k is far below the 1-D convergence regime (PPO ~823 @ ~297k), so the five
+pilot curves are implementation sanity checks + early signal, **not** algorithm
+verdicts; the two 1M SAC runs above are the algorithm-level data points. Evidence: `experiments/sim/training/{ppo,sac}_cam_pilot25k_2024/`,
 `{ppo,sac}_gz2d_pilot25k_2024/` and `sac_gz2d_pilot25k_tuned_2024/` + the
 battery figure (`ppo_vs_sac_pilot25k_battery.png`) and `summary.json` under
 `experiments/sim/training/pilot25k_ppo_vs_sac_2024/`. The GE4-V2 verdict
@@ -1047,6 +1090,17 @@ cage-dependent (666), 1/5 cage–CV conflict (23)).
 
 ## Version log
 
+- **v0.6.6 (2026-07-18):** **§4.2 — 2-D tuned SAC 1M run executed (stopped 251k).**
+  Collapse-recover cycles from auto-temperature pinning (peaks 214→527 @ 154k, ~80% of the
+  PPO 2-D peak with 3.3× fewer steps); 175k peak-of-record evals — mon 4.31 laps / 0
+  emergencies full-horizon, enf stopped by the two known 2-D mechanisms (D-43 heading
+  over-read; zero-margin 0.25 cap vs C-04 ceiling, D-59 now quantified). `ent_coef: auto`
+  collapses in both action spaces (cross-run finding). CHANGELOG 18.07.
+- **v0.6.5 (2026-07-17):** **§4.2 — 1-D SAC 1M run executed (stopped 307k).** Peak 720 @ 89k,
+  entropy-collapse dip @ 143k with partial recovery (replay-buffer resilience PPO lacked),
+  stopped at a PPO-peak-comparable budget; 75k peak checkpoint evals clean (5.12 laps,
+  0 emergencies, cage latent both modes; ~2× PPO lateral error on a tighter line). Config
+  twins: seed 23→2024 restore + `checkpoint_freq: 25000`. CHANGELOG 17.07.
 - **v0.6.4 (2026-07-15):** **§4.2 extended — 2-D wired for SAC + five-curve pilot battery.**
   The D-60 algorithm switch composes with the D-59 2-D `action:` block with zero code change;
   new configs `train_sac_camera_2d.yaml` + `train_{ppo,sac}_camera_2d_pilot25k.yaml`. 2-D 25k

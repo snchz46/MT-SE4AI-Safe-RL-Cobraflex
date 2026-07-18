@@ -31,6 +31,93 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [18.07.2026] — 2-D tuned SAC 1M run executed (stopped 251k): collapse-recover cycles (peaks 214→527 @ 154k), 175k peak evals — monitoring 4.31 laps / 0 emergencies, enforcement stopped by the two known 2-D mechanisms
+
+**Document(s) affected:** `docs/11_camera_rl_training.md` (§4.2 2-D 1M block, version log). **New evidence:** `experiments/sim/training/sac_gz2d_tuned_complex_b_2024_1M/` (curve to 251k, metadata `interrupted` + stop_reason, `checkpoints_peak/` 150k/175k + VecNormalize stats, `ppo_vs_sac_2d_curve.png`); evals `experiments/sim/runs/rl_sacgz2d_eval_2024_cb150k_4k4`, `…cb175k_4k4{,_mon}`.
+**Phase:** posterior (E5 — algorithm study; the 1M 2-D run docs/11 §4.2 called for, on the tuned recipe per the 15.07 pilot)
+**Gate context:** after Gate G4; the 2-D PPO baseline and all frozen artefacts untouched.
+**Author:** Samuel Sanchez
+
+### Change
+
+Ran the tuned 2-D SAC 1M config (`sac_gz2d_tuned_complex_b_2024_1M`, seed 2024, batch 256,
+constant LR, warmup 5k, UTD 2, buffer 150k, 0.25 cap, D-58 random spawns). Stopped manually at
+~251k: the run settles into **collapse-recover cycles** driven by the same auto-temperature
+pinning as the 1-D run (α ≈ 7e-4 from ~62k; the tuned recipe fixes batch/LR but keeps
+`ent_coef: auto`, and UTD 2 adapts α twice as fast) — cycle peaks **214 @ 54k → 527 @ 154k**
+(the 2-D manifestation is throttle-greedy: mean raw throttle 0.86, ~25% saturated high,
+emergencies rising into each collapse), but cycle 3 never recovered (527 → 66 over ~97k steps)
+and the run was stopped with the peak zone already flanked by the 150k/175k checkpoints
+(175k hash `e8934d51…`).
+
+### Rationale / Impact (deterministic SC-NOM-01 evals, 4400 steps, DR off)
+
+**175k is the peak-of-record** (eval-selected): **monitoring 4.31 laps, |ey| 32.3 mm,
+0 emergencies, full horizon** (mean speed 0.182, max 0.252 — it slows for curves); enforcement
+**3.45 laps / |ey| 34.8 mm** before a C-02→C-05 stop on the **known D-43 confident curve
+heading over-read** (cv_epsi ≈ −0.45 rad on a centred car at true |epsi| 0.035 — the 13.07
+CV-probe mechanism). The 150k flank: 2.85 laps / 49.4 mm, stopped by the **zero-margin speed
+envelope** (odom 0.2502 vs the 0.25 C-04 curve ceiling — the action cap *equals* the cage
+ceiling, so a 0.0002 m/s odom overshoot in a curve fires C-04+C-05; D-59 review item,
+quantified). Verdict pattern replicates 2-D PPO (mon competent / enf stopped by cage–CV or
+speed-margin, not by driving) but SAC gets **2.3× further in enforcement** (3.45 vs 1.52 best
+PPO laps) and reaches its curve peak with **3.3× fewer steps** (527 @ 154k vs 654 @ 511k),
+peaking lower. Both 2-D stop mechanisms are now cleanly quantified for the D-59 prerequisite
+review. Combined with the 1-D run (17.07): **`ent_coef: auto` collapses in this env in both
+action spaces** — a fixed-temperature floor (e.g. `sac.ent_coef: 0.005`) is the obvious next
+variant if SAC is pursued further; not launched (deviates from the frozen recipes — user call).
+
+### Verification
+
+SIGINT-clean stop, metadata `interrupted` + stop_reason; `num_timesteps` verified
+(150000/175000); mon eval full 4400 steps / 0 errors; per-step CSVs carry the 2-D
+`raw_throttle`/`safe_throttle` evidence; zero-`cmd_vel` + settle guard between chained evals;
+`python tools/check_traceability.py` → PASS.
+
+---
+
+## [17.07.2026] — 1-D SAC 1M run executed (stopped 307k): peak 720 @ 89k, entropy-collapse dip + recovery; 75k peak checkpoint evals clean (5.12 laps, 0 emergencies, cage latent)
+
+**Document(s) affected:** `docs/11_camera_rl_training.md` (§4.2 1M-run block, version log). Configs: `train_sac_camera.yaml` + `train_ppo_camera.yaml` (seed 23→2024 restore — the multiseed-E5 leftover contradicted the D-36 main-seed comment; `checkpoint_freq: 25000` added to both twins, the 03.07 ckpt-volume lesson, diff-parity preserved). **New evidence:** `experiments/sim/training/sac_newcam_complex_b_2024_1M/` (learning_curve.csv to 307k, metadata `interrupted` + stop_reason, `checkpoints_peak/` with the 75k/100k zips + VecNormalize stats, `ppo_vs_sac_1d_1M_curve.png`); evals `experiments/sim/runs/rl_sacnewcam_eval_2024_cb75k_4k4{,_mon}` + `rl_sacnewcam_eval_2024_cb100k_4k4`.
+**Phase:** posterior (E5 — algorithm study, the 1M follow-up the 15.07 pilots called for)
+**Gate context:** after Gate G4; GE4-V2 and every frozen PPO artefact untouched.
+**Author:** Samuel Sanchez
+
+### Change
+
+Ran the 1M-budget 1-D camera SAC mirror (`sac_newcam_complex_b_2024_1M`, seed 2024, complex_b,
+enforcement, DR on — config differs from the PPO E-main only in `algorithm:`/`sac:` block).
+Stopped manually at ~307k under the pre-agreed deterioration rule (the PPO-1M precedent):
+`ep_rew_mean` peaked **720.0 @ ~89k**, entered a slow decay, then an abrupt **entropy-collapse
+dip at ~143k** (540 → 23 in ~3k steps; the auto-tuned temperature had contracted to ~4e-4,
+near-deterministic — same exploration-collapse family as the PPO 297k run), **recovered** to
+~635 by 262k (replay buffer retains the good era — a recovery PPO never showed from its 500k+
+decay) but then oscillated 540–640 without re-approaching the peak; at a budget comparable to
+the PPO peak (297k) the run was stopped and the peak zone rescued. Peak checkpoints 75k/100k
+(25k periodic cadence) copied to `checkpoints_peak/`; 75k hash `58631022…`.
+
+### Rationale / Impact (deterministic SC-NOM-01 evals, 4400 steps, DR off — the classifier, not the curve)
+
+**75k enforcement: 5.12 laps, mean |ey| 19.8 mm (max 75.1 mm), 0 emergencies, interventions
+48.3% C-06-only** — full horizon, no C-01/02/03/05. **75k monitoring: 5.13 laps, 23.3 mm,
+0 emergencies** → the E-main **cage-latent-in-ODD signature in both modes** (constraint-
+respecting policy). 100k enforcement (5.14 laps, 27.5 mm, 93.3% C-06) confirms 75k as the
+peak checkpoint of record. Against the PPO E-main 297k (4.88 laps, 10.9 mm, 43.5% C-06):
+SAC completes **more laps** (tighter line — the higher |ey| is line-cutting, not instability)
+with **~2× the lateral error** and equal safety (0 emergencies both); it reaches ~87% of the
+PPO peak reward in ~30% of the steps (sample efficiency), at the cost of a temperature-collapse
+instability the linear-LR/batch-64 mirror values plausibly aggravate (the tuned-recipe lesson,
+15.07). Laps ARE comparable here (same track, same fixed 0.2 m/s).
+
+### Verification
+
+Trainer SIGINT-clean (metadata written, no gz orphans; Gazebo kept alive for the eval chain
+with the zero-`cmd_vel` + settle guard between runs); `num_timesteps` verified in both rescued
+zips (75000/100000); all three evals `total_steps: 4400`, summaries recorded;
+`python tools/check_traceability.py` → PASS.
+
+---
+
 ## [15.07.2026] — Tuned 2-D SAC recipe (SAC-canonical values) + fifth pilot curve: the PPO-inherited values were handicapping SAC
 
 **Document(s) affected:** `docs/11_camera_rl_training.md` (§4.2 tuned-variant block, version log), `docs/15_implementation_inventory.md` (§5.3 row). Configs: `train_sac_camera_2d_tuned.yaml` (1M) + `train_sac_camera_2d_pilot25k_tuned.yaml`. **New evidence:** `experiments/sim/training/sac_gz2d_pilot25k_tuned_2024/`; the battery figure under `pilot25k_ppo_vs_sac_2024/` is now `ppo_vs_sac_pilot25k_battery.png` (5 curves).

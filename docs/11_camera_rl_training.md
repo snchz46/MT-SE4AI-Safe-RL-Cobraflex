@@ -1,19 +1,20 @@
-# Camera RL Training — End-to-End Front-Camera PPO (Track 'E')
+# Camera RL Training — End-to-End Front-Camera PPO + Posterior SAC (Track 'E')
 
 | Field | Value |
 | --- | --- |
 | Artifact | Track 'E' training implementation (the camera counterpart of `docs/09`) |
-| Version | **0.6** (2026-06-28 — **GE4-V2 verdict of record** on the 297k E-main, §8.4: 1970 runs, global `NOT SATISFIED` literal blocking SR-002/003 only (D-47 reconciled); SR-001 closed by ruta-1, ruta-2b reverted (D-48). G4 closed 02.07.2026, docs/07) |
+| Version | **0.8** (2026-07-20 — Gazebo 2-D qualification contract and D-43/SC-PERT execution gates added; GE4-V2 remains frozen) |
 | Phase / Gate | F3 training infrastructure, reused by track 'E' (GE3 train, GE4 eval) |
 | Author | Samuel Sanchez |
-| Date | 2026-06-22 |
-| Status | CONFIRMED — implemented in `cobraflex_rl/train_ppo.py` + the camera branch of `cobraflex_rl/gazebo_lane_env.py` |
+| Date | 2026-07-20 |
+| Status | CONFIRMED — the shared `cobraflex_rl/train_ppo.py` entry point trains PPO or SAC; the verdict-bearing E-main remains PPO |
 | Normative spec | Training Specification Ch.7 §7.2 (loop) + §7.7 (camera track). **This document is supporting rationale, not the normative source**: on any numeric discrepancy, §7.2/§7.7 prevails. |
-| Decisions cited | D-41 (end-to-end camera architecture), D-43 (cage reads its own CV estimator), D-34 (cage in the training loop / TS-01), D-36 (main seed 2024), D-32 (external drivers) |
+| Decisions cited | D-41 (end-to-end camera architecture), D-43 (cage reads its own CV estimator), D-34 (cage in the training loop / TS-01), D-36 (main seed 2024), D-49/D-59 (1-D verdict vs posterior 2-D), D-60 (PPO/SAC switch), D-32 (external drivers) |
 | Sibling documents | `docs/09_environment_design.md` (obs/action/wrapper), `docs/10_reward_function.md` (reward), `docs/12_cv_lane_keeper.md` (the classical CV baseline this agent is measured against) |
 
 > Purpose: document *how* the end-to-end front-camera RL agent is trained — the
-> entry-point script, the algorithm (PPO + CNN over a frame stack), the camera
+> entry-point script, the verdict algorithm (PPO) and posterior comparator (SAC),
+> both using a CNN over a frame stack, the camera
 > observation path, the H-10 visual domain randomisation, and the evidence the
 > run emits — and *why* each piece is built this way. It complements the thesis
 > prose (Ch.7 §7.7) with the engineering detail the committee may ask for. The
@@ -25,7 +26,8 @@
 > 02.07.2026). The Isaac-Sim migration
 > ([docs/13](13_isaacsim_environment.md)) is a **separate, posterior** thread (a sim-to-real
 > bridge) that **does not supersede** these results; a Gazebo checkpoint does not transfer to
-> Isaac, so any Isaac E-policy is a future retrain, not a re-do of the 297k campaign documented here.
+> Isaac. The posterior Isaac policies are independent retrains, not transfers or a re-do of
+> the 297k campaign documented here; any new Isaac variant likewise requires retraining.
 
 ---
 
@@ -404,9 +406,9 @@ family adds `throttle_delta`/`stall_penalty` terms, random spawns and a
   steepest end-slope of the four curves) and drives the longest episodes of
   the battery (`ep_len` 198 vs 154 — slower, more survivable driving). The
   off-policy warmup (1k random steps + auto-temperature) delays SAC's takeoff
-  by design; whether it eventually beats the 2-D PPO ceiling (1M baseline peak
-  654 ≪ 1-D 823, §8.5) needs a longer run — `train_sac_camera_2d.yaml` (1M
-  budget, buffer 100k ≈ 5.6 GB) is ready for the training host.
+  by design; the 25k cutoff could not establish whether it would beat the 2-D
+  PPO ceiling (planned-1M baseline peak 654 ≪ 1-D 823, §8.5). The longer tuned
+  SAC run was subsequently executed to 251k and is reported below.
 
 - **Tuned 2-D SAC variant (fifth curve, outside the pair).** The paired SAC
   arms inherit two PPO-shared values that are non-canonical for SAC —
@@ -419,18 +421,18 @@ family adds `throttle_delta`/`stall_penalty` terms, random spawns and a
   arm (90.0) at ~16k, nearly catches PPO (113.0) at cutoff with the steepest
   late slope (31 → 76 → 107 at 15k/20k/25k), and drives *faster* (`ep_len` 131
   vs 198, PPO-like profile; emergencies up slightly, 0.011). The
-  PPO-inherited values were handicapping SAC — **use the tuned config for the
-  1M 2-D SAC run**.
+  PPO-inherited values were handicapping SAC. This recommendation was followed
+  in the planned-1M tuned run reported below.
 
-- **1-D SAC 1M run (17.07.2026) — the follow-up the pilots called for.**
+- **Planned-1M 1-D SAC run, stopped at 307k (17.07.2026) — the follow-up the pilots called for.**
   `sac_newcam_complex_b_2024_1M` (seed 2024 restored in both config twins — the
   multiseed leftover `seed: 23` contradicted the D-36 comment — and
   `checkpoint_freq: 25000` added to both, the 03.07 ckpt-volume lesson): peak
   **`ep_rew_mean` 720.0 @ ~89k** (~87% of the PPO peak in ~30% of the steps),
   slow decay, then an abrupt **entropy-collapse dip @ ~143k** (540 → 23 in ~3k
   steps; auto-temperature ~4e-4 — the same exploration-collapse family as the
-  PPO 297k run), a genuine **recovery** to ~635 @ 262k (the replay buffer keeps
-  the good era — PPO never recovered from its 500k+ decay), then oscillation
+  PPO 297k run), a genuine **recovery** to ~635 @ 262k (observed, but not
+  attributable to retention of the 89k peak era in a 100k buffer), then oscillation
   540–640; stopped manually at ~307k (budget comparable to the PPO peak) and the
   peak zone rescued to `checkpoints_peak/` (75k hash `58631022…`). Deterministic
   SC-NOM-01 evals (4400 steps, DR off): **75k enforcement 5.12 laps / |ey|
@@ -443,7 +445,7 @@ family adds `throttle_delta`/`stall_penalty` terms, random spawns and a
   `ppo_vs_sac_1d_1M_curve.png`), `experiments/sim/runs/rl_sacnewcam_eval_*`.
   See CHANGELOG 17.07.
 
-- **2-D tuned SAC 1M run (18.07.2026).** `sac_gz2d_tuned_complex_b_2024_1M`
+- **Planned-1M 2-D tuned SAC run, stopped at 251k (18.07.2026).** `sac_gz2d_tuned_complex_b_2024_1M`
   (tuned recipe, 0.25 cap, D-58 random spawns): **collapse-recover cycles**
   from the same auto-temperature pinning as the 1-D run (α ≈ 7e-4 from ~62k;
   UTD 2 adapts α twice as fast; 2-D manifestation is throttle-greedy — mean
@@ -458,10 +460,11 @@ family adds `throttle_delta`/`stall_penalty` terms, random spawns and a
   zero-margin speed envelope (odom 0.2502 vs the 0.25 C-04 curve ceiling —
   the action cap equals the cage ceiling; D-59 item, now quantified). Same
   verdict pattern as 2-D PPO (mon competent / enf stopped by cage–CV or
-  speed margin), but 2.3× further in enforcement. Across both 1M runs:
-  **`ent_coef: auto` collapses in this env in both action spaces** — a fixed
-  temperature floor (`sac.ent_coef: 0.005`) is the natural next variant, not
-  launched. Evidence: `experiments/sim/training/sac_gz2d_tuned_complex_b_2024_1M/`
+  speed margin), but 2.3× further in enforcement. Across both planned-1M runs:
+  **`ent_coef: auto` collapses in this env in both action spaces** — this result
+  motivated the fixed-temperature variants reported immediately below; both
+  1-D and 2-D entfix were subsequently executed. Evidence:
+  `experiments/sim/training/sac_gz2d_tuned_complex_b_2024_1M/`
   (+ `ppo_vs_sac_2d_curve.png`), `experiments/sim/runs/rl_sacgz2d_eval_*`.
   See CHANGELOG 18.07.
 
@@ -470,12 +473,15 @@ family adds `throttle_delta`/`stall_penalty` terms, random spawns and a
   fixed): peak **722.5 @ 83k** (== auto), **no cliff anywhere in 260k** (the
   auto run's 143k collapse window passes flat at ~470) → the abrupt collapse
   *was* the α→0 exploitation spiral. The slow post-peak decay to a 445–550
-  band survives the floor → a second mechanism (critic overfit to the
-  narrowing replay tube). **75k peak eval: enf 5.04 laps / |ey| 21.6 mm /
-  0 emergencies / 9.1% C-06-only — the lowest cage engagement of any camera
-  policy measured** (SAC auto 48.3%, PPO 43.5%); monitoring identical. The
-  entropy floor buys a smoother policy at no performance cost. 2-D twin
-  config `train_sac_camera_2d_tuned_entfix.yaml` runs next. Evidence:
+  band survives the floor → a second mechanism, with the bounded 200k-buffer
+  probe strongly supporting **eviction of early replay data**, not the
+  temperature mechanism. **75k peak eval: enf 5.04 laps / |ey| 21.6 mm /
+  0 emergencies / 9.1% C-06-only — the lowest cage engagement then measured
+  for seed 2024** (SAC auto 48.3%, PPO 43.5%); monitoring matches laps/error
+  and has 10.6% counterfactual C-06. The
+  entropy floor buys a much smoother policy with a small nominal task trade-off
+  (5.12→5.04 laps and 19.8→21.6 mm vs SAC-auto 75k), and no safety cost. The 2-D twin
+  `train_sac_camera_2d_tuned_entfix.yaml` was then executed (next bullet). Evidence:
   `experiments/sim/training/sac_newcam_entfix_complex_b_2024_1M/`,
   `experiments/sim/runs/rl_sacentfix_eval_*`; three-curve figure in the auto
   run dir. See CHANGELOG 18.07.
@@ -485,11 +491,12 @@ family adds `throttle_delta`/`stall_penalty` terms, random spawns and a
   removes the 2-D cycles too — monotonic climb to **558.7 @ 78k, the 2-D SAC
   record** (auto 527 @ 154k) — then the familiar slow decay; stopped 176k.
   **75k peak eval: the first FULL-horizon 2-D enforcement eval of the
-  programme — 4.32 laps / |ey| 17.1 mm / 0 emergencies / 17.1% C-06-only**
-  (monitoring identical): the policy self-limits to 0.244 m/s, never touching
+  programme — 4.32 laps / |ey| 17.1 mm / 0 emergencies / 17.1% C-06-only**;
+  monitoring also completes (4.31 laps / 16.3 mm / 0 emergencies / 18.0%
+  counterfactual C-06). The policy self-limits to 0.244 m/s, never touching
   the 0.25 C-04 ceiling. Cap probes (eval-time 0.22) close the D-59 evidence:
   the auto-150k zero-margin stop **vanishes with 0.03 m/s of margin** (full
-  4400, 0 emergencies), while the auto-175k stop persists under any cap (D-43
+  4400, 0 emergencies), while the auto-175k stop persists under both tested caps (D-43
   CV heading over-read — the true residual 2-D risk). Evidence:
   `experiments/sim/training/sac_gz2d_tuned_entfix_2024_1M/`,
   `experiments/sim/runs/rl_sacgz2dentfix_eval_*`, `…capprobe022_*`; the 2-D
@@ -498,12 +505,16 @@ family adds `throttle_delta`/`stall_penalty` terms, random spawns and a
 - **Entfix seed-robustness replicas (19.07.2026, N=3).** Bounded 120k runs with
   seeds 42 and 666 alongside the 2024 original. Seed 42: curve within ~3% of
   2024 throughout, peak 744.3 @ 87k, no cliff; its 75k eval is the **best SAC
-  checkpoint of the study** (4.63 laps, |ey| 12.3 mm max 35, 0 emergencies,
-  **2.3% C-06**). Seed 666 — the E5 hard seed, *cage-dependent under PPO* —
+  enforcement tracking/C-06 result in the N=3 battery** (4.63 laps, |ey| 12.3 mm
+  max 35, 0 emergencies, **2.3% C-06**; nominal monitoring pending). Seed 666 —
+  the E5 hard seed, *cage-dependent under PPO* —
   keeps the regime (no cliff, peak 606.9 @ 81k, ~16% lower) and its 75k evals
   are clean in BOTH modes (5.00 laps, 14.0 mm, 0 emerg, 5.3%/6.2%):
-  **the entfix recipe rescues the bad seed**. Entfix basin N=3: **3/3
-  constraint-respecting** vs PPO's 3/5 (§8.5). 2-D replica (seed 42, bounded
+  **the entfix recipe rescues the bad seed**. The supported nominal statement is:
+  **3/3 clean in enforcement**, and **2/2 of the seeds tested in both nominal
+  modes** (2024/666) are constraint-respecting, vs PPO's 3/5 (§8.5). A nominal
+  monitoring run for seed 42 is still missing; its two-mode SC-PERT campaign
+  does not substitute for SC-NOM-01. 2-D replica (seed 42, bounded
   120k): curve magnitude strongly seed-dependent (peak 271 @ 47k vs 559) but
   the eval overrules the curve again — its 50k ckpt is the **second
   full-horizon 2-D enforcement eval** (4.97 laps, 18.2 mm, 0 emerg, 46.4%
@@ -514,36 +525,89 @@ family adds `throttle_delta`/`stall_penalty` terms, random spawns and a
   of the cage flip.** SC-PERT-04/09/11/12/13 × {enf, mon} × 10 reps on the 1-D
   entfix 75k (`experiments/sim/campaign_sac_pert/`, 100 runs, 0 errors;
   `scenarios_complex_b` overlay REQUIRED). **Enforcement 50/50 PASS — the cage
-  guarantee replicates exactly**; monitoring 33/50 (PERT-11 0/10, PERT-13 5/10,
+  protection result replicates exactly**; monitoring 33/50 (PERT-11 0/10, PERT-13 5/10,
   PERT-09 8/10, PERT-04/12 10/10) vs PPO's 27%. The flip's direction is
-  algorithm-independent (enforcement removes every bare-policy failure); *which*
+  observed under both PPO and SAC (enforcement removes every bare-policy failure); *which*
   scenarios the bare policy fails is policy-dependent — SC-PERT-11 is the
-  universal killer (0% both algorithms). Replicated on the seed-42 entfix 75k
-  (20.07, `campaign_sac_pert_s42/`, 100 runs 0 errors): enf 50/50 again, mon
+  strongest observed cross-policy discriminator (0% both algorithms). Replicated on the seed-42 entfix 75k
+  (20.07, `campaign_sac_pert_s42/`, 100 runs, 0 errors): enf 50/50 again, mon
   35/50 with PERT-11 0/10 and PERT-13 5/10 — the profile is seed-stable and
   **SC-PERT-11 is 0% for a third independent policy**. See CHANGELOG 19.07
-  (campaign entry + 20.07 addendum).
+  (campaign entry + 20.07 addendum). **Provenance caveat:** the per-run metadata
+  pins seed 42 and checkpoint hash `4d09e43c…`, but the generated run IDs and
+  `campaign_runs.csv` retained the label `seed2024`; normalise that generated
+  labelling before treating the directory name as an evidence key.
 
-- **Replay-buffer mechanism probe (20.07.2026) — second mechanism confirmed.**
+- **Replay-buffer mechanism probe (20.07.2026) — second mechanism isolated over a bounded horizon.**
   Single knob `buffer_size` 100k→200k on the entfix config
   (`sac_newcam_entfix_buf200_2024_180k`, bounded 180k): identical to the 100k
   twin to ~86k, then **no decay** — 690–745 band held through 180k (sustained
   744.7 @ 155.6k) where the twin fell to ~470. Decay onset with 100k ==
-  buffer-full-and-evicting → **slow decay = replay eviction of the founding
-  era**. Full chain: cliff = α→0 (entfix floor cures); slow decay = eviction
-  (buffer ≥ step budget cures). Recipe for a future full SAC run: entfix +
-  buffer sized to the budget. 150k ckpt eval: full horizon, 4.94 laps,
+  buffer-full-and-evicting → the evidence attributes the **observed slow decay
+  to replay eviction of the founding era**. Full observed chain: cliff = α→0
+  (entfix floor cures); bounded slow decay = eviction (a buffer longer than the
+  180k probe prevents it within that window). Hypothesis for a future full SAC
+  run: entfix + buffer sized to the budget. 150k ckpt eval: full horizon, 4.94 laps,
   26.9 mm, 0 emerg, 14.4% C-06 (not better than the 75k peaks — the
   eval-overrules-curve lesson). See CHANGELOG 20.07.
 
 25k is far below the 1-D convergence regime (PPO ~823 @ ~297k), so the five
 pilot curves are implementation sanity checks + early signal, **not** algorithm
-verdicts; the four 1M SAC runs above are the algorithm-level data points. Evidence: `experiments/sim/training/{ppo,sac}_cam_pilot25k_2024/`,
+verdicts; the four SAC runs above with a **planned 1M budget** (all stopped once
+their mechanism/peak was characterised) are the algorithm-level data points. Evidence: `experiments/sim/training/{ppo,sac}_cam_pilot25k_2024/`,
 `{ppo,sac}_gz2d_pilot25k_2024/` and `sac_gz2d_pilot25k_tuned_2024/` + the
 battery figure (`ppo_vs_sac_pilot25k_battery.png`) and `summary.json` under
 `experiments/sim/training/pilot25k_ppo_vs_sac_2024/`. The GE4-V2 verdict
-chain, every frozen 1-D PPO artefact and the 2-D PPO 1M baseline are untouched
+chain, every frozen 1-D PPO artefact and the planned-1M 2-D PPO baseline are untouched
 (`algorithm` defaults to `ppo`).
+
+#### 4.2.1 Evidence boundary and next actions (20.07.2026)
+
+These posterior runs answer an algorithm/action-space question; they do **not**
+constitute a replacement verdict. GE4-V2 remains the PPO 297k campaign. In
+particular, each `campaign_sac_pert*` report says global `INCOMPLETE` because it
+intentionally covers only five SC-PERT scenarios; that value is expected and
+must not be quoted as a failed SAC verdict.
+
+The evidence now supports a narrow next-step order:
+
+1. **Close provenance before more compute:** run the missing seed-42 nominal
+   monitoring cell; archive the exact pilot/current config snapshots; normalise
+   the seed-42 campaign labels; and register rescued-checkpoint hashes in the
+   training metadata (the eval metadata already pins them).
+2. **Qualification infrastructure is now prepared, but the campaign remains
+   blocked:** `train_sac_camera_2d_tuned_entfix_margin022.yaml` preregisters a
+   **bounded 75k**, fresh-training-only 0.22 m/s action map, leaving 0.03 m/s
+   below C-04's 0.25 m/s curve ceiling. Its 150k replay buffer covers the 75k
+   parent plus the preregistered 50k fine-tune without eviction; the historical
+   0.25 checkpoints/config remain unchanged and cannot be reinterpreted under
+   it. `tools/d43_preflight.py`
+   gates centred-vehicle CV/oracle disagreement and false C-01/02/03/C-05
+   behaviour. On the four existing enforcement references, entfix-2024/42
+   pass individually, while auto-175k at 0.25 and its 0.22 sensitivity probe
+   block; the aggregate reference is therefore `BLOCKED`. This cleanly
+   separates the speed margin from the independent D-43 heading over-read.
+   A future campaign needs a **fresh 0.22-trained checkpoint** and a D-43
+   preflight input `PASS` bound to that checkpoint **and train-config hash**;
+   `run_campaign.py` enforces this before launching Gazebo. The separate
+   GE4-V2 SC-EDGE-02 audit measures 3573 lateral under-read cycles in 27/60
+   runs, but is `INVALID` as an authorisation artifact because the reconstructed
+   E-main metadata lacks `train_config_hash`.
+3. **SC-PERT-03 is preregistered, not executed:** `lambda_stall = 4.0`, a fixed
+   50 000-step continuation, `M-P6 > 50.0` for the stall arm, and 20 runs per
+   arm/mode. The one-shot preparation tool and campaign arm grouping/hash
+   chain are implemented. The earlier `> 0.50` YAML value mixed fraction and
+   percentage units and was 100× too permissive; it changed no result because
+   the arm had never run. Execute this cell only after item 2 qualifies its
+   released parent.
+4. **The next 2-D retrain is now bounded rather than open-ended:** the margin022
+   parent fixes `ent_coef: 0.005`, 75k steps and a 150k buffer; with the 50k
+   stall continuation the full 125k history remains resident. This implements
+   the planned hypothesis without authorising an unattended 1M run. The buffer
+   mechanism itself is still observed only in the bounded 1-D seed-2024 probe;
+   transfer to 2-D remains a hypothesis until this parent is trained/evaluated.
+   A hard-seed replica is a later decision, after the seed-2024 qualification
+   chain; more 1-D auto-temperature runs have little information value.
 
 ---
 
@@ -640,7 +704,7 @@ It supersedes the oval 425k peak and the 139k campaign policy (§8.3) and is the
 camera counterpart of the F-track ground-truth baseline — the policy a committee
 should read as *what the end-to-end front-camera agent achieves*.
 
-### 8.1 Training (the complex_b 1M run)
+### 8.1 Training (the planned-1M complex_b run, stopped at 662k)
 
 After the Lane-Cam switch, training moved to the **complex_b** circuit (§3.5; the
 self-approaching scalloped track, perimeter **19.22 m** — 2.2× the 8.79 m oval).
@@ -1161,18 +1225,29 @@ cage-dependent (666), 1/5 cage–CV conflict (23)).
 
 ## Version log
 
+- **v0.8 (2026-07-20):** implemented the next-step qualification surface without generating new run evidence: bounded fresh 75k SAC-entfix parent at 0.22 m/s, 150k replay covering the parent + fixed 50k continuation, final VecNormalize/replay capture, hash-bound D-43 preflight and preregistered/arm-wise SC-PERT-03 runner. The historical reference matrix remains aggregate `BLOCKED`; execution is pending.
+- **v0.7 (2026-07-20):** posterior Gazebo evidence consolidation. Header retargeted from
+  PPO-only wording to the shared PPO/SAC trainer while preserving PPO 297k as the sole
+  GE4-V2 policy; stale "not launched / runs next" statements reconciled with the completed
+  entfix runs; replay eviction replaces the earlier provisional critic-overfit reading;
+  evidence boundary + ordered next actions added. Audit correction: entfix is 3/3 clean in
+  nominal enforcement but only 2/2 have matched nominal monitoring (seed 42 monitoring is
+  missing); the seed-42 SC-PERT campaign's generated `seed2024` labels are flagged against
+  its authoritative seed-42 metadata/checkpoint hash.
 - **v0.6.11 (2026-07-20):** **§4.2 — replay-buffer mechanism probe (buffer 200k, 180k).**
-  The slow post-peak decay is replay-eviction-driven: 2× buffer holds the 690-745 band 90k+
+  The bounded probe supports a replay-eviction explanation: 2× buffer holds the 690-745 band 90k+
   steps past the peak (sustained 744.7) where the 100k twin fell to ~470; decay onset ==
-  buffer-full. Full mechanism chain closed (cliff = α→0; decay = eviction). CHANGELOG 20.07.
+  buffer-full. The observation is limited to seed 2024 through 180k. CHANGELOG 20.07.
 - **v0.6.10 (2026-07-19):** **§4.2 — entfix seed-robustness replicas (N=3, bounded 120k).**
   No-cliff + peak-zone replicates on seeds 42/666 (<3% deviation for 42; 666 ~16% lower peak,
-  same regime); seed-42 75k = best SAC ckpt (4.63 laps, 12.3 mm, 2.3% C-06); seed-666 75k
-  clean both modes → **the entfix recipe rescues the PPO-cage-dependent seed**; entfix basin
-  3/3 constraint-respecting vs PPO 3/5. CHANGELOG 19.07 (seed-robustness entry + addendum).
+  same regime); seed-42 75k = best N=3 enforcement tracking/C-06 result (4.63 laps,
+  12.3 mm, 2.3% C-06; nominal monitoring pending); seed-666 75k
+  clean both modes → **the entfix recipe rescues the PPO-cage-dependent seed**; audit update:
+  3/3 enforcement-clean, 2/2 with matched nominal monitoring (seed-42 monitoring pending),
+  vs PPO 3/5. CHANGELOG 19.07 (seed-robustness entry + addendum).
 - **v0.6.9 (2026-07-19):** **§4.2 — SC-PERT subset campaign on the entfix peak.** Enforcement
-  50/50 PASS (cage guarantee algorithm-independent); SAC bare policy 66% mon-pass vs PPO 27%;
-  SC-PERT-11 the universal bare-policy killer (0% both). CHANGELOG 19.07 (campaign entry).
+  50/50 PASS (the protection direction replicates from PPO to SAC); SAC bare policy 66% mon-pass vs PPO 27%;
+  SC-PERT-11 the strongest observed cross-policy discriminator (0% both). CHANGELOG 19.07 (campaign entry).
 - **v0.6.8 (2026-07-19):** **§4.2 — 2-D entfix run + cap-margin probes (D-59 evidence closed).**
   The 0.005 floor removes the 2-D cycles (peak 558.7 @ 78k, 2-D SAC record); 75k peak = first
   full-horizon 2-D enforcement eval (4.32 laps, 0 emerg, 17.1% C-06, self-limits to 0.244).
@@ -1182,14 +1257,14 @@ cage-dependent (666), 1/5 cage–CV conflict (23)).
   0.005 temperature floor removes the collapse cliff (peak 722.5 @ 83k == auto, no cliff in
   260k) but not the slow post-peak decay; 75k peak eval = cleanest SAC profile (5.04 laps,
   9.1% C-06, 0 emergencies, both modes). CHANGELOG 18.07 (entfix entry).
-- **v0.6.6 (2026-07-18):** **§4.2 — 2-D tuned SAC 1M run executed (stopped 251k).**
+- **v0.6.6 (2026-07-18):** **§4.2 — planned-1M 2-D tuned SAC run executed (stopped 251k).**
   Collapse-recover cycles from auto-temperature pinning (peaks 214→527 @ 154k, ~80% of the
   PPO 2-D peak with 3.3× fewer steps); 175k peak-of-record evals — mon 4.31 laps / 0
   emergencies full-horizon, enf stopped by the two known 2-D mechanisms (D-43 heading
   over-read; zero-margin 0.25 cap vs C-04 ceiling, D-59 now quantified). `ent_coef: auto`
   collapses in both action spaces (cross-run finding). CHANGELOG 18.07.
-- **v0.6.5 (2026-07-17):** **§4.2 — 1-D SAC 1M run executed (stopped 307k).** Peak 720 @ 89k,
-  entropy-collapse dip @ 143k with partial recovery (replay-buffer resilience PPO lacked),
+- **v0.6.5 (2026-07-17):** **§4.2 — planned-1M 1-D SAC run executed (stopped 307k).** Peak 720 @ 89k,
+  entropy-collapse dip @ 143k with an observed partial recovery,
   stopped at a PPO-peak-comparable budget; 75k peak checkpoint evals clean (5.12 laps,
   0 emergencies, cage latent both modes; ~2× PPO lateral error on a tighter line). Config
   twins: seed 23→2024 restore + `checkpoint_freq: 25000`. CHANGELOG 17.07.
@@ -1200,7 +1275,8 @@ cage-dependent (666), 1/5 cage–CV conflict (23)).
   battery); neither near a "good point" at 25k. Same-day follow-on: **tuned SAC recipe**
   (`train_sac_camera_2d_tuned.yaml` + pilot — batch 256, constant LR, warmup 5k, UTD 2)
   reaches 107.4 with ~20k learning steps and the steepest late slope → the PPO-inherited
-  values were handicapping SAC; the 1M 2-D SAC run should use the tuned config.
+  values were handicapping SAC; this recommendation was later used for the
+  planned-1M 2-D SAC run (stopped at 251k; v0.6.6).
 - **v0.6.3 (2026-07-15):** **§4.2 added — `algorithm: ppo|sac` config switch (D-60).** The
   shared trainer now builds SB3 PPO *or* SAC from the same entry point (single config key;
   env/wrappers/reward/cage/seed/LR shared verbatim; SAC knobs in an optional `sac:` block,

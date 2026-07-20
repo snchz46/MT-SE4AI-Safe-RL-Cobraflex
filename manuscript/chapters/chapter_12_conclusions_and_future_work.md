@@ -1,13 +1,13 @@
 # Capítulo 12 — Conclusiones y Trabajo Futuro
 
 Convención: las secciones marcadas [BORRADOR POST-G4] se redactaron tras el cierre
-de Gate 4 (02.07.2026) con la evidencia disponible a 16.07.2026. Los capítulos 9
-(sim-to-real / físico), 10 (validación operacional) y 11 (discusión) no existen
-todavía; las conclusiones que dependen de ellos se marcan explícitamente como
-**provisionales** y este capítulo se re-cierra en Fase 6 con esa evidencia
-incorporada. Los solapes deliberados con los capítulos 10 y 11 (veredictos,
-limitaciones) se redistribuyen en la consolidación de Fase 6 — ver el apéndice
-interno al final.
+de Gate 4 (02.07.2026) y se actualizaron con la evidencia posterior disponible a
+20.07.2026. Los capítulos 9 (sim-to-real / físico), 10 (validación operacional) y
+11 (discusión) ya existen como borradores tempranos, pero sus resultados Isaac y
+físicos siguen incompletos; las conclusiones que dependen de ellos se marcan
+explícitamente como **provisionales** y este capítulo se re-cierra en Fase 6. Los
+solapes deliberados con los capítulos 10 y 11 (veredictos, limitaciones) se
+redistribuyen en esa consolidación — ver el apéndice interno al final.
 
 ---
 
@@ -50,8 +50,9 @@ ejecutado como restricción dura en cada gate (cero huérfanos en G1–G4), y
 veredictos por SR respaldados por runs reproducibles con metadatos completos
 (commit, hashes de cage/checkpoint/escenario, semilla). Las cinco adaptaciones
 del V-Model (A1–A5, Capítulo 3) produjeron cada una los artefactos que
-prometían. El coste de adopción quedó registrado en 60 decisiones arquitecturales
-(D-01..D-60) — evidencia directa para la hipótesis H2.
+prometían. El coste de adopción quedó registrado en **55 decisiones** hasta
+D-61 (con los huecos históricos D-20..D-24 y D-40) — evidencia directa para la
+hipótesis H2.
 
 **Hallazgo 2 — El veredicto literal y el criterio propio divergen, y la
 disciplina de reportar ambos es en sí misma un resultado.** El global
@@ -69,7 +70,7 @@ cláusulas cuando la biblioteca migra de geometría— resultó ser tan determin
 para el veredicto como el comportamiento del sistema.
 
 **Hallazgo 3 — La semántica de agregación importa: indeterminado no es fallo, y
-la abstención documentada es un veredicto legítimo.** Dos defectos de
+la abstención documentada es un veredicto legítimo.** Dos defectos históricos de
 instrumentación (el evaluador multi-brazo sin agrupar en SC-PERT-03; la
 inyección de condiciones iniciales del grid sin cablear en SC-EDGE-05) habrían
 colapsado a `FAIL` bajo una agregación ingenua. La reconciliación D-38 (los
@@ -77,7 +78,9 @@ veredictos `None` se excluyen del denominador y se propagan como
 `insufficient_evidence`) y el registro de SR-009/SR-010 como **abstenciones
 documentadas no-vetantes** (D-30) preservaron la distinción entre "el sistema
 falla" y "el experimento no puede pronunciarse" — distinción que el cierre de G4
-convirtió en resoluciones materiales (§12.2.3, Hallazgo 8).
+convirtió en resoluciones materiales (§12.2.3, Hallazgo 8). El runner posterior
+ya separa y conjuga los dos brazos de SC-PERT-03; esto habilita evidencia nueva,
+pero no reinterpreta los runs históricos ni modifica aquel cierre.
 
 **Hallazgo 4 — La curva de entrenamiento no clasifica el comportamiento de
 seguridad de la policy; el eval sí.** Las cinco semillas del E-main comparten la
@@ -160,27 +163,41 @@ medida, y motiva la línea de robustez del disparador C-05 (§12.5).
 ### 12.2.3 Hallazgos del trabajo posterior inmediato (post-G4)
 
 **Hallazgo 10 — Los umbrales `[provisional]` de la cage están acoplados al
-régimen operativo para el que se calibraron y no transfieren a la acción 2-D.**
-Con throttle bajo control de la policy (2-D, Gazebo), **ningún run de
-enforcement completa el horizonte** (4 runs, 26 pasos–1.52 vueltas) pese a que
-la competencia de conducción es real (monitoring: 4.66 vueltas, 21.0 mm, perfil
-de velocidad que decelera en curva). Todas las paradas tienen firma C-04+C-05
-sobre un coche **centrado** (ey ≤ 0.03 m) a >0.25 m/s: el envelope de velocidad
-y los umbrales CV fueron calibrados para el régimen 1-D a 0.2 m/s. Confirma
-D-59: recalibrar el envelope antes de cualquier campaña 2-D. Primera activación
-real, además, del arbitraje longitudinal C-04/C-06.
+régimen operativo, pero el fallo 2-D inicial no era un único mecanismo.** El
+PPO 2-D de autoridad completa (`max_speed_mps = 0.5`) mostró competencia real
+en monitoring (4.66 vueltas, 21.0 mm y desaceleración aprendida en curva), pero
+ninguno de sus cuatro runs de enforcement completó el horizonte: la policy
+cruzaba una envolvente calibrada para el régimen 1-D de 0.2 m/s. La revisión a
+0.25 m/s hizo visible que aún había dos causas distintas. Primero, un **margen
+cero**: el cap de la policy coincidía con el techo C-04 de curva (0.25 m/s), de
+modo que un overshoot de odometría de 0.0002 m/s bastaba para C-04→C-05; el
+probe de evaluación a 0.22 m/s eliminó ese paro y completó los 4 400 pasos.
+Segundo, un residuo independiente del cap: el over-read confiado de heading del
+estimador CV D-43; el checkpoint auto-175k paró tanto a 0.25 como a 0.22 m/s.
+La contraprueba la aportó SAC-entfix: dos checkpoints 2-D sí completaron
+enforcement nominal — seed 2024, 75k: **4.32 vueltas, 17.1 mm, 0 emergencias,
+17.1 % C-06**; seed 42, 50k: **4.97 vueltas, 18.2 mm, 0 emergencias, 46.4 %
+C-06**. Por tanto, D-59 no implica que todo control 2-D sea inviable: exige
+margen o recalibración antes de una campaña, y deja D-43 como riesgo residual.
+Todo ello es evidencia posterior SC-NOM-01, no una campaña ni un veredicto GE4.
 
-**Hallazgo 11 (preliminar, pilotos de 25k) — La elección de algoritmo y sus
-hiperparámetros canónicos importan más que la herencia de configuración.** El
-conmutador `algorithm: ppo|sac` (D-60) compuso con la acción 2-D sin cambio de
-código. En el par 1-D like-for-like, SAC supera a PPO (+23 % de reward al corte);
-en 2-D, el par heredado de PPO rinde por debajo, pero re-tunear SAC a sus valores
-canónicos (batch 256, LR constante, UTD 2 — actualizaciones extra gratis en
-wall-clock porque el render acota la recolección) casi alcanza a PPO con la
-pendiente final más pronunciada de la batería. La lección transferible: heredar
-hiperparámetros entre familias de algoritmos por "comparabilidad" penaliza al
-recién llegado; la comparación justa es par-a-par *y* cada uno en su receta
-canónica. Estos son pilotos de 25k pasos — señal direccional, no veredicto.
+**Hallazgo 11 — El estudio SAC largo separó dos mecanismos de degradación que
+la curva agregada confundía.** El conmutador `algorithm: ppo|sac` (D-60)
+compuso con las acciones 1-D y 2-D sin bifurcar el entorno ni el pipeline de
+evidencia. Los runs largos previstos como 1M se detuvieron una vez
+caracterizados sus regímenes, no porque completaran el millón: con
+`ent_coef: auto`, SAC 1-D alcanzó 720 @ 89k y SAC 2-D tuned 527 @ 154k, pero la
+temperatura cayó hacia cero y produjo un cliff o ciclos collapse–recover. Fijar
+`ent_coef = 0.005` conservó los picos (1-D 722.5 @ 83k; 2-D **558.7 @ 78k**) y
+eliminó el colapso abrupto, además de producir los dos evals 2-D full-horizon
+del Hallazgo 10. Quedaba una deriva lenta post-pico. El probe 1-D de una sola
+variable, `buffer_size` 100k→200k, mantuvo la banda 690–745 hasta 180k allí
+donde el twin de 100k había caído ~35 %: la deriva coincide con el llenado del
+buffer y es consistente con la **evicción de datos tempranos**. La evidencia acotada apoya esta
+cadena: cliff = temperatura automática→0; deriva lenta observada = replay
+eviction. Es evidencia posterior de algoritmo, no un cambio del E-main PPO ni
+un veredicto SAC/GE4; y
+refuerza que el checkpoint se selecciona por eval conductual, no por la curva.
 
 **Hallazgo 12 (Isaac, diagnóstico) — El gap entre simuladores es en sí mismo un
 resultado de sim-to-real en miniatura.** El intento de retrain 2-D en Isaac
@@ -219,7 +236,7 @@ como primer peldaño ya en curso y aportando la anticipación del Hallazgo 12.
 Sobre las hipótesis: **H1** (conjunto pequeño y enumerable de adaptaciones)
 queda soportada por construcción — cinco adaptaciones bastaron sin romper la
 estructura del estándar. **H2** (esfuerzo proporcional) queda soportada por el
-registro: 60 decisiones D-NN, documentos vivos mantenidos al día de los
+registro: 55 decisiones registradas hasta D-61, documentos vivos mantenidos al día de los
 resultados, y gates superados con validación automática, todo dentro del
 presupuesto de una tesis de máster de una persona. **H3** (veredicto fundamentado
 con límites de validez) queda soportada en su mitad de simulación por los dos
@@ -257,13 +274,25 @@ análisis agregado.
 
 Cada línea traza a un hallazgo o decisión concreta.
 
-**T1 — Retrain 2-D en Isaac y verificación bien-puesta de SR-009** *(Hallazgos
-8, 10, 12; D-44/D-49/D-50/D-59).* Con autoridad longitudinal real, el test de
-stall de SR-009 se vuelve verificable (M-P6 deja de ser ≡ 0) y el arbitraje
-C-04/C-06 pasa a régimen operativo permanente. Prerequisito bloqueante ya
-identificado: recalibrar el envelope de velocidad de la cage y las asunciones
-`vehicle.speed_mps` de los escenarios para el régimen 2-D (D-59) — sin eso,
-ninguna campaña 2-D de enforcement es informativa (Hallazgo 10).
+**T1 — Verificación 2-D bien-puesta de SR-009 y traslado a Isaac** *(Hallazgos
+8, 10, 12; D-44/D-49/D-50/D-59).* Gazebo ya demostró la autoridad longitudinal
+y dos evals nominales full-horizon, pero aún no ejecutó **SC-PERT-03** sobre una
+policy 2-D ni produjo una campaña 2-D. La infraestructura de cualificación ya
+está fijada: el contrato **fresh-training-only** `margin022` deja 0.03 m/s bajo
+C-04, acota el parent a 75k y retiene parent + fine-tune en un buffer de 150k;
+el fingerprint queda embebido en el checkpoint y el preflight D-43 compara CV con el
+oráculo y el runner exige un `PASS` ligado a los hashes exactos del checkpoint
+y del config antes de arrancar Gazebo. El meta-test también quedó preregistrado:
+`lambda_stall = 4.0`, continuación única de 50k, criterio porcentual
+`M-P6 > 50.0`, 20 runs por brazo y modo, manifest con hashes y agregación
+independiente de *released*/*stall_variant*. Lo pendiente ya no es diseñar el
+test: es entrenar desde cero el parent 0.22, ejecutar su SC-NOM-01 nominal,
+obtener un preflight D-43 `PASS`, correr el fine-tune único y sólo entonces las
+80 celdas de SC-PERT-03. Los informes históricos muestran por qué el gate es
+necesario: entfix-2024/42 pasan individualmente, mientras auto-175k queda
+bloqueado a 0.25 y en el probe 0.22 por el over-read CV. Isaac sigue siendo una
+réplica de transferencia —sus checkpoints no son compatibles con Gazebo— y no
+reabre G4.
 
 **T2 — Despliegue físico y caracterización del gap sim-to-real (Fase 5 /
 Capítulo 9)** *(pregunta subordinada; adaptación A5).* Portar el subconjunto
@@ -301,13 +330,19 @@ reacción ante degradación genuina (SC-PERT-07/13 deben seguir 25/25 y 40/40).
 Es un problema de diseño de filtro con criterio de aceptación ya medible en la
 biblioteca existente.
 
-**T6 — Estudio de algoritmo a escala (SAC 1M, receta canónica)** *(Hallazgo 11;
-D-60).* Elevar los pilotos a un run 1M 2-D con `train_sac_camera_2d_tuned.yaml`
-y, si la señal del par 1-D se sostiene, un 1M 1-D SAC como contraste del E-main.
-La pregunta de fondo no es "¿qué algoritmo gana?" sino si el colapso de
-exploración que comparten las cinco semillas PPO (Hallazgo 4) es un artefacto
-del algoritmo o del entorno — el off-policy con replay es el experimento
-discriminante natural.
+**T6 — Consolidación del estudio SAC a escala** *(Hallazgo 11; D-60).* El paso
+de pilotos a runs largos **ya se ejecutó** en 1-D y 2-D y aisló la temperatura
+automática; el probe 1-D acotado apoya la evicción del replay como segundo
+mecanismo observado. Terminar por inercia los presupuestos 1M
+interrumpidos no añade un veredicto. El cierre reproducible exige ahora
+archivar los configs exactos de cada variante y enlazar explícitamente cada
+eval con su `train_config`, checkpoint y hashes. El único retrain 2-D justificado
+por T1 ya tiene hipótesis predeclarada: **entfix (`0.005`) + cap 0.22 + parent
+75k + buffer 150k para los 125k parent/fine-tune**, seguida de selección conductual de checkpoint,
+preflight D-43, réplicas de semilla y SC-PERT-03; esa combinación aún no se ha
+entrenado. El
+resultado seguirá siendo posterior y comparativo: no sustituye el E-main PPO
+ni entra en la cadena GE4 salvo una decisión futura explícita.
 
 **T7 — Consolidación metodológica del marco** *(Hallazgos 2, 3, 4; limitación
 vi).* Tres artefactos generalizables que esta tesis deja especificados pero no
@@ -350,8 +385,8 @@ el sitio exacto (A5, Capítulo 9) donde su respuesta debe encajar.
 <!--
 APÉNDICE INTERNO — TRABAJO PENDIENTE EN ESTE CAPÍTULO
 
-Estado: BORRADOR POST-G4 (16.07.2026), pre-Fase 5. Redactado con la evidencia
-de G4 + posterior inmediato (E5 multi-seed 13.07, pilotos SAC 15.07).
+Estado: BORRADOR POST-G4 (actualizado 20.07.2026), pre-Fase 5. Redactado con la
+evidencia de G4 + posterior E5 (multi-seed, Gazebo 2-D y estudio SAC largo).
 
   [ ] Ítems específicos del autor pendientes de incorporar (solicitados tras
        este borrador).
@@ -359,10 +394,10 @@ de G4 + posterior inmediato (E5 multi-seed 13.07, pilotos SAC 15.07).
        (evaluación formal de H1-H3 vive en el 11; aquí solo la síntesis).
   [ ] Redistribuir solapes en Fase 6: los veredictos detallados → cap. 10; el
        desarrollo de limitaciones → cap. 11; aquí queda síntesis + futuro.
-  [ ] Decidir si el Hallazgo 11 (SAC, pilotos 25k) permanece en el manuscrito o
-       se degrada a nota — depende de si el 1M SAC (T6) se ejecuta a tiempo.
+  [x] Hallazgo 11 elevado de piloto a estudio posterior: runs SAC largos 1-D/2-D,
+      entfix y probe de replay ejecutados; sigue fuera del veredicto GE4.
   [ ] Números a re-verificar contra los reportes al pulir: 96-100% frontier
        (frontier_contrast.json), 30/85 (failure_mode_breakdown.json), 10.9/17.2 mm
-       (docs/12 §8), pilotos SAC (CHANGELOG 15.07).
+       (docs/12 §8), SAC largo/entfix/cap probes (CHANGELOG 17–20.07).
   [ ] Referencias cruzadas definitivas (§ de caps. 9-11) cuando existan.
 -->

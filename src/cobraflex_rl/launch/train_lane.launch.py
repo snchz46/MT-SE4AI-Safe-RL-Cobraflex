@@ -4,9 +4,13 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
+    EmitEvent,
     IncludeLaunchDescription,
     OpaqueFunction,
+    RegisterEventHandler,
 )
+from launch.event_handlers import OnProcessExit
+from launch.events import Shutdown
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -83,6 +87,26 @@ def generate_launch_description():
         default_value="",
         description="Final model .zip path (empty -> the config's model_path).",
     )
+    resume_from_arg = DeclareLaunchArgument(
+        "resume_from",
+        default_value="",
+        description="Parent SB3 checkpoint for a continuation run.",
+    )
+    resume_vecnormalize_arg = DeclareLaunchArgument(
+        "resume_vecnormalize",
+        default_value="",
+        description="VecNormalize state paired with resume_from.",
+    )
+    resume_replay_buffer_arg = DeclareLaunchArgument(
+        "resume_replay_buffer",
+        default_value="",
+        description="SAC replay buffer paired with resume_from.",
+    )
+    shutdown_on_train_exit_arg = DeclareLaunchArgument(
+        "shutdown_on_train_exit",
+        default_value="false",
+        description="Shut down Gazebo when training exits (batch/protocol mode).",
+    )
 
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -110,14 +134,31 @@ def generate_launch_description():
         model_path = LaunchConfiguration("model_path").perform(context).strip()
         if model_path:
             arguments += ["--model-path", model_path]
-        return [
-            Node(
-                package="cobraflex_rl",
-                executable="train_ppo",
-                output="screen",
-                arguments=arguments,
-            )
-        ]
+        resume_from = LaunchConfiguration("resume_from").perform(context).strip()
+        if resume_from:
+            arguments += ["--resume-from", resume_from]
+        resume_vecnormalize = LaunchConfiguration("resume_vecnormalize").perform(context).strip()
+        if resume_vecnormalize:
+            arguments += ["--resume-vecnormalize", resume_vecnormalize]
+        resume_replay = LaunchConfiguration("resume_replay_buffer").perform(context).strip()
+        if resume_replay:
+            arguments += ["--resume-replay-buffer", resume_replay]
+        train = Node(
+            package="cobraflex_rl",
+            executable="train_ppo",
+            output="screen",
+            arguments=arguments,
+        )
+        actions = [train]
+        shutdown = LaunchConfiguration("shutdown_on_train_exit").perform(context)
+        if shutdown.strip().lower() in {"1", "true", "yes", "on"}:
+            actions.append(RegisterEventHandler(
+                OnProcessExit(
+                    target_action=train,
+                    on_exit=[EmitEvent(event=Shutdown())],
+                )
+            ))
+        return actions
 
     return LaunchDescription([
         world_arg,
@@ -128,6 +169,10 @@ def generate_launch_description():
         train_config_arg,
         run_id_arg,
         model_path_arg,
+        resume_from_arg,
+        resume_vecnormalize_arg,
+        resume_replay_buffer_arg,
+        shutdown_on_train_exit_arg,
         gazebo,
         OpaqueFunction(function=train_node),
     ])

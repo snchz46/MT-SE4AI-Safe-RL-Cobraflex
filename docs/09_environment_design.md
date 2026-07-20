@@ -3,17 +3,17 @@
 | Field | Value |
 | --- | --- |
 | Artifact | The RL **training environment** of the thesis's primary system: the end-to-end front-camera policy (track 'E'). Camera counterpart of the training loop; sibling of `docs/11` (training) and `docs/10` (reward). |
-| Version | **0.6** (2026-07-07 — retargeted to **track 'E' as the sole subject**: the camera observation is the body of the document, the F-track state-vector env is compressed to a baseline note (§10); the source camera is corrected from the legacy ZED to the dedicated **Lane Cam (IMX219-160 mirror)**; and the **2-D action (steering + throttle)** posterior design (D-50) is added to §3/§6. 0.5 = E2 camera freeze; 0.1–0.4 = F3 state-vector history.) |
+| Version | **0.7** (2026-07-20 — reconciles the frozen GE4 PPO 1-D environment with the posterior Gazebo PPO/SAC 1-D/2-D evidence and the separate Isaac 2-D contract; 0.6 = track-'E' retargeting; 0.5 = E2 camera freeze; 0.1–0.4 = F3 state-vector history.) |
 | Phase / Gate | Track 'E' (camera) — training infrastructure reused from F3; GE3 train, GE4 eval (verdict of record). G4 closed 02.07.2026. |
 | Author | Samuel Sanchez |
-| Date | 2026-07-07 (v0.6) |
-| Status | CONFIRMED — implemented in the camera branch of `GazeboLaneEnv`; the 2-D posterior is implemented + host-tested and live-validated on the Isaac host (D-50). |
+| Date | 2026-07-20 (v0.8) |
+| Status | CONFIRMED — `GazeboLaneEnv` supports PPO/SAC and 1-D/2-D camera policies; posterior Gazebo and Isaac runs are live-validated. GE4 remains the frozen PPO 1-D verdict. |
 | Normative spec | Training Specification Ch.7 §7.2 (loop) + §7.7 (camera track). **This document is supporting rationale, not the normative source**: on any numeric discrepancy, §7.2/§7.7 prevails. |
-| Decisions cited | D-41 (end-to-end camera, supersedes D-01/ED-1), D-43 (cage on its own CV estimator, supersedes D-42), D-34 (cage in the training loop), D-49 (verdict action stays 1-D steering-only), D-50 (Isaac 2-D action + multi-circuit, posterior), D-52 (2-D `ent_coef`), D-56 (2-D `stall_penalty`), D-32 (external drivers) |
+| Decisions cited | D-41 (end-to-end camera, supersedes D-01/ED-1), D-43 (cage on its own CV estimator, supersedes D-42), D-34 (cage in the training loop), D-49 (verdict action stays 1-D steering-only), D-50 (2-D action + multi-circuit, posterior), D-52 (Isaac 2-D `ent_coef`), D-56 (2-D `stall_penalty`), D-59 (Gazebo 2-D posterior), D-60 (PPO/SAC algorithm switch), D-32 (external drivers) |
 
 > Purpose: document *what* the end-to-end camera RL training environment is and,
 > above all, *why* it is designed this way — the camera observation, the action
-> space (the frozen 1-D verdict action and the 2-D posterior extension), the
+> space (the frozen 1-D verdict action and the Gazebo/Isaac 2-D posterior extensions), the
 > wrapper, reset/episode logic, actuation, visual degradation, and the cage's own
 > CV state source — including the rejected alternatives and a defense-question
 > bank. It complements the thesis prose (Ch.7 §7.7) with the engineering detail
@@ -33,7 +33,7 @@
 
 ## 1. What the environment is, in one paragraph
 
-The training environment is `GazeboLaneEnv` in **camera mode** (`observation.type == "camera"`): a Gym env that maps a policy steering command to a Gazebo control cycle and returns the next front-camera frame plus a ground-truth-scored reward. Each cycle, one native Lane-Cam frame is (optionally) degraded, then split to **two parallel consumers** — the policy's CNN (downsampled to 84×84, frame-stacked) and the cage's own deterministic CV lane-estimator (D-43). The policy emits an action; the in-process safety cage (`SafetyCageNode`, D-34) filters it against C-01..C-06 on the CV-derived state; the safe action is actuated as `/cmd_vel`; the sim advances one control cycle. Ground truth survives **only** as the training reward signal and as the oracle that validates the CV estimator — never as an input to the policy or the cage at runtime. Everything the camera policy learns, it learns from pixels.
+The training environment is `GazeboLaneEnv` in **camera mode** (`observation.type == "camera"`): a Gym env that maps either a steering-only action or a config-gated steering+throttle action to a Gazebo control cycle and returns the next front-camera frame plus a ground-truth-scored reward. Each cycle, one native Lane-Cam frame is (optionally) degraded, then split to **two parallel consumers** — the policy's CNN (downsampled to 84×84, frame-stacked) and the cage's own deterministic CV lane-estimator (D-43). The policy emits an action; the in-process safety cage (`SafetyCageNode`, D-34) filters it against C-01..C-06 on the CV-derived state; the safe action is actuated as `/cmd_vel`; the sim advances one control cycle. Ground truth survives **only** as the training reward signal and as the oracle that validates the CV estimator — never as an input to the policy or the cage at runtime. Everything the camera policy learns, it learns from pixels.
 
 ---
 
@@ -77,7 +77,7 @@ Constants in `cobraflex_rl/camera_pipeline.py`; config `train_ppo_camera.yaml`. 
 
 ## 3. Action space
 
-The action space has a **frozen verdict form** (1-D, the GE4-V2 evidence) and a **posterior extension** (2-D, Isaac).
+The action space has a **frozen verdict form** (1-D, the GE4-V2 evidence) and a config-gated **posterior extension** (2-D, implemented in Gazebo and Isaac).
 
 ### 3.1 Verdict action — 1-D steering-only (ED-2, D-49)
 
@@ -98,16 +98,38 @@ throttle → cage scale  u = (throttle + 1) / 2 ∈ [0, 1]              # cage_b
 speed    = max_speed_mps · u   (full stop below throttle_deadband = 0.05; no lower clamp)
 ```
 
-- **`max_speed_mps = 0.5` = C-04's `v_max_straight` = `ODD-1.V_MAX`.** The 1-D actuation capped speed at `fixed_speed = 0.20` — *below every C-04 ceiling* (curve floor 0.25), which is exactly why the cage speed rules were **structurally latent** in-ODD (M-S2 ≡ 0, the F4/GE4 central finding). With 0.5 m/s authority the policy can genuinely exceed the curve ceiling and C-05's high-energy warning band (`v_warning = 0.4`), so **the cage speed rules C-04/C-05/C-06 arbitrate against the policy for real** — the richer safety question D-49 anticipated, and SR-009's stall test becomes well-posed (a true stop is commandable).
-- **No cage change.** The cage rules already operate on a `(steering, throttle)` tuple on the `u ∈ [0,1]` scale — C-04 attenuates throttle, C-06 rate-limits it at `0.10`/cycle — so `cage.yaml` 0.6.1 is consumed as-is (thresholds stay `[provisional]`, now actually exercised). C-06's throttle rate limit bounds commanded acceleration to `max_speed · 0.10 / control_dt = 0.5 m/s²` at 10 Hz — inside the platform's measured 0.53 m/s² (docs/14).
+- **The speed authority is a backend/config contract, not a universal 2-D constant.** The frozen 1-D verdict uses `fixed_speed = 0.20`. The **evidence-bearing Gazebo 2-D** configs use `max_speed_mps = 0.25`, equal to the curve ceiling; a diagnostic eval at **0.22 m/s** tested explicit margin. A separate **untrained** Gazebo contract now preregisters 0.22 for fresh training, but contributes no result yet. The **Isaac 2-D** config separately uses `max_speed_mps = 0.5` (= C-04 `v_max_straight` = `ODD-1.V_MAX`) and can exceed the curve ceiling and C-05's high-energy warning band. All 2-D contracts make a true stop commandable and SR-009's stall arm well-posed, but exercise different parts of the speed envelope.
+- **No cage change.** The cage rules already operate on a `(steering, throttle)` tuple on the `u ∈ [0,1]` scale — C-04 attenuates throttle, C-06 rate-limits it at `0.10`/cycle — so `cage.yaml` 0.6.1 is consumed as-is (thresholds stay `[provisional]`, now actually exercised). At 10 Hz, C-06 bounds commanded acceleration to `max_speed_mps · 0.10 / control_dt`: 0.25 m/s² under the current Gazebo cap and 0.5 m/s² under Isaac's full-authority contract, both inside the 0.53 m/s² platform limit (docs/14).
 - **Reward adds a longitudinal smoothness + liveness pair** (in `rewards.py`; D-50/D-56 — `docs/10` documents the 1-D reward, these 2-D terms are posterior): `throttle_delta` (weight 0.10, on the **raw** policy throttle delta — the mirror of the v1.2 `steer_delta` rationale) and `stall_penalty` (0.5 below `stall_progress_min = 0.25`, D-56) to make the degenerate "park" optimum unprofitable. Both default to weights that leave legacy returns bit-identical when 1-D.
 
-**Two config surfaces, one env.** The 2-D action is backend-agnostic:
+**Config surfaces, one environment contract.** The action mapping is algorithm-agnostic and backend-gated:
 
-- `train_isaac_2d.yaml` — the **Isaac in-process** full-authority config (D-50; `tools/isaac_train.py` default), on the **multi-circuit** CV-safe trio `complex_b,complex_d,complex_e` (§5.3), with `ent_coef 0.01` (D-52, after run-1 exploration collapse).
-- `train_ppo_camera_2d.yaml` — the **Gazebo** counterpart, the clean 2-D run without the Isaac renderer/kinematic confounds (keeps the canonical cage + `yaw_gain 0.8`); same two-step Gazebo camera launch, same env/cage/reward.
+- `train_isaac_2d.yaml` — the **Isaac in-process PPO** full-authority config (D-50; `tools/isaac_train.py` default), on the **multi-circuit** CV-safe trio `complex_b,complex_d,complex_e` (§5.3), with `ent_coef 0.01` (D-52, after run-1 exploration collapse) and `max_speed_mps = 0.5`.
+- `train_ppo_camera_2d.yaml` — the **Gazebo PPO** 2-D counterpart, with the canonical Gazebo cage/CV path and current `max_speed_mps = 0.25`.
+- `train_sac_camera_2d.yaml`, `train_sac_camera_2d_tuned.yaml`, and `train_sac_camera_2d_tuned_entfix.yaml` — the **Gazebo SAC** 2-D variants (D-60), using the same env/cage/reward and action cap; the tuned fixed-entropy variant produced the first full-horizon 2-D enforcement evidence.
+- `train_sac_camera_2d_tuned_entfix_margin022.yaml` — the **Gazebo SAC preregistration**, not an evidence config: fresh bounded 75k checkpoint only, cap 0.22, minimum 0.03 m/s margin to C-04, 150k replay buffer covering parent + 50k stall continuation, embedded contract fingerprint and mandatory checkpoint-bound D-43 preflight.
 
 **A policy trained under either is a new posterior baseline** — new action space, new circuits (and, for Isaac, new simulator) — **never** a re-run of the frozen 297k E-main, and it **does not reopen G4** (D-49 stands for the track-'E' verdict).
+
+### 3.3 Posterior evidence status (17–20.07.2026)
+
+The following observations validate the environment contracts; they are not GE4 verdict cells:
+
+| Family | Evidence |
+| --- | --- |
+| Gazebo PPO 2-D | Historical full-authority run (`max_speed_mps = 0.5`): peak `ep_rew_mean = 654.4` at 510k; monitoring completed competently. No full-horizon PPO 2-D enforcement run is claimed; this result is not attributed to the current 0.25 m/s configs. |
+| Gazebo SAC 1-D | Auto-entropy reached 720 at 89k. Fixing `ent_coef = 0.005` removed the abrupt entropy collapse; all three seeds completed clean enforcement evals, while paired nominal enforcement+monitoring exists for 2/2 evaluated pairs (seed 42 monitoring is pending). Increasing replay capacity from 100k to 200k held rewards through 180k; this bounded single-seed intervention strongly supports replay eviction, rather than reward drift, as the explanation for the observed slow decay. |
+| Gazebo SAC 2-D | Tuned auto-entropy reached 527 at 154k but enforcement stopped on either a zero-margin speed conflict or D-43 CV over-read. Fixed entropy reached 558.7 at 78k and produced full-horizon enforcement for seeds 2024 and 42. |
+| Speed-margin probe | Evaluating the auto 150k checkpoint at 0.22 instead of 0.25 m/s removed its speed-conflict stop; the auto 175k checkpoint still stopped on the D-43 heading over-read under both caps. Margin helps longitudinal arbitration but cannot repair perception. |
+| D-43 preflight | Entfix-2024/75k and entfix-42/50k pass the centred-oracle gate individually; auto-175k at 0.25 and its 0.22 probe block. The aggregate reference is `BLOCKED`; a future run must produce its own PASS bound to checkpoint **and** config hashes. |
+| SAC SC-PERT subset | Two 100-cell seed subsets: enforcement 100/100 PASS combined versus monitoring 68/100; SC-PERT-11 monitoring was 0/10 for each seed. The subset roll-ups are intentionally globally `INCOMPLETE`, not verdict campaigns. |
+
+Within the matched **1-D PPO↔SAC comparison**, SAC changes the optimiser/data
+regime, not the observation, action, reward, cage, scenario, or metric
+contracts. The 2-D rows validate separate posterior contracts; they are not a
+controlled PPO↔SAC algorithm comparison because the historical PPO 2-D arm used
+the 0.5 m/s cap while current SAC 2-D uses 0.25 m/s plus later tuning/random
+spawns. Every PPO-based thesis verdict remains intact.
 
 ---
 
@@ -209,7 +231,7 @@ The cage no longer reads ground truth or the policy's CNN. It reads its **own de
 | ED-10 | Smoothness term on the **raw** policy delta (`steer_delta`; 2-D adds `throttle_delta`) | Δ on the post-cage applied delta | C-06 absorbs raw bang-bang for free, so a post-cage smoothness penalty is toothless; measuring the raw delta makes the policy pay for its own jerk. See `docs/10` |
 | **ED-11** | **Observation = front-camera image** (Lane Cam, 84×84×4), CNN policy | Abstract state vector (ED-1, F-track) | **D-41 supersedes ED-1/D-01 for track 'E'**: the policy *learns* perception from pixels — the thesis's primary system and its generality claim. Source = the dedicated **Lane Cam (IMX219-160 mirror)**, not the legacy ZED (§2.1) |
 | **ED-12** | **Cage state from a dedicated deterministic CV estimator** | Cage on ground truth (D-42) or on the policy's CNN | **D-43**: "any road, sees lines → drives" needs the cage to key on visible lines too, without an authored centerline, while staying independent of the *learned* policy and auditable. Accepts the common-cause trade-off (§8) |
-| **ED-13** | **2-D action (steering + throttle) as posterior work**, config-gated + inert by default | Expand to 2-D for the verdict; or never | **D-49 → D-50**: makes SR-009's stall test well-posed and lets the cage speed rules arbitrate for real (`max_speed = V_MAX`), but doing it in the verdict would invalidate the frozen baseline and force a full retrain + GE4 re-run. So it is a **new posterior baseline** (Isaac `train_isaac_2d.yaml` + Gazebo `train_ppo_camera_2d.yaml`), not a re-run of the 297k E-main |
+| **ED-13** | **2-D action (steering + throttle) as posterior work**, config-gated + inert by default | Expand to 2-D for the verdict; or never | **D-49 → D-50/D-59**: makes SR-009's stall test well-posed and lets the cage speed rules arbitrate for real, but doing it in the verdict would invalidate the frozen baseline and force a full retrain + GE4 re-run. It is therefore a **new posterior baseline**: Gazebo currently caps PPO/SAC 2-D at 0.25 m/s; Isaac PPO uses its separate 0.5 m/s contract. Neither is a re-run of the 297k E-main |
 
 *(ED-1 "abstract obs" and ED-7 "curvature preview in obs" were F-track decisions, superseded on track 'E' by the camera observation — the policy infers bend geometry from the image. They remain in the v0.1–v0.4 history for provenance.)*
 
@@ -224,9 +246,9 @@ The **F-track** state-vector environment is the frozen **baseline / control arm*
 ## 11. Traceability
 
 - **Spec:** Training Specification §7.2 (loop) + §7.7 (camera track); `docs/11` (camera training, normative); `docs/10` (reward); `docs/12` (the CV baseline + estimator); `docs/08` (ODD — camera interfaces §4.6, stressor profiles §5.5).
-- **Decisions:** D-41 (camera, supersedes ED-1/D-01), D-43 (cage on CV estimator, supersedes D-42), D-34 (cage in the loop), D-49 (verdict 1-D), D-50 (2-D + multi-circuit), D-52/D-56 (2-D training levers), D-32 (external drivers).
+- **Decisions:** D-41 (camera, supersedes ED-1/D-01), D-43 (cage on CV estimator, supersedes D-42), D-34 (cage in the loop), D-49 (verdict 1-D), D-50/D-59 (Isaac/Gazebo 2-D posterior), D-52/D-56 (Isaac 2-D training levers), D-60 (PPO/SAC switch), D-32 (external drivers).
 - **Safety:** SR-009 (policy evaluated under the same cage as deployment — satisfied because the training cage is the deployment class/config); SR-012/SR-013/SR-014 (H-10/H-11/H-12, camera hazards).
-- **Code (host-testable):** `camera_pipeline.py`, `camera_geometry.py`, `visual_degradation.py`, `visual_domain_randomization.py`, `cv_lane_estimator.py`, `perception_health.py`, `lane_plausibility.py`, `cage_perception.py`, `cage_bridge.py`, `polyline_tracker.py`. **(sim loop):** camera mode in `gazebo_lane_env.py` + image subscription in `ros_interface.py`. **(2-D posterior):** `tools/isaac_train.py`, `tools/isaac_scene.py`, configs `train_ppo_camera.yaml` / `train_ppo_camera_2d.yaml` / `train_isaac_2d.yaml`.
+- **Code (host-testable):** `camera_pipeline.py`, `camera_geometry.py`, `visual_degradation.py`, `visual_domain_randomization.py`, `cv_lane_estimator.py`, `perception_health.py`, `lane_plausibility.py`, `cage_perception.py`, `cage_bridge.py`, `polyline_tracker.py`. **(sim loop):** camera mode in `gazebo_lane_env.py` + image subscription in `ros_interface.py`; algorithm selection in `train_ppo.py` and `eval_policy.py`. **(posterior configs):** `train_ppo_camera_2d.yaml`, `train_sac_camera*.yaml`, `train_sac_camera_2d*.yaml`, and `train_isaac_2d.yaml`.
 
 ---
 <!--
@@ -242,7 +264,7 @@ A 4-frame stack supplies the short temporal window (motion/rate cues) at a fract
 It is a deliberate, documented common cause (D-43): on a real road the cage cannot have privileged ground truth, so it must perceive from the same sensor. The mitigation is a redundant *response*, not a redundant input — when perception is untrustworthy the cage does not trust a possibly-wrong estimate, it executes the open-loop controlled stop (SR-013/SR-014 → C-05 Trigger 8). The eval-only occlusion/false-lane stressors verify that response.
 
 **Q4. Why keep the verdict on a 1-D action if the 2-D action is "closer to real driving"?**
-Because expanding to 2-D in the verdict would invalidate the frozen F-track baseline and the controlled F↔E comparison (both on the 1-D action), force a full E-main retrain, require re-calibrating the cage speed rules, and re-run every GE4 campaign — disproportionate to closing one CL-B SR that resolves cleanly as N/A for a steering-only action (D-49). The 2-D action is done as posterior work (D-50), where it makes SR-009's stall test well-posed and the cage speed rules arbitrate for real, as a new baseline that does not reopen G4.
+Because expanding to 2-D in the verdict would invalidate the frozen F-track baseline and the controlled F↔E comparison (both on the 1-D action), force a full E-main retrain, require re-calibrating the cage speed rules, and re-run every GE4 campaign — disproportionate to closing one CL-B SR that resolves cleanly as N/A for a steering-only action (D-49). The 2-D action is instead implemented as posterior work in Gazebo and Isaac, where it makes SR-009's stall test well-posed and exposes speed arbitration under explicitly different caps. Those runs are new baselines and do not reopen G4; SC-PERT-03 still needs its dedicated two-arm 2-D execution before any new SR-009 verdict claim.
 
 **Q5. The source camera changed from the ZED to the Lane Cam — does that invalidate earlier camera evidence?**
 No. The Lane Cam (IMX219-160 mirror, 640×360, 90° HFOV, pitch 0.30 rad) is the camera the whole track-'E' verdict (GE4-V2, 297k E-main) trained and evaluated on; the ZED reference in earlier drafts was a documentation carry-over from the platform's stereo suite, not what the policy read. The 0.30 rad pitch and the IMX219 geometry are the values `camera_geometry.py` and the CV estimator are calibrated to (docs/12 §5).
@@ -257,3 +279,5 @@ No. The Lane Cam (IMX219-160 mirror, 640×360, 90° HFOV, pitch 0.30 rad) is the
 - **v0.4 (2026-06-09):** §10 revised for **D-43** (supersedes D-42): cage state from a dedicated deterministic CV estimator; common-cause trade-off + H-12/SR-014; oval-first training; ground truth as sim-only reward + oracle.
 - **v0.5 (2026-06-10, E2):** §10 reconciled to the implementation — 84×84 grayscale, k=4 fixed; camera obs mode + in-env H-10 DR + CV estimator/supervisor → C-05 Trigger 8 (cage YAML 0.6.0).
 - **v0.6 (2026-07-07):** **retargeted to track 'E' as the sole subject.** The camera environment is now the body of the document (§1–§9); the F-track state-vector env is compressed to a baseline note (§10). The **source camera is corrected from the legacy ZED to the dedicated Lane Cam (IMX219-160 mirror, 640×360, 90° HFOV, pitch 0.30 rad, topic `camera/image_raw_lane`)** with the full sensor table (§2.1). The **2-D action (steering + throttle) posterior design (D-50)** is added to §3.2 / §6 (throttle → cage scale `u` → `speed = max_speed·u`, `max_speed = V_MAX`, so the cage speed rules arbitrate for real and SR-009's stall test is well-posed), inert by default (D-49 keeps the verdict 1-D), with the Isaac (`train_isaac_2d.yaml`) and Gazebo (`train_ppo_camera_2d.yaml`) config surfaces, `ent_coef 0.01` (D-52) and `stall_penalty` (D-56), and multi-circuit per-episode sampling (§5.3, D-50/D-51). ED table reworked to a track-'E' basis (new ED-11/12/13). No reward/cage/scenario constant changed.
+- **v0.7 (2026-07-20):** separated the three active contracts: frozen GE4 PPO 1-D at 0.20 m/s, posterior Gazebo PPO/SAC 1-D/2-D with the current 0.25 m/s 2-D cap (plus the 0.22 diagnostic probe), and posterior Isaac PPO 2-D at 0.5 m/s. Added the 17–20.07 evidence summary (SAC entropy fix, replay-buffer probe, full-horizon 2-D enforcement, and two-seed SC-PERT subset), D-59/D-60 traceability, and the explicit warning that these runs do not reopen G4 or close SC-PERT-03.
+- **v0.8 (2026-07-20):** added the untrained qualification contract as a fourth, explicitly non-evidence surface: bounded 75k SAC-entfix parent at 0.22 m/s, 150k replay covering parent + 50k SC-PERT continuation, embedded checkpoint fingerprint and mandatory hash-bound D-43 preflight. Historical 0.25 evidence remains unchanged.

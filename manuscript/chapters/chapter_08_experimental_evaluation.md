@@ -1,7 +1,9 @@
 # Capítulo 8 — Evaluación Experimental (Campaña de Validación)
 
 <!--
-Estado: ESQUELETO F4 (D56+).
+Estado: G4 CERRADO (02.07.2026), actualizado con evidencia posterior E5 a
+20.07.2026. GE4-V2 sigue siendo el veredicto de récord; §8.9.6 es un probe SAC
+de cinco escenarios, no una nueva campaña de veredicto.
 Extensión objetivo: 14–18 páginas.
 Convención (igual que el Capítulo 7):
   [BORRADOR D5X]    → prosa de metodología/diseño, fijable ya (no depende de
@@ -328,14 +330,16 @@ disparadores de C-05) se mantiene bajo la latencia inyectada. SR-007 satisfecho.
 **SC-PERT-03 — meta-test de stall (SR-009) — indeterminado, no fallo.** Es un test
 de **inyección de fallo de dos brazos** (policy *released* vs variante *stall*) que
 verifica que la maquinaria de SR-009 *detecta* un stall inducido (M-P6 alto en la
-variante, M-P6 = 0 en la released). El **evaluador multi-brazo ya existe**
-(`criterion_eval.evaluate_labelled`); el hueco es doble: (a) el **brazo
-stall-variant no se ejecutó** (los 40 runs logueados son un solo brazo) y (b) el
-driver de campaña aún **no agrupa** los valores de los dos brazos antes de
-puntuar, por lo que los runs quedan `None`. La liveness **nominal** sí está
+variante, M-P6 = 0 en la released). En la campaña F, el **brazo stall-variant no
+se ejecutó** (los 40 runs logueados son un solo brazo) y el driver de entonces no
+agrupaba ambos brazos antes de puntuar, por lo que los runs quedaron `None`. La
+liveness **nominal** sí está
 verificada y pasa (SC-NOM-01/02/03, M-P6 = 0, M-P2 = 1). Por tanto SR-009 se
-mantiene **TBD** en `docs/07`, no FAIL; cerrarlo requiere el fine-tune + corrida del
-brazo stall y el agrupado de brazos en el driver (Ubuntu).
+mantiene **TBD** en ese brazo, no FAIL. Como trabajo posterior (20.07.2026), el
+protocolo 2-D ya fija `lambda_stall = 4.0`, 50k, `M-P6 > 50.0` y 20 runs por
+brazo/modo; el runner agrupa cada brazo por separado y encadena sus hashes. No se
+ha ejecutado el fine-tune ni una celda Gazebo, por lo que no existe un veredicto
+SR-009 nuevo.
 
 ---
 
@@ -439,11 +443,11 @@ SR-006 cierra sobre su propia métrica (nota ¹, D-39); **dos** SR-CL-B quedan e
   inerte) solo el 67.6 % cumple (peor tasa 0.43) — medida directa del valor de C-06.
   Análisis: `tools/sr006_smoothness.py`. (Re-apuntar SR-006 a esta métrica en
   `run_campaign.py` es un follow-up; no cambia el veredicto global, CL-B.)
-- **² SR-009 (liveness) — necesita re-run.** Liveness nominal verificada y satisfecha;
-  el veredicto lo arrastra SC-PERT-03, meta-test de dos brazos. El evaluador
-  multi-brazo ya existe (`criterion_eval.evaluate_labelled`); falta (a) ejecutar el
-  brazo *stall-variant* (no corrido) y (b) que el driver agrupe ambos brazos. No es
-  un fallo de liveness.
+- **² SR-009 (liveness) — necesita ejecución nueva.** Liveness nominal verificada y
+  satisfecha; el registro F lo arrastra SC-PERT-03, meta-test de dos brazos. La
+  infraestructura posterior ya prepara el fine-tune único, puntúa y agrega ambos
+  brazos independientemente; faltan el parent 0.22 cualificado, el preflight D-43
+  ligado a su hash y la ejecución Gazebo. No es un fallo de liveness.
 - **³ SR-010 (composición de reglas) — necesita arreglo de escenario + re-run.**
   SC-EDGE-04 pasa; SC-EDGE-05 **no indujo co-activación alguna** (0 intervenciones en
   100 runs, conducción nominal) porque las IC de `parameterised_grid` no se inyectan
@@ -454,8 +458,10 @@ SR-006 cierra sobre su propia métrica (nota ¹, D-39); **dos** SR-CL-B quedan e
 como **abstenciones documentadas y no-vetantes** (D-30), pero ambos quedaron
 *materialmente* respondidos por el track 'E': el brazo stall de SR-009 es **N/A por
 construcción** para el espacio de acción solo-dirección que comparten ambos tracks
-(M-P6 ≡ 0; la inyección de reward de SC-PERT-03 es inerte — D-49; el test bien-puesto
-se difiere a la acción 2-D de Isaac), y la pregunta de co-activación de SR-010 la
+(M-P6 ≡ 0; la inyección de reward de SC-PERT-03 es inerte — D-49). La extensión
+posterior 2-D de Gazebo ya hace el test técnicamente ejecutable, pero la celda
+SC-PERT-03 aún no se ha corrido; Isaac queda como réplica de backend separada. La
+pregunta de co-activación de SR-010 la
 respondió el grid de SC-EDGE-05 **cableado en GE4-V2** (30/85 breaches in-ODD, hallazgo
 CL-B genuino, §8.9). `tools/check_traceability.py` confirma que no quedan SRs huérfanos
 a ningún lado.
@@ -647,8 +653,27 @@ estimador CV de la cage **sub-lee con confianza** (lee `cv_ey ≈ 0.04 m` mientr
 `ey` real → 0.30 m; `cv_ok` True, SR-014 no caza un estimado auto-consistente —
 realización de **H-12**). Acotado al ODD cuesta solo los 2 breaches de borde de
 SC-EDGE-02. No es parcheable barato en un solo frame (D-48); el cierre honesto es
-**mejor percepción** (estimador temporal, o el retrain de acción 2-D de Isaac, D-49).
+**mejor percepción** (consistencia temporal, calibración contra oráculo o redundancia).
+Los probes 2-D posteriores demuestran que reducir el cap de velocidad no elimina
+el over-read de heading D-43; ampliar el espacio de acción no es una mitigación de percepción.
 SR-010 es un hallazgo CL-B genuino (30/85 breaches de co-activación in-ODD).
+
+**Preflight posterior D-43 (20.07.2026; no cambia GE4).** Un análisis offline
+ligado a los hashes de checkpoint/config aplicó una ventana de vehículo centrado
+(`|ey| ≤ 0.08 m`, `|epsi| ≤ 0.10 rad`) y tolerancia de desacuerdo heading de
+0.40 rad, anclada sobre el máximo limpio GE2 de 0.38734 rad y por debajo de
+C-02 (0.4363 rad). SAC-entfix 2024/75k y 42/50k pasan individualmente sin falsos
+C-01/02/03 ni emergencias; auto-175k queda bloqueado a 0.25 y también en el probe
+0.22. El stop 0.25 ocurre con verdad casi centrada (`ey=-0.035 m`,
+`epsi=-0.035 rad`) pero `cv_epsi=-0.446 rad`; en el probe 0.22,
+`cv_epsi=-0.547 rad` frente a verdad `+0.068 rad`. La conclusión causal es más
+fuerte que “bajar velocidad”: el margen resuelve el conflicto longitudinal,
+pero el falso heading es un mecanismo independiente. En un audit separado de
+SC-EDGE-02/GE4-V2, el under-read lateral aparece en 3573/5784 ciclos y 27/60
+runs (2/30 enforcement, 25/30 monitoring; gap máximo 0.266755 m). Es
+caracterización, no token de autorización: el metadata reconstruido del E-main
+carece de `train_config_hash`, por lo que el informe falla cerrado como
+`INVALID` para una campaña nueva.
 
 ### 8.9.2 La cage pasa de latente a activa
 
@@ -687,13 +712,14 @@ falsa sin inducir excursión. Dos huecos de instrumentación de V1 quedaron **ce
 evaluador `labelled_arms` y puntúa 40/40; **SC-EDGE-05** quedó **determinante** (grid de
 co-activación cableado), revelando 30/85 breaches in-ODD genuinos (SR-010, §8.4.2).
 
-Solo **SC-PERT-03** queda indeterminado (per-run `None`, no fallo). Es un test
+Solo **SC-PERT-03** queda indeterminado en la campaña de récord (per-run `None`, no fallo). Es un test
 *negativo* de stall —verifica que la métrica M-P6 detecta un agente parado— que **no
 aplica al espacio de acción solo-dirección**: la policy no controla throttle, no puede
 converger a la inacción, así que M-P6 ≡ 0 por construcción y la inyección de reward del
 escenario es inerte (D-49). Su brazo vivo de SR-009 —M-S2 bajo monitoring— sí queda
 cubierto por la familia nominal. El test de stall bien-puesto se difiere a la acción
-2-D de Isaac (D-49).
+2-D posterior (D-49). En Gazebo, su protocolo/runner ya están preparados pero
+siguen sin ejecución; Isaac sería una réplica de backend independiente.
 
 ### 8.9.4 Matriz E-track y trabajo de cierre
 
@@ -826,6 +852,74 @@ marcas, manchas, agua; ver `src/cobraflex/worlds/README_robustness_worlds.md`), 
 en curso. Evidencia previa: `experiments/sim/runs/cv_ctrl_eval_2024_4k4{,_mon}` y
 `baseline_cv_vs_rl_nominal.json`.
 
+### 8.9.6 Robustez posterior al algoritmo: campañas SAC 1-D sobre SC-PERT  [E5]
+
+Para comprobar si el cambio latente→activo de la cage observado en GE4-V2
+dependía de la política PPO concreta, se ejecutaron dos campañas posteriores
+sobre checkpoints SAC 1-D con `ent_coef=0.005`: seed 2024, checkpoint 75k
+(`b74505ac…`), bajo `experiments/sim/campaign_sac_pert/`; y seed 42,
+checkpoint 75k (`4d09e43c…`), bajo
+`experiments/sim/campaign_sac_pert_s42/`. Cada campaña cubre
+SC-PERT-04/09/11/12/13 × {enforcement, monitoring} × 10 repeticiones: 100
+runs por checkpoint, 200 en total y **0 errores de ejecución**.
+
+| Escenario | SAC seed 2024, enf · mon | SAC seed 42, enf · mon | Combinado enforcement | Combinado monitoring |
+| --- | ---: | ---: | ---: | ---: |
+| SC-PERT-04 | 10/10 · 10/10 | 10/10 · 10/10 | **20/20** | **20/20** |
+| SC-PERT-09 | 10/10 · 8/10 | 10/10 · 10/10 | **20/20** | 18/20 |
+| SC-PERT-11 | 10/10 · **0/10** | 10/10 · **0/10** | **20/20** | **0/20** |
+| SC-PERT-12 | 10/10 · 10/10 | 10/10 · 10/10 | **20/20** | **20/20** |
+| SC-PERT-13 | 10/10 · 5/10 | 10/10 · 5/10 | **20/20** | 10/20 |
+| **Total** | **50/50 · 33/50** | **50/50 · 35/50** | **100/100** | **68/100** |
+
+*Subconjunto SC-PERT posterior con dos políticas SAC. Un PASS por
+parada de emergencia es un desenlace seguro previsto por el criterio del
+escenario, no una recuperación de la tarea.*
+
+El resultado principal es estructural: **enforcement pasa 100/100**, mientras
+la política sin aplicación de la cage pasa solo **68/100**. De los 100 PASS de
+enforcement, 51 se obtienen mediante parada controlada y 49 mediante
+continuación/recuperación de la tarea. Por tanto, la cage no se limita a
+suavizar la acción: bajo degradación severa convierte sistemáticamente el
+fallo de la política desnuda en un estado seguro. La dirección del contraste
+de GE4-V2 sobrevive así al cambio PPO→SAC y a una segunda semilla SAC.
+
+El desglose también evita una lectura homogénea de «robustez SAC».
+SC-PERT-04 y SC-PERT-12 pasan 40/40 agregando ambos modos y políticas; allí la
+policy tolera el estresor sin necesitar una diferencia de veredicto. En
+SC-PERT-09 el monitoring mejora de 8/10 (seed 2024) a 10/10 (seed 42). En
+SC-PERT-13 ambas semillas conservan exactamente 5/10 sin cage. Finalmente,
+**SC-PERT-11 es el discriminador universal**: 0/20 en monitoring y 20/20 en
+enforcement; junto con el 0/30 del PPO 297k de GE4-V2, tres políticas
+independientes fallan desnudas y quedan protegidas por la misma cage. La cage
+es el invariante del sistema; el algoritmo y la semilla desplazan los
+escenarios en los que hace falta.
+
+La comparación con PPO es descriptiva, no un test estadístico pareado entre
+algoritmos: GE4-V2 emplea otros tamaños de muestra (en estos cinco escenarios,
+175 runs por modo) y forma parte de una campaña completa, mientras SAC usa 20
+runs por modo y escenario al combinar dos checkpoints. En el subconjunto, PPO
+obtuvo 47/175 PASS en monitoring (≈27 %) frente a 68/100 (68 %) para SAC, pero
+esta diferencia no autoriza por sí sola un ranking global de seguridad o
+generalización.
+
+**Frontera de veredicto.** Ambos `campaign_report.json` declaran global
+`INCOMPLETE`, que es el resultado **esperado**: faltan 23 de los 28 escenarios
+de la matriz GE4 y, por tanto, múltiples SR-CL-A no pueden agregarse. Estas
+campañas son probes de robustez al algoritmo; no son GE4-V3, no cambian una
+fila de `docs/07` y no sustituyen el global `NOT SATISFIED` literal de GE4-V2.
+Su conclusión válida es más acotada: sobre los cinco estresores de percepción
+seleccionados, la cage elimina todos los fallos observados de dos políticas SAC
+1-D.
+
+**Nota de reproducibilidad.** En `campaign_sac_pert_s42`, el nombre de los
+directorios y la columna `seed` de `campaign_runs.csv` conservan por error la
+etiqueta `2024` del selector del runner con `--model-path` fijo. Los 100
+`metadata.json` internos fijan `seed: 42` y el hash de checkpoint
+`4d09e43c…`; estos metadatos y el hash son la fuente autoritativa para atribuir
+la segunda campaña. La inconsistencia de etiquetado no altera las trazas ni el
+roll-up, pero debe corregirse en una regeneración futura del índice.
+
 ---
 
 ## 8.10 Síntesis y transición al Capítulo 9  [BORRADOR D56]
@@ -846,8 +940,12 @@ ninguno de los dos brazos** (SR-001 cumplido, 0 contactos de borde in-ODD, M-S1 
 `d_max` en enforcement), con dos residuos documentados: los 2 breaches de borde de
 SC-EDGE-02 (el under-read D-43/H-12) y el hallazgo CL-B de co-activación SR-010.
 Con ello **G4 queda cerrado** (docs/07, 02.07.2026) y la rama derecha del V-Model
-se cierra en simulación; el trabajo posterior —Isaac Sim, acción 2-D (D-49) y el
-gap sim-to-real hacia la plataforma física— parte de estos veredictos congelados.
+se cierra en simulación. Las campañas SAC posteriores (§8.9.6) muestran que la
+dirección protectora del contraste cage-on/cage-off se replica de PPO a SAC en
+los cinco estresores probados, pero su global
+`INCOMPLETE` preserva deliberadamente esa frontera. El trabajo posterior —SAC,
+Isaac Sim, acción 2-D (D-49) y el gap sim-to-real hacia la plataforma física—
+parte de estos veredictos congelados.
 
 ```mermaid
 %% Fuente canónica: manuscript/figures/sim2real_roadmap.mmd
@@ -861,7 +959,7 @@ flowchart LR
     subgraph ISC ["Isaac Sim &mdash; posterior bridge (D-44)"]
         direction TB
         I1["URDF import + ROS2 bring-up<br/>+ in-process RL training &amp; DR<br/><i>docs/13</i>"]
-        I2["2-D action retrain: steer + throttle<br/>multi-circuit env (D-49 / D-50)<br/>makes SR-009 stall test well-posed"]
+        I2["2-D action retrain: steer + throttle<br/>multi-circuit env (D-49 / D-50)<br/>makes SR-009 stall test executable (not yet run)"]
     end
 
     subgraph PHY ["Physical CobraFlex 1:14 &mdash; Phase 5"]
@@ -872,7 +970,7 @@ flowchart LR
     GZB --> ISC --> PHY
 
     T["<b>Transfers:</b> GazeboLaneEnv (duck-typed interface) &middot; pure-Python cage + cage.yaml<br/>scenario &amp; SR specs &middot; handover spec <i>docs/14</i>"]
-    NT["<b>Does not transfer:</b> policy checkpoints &mdash; Isaac E-policy = future retrain<br/>(not a re-do of the 297k E-main; Isaac does not reopen G4)"]
+    NT["<b>Does not transfer:</b> policy checkpoints &mdash; Isaac policies are independent retrains<br/>(posterior variants exist; none re-does the 297k E-main or reopens G4)"]
 
     T -.-> ISC
     NT -.-> ISC
@@ -891,12 +989,13 @@ flowchart LR
 
 **Figura 8.2 — Hoja de ruta sim-to-real desde los veredictos congelados.**
 Todos los veredictos de la tesis cierran en Gazebo; Isaac Sim (D-44) es
-trabajo posterior —incluido el retrain con acción 2-D (D-49/D-50) que hace
-bien-puesto el test de stall de SR-009— y no reabre G4. Transfieren el código
+trabajo posterior —incluido el retrain con acción 2-D (D-49/D-50), que hace
+ejecutable el test de stall de SR-009 aunque su protocolo two-arm siga pendiente—
+y no reabre G4. Transfieren el código
 del entorno (interfaz duck-typed), la cage pura + `cage.yaml` y las
 especificaciones (handover en `docs/14`); **no** transfieren los checkpoints
-de policy: una E-policy en Isaac es un retrain futuro, no una repetición del
-E-main de 297k.
+de policy: las políticas Isaac son retrains independientes; las variantes ya
+ejecutadas no son una repetición del E-main de 297k.
 
 El Capítulo 9 lleva el subconjunto físico de la library (`docs/05`, §"Subset for
 physical deployment": SC-NOM-01, SC-NOM-02, SC-EDGE-01) a la plataforma
@@ -929,7 +1028,10 @@ F4 (campaña):
        el re-run F es opcional/histórico.
   [—] SR-009 / SC-PERT-03: N/A para la acción solo-dirección — el test negativo de stall
        requiere control de throttle (M-P6≡0 by construction, reward-injection inerte; D-49).
-       Brazo vivo M-S2-monitoring cubierto; test bien-puesto diferido a la acción 2-D de Isaac.
+       Brazo vivo M-S2-monitoring cubierto. El protocolo/runner Gazebo 2-D ya están
+       preregistrados (`lambda_stall=4.0`, 50k, M-P6>50 %, hashes, agregación por brazo),
+       pero el parent fresh-0.22, su preflight D-43 y la ejecución siguen pendientes
+       (posterior, no reabre GE4); Isaac sería una réplica aparte.
   [ ] Resolver la decisión de métrica QED (D-17/D-21/D-22) si aplica a §8.6
   [ ] (Pendiente análisis estadístico §8.2.5: como M-S2=0 in-ODD en ambos modos,
        los tests χ²/Welch sobre el delta son degenerados; documentar o aplicar
@@ -952,7 +1054,8 @@ E4 / track 'E' (campaña GE4 cámara, §8.9):
        replicado). La curva de entrenamiento no clasifica la cuenca (D-36 ext.). §7.5.3–7.5.4,
        docs/11 §8.5. No toca el veredicto GE4-V2.
   [—] SR-009/SC-PERT-03: stall test N/A para acción solo-dirección (M-P6≡0 by construction, D-49);
-       el test bien-puesto se difiere a la acción 2-D de Isaac.
+       el posterior Gazebo 2-D ya tiene protocolo y runner ejecutables, pero todavía no
+       existe el parent 0.22 cualificado ni se ha corrido la celda.
 
 Fase 6:
   [ ] Pulido de prosa; verificar coherencia cruzada con Cap.7 (§7.5/§7.6) y

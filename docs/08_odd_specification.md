@@ -1,7 +1,11 @@
 # ODD Specification — SE4AI Lane Following Thesis
 
 **Document ID:** `ODD-SPEC`  
-**Version:** 0.7 (E-track / G4-closed rewrite, 07.07.2026 — retargets the concrete
+**Version:** 0.9 (posterior Gazebo 2-D qualification contract, 20.07.2026 — keeps the
+ODD and GE4 parameters frozen while recording the bounded 75k/0.22 parent,
+150k replay coverage and checkpoint-bound D-43 gate; 0.8 = post-G4 evidence reconciliation — keeps the
+GE4-V2 1-D PPO verdict frozen while recording the posterior Gazebo PPO/SAC 1-D/2-D
+evidence and its distinct speed contracts; 0.7 = E-track / G4-closed rewrite, 07.07.2026 — retargets the concrete
 realisation from the F-track oval to the **track-'E' front-camera policy on the
 `complex_b` circuit** (the GE4-V2 verdict of record), re-specifies the ODD-2/ODD-4
 adverse axis as **camera-perception degradation** (H-10/H-11/H-12), rewrites the
@@ -14,7 +18,8 @@ reconciliation §12; 0.5 = F4-entry TBD closure; 0.4 = F3 housekeeping.)
 **TBD-Q10** (`ODD-3.A_LAT_MAX`, physical lateral-accel envelope) remains, deferred to
 the M-4 physical calibration (F5). By construction unmeasurable in simulation — see
 decision D-33 and §12.3.  
-**Last updated:** 2026-07-07  
+**Last updated:** 2026-07-20
+
 **Approving reviewer (Gate 1 / Gate 4):** [supervisor name]  
 
 <!--
@@ -39,6 +44,8 @@ every parameter ID that downstream artefacts cite.
 | 0.5 | 2026-06-03 | SS | F4-entry closure of TBD-Q4–Q7 (ODD-2 stressor profiles) and TBD-Q12. Source: `src/cobraflex_rl/config/adverse_profiles.yaml`. Obstacle profiles specced but execution-deferred. Only Q10 left. |
 | 0.6 | 2026-06-08 | SS | F4 single-world reconciliation (§12, D-37): the F4 **F-track** campaign realises ODD-1..4 on the single oval `lane_following_oval.world` at one fixed-speed `ACT_DIM=1` operating point. No ODD parameter changed. |
 | **0.7** | **2026-07-07** | **SS** | **Track-'E' / G4-closed rewrite.** The concrete realisation moves from the **F-track state-vector policy on the oval** to the **track-'E' front-camera policy on the `complex_b` circuit** — the **GE4-V2 verdict of record** (297k E-main, 1970 runs, 28.06.2026; G4 closed 02.07.2026). Changes: **(a)** ODD-2 / ODD-4's differentiator is re-specified from "state-vector sensor noise + latency + obstacles" to **camera-perception degradation** — visual degradation (glare / low-light / motion-blur = **H-10**), perception loss (occlusion = **H-11**) and cage lane-misdetection (false-lane = **H-12**), with the H-10 domain-randomisation trio + the SC-PERT-04..13 eval stressors + the worn/wet/gaps world variants as the named profiles (§5.5); **(b)** the sensor/actuation interfaces (§4.6) are rewritten for the **front camera** (Lane Cam IMX219-160 mirror, 640×360) feeding the policy CNN, and the cage's **own deterministic CV lane-estimator** (D-43), replacing the privileged state vector; the F-track 6-vector is retained as the frozen ground-truth **baseline**; **(c)** the geometry (§6) moves oval→`complex_b`: `ROAD_WIDTH` 0.50 → **0.52 m** (road edge 0.25 → **0.26 m**), perimeter 8.79 → **19.22 m** (centre) / **19.93 m** (driven right lane), `KAPPA_MAX` 1.25 → **1.14 m⁻¹** (centre R_min 0.876 m; driven R_min 0.998 m); a new **`*.ROAD_EDGE`** parameter (0.26 m) records the off-road boundary the E-track uses; **(d)** the action stays **1-D steering-only** (D-49) — the 2-D speed envelope of ODD-3/ODD-4 is deferred to the **Isaac posterior track** (D-50); **(e)** §8 expanded to the **Isaac Sim sim-to-real** forward reference (docs/13–14); **(f)** §12 rewritten from D-37 (F4 oval) to the **GE4-V2 complex_b realisation**. Only Q10 remains open. Ignores the standing "do not rewrite doc 08" note by user request. |
+| **0.8** | **2026-07-20** | **SS** | **Post-G4 evidence reconciliation.** GE4-V2 remains the frozen 1-D PPO verdict at 0.20 m/s. Records the separate posterior Gazebo evidence: PPO/SAC camera policies in 1-D and 2-D, the current Gazebo 2-D authority cap `max_speed_mps = 0.25`, the diagnostic 0.22 m/s margin probe, the first full-horizon 2-D enforcement runs, and the two-seed SC-PERT subset. Keeps Isaac as a different posterior simulator with its own 2-D 0.5 m/s contract. No `ODD-N.<PARAM>`, SR threshold, cage constant, or G4 verdict changed. |
+| **0.9** | **2026-07-20** | **SS** | **Posterior qualification contract.** Adds no ODD parameter: preregisters a fresh bounded-75k Gazebo parent at 0.22 m/s, 150k replay covering its 50k SC-PERT continuation, and a checkpoint/config-bound D-43 preflight before execution. Historical 0.25 evidence and the diagnostic 0.22 probe remain distinct. |
 
 ---
 
@@ -127,7 +134,7 @@ This is the interface that **track 'E' redefined** relative to the F-track basel
 - **Cage observation (track 'E').** The cage does **not** read the camera image or the policy's CNN. It reads its **own deterministic CV lane-estimator** (`CvLaneEstimator`, D-43; docs/12 §4) on the same native frame, producing a state `(ey, epsi, lane_width, curvature, confidence)` for the rules C-01..C-06. A **perception supervisor** wraps it: on a trustworthy estimate it stamps a cage `State` with the frame's age; otherwise it passes `perception_invalid = True` so the cage takes its missing-state path and, once persistence elapses, fires C-05 **Trigger 8** (the controlled stop, SR-013/SR-014).
 - **F-track baseline (frozen).** For the ground-truth control arm the policy reads a **6-D state vector** `[ey, epsi, speed, prev_steer, kappa_near, kappa_far]` (`MlpPolicy`), and the cage reads ground-truth-derived state (`PolylineTracker` on `/odom_truth`). This is the frozen reference for "what camera perception costs"; it is not the deployable artefact (it needs a prior map and privileged pose).
 
-The **action space** in ODD-1 is **one-dimensional and continuous** — steering (yaw-rate) only, `Box([-1, 1])`, `ODD-1.ACT_DIM = 1` (D-49). Throttle is held at the fixed cruise operating point and is not a controlled variable; the exogenous throttle-override stressor (SC-EDGE-03) exercises C-04. A 2-D action (steering + throttle) is deferred to the Isaac posterior track (§8; D-49/D-50).
+For the **GE4 verdict**, the action space in ODD-1 is **one-dimensional and continuous** — steering (yaw-rate) only, `Box([-1, 1])`, `ODD-1.ACT_DIM = 1` (D-49). Throttle is held at the fixed cruise operating point and is not a controlled variable; the exogenous throttle-override stressor (SC-EDGE-03) exercises C-04. Posterior work implements a config-gated 2-D action (steering + throttle) in **both Gazebo and Isaac** (§8; D-50/D-59/D-60): Gazebo evidence uses a 0.25 m/s cap (plus a diagnostic 0.22 probe), and an **untrained** fresh contract now preregisters a bounded 0.22 parent; Isaac uses its separate full-authority 0.5 m/s contract. These posterior contracts do not alter `ODD-1.ACT_DIM = 1` for GE4.
 
 A sensor reading is **nominal** when its timestamp is no older than `ODD-1.STALENESS_MAX = 200 ms` (SR-007) and all fields lie within their plausible ranges (§9). Violations are not part of ODD-1; they trigger H-06 (cage-state staleness) / SR-007, or — for the camera channel — H-11/H-12 / SR-013/SR-014.
 
@@ -210,7 +217,7 @@ The ODD-1 exit conditions apply (§4.8). ODD-2 additionally treats persistent lo
 
 ### 6.1 Relation to ODD-1
 
-ODD-3 preserves the environmental conditions and dynamic-element exclusions of ODD-1 and differs in the **scenery**: a closed loop with non-zero curvature. In the *specified* domain ODD-3 also expands the action to two dimensions (steering + speed) with a curvature-dependent speed cap; in the **realised** verdict the action stays **1-D steering-only** (D-49), so the speed-envelope face of ODD-3 is validated only at the cage-rule level, not end-to-end (§12.2). Closing that gap is the Isaac 2-D posterior work (§8; D-50).
+ODD-3 preserves the environmental conditions and dynamic-element exclusions of ODD-1 and differs in the **scenery**: a closed loop with non-zero curvature. Its full speed-envelope face presupposes two controlled dimensions (steering + speed), but the canonical **GE4 realisation parameter** stays **`ODD-3.ACT_DIM = 1`**, steering-only (D-49), so GE4 does not exercise that face end-to-end (§12.2). Posterior 2-D configs exercise it separately in Gazebo and Isaac (§8; D-50/D-59/D-60), without changing the GE4 parameter or reopening G4.
 
 ### 6.2 Scenery
 
@@ -233,11 +240,11 @@ Identical to ODD-1: no other actors, only the subject vehicle.
 
 ### 6.5 Subject-vehicle dynamic envelope
 
-In the **specified** domain the forward-speed envelope becomes curvature-dependent: straight cap `ODD-3.V_MAX_STRAIGHT = 0.5 m/s` (= ODD-1.V_MAX), curve cap `ODD-3.V_MAX_CURVE = 0.25 m/s`, interpolated by `v_max(κ) = max(V_MAX_CURVE, V_MAX_STRAIGHT − k_κ|κ|)` with `ODD-3.K_KAPPA = 0.3 m/s per unit curvature` (mirrored in SR-004 and C-04). The maximum commanded lateral acceleration is `ODD-3.A_LAT_MAX = TBD-Q10`, closing when M-4 measures the physical envelope. In the **realised** verdict the operating point is fixed at 0.20 m/s (below both caps), so this speed envelope is exercised end-to-end **only** by the C-04 unit tests, not by closed-loop policy control (§12.2). The Isaac 2-D retrain (D-50) sets `max_speed = 0.5 m/s = V_MAX`, so the policy can genuinely exceed the curve ceiling and the cage speed rules arbitrate for real — the posterior work that makes this face of ODD-3 live.
+The forward-speed envelope is curvature-dependent: straight cap `ODD-3.V_MAX_STRAIGHT = 0.5 m/s` (= ODD-1.V_MAX), curve cap `ODD-3.V_MAX_CURVE = 0.25 m/s`, interpolated by `v_max(κ) = max(V_MAX_CURVE, V_MAX_STRAIGHT − k_κ|κ|)` with `ODD-3.K_KAPPA = 0.3 m/s per unit curvature` (mirrored in SR-004 and C-04). The maximum commanded lateral acceleration is `ODD-3.A_LAT_MAX = TBD-Q10`, closing when M-4 measures the physical envelope. In the **canonical GE4 realisation** the operating point is fixed at 0.20 m/s with `ODD-3.ACT_DIM = 1` (below both caps), so its policy does not exercise this envelope end-to-end. Posterior evidence-bearing Gazebo 2-D configs use `max_speed_mps = 0.25`, and a diagnostic 0.22 m/s eval cap removed one zero-margin speed-conflict stop while a D-43 heading over-read persisted under both caps. The new 0.22 contract is bounded/fresh-only and has not been trained. Isaac retains its separate `max_speed_mps = 0.5` full-authority contract. The result is evidence about implementations and margin, not a re-value of the ODD ceilings or action parameter.
 
 ### 6.6 Sensor and actuation interfaces
 
-Inherited from ODD-1 (§4.6): track-'E' policy reads the camera (84×84×4), the cage reads its CV estimator; the F-track baseline reads the 6-D state vector. The action is 1-D steering (`ODD-3.ACT_DIM = 1`, D-49; the specified 2-D action is Isaac posterior work). Control cycle and nominal latency inherited from ODD-1.
+Inherited from ODD-1 (§4.6): track-'E' policy reads the camera (84×84×4), the cage reads its CV estimator; the F-track baseline reads the 6-D state vector. The **canonical GE4 action parameter** is 1-D steering (`ODD-3.ACT_DIM = 1`, D-49); local posterior Gazebo/Isaac configs implement 2-D without changing that verdict realisation. Control cycle and nominal latency are inherited from ODD-1.
 
 ### 6.7 Excluded conditions
 
@@ -290,9 +297,9 @@ A physical operational design domain, provisionally `ODD-PHYS-1`, will be specif
 
 ### 8.2 Isaac Sim sim-to-real bridge (posterior track, docs/13–14)
 
-With G4 closed, the open thread is the **Isaac Sim** sim-to-real bridge (D-44) — a *posterior* track, **not** a re-opening of the Gazebo E verdict. It comprises: URDF→USD import + ROS2 bring-up + in-process RL training (docs/13), the handover spec (docs/14), and the **2-D action (steering + throttle) retrain** (D-49/D-50) that makes SR-009's stall/liveness sub-mode well-posed and lets the cage speed rules (C-04/C-05/C-06) arbitrate against the policy for real. The Isaac training environment adds **multi-circuit per-episode sampling** across a CV-safe trio (`complex_b`, `complex_d`, `complex_e`; D-50/D-51), each designed against the §6.2 monocular curvature boundary.
+With G4 closed, the **Isaac Sim** sim-to-real bridge (D-44) is a *posterior* track, **not** a re-opening of the Gazebo E verdict. It comprises URDF→USD import, ROS2 bring-up, in-process PPO training/evaluation (docs/13), the handover contract (docs/14), and the **2-D action (steering + throttle)** (D-49/D-50). The implemented Isaac training environment adds **multi-circuit per-episode sampling** across a CV-safe trio (`complex_b`, `complex_d`, `complex_e`; D-50/D-51), each designed against the §6.2 monocular curvature boundary.
 
-Two ODD-relevant facts follow. First, **Isaac is a different simulator**: Gazebo checkpoints do not transfer, so an Isaac E-policy is a *future retrain and a new baseline*, never a re-run of the 297k E-main — it does not reopen G4. Second, the 2-D Isaac action **exercises the ODD-3/ODD-4 speed envelope that the Gazebo verdict leaves latent** (§6.5): with `max_speed = 0.5 m/s = ODD-1.V_MAX` the policy can exceed the curve ceiling and C-04 attenuation / C-05 emergency become measurable (the D-50 20k pilot already shows C-04 active on 0.7–1.8 % of steps — the latent→measured flip). Isaac work is captured in docs/13–14 and does not change any `ODD-N.<PARAM>` value.
+Three ODD-relevant facts follow. First, **Isaac is a different simulator**: Gazebo checkpoints do not transfer, and its completed/repeated retrains are new baselines, never re-runs of the 297k E-main; they do not reopen G4. Second, Isaac's 2-D action uses `max_speed_mps = 0.5`, whereas the **posterior Gazebo 2-D** PPO/SAC configs currently cap policy authority at **0.25 m/s** (with a 0.22 m/s diagnostic probe). Third, both posterior paths make longitudinal arbitration measurable, but only within their own simulator/config contracts. Cross-simulator comparison therefore requires a fresh, explicitly matched evaluation; none of this changes an `ODD-N.<PARAM>` value or the frozen GE4 verdict.
 
 ---
 
@@ -305,6 +312,12 @@ one row per parameter ID. When a value changes, update it once here and propagat
 the ID. The "track-'E' realisation" reading is complex_b; oval values are the frozen
 F-track legacy noted in Source.
 -->
+
+The table is the canonical **track-'E' GE4 realisation**. In particular,
+`*.ACT_DIM = 1` is a realised verdict parameter, not a claim that the posterior
+2-D configs changed an ODD parameter. The curvature-dependent speed limits are
+envelope bounds; their end-to-end 2-D face is reported as a coverage gap and
+posterior experiment, not back-propagated into this table.
 
 | Parameter ID | Quantity | ODD-1 | ODD-2 | ODD-3 | ODD-4 | Source |
 | ------------ | -------- | ----- | ----- | ----- | ----- | ------ |
@@ -326,7 +339,7 @@ F-track legacy noted in Source.
 | `*.ROAD_EDGE` | Painted road boundary (m, from centre) | 0.26 | 0.26 | 0.26 | 0.26 | ROAD_WIDTH / 2; off-road / M-S5 criterion (oval legacy 0.25) |
 | `*.STUCK_TIMEOUT` | Stuck criterion timeout (s) | n/a | n/a | n/a | n/a | Subsumed by env truncation (500 × 0.10 s = 50 s); TBD-Q11 |
 | `*.OBS_DIM` | Observation | camera 84×84×4 (policy); CV lane-estimate (cage) | same | same | same | Track 'E' (D-43). F-track baseline: 6-D state vector |
-| `*.ACT_DIM` | Action vector dimension | 1 | 1 | 1 | 1 | Steering-only (D-49). Isaac posterior = 2 (D-50) |
+| `*.ACT_DIM` | **GE4-realised** action vector dimension | 1 | 1 | 1 | 1 | Steering-only verdict parameter (D-49). Posterior Gazebo and Isaac configs set 2 locally (D-50/D-59/D-60) without changing this ODD value |
 
 ---
 
@@ -350,7 +363,7 @@ delete a TBD silently; close it with an explicit value. Do NOT run tools/close_o
 | --- | -------- | ----- | ------------ | ---------- |
 | TBD-Q1 | Friction coefficient of the road surface? | SS | closed | **1.0** — world SDFs ship an empty `<surface><friction>` block; Gazebo ODE defaults `mu1=mu2=1.0`. Inferred, not explicit `<mu>`; re-read if a future world sets one. (2026-05-14) |
 | TBD-Q2 | Max commanded lateral accel., ODD-1? | SS | closed | **9.81** — Coulomb ceiling FRICTION×g. Physical envelope, not a typical value (operational `a_lat ≈ 0` at κ=0). (2026-05-14) |
-| TBD-Q3 | Numerical drivable-corridor edge; why differ from LANE_EDGE? | SS | closed | **0.1225** — the env terminates at `|ey| > lane_width/2`; CORRIDOR_EDGE = LANE_EDGE, no separate margin. (Track 'E' adds off-road-by-road-centre-distance vs ROAD_EDGE = 0.26 for self-approaching loops, docs/11 §3.5.) (2026-05-14) |
+| TBD-Q3 | Numerical drivable-corridor edge; why differ from LANE_EDGE? | SS | closed | **0.1225** — the env terminates at `\|ey\| > lane_width/2`; CORRIDOR_EDGE = LANE_EDGE, no separate margin. (Track 'E' adds off-road-by-road-centre-distance vs ROAD_EDGE = 0.26 for self-approaching loops, docs/11 §3.5.) (2026-05-14) |
 | TBD-Q4 | Lighting-degradation + noise in the nominal-adverse profile? | SS | closed | Superseded on track 'E' by the **camera visual-degradation stressors** (§5.5): glare/low-light/motion-blur (H-10), levels grounded in the GE2 oracle. F-track legacy value in `adverse_profiles.yaml`. (2026-06-03; retargeted 2026-07-07) |
 | TBD-Q5 | Latency / jitter / actuation-imperfection profile? | SS | closed | Superseded on track 'E' — the perception channel, not state-vector latency, is the ODD-2 axis; F-track legacy `odd2_adverse_with_latency` retained historically. (2026-06-03; retargeted 2026-07-07) |
 | TBD-Q6 | Obstacle geometry / position / quantity? | SS | closed (retired) | **Retired** — no obstacle observation channel; no obstacle scenario in the verdict library. The F4 spec-only box profile is withdrawn. (2026-07-07) |
@@ -387,24 +400,39 @@ The four ODDs are specified abstractly. The **track-'E' GE4-V2 campaign** — th
 ### 12.2 Declared coverage gaps
 
 - **(a) Nominal-straight length & curvature.** ODD-1's abstract "straight, κ ≡ 0" is realised on complex_b's straight tiles; curvature is zero only within the recovery window before curve entry. The single-rule isolation each straight scenario intends is preserved because the recovery budgets complete within the straight at 0.20 m/s.
-- **(b) ODD-3/4 speed envelope NOT exercised end-to-end.** ODD-3/4 are *defined* with a 2-D action and a curvature-dependent `v_max(κ)`; the evaluated policy is fixed-speed `ACT_DIM = 1` (D-49), so the speed-adaptation envelope is validated only at the cage-rule level (C-04 unit tests), not by closed-loop policy control. ODD-3 is claimed **partial** for this reason. Closing it is the **Isaac 2-D retrain** (§8; D-50), which sets `max_speed = V_MAX = 0.5 m/s` so the cage speed rules arbitrate for real.
-- **(c) The D-43 confident under-read (H-12), a real but in-ODD-marginal residual.** The cage reads its own CV estimator; when the vehicle departs its lane past ~half a lane width, nearest-centre lane selection can lock onto a *neighbour* pair and confidently under-read (`cv_ey ≈ 0.04 m` while true `ey → 0.30 m`, `cv_ok` True) — a self-consistent wrong estimate SR-014 cannot catch (H-12). Scoped to the ODD (the ruta-1 SC-EDGE-02 in-ODD IC clip) this costs only **2/30 boundary-edge breaches** in GE4-V2, so SR-001 still closes; the single-frame "read the larger offset" patch (ruta-2b) was reverted for firing spurious emergencies on centred/curving views (D-48). The honest closure is **better perception** (a temporal estimator or the 2-D Isaac retrain), not a single-frame rule.
-- **(d) Single operating speed.** 0.20 m/s is a single conservative operating point, below both `V_MAX = 0.5` and `V_MAX_CURVE = 0.25` — not a speed sweep. (This is *why* the cage speed rules C-04/C-05 are structurally latent in-ODD — the central F4/GE4 finding.)
-- **(e) Multi-seed.** GE4-V2 is the seed-2024 run; a multi-seed N = 5 confirmation is host-deferred posterior work.
+- **(b) ODD-3/4 speed-envelope face NOT exercised end-to-end by GE4.** The curvature-dependent `v_max(κ)` design needs throttle authority for a learned-policy test, while the canonical verdict parameter is fixed-speed `ACT_DIM = 1` (D-49). ODD-3 therefore remains **partial in the GE4 claim**. Posterior Gazebo and Isaac 2-D runs exercise longitudinal control under local configs (§12.4), but are not verdict campaigns and do not change `ODD-3.ACT_DIM` or retroactively expand GE4 coverage.
+- **(c) Two distinct D-43 confident-estimate residuals.** In SC-EDGE-02 the cage's CV estimator can lock onto a neighbouring lane pair and **under-read lateral offset** (`cv_ey ≈ 0.04 m` while true `ey → 0.30 m`, `cv_ok` True). Scoped to the ODD by ruta 1, this costs **2/30 boundary-edge breaches** in GE4-V2 and SR-001 still closes; the single-frame "read the larger offset" patch (ruta 2b) was reverted after spurious emergencies on centred/curving views (D-48). Separately, the posterior 2-D cap probe exposed a confident **heading over-read** (`cv_epsi`) in a tight curve: lowering 0.25→0.22 m/s did not remove that stop. The probe therefore shows that speed margin cannot repair a confidently wrong estimator, but it does not re-characterise the SC-EDGE-02 `cv_ey` under-read. The honest closure for both is better/temporal perception, not a new action dimension or a single-frame rule.
+- **(d) Single operating speed in GE4.** 0.20 m/s is a single conservative operating point, below both `V_MAX = 0.5` and `V_MAX_CURVE = 0.25` — not a speed sweep. This is why the speed rules are structurally latent in the verdict runs; posterior 2-D evidence is reported separately.
+- **(e) Multi-seed.** GE4-V2 remains the seed-2024 verdict. The posterior PPO camera N = 5 study is now complete (3/5 constraint-respecting; seed 666 cage-dependent; seed 23 cage–CV conflict), but was not pooled into the pre-registered GE4 verdict.
 - **(f) `ODD-3.A_LAT_MAX` (TBD-Q10).** Unmeasurable in simulation; deferred to the physical M-4 calibration (§12.3).
 
 These gaps are the analogue of the bounded-validation principle (D-11), reported in the manuscript Limitations. They change no ODD parameter, SR threshold, or cage constant; the spec above remains the authoritative definition of the *intended* domain, and the reconciliation records coverage — it does not back-propagate a measured value into a threshold.
 
 ### 12.3 Version status at G4 (v1.0 carries Q10 to F5)
 
-The maturation plan targeted **v1.0 "all TBDs resolved, signed off"**. With the F4 and GE4-V2 campaigns closed and **G4 signed off (02.07.2026)**, **11 of 12 TBDs are resolved**; the sole remainder, **TBD-Q10 (`ODD-3.A_LAT_MAX`)**, depends on the physical lateral-accel calibration **M-4** and is by construction unmeasurable in simulation, so it is deferred to F5 (D-33). The ODD-Spec is therefore signed off at G4 at this minor version (**0.7**) with **Q10 explicitly carried to F5**, not promoted to 1.0; 1.0 is reached when M-4 closes Q10 on the physical platform. This is a disclosed limitation, not an open orphan: every *simulation-resolvable* TBD is closed, and Q10's dependency on hardware is recorded here and in D-33.
+The maturation plan targeted **v1.0 "all TBDs resolved, signed off"**. With the F4 and GE4-V2 campaigns closed and **G4 signed off (02.07.2026)**, **11 of 12 TBDs are resolved**; the sole remainder, **TBD-Q10 (`ODD-3.A_LAT_MAX`)**, depends on the physical lateral-accel calibration **M-4** and is by construction unmeasurable in simulation, so it is deferred to F5 (D-33). The ODD-Spec is therefore signed off at G4 and maintained at this minor version (**0.8**) with **Q10 explicitly carried to F5**, not promoted to 1.0; 1.0 is reached when M-4 closes Q10 on the physical platform. This is a disclosed limitation, not an open orphan: every *simulation-resolvable* TBD is closed, and Q10's dependency on hardware is recorded here and in D-33.
+
+### 12.4 Post-G4 posterior evidence (17–20.07.2026)
+
+This evidence is **diagnostic/posterior**, not a new Gate campaign:
+
+| Evidence family | Action / speed contract | Result relevant to the ODD |
+| --- | --- | --- |
+| Frozen GE4-V2, PPO 297k | 1-D, fixed 0.20 m/s | Verdict of record; unchanged |
+| Gazebo PPO/SAC posterior | 1-D and 2-D; current 2-D cap 0.25 m/s | PPO 2-D reached a competent monitoring baseline; SAC produced full-horizon 2-D enforcement runs after entropy fixing |
+| Gazebo 0.22 m/s probe | 2-D eval-time diagnostic cap | Removed the zero-margin speed-conflict stop on the SAC-auto 150k checkpoint; did **not** remove the D-43 heading over-read on the 175k checkpoint |
+| Gazebo margin022 qualification | 2-D, fresh bounded 75k parent + 50k continuation inside 150k replay | Preregistered/untrained; runner requires a D-43 PASS for the exact checkpoint/config before Gazebo |
+| Gazebo SAC SC-PERT subset | 1-D, seeds 2024 and 42; 200 cells total | Enforcement 100/100 PASS versus monitoring 68/100; subset reports are intentionally `INCOMPLETE` globally and carry no GE4 verdict |
+| Isaac posterior | 2-D, 0.5 m/s full authority | Separate simulator and retrained baselines; checkpoints do not transfer |
+
+Thus the ODD-3 speed face is no longer wholly unexercised in the repository, but it remains **outside the GE4 verdict claim**. The 0.22 probe also separates two mechanisms: longitudinal margin can remove a speed-boundary conflict, whereas lowering speed alone does not repair a confidently wrong CV heading estimate.
 
 ---
 <!--
 ## 13. Anticipated defense questions
 
-**Q1. The verdict track uses an 84×84 camera image and a 1-D action, but ODD-3/ODD-4 are *defined* with a 2-D speed envelope — isn't the specified domain wider than what you validated?**
-Yes, and it is declared (§6.5, §12.2-b). ODD-3 is claimed **partial**: curve geometry and the cage's lateral behaviour on curves are exercised end-to-end (SC-NOM-02/03, and adversely SC-PERT-11/12/13), but the 2-D `v_max(κ)` speed envelope is validated only at the cage-rule level because the evaluated policy is fixed-speed `ACT_DIM=1` (D-49). Closing it is the Isaac 2-D retrain (D-50), which sets `max_speed = V_MAX = 0.5 m/s` so the cage speed rules arbitrate for real (the D-50 20k pilot already shows C-04 active). This is a bounded, declared gap, not a silent one.
+**Q1. The verdict track uses an 84×84 camera image and a 1-D action, but ODD-3/ODD-4 include a curvature-dependent speed envelope — isn't the validated realisation narrower than that envelope?**
+Yes, and it is declared (§6.5, §12.2-b). ODD-3 is claimed **partial in GE4**: curve geometry and the cage's lateral behaviour on curves are exercised end-to-end (SC-NOM-02/03, and adversely SC-PERT-11/12/13), but the canonical verdict parameter is fixed-speed `ACT_DIM=1` (D-49). Posterior Gazebo 2-D runs at a 0.25 m/s cap and Isaac 2-D runs at 0.5 m/s exercise speed authority as new baselines under local configs; they do not retroactively expand the GE4 coverage claim or change the ODD parameter table. This is a bounded, declared gap, not a silent one.
 
 **Q2. Why re-specify ODD-2/ODD-4 as camera-perception degradation instead of the earlier sensor-noise-plus-obstacles?**
 Because track 'E' is the verdict of record and its stressor axis *is* the perception channel: the same camera feeds the policy CNN and the cage's CV estimator (D-43 common-cause), so glare/low-light/blur (H-10), occlusion (H-11) and false markings (H-12) are the meaningful adverse conditions. The old state-vector noise/latency profiles belonged to the F-track baseline and are retained historically; the obstacle profile never had an observation channel and is retired.
@@ -423,4 +451,4 @@ The stratification (nominal → +perception stressor → +curvature → combined
 
 --->
 
-*End of ODD-SPEC v0.7.*
+*End of ODD-SPEC v0.8.*

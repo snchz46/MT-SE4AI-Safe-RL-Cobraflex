@@ -26,7 +26,12 @@ from stable_baselines3 import PPO, SAC
 import yaml
 
 from .campaign_metrics import compute_run_metrics
+from .campaign_contract import (
+    campaign_contract_fingerprint,
+    validate_checkpoint_campaign_contract,
+)
 from .criterion_eval import evaluate as evaluate_criterion
+from .criterion_eval import evaluate_labelled_arm
 from .criterion_eval import is_labelled, labelled_arms
 from .eval_metrics import summarize_eval
 from .gazebo_lane_env import GazeboLaneEnv
@@ -110,6 +115,16 @@ def parse_args(args: Optional[Sequence[str]] = None) -> argparse.Namespace:
                         help="Repetition index — seeds the per-run randomisation jitter.")
     parser.add_argument("--base-seed", type=int, default=0,
                         help="Base seed folded into the per-rep jitter (reproducibility).")
+    parser.add_argument(
+        "--criterion-arm", type=str, default=None,
+        help="Label of one preregistered multi-arm criterion (SC-PERT-03: "
+             "released|stall_variant). Omit for ordinary scenarios.",
+    )
+    parser.add_argument(
+        "--protocol-manifest", type=str, default=None,
+        help="Completed two-arm protocol manifest; its path/hash are recorded "
+             "with every SC-PERT-03 run.",
+    )
     cleaned_args = remove_ros_args(args=args)
     if cleaned_args and not cleaned_args[0].startswith("-"):
         cleaned_args = cleaned_args[1:]
@@ -270,6 +285,9 @@ def main(args: Optional[Sequence[str]] = None) -> None:
 
     centerline_cfg = load_yaml(centerline_path)
     train_cfg = load_yaml(train_cfg_path)
+    # Validate opted-in posterior contracts before starting an evaluation. The
+    # historical configs omit this block and remain unchanged.
+    campaign_contract_fingerprint(train_cfg)
     road_centerline_points = None
     if cli_args.road_centerline_config:
         road_centerline_points = np.asarray(
@@ -374,6 +392,7 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         ).lower()
         algo_cls = {"ppo": PPO, "sac": SAC}[algorithm]
         model = algo_cls.load(str(resolve_load_path(model_path)), device="cpu")
+        validate_checkpoint_campaign_contract(model, train_cfg)
 
         # Guard against an action-dim mismatch between the checkpoint and the
         # --train-config. The 1-D and 2-D camera configs share an identical
@@ -437,6 +456,7 @@ def main(args: Optional[Sequence[str]] = None) -> None:
                 records, run_config, completed=not last_terminated,
                 control_dt=env.control_dt, road_half_m=0.5 * env.road_width,
                 termination_reason=str(last_info.get("termination_reason", "")),
+                criterion_arm=cli_args.criterion_arm,
             )
             _print_verdict(scenario_id, campaign)
         _write_run(
@@ -480,6 +500,7 @@ def _evaluate_scenario(
     control_dt: float,
     road_half_m: Optional[float] = None,
     termination_reason: str = "",
+    criterion_arm: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Compute the full per-run metric catalogue + scenario-specific metrics and
     score the scenario's ``pass_criterion_per_run`` (three-valued; an unavailable
@@ -511,7 +532,13 @@ def _evaluate_scenario(
 
     expr = run_config.pass_criterion_per_run
     pert = getattr(run_config, "perturbation", None)
-    if is_labelled(expr) and pert is not None and pert.active:
+    if is_labelled(expr) and criterion_arm:
+        result = evaluate_labelled_arm(expr, criterion_arm, values)
+        verdict, clauses = result["passed"], result["clauses"]
+        note = f"preregistered criterion arm '{criterion_arm}'"
+        if result.get("error"):
+            note += f"; {result['error']}"
+    elif is_labelled(expr) and pert is not None and pert.active:
         # Level-resolved labelled criterion (e.g. SC-PERT-05 low/high): this rep
         # ran ONE perturbation level, so score the matching arm only. Arm order
         # follows the YAML, which matches the scenario's level_levels order.
@@ -597,12 +624,18 @@ def _write_run(
 
     summary_out = dict(summary)
     summary_out.update({"run_id": run_id, "scenario_id": scenario_id, "mode": mode})
+    if getattr(cli_args, "criterion_arm", None):
+        summary_out["criterion_arm"] = cli_args.criterion_arm
     if campaign is not None:
         summary_out["verdict"] = campaign["verdict"]
         summary_out["campaign"] = campaign
     with (out_dir / "summary.json").open("w", encoding="utf-8") as handle:
         json.dump(summary_out, handle, indent=2)
 
+    train_cfg_path = Path(
+        cli_args.train_config
+        or resolve_share_directory() / "config" / "train_ppo.yaml"
+    )
     metadata = {
         "run_id": run_id,
         "scenario_id": scenario_id,
@@ -610,6 +643,8 @@ def _write_run(
         "timestamp_iso": datetime.now(timezone.utc).isoformat(),
         "duration_s": summary["duration_s"],
         "git_commit": git_commit(out_dir),
+        "train_config": str(train_cfg_path),
+        "train_config_hash": sha256_file(train_cfg_path),
         "cage_yaml": str(cage_yaml),
         "cage_yaml_hash": sha256_file(cage_yaml),
         "policy_checkpoint": str(model_path),
@@ -617,8 +652,19 @@ def _write_run(
         "centerline_yaml_hash": sha256_file(centerline_path),
         "scenario_yaml": str(cli_args.scenario or ""),
         "scenario_yaml_hash": sha256_file(Path(cli_args.scenario)) if cli_args.scenario else sha256_file(centerline_path),
+        "criterion_arm": getattr(cli_args, "criterion_arm", None),
+        "protocol_manifest": str(getattr(cli_args, "protocol_manifest", "") or ""),
+        "protocol_manifest_hash": (
+            sha256_file(Path(cli_args.protocol_manifest))
+            if getattr(cli_args, "protocol_manifest", None) else None
+        ),
         "rep": int(getattr(cli_args, "rep", 0)),
         "seed": seed,
+        "algorithm": str(
+            cli_args.algorithm or train_cfg.get("algorithm", "ppo")
+        ).lower(),
+        "action": dict(train_cfg.get("action", {})),
+        "campaign_contract": campaign_contract_fingerprint(train_cfg),
         "platform": "sim",
         "status": "completed",
     }

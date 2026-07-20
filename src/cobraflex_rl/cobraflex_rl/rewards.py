@@ -26,7 +26,8 @@ def compute_reward(
     """One control-cycle reward (Training Spec §7.2.3).
 
         r = w_fwd·max(progress, 0) − w_ey·|ey| − w_eps·|epsi|
-            − w_ds·|Δsteer| − w_dt·|Δthrottle| − w_term·[done]
+            − w_ds·|Δsteer| − w_dt·|Δthrottle|
+            − lambda_stall·|throttle| − w_term·[done]
 
     ``progress`` is the *normalised* advance along the lane centerline this cycle
     (≈1.0 at nominal cruise; the env handles the closed-loop arc-length wrap),
@@ -86,9 +87,18 @@ def compute_reward(
     ):
         stall_penalty = stall_weight
 
+    # SC-PERT-03 negative-test hook. ``lambda_stall`` is absent/zero in every
+    # released config, so normal training is bit-identical. The protocol tool
+    # writes it only into the hash-pinned one-shot stall-variant config.
+    injected_throttle_penalty = 0.0
+    if throttle is not None:
+        injected_throttle_penalty = float(reward_cfg.get("lambda_stall", 0.0)) * abs(
+            float(throttle)
+        )
+
     reward = (
         forward_reward - lateral_penalty - heading_penalty - steer_penalty
-        - throttle_penalty - stall_penalty
+        - throttle_penalty - stall_penalty - injected_throttle_penalty
     )
     if done:
         reward -= float(reward_cfg.get("termination", 10.0))

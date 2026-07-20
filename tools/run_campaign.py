@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import re
 from dataclasses import dataclass, field
@@ -75,6 +76,7 @@ class Scenario:
     pass_criterion_per_scenario: str = ""
     n_runs: Dict[str, int] = field(default_factory=dict)  # mode -> count
     track: Dict[str, object] = field(default_factory=dict)
+    perturbations: Dict[str, object] = field(default_factory=dict)
     path: Optional[Path] = None  # source YAML, for the Gazebo executor
 
     @property
@@ -93,6 +95,7 @@ def load_scenarios(scenario_dir: Path = SCENARIO_DIR) -> Dict[str, Scenario]:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
         if not isinstance(data, dict) or "id" not in data:
             continue
+        perturbations = data.get("perturbations", {}) or {}
         out[data["id"]] = Scenario(
             id=data["id"],
             category=data.get("category", ""),
@@ -102,6 +105,7 @@ def load_scenarios(scenario_dir: Path = SCENARIO_DIR) -> Dict[str, Scenario]:
             pass_criterion_per_scenario=str(data.get("pass_criterion_per_scenario", "")),
             n_runs=dict(data.get("n_runs_recommended", {}) or {}),
             track=dict(data.get("track", {}) or {}),
+            perturbations=(dict(perturbations) if isinstance(perturbations, dict) else {}),
             path=path,
         )
     return out
@@ -140,6 +144,21 @@ class RunSpec:
     controller: str    # rl | pd
     seed: Optional[int]  # policy seed for rl; None for pd
     rep: int           # 0..n_runs-1
+    arm: Optional[str] = None  # labelled policy arm (SC-PERT-03), else None
+
+
+def policy_arms(scenario: Scenario) -> List[Dict[str, object]]:
+    """Explicit policy arms for a pre-run fine-tune scenario, else ``[]``."""
+    perturb = scenario.perturbations
+    if str(perturb.get("type", "")) != "pre_run_policy_finetune":
+        return []
+    arms = list(perturb.get("arms", []) or [])
+    if not arms or any(not isinstance(a, dict) or not str(a.get("id", "")) for a in arms):
+        raise ValueError(f"{scenario.id}: invalid pre_run_policy_finetune arms")
+    ids = [str(a["id"]) for a in arms]
+    if len(ids) != len(set(ids)):
+        raise ValueError(f"{scenario.id}: duplicate policy-arm id")
+    return arms
 
 
 def build_matrix(
@@ -162,11 +181,33 @@ def build_matrix(
             n = int(scen.n_runs.get(mode, 0))
             if reps_cap is not None:
                 n = min(n, reps_cap)
+            arms = policy_arms(scen)
+            if arms:
+                per_arm = [int(a.get("runs_per_mode", 0)) for a in arms]
+                if any(count <= 0 for count in per_arm) or sum(per_arm) != int(
+                    scen.n_runs.get(mode, 0)
+                ):
+                    raise ValueError(
+                        f"{sid}: arm runs_per_mode must be positive and sum to "
+                        f"n_runs_recommended.{mode}"
+                    )
+                if reps_cap is not None:
+                    # A cap applies symmetrically, preserving the paired design.
+                    per_arm = [min(count, reps_cap) for count in per_arm]
             for controller in controllers:
+                if arms and controller != "rl":
+                    raise ValueError(f"{sid}: policy fine-tune arms require controller=rl")
                 seed_axis: Sequence[Optional[int]] = seeds if controller == "rl" else [None]
                 for seed in seed_axis:
-                    for rep in range(n):
-                        runs.append(RunSpec(sid, mode, controller, seed, rep))
+                    if arms:
+                        for arm, count in zip(arms, per_arm):
+                            for rep in range(count):
+                                runs.append(RunSpec(
+                                    sid, mode, controller, seed, rep, str(arm["id"])
+                                ))
+                    else:
+                        for rep in range(n):
+                            runs.append(RunSpec(sid, mode, controller, seed, rep))
     return runs
 
 
@@ -498,12 +539,136 @@ def resolve_config_path(name: str) -> Path:
     raise FileNotFoundError(f"scenario centerline config not found: {name}")
 
 
-def run_id_for(run_spec: RunSpec) -> str:
+def run_id_for(run_spec: RunSpec, protocol_hash: str = "") -> str:
     """Deterministic, collision-free run id for a matrix cell, so the executor
     can locate the run dir it just produced and the campaign tree is traceable."""
     who = "pd" if run_spec.controller == "pd" else f"seed{run_spec.seed}"
     sid = run_spec.scenario_id.replace("SC-", "").replace("-", "").lower()
-    return f"camp_{sid}_{run_spec.controller}_{who}_{run_spec.mode}_rep{run_spec.rep:02d}"
+    arm = f"_{run_spec.arm}" if run_spec.arm else ""
+    protocol = f"_proto{protocol_hash[:12]}" if run_spec.arm and protocol_hash else ""
+    return (
+        f"camp_{sid}_{run_spec.controller}_{who}_{run_spec.mode}{arm}"
+        f"{protocol}_rep{run_spec.rep:02d}"
+    )
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _config_requires_d43_preflight(path: Path) -> bool:
+    """Return whether an opted-in posterior config requires the D-43 gate.
+
+    Historical F/GE4 configs have no ``campaign_contract`` and deliberately
+    stay outside this posterior guard.  A malformed opted-in contract is an
+    error rather than being treated as ``False``.
+    """
+
+    path = Path(path)
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"training config is not a YAML mapping: {path}")
+    contract = data.get("campaign_contract")
+    if contract is None:
+        return False
+    if not isinstance(contract, dict):
+        raise ValueError(f"campaign_contract is not a mapping: {path}")
+    required = contract.get("d43_preflight_required")
+    if required is not True:
+        raise ValueError(
+            "an opted-in campaign_contract must set "
+            f"d43_preflight_required=true: {path}"
+        )
+    return True
+
+
+def validate_d43_preflight_report(
+    report_path: Path,
+    expected_targets: Sequence[Dict[str, str]],
+) -> Dict[str, object]:
+    """Validate a fail-closed D-43 authorisation for concrete checkpoints.
+
+    A report may contain a reference matrix with unrelated blocked policies;
+    authorisation is therefore input-specific.  Every requested checkpoint +
+    training-config pair must have its own valid ``SC-NOM-01`` enforcement
+    input marked ``PASS``.  An aggregate ``INVALID`` report can never authorise
+    execution, even if one embedded input happens to pass.
+    """
+
+    report_path = Path(report_path).resolve()
+    if not report_path.is_file():
+        raise ValueError(f"D-43 preflight report not found: {report_path}")
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"D-43 preflight report is not valid JSON: {exc}") from exc
+    if not isinstance(report, dict):
+        raise ValueError("D-43 preflight report must be a JSON object")
+    if report.get("schema_version") != "d43-preflight/v1":
+        raise ValueError(
+            "D-43 preflight schema must be 'd43-preflight/v1', got "
+            f"{report.get('schema_version')!r}"
+        )
+    if report.get("verdict") == "INVALID" or report.get("invalid_reasons"):
+        raise ValueError(
+            "D-43 preflight report is INVALID and cannot authorise a campaign"
+        )
+    inputs = report.get("inputs")
+    if not isinstance(inputs, list):
+        raise ValueError("D-43 preflight report has no inputs[] list")
+
+    matches: List[Dict[str, str]] = []
+    for target in expected_targets:
+        checkpoint_hash = str(target["checkpoint_sha256"]).lower()
+        config_hash = str(target["train_config_sha256"]).lower()
+        match = None
+        for item in inputs:
+            if not isinstance(item, dict) or item.get("verdict") != "PASS":
+                continue
+            provenance = item.get("provenance")
+            if not isinstance(provenance, dict) or provenance.get("valid") is not True:
+                continue
+            if (
+                str(provenance.get("policy_checkpoint_hash", "")).lower()
+                != checkpoint_hash
+                or str(provenance.get("train_config_hash", "")).lower()
+                != config_hash
+                or provenance.get("scenario_id") != "SC-NOM-01"
+                or provenance.get("mode") != "enforcement"
+                or provenance.get("status") != "completed"
+            ):
+                continue
+            match = {
+                "label": str(target.get("label", "policy")),
+                "checkpoint_sha256": checkpoint_hash,
+                "train_config_sha256": config_hash,
+                "input_path": str(item.get("path", "")),
+                "input_csv_sha256": str(item.get("sha256", "")),
+                "input_metadata_sha256": str(
+                    provenance.get("metadata_sha256", "")
+                ),
+            }
+            break
+        if match is None:
+            raise ValueError(
+                "D-43 preflight has no provenance-valid PASS for "
+                f"{target.get('label', 'policy')} checkpoint {checkpoint_hash} "
+                f"with train-config {config_hash}"
+            )
+        matches.append(match)
+
+    return {
+        "schema_version": report["schema_version"],
+        "report": str(report_path),
+        "report_sha256": _file_sha256(report_path),
+        "report_verdict": str(report.get("verdict")),
+        "status": "PASS_FOR_SELECTED_CHECKPOINTS",
+        "matches": matches,
+    }
 
 
 def _read_summary(output_root: Path, run_id: str) -> Optional[Dict[str, object]]:
@@ -553,6 +718,9 @@ def execute_run(
     retries: int = 2,
     train_config: str = "",
     checkpoint_template: str = DEFAULT_CHECKPOINT_TEMPLATE,
+    model_paths_by_arm: Optional[Dict[str, Path]] = None,
+    train_configs_by_arm: Optional[Dict[str, Path]] = None,
+    protocol_manifest: Optional[Path] = None,
 ) -> Dict[str, object]:  # pragma: no cover - drives Gazebo, host-only
     """Drive one scenario run in Gazebo (headless) and return its ``summary.json``.
 
@@ -570,7 +738,10 @@ def execute_run(
     import subprocess
     import time
 
-    run_id = run_id_for(run_spec)
+    if run_spec.arm and not protocol_manifest:
+        raise ValueError(f"{scenario.id}: a completed protocol manifest is required")
+    protocol_hash = _file_sha256(Path(protocol_manifest)) if protocol_manifest else ""
+    run_id = run_id_for(run_spec, protocol_hash=protocol_hash)
     if resume:
         cached = _read_summary(output_root, run_id)
         if cached is not None:
@@ -583,10 +754,17 @@ def execute_run(
         )
     if scenario.path is None:
         raise ValueError(f"{scenario.id}: scenario has no source path to run")
-    checkpoint = (
-        Path(model_path) if model_path
-        else checkpoint_for_seed(run_spec.seed, checkpoint_template)
-    )
+    if run_spec.arm:
+        if not model_paths_by_arm or run_spec.arm not in model_paths_by_arm:
+            raise ValueError(f"{scenario.id}: no checkpoint registered for arm {run_spec.arm!r}")
+        checkpoint = Path(model_paths_by_arm[run_spec.arm])
+        if train_configs_by_arm and run_spec.arm in train_configs_by_arm:
+            train_config = str(train_configs_by_arm[run_spec.arm])
+    else:
+        checkpoint = (
+            Path(model_path) if model_path
+            else checkpoint_for_seed(run_spec.seed, checkpoint_template)
+        )
     if not checkpoint.is_file():
         raise FileNotFoundError(f"checkpoint not found for seed {run_spec.seed}: {checkpoint}")
 
@@ -603,6 +781,11 @@ def execute_run(
         f"rviz:={'true' if rviz else 'false'}",
         f"train_config:={train_config}",
     ]
+    if run_spec.arm:
+        cmd.extend([
+            f"criterion_arm:={run_spec.arm}",
+            f"protocol_manifest:={Path(protocol_manifest)}",
+        ])
     # World-variant scenarios (SC-PERT-09/10: worn / wet oval textures) name a
     # non-default world in their track block; everything else keeps the launch
     # default so the F-track cells are byte-identical to the pre-E behaviour.
@@ -720,15 +903,22 @@ def aggregate_campaign(
     *excluded* from the scenario pass fraction (not counted as a fail), matching
     the verdict_aggregation spine (D-38); its count is surfaced in
     ``n_indeterminate`` and, when it came from an executor error, ``n_error``."""
-    # Group per (scenario, mode).
+    # Group per (scenario, mode, arm). Ordinary scenarios use arm=None. Keeping
+    # SC-PERT-03 arms separate is essential: pooling 80% stall-variant passes
+    # with 100% released passes would otherwise produce a misleading 90% pass.
     groups: Dict[tuple, List[RunOutcome]] = {}
     for o in outcomes:
-        groups.setdefault((o.run_spec.scenario_id, o.run_spec.mode), []).append(o)
+        groups.setdefault(
+            (o.run_spec.scenario_id, o.run_spec.mode, o.run_spec.arm), []
+        ).append(o)
 
     scenario_results: Dict[str, ScenarioResult] = {}   # verdict_mode results, by scenario
     runs_per_scenario: Dict[str, int] = {}
     per_scenario_report: List[Dict[str, object]] = []
-    for (sid, mode), group in sorted(groups.items()):
+    grouped_results: Dict[tuple, List[ScenarioResult]] = {}
+    for (sid, mode, arm), group in sorted(
+        groups.items(), key=lambda item: tuple("" if x is None else str(x) for x in item[0])
+    ):
         scen = scenarios.get(sid)
         if scen is None:
             continue
@@ -745,7 +935,7 @@ def aggregate_campaign(
                 ((o.summary.get("campaign") or {}).get("values") or {}).get("emergency"))
         )
         per_scenario_report.append({
-            "scenario": sid, "mode": mode, "n_runs": result.n_runs,
+            "scenario": sid, "mode": mode, "arm": arm, "n_runs": result.n_runs,
             "n_pass": result.n_pass, "n_pass_emergency": n_pass_emergency,
             "n_fail": result.n_fail,
             "n_indeterminate": result.n_indeterminate,
@@ -753,9 +943,32 @@ def aggregate_campaign(
                               if result.fraction_pass is not None else None),
             "verdict": result.verdict, "n_error": n_error,
         })
-        if mode == verdict_mode:
-            scenario_results[sid] = result
-            runs_per_scenario[sid] = result.n_runs
+        grouped_results.setdefault((sid, mode), []).append(result)
+
+    # Conjoin arm-level verdicts, while ordinary one-arm(None) scenarios pass
+    # through unchanged. Counts remain visible as totals for D-29 sufficiency.
+    for (sid, mode), results in grouped_results.items():
+        if mode != verdict_mode:
+            continue
+        verdicts = [r.verdict for r in results]
+        combined_verdict: Optional[bool]
+        if any(v is False for v in verdicts):
+            combined_verdict = False
+        elif any(v is None for v in verdicts):
+            combined_verdict = None
+        else:
+            combined_verdict = True
+        combined = ScenarioResult(
+            scenario_id=sid,
+            mode=mode,
+            n_runs=sum(r.n_runs for r in results),
+            n_pass=sum(r.n_pass for r in results),
+            n_fail=sum(r.n_fail for r in results),
+            n_indeterminate=sum(r.n_indeterminate for r in results),
+            verdict=combined_verdict,
+        )
+        scenario_results[sid] = combined
+        runs_per_scenario[sid] = combined.n_runs
 
     sr_results: List[SRResult] = []
     for sr_id, sr in sorted(srs.items()):
@@ -792,7 +1005,7 @@ def write_report(report: Dict[str, object], outcomes: Sequence[RunOutcome], out_
         json.dump(report, handle, indent=2)
     with (out_dir / "campaign_runs.csv").open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
-        writer.writerow(["scenario", "mode", "controller", "seed", "rep",
+        writer.writerow(["scenario", "mode", "arm", "controller", "seed", "rep",
                          "verdict", "emergency", "error"])
         for o in outcomes:
             rs = o.run_spec
@@ -800,7 +1013,7 @@ def write_report(report: Dict[str, object], outcomes: Sequence[RunOutcome], out_
             # cage's controlled stop; verdict=True + emergency=False overcame the
             # scenario. Empty when the run has no metric record (e.g. errored).
             vals = (o.summary.get("campaign") or {}).get("values") or {}
-            writer.writerow([rs.scenario_id, rs.mode, rs.controller, rs.seed, rs.rep,
+            writer.writerow([rs.scenario_id, rs.mode, rs.arm or "", rs.controller, rs.seed, rs.rep,
                              o.verdict, vals.get("emergency", ""), o.error or ""])
 
 
@@ -850,6 +1063,20 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     p.add_argument("--scenario-dir", default="",
                    help="scenario library root (dir of <category>/*.yaml). Empty = the "
                         "oval `scenarios/`; pass `scenarios_complex_b` for the camera campaign.")
+    p.add_argument(
+        "--two-arm-manifest", type=Path, default=None,
+        help="completed protocol_manifest.json from sc_pert_03_protocol.py; "
+             "required when executing SC-PERT-03",
+    )
+    p.add_argument(
+        "--d43-preflight-report", type=Path, default=None,
+        help=(
+            "d43-preflight/v1 JSON produced by tools/d43_preflight.py. "
+            "Required by opted-in posterior campaign_contract configs; the "
+            "report must contain a provenance-valid PASS for the exact "
+            "checkpoint and train-config hashes selected here."
+        ),
+    )
     return p.parse_args(argv)
 
 
@@ -911,10 +1138,52 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print("\n--dry-run: plan only, no Gazebo execution.")
         return 0
 
+    arm_runs = [r for r in matrix if r.arm]
+    protocol_manifest_path: Optional[Path] = None
+    protocol_data: Optional[Dict[str, object]] = None
+    arm_model_paths: Dict[str, Path] = {}
+    arm_train_configs: Dict[str, Path] = {}
+    if arm_runs:
+        if args.two_arm_manifest is None:
+            print("\nERROR: SC-PERT-03 execution requires --two-arm-manifest from\n"
+                  "  python tools/sc_pert_03_protocol.py prepare ...")
+            return 2
+        import sc_pert_03_protocol as two_arm
+
+        protocol_manifest_path = Path(args.two_arm_manifest).resolve()
+        try:
+            protocol_data = two_arm.validate_manifest(
+                protocol_manifest_path, require_completed=True
+            )
+        except two_arm.ProtocolError as exc:
+            print(f"\nERROR: invalid two-arm manifest: {exc}")
+            return 2
+        arm_model_paths = two_arm.model_paths_by_arm(protocol_data)
+        arm_train_configs = {
+            "released": Path(protocol_data["parent"]["train_config"]),
+            "stall_variant": Path(protocol_data["derived"]["train_config"]),
+        }
+        manifest_scenario = Path(protocol_data["scenario"]["path"]).resolve()
+        selected_arm_scenarios = {
+            scenarios[r.scenario_id].path.resolve()
+            for r in arm_runs if scenarios[r.scenario_id].path is not None
+        }
+        if selected_arm_scenarios != {manifest_scenario}:
+            print("\nERROR: manifest scenario does not match the selected scenario library")
+            return 2
+        if {r.seed for r in arm_runs} != {int(protocol_data["seed"])}:
+            print("\nERROR: SC-PERT-03 campaign seed must match the manifest parent seed")
+            return 2
+        for run in arm_runs:
+            if scenarios[run.scenario_id].pass_criterion_per_run != protocol_data["criterion"]:
+                print("\nERROR: SC-PERT-03 criterion differs from the completed manifest")
+                return 2
+
     # Fail fast before launching dozens of cells: an empty/bad --train-config makes
     # every RL launch reject a malformed `train_config:=` arg (one cryptic error per
     # cell). The camera eval requires it, so catch it once here.
-    if "rl" in controllers:
+    plain_rl_runs = [r for r in matrix if r.controller == "rl" and not r.arm]
+    if plain_rl_runs:
         if not str(args.train_config).strip():
             print("\nERROR: --train-config is empty. Pass the camera eval config, e.g.\n"
                   "  source /opt/ros/jazzy/setup.bash\n"
@@ -923,6 +1192,58 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if not Path(args.train_config).is_file():
             print(f"\nERROR: --train-config file not found: {args.train_config!r}")
             return 2
+
+    # Posterior 2-D configs opt into a fail-closed D-43 preflight.  Bind the
+    # authorisation to the exact selected checkpoint *and* train-config hashes;
+    # this check runs before orphan reaping or any Gazebo process is started.
+    d43_targets: List[Dict[str, str]] = []
+    try:
+        if plain_rl_runs and _config_requires_d43_preflight(Path(args.train_config)):
+            plain_config = Path(args.train_config).resolve()
+            plain_checkpoints = {
+                (
+                    Path(args.model_path).resolve()
+                    if args.model_path
+                    else checkpoint_for_seed(run.seed, args.checkpoint_template).resolve()
+                )
+                for run in plain_rl_runs
+            }
+            for checkpoint in sorted(plain_checkpoints, key=str):
+                if not checkpoint.is_file():
+                    raise ValueError(
+                        f"checkpoint selected for D-43 preflight not found: {checkpoint}"
+                    )
+                d43_targets.append({
+                    "label": f"campaign policy {checkpoint.name}",
+                    "checkpoint_sha256": _file_sha256(checkpoint),
+                    "train_config_sha256": _file_sha256(plain_config),
+                })
+
+        if arm_runs and protocol_data is not None:
+            parent_config = Path(protocol_data["parent"]["train_config"]).resolve()
+            if _config_requires_d43_preflight(parent_config):
+                d43_targets.append({
+                    "label": "SC-PERT-03 released parent",
+                    "checkpoint_sha256": str(
+                        protocol_data["parent"]["checkpoint_sha256"]
+                    ),
+                    "train_config_sha256": str(
+                        protocol_data["parent"]["train_config_sha256"]
+                    ),
+                })
+
+        d43_authorisation: Optional[Dict[str, object]] = None
+        if d43_targets:
+            if args.d43_preflight_report is None:
+                raise ValueError(
+                    "selected campaign contract requires --d43-preflight-report"
+                )
+            d43_authorisation = validate_d43_preflight_report(
+                args.d43_preflight_report, d43_targets
+            )
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        print(f"\nERROR: D-43 preflight blocked campaign execution: {exc}")
+        return 2
 
     # Execution path (Ubuntu+Jazzy host): drive each matrix cell through Gazebo,
     # then aggregate per-run -> per-scenario -> per-SR (D-29) -> global (D-30).
@@ -936,7 +1257,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         rs = outcome.run_spec
         tag = ("ERROR" if outcome.error else
                {True: "PASS", False: "FAIL", None: "INDET"}[outcome.verdict])
-        line = f"[{i:>4}/{total}] {rs.scenario_id} {rs.mode} seed{rs.seed} rep{rs.rep:02d} -> {tag}"
+        arm = f" {rs.arm}" if rs.arm else ""
+        line = f"[{i:>4}/{total}] {rs.scenario_id} {rs.mode}{arm} seed{rs.seed} rep{rs.rep:02d} -> {tag}"
         print(line + (f"  ({outcome.error})" if outcome.error else ""))
 
     model_path_override = Path(args.model_path) if args.model_path else None
@@ -945,7 +1267,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             rs, sc, gui=args.gui, rviz=args.rviz, resume=args.resume,
             retries=args.retries, train_config=args.train_config,
             checkpoint_template=args.checkpoint_template,
-            model_path=model_path_override, **kw)
+            model_path=model_path_override,
+            model_paths_by_arm=arm_model_paths,
+            train_configs_by_arm=arm_train_configs,
+            protocol_manifest=protocol_manifest_path,
+            **kw)
     )
     outcomes = run_matrix(
         matrix, scenarios, runs_root, executor=executor,
@@ -954,6 +1280,20 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
 
     report = aggregate_campaign(outcomes, scenarios, srs, verdict_mode=args.verdict_mode)
+    if protocol_data is not None and protocol_manifest_path is not None:
+        import sc_pert_03_protocol as two_arm
+        report["two_arm_protocol"] = {
+            "manifest": str(protocol_manifest_path),
+            "manifest_sha256": two_arm.sha256_file(protocol_manifest_path),
+            "criterion": protocol_data["criterion"],
+            "lambda_stall": protocol_data["lambda_stall"],
+            "parent_checkpoint_sha256": protocol_data["parent"]["checkpoint_sha256"],
+            "derived_checkpoint_sha256": protocol_data["derived"]["checkpoint_sha256"],
+            "parent_train_config_sha256": protocol_data["parent"]["train_config_sha256"],
+            "derived_train_config_sha256": protocol_data["derived"]["train_config_sha256"],
+        }
+    if d43_authorisation is not None:
+        report["d43_preflight"] = d43_authorisation
     write_report(report, outcomes, args.out)
 
     gv = report["global"]

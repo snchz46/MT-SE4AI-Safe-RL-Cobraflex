@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 > Keep lean (<250 lines). Move detail into linked docs rather than inflating this file.
-> Last reviewed: 2026-07-02.
+> Last reviewed: 2026-07-20.
 
 ## What this repo is
 
@@ -29,8 +29,9 @@ script reports orphans on either side.
 > result and **all thesis verdicts** — the E verdict **closed in Gazebo** with GE4-V2 on the
 > complex_b 297k E-main (28.06.2026) and **G4 closed 02.07.2026** (docs/07); **Isaac**
 > (D-44) is **posterior work** — a sim-to-real / physical-platform bridge, **not the E
-> verdict**. Gazebo checkpoints don't transfer to Isaac, so an Isaac E-policy is a *future
-> retrain* (with the 2-D action expansion, D-49), not a re-do of the 297k E-main. Isaac lives
+> verdict**. Gazebo checkpoints don't transfer to Isaac: the posterior Isaac policies are
+> independent 2-D retrains (D-49), not a re-do of the 297k E-main; any new variant must likewise
+> retrain. Isaac lives
 > in docs/13–14 (note: `E4: Migration to Isaac Sim` commits tag this posterior
 > work under the E gate, but its eval is not GE4).
 
@@ -96,10 +97,14 @@ script reports orphans on either side.
   gone). **RL beats the CV baseline on the same track** (10.9 vs 17.2 mm |ey|), reversing the oval finding. Laps NOT comparable
   across tracks (~94 m ≈ the 425k's 98 m). GE4 closure on this checkpoint = the **GE4-V2 campaign above** (verdict of record);
   docs/07 matrix rows, ch.8 §8.9 and the traceability CSV all read V2 now.
-- **Next phase — Isaac Sim / sim-to-real (posterior track, docs/13–14).** With G4 closed, the open thread is the
-  D-44 Isaac bridge: URDF import + ROS2 bring-up + in-process RL training (docs/13), the handover spec (docs/14),
-  the **2-D action (steering + throttle) retrain** that makes SR-009's stall test well-posed (D-49), and the
-  sim-to-real gap characterisation toward the physical CobraFlex (Phase 5). Isaac work does not reopen G4.
+- **Posterior E5 — Gazebo algorithm/action probes + Isaac/sim-to-real (does not reopen G4).** Gazebo now has
+  the closed PPO camera N=5 nominal battery, a PPO 2-D baseline, and SAC 1-D/2-D studies (D-60): fixed
+  `ent_coef=0.005` removes the entropy-collapse cliff; a 200k replay buffer prevented the observed slow
+  decay through the bounded 180k 1-D probe; SAC-entfix produced two full-horizon 2-D enforcement evals. Two 1-D SAC SC-PERT
+  subsets give 100/100 enforcement PASS vs 68/100 monitoring, but are probes, not verdict campaigns. Qualification is
+  ready but unexecuted: fresh-only 75k/0.22 contract (150k replay), hash-bound D-43 gate (entfix-2024/42 PASS; auto-175k both caps BLOCKED),
+  and SC-PERT-03 λ=4.0/50k two-arm orchestration. Next: fresh parent → nominal D-43 PASS → fine-tune + 80 cells. D-44 remains the bridge toward
+  the physical CobraFlex (Phase 5); Gazebo and Isaac checkpoints do not transfer.
 - **F2 evidence:** `ros_run_20260523T153003Z` — 9.91 laps, 845 s,
   0 emergencies, cage v0.5.1, PD v0.8.0.
 - **F3 evidence (closed):** main run `ppo_train_2024_200k` (seed 2024, 200k, reward v1.2,

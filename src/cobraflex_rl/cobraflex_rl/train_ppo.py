@@ -52,6 +52,10 @@ from .callbacks import (
     LearningCurveCallback,
     ProgressBarCallback,
 )
+from .campaign_contract import (
+    bind_campaign_contract,
+    campaign_contract_fingerprint,
+)
 from .gazebo_lane_env import GazeboLaneEnv
 from .ros_interface import RosGazeboInterface
 from .run_io import git_commit, sha256_file
@@ -141,6 +145,22 @@ def parse_args(args: Optional[Sequence[str]] = None) -> argparse.Namespace:
         "the run then adds the config's "
         "total_timesteps on top of the checkpoint's step count "
         "(SB3 reset_num_timesteps=False).",
+    )
+    parser.add_argument(
+        "--resume-vecnormalize",
+        type=str,
+        default=None,
+        help="VecNormalize .pkl paired with --resume-from. Required by the "
+        "SC-PERT-03 protocol when the parent config normalizes rewards, so the "
+        "one-shot continuation does not silently reset running statistics.",
+    )
+    parser.add_argument(
+        "--resume-replay-buffer",
+        type=str,
+        default=None,
+        help="SAC replay-buffer .pkl paired with --resume-from. SB3 excludes "
+        "the buffer from the policy .zip, so a reproducible SAC continuation "
+        "must restore it explicitly.",
     )
     cleaned_args = remove_ros_args(args=args)
     if cleaned_args and not cleaned_args[0].startswith("-"):
@@ -243,6 +263,9 @@ def _write_training_metadata(
     model_path: Path,
     total_timesteps: int,
     status: str,
+    resume_from: Optional[Path] = None,
+    resume_vecnormalize: Optional[Path] = None,
+    resume_replay_buffer: Optional[Path] = None,
 ) -> None:
     """Write the run's reproducibility metadata.json (also on failure)."""
     algorithm = _resolve_algorithm(train_cfg)
@@ -281,6 +304,34 @@ def _write_training_metadata(
         "scenario_yaml_hash": sha256_file(centerline_path),
         "policy_checkpoint": str(resolve_save_path(model_path)),
         "policy_checkpoint_hash": sha256_file(resolve_save_path(model_path)),
+        "parent_policy_checkpoint": str(resume_from) if resume_from else None,
+        "parent_policy_checkpoint_hash": sha256_file(resume_from) if resume_from else None,
+        "parent_vecnormalize": str(resume_vecnormalize) if resume_vecnormalize else None,
+        "parent_vecnormalize_hash": (
+            sha256_file(resume_vecnormalize) if resume_vecnormalize else None
+        ),
+        "policy_vecnormalize": (
+            str(resolve_save_path(model_path).with_suffix(".vecnormalize.pkl"))
+            if bool(train_cfg.get("normalize_reward", False)) else None
+        ),
+        "policy_vecnormalize_hash": (
+            sha256_file(resolve_save_path(model_path).with_suffix(".vecnormalize.pkl"))
+            if bool(train_cfg.get("normalize_reward", False)) else None
+        ),
+        "parent_replay_buffer": str(resume_replay_buffer) if resume_replay_buffer else None,
+        "parent_replay_buffer_hash": (
+            sha256_file(resume_replay_buffer) if resume_replay_buffer else None
+        ),
+        "policy_replay_buffer": (
+            str(resolve_save_path(model_path).with_suffix(".replay_buffer.pkl"))
+            if algorithm == "sac" and bool(train_cfg.get("save_replay_buffer", False))
+            else None
+        ),
+        "policy_replay_buffer_hash": (
+            sha256_file(resolve_save_path(model_path).with_suffix(".replay_buffer.pkl"))
+            if algorithm == "sac" and bool(train_cfg.get("save_replay_buffer", False))
+            else None
+        ),
         "seed": seed,
         "platform": "sim",
         "total_timesteps": total_timesteps,
@@ -294,6 +345,7 @@ def _write_training_metadata(
         # steer+throttle run's metadata is indistinguishable from a frozen
         # 1-D run's ({} = config predates the block → 1-D steering-only).
         "action": dict(train_cfg.get("action", {})),
+        "campaign_contract": campaign_contract_fingerprint(train_cfg),
         "reward": dict(train_cfg.get("reward", {})),
         "domain_randomization": dict(train_cfg.get("domain_randomization", {})),
         "status": status,
@@ -339,6 +391,7 @@ def main(args: Optional[Sequence[str]] = None) -> None:
 
     centerline_cfg = load_yaml(centerline_path)
     train_cfg = load_yaml(train_cfg_path)
+    campaign_contract_fingerprint(train_cfg)
 
     # Optional road-centreline for off-road geometry (see GazeboLaneEnv): the
     # reward centreline can be a lane offset, but "left the road" is judged
@@ -369,6 +422,15 @@ def main(args: Optional[Sequence[str]] = None) -> None:
     interface: Optional[RosGazeboInterface] = None
     env: Optional[GazeboLaneEnv] = None
     status = "failed"
+    resume_from = Path(cli_args.resume_from).resolve() if cli_args.resume_from else None
+    resume_vecnormalize = (
+        Path(cli_args.resume_vecnormalize).resolve()
+        if cli_args.resume_vecnormalize else None
+    )
+    resume_replay_buffer = (
+        Path(cli_args.resume_replay_buffer).resolve()
+        if cli_args.resume_replay_buffer else None
+    )
 
     obs_cfg = dict(train_cfg.get("observation", {}))
     camera_obs = str(obs_cfg.get("type", "state")) == "camera"
@@ -447,6 +509,12 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         # raw obs, so eval/inference need NO normalization stats (the policy's
         # obs->action map is unchanged). ep_rew_mean stays raw (Monitor is inside).
         normalize_reward = bool(train_cfg.get("normalize_reward", False))
+        if resume_vecnormalize is not None and resume_from is None:
+            raise ValueError("--resume-vecnormalize requires --resume-from")
+        if resume_replay_buffer is not None and resume_from is None:
+            raise ValueError("--resume-replay-buffer requires --resume-from")
+        if resume_replay_buffer is not None and algorithm != "sac":
+            raise ValueError("--resume-replay-buffer is valid only for SAC")
         if normalize_reward:
             if not isinstance(train_env, VecEnv):
                 train_env = DummyVecEnv([lambda: Monitor(env)])
@@ -459,16 +527,28 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             # (frozen) wrapper stack stays byte-identical.
             if algorithm == "sac" and camera_obs:
                 train_env = VecTransposeImage(train_env)
-            train_env = VecNormalize(
-                train_env,
-                norm_obs=False,
-                norm_reward=True,
-                gamma=float(train_cfg.get("gamma", 0.99)),
-                clip_reward=float(train_cfg.get("clip_reward", 10.0)),
+            if resume_vecnormalize is not None:
+                if not resume_vecnormalize.is_file():
+                    raise FileNotFoundError(
+                        f"VecNormalize resume state not found: {resume_vecnormalize}"
+                    )
+                train_env = VecNormalize.load(str(resume_vecnormalize), train_env)
+                train_env.training = True
+                train_env.norm_reward = True
+            else:
+                train_env = VecNormalize(
+                    train_env,
+                    norm_obs=False,
+                    norm_reward=True,
+                    gamma=float(train_cfg.get("gamma", 0.99)),
+                    clip_reward=float(train_cfg.get("clip_reward", 10.0)),
+                )
+        elif resume_vecnormalize is not None:
+            raise ValueError(
+                "--resume-vecnormalize was supplied but normalize_reward is disabled"
             )
 
         algo_cls = ALGORITHMS[algorithm]
-        resume_from = getattr(cli_args, "resume_from", None)
         if resume_from:
             model = algo_cls.load(
                 resume_from,
@@ -481,6 +561,12 @@ def main(args: Optional[Sequence[str]] = None) -> None:
                 # the trust-region brake from the (current) config — otherwise a
                 # resume silently keeps the checkpoint's target_kl (often None).
                 model.target_kl = _resolve_target_kl(train_cfg)
+            elif resume_replay_buffer is not None:
+                if not resume_replay_buffer.is_file():
+                    raise FileNotFoundError(
+                        f"SAC replay buffer not found: {resume_replay_buffer}"
+                    )
+                model.load_replay_buffer(str(resume_replay_buffer))
             print(
                 f"Resumed {algorithm.upper()} from {resume_from} "
                 f"at {model.num_timesteps} steps"
@@ -529,6 +615,14 @@ def main(args: Optional[Sequence[str]] = None) -> None:
 
         # §7.2.8: persist the learning curve + periodic checkpoints so the run
         # produces its §7.4 evidence automatically.
+        # Persist the preregistered contract in fresh SB3 checkpoints. A resume
+        # from a historical or differently scaled action map fails here.
+        bind_campaign_contract(
+            model,
+            train_cfg,
+            require_existing=bool(resume_from),
+        )
+
         checkpoint_freq = int(train_cfg.get("checkpoint_freq", train_cfg.get("n_steps", 1024)))
         # SAC collects train_freq(=1) steps per "rollout", so the curve callback
         # is throttled to one row per n_steps-equivalent window; PPO keeps its
@@ -560,6 +654,13 @@ def main(args: Optional[Sequence[str]] = None) -> None:
                 # (needed only to *resume* a normalized run; deterministic eval
                 # with norm_obs=False does not need them).
                 save_vecnormalize=normalize_reward,
+                # Periodic replay snapshots are a separate, default-off switch:
+                # a camera buffer is multi-GB and duplicating it at every 25k
+                # checkpoint can exhaust disk. ``save_replay_buffer`` below
+                # still persists one deterministic final buffer for derivation.
+                save_replay_buffer=bool(
+                    train_cfg.get("checkpoint_save_replay_buffer", False)
+                ),
             ),
         ])
 
@@ -571,6 +672,18 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             reset_num_timesteps=not resume_from,
         )
         model.save(str(model_path))
+        if normalize_reward:
+            if not isinstance(train_env, VecNormalize):
+                raise RuntimeError(
+                    "normalize_reward is enabled but the final env is not VecNormalize"
+                )
+            vecnormalize_path = resolve_save_path(model_path).with_suffix(
+                ".vecnormalize.pkl"
+            )
+            train_env.save(str(vecnormalize_path))
+        if algorithm == "sac" and bool(train_cfg.get("save_replay_buffer", False)):
+            replay_path = resolve_save_path(model_path).with_suffix(".replay_buffer.pkl")
+            model.save_replay_buffer(str(replay_path))
         status = "completed"
         print(f"Saved {algorithm.upper()} model to {resolve_save_path(model_path)}")
         print(f"Learning curve + metadata under {run_dir}")
@@ -593,6 +706,9 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             model_path=model_path,
             total_timesteps=total_timesteps,
             status=status,
+            resume_from=resume_from,
+            resume_vecnormalize=resume_vecnormalize,
+            resume_replay_buffer=resume_replay_buffer,
         )
         if status == "completed":
             _append_checkpoint_registry(

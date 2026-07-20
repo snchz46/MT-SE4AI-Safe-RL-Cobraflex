@@ -200,6 +200,33 @@ def validate_full_scenario(path: Path, data: dict, result: Result) -> None:
     if scenario_id in F2_REQUIRED_FULL:
         print(f"INFO: {scenario_id} full YAML OK ({rel(path)}).")
 
+    if scenario_id == "SC-PERT-03":
+        perturb = data.get("perturbations") or {}
+        if not isinstance(perturb, dict):
+            perturb = {}
+        arms = list(perturb.get("arms", []) or [])
+        by_id = {
+            str(arm.get("id")): arm for arm in arms if isinstance(arm, dict)
+        }
+        if perturb.get("type") != "pre_run_policy_finetune":
+            result.error(f"{rel(path)}: SC-PERT-03 requires pre_run_policy_finetune.")
+        if set(by_id) != {"released", "stall_variant"}:
+            result.error(f"{rel(path)}: SC-PERT-03 requires released + stall_variant arms.")
+        else:
+            stall = by_id["stall_variant"]
+            if not isinstance(stall.get("lambda_stall"), (int, float)):
+                result.error(f"{rel(path)}: lambda_stall must be preregistered numerically.")
+            counts = [arm.get("runs_per_mode") for arm in by_id.values()]
+            if any(not isinstance(count, int) or count <= 0 for count in counts):
+                result.error(f"{rel(path)}: each arm requires a positive runs_per_mode.")
+            elif any(sum(counts) != data["n_runs_recommended"][mode]
+                     for mode in ("enforcement", "monitoring")):
+                result.error(f"{rel(path)}: arm counts must sum to each mode's run budget.")
+        if "M-P6 > 50.0" not in str(data.get("pass_criterion_per_run", "")):
+            result.error(
+                f"{rel(path)}: M-P6 uses percentage points; criterion must use > 50.0."
+            )
+
 
 def extract_doc_scenario_ids() -> list[str]:
     """Scenario ids declared in docs/05_scenario_library.md."""

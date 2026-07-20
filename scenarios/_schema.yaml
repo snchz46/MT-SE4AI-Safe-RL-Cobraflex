@@ -19,6 +19,10 @@
 #                       Non-runtime mechanisms live elsewhere: SC-EDGE-05 uses
 #                       initial_conditions.type=parameterised_grid; SC-PERT-03 uses
 #                       perturbations.type=pre_run_policy_finetune (a pre-run policy swap).
+#                       Its arms require unique id + positive runs_per_mode; the
+#                       stall_variant additionally fixes numeric lambda_stall and
+#                       finetune_steps before execution. A completed hash manifest
+#                       from tools/sc_pert_03_protocol.py binds the 2-D policies.
 # termination:          block of termination criteria
 # metrics_primary:      list of metric IDs (M-*); a few per-run event/quantity
 #                       fields the executor records directly are also accepted by

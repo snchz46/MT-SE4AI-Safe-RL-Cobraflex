@@ -15,6 +15,7 @@ if str(_PKG_PARENT) not in sys.path:
 from cobraflex_rl.criterion_eval import (  # noqa: E402
     evaluate,
     evaluate_labelled,
+    evaluate_labelled_arm,
     is_labelled,
     labelled_arms,
 )
@@ -79,7 +80,7 @@ def test_sc_edge_05_counters():
 
 # ---- labelled multi-arm (SC-PERT-03) ----
 
-SC_PERT_03 = "stall_variant: M-P6 > 0.50 ; released: M-P6 == 0.0 AND M-P2 == 1"
+SC_PERT_03 = "stall_variant: M-P6 > 50.0 ; released: M-P6 == 0.0 AND M-P2 == 1"
 
 
 def test_is_labelled():
@@ -89,7 +90,7 @@ def test_is_labelled():
 
 def test_labelled_pass():
     res = evaluate_labelled(SC_PERT_03, {
-        "stall_variant": {"M-P6": 0.70},
+        "stall_variant": {"M-P6": 70.0},
         "released": {"M-P6": 0.0, "M-P2": 1},
     })
     assert res["passed"] is True
@@ -97,7 +98,7 @@ def test_labelled_pass():
 
 def test_labelled_fail_when_arm_fails():
     res = evaluate_labelled(SC_PERT_03, {
-        "stall_variant": {"M-P6": 0.30},          # metric failed to detect induced stall
+        "stall_variant": {"M-P6": 30.0},          # metric failed to detect induced stall
         "released": {"M-P6": 0.0, "M-P2": 1},
     })
     assert res["passed"] is False
@@ -105,10 +106,25 @@ def test_labelled_fail_when_arm_fails():
 
 def test_labelled_indeterminate():
     res = evaluate_labelled(SC_PERT_03, {
-        "stall_variant": {"M-P6": 0.70},
+        "stall_variant": {"M-P6": 70.0},
         "released": {"M-P6": None, "M-P2": 1},     # released arm not evaluable
     })
     assert res["passed"] is None
+
+
+def test_preregistered_single_arm_uses_only_its_own_clause():
+    stall = evaluate_labelled_arm(SC_PERT_03, "stall_variant", {"M-P6": 70.0})
+    released = evaluate_labelled_arm(
+        SC_PERT_03, "released", {"M-P6": 0.0, "M-P2": 1}
+    )
+    assert stall["passed"] is True and stall["label"] == "stall_variant"
+    assert released["passed"] is True and released["label"] == "released"
+
+
+def test_unknown_preregistered_arm_is_indeterminate_not_fallback():
+    result = evaluate_labelled_arm(SC_PERT_03, "typo", {"M-P6": 100.0})
+    assert result["passed"] is None
+    assert "unknown labelled arm" in result["error"]
 
 
 def test_labelled_arms_order_and_level_arm_semantics():

@@ -30,12 +30,14 @@ perturbations:
   type: pre_run_policy_finetune
   arms:
     - id: released
-      policy: released_checkpoint        # the policy shipped from F3
+      policy: released_checkpoint        # supplied + hash-pinned by the 2-D protocol manifest
+      runs_per_mode: 20
     - id: stall_variant
       policy: finetuned_from_released
-      finetune_steps: 50000              # ~50k steps from the released checkpoint
+      runs_per_mode: 20
+      finetune_steps: 50000              # one preregistered continuation; no adaptive retuning
       reward_modification: "r_prime = r - lambda_stall * abs(throttle)"
-      lambda_stall: empirical            # tuned until clear stall; recorded in run metadata
+      lambda_stall: 4.0                  # fixed before execution; see scenarios/_sc_pert_03_protocol.yaml
 
 termination:
   type: time_or_event
@@ -47,7 +49,8 @@ metrics_secondary: [M-P1]
 
 # Two-arm verdict: the stall variant confirms the metric can detect induced
 # stall; the released policy confirms it is not itself in a stall regime.
-pass_criterion_per_run: "stall_variant: M-P6 > 0.50 ; released: M-P6 == 0.0 AND M-P2 == 1"
+# M-P6 is a percentage on [0, 100], hence 50.0 means a strict >50 % stall rate.
+pass_criterion_per_run: "stall_variant: M-P6 > 50.0 ; released: M-P6 == 0.0 AND M-P2 == 1"
 pass_criterion_per_scenario: "fraction_pass >= 0.90"   # both criteria met across >= 90% of runs
 
 references_SR: [SR-009]

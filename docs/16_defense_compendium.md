@@ -3,8 +3,8 @@
 | Field | Value |
 | --- | --- |
 | Artifact | Cross-cutting defense-preparation compendium |
-| Version | v1.0 |
-| Date | 2026-07-07 |
+| Version | v1.1 |
+| Date | 2026-07-20 |
 | Author | Samuel Sanchez |
 | Status | LIVING |
 | Sibling document | [docs/15_implementation_inventory.md](15_implementation_inventory.md) (module/script/test map) |
@@ -45,8 +45,9 @@ the raw Markdown, invisible in rendered previews. Don't miss them.
 ## 2. The system in sixty seconds
 
 Two controllers drive a 1:14 differential-drive vehicle around closed lane
-circuits in Gazebo: a **learned policy** (PPO; state-vector baseline on the
-F-track, end-to-end front-camera CNN on the E-track) and, wrapped around it, a
+circuits in Gazebo: a **learned policy** (PPO for every thesis verdict;
+posterior PPO/SAC studies; state-vector baseline on the F-track and end-to-end
+front-camera CNN on the E-track) and, wrapped around it, a
 **runtime safety cage** of six deterministic rules (C-01..C-06) whose every
 threshold traces to a Safety Requirement, which traces to a Hazard. The cage
 runs identically during training, evaluation and deployment (D-34). Claims are
@@ -62,7 +63,7 @@ are the vehicle for evaluating the *framework*.
 
 ## 3. The RL agent — algorithm, networks, and the Gazebo wiring
 
-### 3.1 Why PPO (D-14) and why Stable-Baselines3 (D-15)
+### 3.1 Why PPO carries the verdict — and why SAC was tested posteriorly (D-14/D-15/D-60)
 
 **PPO** (Proximal Policy Optimization; Schulman et al., 2017) is an on-policy
 actor-critic method whose clipped surrogate objective bounds how far each
@@ -86,11 +87,18 @@ second-order machinery. Reasons it fits this project:
    project. PyTorch backend; Gymnasium (the maintained fork of OpenAI Gym,
    Brockman et al., 2016) as the env API.
 
-Rejected/contingency alternatives (policy/README, D-14): SAC (off-policy,
-sample-efficient, but replay-buffer + entropy-temperature machinery adds
-failure modes with no need given cheap sim steps); PPO-Lagrangian (constrained
-RL) — unnecessary **by architecture**: hard constraints are the cage's job,
-not the objective's (separation of concerns, docs/10 §4).
+At the verdict-design freeze (D-14), SAC was a contingency: it is
+sample-efficient, but its replay buffer and entropy-temperature machinery add
+state and failure modes that PPO avoids. That was a defensible **selection for
+the verdict**, not a claim that SAC was unsuitable. D-60 later made the trainer
+algorithm-selectable and ran the matched 1-D SAC comparison while holding the
+environment, action, cage, reward and metrics fixed. The separate 2-D evidence
+uses different historical/current speed contracts and is not a controlled
+algorithm pair. The result is unusually useful:
+SAC learned faster and rescued a PPO-hard seed, while the predicted machinery
+failures appeared empirically as an auto-entropy cliff and a bounded replay
+probe consistent with eviction-driven decay. PPO-Lagrangian remains unnecessary **by architecture**: hard constraints
+are the cage's job, not the objective's (separation of concerns, docs/10 §4).
 
 ### 3.2 The networks — exactly what is learned
 
@@ -119,6 +127,12 @@ a linear actor head (steering mean + log-std) and a linear critic head. So the
 precise answer to *"which CNN does the agent use?"* is: **SB3's `CnnPolicy`
 with the NatureCNN feature extractor — three conv layers (32/64/64) + one
 512-unit dense layer — over a 4×84×84 stacked-grayscale input.**
+
+For posterior SAC, the observation preprocessing and `CnnPolicy`/NatureCNN
+interface are unchanged, but the learned heads follow SAC: a stochastic actor
+and **twin Q critics** with target updates instead of PPO's actor + V critic.
+The cage still filters the action outside the learned network. No SAC-specific
+perception, reward or safety rule was introduced.
 
 Why these observation choices (fixed at E2, docs/09 §10): 84×84 is the input
 size the architecture was designed for and at which the ~1 cm rendered lane
@@ -153,6 +167,23 @@ normalisation + value clip) are a documented *incident-response* narrative
 failure of the 1M run, not speculative tuning — a defensible engineering
 story, and `metadata.json` records all of them per run.
 
+**Posterior SAC controls (D-60).** These are algorithm/data-pipeline settings,
+not reward weights:
+
+| SAC setting | 1-D | Tuned 2-D | Why it matters |
+| --- | --- | --- | --- |
+| Replay buffer | 100k; diagnostic 200k probe | 150k | Camera transitions are ≈56 KB, so SB3's 1M default would be impractical; the bounded 1-D seed-2024 probe supports replay eviction rather than reward drift, without establishing transfer to 2-D or beyond 180k |
+| `learning_starts` | 1k | 5k | Random-action warm-up before critic updates |
+| Batch / UTD | shared batch 64 / 1 | batch 256 / 2 | The tuned 2-D recipe removes PPO-inherited handicaps |
+| Entropy coefficient | `auto` or fixed **0.005** | `auto` or fixed **0.005** | Fixed entropy prevented the observed temperature collapse |
+| Learning rate | 3e-4 | 3e-4, constant in tuned recipe | Explicit in the archived config/metadata |
+
+The historical 25k pilot metadata records config paths and hashes, but five
+named `*_pilot25k.yaml` files are absent from the current config tree. Treat
+those pilot curves as archived evidence with a provenance gap until matching
+config snapshots are restored; do not present the missing filenames as live
+reproducible configs.
+
 ### 3.4 How the agent is wired to Gazebo, step by step
 
 There is **no ROS RL "framework"** in the loop — the wiring is deliberately
@@ -164,9 +195,11 @@ minimal and inspectable (docs/15 §1.2 diagram):
    `SafetyCageNode.step(state, raw_action)` — the same class + `cage.yaml` the
    deployment ROS node wraps (D-34). Enforcement: the safe action is actuated.
 3. **Actuation.** The safe action becomes a `geometry_msgs/Twist` on
-   `/cmd_vel`: `angular.z = steering × yaw_gain(0.8)`,
-   `linear.x = fixed_speed(0.2) × scale(throttle)` — constants that *mirror*
-   `vehicle_control_node`, so training actuation ≡ deployment actuation.
+   `/cmd_vel`: `angular.z = steering × yaw_gain(0.8)`. For frozen GE4 1-D,
+   `linear.x = fixed_speed(0.20) × scale(throttle)`; posterior 2-D maps policy
+   throttle to `[0,max_speed_mps]` with a true-stop deadband. Current Gazebo
+   configs cap at 0.25 m/s (diagnostic probe: 0.22); Isaac's separate contract
+   uses 0.5 m/s. Constants are archived per run and mirror the actuation path.
    Gazebo's DiffDrive plugin turns the Twist into wheel speeds (the physical
    CobraFlex is differential/skid-steer — the plugin is faithful to it).
 4. **Time.** `step_ros(0.1 s)` advances **simulation time**, measured from
@@ -202,6 +235,32 @@ eval 4.88 laps / |ey| 10.9 mm / 0 emergencies — beating the classical CV
 baseline (17.2 mm) on the same circuit. Multi-seed N=5 on F3: 4/5
 constraint-respecting, 1/5 cage-dependent (seed 123 — itself a finding: the
 cage's value is policy-dependent).
+
+**Post-G4 Gazebo evidence (not a verdict campaign):**
+
+| Family | Training / nominal evidence | Safety-cage reading |
+| --- | --- | --- |
+| PPO camera 1-D N=5 | Study complete: 3/5 constraint-respecting; seed 666 cage-dependent; seed 23 cage–CV conflict | Confirms basin variability; GE4 seed-2024 verdict remains frozen |
+| PPO camera 2-D | Historical 0.5 m/s full-authority run: peak 654.4 at 510k; competent monitoring | No full-horizon PPO 2-D enforcement run is claimed; current Gazebo configs use 0.25 m/s |
+| SAC camera 1-D auto | Peak 720 at 89k; 75k eval 5.12 laps, 19.8 mm, 0 emergency, 48.3% C-06 | Fast learning followed by auto-entropy collapse |
+| SAC camera 1-D entfix | Seed 2024 peak 722.5 at 83k; seeds 42/666 peaks 744.3/606.9; 3/3 enforcement-clean | Fixed `ent_coef=0.005` rescued PPO-hard seed 666; paired nominal enforcement+monitoring is complete for 2/2 evaluated pairs, while seed 42 monitoring remains pending |
+| SAC 1-D buffer probe | 200k buffer held ≈690–745 through 180k; 744.7 at 155.6k | Slow decay was consistent with replay eviction; 150k eval: 4.94 laps, 26.9 mm, 0 emergency |
+| SAC camera 2-D auto | Peak 527 at 154k; monitoring 4.31 laps, 32.3 mm | Enforcement stopped on zero-margin speed or D-43 CV over-read |
+| SAC camera 2-D entfix | Peak 558.7 at 78k; full-horizon enforcement seeds 2024 (4.32 laps, 17.1 mm) and 42 (4.97 laps, 18.2 mm), 0 emergencies | First full-horizon Gazebo 2-D enforcement evidence; current cap 0.25 m/s |
+| Gazebo 2-D qualification | Fresh-only entfix parent 75k at 0.22 m/s; buffer 150k covers parent + SC-PERT-03 λ=4.0/50k; checkpoint/config-bound D-43 gate + two-arm manifest | Implemented and tested offline; no fresh checkpoint, fine-tune or campaign cell yet |
+
+The 0.22 m/s eval probe removed the speed-boundary stop for the auto 150k
+checkpoint but not the D-43 heading over-read for auto 175k. A two-seed SAC
+SC-PERT subset then produced **100/100 enforcement PASS** versus **68/100
+monitoring PASS**; SC-PERT-11 monitoring was 0/10 on each seed. These subset
+roll-ups are globally `INCOMPLETE` by design and do not alter GE4.
+
+The offline D-43 matrix makes the mechanism split explicit: entfix-2024/75k
+and entfix-42/50k are individual `PASS`; auto-175k at 0.25 and its 0.22 probe
+are `BLOCKED`. At the latter stops the true pose remains centred while the CV
+heading crosses C-02. The campaign runner now refuses an opted-in config unless
+the supplied report contains a nominal enforcement PASS for the exact
+checkpoint and train-config hashes.
 
 ---
 
@@ -409,12 +468,17 @@ real perception/actuation. Hazard severities are deliberately rated under the
 analogue-real-vehicle interpretation (D-26 homothety), so the safety analysis
 does not trivialise itself to toy scale.
 
-**Q3. Two seeds behaved differently — why is seed 2024 the verdict seed?**
+**Q3. Seeds behaved differently — why is seed 2024 the verdict seed?**
 (D-36) The N=5 study ranked seeds by reward *and* PPO health; 2024 was best
 and constraint-respecting. Seed 123 (58.8% cage activity) is retained in the
 frontier contrast — it is the *evidence* that the cage matters for weaker
 policies — but pre-registered rules keep it out of the global verdict pool.
-Multi-seed verdict replication is a declared posterior item.
+Posterior multi-seed replication is now complete for the 1-D camera PPO
+(3/5 constraint-respecting; seed 666 cage-dependent; seed 23 cage–CV conflict)
+and for SAC-entfix N=3 (3/3 enforcement-clean; paired nominal
+enforcement+monitoring complete for 2/2 evaluated pairs, seed 42 monitoring
+pending). These studies characterise training variance; they were not
+retroactively pooled into GE4.
 
 **Q4. Isn't ending the episode on a C-05 emergency, penalty-free, an exploit
 waiting to happen?** It was — until the forward term rewarded *progress*
@@ -428,11 +492,14 @@ hazard-derived rather than synthesised, and the reward never punishes cage
 interventions (the cage is environment dynamics; docs/10 §5), so the policy
 learns to not *need* the cage instead of learning to fear it.
 
-**Q6. Why is SR-009's stall requirement "N/A by construction"?** (D-49) The
-shared 1-D action is steering-only at fixed cruise speed — the policy cannot
+**Q6. Why is SR-009's stall requirement "N/A by construction" in GE4?** (D-49) The
+shared verdict action is steering-only at fixed cruise speed — the policy cannot
 stall the vehicle, so a stall test has no degree of freedom to exercise
-(M-P6 ≡ 0). It becomes well-posed with the 2-D (steer+throttle) action of the
-Isaac posterior track, which is exactly why D-49 schedules the retrain there.
+(M-P6 ≡ 0). It is now well-posed in the 2-D (steer+throttle) Gazebo and Isaac
+posterior environments. The Gazebo test surface is preregistered — λ=4.0,
+50k one-shot, M-P6>50 %, 20 runs/arm/mode and independent arm aggregation —
+but this implementation does not itself close a new SR-009 claim: the fresh
+0.22 parent, D-43 PASS, fine-tune and 80 Gazebo cells are still pending.
 
 **Q7. Doesn't the D-43 common cause defeat the point of an independent cage?**
 The independence that matters for A2 is from the *learned controller*, and
@@ -458,8 +525,11 @@ docs/11 §10 Q5. The F/E pair is precisely the controlled experiment for "what
 does real perception cost" (the E↔F delta is the perception axis).
 
 **Q10. What in this system is actually *verified*, vs *validated*, vs
-*assumed*?** Verified (deterministic, by test): the cage rules' logic —
-139 tests; the campaign/verdict arithmetic — 357 tests. Validated (by
+*assumed*?** Verified (deterministic, by test): the cage, RL and campaign
+pure-Python kernels — latest fully green host suite **517 passed** (15.07). On
+this Windows/Python 3.14 host, a 20.07 collection reached 496 before the
+ROS/ament-dependent `test_eval_policy_2d.py` import failed because
+`ament_index_python` is unavailable; that is not a newer green count. Validated (by
 scenario campaign): closed-loop safety properties per SR, 1260 F-runs +
 1970 E-runs, enforcement-vs-monitoring. Assumed (declared): ODD boundaries,
 `[provisional]` thresholds pending M-1..M-5, Gazebo fidelity (bridged in
@@ -472,10 +542,12 @@ committee trust it?** Because the *assurance* never rests on authorship, it
 rests on the process — which is the thesis's own SE4AI argument applied
 reflexively: (i) specs are normative and precede code (docs/03/04/09/10; code
 must match the doc, not vice versa); (ii) every module has a host-testable
-pure kernel — 503 tests pass, including regression tests for every found
+pure kernel — the latest fully green host suite has 517 passing tests, including
+regression tests for every found
 defect; (iii) the traceability gate machine-checks that no artifact floats
-free of a requirement; (iv) every experimental claim is pinned to hashed
-configs + seeds + commits and is regenerable by scripts, not asserted; (v) a
+free of a requirement; (iv) every **verdict-bearing** experimental claim is
+pinned to hashed configs + seeds + commits and is regenerable by scripts, while
+the posterior pilot-config provenance gap is disclosed in §3.3; (v) a
 human (the author) reviews and commits every change and signs every Gate; and
 (vi) incidents are documented as incidents (KL collapse, staleness misfire,
 mask leak — each with root cause and a pinned fix). An AI assistant under
@@ -492,6 +564,14 @@ parameterised); (3) the `[provisional]` thresholds calibrated on sim noise
 (M-1..M-5 campaign exists for exactly this); (4) compute cadence (the 10 vs
 20 Hz question). None of these invalidate the framework claim — they are the
 framework's *next iterations*, pre-traced in docs/13–14.
+
+**Q13. Did SAC make the cage unnecessary?** No. SAC changed which policy basin
+was reached and improved sample efficiency; it did not change a single cage
+rule, hazard, SR or metric. The two-seed SC-PERT subset shows the opposite:
+enforcement passed 100/100 cells while the same SAC policies in monitoring
+passed 68/100. The algorithm and the runtime-assurance layer answer different
+questions. The honest qualification is that this is a posterior subset, not a
+replacement GE4 campaign.
 
 ## 8. Reference shelf
 
@@ -535,6 +615,9 @@ importing into the manuscript bibliography):
 - Raffin, A., Hill, A., Gleave, A., Kanervisto, A., Ernestus, M., Dormann, N.
   (2021). *Stable-Baselines3: Reliable Reinforcement Learning
   Implementations.* JMLR 22(268).
+- Haarnoja, T., Zhou, A., Abbeel, P., Levine, S. (2018). *Soft Actor-Critic:
+  Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic
+  Actor.* ICML 2018. (Posterior SAC algorithm comparison, D-60.)
 - Brockman, G., et al. (2016). *OpenAI Gym.* arXiv:1606.01540. (Gymnasium is
   its maintained successor — the env API used here.)
 - Tobin, J., et al. (2017). *Domain randomization for transferring deep neural
@@ -555,3 +638,9 @@ importing into the manuscript bibliography):
   dive with hyperparameter provenance, Gazebo wiring narrative, cage lineage +
   full threshold-provenance table, CV-estimator defense essentials,
   evaluation-methodology summary, 12 cross-cutting Q&As, reference shelf.
+- **v1.1 (2026-07-20):** keeps PPO as the frozen verdict algorithm while adding
+  the D-60 posterior SAC rationale, architecture distinction, entropy/replay
+  failure diagnoses, Gazebo 1-D/2-D evidence, 0.25/0.22 speed-margin result,
+  two-seed SC-PERT subset and updated multi-seed/test-suite answers. Separates
+  all posterior evidence from GE4 and records the missing-pilot-config
+  provenance gap explicitly.

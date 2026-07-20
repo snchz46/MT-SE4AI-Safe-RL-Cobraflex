@@ -1,8 +1,8 @@
 # Metrics Catalogue
 
-**Status:** Living document — Phase 0 baseline, refined through Phase 1; M-S5 added in F4; **verified at G4**  
-**Last update:** 07.07.2026 (current-state framing note added)  
-**Approved at Gate:** G1  
+**Status:** Living document — Phase 0 baseline, refined through Phase 1; M-S5 added in F4; **verified at G4**
+**Last update:** 20.07.2026 (M-P6 percentage-unit correction and posterior 2-D protocol annotation)
+**Approved at Gate:** G1
 
 ## Purpose
 
@@ -15,9 +15,11 @@ A companion CSV (`docs/data/metrics.csv`) is generated automatically.
 > (GE4-V2, `docs/07`). One metric carries a track-specific caveat worth preserving: **M-P6
 > (stall rate)** is **N/A-by-construction on the frozen 1-D steering-only action** — with no
 > speed authority the policy cannot converge to inaction, so M-P6 ≡ 0 and its negative test
-> SC-PERT-03 is inert (**D-49**). M-P6 becomes **well-posed only on the 2-D action** (steering +
-> throttle) of the Isaac posterior track, where a true stop is commandable (**D-50**; SR-009's
-> liveness sub-mode is then genuinely testable). **M-S5 (road-edge departure)** is the headline
+> SC-PERT-03 is inert (**D-49**). M-P6 becomes **well-posed only on a 2-D action** (steering +
+> throttle) in the posterior Gazebo or Isaac tracks, where a true stop is commandable
+> (**D-50/D-59**). Gazebo's negative-test protocol is now preregistered on the metric's
+> 0–100 percentage scale but remains unexecuted; no new SR-009 verdict is claimed.
+> **M-S5 (road-edge departure)** is the headline
 > metric of the out-of-ODD Frontier cage-efficacy study (paired enforcement-vs-monitoring
 > contrast, not folded into the global verdict — D-35).
 
@@ -85,6 +87,11 @@ A companion CSV (`docs/data/metrics.csv`) is generated automatically.
 **Definition.** Fraction of *eligible* nominal-mode time steps in which the trailing sliding window of `t_window` seconds has accumulated less than `Δs_min` of forward longitudinal progress. A time step is *eligible* if it is in nominal mode (not emergency, no active stop signal) **and** at least `Δt_settle` seconds have elapsed since the most recent transition into nominal mode.
 
 **Units.** Percentage (0 % = no stall observed; 100 % = full-run stall under nominal mode).
+
+**Executable representation.** The campaign pipeline emits M-P6 in percentage points on
+`[0, 100]`. Consequently SC-PERT-03's preregistered negative-test clause is
+`M-P6 > 50.0`; writing `> 0.50` would mean only 0.5 %, not 50 %. That unit mismatch
+was corrected on 20.07.2026 before the 2-D two-arm test was executed.
 
 **Computation.** For each control step `t` in the run: (i) determine eligibility per the definition above; (ii) compute trailing-window progress `Δs(t) = ∫_{t-t_window}^{t} v(τ) dτ`; (iii) flag as stall step if `Δs(t) < Δs_min`. Aggregate as `M_P6 = (stall_steps / eligible_steps) * 100`. If `eligible_steps == 0` (e.g., scenario entirely in emergency mode), `M_P6` is undefined and the verdict for SR-009 falls through to scenario semantics.
 

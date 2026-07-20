@@ -2,8 +2,11 @@
 verdict-aggregation core of the Phase-4 campaign runner (D-29 run counts,
 D-30 SR-CL-A veto). The Gazebo executor is out of scope here."""
 
+import json
 import sys
 from pathlib import Path
+
+import pytest
 
 # run_campaign lives in tools/; import it by file path (it is ROS-free, needs
 # only PyYAML + stdlib), mirroring the cage_bridge/training_metrics test pattern.
@@ -35,8 +38,9 @@ def test_criterion_per_run_pass_and_fail():
 
 
 def test_criterion_or_and_thresholds():
-    assert rc.evaluate_criterion("M-P6 > 0.50", {"M-P6": 0.7}) is True
-    assert rc.evaluate_criterion("M-P6 > 0.50", {"M-P6": 0.2}) is False
+    # M-P6 is expressed in percentage points (0..100), not a 0..1 fraction.
+    assert rc.evaluate_criterion("M-P6 > 50.0", {"M-P6": 70.0}) is True
+    assert rc.evaluate_criterion("M-P6 > 50.0", {"M-P6": 20.0}) is False
     assert rc.evaluate_criterion("fraction_pass >= 0.95", {"fraction_pass": 0.96}) is True
     assert rc.evaluate_criterion("fraction_pass >= 0.95", {"fraction_pass": 0.90}) is False
 
@@ -69,6 +73,45 @@ def test_build_matrix_skips_stubs():
     }
     matrix = rc.build_matrix(scenarios, ["rl"], [42], ["enforcement"])
     assert {r.scenario_id for r in matrix} == {"SC-NOM-01"}
+
+
+def test_build_matrix_splits_preregistered_policy_arms_symmetrically():
+    scen = _scen("SC-PERT-03", n_enf=40, n_mon=40)
+    scen.perturbations = {
+        "type": "pre_run_policy_finetune",
+        "arms": [
+            {"id": "released", "runs_per_mode": 20},
+            {"id": "stall_variant", "runs_per_mode": 20},
+        ],
+    }
+    matrix = rc.build_matrix(
+        {scen.id: scen}, ["rl"], [2024], ["enforcement", "monitoring"]
+    )
+    assert len(matrix) == 80
+    assert {
+        (r.mode, r.arm): sum(
+            1 for x in matrix if (x.mode, x.arm) == (r.mode, r.arm)
+        )
+        for r in matrix
+    } == {
+        ("enforcement", "released"): 20,
+        ("enforcement", "stall_variant"): 20,
+        ("monitoring", "released"): 20,
+        ("monitoring", "stall_variant"): 20,
+    }
+
+
+def test_build_matrix_rejects_arm_counts_that_do_not_sum_to_scenario_budget():
+    scen = _scen("SC-PERT-03", n_enf=40, n_mon=40)
+    scen.perturbations = {
+        "type": "pre_run_policy_finetune",
+        "arms": [
+            {"id": "released", "runs_per_mode": 20},
+            {"id": "stall_variant", "runs_per_mode": 19},
+        ],
+    }
+    with pytest.raises(ValueError, match="sum to"):
+        rc.build_matrix({scen.id: scen}, ["rl"], [2024], ["enforcement"])
 
 
 # ----- aggregate_scenario -------------------------------------------------- #
@@ -323,7 +366,42 @@ def test_write_report_emits_json_and_csv(tmp_path):
     rc.write_report(report, outcomes, tmp_path)
     assert (tmp_path / "campaign_report.json").is_file()
     csv_lines = (tmp_path / "campaign_runs.csv").read_text().splitlines()
-    assert csv_lines[0] == "scenario,mode,controller,seed,rep,verdict,emergency,error"
+    assert csv_lines[0] == "scenario,mode,arm,controller,seed,rep,verdict,emergency,error"
+
+
+def test_two_arm_aggregation_requires_each_arm_to_meet_fraction():
+    scen = _scen(
+        "SC-PERT-03", n_enf=40, n_mon=0, srs=["SR-009"],
+        per_scen="fraction_pass >= 0.90",
+    )
+    scen.perturbations = {
+        "type": "pre_run_policy_finetune",
+        "arms": [
+            {"id": "released", "runs_per_mode": 20},
+            {"id": "stall_variant", "runs_per_mode": 20},
+        ],
+    }
+    scens = {scen.id: scen}
+    matrix = rc.build_matrix(scens, ["rl"], [2024], ["enforcement"])
+
+    def _exec(run_spec, scenario, *, output_root, **kw):
+        # released=20/20, stall=16/20. Pooling would be 36/40=90% and pass;
+        # correct arm-wise conjunction must fail the scenario.
+        verdict = run_spec.arm == "released" or run_spec.rep < 16
+        return {"verdict": verdict, "scenario_id": scenario.id}
+
+    outcomes = rc.run_matrix(matrix, scens, Path("/tmp/x"), executor=_exec)
+    report = rc.aggregate_campaign(
+        outcomes,
+        scens,
+        {"SR-009": {"criticality": "SR-CL-B", "scenarios": [scen.id]}},
+    )
+    rows = report["per_scenario"]
+    assert {(row["arm"], row["fraction_pass"]) for row in rows} == {
+        ("released", 1.0), ("stall_variant", 0.8)
+    }
+    sr = report["per_sr"][0]
+    assert sr["status"] == "failed" and sr["failing_scenarios"] == [scen.id]
 
 
 def test_run_id_for_is_deterministic_and_unique():
@@ -332,6 +410,10 @@ def test_run_id_for_is_deterministic_and_unique():
     assert rc.run_id_for(a) == rc.run_id_for(a)
     assert rc.run_id_for(a) != rc.run_id_for(b)
     assert "rep03" in rc.run_id_for(a)
+    arm_a = rc.RunSpec("SC-PERT-03", "enforcement", "rl", 2024, 3, "released")
+    arm_b = rc.RunSpec("SC-PERT-03", "enforcement", "rl", 2024, 3, "stall_variant")
+    assert rc.run_id_for(arm_a) != rc.run_id_for(arm_b)
+    assert rc.run_id_for(arm_a, "a" * 64) != rc.run_id_for(arm_a, "b" * 64)
 
 
 def test_execute_run_resume_reads_cached_summary(tmp_path):
@@ -344,3 +426,183 @@ def test_execute_run_resume_reads_cached_summary(tmp_path):
     (run_dir / "summary.json").write_text('{"verdict": true, "scenario_id": "SC-EDGE-01"}')
     out = rc.execute_run(rs, scen, output_root=tmp_path, resume=True)
     assert out["verdict"] is True
+
+
+def test_execute_run_selects_arm_checkpoint_config_and_manifest(tmp_path, monkeypatch):
+    import subprocess
+
+    rs = rc.RunSpec(
+        "SC-PERT-03", "enforcement", "rl", 2024, 0, "stall_variant"
+    )
+    scenario_path = tmp_path / "scenario.yaml"
+    scenario_path.write_text("id: SC-PERT-03\n", encoding="utf-8")
+    scen = _scen("SC-PERT-03")
+    scen.path = scenario_path
+    checkpoint = tmp_path / "stall.zip"
+    checkpoint.write_bytes(b"checkpoint")
+    config = tmp_path / "stall.yaml"
+    config.write_text("algorithm: sac\n", encoding="utf-8")
+    manifest = tmp_path / "protocol_manifest.json"
+    manifest.write_text("{}", encoding="utf-8")
+    run_dir = tmp_path / rc.run_id_for(rs, rc._file_sha256(manifest))
+    run_dir.mkdir()
+    (run_dir / "summary.json").write_text(
+        '{"verdict": true, "criterion_arm": "stall_variant"}', encoding="utf-8"
+    )
+    calls = []
+
+    class Result:
+        returncode = 0
+
+    monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: calls.append(cmd) or Result())
+    monkeypatch.setattr(rc, "_reap_orphan_gazebo", lambda: 0)
+    result = rc.execute_run(
+        rs, scen, output_root=tmp_path,
+        model_paths_by_arm={"stall_variant": checkpoint},
+        train_configs_by_arm={"stall_variant": config},
+        protocol_manifest=manifest,
+    )
+    assert result["verdict"] is True
+    command = calls[0]
+    assert f"model_path:={checkpoint}" in command
+    assert f"train_config:={config}" in command
+    assert "criterion_arm:=stall_variant" in command
+    assert f"protocol_manifest:={manifest}" in command
+
+
+# ----- posterior D-43 execution gate -------------------------------------- #
+def _write_d43_report(tmp_path, *, checkpoint_hash, config_hash,
+                      aggregate_verdict="PASS", input_verdict="PASS",
+                      provenance_valid=True):
+    path = tmp_path / "d43.json"
+    path.write_text(json.dumps({
+        "schema_version": "d43-preflight/v1",
+        "verdict": aggregate_verdict,
+        "invalid_reasons": [],
+        "inputs": [{
+            "path": "runs/nominal/cage_status.csv",
+            "sha256": "c" * 64,
+            "verdict": input_verdict,
+            "provenance": {
+                "valid": provenance_valid,
+                "metadata_sha256": "m" * 64,
+                "policy_checkpoint_hash": checkpoint_hash,
+                "train_config_hash": config_hash,
+                "scenario_id": "SC-NOM-01",
+                "mode": "enforcement",
+                "status": "completed",
+            },
+        }],
+    }), encoding="utf-8")
+    return path
+
+
+def test_d43_gate_binds_pass_to_checkpoint_and_config_hashes(tmp_path):
+    checkpoint_hash = "a" * 64
+    config_hash = "b" * 64
+    report = _write_d43_report(
+        tmp_path,
+        checkpoint_hash=checkpoint_hash,
+        config_hash=config_hash,
+        # A reference matrix may be BLOCKED by unrelated inputs.  The exact
+        # selected checkpoint is nevertheless authorised by its own PASS row.
+        aggregate_verdict="BLOCKED",
+    )
+    result = rc.validate_d43_preflight_report(report, [{
+        "label": "released",
+        "checkpoint_sha256": checkpoint_hash,
+        "train_config_sha256": config_hash,
+    }])
+    assert result["status"] == "PASS_FOR_SELECTED_CHECKPOINTS"
+    assert result["matches"][0]["checkpoint_sha256"] == checkpoint_hash
+    assert result["report_sha256"] == rc._file_sha256(report)
+
+
+@pytest.mark.parametrize(
+    ("checkpoint_hash", "config_hash", "input_verdict", "provenance_valid"),
+    [
+        ("x" * 64, "b" * 64, "PASS", True),
+        ("a" * 64, "x" * 64, "PASS", True),
+        ("a" * 64, "b" * 64, "BLOCKED", True),
+        ("a" * 64, "b" * 64, "PASS", False),
+    ],
+)
+def test_d43_gate_rejects_unmatched_or_invalid_input(
+    tmp_path, checkpoint_hash, config_hash, input_verdict, provenance_valid
+):
+    report = _write_d43_report(
+        tmp_path,
+        checkpoint_hash=checkpoint_hash,
+        config_hash=config_hash,
+        input_verdict=input_verdict,
+        provenance_valid=provenance_valid,
+    )
+    with pytest.raises(ValueError, match="no provenance-valid PASS"):
+        rc.validate_d43_preflight_report(report, [{
+            "label": "released",
+            "checkpoint_sha256": "a" * 64,
+            "train_config_sha256": "b" * 64,
+        }])
+
+
+def test_d43_gate_rejects_aggregate_invalid_report(tmp_path):
+    report = _write_d43_report(
+        tmp_path,
+        checkpoint_hash="a" * 64,
+        config_hash="b" * 64,
+        aggregate_verdict="INVALID",
+    )
+    with pytest.raises(ValueError, match="INVALID"):
+        rc.validate_d43_preflight_report(report, [{
+            "label": "released",
+            "checkpoint_sha256": "a" * 64,
+            "train_config_sha256": "b" * 64,
+        }])
+
+
+def test_config_d43_opt_in_is_explicit_and_fail_closed(tmp_path):
+    historical = tmp_path / "historical.yaml"
+    historical.write_text("algorithm: sac\n", encoding="utf-8")
+    assert rc._config_requires_d43_preflight(historical) is False
+
+    opted_in = tmp_path / "posterior.yaml"
+    opted_in.write_text(
+        "campaign_contract:\n  d43_preflight_required: true\n",
+        encoding="utf-8",
+    )
+    assert rc._config_requires_d43_preflight(opted_in) is True
+
+    opted_in.write_text(
+        "campaign_contract:\n  d43_preflight_required: false\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="d43_preflight_required=true"):
+        rc._config_requires_d43_preflight(opted_in)
+
+
+def test_main_blocks_missing_d43_report_before_touching_gazebo(tmp_path, monkeypatch):
+    checkpoint = tmp_path / "fresh_margin022.zip"
+    checkpoint.write_bytes(b"fresh-policy")
+    reaped = []
+    monkeypatch.setattr(rc, "_reap_orphan_gazebo", lambda: reaped.append(True))
+
+    result = rc.main([
+        "--scenario-dir", str(rc.REPO / "scenarios_complex_b"),
+        "--scenarios", "SC-NOM-01",
+        "--controllers", "rl",
+        "--seeds", "2024",
+        "--modes", "enforcement",
+        "--reps", "1",
+        "--train-config", str(
+            rc.REPO
+            / "src"
+            / "cobraflex_rl"
+            / "config"
+            / "train_sac_camera_2d_tuned_entfix_margin022.yaml"
+        ),
+        "--model-path", str(checkpoint),
+        "--out", str(tmp_path / "campaign"),
+        "--no-frontier-plots",
+    ])
+    assert result == 2
+    assert reaped == []

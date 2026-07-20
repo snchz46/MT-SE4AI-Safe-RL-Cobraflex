@@ -1,13 +1,13 @@
-# Reward Function Design — PPO Reward Function (CobraFlex / F3)
+# Reward Function Design — PPO verdict and posterior PPO/SAC (CobraFlex)
 
 | Field | Value |
 | --- | --- |
 | Artifact | Output of days **D38–D39** (Phase 3, Week 8) — see `docs/.phases/Fase 3/fase_3_detallada.md` §4 (local plan) |
 | Weights version | **v1.2** (forward-driver v1.1 + raw-smoothness v1.2; provisional, subject to experimental tuning) |
-| Phase / Gate | F3 (PPO training), after G2 — **reused unchanged by the track-'E' camera training** (GE3 train / GE4 eval, the system of record): the reward scores the **ground-truth** state regardless of what the policy observes (docs/11 §3.4) |
+| Phase / Gate | F3/GE3–GE4 PPO verdict, then post-G4 Gazebo/Isaac studies — the 1-D reward is **reused unchanged** by camera PPO and SAC; it scores the **ground-truth** state regardless of what the policy observes (docs/11 §3.4) |
 | Author | Samuel Sanchez |
-| Date | 2026-05-29 |
-| Status | CONFIRMED — implemented in `cobraflex_rl/rewards.py`; tests in `policy/tests/test_rewards.py` |
+| Date | 2026-07-20 (documentation reconciliation; weights remain v1.2) |
+| Status | CONFIRMED — implemented in `cobraflex_rl/rewards.py`; the 2-D extension is live in Gazebo and Isaac; tests in `policy/tests/test_rewards.py` |
 | Normative spec | Training Specification §7.2.3. **This document is supporting rationale**: on any numeric discrepancy, §7.2.3 prevails. |
 | Sibling document | `docs/09_environment_design.md` (obs/action/wrapper) |
 | Spanish working copy | `docs/.phases/Fase 3/reward_function_design.md` (local, gitignored) |
@@ -23,7 +23,9 @@
 > it unchanged. The F-track (state-vector baseline) is **archived / frozen**; it shares this
 > reward. The one place the reward is *extended* is the **2-D action posterior work** (D-50),
 > which adds a longitudinal-smoothness + anti-stall pair — documented in §10.2, inert by
-> default so the frozen 1-D returns stay bit-identical.
+> default so the frozen 1-D returns stay bit-identical. The posterior Gazebo study
+> runs both PPO and SAC through this same reward; SAC entropy and replay-buffer
+> settings are **algorithm hyperparameters, not reward terms**.
 
 ---
 
@@ -244,7 +246,7 @@ lane-following and makes attributing effects harder. The "reward = quality, cage
 
 ---
 --->
-## 10. Track E and the 2-D posterior — what carries over, what extends
+## 10. Track E and posterior PPO/SAC — what carries over, what extends
 
 ### 10.1 Track E (camera, verdict of record) — reward unchanged (D-41 / D-43)
 
@@ -266,8 +268,8 @@ not needed.)*
 ### 10.2 The 2-D action posterior — two added terms (D-50 / D-56)
 
 The **only** extension of this reward is for the **2-D action (steering + throttle)**
-posterior work (D-50, `docs/09` §3.2) — deferred out of the frozen Gazebo verdict by D-49
-and taken up on the Isaac track. Because the policy now commands throttle, the reward gains
+posterior work (D-50/D-59, `docs/09` §3.2) — deferred out of the frozen Gazebo verdict by D-49
+and implemented afterward in **both Gazebo and Isaac**. Because the policy now commands throttle, the reward gains
 a **longitudinal** mirror of the existing terms, both **weight-defaulted to leave the 1-D
 returns bit-identical**:
 
@@ -276,12 +278,42 @@ returns bit-identical**:
 | `throttle_delta` (raw policy throttle delta) | 0.10 | Longitudinal twin of the v1.2 raw `steer_delta` (§10 above): C-06 rate-limits throttle too, so a post-cage penalty would be toothless — measuring the raw delta makes the policy pay for its own jerk |
 | `stall_penalty` (below `stall_progress_min = 0.25`) | 0.5 | **The 2-D-only failure mode:** with speed authority the policy can converge to a degenerate "park" optimum (throttle → 0, collect the survival/centring reward without moving). The penalty makes standing still unprofitable, so SR-009's liveness sub-mode is well-posed (D-56) |
 
+SC-PERT-03 adds one deliberately adversarial, config-gated hook that is **not part
+of the released reward**: `lambda_stall * abs(throttle)`, defaulting to zero.
+The preregistered stall arm sets `lambda_stall = 4.0` for one 50 000-step
+continuation. This value is fixed rather than tuned until failure: at the
+`stall_progress_min = 0.25` boundary it makes motion less rewarding than the
+existing −0.5 parked penalty for both the 0.22 and 0.25 m/s Gazebo action maps.
+The hook is inert for every existing config and for the 1-D action, where no
+policy throttle is supplied. It validates the M-P6 measurement chain; it is not
+a candidate production reward and does not change reward v1.2.
+
 The `stall_penalty` is the knowledge worth preserving from the 2-D pilots: the **first**
 Isaac 2-D run's `ep_rew_mean` peaked then decayed into a *crawl-and-die* regime as the
-policy over-annealed — an exploration collapse fixed by `ent_coef 0.01` (D-52), while
-`stall_penalty` removes the standing-still attractor the added speed dimension created.
-Neither exists on the 1-D verdict reward. A policy trained with these terms is a **new
-posterior baseline**, never a re-run of the 297k E-main.
+policy over-annealed. Isaac's PPO mitigation was `ent_coef = 0.01` (D-52), while the
+reward-side `stall_penalty` removes the standing-still attractor created by speed authority.
+Neither added term exists on the 1-D verdict reward. A policy trained with them is a **new
+posterior baseline**, never a re-run of the 297k E-main. Making the liveness test well-posed
+does not itself close SR-009. The two-arm SC-PERT-03 protocol and runner path are
+now implemented and preregistered, but the fine-tune/evaluation cells are still
+pending; no SR-009 closure is claimed.
+
+### 10.3 What the Gazebo SAC evidence says about the reward (D-60)
+
+The 17–20.07 runs deliberately held the environment, cage, image pipeline and reward
+fixed while changing the learning algorithm and, in targeted probes, SAC machinery:
+
+| Observation | Interpretation for reward design |
+| --- | --- |
+| SAC 1-D auto entropy peaked at 720 around 89k; fixed `ent_coef = 0.005` peaked at 722.5 around 83k and removed the abrupt cliff | The collapse was an entropy-temperature/exploration failure, not evidence for another reward term |
+| The fixed-entropy seeds {2024, 42, 666} were 3/3 enforcement-clean; paired nominal enforcement+monitoring evidence is complete for 2/2 evaluated pairs, with seed 42 monitoring pending. Seed 666 was rescued relative to its cage-dependent PPO outcome | The existing 1-D reward can support a robust basin under a different optimiser/data regime, without overclassifying an unevaluated monitoring arm |
+| Increasing the replay buffer from 100k to 200k held rewards near 690–745 through 180k (744.7 at 155.6k) | In this bounded 1-D seed-2024 probe, the slower late decay is consistent with replay eviction rather than reward drift; transfer beyond 180k or to 2-D remains untested |
+| SAC 2-D fixed entropy peaked at 558.7 around 78k and produced full-horizon enforcement for seeds 2024 and 42 | The two longitudinal terms are sufficient to learn moving 2-D policies; this is not yet the SC-PERT-03 liveness verdict |
+
+For clarity, `ent_coef`, `buffer_size`, `learning_starts`, update-to-data ratio and
+learning-rate schedule live in the algorithm config/metadata. Changing any of them does
+**not** bump reward weights v1.2. The Gazebo 2-D speed cap (0.25 m/s, with a 0.22 m/s
+eval probe) is likewise an action/actuation parameter, not a reward constant.
 
 ---
 
@@ -318,3 +350,9 @@ posterior baseline**, never a re-run of the 297k E-main.
   D-56), both inert-by-default so the 1-D returns stay bit-identical, with the exploration-
   collapse / crawl-and-die obstacle (fixed by `ent_coef 0.01`, D-52 + the stall penalty)
   recorded so the knowledge is not lost. No 1-D formula/weight change.
+- **posterior PPO/SAC reconciliation (2026-07-20):** records that Gazebo and Isaac
+  both implement the config-gated 2-D reward extension, while the frozen GE4 PPO 1-D
+  reward remains unchanged. Adds the SAC fixed-entropy (`0.005`) and replay-buffer
+  evidence as algorithm-level failure diagnoses, not reward changes; records the first
+  full-horizon SAC 2-D enforcement runs and keeps SC-PERT-03/SR-009 explicitly open.
+  **Weights remain v1.2.**

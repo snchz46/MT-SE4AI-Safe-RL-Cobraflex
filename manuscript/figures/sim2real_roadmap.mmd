@@ -10,7 +10,7 @@
 %% D-49/D-50) that makes SR-009's stall test well-posed. What transfers is the
 %% code and the specs (duck-typed env interface, pure-Python cage + cage.yaml,
 %% scenario/SR artefacts, handover spec docs/14); policy checkpoints do NOT
-%% transfer — an Isaac E-policy is a future retrain, not a re-do of the 297k
+%% transfer — Isaac policies are independent retrains, not a re-do of the 297k
 %% E-main, and Isaac work does not reopen G4.
 %% WIRED (10.07.2026): Cap. 8 §8.10 as Figura 8.2, mermaid inline — keep the
 %% inline copy in sync with this file. Also a defense slide.
@@ -25,7 +25,7 @@ flowchart LR
     subgraph ISC ["Isaac Sim &mdash; posterior bridge (D-44)"]
         direction TB
         I1["URDF import + ROS2 bring-up<br/>+ in-process RL training &amp; DR<br/><i>docs/13</i>"]
-        I2["2-D action retrain: steer + throttle<br/>multi-circuit env (D-49 / D-50)<br/>makes SR-009 stall test well-posed"]
+    I2["2-D action retrain: steer + throttle<br/>multi-circuit env (D-49 / D-50)<br/>makes SR-009 stall test executable (not yet run)"]
     end
 
     subgraph PHY ["Physical CobraFlex 1:14 &mdash; Phase 5"]
@@ -36,7 +36,7 @@ flowchart LR
     GZB --> ISC --> PHY
 
     T["<b>Transfers:</b> GazeboLaneEnv (duck-typed interface) &middot; pure-Python cage + cage.yaml<br/>scenario &amp; SR specs &middot; handover spec <i>docs/14</i>"]
-    NT["<b>Does not transfer:</b> policy checkpoints &mdash; Isaac E-policy = future retrain<br/>(not a re-do of the 297k E-main; Isaac does not reopen G4)"]
+    NT["<b>Does not transfer:</b> policy checkpoints &mdash; Isaac policies are independent retrains<br/>(posterior variants exist; none re-does the 297k E-main or reopens G4)"]
 
     T -.-> ISC
     NT -.-> ISC

@@ -1,13 +1,15 @@
-# Capítulo 7 — Training Specification y Entrenamiento PPO
+# Capítulo 7 — Training Specification y Entrenamiento PPO/SAC
 
 <!--
-Estado: E-track PRIMARIO (2026-06-22; GE4-V2 cerrada 2026-06-28). El capítulo
+Estado: E-track PRIMARIO (actualizado 2026-07-20; GE4-V2 cerrada 2026-06-28). El capítulo
 reporta el track 'E' (cámara end-to-end, D-41/D-43) como sistema principal; el
 track 'F' (vector de estado) queda como LÍNEA BASE / brazo de control ("coste
 de la percepción por cámara"), no se elimina. La campaña GE4 sobre el E-main
 297k está EJECUTADA (V2, 1970 runs, veredicto de récord; §8.9, docs/11 §8.4):
 el track 'E' es la evidencia de veredicto de cámara y G4 está cerrado
 (02.07.2026, docs/07).
+El estudio PPO/SAC 1-D/2-D de §7.5.5 es evidencia posterior E5 y no sustituye
+el PPO 297k ni reabre GE4.
 
 Convención de figuras: las figuras primarias E llevan sufijo `_newcam`
 (generadas del run complex_b 297k por `tools/plot_f3_figures.py`); las
@@ -632,8 +634,10 @@ disparan activamente; sin cage abandonaría el carril). El valor del cage
 **depende de la policy** — latente cuando la policy basta (el E-main de cámara en
 nominal, §7.5.2), protector activo cuando no. La fuerza que empuja hacia
 *constraint-respecting* es el término de suavidad `w_ds` (§7.2.5), suficiente para
-4/5 semillas del baseline F; el multi-seed de cámara dirá si se sostiene también
-bajo percepción. El análisis de sensibilidad de `w_ds` es del Capítulo 8 (tag
+4/5 semillas del baseline F. El multi-seed de cámara ya cerrado muestra una
+partición distinta —3/5 *constraint-respecting*, una *cage-dependent* y una en
+conflicto cage–CV—, por lo que la percepción y su supervisor cambian la cuenca y
+la curva de entrenamiento no basta para anticiparla. El análisis de sensibilidad de `w_ds` es del Capítulo 8 (tag
 `[provisional, M-P4]`).
 
 ### 7.5.4 Variantes posteriores de la seed 2024: random start (v2) y acción 2-D  [E5]
@@ -703,6 +707,100 @@ comparables 1:1 con la v1 (la mezcla de spawns cambia la distribución de
 episodios); el juicio es el eval nominal (§7.5.4). Generada por
 `tools/plot_f3_figures.py --variant-runs`.*
 
+### 7.5.5 Estudio posterior PPO–SAC en Gazebo: checkpoints, mecanismos y límites  [E5]
+
+Una vez cerrado G4 se incorporó **Soft Actor-Critic (SAC)** al mismo entrenador
+mediante la selección `algorithm: ppo | sac` (D-60). Esta extensión conserva el
+entorno, la cámara, la recompensa, la cage y el *spine* de evaluación; cambia el
+algoritmo de actualización y añade el *replay buffer* y el coeficiente de
+entropía propios de SAC. Su objetivo es estudiar eficiencia y estabilidad del
+aprendizaje, no sustituir retrospectivamente el PPO E-main ni reabrir GE4.
+
+La tabla siguiente enlaza explícitamente cada corrida con el checkpoint que realmente
+se evaluó y con su resultado nominal. Todos los valores de evaluación proceden
+de SC-NOM-01, con horizonte programado de 4 400 pasos (salvo parada anticipada)
+y DR desactivada; `enf` y `mon` denotan *enforcement* y *monitoring*. El pico
+indicado pertenece a la curva de entrenamiento y no
+siempre coincide exactamente con la cadencia de checkpoints, por lo que la
+selección final se resuelve mediante evaluación, siguiendo el precedente D-36.
+
+| Acción · configuración | Evidencia de entrenamiento | Checkpoint evaluado | SC-NOM-01, enforcement | SC-NOM-01, monitoring |
+| --- | --- | --- | --- | --- |
+| **1-D**, SAC `auto`, seed 2024 · `sac_newcam_complex_b_2024_1M` | pico 720,0 @ 89 089; parada manual en 307 201 de 1M previstos | 75k (`58631022…`) | 5,12 vueltas; 19,8 mm; 0 emerg.; 48,3 % C-06 | 5,13 vueltas; 23,3 mm; 0 emerg. |
+| **1-D**, `ent_coef=0.005`, seed 2024 · `sac_newcam_entfix_complex_b_2024_1M` | pico 722,5 @ 82 945; sin el colapso abrupto; parada en 260 097 | 75k (`b74505ac…`) | 5,04 vueltas; 21,6 mm; 0 emerg.; 9,1 % C-06 | 5,04 vueltas; 21,6 mm; 0 emerg. |
+| **1-D**, `ent_coef=0.005`, seed 42 · `sac_newcam_entfix_complex_b_42_120k` | pico 744,3 @ 87 041; réplica acotada a 120 833 | 75k (`4d09e43c…`) | 4,63 vueltas; **12,3 mm**; 0 emerg.; **2,3 % C-06** | **pendiente: no existe run nominal `_mon`** |
+| **1-D**, `ent_coef=0.005`, seed 666 · `sac_newcam_entfix_complex_b_666_120k` | pico 606,9 @ 80 897; réplica acotada a 120 833 | 75k (`18c80fce…`) | 5,00 vueltas; 14,0 mm; 0 emerg.; 5,3 % C-06 | 5,00 vueltas; 14,0 mm; 0 emerg.; 6,2 % C-06 contrafactual |
+| **1-D**, `ent_coef=0.005`, buffer 200k, seed 2024 · `sac_newcam_entfix_buf200_2024_180k` | banda 690–745 sostenida; pico 744,7 @ 155 649; parada en 180 225 | 150k (`a5c5f3c4…`) | 4,94 vueltas; 26,9 mm; 0 emerg.; 14,4 % C-06 | no ejecutado |
+| **2-D**, SAC `auto`, seed 2024 · `sac_gz2d_tuned_complex_b_2024_1M` | ciclos colapso–recuperación; pico 527,0 @ 153 601; parada en 250 881 | flanco 175k (`e8934d51…`) | 3,45 vueltas; 34,8 mm; 1 parada C-05 | 4,31 vueltas; 32,3 mm; 0 emerg. |
+| **2-D**, `ent_coef=0.005`, seed 2024 · `sac_gz2d_tuned_entfix_2024_1M` | pico 558,7 @ 77 825; subida sin ciclos abruptos; parada en 176 129 | 75k (`b76724c7…`) | **4,32 vueltas; 17,1 mm; 0 emerg.**; 17,1 % C-06 | 4,31 vueltas; 16,3 mm; 0 emerg. |
+| **2-D**, `ent_coef=0.005`, seed 42 · `sac_gz2d_tuned_entfix_42_120k` | pico 270,9 @ 47 105; réplica acotada a 120 833 | 50k (`cbde3836…`) | **4,97 vueltas; 18,2 mm; 0 emerg.**; 46,4 % C-06 | 4,84 vueltas; 22,6 mm; 39 pasos con trigger C-05 contrafactual |
+
+*Cadena corrida → checkpoint → evaluación del estudio SAC
+posterior. Los porcentajes de intervención en monitoring son activaciones
+contrafactuales: se registran, pero la acción de la cage no se aplica.*
+
+**Mecanismo 1 — temperatura de entropía.** En las corridas con
+`ent_coef: auto`, la temperatura descendió hasta aproximadamente
+4 × 10⁻⁴ en 1-D y 7 × 10⁻⁴ en 2-D. La 1-D sufrió una caída
+abrupta alrededor de 143k y la 2-D exhibió ciclos de colapso y recuperación. El
+cambio aislado a `ent_coef: 0.005` conservó un suelo de exploración y eliminó
+esas transiciones violentas en ambos espacios de acción. No eliminó, sin
+embargo, el descenso lento posterior al pico: temperatura y degradación lenta
+son dos mecanismos distintos.
+
+**Mecanismo 2 — reemplazo del replay.** La variante 1-D de seed 2024 con buffer
+100k empieza a perder rendimiento cuando el buffer se llena y comienza a
+expulsar la etapa inicial de aprendizaje. El probe de una sola variable
+(`buffer_size` 100k→200k) mantiene la recompensa en 690–745 hasta su parada a
+180k, antes de que pueda comenzar el reemplazo. Esta coincidencia temporal
+apoya la lectura de que el descenso lento está asociado a la expulsión de la
+distribución fundacional. Es evidencia mecanística fuerte, pero todavía de una
+sola semilla y un horizonte acotado; no constituye por sí sola una ley general
+de SAC. Además, el checkpoint 150k del buffer 200k no mejora el eval nominal
+frente a los 75k entfix (26,9 mm frente a 12,3–21,6 mm): **una curva alta no
+reemplaza la evaluación cerrada en lazo**. Tampoco es una receta gratuita:
+con aproximadamente 56 kB por transición de cámara, retener 1M pasos exigiría
+del orden de 56 GB de RAM; una corrida completa requiere dimensionamiento de
+hardware o una estrategia de replay que preserve la etapa fundacional sin
+conservar todas las transiciones.
+
+**Robustez de semilla y acción 2-D.** En 1-D, los tres checkpoints entfix
+evaluados en enforcement completan el horizonte sin emergencia: **3/3 limpios
+en enforcement**. Solo seeds 2024 y 666 disponen también del nominal en
+monitoring, por lo que el contraste completo es por ahora **2/2**; clasificar la
+seed 42 como *constraint-respecting en ambos modos* queda pendiente del run
+`rl_sacentfix42_eval_cb75k_4k4_mon`. En 2-D, el entfix permite los primeros
+horizontes completos bajo enforcement: la seed 2024 se autolimita por debajo
+del techo de 0,25 m/s y la seed 42 completa aun con una curva de recompensa
+mucho más baja. El SAC 2-D `auto`, en cambio, conserva las dos incompatibilidades
+ya observadas con PPO 2-D: margen nulo frente al techo de velocidad y parada
+inducida por el *over-read* de rumbo del estimador CV. Por ello la magnitud de
+`ep_rew_mean` no es comparable directamente entre 1-D y 2-D ni basta para
+declarar compatibilidad con la envolvente de la cage.
+
+**Contrato de la siguiente corrida 2-D (preregistrado, no entrenado).** Para no
+reinterpretar un checkpoint 0.25 bajo otro mapa de acción, el config
+`train_sac_camera_2d_tuned_entfix_margin022.yaml` exige entrenamiento fresco,
+cap 0.22 m/s, margen mínimo 0.03 m/s frente a C-04, `ent_coef=0.005` y un parent
+acotado a 75k. El buffer de 150k cubre ese parent y la continuación 50k completa
+(125k acumulados) sin expulsión. Un fingerprint del contrato viaja dentro del checkpoint; resume o
+eval con un modelo histórico falla explícitamente. Tras el nominal, un preflight
+D-43 ligado a hashes de checkpoint/config debe pasar antes de cualquier campaña.
+El follow-up SC-PERT-03 también queda fijo antes de generar datos: continuación
+única de 50k desde ese parent con `lambda_stall=4.0`, replay/VecNormalize
+restaurados, brazos *released* y *stall_variant*, y criterio porcentual
+`M-P6 > 50.0` frente a `M-P6 == 0 ∧ M-P2 == 1`. No hay todavía curva, checkpoint
+ni resultado experimental bajo este contrato.
+
+**Frontera de validez.** Estas corridas son trabajo **posterior E5**. Ninguna
+agotó el presupuesto nominal de 1M; las réplicas cubren N=3 en 1-D y N=2 en
+2-D, con brazos nominales todavía incompletos, y no se ejecutó una campaña de
+28 escenarios equivalente a GE4. Los dos probes SC-PERT con SAC se analizan en
+§8.9.6, pero son subconjuntos deliberados. En consecuencia, la receta que
+emerge —suelo de entropía + buffer dimensionado al horizonte— es una hipótesis
+de diseño respaldada por evidencia, no un nuevo veredicto de seguridad. El
+veredicto de récord continúa siendo GE4-V2 sobre el PPO 297k.
+
 ---
 
 ## 7.6 Síntesis y transición al Capítulo 8  [BORRADOR D36]
@@ -725,6 +823,12 @@ cerrada** (V2, 1970 runs, 28.06.2026): el §8.9 la reporta como veredicto de
 récord del brazo de cámara, y con ella G4 queda cerrado (docs/07). La
 comparación sistemática RL+cage vs CV+cage —y el contraste E↔F como coste de
 la percepción— es el resultado experimental central de la tesis.
+
+El estudio SAC de §7.5.5 amplía posteriormente la evidencia sobre estabilidad
+del aprendizaje y elección de checkpoint. Se mantiene fuera de la cadena de
+veredicto GE4: sus campañas parciales se utilizan en el capítulo siguiente para
+comprobar si la dirección del contraste cage-on/cage-off sobrevive al cambio de
+algoritmo, no para re-puntuar los Safety Requirements.
 
 ---
 

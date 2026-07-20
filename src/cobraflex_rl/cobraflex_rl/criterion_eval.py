@@ -165,3 +165,24 @@ def evaluate_labelled(expression: str, values_by_label: Dict[str, Dict[str, Any]
         per_label[label] = evaluate(sub, values_by_label.get(label, {}))
     passed = _combine([r["passed"] for r in per_label.values()]) if per_label else None
     return {"passed": passed, "per_label": per_label}
+
+
+def evaluate_labelled_arm(
+    expression: str, label: str, values: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Evaluate exactly one preregistered arm of a labelled criterion.
+
+    Unlike :func:`evaluate_labelled`, this is the per-run operation used when
+    the campaign has already selected the policy arm. An unknown label remains
+    indeterminate and explicit; it can never fall back to another arm.
+    """
+    arms = _split_labelled(expression)
+    if label not in arms:
+        return {
+            "passed": None,
+            "clauses": [],
+            "error": f"unknown labelled arm {label!r}; expected {sorted(arms)}",
+        }
+    result = evaluate(arms[label], values)
+    result["label"] = label
+    return result

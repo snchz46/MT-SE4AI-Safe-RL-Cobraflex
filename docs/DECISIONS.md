@@ -1,8 +1,8 @@
 # DECISIONS.md — Project decision log
 
 <!--
-Status: D9 (Phase 0 close) + F1 audit additions (D-25..D-33) + F3 (D-34) + F4 (D-35, D-36, D-37, D-38, D-39) + E-track (D-41 supersedes D-01; D-42 superseded by D-43; D-43) + Isaac platform (D-44 in-process RL training) + track-'E' GE4 (D-45 safe-stop scoring; D-46 camera-SR nominal coverage).
-Last update: see Git commit date.
+Status: decisions through D-61. D-47..D-49 close/reconcile GE4; D-50..D-58 cover the Isaac posterior; D-59/D-60 cover Gazebo 2-D and PPO/SAC; D-61 reconciles the implemented Jazzy/Harmonic stack and supersedes D-13's preliminary Humble distribution choice.
+Last update: 2026-07-20.
 -->
 
 ## Purpose of this file
@@ -55,7 +55,7 @@ consistent with the chapters.
 | D-10 | A4 — Bidirectional traceability as hard constraint enforced by tooling | §3.4.4 | CONFIRMED |
 | D-11 | A5 — Bounded operational validation with sim-to-real gap characterization | §3.4.5 | CONFIRMED |
 | D-12 | Adopted simulator: Gazebo (supersedes CARLA in preliminary version) | §3.6.1 | CONFIRMED |
-| D-13 | Middleware: ROS2 Humble distribution | §3.6.2 | CONFIRMED |
+| D-13 | Middleware: ROS2 Humble distribution | §3.6.2 | SUPERSEDED by D-61 |
 | D-14 | Learning algorithm: PPO | §3.6.3 | CONFIRMED |
 | D-15 | Technology stack: Stable-Baselines3 + PyTorch + pytest + Python 3.10+ | §3.6.4 | CONFIRMED |
 | D-16 | Physical platform: 1:14 scale radio-controlled vehicle | §3.6.5 | CONFIRMED |
@@ -83,6 +83,21 @@ consistent with the chapters.
 | D-44 | Isaac-Sim RL training runs **in-process** (the gym env drives a live Isaac `World` via `IsaacSimInterface` — `set_world_pose` teleport / `world.step` / Replicator Lane Cam), **not** over the ROS2 bring-up; this supplies the per-episode reset the bring-up's `gz service set_pose` path could not, and decouples training from the bring-up command (shared scene only, `tools/isaac_scene.py`) | `docs/14`; `tools/isaac_train.py`; `tools/isaac_scene.py`; `src/cobraflex_rl/.../isaac_interface.py` | CONFIRMED |
 | D-45 | Track-'E' GE4 safety verdict scored on the SR limit predicate, not the absence of a controlled stop (`emergency == False` dropped from the 8 adverse safety scenarios; a safe stop within limits = pass) | `scenarios_complex_b/*`; `docs/07`; Ch.8 §8.9 | CONFIRMED |
 | D-46 | Two-sided D-29 coverage for the camera-stressor SRs: SR-012/013/014 take their nominal family from the clean-input SC-NOM-01 (no-false-trigger baseline), adverse from SC-PERT-04..13 — D-29-feasible without weakening the gate | `docs/03`; `docs/07`; `scenarios_complex_b` | CONFIRMED |
+| D-47 | Score SR-002/SR-003 on their own predicate, not the oval-legacy recovery clause | `docs/07`; Ch.8 §8.9 | CONFIRMED |
+| D-48 | GE4-V2 SR-001 route: in-ODD IC clip; conservative lane-selection reverted | `docs/11`; `docs/12`; Ch.8 §8.9 | CLOSED |
+| D-49 | Freeze 1-D steering-only for GE4; keep 2-D outside the verdict | `docs/09`; `docs/07`; D-59 | CONFIRMED |
+| D-50 | Isaac full-authority 2-D environment and multi-circuit sampling | `docs/13`; `docs/14` | VERIFIED |
+| D-51 | Re-cut `complex_e` clockwise for steering-handedness balance | `docs/13` | ACCEPTED |
+| D-52 | Isaac iteration 2: entropy bonus, graceful stop and nominal evaluator | `docs/13` | ACCEPTED |
+| D-53 | Isaac iteration 3: visual-first DR curriculum | `docs/13` | ACCEPTED |
+| D-54 | Calibrate Isaac yaw authority | `docs/13` | ACCEPTED |
+| D-55 | Isaac-specific cage heading calibration and residual perception risk | `docs/13`; `docs/12` | ACCEPTED |
+| D-56 | Add 2-D `stall_penalty` against the parked optimum | `docs/10`; `docs/13` | ACCEPTED |
+| D-57 | Debias estimator heading for the Isaac renderer | `docs/12`; `docs/13` | ACCEPTED |
+| D-58 | Add reusable hard-section random-spawn curriculum | `docs/09`; `docs/13`; Ch.7 | CONFIRMED |
+| D-59 | Add posterior Gazebo 2-D config and separate portable/non-portable Isaac findings | `docs/11`; `docs/13` | ACCEPTED |
+| D-60 | Select PPO/SAC through the shared trainer config | `docs/11` §4.2 | ACCEPTED |
+| D-61 | Implemented middleware baseline is ROS2 Jazzy + Gazebo Sim Harmonic | Ch.6 §6.2.1; `docs/15` | CONFIRMED |
 
 > **Renumbering note (11.06.2026, pre-merge).** The E-track decisions above were
 > originally allocated **D-38 / D-39 / D-40** on the `e2e-camera` branch, while
@@ -601,7 +616,7 @@ rejected alternative and as state-of-the-art reference in §2.4.
 | Field | Value |
 | --- | --- |
 | Section | §3.6.2 |
-| Status | CONFIRMED |
+| Status | SUPERSEDED by D-61 |
 | Date | D9 (Phase 0) |
 
 **Decision.** ROS2 Humble distribution (LTS) as the communication
@@ -623,6 +638,11 @@ environment (D-12) and with the SBC embedded in the physical car.
 **Consequences.** The entire architecture of Chapter 5 is ROS2 from its
 inception. Inspection tools (rqt, ros2 topic, ros2 bag) are usable as is,
 without additional development.
+
+**Supersession note (20.07.2026).** The ROS2 architectural choice remains, but
+the distribution named here was a preliminary decision and was not the stack
+used for implementation or evidence. D-61 records the realised Ubuntu 24.04 +
+ROS2 Jazzy + Gazebo Sim Harmonic baseline.
 
 ---
 
@@ -2009,7 +2029,7 @@ reproducible picture that **corrects the D-43 "perception loss" framing**.
   (a) the reward term `λ·|throttle|` is a **constant** → inert, no gradient effect, and (b) the policy
   has **no speed authority** → it cannot converge to inaction → **M-P6 ≡ 0 by construction**. The
   stall fine-tune was therefore **not launched** (it would produce an identical policy and SC-PERT-03
-  would still not fire). SR-009's stall arm is satisfied-by-construction; its live arm — M-S2 under
+  would still not fire). SR-009's stall arm is N/A-by-construction; its live arm — M-S2 under
   monitoring (H-08 adversarial-direction sub-mode) — is covered by the nominal/monitoring runs. The
   well-posed stall test is deferred to the 2-D-action Isaac work (**D-49**).
 - **V2 OUTCOME (28.06.2026) — ruta-2b was unnecessary; SR-001 closed by ruta-1 alone.** GE4-V2 ran
@@ -2032,20 +2052,21 @@ reproducible picture that **corrects the D-43 "perception loss" framing**.
 
 ---
 
-### D-49 — Action space stays steering-only (1-D) for the track-E Gazebo verdict; throttle-as-action (2-D) deferred to the Isaac posterior work
+### D-49 — Action space stays steering-only (1-D) for the track-E Gazebo verdict; throttle-as-action (2-D) stays outside GE4 as posterior work
 
 | Field | Value |
 | --- | --- |
-| Section | `src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py` (`action_space`); `docs/09` §3 (ED-2); `docs/13`/`docs/14` (Isaac future work); SR-009 (`docs/03`); `docs/07` note ⁸ |
-| Status | CONFIRMED (steering-only retained for E); 2-D = future work (Isaac) |
+| Section | `src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py` (`action_space`); `docs/09` §3 (ED-2); `docs/13`/`docs/14` (Isaac posterior); D-59 (Gazebo 2-D posterior); SR-009 (`docs/03`); `docs/07` note ⁸ |
+| Status | CONFIRMED for the verdict (steering-only retained for E/GE4); 2-D implemented later as posterior work in Isaac and Gazebo |
 | Date | track 'E' / GE4-V2 (27.06.2026) |
 
 **Decision.** The track-E camera policy keeps the **steering-only 1-D action space** (`ACT_DIM = 1`,
 throttle fixed at cruise) for the whole Gazebo E verdict, per the original **ED-2** design choice
 (`docs/09` §3: steering-only, fixed speed — lower dimensionality, faster learning, PD baseline stable
-at fixed speed). Expanding to a **2-D action (steering + throttle)** is **deferred to the Isaac
-posterior track** (`docs/13`/`docs/14`), where a sim-to-real retrain is already expected and it does
-not disturb the frozen Gazebo verdicts.
+at fixed speed). Expanding **the verdict** to a **2-D action (steering + throttle)** is deferred;
+at the time of this decision the separate posterior retrain was assigned to Isaac
+(`docs/13`/`docs/14`), where it would not disturb the frozen Gazebo verdicts. D-59 later added a
+Gazebo counterpart under the same posterior-only boundary.
 
 **Rationale.** The question surfaced from SR-009: its H-08 *stall* sub-mode (M-P6) and its negative
 test SC-PERT-03 are **ill-posed for a steering-only policy** — with no speed authority the policy
@@ -2061,14 +2082,27 @@ safety problem than the cage-as-filter study the thesis poses. The cost is dispr
 one CL-B SR that resolves cleanly as N/A (note ⁸).
 
 **Consequences.**
-- SR-009 stall arm is **satisfied-by-construction** (M-P6 ≡ 0; steering-only) and its M-S2-monitoring
+- SR-009 stall arm is **N/A-by-construction** (M-P6 ≡ 0; steering-only) and its M-S2-monitoring
   arm is covered; SC-PERT-03 is documented **N/A for this action space** (not `insufficient_evidence`).
-- **Future work (Isaac):** a 2-D action makes SR-009's liveness well-posed (real stall test, genuine
+- **Posterior work (originally Isaac; Gazebo counterpart added by D-59):** a 2-D action makes
+  SR-009's liveness well-posed (real stall test, genuine
   C-04/C-05 exercise) and is closer to real driving. The throttle→speed plumbing already exists
   (`docs/09`: `linear.x = fixed_speed · clamp(throttle/throttle_nominal, [0.35, 1])`; the cage already
   modulates speed), so the cost is the **retrain + re-baseline**, not the wiring. Captured in
-  `docs/13`/`docs/14` as a posterior-work item, to be taken up after E4 closes for Gazebo.
+  `docs/13`/`docs/14` and D-59 after E4 closed.
   Cites ED-2 (`docs/09`), D-44 (Isaac), D-47, D-48; SR-009, H-08.
+
+**Scope clarification (20.07.2026).** “Deferred” froze the **verdict contract**, not the
+simulator executable forever. D-59 subsequently instantiated the same 2-D action in Gazebo and
+PPO/SAC policies were trained and evaluated there as posterior E5 evidence. This does not turn
+those runs into a re-run of GE4, and it does not change the G4 disposition of SR-009: the
+SC-PERT-03 two-arm stall injection still has not been executed for a 2-D policy. Its
+preregistered execution path is now implemented (`lambda_stall = 4.0`, 50k one-shot
+continuation, `M-P6 > 50.0` on the metric's 0–100 scale, 20 cells per arm/mode, hash-pinned
+manifest and independent arm aggregation). This fixes the former 0.50/50 % unit mismatch
+before any result existed. The Gazebo posterior makes the test technically well-posed and
+reproducible; it does not retroactively alter the 1-D verdict where M-P6 ≡ 0, nor close SR-009
+until the prepared protocol is actually executed.
 
 ---
 
@@ -2597,13 +2631,62 @@ artefact are untouched, no re-runs. A policy trained here is a **new posterior b
 re-run of the frozen GE4-V2 1-D verdict (D-49); it evaluates with the same config via
 `eval_policy`. The deployed `vehicle_control_node` ROS graph (the F2 demo) stays 1-D — 2-D is
 in-process training/eval only, mirroring Isaac (out of scope). Only `--train-config` selects it.
+
+**Amendment / evidence follow-up (13–19.07.2026; no change to GE4).** The values above record
+the 06.07 design point; the executed Gazebo sequence refined it as follows:
+
+- **0.5 m/s is the historical full-authority PPO arm.** `ppo_gz2d_complex_b_2024` trained with
+  that cap (628736 steps; reward peak 654.4 @ 510k). Its monitoring eval was competent
+  (525k: 4.66 laps, 21.0 mm), but none of four enforcement runs completed: some crossed the
+  speed envelope directly, while others escalated marginal/confident CV reads into C-05 stops
+  at the higher-speed regime. On 13.07 the dedicated
+  Gazebo 2-D configs were therefore revised to the **current 0.25 m/s cap**. Likewise,
+  `random_start_s: false` remains the environment's inert default; the dedicated posterior
+  configs used for the completed Gazebo 2-D trainings explicitly set it **true** (D-58).
+- **0.22 m/s was an eval-only sensitivity probe, not a new default.** With the auto-SAC 150k
+  checkpoint, reducing 0.25→0.22 removed the zero-margin C-04/C-05 stop and completed all
+  4400 steps. The auto-175k checkpoint still stopped at either cap on the known D-43 confident
+  heading over-read. The probe therefore separates **cap equals C-04 ceiling** from the
+  cap-independent CV residual; lowering speed alone is not a D-43 mitigation.
+- **A 2-D policy can nevertheless be nominally compatible with enforcement.** SAC-entfix
+  produced two full-horizon SC-NOM-01 enforcement evals under the 0.25 contract: seed-2024
+  75k (4.32 laps, 17.1 mm, 0 emergencies, 17.1% C-06 only) and seed-42 50k
+  (4.97 laps, 18.2 mm, 0 emergencies, 46.4% C-06 only). The former self-limited its raw
+  command to ≈0.244 m/s.
+
+The amendment narrows, rather than removes, the D-59 prerequisite: preregister a non-zero
+speed margin or recalibrate the `[provisional]` envelope, fix the exact config provenance, and
+address/characterise D-43 before any 2-D campaign. No 2-D campaign or SC-PERT-03 cell has run;
+these nominal posterior evals do not enter the GE4 verdict chain.
+
+**Qualification implementation (20.07.2026).** The non-zero-margin alternative is now
+preregistered, without rewriting the evidence configs: the new, **untrained**
+`train_sac_camera_2d_tuned_entfix_margin022.yaml` fixes the action cap at 0.22 m/s, asserts a
+minimum 0.03 m/s gap to C-04's 0.25 m/s curve ceiling, requires a fresh **bounded 75k** parent,
+and fingerprints the map/horizons into its SB3 checkpoints. Its 150k replay buffer covers the
+75k parent plus the fixed 50k stall continuation (125k total) without eviction. Evaluation rejects a missing/mismatched fingerprint, so a
+historical 0.25 checkpoint cannot be relabelled as margin-qualified. The contract also declares
+a D-43 preflight mandatory.
+
+`tools/d43_preflight.py` operationalises that second prerequisite against the logged Gazebo
+oracle. Its reference report over four enforcement traces classifies both entfix full-horizon
+checkpoints as individual `PASS`, and both auto-175k variants (0.25 and the 0.22 sensitivity
+probe) as `BLOCKED` on centred CV/heading conflicts; the aggregate is therefore intentionally
+`BLOCKED`. The 0.40 rad disagreement gate is anchored just above the final clean GE2 maximum
+0.38734 and below C-02's 0.4363 rad hard limit; direct envelope crossings, false rules and
+emergencies remain zero-tolerance checks. Thus D-43 is **characterised and fail-closed, not
+claimed fixed**. A full campaign requires a new margin022-trained checkpoint and a `PASS`
+input bound to that exact checkpoint **and train-config hash**. `run_campaign.py` now checks
+that provenance before orphan reaping/Gazebo startup and records the matched report/input in
+`campaign_report.json`; unrelated `PASS` inputs cannot authorise another policy. Cites the derived reports under
+`experiments/sim/eval_gz2d/`.
 Cites D-49, D-50, D-52, D-54, D-55, D-56, D-57, D-58; docs/11 §9; docs/13.
 
 ### D-60 — SB3 algorithm switch in the shared trainer: `algorithm: ppo|sac` config key (not a separate SAC entry point)
 
 | Field | Value |
 | --- | --- |
-| Section | `src/cobraflex_rl/cobraflex_rl/train_ppo.py` (+ `callbacks.py`, `training_metrics.py`, `eval_policy.py`, `launch/train_lane.launch.py`); new configs `train_sac_camera.yaml`, `train_{ppo,sac}_camera_pilot25k.yaml`; docs/11 §4.2 |
+| Section | `src/cobraflex_rl/cobraflex_rl/train_ppo.py` (+ `callbacks.py`, `training_metrics.py`, `eval_policy.py`, `launch/train_lane.launch.py`); `train_sac_camera.yaml`; 25k pilot variants/evidence under `experiments/sim/training/pilot25k_ppo_vs_sac_2024/` (temporary pilot YAMLs not retained; follow-up below); docs/11 §4.2 |
 | Status | ACCEPTED — pytest 517 green; offline + live-Gazebo SAC smokes; 25k verification pilot pair completed 15.07.2026 (`experiments/sim/training/pilot25k_ppo_vs_sac_2024/`) |
 | Date | posterior track (15.07.2026) |
 
@@ -2644,6 +2727,30 @@ render-bound — the GPU absorbs SAC's per-step gradient update). 25k is far bel
 convergence regime (PPO ~823 @ ~297k): this is an implementation sanity check + early signal,
 **not** an algorithm verdict.
 
+**Follow-up evidence (17–20.07.2026).** The pilots were elevated to long, bounded Gazebo runs
+in both action spaces. Their `1M` names record the planned budget; each was deliberately stopped
+once the regime was characterised, so none is a completed-million-step claim.
+
+- With `ent_coef: auto`, 1-D SAC peaked at 720 @ 89k and 2-D tuned SAC at 527 @ 154k, then
+  suffered an abrupt cliff or collapse–recover cycles as the learned temperature approached
+  zero. Fixing `ent_coef: 0.005` preserved the peak zone (1-D 722.5 @ 83k; 2-D 558.7 @ 78k)
+  and removed the abrupt collapse. The 2-D entfix checkpoints produced the two full-horizon
+  enforcement evals recorded in the D-59 amendment.
+- A slower post-peak decay survived entfix. The single-variable 1-D probe
+  `buffer_size: 100000→200000` held the 690–745 reward band through 180k, whereas the 100k
+  twin had fallen ~35% after the buffer filled. The evidence therefore separates two
+  mechanisms over the observed 1-D horizon: **abrupt collapse = temperature→0; the slow
+  decay is consistent with replay eviction of the founding data**. The replay conclusion is
+  bounded to seed 2024 through 180k; transfer to 2-D remains a hypothesis, not a result.
+
+**Consequence update.** The algorithm study remains posterior and does not promote SAC into the
+G4-closed verdict. If a further 2-D retrain is justified, the predeclared variant is entfix plus
+a replay buffer at least as long as its bounded horizon, followed by seed replication and
+behavioural checkpoint selection. Before that run, archive the exact config beside its evidence
+and link each eval metadata record to the training config/checkpoint hashes; the temporary 25k
+pilot configs were not retained as repository files, so hashes and prose alone are not an
+acceptable provenance pattern for the next experiment.
+
 **Consequences.** Purely **additive**: `algorithm` defaults to `ppo`, old configs load
 unchanged, and the frozen PPO artefacts (GE4-V2, E-main, multiseed) are untouched — no re-runs.
 A SAC policy is a **new posterior baseline** evaluated through the same harness; it does not
@@ -2652,3 +2759,36 @@ study. `train_lane.launch.py` now exposes `train_config:=`/`run_id:=`/`model_pat
 select the algorithm at launch; bare launch behaviour unchanged).
 Cites D-36 (seed), D-41/D-43 (architecture unchanged), D-49 (1-D contract); docs/11 §4.2;
 CHANGELOG 15.07.2026.
+
+---
+
+### D-61 — Realised middleware baseline: ROS2 Jazzy + Gazebo Sim Harmonic supersedes the preliminary Humble distribution choice
+
+| Field | Value |
+| --- | --- |
+| Section | Ch.6 §6.2.1; `README.md`; `AGENTS.md`; `docs/15_implementation_inventory.md` |
+| Status | CONFIRMED — reconciles the decision log with the implemented and evidence-bearing host stack |
+| Date | implementation baseline documented 28.05.2026; decision-log reconciliation 20.07.2026 |
+
+**Context.** D-13 selected ROS2 Humble during Phase 0, before the repository's
+simulator stack was integrated. The realised system, build commands and all
+Gazebo evidence use **Ubuntu 24.04 LTS + ROS2 Jazzy + Gazebo Sim Harmonic** via
+`ros_gz_sim` / `ros_gz_bridge`; Ch.6 §6.2.1 already records that implementation
+and explicitly identifies the earlier Humble + Gazebo Classic wording as
+inconsistent.
+
+**Decision.** Keep ROS2 as the middleware architecture, but supersede D-13's
+distribution-specific choice with **ROS2 Jazzy** and its supported **Gazebo Sim
+Harmonic** pairing. This is a documentation reconciliation of the stack actually
+used, not a runtime migration performed after the campaigns.
+
+**Rationale.** Jazzy is the distribution installed on the Ubuntu 24.04 evidence
+host and matches the repository's `ros_gz_*` integration. Retaining Humble as a
+current confirmed decision would contradict the executable setup, manuscript and
+reproducibility instructions.
+
+**Consequences.** No experimental artifact, checkpoint, scenario, metric or
+verdict changes. Commands and future reproductions use `/opt/ros/jazzy`; the
+architectural reasoning in D-13 (ROS2 pub/sub, bags and inspection tooling)
+remains valid. Historical Phase-0 provenance is preserved by marking D-13
+superseded rather than rewriting its original rationale.

@@ -209,3 +209,25 @@ def test_stall_penalty_not_charged_while_driving():
     # Slow-but-driving (progress 0.6 = 0.12 m/s at cruise 0.2) is NOT a stall.
     assert compute_reward(progress=0.6, **kw) == pytest.approx(0.6)
     assert compute_reward(progress=NOMINAL, **kw) == pytest.approx(NOMINAL)
+
+
+def test_sc_pert_03_lambda_stall_is_inert_by_default_and_penalises_throttle():
+    kw = dict(
+        track_state=_ts(), progress=NOMINAL, steer=0.0, prev_steer=0.0,
+        done=False, throttle=0.4, prev_throttle=0.4,
+    )
+    base = compute_reward(cfg={"reward": WEIGHTS}, **kw)
+    injected = compute_reward(
+        cfg={"reward": dict(WEIGHTS, lambda_stall=4.0)}, **kw
+    )
+    assert base - injected == pytest.approx(4.0 * 0.4)
+
+
+def test_sc_pert_03_lambda_stall_does_not_affect_legacy_1d_action():
+    kw = dict(
+        track_state=_ts(), progress=NOMINAL, steer=0.0, prev_steer=0.0,
+        done=False,
+    )
+    assert compute_reward(
+        cfg={"reward": dict(WEIGHTS, lambda_stall=4.0)}, **kw
+    ) == pytest.approx(compute_reward(cfg={"reward": WEIGHTS}, **kw))

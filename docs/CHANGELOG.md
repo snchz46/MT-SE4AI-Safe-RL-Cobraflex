@@ -31,7 +31,159 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
-## [20.07.2026] — Replay-buffer mechanism probe (buffer 200k, bounded 180k): the slow post-peak decay is replay-eviction-driven — with a 2× buffer the peak band holds for 90k+ steps where the 100k twin fell 35%
+## [20.07.2026] — Gazebo 2-D qualification made executable: fresh 0.22 contract, checkpoint-bound D-43 preflight and preregistered SC-PERT-03 two-arm protocol
+
+**Document(s) affected:** `docs/05_scenario_library.md`; `docs/06_metrics_catalogue.md`; `docs/07_traceability_matrix.md` (post-G4 annotation only); `docs/08_odd_specification.md`; `docs/09_environment_design.md`; `docs/10_reward_function.md`; `docs/11_camera_rl_training.md`; `docs/14_isaacsim_handover_spec.md`; `docs/15_implementation_inventory.md`; `docs/16_defense_compendium.md`; `docs/DECISIONS.md` (D-49/D-59 follow-up); `README.md`; `AGENTS.md`; `CLAUDE.md`; `policy/README.md`; `tools/README.md`; `experiments/README.md`; Chapters 7, 8, 11 and 12. **Code/config/scenario:** campaign/training/eval/reward surfaces under `src/cobraflex_rl/`; `tools/run_campaign.py`; `tools/sc_pert_03_protocol.py`; `tools/d43_preflight.py`; both SC-PERT-03 YAMLs; `scenarios/_sc_pert_03_protocol.yaml`; `train_sac_camera_2d_tuned_entfix_margin022.yaml`; associated tests. **Derived evidence:** `experiments/sim/eval_gz2d/d43_*.json`.
+
+**Phase:** posterior E5 — Gazebo 2-D qualification / SR-009 meta-test preparation
+
+**Gate context:** after Gate G4; GE4-V2 and `docs/07` remain frozen.
+
+**Author:** Samuel Sanchez
+
+### Change
+
+- Added a **fresh-training-only, bounded 75k** SAC-entfix 2-D contract at
+  0.22 m/s: minimum 0.03 m/s below C-04's 0.25 m/s curve ceiling, 150k replay
+  buffer covering the 75k parent + fixed 50k continuation, action/horizon
+  fingerprint inside the SB3 checkpoint, historical-checkpoint rejection and
+  mandatory D-43 preflight. The historical 0.25 evidence config remains
+  byte-identical (`4cc04344…`); the new untrained config is `78b263b0…`.
+- Implemented the ROS-free D-43 preflight over nominal `cage_status.csv`, with
+  fail-closed metadata/checkpoint/config provenance. Existing Gazebo 2-D
+  references classify entfix-2024/75k and entfix-42/50k as individual `PASS`,
+  while auto-175k at 0.25 and its 0.22 probe are `BLOCKED`. The runner now
+  requires a matching nominal-enforcement `PASS` before starting Gazebo and
+  records the authorization hashes in the campaign report.
+- Preregistered SC-PERT-03 at `lambda_stall = 4.0`, 50k one-shot continuation,
+  no adaptive tuning, 20 runs per arm/mode, and arm criteria
+  `stall_variant: M-P6 > 50.0` / `released: M-P6 == 0.0 AND M-P2 == 1`.
+  Corrected the prior `>0.50` fraction/percentage mismatch; M-P6 is emitted on
+  0–100. No historical verdict changes because the stall arm had never run.
+- Added the default-zero reward hook, parent VecNormalize/replay restoration,
+  one final deterministic VecNormalize/replay-buffer save, immutable manifest/hashes,
+  arm-labelled run IDs/eval metadata and independent per-arm aggregation. A
+  100% released arm can no longer mask an 80% stall arm.
+- Reconciled the living docs and manuscript from “infrastructure pending” to
+  “implemented, execution pending”, preserving the separation between posterior
+  qualification evidence and the frozen 1-D GE4 verdict.
+
+### Rationale
+
+The previous evidence separated two 2-D blockers but did not enforce that
+separation operationally: reducing the cap removed one exact speed-envelope
+conflict, whereas auto-175k still stopped because a centred vehicle was assigned
+a false CV heading beyond C-02. At the same time SC-PERT-03 was conceptually
+well-posed in 2-D but could neither produce nor aggregate its two required arms.
+The new contracts turn those findings into auditable preconditions instead of
+allowing a historical checkpoint, unrelated preflight or pooled arm average to
+be mistaken for evidence.
+
+### Impact / remaining execution
+
+- **No Gazebo training, fine-tune or campaign was run on this Windows host.**
+  The margin022 YAML is a preregistration, not a result; the committed four-run
+  D-43 matrix is diagnostic and aggregate `BLOCKED`, not an authorization token.
+- The next evidence chain is fixed: fresh bounded-75k margin022 SAC training with final
+  replay buffer → SC-NOM-01 enforcement eval → checkpoint/config-bound D-43
+  `PASS` → one-shot 50k stall fine-tune → 80 SC-PERT-03 cells (2 arms × 2 modes
+  × 20). Only that final chain can support a new posterior SR-009 statement.
+- No H/SR/cage-rule count, cage threshold, generated traceability CSV, raw run,
+  GE4 result or Gate verdict changed; Isaac remains an independent backend.
+
+### Verification
+
+- Targeted qualification suite → **106 passed, 1 skipped** on this host (the
+  optional SB3 round-trip skips because `gymnasium` is unavailable here; it was
+  exercised successfully in the dependency-complete environment).
+- `python -m pytest -q --ignore=policy/tests/test_eval_policy_2d.py` →
+  **541 passed, 7 skipped**. The omitted ROS/ament module cannot collect on
+  this Windows host; the latest full Ubuntu/Jazzy baseline remains 517 passed.
+- `python tools/check_traceability.py` → **PASS, 0 warnings**.
+- `python tools/check_scenario_yaml.py` → **PASS, 0 errors** (historical warnings
+  remain non-blocking).
+- SC-PERT-03 complex_b dry-run → **80 cells** (2 arms × 2 modes × 20), no
+  Gazebo; `py_compile` → PASS; `git diff --check` → clean (line-ending notices only).
+
+---
+
+## [20.07.2026] — Posterior Gazebo evidence consolidated across the engineering docs and manuscript: PPO/SAC 1-D/2-D scope, provenance limits and ordered next steps
+
+**Document(s) affected:** `README.md`; `AGENTS.md`; `CLAUDE.md`; `docs/08_odd_specification.md`; `docs/09_environment_design.md`; `docs/10_reward_function.md`; `docs/11_camera_rl_training.md`; `docs/13_isaacsim_environment.md`; `docs/14_isaacsim_handover_spec.md`; `docs/15_implementation_inventory.md`; `docs/16_defense_compendium.md`; `docs/DECISIONS.md` (D-49/D-59/D-60 follow-ups + D-61 stack reconciliation); `experiments/README.md`; `policy/README.md`; `manuscript/README.md`; Chapters 7, 8, 11 and 12; `manuscript/figures/sim2real_roadmap.mmd`.
+
+**Phase:** posterior E5 — Gazebo algorithm/action-space study
+
+**Gate context:** after Gate G4; GE4-V2 and `docs/07` remain frozen.
+
+**Author:** Samuel Sanchez
+
+### Change
+
+- Reconciled the completed PPO camera N=5 study, the PPO/SAC 1-D and 2-D
+  training/evaluation chain, the 0.25/0.22 m/s speed-contract evidence, and the
+  two SAC SC-PERT subset campaigns across the living docs and thesis chapters.
+- Added a canonical run → checkpoint → SC-NOM-01 table and the combined SC-PERT
+  result: **100/100 enforcement PASS vs 68/100 monitoring**, with 51 controlled-
+  stop PASS cells. Both subset reports remain globally `INCOMPLETE` by
+  construction and are not GE4 replacements.
+- Corrected the SAC-entfix N=3 claim: **3/3 nominal enforcement-clean**, but
+  paired nominal enforcement+monitoring exists only for seeds 2024/666 (**2/2**);
+  the seed-42 nominal monitoring cell is pending.
+- Recorded the evidence boundary and provenance gaps: seed-42 campaign run IDs /
+  `campaign_runs.csv` retain a generated `seed2024` label while the per-run
+  metadata and checkpoint hash identify seed 42; five pilot25k YAML snapshots
+  are absent from the repository; interrupted training metadata can omit the
+  rescued-checkpoint hash even though eval metadata pins it.
+- Updated D-49/D-59/D-60 without changing their verdict boundary: Gazebo 2-D is
+  implemented posteriorly, but no 2-D campaign or SC-PERT-03/SR-009 cell has run.
+  The 0.22 m/s probe removes the zero-margin speed stop, not the independent D-43
+  confident heading over-read.
+- Added D-61 to reconcile the stale Phase-0 Humble choice with the implemented
+  and evidence-bearing Ubuntu 24.04 + ROS2 Jazzy + Gazebo Sim Harmonic stack.
+
+### Rationale
+
+The repository contained the latest evidence artifacts and chronological
+CHANGELOG entries, but several overview/specification documents still described
+SAC and Gazebo 2-D as future work or over-stated the available paired nominal
+evidence. This pass makes the current status auditable while keeping observation
+track, action contract, simulator and verdict role separate.
+
+### Impact / ordered next steps
+
+1. **Close provenance before more compute:** run
+   `rl_sacentfix42_eval_cb75k_4k4_mon`; fix the campaign runner's seed labelling
+   for explicit `--model-path`; recover hash-matched pilot YAML snapshots if they
+   still exist; and backfill training → rescued-checkpoint → eval links without
+   rewriting raw evidence.
+2. **Qualify Gazebo 2-D before a campaign:** preregister a non-zero speed margin
+   (or recalibrate C-04 from new evidence), then characterise/mitigate D-43.
+   Before the targeted SC-PERT-03/SR-009 cell, preregister `lambda_stall` and
+   its criterion, implement runner orchestration for the released/fine-tuned
+   arms, and hash the derived checkpoint/config.
+3. **Only then decide on more training:** if justified, run a bounded 2-D hard-
+   seed replica with fixed `ent_coef = 0.005` plus a replay buffer covering its
+   planned horizon. The buffer result is demonstrated only for the bounded 1-D
+   probe through 180k; transfer to 2-D is a hypothesis. Isaac/physical work stays
+   an independent sim-to-real stream and does not reopen G4.
+
+No hazard, SR, cage rule, scenario, metric, threshold, source code, generated
+CSV, raw log or verdict artifact changed; no campaign/training re-run is required
+by this documentation-only reconciliation.
+
+### Verification
+
+- `python tools/check_traceability.py` → **PASS, 0 warnings** (12 H, 14 SR,
+  6 cage rules, 28 scenarios, 19 metrics).
+- `python -m pytest -q --ignore=policy/tests/test_eval_policy_2d.py` →
+  **491 passed, 6 skipped**. The omitted module cannot collect on this
+  Windows/Python 3.14 host because ROS `ament_index_python` is unavailable; the
+  latest fully green Ubuntu/Jazzy baseline remains **517 passed** (15.07.2026).
+- `git diff --check` → clean (line-ending conversion notices only).
+
+---
+
+## [20.07.2026] — Replay-buffer mechanism probe (buffer 200k, bounded 180k): evidence supports replay eviction as the slow-decay mechanism — with a 2× buffer the peak band holds where the 100k twin fell 35%
 
 **Document(s) affected:** `docs/11_camera_rl_training.md` (§4.2 mechanism-probe bullet, version log). **New evidence:** `experiments/sim/training/sac_newcam_entfix_buf200_2024_180k/` (curve to 180.2k, metadata `interrupted` + probe conclusion, `checkpoints_peak/` 150k/175k, config copy archived); eval `experiments/sim/runs/rl_sacbuf200_eval_cb150k_4k4`.
 **Phase:** posterior (E5 — algorithm study; second-mechanism isolation, the follow-up the entfix runs called for)
@@ -43,17 +195,18 @@ Result of `tools/check_traceability.py` after the change.
 Single-knob probe on the 1-D entfix config: `sac.buffer_size` 100k → 200k (~11 GB), seed 2024,
 planned stop at 180k.
 
-### Rationale / Impact — second mechanism confirmed
+### Rationale / Impact — second mechanism isolated over the observed horizon
 
 Curve identical to the 100k twin up to ~86k (peak 720 @ 88k), then **no slow decay**: holds and
 climbs in the **690–745 band through 180k** (new peaks 722 @ 145k, **744.7 @ 155.6k** — the
 highest sustained level of the study) where the 100k twin had fallen to ~445–470. The timing
-seals it: the 100k twin's decay onset (~90–125k) coincides exactly with its buffer filling and
+strongly supports the mechanism: the 100k twin's decay onset (~90–125k) coincides with its buffer filling and
 **evicting the early era**; with 200k nothing is evicted before 200k and the decay never
-starts. **Complete mechanism chain for camera-SAC on this env: abrupt collapse = auto-
-temperature → 0 (cured by the `ent_coef: 0.005` floor); slow post-peak decay = replay
-eviction of the founding data (cured by a buffer ≥ the training horizon).** Practical recipe
-for a future full-length SAC run: entfix + buffer sized to the intended step budget. Eval of
+starts. **Observed mechanism split:** abrupt collapse = auto-temperature → 0 (removed by
+`ent_coef: 0.005`); the bounded slow decay is consistent with replay eviction (prevented by
+the 200k buffer through the 180k observation window). The result is one seed and does not yet
+establish transfer to 2-D or a longer horizon. Hypothesis for a future run: entfix + buffer
+sized to the intended bounded budget. Eval of
 the 150k plateau checkpoint: full horizon, 4.94 laps, 26.9 mm, 0 emergencies, 14.4% C-06 —
 solid but not better than the 75k peaks (the eval-overrules-curve lesson, again).
 
@@ -102,10 +255,15 @@ enforcement C-06 smoothing is doing real work. Evidence:
 **Addendum — seed 666 (same bounded protocol; the E5 hard seed, cage-dependent under PPO):**
 same regime (no cliff, peak 606.9 @ 81k — ~16% below 2024/42, the hard seed stays hardest in
 magnitude only; recovering to 596 at the 120k cutoff). **75k evals: enforcement 5.00 laps /
-|ey| 14.0 mm / 0 emergencies / 5.3% C-06; monitoring identical (5.00 laps, 14.0 mm, 6.2%)** —
-**not cage-dependent: the entfix recipe rescues the bad seed.** Entfix N=3 basin: **3/3
-constraint-respecting in both modes** (75k evals: 21.6/12.3/14.0 mm; 9.1/2.3/5.3% C-06) vs
-the PPO E5 N=5 split of 3/5 (666 cage-dependent, 23 cage–CV conflict). Evidence:
+|ey| 14.0 mm / 0 emergencies / 5.3% C-06; monitoring matches the task metrics
+(5.00 laps, 14.0 mm, 6.2% counterfactual C-06)** —
+**not cage-dependent: the entfix recipe rescues the bad seed.** **Audit correction
+(20.07.2026):** the supported N=3 statement is **3/3 clean in nominal enforcement**;
+only seeds 2024/666 have the matched nominal monitoring cell and are 2/2 clean in both
+modes. The seed-42 nominal monitoring run is still missing and its SC-PERT monitoring
+campaign is not a substitute for SC-NOM-01. This is therefore not yet a 3/3 two-mode basin
+classification. The PPO E5 N=5 split remains 3/5 (666 cage-dependent, 23 cage–CV conflict).
+Evidence:
 `experiments/sim/training/sac_newcam_entfix_complex_b_666_120k/`,
 `experiments/sim/runs/rl_sacentfix666_eval_cb75k_4k4{,_mon}`.
 
@@ -116,7 +274,7 @@ Planned SIGINT at 120k, clean exit; eval full 4400 / 0 errors;
 
 ---
 
-## [19.07.2026] — SC-PERT subset campaign on the SAC entfix peak: the cage's latent→active flip is algorithm-independent (enforcement 50/50 PASS); the SAC bare policy is markedly more degradation-robust than PPO's
+## [19.07.2026] — SC-PERT subset campaign on the SAC entfix peak: the protective direction replicates from PPO to SAC (enforcement 50/50 PASS); the SAC bare policy is more degradation-robust on this subset
 
 **Document(s) affected:** `docs/11_camera_rl_training.md` (§4.2 closing bullet, version log). **New evidence:** `experiments/sim/campaign_sac_pert/` (100 runs, 0 errors: SC-PERT-04/09/11/12/13 × {enforcement, monitoring} × 10 reps, `scenarios_complex_b` overlay, SAC entfix 75k checkpoint; campaign_report.json + campaign_runs.csv + per-run dirs).
 **Phase:** posterior (E5 — algorithm study close-out: does the GE4-V2 cage-value finding survive an algorithm change?)
@@ -133,14 +291,14 @@ campaigns.
 
 ### Rationale / Impact
 
-**Enforcement: 50/50 PASS — identical to PPO (175/175). The cage guarantee replicates
-exactly under an algorithm change.** Monitoring (bare policy): PERT-04 10/10, PERT-09 8/10,
+**Enforcement: 50/50 PASS — identical to PPO (175/175). The observed protection result
+replicates under the PPO→SAC change.** Monitoring (bare policy): PERT-04 10/10, PERT-09 8/10,
 PERT-11 **0/10**, PERT-12 10/10, PERT-13 5/10 — vs PPO's 24/40, 0/25, 0/30, 23/40, 0/40. Two
-readings: (a) **the latent→active flip is algorithm-independent in direction** — wherever the
+readings: (a) **the latent→active direction is observed under both PPO and SAC** — wherever the
 bare policy fails under degradation, enforcement removes every failure; (b) **which scenarios
 the bare policy fails is policy-dependent** — the SAC entfix policy is markedly more robust
 (mon pass 33/50 = 66% vs PPO 27%; PERT-09/13 mostly survive where PPO always failed), and
-**SC-PERT-11 is the universal bare-policy killer** (0% both algorithms — the strongest
+**SC-PERT-11 is the strongest observed cross-policy discriminator** (0% both algorithms — the strongest
 single cage-value scenario in the library). Net thesis claim strengthened: the cage's safety
 contribution is the invariant across policies; the policy only moves *where* it is needed.
 
@@ -154,8 +312,8 @@ GE4-V2 report numbers quoted above; `python tools/check_traceability.py` → PAS
 PASS**; monitoring 35/50 (PERT-04 10/10, PERT-09 10/10, PERT-11 **0/10**, PERT-12 10/10,
 PERT-13 **5/10** — identical to the seed-2024 rate). The degradation-robustness profile of
 the entfix policy family is seed-stable, and **SC-PERT-11 is now 0% for a third independent
-policy** (PPO 297k, SAC entfix 2024, SAC entfix 42) — the library's canonical cage-value
-scenario.
+policy** (PPO 297k, SAC entfix 2024, SAC entfix 42) — the strongest cage-value
+scenario in this observed battery.
 
 ---
 
@@ -180,7 +338,8 @@ unchanged) on the auto run's 150k/175k checkpoints.
 **2-D entfix 75k peak evals (SC-NOM-01, 4400 steps, DR off): enforcement completes the FULL
 horizon — 4.32 laps, |ey| 17.1 mm, 0 emergencies, 17.1% C-06-only — the first full-horizon
 2-D enforcement eval of the programme** (2-D PPO best: 1.52 laps; SAC auto: 2.85/3.45 before
-stops). Monitoring identical (4.31 laps, 16.3 mm, 0 emergencies) → 2-D cage-latent-in-ODD.
+stops). Monitoring also completes (4.31 laps, 16.3 mm, 0 emergencies, 18.0%
+counterfactual C-06) → 2-D cage-latent-in-ODD.
 Mechanism: the policy **self-limits to max 0.244 m/s**, never touching the 0.25 C-04 curve
 ceiling — the entropy floor yields margin-keeping behaviour without any cage/config change.
 **Cap probes (D-59 closed-out evidence):** the 150k ckpt — stopped at 0.25-cap by the
@@ -218,8 +377,9 @@ re-approaching it).
 140–155k window where the auto run collapsed 540→23, the entfix run held ~470 flat — **no
 abrupt collapse anywhere in 260k steps**. **But the slow post-peak decay happened anyway**
 (722 → 445–550 band): two distinct mechanisms — the cliff was the α→0 exploitation spiral;
-the slow decay survives the floor (consistent with critic overfit to the narrowing replay
-tube). **Eval (SC-NOM-01, 4400 steps, DR off): 75k peak-of-record — enforcement 5.04 laps,
+the slow decay survives the floor (provisionally attributed here to critic overfit; superseded
+by the 20.07 replay-buffer probe, which isolates replay eviction). **Eval (SC-NOM-01, 4400
+steps, DR off): 75k peak-of-record — enforcement 5.04 laps,
 |ey| 21.6 mm (max 55.8), 0 emergencies, intervention 9.1% C-06-only (402 steps); monitoring
 identical (5.04 laps, 21.6 mm, 0 emerg, 10.6% would-be)** — the lowest cage engagement of any
 camera policy measured (SAC auto 48.3%, PPO 297k 43.5%): the entropy floor yields a visibly
@@ -232,7 +392,7 @@ SIGINT-clean stop, metadata + stop_reason recorded; both evals full 4400 / 0 err
 
 ---
 
-## [18.07.2026] — 2-D tuned SAC 1M run executed (stopped 251k): collapse-recover cycles (peaks 214→527 @ 154k), 175k peak evals — monitoring 4.31 laps / 0 emergencies, enforcement stopped by the two known 2-D mechanisms
+## [18.07.2026] — Planned-1M 2-D tuned SAC run stopped at 251k: collapse-recover cycles (peaks 214→527 @ 154k), 175k peak evals — monitoring 4.31 laps / 0 emergencies, enforcement stopped by the two known 2-D mechanisms
 
 **Document(s) affected:** `docs/11_camera_rl_training.md` (§4.2 2-D 1M block, version log). **New evidence:** `experiments/sim/training/sac_gz2d_tuned_complex_b_2024_1M/` (curve to 251k, metadata `interrupted` + stop_reason, `checkpoints_peak/` 150k/175k + VecNormalize stats, `ppo_vs_sac_2d_curve.png`); evals `experiments/sim/runs/rl_sacgz2d_eval_2024_cb150k_4k4`, `…cb175k_4k4{,_mon}`.
 **Phase:** posterior (E5 — algorithm study; the 1M 2-D run docs/11 §4.2 called for, on the tuned recipe per the 15.07 pilot)
@@ -277,7 +437,7 @@ SIGINT-clean stop, metadata `interrupted` + stop_reason; `num_timesteps` verifie
 
 ---
 
-## [17.07.2026] — 1-D SAC 1M run executed (stopped 307k): peak 720 @ 89k, entropy-collapse dip + recovery; 75k peak checkpoint evals clean (5.12 laps, 0 emergencies, cage latent)
+## [17.07.2026] — Planned-1M 1-D SAC run stopped at 307k: peak 720 @ 89k, entropy-collapse dip + recovery; 75k peak checkpoint evals clean (5.12 laps, 0 emergencies, cage latent)
 
 **Document(s) affected:** `docs/11_camera_rl_training.md` (§4.2 1M-run block, version log). Configs: `train_sac_camera.yaml` + `train_ppo_camera.yaml` (seed 23→2024 restore — the multiseed-E5 leftover contradicted the D-36 main-seed comment; `checkpoint_freq: 25000` added to both twins, the 03.07 ckpt-volume lesson, diff-parity preserved). **New evidence:** `experiments/sim/training/sac_newcam_complex_b_2024_1M/` (learning_curve.csv to 307k, metadata `interrupted` + stop_reason, `checkpoints_peak/` with the 75k/100k zips + VecNormalize stats, `ppo_vs_sac_1d_1M_curve.png`); evals `experiments/sim/runs/rl_sacnewcam_eval_2024_cb75k_4k4{,_mon}` + `rl_sacnewcam_eval_2024_cb100k_4k4`.
 **Phase:** posterior (E5 — algorithm study, the 1M follow-up the 15.07 pilots called for)

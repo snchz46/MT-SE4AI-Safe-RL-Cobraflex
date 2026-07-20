@@ -19,7 +19,7 @@ evidencia registrada (§11.2), evalúa las tres hipótesis de §1.3 (§11.3), de
 las lecciones aprendidas que no estaban en el diseño original (§11.4), compara
 con las prácticas alternativas que el marco desplaza (§11.5), y cierra con
 limitaciones y riesgos residuales (§11.6–11.7). El registro primario para todo
-ello es `DECISIONS.md` (D-01..D-60) y el CHANGELOG: la disciplina de anotar
+ello es `DECISIONS.md` (55 entradas hasta D-61) y el CHANGELOG: la disciplina de anotar
 decisiones y costes *cuando ocurrían* es lo que permite que esta sección cite en
 lugar de recordar.
 
@@ -56,7 +56,7 @@ anticipaba en abstracto y la instancia concreta requirió descubrir. En ambos
 casos el marco absorbió el emergente por la vía prevista: ID, decisión, artefacto.
 
 **(4) Coste de adopción — criterio: proporcional al beneficio.** Evaluación
-provisional: proporcional. El registro son 60 decisiones D-NN, el validador, las
+provisional: proporcional. El registro contiene 55 decisiones hasta D-61, el validador, las
 plantillas y los documentos vivos 00–16 mantenidos al día de los resultados por
 una sola persona *mientras* se ejecutaban dos campañas de evaluación, dos pistas
 de entrenamiento y un puente de simulador. La cifra de reparto exacto
@@ -120,7 +120,11 @@ conocer (desarrollo en cap. 12 §12.2; aquí la forma general):
 4. **Los umbrales están acoplados al régimen para el que se calibraron.** El
    traslado 1-D→2-D invalidó el envelope de velocidad sin tocar una línea de la
    cage (D-59); "parámetro `[provisional]`" resultó significar "válido en el
-   régimen donde se midió".
+   régimen donde se midió". La respuesta posterior convierte esa lección en un
+   gate reproducible: cap 0.22 con margen explícito, checkpoint fresh-only y
+   preflight D-43 ligado a checkpoint/config. La matriz histórica discrimina
+   mecanismos —entfix-2024/42 pasan, auto-175k falla también a 0.22—, por lo que
+   velocidad y percepción no deben colapsarse en una sola causa.
 5. **Entre simuladores no hay transferencia silenciosa** — ni de checkpoints ni
    de calibraciones (D-54/D-55/D-57); cada discrepancia exigió una sonda
    dedicada. Anticipa la forma del gap físico.

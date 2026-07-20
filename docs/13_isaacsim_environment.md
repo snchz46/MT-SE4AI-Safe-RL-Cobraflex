@@ -17,10 +17,19 @@ host, 2026-06-16). The **in-process RL training** path is **live-validated on th
 > 02.07.2026**), with evidence in [docs/11](11_camera_rl_training.md) §8.4,
 > [docs/07](07_traceability_matrix.md) and ch.8 §8.9 — and Isaac **does not supersede** it. A
 > checkpoint trained in Gazebo is **not transferable to Isaac** (different physics + renderer;
-> see [Speed and fidelity](#speed-and-fidelity--same-logic-different-environment)), so an
-> Isaac-based E policy is a **future retrain from scratch**, never a re-run of the current
-> result. Read this doc as the *next-stage* toolbelt, not as a change to what is being
-> evaluated now.
+> see [Speed and fidelity](#speed-and-fidelity--same-logic-different-environment)), so every
+> Isaac-based E policy is an **independent retrain from scratch**, never a re-run of the current
+> result. Those independent Isaac retrains now exist as posterior experiments; they still do
+> not enter GE4. Read this doc as the *next-stage* toolbelt, not as a change to the frozen
+> verdict.
+
+Keep the three contracts separate when reading results:
+
+| Contract | Algorithm/action | Speed authority | Evidence role |
+| --- | --- | --- | --- |
+| Gazebo GE4-V2 | PPO, 1-D steering | fixed 0.20 m/s | **Verdict of record** |
+| Gazebo posterior E5 | PPO/SAC, 1-D and 2-D | current 2-D cap 0.25 m/s (historical PPO run used 0.5) | algorithm/action probes in docs/11; not GE4 |
+| Isaac posterior | independently trained PPO, 2-D | 0.5 m/s under the Isaac-specific calibration | sim-to-real/backend study; not GE4 |
 
 > Running it on a fresh machine? See **[docs/SETUP_ISAAC.md](SETUP_ISAAC.md)** for the
 > step-by-step recipe (deps, `download_meshes.sh`, **source ROS2 first**, smoke tests).

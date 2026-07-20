@@ -3,8 +3,8 @@
 | Field | Value |
 | --- | --- |
 | Artifact | Cross-cutting implementation inventory (defense-preparation deliverable) |
-| Version | v1.0 |
-| Date | 2026-07-07 |
+| Version | v1.1 |
+| Date | 2026-07-20 |
 | Author | Samuel Sanchez |
 | Status | LIVING — regenerate the §6 test counts before each Gate/defense rehearsal |
 | Sibling document | [docs/16_defense_compendium.md](16_defense_compendium.md) (the *why* + literature; this document is the *what/where/verified-by*) |
@@ -15,10 +15,14 @@
 > docs/00–14; this inventory is the map. Use it when a defense question starts
 > with "where is…", "what does the script X do…", or "how do you know Y works".
 >
-> **Verified baseline (2026-07-07, Windows host, `.venv-win`):**
-> `pytest` → **503 passed, 5 skipped** (139 cage + 357 policy/RL + 7 tools);
+> **Latest fully green host baseline (2026-07-15):**
+> `pytest` → **517 passed** (CHANGELOG 15.07.2026);
 > `python tools/check_traceability.py` → **All checks PASSED, 0 warnings**
 > (12 hazards, 14 SRs, 6 cage rules, all scenarios/metrics linked).
+> A 20.07 collection attempt on this Windows/Python 3.14 host found 496 tests
+> before `policy/tests/test_eval_policy_2d.py` failed to import because
+> `ament_index_python` is unavailable. That is an environment/dependency limit,
+> not a newer green count or a regression verdict.
 
 ---
 
@@ -52,7 +56,7 @@ determinism under a fixed seed, no topic asynchrony, identical cage class +
 `cage.yaml` as deployment). Only Gazebo I/O crosses a process boundary:
 
 ```text
-SB3 PPO ──action──► GazeboLaneEnv.step()
+SB3 PPO/SAC ──action──► GazeboLaneEnv.step()
                        │  1. clip / map action
                        │  2. SafetyCageNode.step(state, raw_action)   [in-process]
                        │  3. safe_action → Twist(/cmd_vel)            [RosGazeboInterface]
@@ -141,11 +145,12 @@ throughout.
 | [isaac_interface.py](../src/cobraflex_rl/cobraflex_rl/isaac_interface.py) | Duck-typed Isaac-Sim counterpart of `RosGazeboInterface` (same method surface) so the env runs unchanged in-process inside Isaac (D-44) |
 | [cage_bridge.py](../src/cobraflex_rl/cobraflex_rl/cage_bridge.py) | Pure glue env↔cage: builds the cage `State`, maps throttle↔cage scale, mirrors `vehicle_control_node`'s actuation constants (`yaw_gain=0.8`, `throttle_nominal=0.5`, `min_speed_scale=0.35`) so training actuation == deployment actuation; 2-D maps for D-50 |
 | [polyline_tracker.py](../src/cobraflex_rl/cobraflex_rl/polyline_tracker.py) | `PolylineTracker` — Frenet projection of a world pose onto the centerline polyline: `ey`, `epsi`, arc-length `s`, curvature preview, `pose_at_arclength` (scenario spawns), `distance_to` (off-road check on self-approaching circuits). Pure NumPy |
-| [rewards.py](../src/cobraflex_rl/cobraflex_rl/rewards.py) | `compute_reward` — reward v1.2 (docs/10): progress − w·\|ey\| − w·\|epsi\| − w·\|Δsteer_raw\| − termination |
-| [train_ppo.py](../src/cobraflex_rl/cobraflex_rl/train_ppo.py) | Training entry point: config/centerline load, env build + `check_env`, `VecFrameStack`/`VecNormalize` wrapping, SB3 construction — **PPO or SAC via the config's `algorithm:` key (D-60, docs/11 §4.2)** — all hyperparameters from YAML (`target_kl` / `lr_schedule` / `clip_range_vf` PPO stability levers; SAC knobs in the `sac:` block; SAC+camera transpose-inside-VecNormalize fix), `--resume-from`, reproducibility `metadata.json` (records `algorithm`) + checkpoint-registry append |
-| [callbacks.py](../src/cobraflex_rl/cobraflex_rl/callbacks.py) | SB3 callbacks: progress bar (algorithm-labelled), `LearningCurveCallback` (reward + algorithm health scalars + per-rule cage-intervention rates per rollout → `learning_curve.csv`; per-algorithm scalar map + `min_row_interval` throttle for SAC's per-step rollout cadence), `ActionSampleCallback` (raw-steering histogram evidence) |
+| [rewards.py](../src/cobraflex_rl/cobraflex_rl/rewards.py) | `compute_reward` — reward v1.2 (docs/10): progress − w·\|ey\| − w·\|epsi\| − w·\|Δsteer_raw\| − termination; config-gated 2-D extension adds raw `throttle_delta` and `stall_penalty`; the default-zero `lambda_stall·\|throttle\|` hook exists only for SC-PERT-03's preregistered negative test |
+| [campaign_contract.py](../src/cobraflex_rl/cobraflex_rl/campaign_contract.py) | Pure guard for opted-in posterior campaign configs: checks the 0.22-vs-C-04 speed margin and bounded 75k+50k/150k-replay chain, fingerprints the action/horizon contract into fresh SB3 checkpoints, rejects historical/mismatched checkpoints, and declares the D-43 preflight prerequisite |
+| [train_ppo.py](../src/cobraflex_rl/cobraflex_rl/train_ppo.py) | Training entry point: config/centerline load, env build + `check_env`, `VecFrameStack`/`VecNormalize` wrapping, SB3 construction — **PPO or SAC via the config's `algorithm:` key (D-60, docs/11 §4.2)** — all hyperparameters from YAML (`target_kl` / `lr_schedule` / `clip_range_vf` PPO stability levers; SAC knobs in the `sac:` block; SAC+camera transpose-inside-VecNormalize fix), `--resume-from` + paired `--resume-vecnormalize`/replay, final paired VecNormalize/replay capture, campaign-contract binding, reproducibility `metadata.json` + checkpoint-registry append |
+| [callbacks.py](../src/cobraflex_rl/cobraflex_rl/callbacks.py) | SB3 callbacks: progress bar (algorithm-labelled), `LearningCurveCallback` (reward + algorithm health scalars + per-rule cage-intervention rates per rollout → `learning_curve.csv`; per-algorithm scalar map + `min_row_interval` throttle for SAC's per-step rollout cadence), `ActionSampleCallback` (raw-steering and, for 2-D, raw-throttle evidence) |
 | [training_metrics.py](../src/cobraflex_rl/cobraflex_rl/training_metrics.py) | Pure schema/aggregation behind the learning-curve CSV (testable without SB3); per-algorithm SB3 scalar maps (`SB3_SCALAR_COLUMNS[_SAC/_BY_ALGO]` — identical CSV columns for PPO and SAC) |
-| [eval_policy.py](../src/cobraflex_rl/cobraflex_rl/eval_policy.py) | Scored deterministic evaluation of a checkpoint through the *same* env + cage; SB3 class resolved from the config's `algorithm` key or `--algorithm` (PPO/SAC, D-60); emits §7.5 evidence under `experiments/sim/runs/<run_id>/` |
+| [eval_policy.py](../src/cobraflex_rl/cobraflex_rl/eval_policy.py) | Scored deterministic evaluation of a checkpoint through the *same* env + cage; resolves PPO/SAC, validates opted-in campaign fingerprints, scores an explicit preregistered criterion arm when requested, and emits config/checkpoint/protocol hashes under `experiments/sim/runs/<run_id>/` |
 | [eval_metrics.py](../src/cobraflex_rl/cobraflex_rl/eval_metrics.py) | Pure aggregation: laps, intervention rate, emergencies, tracking error |
 | [run_io.py](../src/cobraflex_rl/cobraflex_rl/run_io.py) | SHA-256 file hashing + git-commit lookup for run metadata (shared by train/eval) |
 
@@ -196,7 +201,7 @@ throughout.
 | [baseline_pd.py](../policy/baseline_pd.py) | Pure-Python PD controller (F2 baseline; gains in `baseline_pd.yaml`). The known-competent control arm that validated the pipeline and calibrated the reward |
 | `train.py` | Thin shim (historical entry point; the real trainer is `cobraflex_rl/train_ppo.py`) |
 | `checkpoints/` | Trained checkpoints (`.zip`, gitignored blobs) + `checkpoint_registry.csv` (seed, steps, timestamp, git commit, cage-YAML hash per row) |
-| `tests/` | The 357-test pure-Python suite covering the RL package (see §6) |
+| `tests/` | Pure-Python tests covering the RL package and campaign spine (included in the 517-pass host baseline; see §6) |
 
 ### 5.2 `tools/` — every script, what it does, how
 
@@ -205,7 +210,9 @@ throughout.
 | [check_traceability.py](../tools/check_traceability.py) | **The hard Gate gate.** Parses docs/02/03/04/05/06 + `cage/cage.yaml` + `scenarios/*.yaml` + `tools/traceability_matrix.csv` and enforces 8 bidirectional constraints (every H referenced by ≥1 SR, every SR references ≥1 H, every cage rule implements ≥1 SR, every rule referenced by ≥1 scenario, every scenario references ≥1 SR, every SR has ≥1 metric, every referenced metric defined, matrix present). Any orphan on either side fails the Gate |
 | [sync_hazard_register.py](../tools/sync_hazard_register.py) / [sync_safety_requirements.py](../tools/sync_safety_requirements.py) | Regenerate `docs/data/*.csv` from the Markdown source tables (manuscript / docs/03). Direction is always **Markdown → CSV**; hand-editing the CSVs is prohibited (single-source-of-truth rule) |
 | [check_scenario_yaml.py](../tools/check_scenario_yaml.py) | Validates every scenario YAML against the executable schema (`scenarios/_schema.yaml`); `--strict` turns deferred-stub warnings into failures |
-| [run_campaign.py](../tools/run_campaign.py) | Orchestrates a full validation campaign: builds the run matrix (scenario × mode × reps), executes each run through the Gazebo executor (`eval_scenario_batch.launch.py` with `GZ_PARTITION` isolation, orphan-process reaping, retries, resume), scores it, and aggregates run → scenario → SR → global verdicts (D-29/D-30/D-38). `--dry-run` validates plan + D-29 feasibility with no Gazebo. Produces `campaign_report.json` |
+| [run_campaign.py](../tools/run_campaign.py) | Orchestrates a full validation campaign: builds the run matrix (scenario × mode × reps, plus explicit SC-PERT-03 policy arms), executes through the Gazebo launcher, scores and aggregates run → arm → scenario → SR → global verdicts. A completed two-arm manifest is required for SC-PERT-03; opted-in 0.22 campaign contracts also require a checkpoint-bound D-43 `PASS` report |
+| [sc_pert_03_protocol.py](../tools/sc_pert_03_protocol.py) | One-shot SC-PERT-03 preparation: validates the fixed λ/criterion/run counts, derives a 50k stall config from one 2-D parent, restores and hashes paired VecNormalize/replay state, freezes the ROS command, and hashes parent/derived checkpoint/config/state plus protocol/scenario in `protocol_manifest.json` |
+| [d43_preflight.py](../tools/d43_preflight.py) | ROS-free preflight over nominal `cage_status.csv`: compares CV state with the Gazebo oracle in a centred band, characterises lateral under-read, blocks false C-01/02/03/C-05 behaviour, and emits a checkpoint-bound JSON report (`PASS`, `BLOCKED`, or `INVALID`) |
 | [frontier_contrast.py](../tools/frontier_contrast.py) | Paired enforcement-vs-monitoring analysis of the out-of-ODD frontier study (D-35): road-edge-contact rate, max excursion, emergency rate per (scenario, seed) |
 | [sr006_smoothness.py](../tools/sr006_smoothness.py) | Dedicated SR-006 verification on its own committed-steer-rate metric (D-39), computed from `cage_status.csv` traces — outside the per-scenario aggregation that would let unrelated failures contaminate it |
 | [campaign_e_failure_modes.py](../tools/campaign_e_failure_modes.py) | Post-hoc classification of every campaign FAIL by *which clause* of the pass criterion broke + cage core-safety invariant checks; regenerable numbers behind the E-campaign write-up |
@@ -224,9 +231,13 @@ throughout.
 | `cage/cage.yaml` (v0.6.1) | Every cage threshold; hash-pinned per run |
 | `src/cobraflex_rl/config/train_ppo.yaml` | F-track training: MlpPolicy, 6-dim obs, hyperparameters, reward weights, cage block, spawn perturbation |
 | `src/cobraflex_rl/config/train_ppo_camera.yaml` | E-track training: CnnPolicy, camera obs block (84×84 gray, k=4, `/camera/image_raw_lane`), H-10 domain randomization, PPO stability levers (`target_kl: 0.5`, `lr_schedule: linear`, `normalize_reward` + `clip_range_vf: 0.2`), `sim_real_time_factor: 1` |
-| `train_ppo_camera_2d.yaml`, `train_isaac_2d*.yaml`, `train_isaac_kin2_curric.yaml` | Posterior 2-D action / Isaac variants (D-49/D-50) |
-| `src/cobraflex_rl/config/train_sac_camera.yaml`, `train_sac_camera_2d.yaml` | E-track SAC training (D-60): mirrors of `train_ppo_camera.yaml` / `train_ppo_camera_2d.yaml` (0.25 cap) differing only in `algorithm: sac` + the `sac:` off-policy block (`buffer_size` stays explicit — the camera replay buffer holds ~56 KB/transition) |
-| `train_{ppo,sac}_camera_pilot25k.yaml`, `train_{ppo,sac}_camera_2d_pilot25k.yaml`, `train_sac_camera_2d{,_pilot25k}_tuned.yaml` | The 25k PPO-vs-SAC verification battery (seed 2024, 15.07.2026): two like-for-like pairs (identical except the algorithm switch) + the tuned SAC-canonical 2-D variant (batch 256, constant LR, UTD 2) — evidence under `experiments/sim/training/pilot25k_ppo_vs_sac_2024/` |
+| `train_ppo_camera_2d.yaml`, `train_isaac_2d*.yaml`, `train_isaac_kin2_curric.yaml` | Posterior 2-D variants (D-49/D-50/D-59). Current Gazebo config cap = 0.25 m/s; Isaac full-authority contract = 0.5 m/s |
+| `train_sac_camera.yaml`, `train_sac_camera_entfix.yaml` | Gazebo SAC 1-D (D-60): auto-entropy and fixed `ent_coef = 0.005` variants; explicit replay buffer because camera transitions are large |
+| `train_sac_camera_2d.yaml`, `train_sac_camera_2d_tuned.yaml`, `train_sac_camera_2d_tuned_entfix.yaml` | Historical/current Gazebo SAC 2-D evidence configs: base, SAC-canonical tuned, and fixed-entropy variants on the 0.25 m/s action cap |
+| `train_sac_camera_2d_tuned_entfix_margin022.yaml` | **Preregistered, untrained** fresh-policy contract: entfix parent bounded to 75k with a 0.22 m/s cap, 0.03 m/s minimum margin to C-04, 150k replay covering parent + 50k fine-tune, checkpoint fingerprint, historical-checkpoint rejection and mandatory D-43 preflight |
+| `scenarios/_sc_pert_03_protocol.yaml` | Fixed two-arm negative-test protocol: λ=4.0, 50k one-shot continuation, M-P6 percentage criterion and 20 runs per arm/mode |
+| Per-run archived configs under `experiments/sim/training/sac_*` | Seed-specific entfix configs and the 200k replay-buffer probe (for example `sac_newcam_entfix_buf200_2024_180k/train_sac_camera_entfix_buf200k.yaml`) preserve the exact run surface alongside metadata/hash |
+| `experiments/sim/training/pilot25k_ppo_vs_sac_2024/` | The 25k PPO-vs-SAC verification battery is archived as evidence. Its metadata records config paths/hashes, but the five named `*_pilot25k.yaml` source files are **not present in the current config tree**; exact reconstruction from filenames alone is not claimed. This is a provenance gap to close by restoring hash-matched snapshots, not by inventing live configs |
 | `*_centerline.yaml` (oval, complex_a..e, flips) | Track geometry: reward/lane centerline points, `lane_width`, `road_width`; road-centre variants for the off-road check |
 | `scenarios/{nominal,edge,perturbed,frontier}/*.yaml` | Executable scenario definitions: initial conditions, perturbations, timeout, `pass_criterion_per_run/scenario`, SR links (schema: `scenarios/_schema.yaml`) |
 | `policy/baseline_pd.yaml` | PD gains |
@@ -235,9 +246,16 @@ throughout.
 
 ## 6. Test inventory — what each test file proves
 
-Baseline (2026-07-07): **503 passed, 5 skipped** from the repo root
-(`pytest.ini` scopes collection to `cage/tests` + `policy/tests` + `tools/tests`;
-`src/` packages are colcon/ament territory, deliberately excluded).
+Latest fully green host baseline (2026-07-15): **517 passed** from the repo root
+(CHANGELOG 15.07.2026; `pytest.ini` scopes collection to `cage/tests` +
+`policy/tests` + `tools/tests`; `src/` packages are colcon/ament territory,
+deliberately excluded). Per-directory counts below are retained only where they
+have been re-verified; do not sum the older headings into a newer total.
+
+On this Windows/Python 3.14 host on 20.07, collection reached **496 tests** and
+then failed while importing `policy/tests/test_eval_policy_2d.py` because
+`ament_index_python` is missing. Use the Ubuntu/Jazzy-capable environment to
+regenerate the suite count; the partial collection is not a failed product test.
 
 ### 6.1 `cage/tests/` (139 tests) — the cage's verification evidence
 
@@ -261,15 +279,16 @@ Baseline (2026-07-07): **503 passed, 5 skipped** from the repo root
 | `test_logger.py` | CSV schema stability of the cage log | evidence chain |
 | `test_sr_spec_version_check.py` | `IncompatibleCageConfigError` on missing/unknown `compatible_sr_spec_version` | config governance |
 
-### 6.2 `policy/tests/` (357 tests, 5 skipped) — RL package + campaign spine
+### 6.2 `policy/tests/` — RL package + campaign spine
 
 | Test file | Proves | Traces to |
 | --- | --- | --- |
 | `test_baseline_pd.py` | PD control law arithmetic | F2 baseline |
-| `test_rewards.py` | Every reward term's weight/sign, termination penalty, progress clamp, config completeness | docs/10 §7 |
+| `test_rewards.py` | Every reward term's weight/sign, termination penalty, progress clamp, config completeness, and default-inert SC-PERT-03 throttle injection | docs/10 §7 |
 | `test_cage_bridge.py` | Throttle↔speed maps mirror `vehicle_control_node`; cage invocation contract | D-34 |
 | `test_polyline_tracker.py` | Arc-length spawn helper (`pose_at_arclength`) | F4 executor |
 | `test_gazebo_lane_env_2d.py` | D-50 2-D action + multi-circuit sampling with the **real** cage in loop, against a fake sim interface | D-49/D-50 |
+| `test_eval_policy_2d.py` | 2-D eval action-shape guard and config propagation; requires the ROS/ament import surface during collection | D-50/D-59 |
 | `test_camera_geometry.py` | Analytic invariants of the pixel↔ground mapping | D-43 |
 | `test_camera_pipeline.py` | Decode → single degradation point → both consumers | D-43 |
 | `test_cv_lane_estimator.py` | Estimator recovers known synthetic lane geometries rendered through its own camera model | D-43, SR-014 |
@@ -280,7 +299,9 @@ Baseline (2026-07-07): **503 passed, 5 skipped** from the repo root
 | `test_visual_domain_randomization.py` | Seeded per-episode DR sampling over the H-10 envelope | SR-012 |
 | `test_scenario_loader.py` / `test_scenario_runner.py` / `test_scenario_perturbations.py` | Real scenario YAMLs parse; (scenario, rep) → run config determinism; perturbation injection | docs/05 |
 | `test_campaign_metrics.py` / `test_criterion_eval.py` / `test_verdict_aggregation.py` | Metric catalogue arithmetic; safe three-valued criterion evaluation; D-29 gate + D-30 veto + D-38 propagation | docs/06/07 |
-| `test_run_campaign.py` | The campaign runner's pure core (matrix, aggregation) | D-29/D-30 |
+| `test_run_campaign.py` | The campaign runner's pure core, including SC-PERT-03 arm expansion, independent per-arm aggregation and manifest checks | D-29/D-30, SR-009 |
+| `test_campaign_contract.py` | 0.22 speed-margin delta, canonical C-04 gap, checkpoint fingerprint binding/rejection and historical-config compatibility | D-59 |
+| `tools/tests/test_d43_preflight.py` | D-43 schema/coverage failure modes, GE2-anchored heading tolerance, per-input PASS/BLOCK discrimination and metadata provenance | D-43, H-12 |
 | `test_frontier_contrast.py` / `test_failure_modes_grid_split.py` | Frontier paired contrast; SC-EDGE-05 in-ODD/OOD attribution split | D-35, D-48 |
 | `test_eval_metrics.py` / `test_training_metrics.py` / `test_run_io.py` | Eval aggregation; learning-curve schema; hashing/git metadata | §7.5, §7.2.8 |
 
@@ -297,7 +318,8 @@ Baseline (2026-07-07): **503 passed, 5 skipped** from the repo root
   the project rule "typecheck/pytest ≠ feature works" for ROS2 nodes.
 - `tests/integration/`, `tests/unit/` at repo root are **empty placeholders**
   (not in `pytest.ini` testpaths).
-- The 5 skips are environment-conditional (host-dependent optional deps).
+- Environment-conditional optional dependencies can skip or block collection;
+  the current Windows example is the missing `ament_index_python` import above.
 
 ---
 
@@ -338,10 +360,16 @@ core defense narrative for RQ-traceability):
 | `sllidar_ros2`, `zed-ros2-wrapper` drivers | Third-party, intentionally untracked (D-32); installed externally |
 | Mesh blobs, checkpoints, raw logs, `build/install/log`, `.venv*` | Gitignored; binaries pinned by hash/registry instead |
 | A second terminal C-06 pass | Declared F2 approximation in docs/04 §Known approximation; gated on Phase-4 log evidence |
-| Isaac ↔ Gazebo checkpoint transfer | Not possible (different renderers/physics); the Isaac E-policy is a future retrain (docs/13–14, D-49) |
+| Isaac ↔ Gazebo checkpoint transfer | Not possible (different renderers/physics); independent Isaac retrains/evals already exist, but remain new posterior baselines rather than transfers or GE4 re-runs (docs/13–14, D-49/D-50) |
 
 ## Version log
 
 - **v1.0 (2026-07-07):** first complete inventory. Test/traceability baselines
   verified on the Windows host this date (503 passed / 5 skipped; traceability
   PASS, 0 warnings).
+- **v1.1 (2026-07-20):** adds the live PPO/SAC and Gazebo/Isaac contract split,
+  current SAC/entfix/buffer config surfaces and 2-D evidence paths; removes the
+  false implication that absent pilot YAML filenames are live configs and records
+  that provenance gap explicitly. Updates the latest fully green suite to 517
+  passed (15.07 host) and records the current Windows `ament_index_python`
+  collection limitation without treating it as a regression.

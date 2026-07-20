@@ -1,8 +1,8 @@
 # Traceability Matrix
 
-**Status:** Living document — Phase 0 baseline, refined through every phase, closed at G6  
-**Last update:** 02.07.2026 (**Gate G4 closed** — Phase-4 evaluation complete on both arms; see the G4 closure note below. F-track F4: global `SATISFIED`, frozen. Track-'E' GE4-V2 (28.06.2026, verdict of record): 1970 runs, global `NOT SATISFIED` (literal), blocking SR-CL-A **SR-002/003 only**; both fail *only* SC-EDGE-01's oval-legacy 2.0 s recovery-time clause and are Satisfied on their own criterion (D-47), so no safety predicate is breached. **SR-001 Satisfied** (ruta-1 in-ODD IC clip → SC-EDGE-02 28/30; 2 boundary-edge residuals; the abandoned ruta-2b estimator change was unnecessary + reverted, D-48). SR-012/013/014 Satisfied — the matrix rows now read GE4-V2. SR-010 genuine CL-B in-ODD co-activation; SR-009 stall arm N/A-by-construction (D-49). Next: Isaac / sim-to-real posterior work (docs/13–14, D-44/D-49). See the GE4-V2 note below + docs/11 §8.4. V1 (campaign_e_297k) + the 139k block are historical)  
-**Approved at Gate:** every Gate (incrementally)  
+**Status:** Living document — Phase 0 baseline, refined through every phase, closed at G6
+**Last update:** 20.07.2026 (post-G4 annotation only: the Gazebo 2-D SC-PERT-03 protocol/runner and qualification gates are implemented but **unexecuted**; no matrix row or Gate verdict changed. **Gate G4 closed** — Phase-4 evaluation complete on both arms; see the G4 closure note below. F-track F4: global `SATISFIED`, frozen. Track-'E' GE4-V2 (28.06.2026, verdict of record): 1970 runs, global `NOT SATISFIED` (literal), blocking SR-CL-A **SR-002/003 only**; both fail *only* SC-EDGE-01's oval-legacy 2.0 s recovery-time clause and are Satisfied on their own criterion (D-47), so no safety predicate is breached. **SR-001 Satisfied** (ruta-1 in-ODD IC clip → SC-EDGE-02 28/30; 2 boundary-edge residuals; the abandoned ruta-2b estimator change was unnecessary + reverted, D-48). SR-012/013/014 Satisfied — the matrix rows now read GE4-V2. SR-010 genuine CL-B in-ODD co-activation; SR-009 stall arm N/A-by-construction (D-49). Isaac remains a separate sim-to-real posterior track (docs/13–14, D-44/D-49). See the GE4-V2 note below + docs/11 §8.4. V1 (campaign_e_297k) + the 139k block are historical.)
+**Approved at Gate:** every Gate (incrementally)
 
 ## Purpose
 
@@ -78,19 +78,24 @@ One SR-CL-B verdict (**SR-006**) is now resolved by a dedicated metric analysis
   (C-06 inert) only 67.6 % of runs hold and the worst rate is 0.43 — a direct
   measure of C-06's value. Analysis: `tools/sr006_smoothness.py` (reads the
   committed-steer trace from `cage_status.csv`, no Gazebo). The per-SR entry in
-  `campaign_report.json` still reads `failed` from the superseded `ALL` inheritance;
-  re-pointing SR-006 to this metric in `run_campaign.py` is a flagged follow-up
-  (D-39) and does not change the global verdict (CL-B).
+  the historical `campaign_report.json` still reads `failed` from the superseded
+  `ALL` inheritance; the current runner marks SR-006 `scored_out_of_band` instead
+  of inheriting unrelated scenario failures. The evidence artifact is not silently
+  rewritten, and the correction does not change the global verdict (CL-B, D-39).
 - **² SR-009 (liveness) — TBD abstention; resolved N/A-by-construction at G4 (D-49).**
   Nominal liveness (SC-NOM-01/02/03) passes; the verdict is driven by **SC-PERT-03**,
   a two-arm failure-injection meta-test (released vs stall-variant). The multi-arm
-  evaluator already exists (`criterion_eval.evaluate_labelled`); the gap was that (a)
-  the **stall-variant arm was never executed** and (b) the campaign driver does not
-  *group* the two arms. At G4 close this resolved differently: the stall sub-mode is
+  evaluator already existed (`criterion_eval.evaluate_labelled`); the F-campaign gap
+  was that (a) the **stall-variant arm was never executed** and (b) its campaign driver
+  did not *group* the two arms. At G4 close this resolved differently: the stall sub-mode is
   **ill-posed for the steering-only action space both tracks share** (M-P6 ≡ 0 by
   construction; the reward injection is inert — D-49), so the negative test is N/A,
   and the live M-S2-monitoring arm is covered by the nominal family. The well-posed
-  stall test moves to the 2-D-action Isaac work. Not a liveness failure.
+  stall test moves to posterior 2-D work. **Post-G4 annotation (20.07.2026):** the
+  Gazebo 2-D protocol/runner now preregister λ=4.0/50k, hash both arms and aggregate
+  them independently, but no parent/fine-tune/cell has run; this new capability does
+  not alter the frozen abstention. Isaac remains a separate backend replica. Not a
+  liveness failure.
 - **³ SR-010 (cage-rule composition) — TBD abstention on the F arm; answered on the E
   arm at G4.** SC-EDGE-04 passes. SC-EDGE-05's per-run predicate references operands
   (`joint_envelope_assertion_failures`, `inter_cycle_oscillations`) **absent from

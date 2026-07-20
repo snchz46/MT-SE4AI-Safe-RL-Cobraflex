@@ -2,25 +2,35 @@
 
 Experimental data and analysis scripts.
 
-> **Status (2026-07).** The evidence of record is the **track-'E' end-to-end camera
+> **Status (2026-07-20).** The evidence of record is the **track-'E' end-to-end camera
 > campaign** `sim/campaign_e_v2/` (GE4-V2, 1970 runs, 28.06.2026; G4 closed
 > 02.07.2026). The F-track state-vector campaigns (`sim/campaign/`,
 > `sim/campaign_frontier/`) are **frozen as the ground-truth baseline** — the
 > control arm for "what does camera perception cost" — and are not re-run.
-> Next phase: Isaac Sim / sim-to-real (`sim/eval_isaac/`, docs/13–14).
+> Post-G4 evidence now also covers Gazebo PPO/SAC camera policies in 1-D and 2-D,
+> plus the separate Isaac 2-D retrains. These are posterior studies and do **not**
+> replace or reopen GE4.
 
 ## Organisation
 
 - `sim/runs/` — single evaluation runs: F2 PD closed-loop (`ros_run_*`), F3 state
   evals (`rl_eval_*`), track-'E' camera evals (`rl_cam_eval_*`, `rl_newcam_eval_*`),
-  CV-estimator oracle validation (`cv_estimator_val_*`).
+  SAC 1-D/2-D evals (`rl_sac*`), and CV-estimator oracle validation
+  (`cv_estimator_val_*`).
 - `sim/training/` — training runs with metadata + learning curves (`ppo_train_*`
   F-track; `ppo_newcam_*` track 'E'; `ppo_gz2d_*` Gazebo 2-D posterior;
   `{ppo,sac}_cam_pilot25k_*` / `{ppo,sac}_gz2d_pilot25k_*` + `pilot25k_ppo_vs_sac_*`
-  the D-60 algorithm-switch four-curve verification battery; peak checkpoints
-  under `checkpoints_peak/`).
+  the D-60 verification battery; `sac_newcam_*` the 1-D SAC auto/entfix/seed/buffer
+  studies; `sac_gz2d_tuned_*` the 2-D SAC studies; peak checkpoints under
+  `checkpoints_peak/`).
 - `sim/eval_gz2d/` — Gazebo 2-D (steer+throttle) posterior-baseline evals
-  (`rl_gz2d_eval_*`, D-49/D-59; not GE4 evidence).
+  (`rl_gz2d_eval_*`, D-49/D-59; not GE4 evidence) plus derived D-43 preflight
+  reports. `d43_preflight_reference_gazebo_2d.json` compares four enforcement
+  traces: both entfix checkpoints pass individually, while auto-175k at 0.25
+  and its 0.22 cap probe block; its aggregate verdict is therefore `BLOCKED`.
+  `d43_underread_ge4v2_edge02.json` quantifies 3573 under-read cycles in 27/60
+  GE4-V2 SC-EDGE-02 runs, but is `INVALID` as a new-campaign authorisation
+  because the reconstructed E-main metadata lacks `train_config_hash`.
 - `sim/campaign_e_v2/` — **GE4-V2, the verdict of record** (track 'E', complex_b
   297k E-main): `campaign_report.json` (per-scenario/per-SR/global roll-up),
   `campaign_runs.csv`, `failure_mode_breakdown.json` (failure classes + pass-mode
@@ -30,6 +40,10 @@ Experimental data and analysis scripts.
 - `sim/campaign/` — **F4 verdict campaign, frozen baseline** (1260 runs, seed 2024,
   global `SATISFIED`, cage latent in-ODD).
 - `sim/campaign_frontier/` — F4 out-of-ODD cage-efficacy contrast (D-35).
+- `sim/campaign_sac_pert/`, `sim/campaign_sac_pert_s42/` — posterior SAC
+  SC-PERT subsets, 100 cells per seed. Each is deliberately a subset, so its
+  global roll-up is `INCOMPLETE`; together they provide enforcement 100/100 PASS
+  versus monitoring 68/100, not a replacement verdict campaign.
 - `sim/tracks/` — track sources (complex_b centerlines etc.).
 - `sim/eval_isaac/` — Isaac Sim posterior-track evals (D-44/D-50; not GE4 evidence).
 - `physical/` — physical CobraFlex experiments (F5, pending).
@@ -67,21 +81,37 @@ Every run produces a `metadata.json` with at minimum:
     "policy_checkpoint_hash": "...",
     "scenario_yaml_hash": "...",
     "seed": 42,
-    "platform": "sim" or "cobraflex",
+    "platform": "sim",
     "battery_voltage_v": null,
     "ambient_temperature_c": null,
-    "status": "completed" or "failed_*"
+    "status": "completed"
 }
 ```
 
-The `metadata.json` is what makes a run reproducible: with the same git commit, same hashes, same seed, the run can be reproduced.
+Allowed `platform` values are `sim`, `sim-isaac`, and `cobraflex`; `status` is
+`completed`, `interrupted`, or a `failed_*` value.
+
+`metadata.json` provides the reproducibility identity: git commit, hashes and
+seed. Exact reproduction additionally requires every referenced artifact and
+hash-matched config snapshot to remain resolvable; the pilot limitation below
+is a known exception, so metadata alone is not claimed to reconstruct it.
 
 Training runs (`sim/training/<run_id>/`) additionally record the training-config
 provenance: `train_config` + `train_config_hash` (sha256 of the train YAML),
 the `action` contract (`{}` = the frozen 1-D steering-only contract; the D-50/D-59
 2-D runs record `steer_throttle` + `max_speed_mps`/`throttle_deadband`), the
-`reward` weights and the PPO `hyperparameters`. Runs recorded before 07.07.2026
-lack the `train_config*`/`action`/`reward` keys.
+`reward` weights, `algorithm`, and algorithm-specific hyperparameters (PPO or
+the SAC block, including explicit `buffer_size` and `ent_coef`). Runs recorded
+before 07.07.2026 lack the `train_config*`/`action`/`reward` keys.
+
+**Pilot provenance limitation.** The 15.07 pilot metadata preserves the
+recorded config paths and SHA-256 hashes, but five named `*_pilot25k.yaml`
+source files are absent from the current `src/cobraflex_rl/config/` tree. Treat
+those pilot curves as archived evidence only until matching config snapshots are
+restored. Do not infer or recreate the missing YAML contents from filenames.
+Later SAC runs do archive exact seed/probe configs beside their evidence (for
+example the 200k-buffer config under
+`sim/training/sac_newcam_entfix_buf200_2024_180k/`).
 
 ## Phase status
 
@@ -95,8 +125,21 @@ lack the `train_config*`/`action`/`reward` keys.
   — blocking SR-002/003 on the oval-legacy recovery-time clause only, Satisfied
   on their own criterion (D-47); no SR-CL-A safety predicate breached. G4 closed
   02.07.2026. See `docs/11` §8 and `docs/07`.
-- **Isaac / sim-to-real (open, posterior):** URDF import, in-process RL training,
-  2-D action retrain (D-49/D-50). Does not reopen G4.
+- **Gazebo posterior (17–20.07.2026):** PPO/SAC camera comparisons in 1-D and
+  2-D. Evidence-bearing 2-D configs cap speed at **0.25 m/s**; a **0.22 m/s**
+  eval-only probe removed one zero-margin speed conflict but not the D-43 CV heading
+  over-read. SAC fixed entropy (`ent_coef = 0.005`) and the 200k replay-buffer
+  probe separate entropy collapse/replay eviction from reward failure. The
+  first full-horizon Gazebo 2-D enforcement runs are SAC-entfix seeds 2024 and
+  42. A separate **untrained**, bounded-75k margin022 config now preregisters
+  0.03 m/s of C-04 margin, keeps the 75k+50k chain inside a 150k replay buffer,
+  and rejects historical checkpoints. SC-PERT-03's λ/criterion and
+  two-arm orchestration are prepared but unexecuted. The two-seed SC-PERT
+  subset is reported separately above. None is GE4.
+- **Isaac / sim-to-real (open, posterior):** URDF import, in-process PPO
+  training/evaluation and independent 2-D retrains (D-49/D-50), under a separate
+  **0.5 m/s** full-authority contract. Gazebo checkpoints do not transfer; this
+  does not reopen G4.
 - **F5 (planned):** physical CobraFlex experiments; `physical/runs/` empty.
 
 ## Running a campaign (Ubuntu + Jazzy host)
@@ -136,7 +179,60 @@ Operational notes (both forms):
   F2/F3 runs under `sim/runs/`.
 - **Perturbation status:** all scenario mechanisms of the E library are wired and
   Gazebo-validated (runtime visual degradation, world variants, IC grids;
-  SC-PERT-03's two-arm stall design is recorded indeterminate per D-38/D-49).
+  SC-PERT-03's two-arm stall design is now preregistered and runner-wired but
+  remains unexecuted; the GE4 1-D arm remains N/A-by-construction per D-38/D-49).
+
+The executable qualification sequence is fixed (Ubuntu/Jazzy, after sourcing
+the workspace). First train the **bounded fresh 75k** parent; the trainer writes
+paired `.vecnormalize.pkl` and `.replay_buffer.pkl` files beside the final model:
+
+```bash
+CFG=$(ros2 pkg prefix cobraflex_rl)/share/cobraflex_rl/config
+PARENT=$PWD/policy/checkpoints/cobraflex_sac_gz2d_entfix_margin022_2024_75k.zip
+ros2 launch cobraflex_rl train_lane.launch.py \
+  train_config:=$CFG/train_sac_camera_2d_tuned_entfix_margin022.yaml \
+  run_id:=sac_gz2d_entfix_margin022_2024_75k model_path:=$PARENT \
+  gui:=false shutdown_on_train_exit:=true
+```
+
+Evaluate that exact checkpoint on SC-NOM-01, then produce a D-43 report bound
+to its checkpoint/config metadata:
+
+```bash
+NOM=rl_sacgz2d_margin022_eval_2024_cb75k_4k4
+ros2 run cobraflex_rl eval_policy \
+  --train-config $CFG/train_sac_camera_2d_tuned_entfix_margin022.yaml \
+  --centerline-config $CFG/complex_b_right_lane_centerline.yaml \
+  --road-centerline-config $CFG/complex_b_centerline.yaml \
+  --world-name lane_following_complex_b --model-path $PARENT \
+  --max-steps 4400 --mode enforcement --run-id $NOM \
+  --output-root experiments/sim/runs
+D43=experiments/sim/eval_gz2d/margin022_seed2024_d43_preflight.json
+python tools/d43_preflight.py experiments/sim/runs/$NOM --output $D43
+```
+
+Only a `PASS` report for that same checkpoint may be supplied to the runner.
+The committed four-run reference report is deliberately `BLOCKED`; it
+characterises historical mechanisms and is not an authorization token.
+
+Then freeze and execute the one-shot stall continuation, followed by the 80
+arm-labelled cells (20 × 2 arms × 2 modes):
+
+```bash
+PROTO=experiments/sim/sc_pert_03/margin022_seed2024_v1
+python tools/sc_pert_03_protocol.py prepare \
+  --scenario scenarios_complex_b/perturbed/sc_pert_03.yaml \
+  --parent-checkpoint $PARENT \
+  --parent-config $CFG/train_sac_camera_2d_tuned_entfix_margin022.yaml \
+  --parent-vecnormalize ${PARENT%.zip}.vecnormalize.pkl \
+  --parent-replay-buffer ${PARENT%.zip}.replay_buffer.pkl --out $PROTO
+python tools/sc_pert_03_protocol.py run --manifest $PROTO/protocol_manifest.json
+python tools/run_campaign.py --scenario-dir scenarios_complex_b \
+  --scenarios SC-PERT-03 --controllers rl --seeds 2024 \
+  --modes enforcement,monitoring --out experiments/sim/campaign_sc_pert_03_gz2d \
+  --two-arm-manifest $PROTO/protocol_manifest.json \
+  --d43-preflight-report $D43
+```
 
 ## Data not in version control
 

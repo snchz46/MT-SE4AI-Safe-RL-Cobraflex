@@ -195,7 +195,7 @@ use `ament_python` + `colcon test`, not bare pytest).
 
 The F2 ROS2 demo wires five nodes over these topics:
 
-```
+```text
 /odom → lane_perception_node → /state_obs
 /state_obs → pd_baseline_node → /raw_action
 /raw_action + /state_obs → cage_ros_node → /safe_action + /cage_status

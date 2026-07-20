@@ -1,0 +1,62 @@
+{
+  "run_id": "sac_newcam_entfix_buf200_2024_180k",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-07-19T22:25:28.161413+00:00",
+  "git_commit": "ad9f8a7870aea37cf539f7e29d1dd6ae70afe51e",
+  "train_config": "/tmp/claude-1000/-media-samuel-Fast-SSD-SE4AI-thesis-repo/003e24c6-2bf0-4919-bad7-a3fc8843b30e/scratchpad/train_sac_camera_entfix_buf200k.yaml",
+  "train_config_hash": "9e78fe5ca4578ad62867ae5ac3ea98b0b2a094bb00031ecdfce29e9e490731b3",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "scenario_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "policy_checkpoint": "cobraflex_sac_newcam_lane_entfix_buf200.zip",
+  "policy_checkpoint_hash": null,
+  "seed": 2024,
+  "platform": "sim",
+  "total_timesteps": 1000000,
+  "algorithm": "sac",
+  "hyperparameters": {
+    "learning_rate": 0.0003,
+    "lr_schedule": "linear",
+    "gamma": 0.99,
+    "batch_size": 64,
+    "normalize_reward": true,
+    "buffer_size": 200000,
+    "learning_starts": 1000,
+    "tau": 0.005,
+    "train_freq": 1,
+    "gradient_steps": 1,
+    "ent_coef": 0.005,
+    "target_update_interval": 1
+  },
+  "policy": "CnnPolicy",
+  "observation": {
+    "type": "camera",
+    "camera": {
+      "topic": "/camera/image_raw_lane",
+      "width": 84,
+      "height": 84,
+      "grayscale": true,
+      "frame_stack": 4
+    }
+  },
+  "action": {},
+  "reward": {
+    "lateral_error": 2.5,
+    "heading_error": 0.75,
+    "steer_delta": 0.2,
+    "forward_progress": 1.0,
+    "termination": 25.0
+  },
+  "domain_randomization": {
+    "enabled": true,
+    "p_degrade": 0.5,
+    "level_range": [
+      0.2,
+      0.8
+    ]
+  },
+  "status": "interrupted",
+  "stopped_at_steps": 180225,
+  "stop_reason": "mechanism probe, planned stop at ~180k. Single knob buffer_size 100k->200k on the entfix config: identical curve to the 100k twin up to ~86k (peak 720@88k), then NO slow decay \u2014 holds/climbs in the 690-745 band through 180k (new peaks 722@145k, 744.7@156k) where the 100k twin had fallen to ~445-470. Decay onset with 100k buffer (~90-125k) coincides with the buffer filling and evicting the early era -> replay-eviction mechanism CONFIRMED for the slow post-peak decay."
+}

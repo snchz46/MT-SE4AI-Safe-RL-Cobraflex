@@ -1,0 +1,21 @@
+{
+  "total_steps": 4400,
+  "episodes": 1,
+  "completed_laps": 4.937099310283053,
+  "mean_ey_m": 0.02686109470500356,
+  "mean_abs_ey_m": 0.02686109470500356,
+  "max_abs_ey_m": 0.04685563196058524,
+  "mean_epsi_rad": 0.010486125959716108,
+  "mean_abs_epsi_rad": 0.020387159416469208,
+  "emergency_steps": 0,
+  "intervention_steps": 635,
+  "intervention_rate_pct": 14.431818181818182,
+  "interventions_per_rule": {
+    "C-06": 635
+  },
+  "cycle_dt_s": 0.1,
+  "duration_s": 440.0,
+  "run_id": "rl_sacbuf200_eval_cb150k_4k4",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement"
+}

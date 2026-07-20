@@ -1,0 +1,19 @@
+{
+  "run_id": "camp_pert04_rl_seed2024_monitoring_rep08",
+  "scenario_id": "SC-PERT-04",
+  "mode": "monitoring",
+  "timestamp_iso": "2026-07-19T00:45:06.073347+00:00",
+  "duration_s": 40.0,
+  "git_commit": "ad9f8a7870aea37cf539f7e29d1dd6ae70afe51e",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "policy_checkpoint": "policy/checkpoints/sac_newcam_entfix_complex_b_2024_1M_75000_steps.zip",
+  "policy_checkpoint_hash": "b74505ac5bed1d87e5252be78b9113312f286644c5a0a6f8e6ce48bada3f6f8e",
+  "centerline_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "scenario_yaml": "scenarios_complex_b/perturbed/sc_pert_04.yaml",
+  "scenario_yaml_hash": "8eca68938fbc6433ed50b8f28e382fb4e4564a71e9a280d82c62785955249555",
+  "rep": 8,
+  "seed": 2024,
+  "platform": "sim",
+  "status": "completed"
+}

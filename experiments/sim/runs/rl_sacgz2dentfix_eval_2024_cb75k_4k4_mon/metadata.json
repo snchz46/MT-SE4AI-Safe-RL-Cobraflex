@@ -1,0 +1,19 @@
+{
+  "run_id": "rl_sacgz2dentfix_eval_2024_cb75k_4k4_mon",
+  "scenario_id": "SC-NOM-01",
+  "mode": "monitoring",
+  "timestamp_iso": "2026-07-19T00:01:07.879141+00:00",
+  "duration_s": 440.0,
+  "git_commit": "ad9f8a7870aea37cf539f7e29d1dd6ae70afe51e",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "policy_checkpoint": "policy/checkpoints/sac_gz2d_tuned_entfix_2024_1M_75000_steps.zip",
+  "policy_checkpoint_hash": "b76724c7402ebc78f596c0ee45464de3ccd3b1e087ea2249e15661b6b807a13d",
+  "centerline_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "scenario_yaml": "",
+  "scenario_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "rep": 0,
+  "seed": 2024,
+  "platform": "sim",
+  "status": "completed"
+}

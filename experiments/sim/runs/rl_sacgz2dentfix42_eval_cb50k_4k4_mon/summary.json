@@ -1,0 +1,23 @@
+{
+  "total_steps": 4400,
+  "episodes": 1,
+  "completed_laps": 4.843868948450567,
+  "mean_ey_m": 0.013302851187075103,
+  "mean_abs_ey_m": 0.022597458396218642,
+  "max_abs_ey_m": 0.08161193917638143,
+  "mean_epsi_rad": 0.005580763670810398,
+  "mean_abs_epsi_rad": 0.03367574519270617,
+  "emergency_steps": 39,
+  "intervention_steps": 2062,
+  "intervention_rate_pct": 46.86363636363637,
+  "interventions_per_rule": {
+    "C-06": 2062,
+    "C-04": 1,
+    "C-05": 39
+  },
+  "cycle_dt_s": 0.1,
+  "duration_s": 440.0,
+  "run_id": "rl_sacgz2dentfix42_eval_cb50k_4k4_mon",
+  "scenario_id": "SC-NOM-01",
+  "mode": "monitoring"
+}

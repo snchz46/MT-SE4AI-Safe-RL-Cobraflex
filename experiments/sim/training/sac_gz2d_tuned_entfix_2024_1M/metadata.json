@@ -1,0 +1,69 @@
+{
+  "run_id": "sac_gz2d_tuned_entfix_2024_1M",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-07-18T23:42:58.953569+00:00",
+  "git_commit": "ad9f8a7870aea37cf539f7e29d1dd6ae70afe51e",
+  "train_config": "src/cobraflex_rl/config/train_sac_camera_2d_tuned_entfix.yaml",
+  "train_config_hash": "4cc043440de9f6369821212fdd49ae9af4a1e0c0b54c339ecefa1d8d8b0bc617",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "scenario_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "policy_checkpoint": "cobraflex_sac_gz2d_lane_tuned_entfix.zip",
+  "policy_checkpoint_hash": null,
+  "seed": 2024,
+  "platform": "sim",
+  "total_timesteps": 1000000,
+  "algorithm": "sac",
+  "hyperparameters": {
+    "learning_rate": 0.0003,
+    "lr_schedule": "constant",
+    "gamma": 0.99,
+    "batch_size": 256,
+    "normalize_reward": true,
+    "buffer_size": 150000,
+    "learning_starts": 5000,
+    "tau": 0.005,
+    "train_freq": 1,
+    "gradient_steps": 2,
+    "ent_coef": 0.005,
+    "target_update_interval": 1
+  },
+  "policy": "CnnPolicy",
+  "observation": {
+    "type": "camera",
+    "camera": {
+      "topic": "/camera/image_raw_lane",
+      "width": 84,
+      "height": 84,
+      "grayscale": true,
+      "frame_stack": 4
+    }
+  },
+  "action": {
+    "type": "steer_throttle",
+    "max_speed_mps": 0.25,
+    "throttle_deadband": 0.05
+  },
+  "reward": {
+    "lateral_error": 2.5,
+    "heading_error": 0.75,
+    "steer_delta": 0.2,
+    "throttle_delta": 0.1,
+    "forward_progress": 1.0,
+    "stall_penalty": 0.5,
+    "stall_progress_min": 0.25,
+    "termination": 25.0
+  },
+  "domain_randomization": {
+    "enabled": true,
+    "p_degrade": 0.5,
+    "level_range": [
+      0.2,
+      0.8
+    ]
+  },
+  "status": "interrupted",
+  "stopped_at_steps": 176129,
+  "stop_reason": "manual stop at ~176k: temperature floor removes the 2-D collapse-recover cycles too (monotonic climb to peak 558.7@78k, a new 2-D SAC record \u2014 auto peaked 527@154k \u2014 with no cliff), but the slow post-peak decay to a ~260-295 band then a downward break repeats. 98k steps post-peak without re-approach; regime characterized across all four SAC runs."
+}

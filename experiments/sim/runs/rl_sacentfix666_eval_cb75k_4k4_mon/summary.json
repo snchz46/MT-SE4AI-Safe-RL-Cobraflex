@@ -1,0 +1,21 @@
+{
+  "total_steps": 4400,
+  "episodes": 1,
+  "completed_laps": 5.001515524481294,
+  "mean_ey_m": -0.009581922085020567,
+  "mean_abs_ey_m": 0.013979411603965767,
+  "max_abs_ey_m": 0.047302301316533665,
+  "mean_epsi_rad": 0.0105997163150627,
+  "mean_abs_epsi_rad": 0.029813429322021846,
+  "emergency_steps": 0,
+  "intervention_steps": 274,
+  "intervention_rate_pct": 6.2272727272727275,
+  "interventions_per_rule": {
+    "C-06": 274
+  },
+  "cycle_dt_s": 0.1,
+  "duration_s": 440.0,
+  "run_id": "rl_sacentfix666_eval_cb75k_4k4_mon",
+  "scenario_id": "SC-NOM-01",
+  "mode": "monitoring"
+}

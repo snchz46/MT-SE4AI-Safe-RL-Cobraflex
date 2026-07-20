@@ -1,0 +1,69 @@
+{
+  "run_id": "sac_gz2d_tuned_entfix_42_120k",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-07-19T15:58:00.989016+00:00",
+  "git_commit": "ad9f8a7870aea37cf539f7e29d1dd6ae70afe51e",
+  "train_config": "/tmp/claude-1000/-media-samuel-Fast-SSD-SE4AI-thesis-repo/003e24c6-2bf0-4919-bad7-a3fc8843b30e/scratchpad/train_sac_camera_2d_tuned_entfix_seed42.yaml",
+  "train_config_hash": "25fc371fe44408a4b197fb3955a04e290f627d4d0eb8ed05723b698fc6bf1218",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "scenario_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "policy_checkpoint": "cobraflex_sac_gz2d_lane_tuned_entfix_42.zip",
+  "policy_checkpoint_hash": null,
+  "seed": 42,
+  "platform": "sim",
+  "total_timesteps": 1000000,
+  "algorithm": "sac",
+  "hyperparameters": {
+    "learning_rate": 0.0003,
+    "lr_schedule": "constant",
+    "gamma": 0.99,
+    "batch_size": 256,
+    "normalize_reward": true,
+    "buffer_size": 150000,
+    "learning_starts": 5000,
+    "tau": 0.005,
+    "train_freq": 1,
+    "gradient_steps": 2,
+    "ent_coef": 0.005,
+    "target_update_interval": 1
+  },
+  "policy": "CnnPolicy",
+  "observation": {
+    "type": "camera",
+    "camera": {
+      "topic": "/camera/image_raw_lane",
+      "width": 84,
+      "height": 84,
+      "grayscale": true,
+      "frame_stack": 4
+    }
+  },
+  "action": {
+    "type": "steer_throttle",
+    "max_speed_mps": 0.25,
+    "throttle_deadband": 0.05
+  },
+  "reward": {
+    "lateral_error": 2.5,
+    "heading_error": 0.75,
+    "steer_delta": 0.2,
+    "throttle_delta": 0.1,
+    "forward_progress": 1.0,
+    "stall_penalty": 0.5,
+    "stall_progress_min": 0.25,
+    "termination": 25.0
+  },
+  "domain_randomization": {
+    "enabled": true,
+    "p_degrade": 0.5,
+    "level_range": [
+      0.2,
+      0.8
+    ]
+  },
+  "status": "interrupted",
+  "stopped_at_steps": 120833,
+  "stop_reason": "bounded 2-D seed-robustness replica: planned stop at ~120k. Regime replicates (no violent collapse; smooth band oscillation) but magnitude is strongly seed-dependent in 2-D: peak 270.9@47105 vs the 2024 run's 558.7@78k; recovering toward the peak at cutoff (242.8@111.6k)."
+}

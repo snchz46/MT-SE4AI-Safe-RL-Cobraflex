@@ -336,6 +336,91 @@ curves were opened to `R_min ≈ 0.86 m` (driven right-lane `R_min ≈ 0.97 m`,
 waypoints); regenerate the right lane with `scripts/offset_lane_centerline.py` and
 the Isaac mesh with `scripts/export_track_mesh.py`.
 
+### 4.8 D-43 to C-02 controlled-heading calibration (21.07.2026)
+
+A bounded Gazebo calibration used the real Lane Cam renderer, `CvLaneEstimator`,
+perception supervisor and canonical `cage/cage.yaml`; Gazebo ground truth was an
+offline oracle only. The 28-cell matrix separated seed 2024 calibration from
+seed 42 validation and covered straight, representative curve and the maximum
+`complex_b` curvature, 0.10/0.22 m/s, glare/motion blur, and controlled
+`+/-0.48 rad` spawn-heading injections. Evidence is under
+`experiments/sim/eval_gz2d/d43_c02_calibration_20260721T073151Z/`.
+
+**Result: BLOCKED.** The held-out centred band had 0 false C-02, 0 false C-05,
+0 road-edge contacts and maximum M-S1 0.0722 m. Nevertheless only 3 of 5 cells
+that actually crossed the physical 0.4363 rad heading boundary were detected;
+the positive-heading injections on the representative (`kappa = 0.516 1/m`) and
+maximum (`kappa = 1.031 1/m`) curves were missed by both C-02 and C-05. Safe
+and faulty `|epsi_cv|` overlap (safe maximum 0.25295 rad; fault minimum
+0.23104 rad; separation margin -0.02190 rad), so no scalar global threshold
+separates them. The centred CV-GT heading error also changes with curvature:
+mean -0.0016 rad on the straight, -0.1201 rad at 0.516 1/m and -0.1741 rad at
+1.031 1/m in the held-out split. This is not a stable renderer-wide offset.
+
+Therefore no Gazebo correction is accepted and the physical C-02 limit remains
+25 degrees. A curvature subtraction is still rejected because the controlled
+fault cells demonstrate the same masking mechanism described above. Before the
+posterior margin022 checkpoint may qualify, D-43 needs either (a) a heading
+estimator with an independently observable vehicle-vs-tangent quantity, validated
+on the same held-out injections, or (b) an explicit certified radius/curvature
+validity envelope whose violation raises `perception_invalid` and produces the
+C-05 controlled stop within SR-005/SR-008. The present evidence supports neither
+a correction nor a complete validity boundary, so the D-43 prerequisite remains
+fail-closed. GE4/G4 and all canonical cage thresholds are unchanged.
+
+### 4.9 Improved heading readout and dynamic held-out validation (21.07.2026)
+
+The §4.8 result was used as a failing baseline, not hidden by a threshold
+change. The estimator was changed behind an opt-in configuration switch:
+`joint_pair_quadratic` fits both selected markings simultaneously as
+
+```text
+Y_right(X) = a_right + b X + c X^2
+Y_left (X) = a_left  + b X + c X^2,
+```
+
+so lane width/lateral position stay in the two intercepts while the local
+vehicle-to-lane tangent `b` is observed jointly. This removes the legacy
+near-secant curvature subtraction. A global Gazebo measurement gain of `1.60`
+was then selected from calibration-only safe/fault separation. It multiplies
+the measured tangent; it does not change C-02's 25-degree physical limit and is
+not a function of curvature.
+
+The final 28-cell campaign improved the injector as well: all six `+/-0.48 rad`
+fault cells per split began nominally, reached the commanded speed, and received
+a calibration-only yaw impulse during motion. Runs continued after emergency so
+the controlled stop and lateral excursion were observable. The final evidence is
+`experiments/sim/eval_gz2d/d43_c02_calibration_20260721T082128Z/`.
+
+| Held-out metric (seed 42) | Result |
+| --- | ---: |
+| Cycles / centred safe cycles | 560 / 392 |
+| Real heading-fault cells detected | **6/6** |
+| False C-02 / C-05 in centred band | **0 / 0** |
+| Minimum pre-injection speed | 0.220 m/s |
+| Maximum detection delay | 0.10 s |
+| Controlled-stop upper bound | 0.10 s |
+| M-S1 / M-S2 | 0.03177 m / **0 cycles** |
+| Road-edge contacts | **0** |
+| Safe max / fault min `|epsi_cv|` | 0.30861 / 0.38299 rad |
+| Safe/fault separation | +0.07438 rad |
+
+**Decision: PASS, scoped to the hash-bound Gazebo Lane Cam + `complex_b`
+envelope through the most demanding driven-lane anchor (`|kappa_anchor| =
+1.031 1/m`; exact per-cycle local GT maximum 0.978 1/m).**
+The lowest fault read occurred at that maximum-curvature positive injection;
+the next read was 0.725 rad and C-02/C-05 fired within one 0.10 s cycle. The
+retained safe maximum remained 0.0405 rad below `theta_warning = 0.3491 rad`.
+Thus the correction maintains sensitivity to real positive and negative faults
+without adding false stops. Curves/renderers/cameras outside the recorded hashes
+remain uncertified; in particular no Isaac parameter is reused.
+
+The frozen estimator default remains `near_secant`, so historical GE4/G4
+artefacts are bit-identical. Only the untrained posterior margin022 contract
+opts into `joint_pair_quadratic` + `1.60`; its new checkpoint must still pass the
+checkpoint-bound nominal D-43 preflight before a campaign. No checkpoint exists
+yet, so this PASS qualifies the measurement interface, not a learned policy.
+
 ---
 
 ## 5. Camera geometry (`camera_geometry.py`)

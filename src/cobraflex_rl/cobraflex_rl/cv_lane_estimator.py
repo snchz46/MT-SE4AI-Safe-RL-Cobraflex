@@ -90,6 +90,21 @@ class CvLaneEstimatorConfig:
     # tracked to mm). Swept on the cv_ctrl_eval_20260618T182017Z apex frames:
     # 0.15 keeps |cv_epsi| ≤ 0.31, i.e. 0.13 rad under theta_max (0.4363).
     heading_window_m: float = 0.15
+    # Experimental Gazebo D-43/C-02 heading readout. ``near_secant`` is the
+    # frozen GE4 behaviour. ``joint_pair_quadratic`` fits both selected lane
+    # boundaries at once with separate intercepts but one shared tangent and
+    # curvature. Sharing the shape makes heading (the X=0 derivative)
+    # observable from both markings instead of correcting a measured secant by
+    # subtracting curvature afterwards. It remains opt-in so frozen GE4/G4
+    # configs stay bit-identical; the posterior Gazebo contract selects it after
+    # the held-out moving-fault PASS (docs/12 §4.9).
+    heading_fit_mode: str = "near_secant"
+    # Multiplicative calibration of the chosen heading readout. Default 1.0 is
+    # bit-identical. The Gazebo joint-fit experiment derives a conservative
+    # gain from calibration-only safe/fault separation and validates it on a
+    # held-out seed (d43_c02_calibration_20260721T082128Z); it does not change
+    # C-02's physical 25-degree threshold.
+    heading_gain: float = 1.0
     # Heading-bias correction (D-57, Isaac). The camera_geometry IPM extrinsics
     # (pitch 0.30 rad, height 0.077 m) are calibrated for the GAZEBO render; the
     # Isaac RTX camera reproduces the same URDF but its rendered lane geometry
@@ -175,6 +190,15 @@ class CvLaneEstimator:
         self.config = config or CvLaneEstimatorConfig()
         if self.config.far_distance_m <= self.config.near_distance_m:
             raise ValueError("far_distance_m must exceed near_distance_m")
+        if self.config.heading_fit_mode not in {
+            "near_secant", "joint_pair_quadratic",
+        }:
+            raise ValueError(
+                "heading_fit_mode must be 'near_secant' or "
+                "'joint_pair_quadratic'"
+            )
+        if not np.isfinite(self.config.heading_gain) or self.config.heading_gain <= 0.0:
+            raise ValueError("heading_gain must be finite and > 0")
         # Precompute the scan rows (image v) for the configured look-ahead band.
         v_near = self.camera.distance_to_row(self.config.near_distance_m)
         v_far = self.camera.distance_to_row(self.config.far_distance_m)
@@ -338,6 +362,40 @@ class CvLaneEstimator:
             return full_band_slope
         return float(np.mean(slopes))
 
+    @staticmethod
+    def _joint_pair_slope(right: dict, left: dict, fallback: float) -> float:
+        """Fit a common lane shape while keeping independent line offsets.
+
+        Model both selected markings as
+
+        ``Y_side(X) = a_side + b*X + c*X^2``.
+
+        The two intercepts absorb lane width and lateral offset; ``b`` is the
+        common tangent at the vehicle and ``c`` the common bend. This is not a
+        curvature subtraction: heading faults remain in ``b`` and are tested
+        directly by the controlled spawn-yaw cells. Return ``fallback`` if the
+        geometry cannot constrain all four coefficients.
+        """
+        design = []
+        values = []
+        for side, line in enumerate((right, left)):
+            for x, y in line["pts"]:
+                design.append(
+                    [1.0 if side == 0 else 0.0,
+                     1.0 if side == 1 else 0.0, x, x * x]
+                )
+                values.append(y)
+        if len(design) < 6:
+            return fallback
+        matrix = np.asarray(design, dtype=float)
+        if np.linalg.matrix_rank(matrix) < 4:
+            return fallback
+        coeffs, *_ = np.linalg.lstsq(
+            matrix, np.asarray(values, dtype=float), rcond=None
+        )
+        slope = float(coeffs[2])
+        return slope if np.isfinite(slope) else fallback
+
     # ------------------------------------------------------------------ main
     def estimate(self, frame_bgr: np.ndarray) -> CvLaneEstimate:
         """One frame → lane estimate (``ok=False`` with a reason when no lane found)."""
@@ -402,12 +460,15 @@ class CvLaneEstimator:
         # Heading from a curvature-corrected near-field refit (slope at the
         # vehicle) rather than the full-band slope c1, which a tight curve fit
         # biases toward the curve direction.
-        c1_heading = self._near_field_slope(right, left, c1)
+        if cfg.heading_fit_mode == "joint_pair_quadratic":
+            c1_heading = self._joint_pair_slope(right, left, c1)
+        else:
+            c1_heading = self._near_field_slope(right, left, c1)
         # Subtract the calibrated heading bias (D-57, Isaac renderer; 0.0 on
         # Gazebo → unchanged) so a straight-ahead vehicle reads epsi ≈ 0.
         heading = float(np.arctan(c1_heading)) - cfg.heading_bias_rad
         ey = -float(c0)
-        epsi = -heading
+        epsi = -cfg.heading_gain * heading
         lane_width = float((left["c0"] - right["c0"]) * np.cos(heading))
 
         pair_pts = right["pts"] + left["pts"]
@@ -463,7 +524,7 @@ class CvLaneEstimator:
             )
         side = 1.0 if best["c0"] >= 0 else -1.0  # +1: left line, -1: right line
         center0 = best["c0"] - side * half
-        heading = float(np.arctan(best["c1"]))
+        heading = float(np.arctan(best["c1"])) - cfg.heading_bias_rad
         xs = np.array([p[0] for p in best["pts"]])
         curvature = (
             float(2.0 * best["c2"])
@@ -476,7 +537,7 @@ class CvLaneEstimator:
         return CvLaneEstimate(
             ok=True,
             ey=-float(center0),
-            epsi=-heading,
+            epsi=-cfg.heading_gain * heading,
             lane_width=float(self._lane_width_ema),
             curvature=curvature,
             confidence=float(confidence),

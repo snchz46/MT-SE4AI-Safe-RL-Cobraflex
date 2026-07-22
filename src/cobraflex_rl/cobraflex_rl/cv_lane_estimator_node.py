@@ -47,6 +47,7 @@ from std_msgs.msg import Bool, Float64MultiArray
 
 from .cage_perception import CagePerceptionSupervisor
 from .camera_pipeline import decode_image
+from .cv_lane_estimator import CvLaneEstimator, CvLaneEstimatorConfig
 
 
 class CvLaneEstimatorNode(Node):
@@ -60,8 +61,14 @@ class CvLaneEstimatorNode(Node):
         self.declare_parameter("perception_invalid_topic", "/perception_invalid")
         self.declare_parameter("publish_rate_hz", 10.0)
         self.declare_parameter("road_width_m", 0.52)
+        self.declare_parameter("heading_fit_mode", "near_secant")
+        self.declare_parameter("heading_gain", 1.0)
 
-        self._supervisor = CagePerceptionSupervisor()
+        estimator = CvLaneEstimator(config=CvLaneEstimatorConfig(
+            heading_fit_mode=str(self.get_parameter("heading_fit_mode").value),
+            heading_gain=float(self.get_parameter("heading_gain").value),
+        ))
+        self._supervisor = CagePerceptionSupervisor(estimator=estimator)
         self._image_msg: Optional[Image] = None
         self._speed = 0.0
         self._road_width = float(self.get_parameter("road_width_m").value)
@@ -87,7 +94,9 @@ class CvLaneEstimatorNode(Node):
         rate = float(self.get_parameter("publish_rate_hz").value or 10.0)
         self.create_timer(1.0 / rate, self._tick)
         self.get_logger().info(
-            "cv_lane_estimator_node up (D-43 cage perception source)"
+            "cv_lane_estimator_node up (D-43 cage perception source; "
+            f"heading_fit_mode={estimator.config.heading_fit_mode}, "
+            f"heading_gain={estimator.config.heading_gain:.3f})"
         )
 
     def _on_image(self, msg: Image) -> None:

@@ -1,0 +1,89 @@
+total_timesteps: 1000000
+learning_rate: 0.0003
+lr_schedule: linear
+target_kl: 0.5
+gamma: 0.99
+gae_lambda: 0.95
+n_steps: 1024
+batch_size: 64
+n_epochs: 10
+clip_range: 0.2
+ent_coef: 0.005
+vf_coef: 0.5
+max_grad_norm: 0.5
+normalize_reward: true
+clip_range_vf: 0.2
+clip_reward: 10.0
+device: auto
+service_timeout_ms: 3500
+seed: 2024
+max_episode_steps: 1024
+control_dt: 0.1
+fixed_speed: 0.2
+progress_bounded_tracking: false
+viz: true
+checkpoint_freq: 25000
+model_path: cobraflex_ppo_newcam_lane
+sim_real_time_factor: 1
+policy: CnnPolicy
+observation:
+  type: camera
+  camera:
+    topic: /camera/image_raw_lane
+    width: 84
+    height: 84
+    grayscale: true
+    frame_stack: 4
+domain_randomization:
+  enabled: true
+  p_degrade: 0.5
+  level_range:
+  - 0.2
+  - 0.8
+dynamics_randomization:
+  enabled: true
+  friction_range:
+  - 0.04
+  - 0.07
+  mass_scale_range:
+  - 0.85
+  - 1.15
+  yaw_scale_range:
+  - 0.8
+  - 1.2
+  latency_steps_range:
+  - 0
+  - 2
+scene_randomization:
+  enabled: true
+  dome_intensity_scale:
+  - 0.6
+  - 1.4
+  sun_intensity_scale:
+  - 0.5
+  - 1.5
+  light_tint: 0.1
+  asphalt_jitter: 0.08
+  line_jitter: 0.15
+  grass_jitter: 0.1
+reward:
+  lateral_error: 2.5
+  heading_error: 0.75
+  steer_delta: 0.2
+  forward_progress: 1.0
+  termination: 25.0
+cage:
+  enabled: true
+  mode: enforcement
+  yaml_path: ''
+  lookahead_segments: 5
+  throttle_nominal: 0.5
+  yaw_gain: 0.8
+  min_speed_scale: 0.35
+  perception_heading_fit_mode: joint_pair_quadratic
+  perception_heading_gain: 1.6
+spawn_perturbation:
+  enabled: true
+  heading_rad: 0.15
+  lateral_m: 0.05
+  random_start_s: false

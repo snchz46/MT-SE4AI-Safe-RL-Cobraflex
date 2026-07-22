@@ -1,0 +1,41 @@
+id: CAL-D43-C02-VAL_02
+category: calibration_only
+track:
+  world: lane_following_oval_complex.world
+  centerline: complex_b_right_lane_centerline.yaml
+  start_s_m: 1.4844354941879767
+commanded_speed_mps: 0.22
+description: Non-verdict D-43/C-02 calibration cell.
+initial_conditions:
+  pose:
+    x: 0.0
+    y: 0.0
+    theta_deg: 0.0
+  speed_mps: 0.0
+  randomisation:
+    lateral_offset_uniform_m:
+    - 0.0
+    - 0.0
+    heading_uniform_deg:
+    - 0.0
+    - 0.0
+perturbations: none
+termination:
+  type: time_or_event
+  timeout_s: 4.0
+  events:
+  - lane_exit
+  - emergency_stop
+metrics_primary:
+- M-S1
+- M-S2
+metrics_secondary: []
+pass_criterion_per_run: calibration_only
+pass_criterion_per_scenario: calibration_only
+references_SR:
+- SR-002
+- SR-005
+- SR-008
+n_runs_recommended:
+  enforcement: 1
+  monitoring: 0

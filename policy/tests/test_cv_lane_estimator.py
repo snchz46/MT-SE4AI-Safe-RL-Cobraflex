@@ -257,6 +257,46 @@ def test_near_field_slope_disabled_falls_back_to_full_band():
     assert est._near_field_slope(right, left, 0.345) == 0.345
 
 
+def test_joint_pair_fit_separates_heading_from_shared_curvature(cam):
+    """The candidate readout recovers heading without subtracting curvature."""
+    cfg = CvLaneEstimatorConfig(heading_fit_mode="joint_pair_quadratic")
+    estimator = CvLaneEstimator(cam, cfg)
+    for yaw in (-0.48, 0.0, 0.48):
+        estimate = estimator.estimate(
+            render_lane(cam, centered_lane(yaw=yaw, kappa=1.0))
+        )
+        assert estimate.ok, estimate.reason
+        assert estimate.epsi == pytest.approx(yaw, abs=0.06)
+
+
+def test_joint_pair_fit_mode_is_explicit_and_validated():
+    with pytest.raises(ValueError, match="heading_fit_mode"):
+        CvLaneEstimator(config=CvLaneEstimatorConfig(heading_fit_mode="unknown"))
+
+
+def test_heading_gain_preserves_sign_and_amplifies_real_heading(cam):
+    base = CvLaneEstimator(
+        cam, CvLaneEstimatorConfig(heading_fit_mode="joint_pair_quadratic")
+    )
+    gained = CvLaneEstimator(
+        cam,
+        CvLaneEstimatorConfig(
+            heading_fit_mode="joint_pair_quadratic", heading_gain=1.75,
+        ),
+    )
+    for yaw in (-0.30, 0.30):
+        image = render_lane(cam, centered_lane(yaw=yaw, kappa=1.0))
+        assert gained.estimate(image).epsi == pytest.approx(
+            1.75 * base.estimate(image).epsi, abs=1e-6
+        )
+
+
+@pytest.mark.parametrize("gain", [0.0, -1.0, float("inf")])
+def test_heading_gain_must_be_positive_and_finite(gain):
+    with pytest.raises(ValueError, match="heading_gain"):
+        CvLaneEstimator(config=CvLaneEstimatorConfig(heading_gain=gain))
+
+
 # --------------------------------------------------------------------------
 # Pure-pursuit controller (cobraflex_rl.cv_lane_controller). Shares this file's
 # synthetic-frame fixtures; verifies the look-ahead law turns the right way and

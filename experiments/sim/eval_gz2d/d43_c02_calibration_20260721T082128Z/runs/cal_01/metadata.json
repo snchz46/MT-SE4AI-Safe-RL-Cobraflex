@@ -1,0 +1,24 @@
+{
+  "run_id": "cal_01",
+  "scenario_id": "CAL-D43-C02-CAL_01",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-07-21T08:21:52.802685+00:00",
+  "duration_s": 4.0,
+  "git_commit": "b223f78091a1d4a17e4a6b1957fb3592e62642c6",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "controller": "cv_lane_controller (CvLaneEstimator D-43 + pure-pursuit look-ahead)",
+  "controller_params": {
+    "look_ahead_m": 0.4,
+    "pursuit_gain": 1.0,
+    "max_angular_z": 0.9
+  },
+  "controller_source_hash": "fdfa938caea82c5e87f891e9f95596270749912a66b4c94ecadfc95d49c8ebff",
+  "centerline_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "scenario_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/experiments/sim/eval_gz2d/d43_c02_calibration_20260721T082128Z/calibration_scenarios/cal_01.yaml",
+  "scenario_yaml_hash": "816389857ead1d5128bda322d527cf5653da0e2d9c4a59d7f38d3fc3f72c3a5a",
+  "rep": 2024,
+  "seed": 2024,
+  "platform": "sim",
+  "status": "completed"
+}

@@ -9,7 +9,7 @@ baseline (train_ppo_camera_2d.yaml, D-49..D-58) was launched:
      jitter) AND ``random_start_s`` (the D-58 curriculum lever). The latter is
      read by the env independently of ``enabled``, so a nominal eval of the 2-D
      config would otherwise spawn at a random arc-length (non-reproducible).
-  2. the per-step record + CSV must carry the throttle channels (the cage's
+  2. the per-step record + CSV must carry simulator time and throttle channels (the cage's
      longitudinal arbitration is the 2-D run's new SR-CL / SR-009 evidence),
      staying 0-valued/backward-compatible on the frozen 1-D path.
 """
@@ -86,3 +86,14 @@ def test_cage_status_csv_has_throttle_columns(tmp_path):
     assert {"raw_throttle", "safe_throttle", "throttle_correction"} <= set(rows[0])
     assert float(rows[0]["raw_throttle"]) == 0.9
     assert float(rows[0]["throttle_correction"]) == -0.4
+
+
+def test_cage_status_csv_carries_simulator_timestamp(tmp_path):
+    rec = _record_from_info(
+        episode=0, step=7, info={"sim_time_s": 12.345}
+    )
+    out = tmp_path / "cage_status.csv"
+    _write_cage_status_csv(out, [rec])
+    with out.open(newline="", encoding="utf-8") as handle:
+        row = next(csv.DictReader(handle))
+    assert float(row["sim_time_s"]) == 12.345

@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
@@ -161,6 +162,7 @@ def _record_from_info(episode: int, step: int, info: Dict[str, Any]) -> Dict[str
     return {
         "episode": episode,
         "step": step,
+        "sim_time_s": float(info.get("sim_time_s", math.nan)),
         # World pose (x, y) → §7.5 trajectory overlay (RL vs PD on the oval);
         # ey/epsi/s are the Frenet/cage state at the same step.
         "x": float(info.get("x", 0.0)),
@@ -208,7 +210,7 @@ def _record_from_info(episode: int, step: int, info: Dict[str, Any]) -> Dict[str
 def _write_cage_status_csv(path: Path, records: List[Dict[str, Any]]) -> None:
     """Write the per-step trace CSV (one row per control cycle)."""
     fields = [
-        "episode", "step", "x", "y", "yaw", "ey", "epsi", "s", "speed",
+        "episode", "step", "sim_time_s", "x", "y", "yaw", "ey", "epsi", "s", "speed",
         "raw_steer", "safe_steer", "steer_correction",
         "raw_throttle", "safe_throttle", "throttle_correction",
         "interventions", "emergency",
@@ -222,7 +224,7 @@ def _write_cage_status_csv(path: Path, records: List[Dict[str, Any]]) -> None:
         writer.writerow(fields)
         for r in records:
             writer.writerow([
-                r["episode"], r["step"],
+                r["episode"], r["step"], f"{r.get('sim_time_s', math.nan):.6f}",
                 f"{r['x']:.6f}", f"{r['y']:.6f}", f"{r['yaw']:.6f}",
                 f"{r['ey']:.6f}", f"{r['epsi']:.6f}", f"{r['s']:.6f}",
                 f"{r['speed']:.6f}", f"{r['raw_steer']:.6f}",

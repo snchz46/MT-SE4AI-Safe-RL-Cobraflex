@@ -31,6 +31,7 @@ Verification and synchronisation utilities for the repository.
 
 - `validate_cv_estimator.py` — GE2 oracle validation of the cage's deterministic CV lane-estimator (D-43) against ground truth under controlled degradations (the evidence behind the glare 0.3/0.6 levels used by SC-PERT-04/12/13).
 - `d43_preflight.py` — offline campaign-qualification gate over one or more nominal `cage_status.csv` traces. It compares CV vs Gazebo-oracle state in a centred band, reports the separate lateral under-read residual, binds inputs to sibling run metadata/checkpoint hashes, and exits 0 `PASS`, 2 `BLOCKED`, or 1 `INVALID`. Example: `python tools/d43_preflight.py <run-dir> --output <report.json>`.
+- `calibrate_d43_c02.py` — bounded Gazebo calibration of the D-43 heading interface against canonical C-02. It builds disjoint seed-2024/seed-42 calibration-validation cells, injects real heading faults during motion through a calibration-only eval hook, logs GT solely as an offline oracle, and writes raw CSV, hash-bound JSON, Markdown/PNG evidence. Default estimator settings reproduce the frozen baseline; select the qualified Gazebo candidate with `--heading-fit-mode joint_pair_quadratic --heading-gain 1.60`. Run the 28-cell matrix with `python tools/calibrate_d43_c02.py --collect --steps 40 --injection-step 12 --heading-fit-mode joint_pair_quadratic --heading-gain 1.60`.
 - `capture_camera_frames.py` — grabs native camera frames from a running sim (calibration / estimator debugging).
 - `apply_calibration.py` — applies M-1/M-2 calibration results to config parameters.
 

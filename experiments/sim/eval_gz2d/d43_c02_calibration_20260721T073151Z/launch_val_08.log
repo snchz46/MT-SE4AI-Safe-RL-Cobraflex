@@ -1,0 +1,126 @@
+[INFO] [launch]: All log files can be found below /home/samuel/.ros/log/2026-07-21-09-36-54-487215-samubuntu-23224
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [robot_state_publisher-1]: process started with pid [23228]
+[INFO] [gazebo-2]: process started with pid [23229]
+[INFO] [parameter_bridge-3]: process started with pid [23230]
+[INFO] [create-4]: process started with pid [23231]
+[INFO] [ekf_node-5]: process started with pid [23233]
+[INFO] [eval_cv_controller-6]: process started with pid [23234]
+[create-4] [INFO] [1784619414.710732646] [ros_gz_sim]: Requesting list of world names.
+[ekf_node-5] [INFO] [1784619414.712205413] [ekf_filter_node]: Waiting for clock to start...
+[robot_state_publisher-1] Error:   Could not parse visual element for Link [base_footprint]
+[robot_state_publisher-1]          at line 453 in ./urdf_parser/src/link.cpp
+[robot_state_publisher-1] [INFO] [1784619414.713580794] [robot_state_publisher]: Robot initialized
+[create-4] [INFO] [1784619415.077531287] [ros_gz_sim]: Waiting messages on topic [robot_description].
+[create-4] [INFO] [1784619415.088479125] [ros_gz_sim]: Entity creation successful.
+[INFO] [create-4]: process has finished cleanly [pid 23231]
+[parameter_bridge-3] [INFO] [1784619415.718682116] [ros_gz_bridge]: Creating GZ->ROS Bridge: [clock (gz.msgs.Clock) -> clock (rosgraph_msgs/msg/Clock)] (Lazy 0)
+[parameter_bridge-3] [INFO] [1784619415.719636699] [ros_gz_bridge]: Creating GZ->ROS Bridge: [joint_states (gz.msgs.Model) -> joint_states (sensor_msgs/msg/JointState)] (Lazy 0)
+[parameter_bridge-3] [INFO] [1784619415.720981652] [ros_gz_bridge]: Creating GZ->ROS Bridge: [odom (gz.msgs.Odometry) -> odom (nav_msgs/msg/Odometry)] (Lazy 0)
+[parameter_bridge-3] [INFO] [1784619415.721744361] [ros_gz_bridge]: Creating GZ->ROS Bridge: [odom_truth (gz.msgs.Odometry) -> odom_truth (nav_msgs/msg/Odometry)] (Lazy 0)
+[parameter_bridge-3] [INFO] [1784619415.721913061] [ros_gz_bridge]: Creating GZ->ROS Bridge: [tf (gz.msgs.Pose_V) -> tf (tf2_msgs/msg/TFMessage)] (Lazy 0)
+[parameter_bridge-3] [INFO] [1784619415.722561212] [ros_gz_bridge]: Creating ROS->GZ Bridge: [cmd_vel (geometry_msgs/msg/Twist) -> cmd_vel (gz.msgs.Twist)] (Lazy 0)
+[parameter_bridge-3] [INFO] [1784619415.722964909] [ros_gz_bridge]: Creating GZ->ROS Bridge: [imu (gz.msgs.IMU) -> imu (sensor_msgs/msg/Imu)] (Lazy 0)
+[parameter_bridge-3] [INFO] [1784619415.723188854] [ros_gz_bridge]: Creating GZ->ROS Bridge: [scan (gz.msgs.LaserScan) -> scan (sensor_msgs/msg/LaserScan)] (Lazy 0)
+[parameter_bridge-3] [INFO] [1784619415.723433498] [ros_gz_bridge]: Creating GZ->ROS Bridge: [camera/left/camera_info (gz.msgs.CameraInfo) -> camera/left/camera_info (sensor_msgs/msg/CameraInfo)] (Lazy 0)
+[parameter_bridge-3] [INFO] [1784619415.723687811] [ros_gz_bridge]: Creating GZ->ROS Bridge: [camera/left/image_raw (gz.msgs.Image) -> camera/left/image_raw (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-3] [INFO] [1784619415.723880227] [ros_gz_bridge]: Creating GZ->ROS Bridge: [camera/right/camera_info (gz.msgs.CameraInfo) -> camera/right/camera_info (sensor_msgs/msg/CameraInfo)] (Lazy 0)
+[parameter_bridge-3] [INFO] [1784619415.724017608] [ros_gz_bridge]: Creating GZ->ROS Bridge: [camera/right/image_raw (gz.msgs.Image) -> camera/right/image_raw (sensor_msgs/msg/Image)] (Lazy 0)
+[parameter_bridge-3] [INFO] [1784619415.724145019] [ros_gz_bridge]: Creating GZ->ROS Bridge: [camera/camera_info (gz.msgs.CameraInfo) -> camera/camera_info (sensor_msgs/msg/CameraInfo)] (Lazy 0)
+[parameter_bridge-3] [INFO] [1784619415.724272071] [ros_gz_bridge]: Creating GZ->ROS Bridge: [camera/image_raw_lane (gz.msgs.Image) -> camera/image_raw_lane (sensor_msgs/msg/Image)] (Lazy 0)
+[gazebo-2] Error:   Could not parse visual element for Link [base_footprint]
+[gazebo-2]          at line 453 in ./urdf_parser/src/link.cpp
+[gazebo-2] [1;33mWarning [Utils.cc:132][0m [/sdf/model[@name="cobraflex_robot"]/link[@name="base_footprint"]/sensor[@name="ZEDm IMU"]/gz_frame_id:<urdf-string>:L0]: XML Element[gz_frame_id], child of element[sensor], not defined in SDF. Copying[gz_frame_id] as children of [sensor].
+[gazebo-2] [1;33mWarning [Utils.cc:132][0m [/sdf/model[@name="cobraflex_robot"]/link[@name="base_footprint"]/sensor[@name="RPLiDAR"]/gz_frame_id:<urdf-string>:L0]: XML Element[gz_frame_id], child of element[sensor], not defined in SDF. Copying[gz_frame_id] as children of [sensor].
+[gazebo-2] [1;33mWarning [Utils.cc:132][0m [/sdf/model[@name="cobraflex_robot"]/link[@name="base_footprint"]/sensor[@name="RPLiDAR"]/lidar/frame_id:<urdf-string>:L0]: XML Element[frame_id], child of element[lidar], not defined in SDF. Copying[frame_id] as children of [lidar].
+[ekf_node-5] [INFO] [1784619416.799537505] [ekf_filter_node]: Detected a initial_estimate_covariance parameter with length 15. Assuming diagonal values specified.
+[gazebo-2] libEGL warning: pci id for fd 67: 10de:2d05, driver (null)
+[gazebo-2] 
+[gazebo-2] pci id for fd 68: 10de:2d05, driver (null)
+[gazebo-2] pci id for fd 69: 10de:2d05, driver (null)
+[gazebo-2] libEGL warning: egl: failed to create dri2 screen
+[gazebo-2] libEGL warning: pci id for fd 67: 10de:2d05, driver (null)
+[gazebo-2] 
+[gazebo-2] pci id for fd 68: 10de:2d05, driver (null)
+[gazebo-2] pci id for fd 69: 10de:2d05, driver (null)
+[gazebo-2] libEGL warning: egl: failed to create dri2 screen
+[gazebo-2] libEGL warning: pci id for fd 67: 10de:2d05, driver (null)
+[gazebo-2] 
+[parameter_bridge-3] [INFO] [1784619419.093351752] [ros_gz_bridge]: Passing message from ROS geometry_msgs/msg/Twist to Gazebo gz.msgs.Twist (showing msg only once per type)
+[eval_cv_controller-6] Episode 1
+[eval_cv_controller-6] step=0001 ey=0.0000 epsi=0.0075 act=+0.109 lane=Y dbg={'ok': True, 'ey': 0.0052, 'epsi': -0.2406, 'y_l': 0.0921, 'kappa_cmd': 1.093, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0002 ey=0.0002 epsi=0.0135 act=+0.108 lane=Y dbg={'ok': True, 'ey': 0.0058, 'epsi': -0.2364, 'y_l': 0.0905, 'kappa_cmd': 1.076, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0003 ey=0.0003 epsi=0.0194 act=+0.108 lane=Y dbg={'ok': True, 'ey': 0.0081, 'epsi': -0.2359, 'y_l': 0.0906, 'kappa_cmd': 1.077, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0004 ey=0.0005 epsi=0.0255 act=+0.109 lane=Y dbg={'ok': True, 'ey': 0.008, 'epsi': -0.2339, 'y_l': 0.0916, 'kappa_cmd': 1.088, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0005 ey=0.0008 epsi=0.0316 act=+0.110 lane=Y dbg={'ok': True, 'ey': 0.0059, 'epsi': -0.2359, 'y_l': 0.0923, 'kappa_cmd': 1.095, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0006 ey=0.0009 epsi=-0.0189 act=+0.111 lane=Y dbg={'ok': True, 'ey': 0.0051, 'epsi': -0.2343, 'y_l': 0.0935, 'kappa_cmd': 1.108, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0007 ey=0.0007 epsi=-0.0126 act=+0.112 lane=Y dbg={'ok': True, 'ey': 0.0038, 'epsi': -0.2463, 'y_l': 0.0942, 'kappa_cmd': 1.116, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0008 ey=0.0005 epsi=-0.0073 act=+0.112 lane=Y dbg={'ok': True, 'ey': 0.0046, 'epsi': -0.2492, 'y_l': 0.095, 'kappa_cmd': 1.124, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0009 ey=0.0004 epsi=-0.0009 act=+0.113 lane=Y dbg={'ok': True, 'ey': 0.0036, 'epsi': -0.2503, 'y_l': 0.0958, 'kappa_cmd': 1.132, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0010 ey=0.0003 epsi=0.0045 act=+0.114 lane=Y dbg={'ok': True, 'ey': 0.0028, 'epsi': -0.2529, 'y_l': 0.0964, 'kappa_cmd': 1.139, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0011 ey=0.0003 epsi=0.0099 act=+0.114 lane=Y dbg={'ok': True, 'ey': 0.0026, 'epsi': -0.2518, 'y_l': 0.0966, 'kappa_cmd': 1.141, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0012 ey=-0.0003 epsi=-0.0354 act=+0.115 lane=Y dbg={'ok': True, 'ey': 0.0029, 'epsi': -0.2495, 'y_l': 0.0971, 'kappa_cmd': 1.147, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0013 ey=-0.0009 epsi=-0.0287 act=+0.116 lane=Y dbg={'ok': True, 'ey': 0.0016, 'epsi': -0.2472, 'y_l': 0.0981, 'kappa_cmd': 1.156, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0014 ey=-0.0012 epsi=-0.0231 act=+0.116 lane=Y dbg={'ok': True, 'ey': 0.0007, 'epsi': -0.2489, 'y_l': 0.0983, 'kappa_cmd': 1.159, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0015 ey=-0.0016 epsi=-0.0175 act=+0.116 lane=Y dbg={'ok': True, 'ey': -0.0027, 'epsi': -0.2418, 'y_l': 0.0986, 'kappa_cmd': 1.162, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0016 ey=-0.0018 epsi=-0.0118 act=+0.117 lane=Y dbg={'ok': True, 'ey': -0.0028, 'epsi': -0.2425, 'y_l': 0.0989, 'kappa_cmd': 1.165, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0017 ey=-0.0026 epsi=-0.0508 act=+0.117 lane=Y dbg={'ok': True, 'ey': -0.0045, 'epsi': -0.2362, 'y_l': 0.0993, 'kappa_cmd': 1.169, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0018 ey=-0.0033 epsi=-0.0450 act=+0.117 lane=Y dbg={'ok': True, 'ey': -0.0048, 'epsi': -0.2369, 'y_l': 0.0995, 'kappa_cmd': 1.172, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0019 ey=-0.0040 epsi=-0.0392 act=+0.117 lane=Y dbg={'ok': True, 'ey': -0.0059, 'epsi': -0.2367, 'y_l': 0.0997, 'kappa_cmd': 1.174, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0020 ey=-0.0045 epsi=-0.0334 act=+0.118 lane=Y dbg={'ok': True, 'ey': -0.0043, 'epsi': -0.2367, 'y_l': 0.1002, 'kappa_cmd': 1.179, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0021 ey=-0.0050 epsi=-0.0276 act=+0.118 lane=Y dbg={'ok': True, 'ey': -0.0049, 'epsi': -0.2384, 'y_l': 0.1004, 'kappa_cmd': 1.18, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0022 ey=-0.0057 epsi=-0.0631 act=+0.118 lane=Y dbg={'ok': True, 'ey': -0.0061, 'epsi': -0.2378, 'y_l': 0.1001, 'kappa_cmd': 1.177, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0023 ey=-0.0066 epsi=-0.0561 act=+0.118 lane=Y dbg={'ok': True, 'ey': -0.0071, 'epsi': -0.2375, 'y_l': 0.1002, 'kappa_cmd': 1.178, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0024 ey=-0.0074 epsi=-0.0501 act=+0.119 lane=Y dbg={'ok': True, 'ey': -0.0068, 'epsi': -0.2388, 'y_l': 0.101, 'kappa_cmd': 1.186, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0025 ey=-0.0081 epsi=-0.0441 act=+0.118 lane=Y dbg={'ok': True, 'ey': -0.0082, 'epsi': -0.2332, 'y_l': 0.1007, 'kappa_cmd': 1.183, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0026 ey=-0.0087 epsi=-0.0382 act=+0.118 lane=Y dbg={'ok': True, 'ey': -0.0103, 'epsi': -0.2225, 'y_l': 0.1004, 'kappa_cmd': 1.18, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0027 ey=-0.0095 epsi=-0.0664 act=+0.118 lane=Y dbg={'ok': True, 'ey': -0.011, 'epsi': -0.2295, 'y_l': 0.1005, 'kappa_cmd': 1.181, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0028 ey=-0.0103 epsi=-0.0603 act=+0.118 lane=Y dbg={'ok': True, 'ey': -0.011, 'epsi': -0.2295, 'y_l': 0.1005, 'kappa_cmd': 1.181, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0029 ey=-0.0110 epsi=-0.0543 act=+0.117 lane=Y dbg={'ok': True, 'ey': -0.0139, 'epsi': -0.2192, 'y_l': 0.0998, 'kappa_cmd': 1.175, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0030 ey=-0.0116 epsi=-0.0483 act=+0.117 lane=Y dbg={'ok': True, 'ey': -0.0142, 'epsi': -0.2196, 'y_l': 0.0998, 'kappa_cmd': 1.174, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0031 ey=-0.0124 epsi=-0.0410 act=+0.117 lane=Y dbg={'ok': True, 'ey': -0.0154, 'epsi': -0.2169, 'y_l': 0.0994, 'kappa_cmd': 1.17, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0032 ey=-0.0132 epsi=-0.0636 act=+0.117 lane=Y dbg={'ok': True, 'ey': -0.0155, 'epsi': -0.2141, 'y_l': 0.0995, 'kappa_cmd': 1.171, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0033 ey=-0.0140 epsi=-0.0575 act=+0.118 lane=Y dbg={'ok': True, 'ey': -0.0125, 'epsi': -0.2162, 'y_l': 0.0999, 'kappa_cmd': 1.175, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0034 ey=-0.0149 epsi=-0.0502 act=+0.116 lane=Y dbg={'ok': True, 'ey': -0.0156, 'epsi': -0.2121, 'y_l': 0.0989, 'kappa_cmd': 1.165, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0035 ey=-0.0157 epsi=-0.0428 act=+0.116 lane=Y dbg={'ok': True, 'ey': -0.0168, 'epsi': -0.2104, 'y_l': 0.0984, 'kappa_cmd': 1.16, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0036 ey=-0.0164 epsi=-0.0355 act=+0.116 lane=Y dbg={'ok': True, 'ey': -0.0172, 'epsi': -0.2005, 'y_l': 0.0981, 'kappa_cmd': 1.157, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0037 ey=-0.0173 epsi=-0.0558 act=+0.116 lane=Y dbg={'ok': True, 'ey': -0.0165, 'epsi': -0.2043, 'y_l': 0.0984, 'kappa_cmd': 1.159, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0038 ey=-0.0182 epsi=-0.0484 act=+0.115 lane=Y dbg={'ok': True, 'ey': -0.0191, 'epsi': -0.1969, 'y_l': 0.0974, 'kappa_cmd': 1.149, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0039 ey=-0.0189 epsi=-0.0423 act=+0.114 lane=Y dbg={'ok': True, 'ey': -0.0207, 'epsi': -0.1955, 'y_l': 0.0966, 'kappa_cmd': 1.141, 'nL': 2} interv=[]
+[eval_cv_controller-6] step=0040 ey=-0.0196 epsi=-0.0350 act=+0.114 lane=Y dbg={'ok': True, 'ey': -0.021, 'epsi': -0.1986, 'y_l': 0.0965, 'kappa_cmd': 1.14, 'nL': 2} interv=[]
+[eval_cv_controller-6] 
+[eval_cv_controller-6] ===== §7.5 evaluation summary (RL + cage) =====
+[eval_cv_controller-6]   episodes / steps    : 1 / 40
+[eval_cv_controller-6]   completed laps      : 0.02
+[eval_cv_controller-6]   cage emergencies    : 0 steps
+[eval_cv_controller-6]   cage interventions  : 0.000% of steps ({})
+[eval_cv_controller-6]   mean ey / |ey|      : -0.0065 / 0.0067 m
+[eval_cv_controller-6]   mean |epsi|         : 0.0354 rad
+[eval_cv_controller-6]   duration            : 4.0 s
+[eval_cv_controller-6] ===============================================
+[eval_cv_controller-6] 
+[eval_cv_controller-6]   no-lane (CV miss)   : 0 steps (0.00%)
+[eval_cv_controller-6] 
+[eval_cv_controller-6] ===== CAL-D43-C02-VAL_08 per-run verdict: INDETERMINATE =====
+[eval_cv_controller-6]   criterion: calibration_only
+[eval_cv_controller-6]    [n/a ] calibration_only  (lhs=None)
+[eval_cv_controller-6]   termination='truncated'  max_excursion=0.019593058874744527 m  road_edge_contact=False
+[eval_cv_controller-6]   note: unparseable clause: 'calibration_only'
+[eval_cv_controller-6] ===============================================
+[eval_cv_controller-6] 
+[eval_cv_controller-6] Wrote evaluation run to /media/samuel/Fast_SSD/SE4AI/thesis_repo/experiments/sim/eval_gz2d/d43_c02_calibration_20260721T073151Z/runs/val_08
+[INFO] [eval_cv_controller-6]: process has finished cleanly [pid 23234]
+[INFO] [ekf_node-5]: sending signal 'SIGINT' to process[ekf_node-5]
+[INFO] [parameter_bridge-3]: sending signal 'SIGINT' to process[parameter_bridge-3]
+[INFO] [gazebo-2]: sending signal 'SIGINT' to process[gazebo-2]
+[INFO] [robot_state_publisher-1]: sending signal 'SIGINT' to process[robot_state_publisher-1]
+[ekf_node-5] [INFO] [1784619424.403561334] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[parameter_bridge-3] [INFO] [1784619424.403794236] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[robot_state_publisher-1] [INFO] [1784619424.404160692] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[INFO] [robot_state_publisher-1]: process has finished cleanly [pid 23228]
+[INFO] [parameter_bridge-3]: process has finished cleanly [pid 23230]
+[INFO] [ekf_node-5]: process has finished cleanly [pid 23233]
+[ERROR] [gazebo-2]: process[gazebo-2] failed to terminate '5' seconds after receiving 'SIGINT', escalating to 'SIGTERM'
+[INFO] [gazebo-2]: sending signal 'SIGTERM' to process[gazebo-2]
+[ERROR] [gazebo-2]: process has died [pid 23229, exit code -15, cmd 'ruby /opt/ros/jazzy/opt/gz_tools_vendor/bin/gz sim -r -s -v1 /media/samuel/Fast_SSD/SE4AI/thesis_repo/install/cobraflex/share/cobraflex/worlds/lane_following_oval_complex.world --force-version 8'].
+[INFO] [launch]: process[gazebo-2] was required: shutting down launched system

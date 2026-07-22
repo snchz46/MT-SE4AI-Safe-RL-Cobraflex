@@ -2680,6 +2680,26 @@ input bound to that exact checkpoint **and train-config hash**. `run_campaign.py
 that provenance before orphan reaping/Gazebo startup and records the matched report/input in
 `campaign_report.json`; unrelated `PASS` inputs cannot authorise another policy. Cites the derived reports under
 `experiments/sim/eval_gz2d/`.
+
+**D-43 heading-interface follow-up (21.07.2026).** The original near-secant
+readout failed the controlled-heading baseline (3/5 held-out real faults; safe/fault
+overlap), so neither C-02 nor its threshold was relaxed. An opt-in estimator
+candidate instead fits the two selected lane boundaries jointly with separate
+intercepts and a shared quadratic tangent/curvature, then applies a global
+Gazebo heading gain of 1.60. A repeated 28-cell campaign injected six
+positive/negative heading failures per split *during motion* (minimum 0.220 m/s)
+and continued through the controlled stop. Held-out result: 6/6 detected, no
+false C-02/C-05 over 392 centred-safe cycles, no M-S2/road-edge event, 0.10 s
+maximum detection delay and 0.10 s stopping upper bound. Evidence and hashes are
+in `d43_c02_calibration_20260721T082128Z`; the canonical 25-degree limit is unchanged.
+
+Only the fresh, still-untrained margin022 contract opts into this candidate.
+Frozen defaults keep every GE4/G4 run bit-identical, and the result is scoped to
+the hashed Gazebo Lane Cam + `complex_b` envelope (through the tested driven-lane
+anchor `|kappa| = 1.031 1/m`, exact per-cycle local GT maximum 0.978 1/m),
+not Isaac or arbitrary tighter roads. D-59's
+checkpoint-bound preflight remains mandatory after training: this closes the
+measurement-interface blocker, not the absent checkpoint/policy evidence.
 Cites D-49, D-50, D-52, D-54, D-55, D-56, D-57, D-58; docs/11 §9; docs/13.
 
 ### D-60 — SB3 algorithm switch in the shared trainer: `algorithm: ppo|sac` config key (not a separate SAC entry point)

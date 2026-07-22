@@ -31,6 +31,86 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [21.07.2026] — D-43 heading estimator improved; moving-fault validation PASS
+
+**Document(s) affected:** `docs/12_cv_lane_keeper.md`; `docs/DECISIONS.md`
+(D-59 follow-up); `tools/README.md`; D-43 estimator/env/eval sources; posterior
+margin022 config; calibration tool/tests; bounded evidence under
+`experiments/sim/eval_gz2d/d43_c02_calibration_20260721T082128Z/`.
+**Phase:** posterior E5 — Gazebo D-43 qualification
+**Gate context:** after G4; GE4/G4 frozen
+**Author:** Samuel Sanchez
+
+### Change
+
+Added an opt-in joint two-boundary quadratic heading fit and a hash-bound Gazebo
+measurement gain of 1.60. Added a calibration-only moving yaw injector, simulator
+timestamps and post-emergency observation so detection delay, controlled stopping,
+M-S1/M-S2 and road-edge contact are measured rather than inferred from a stationary
+spawn. The untrained margin022 contract explicitly selects the candidate; frozen
+defaults and historical configs remain unchanged.
+
+### Rationale and result
+
+The held-out dynamic split is **PASS**: 6/6 positive/negative real heading-fault
+cells detected at a minimum pre-injection speed of 0.220 m/s, 0 false C-02/C-05
+over 392 centred-safe cycles, 0 M-S2 cycles, 0 road-edge contacts, maximum M-S1
+0.03177 m, maximum detection delay 0.10 s and controlled-stop upper bound 0.10 s.
+Safe and faulty `|epsi_cv|` distributions are separated by 0.07438 rad. The
+canonical 25-degree/20-degree thresholds and `d_max`/`t_min` are unchanged.
+
+### Impact
+
+The D-43 measurement interface is qualified only for the recorded Gazebo Lane
+Cam/renderer/`complex_b` envelope and hashes. This does not qualify a policy:
+the margin022 checkpoint still does not exist and its mandatory checkpoint-bound
+nominal D-43 preflight remains. GE4/G4 and Isaac-specific settings are untouched.
+
+### Verification
+
+Targeted estimator, env, logging and calibration tests; bounded Gazebo matrix;
+traceability and whitespace checks are recorded with the working-tree handoff.
+
+---
+
+## [21.07.2026] — D-43/C-02 controlled-heading calibration BLOCKED
+
+**Document(s) affected:** `docs/12_cv_lane_keeper.md`; `tools/calibrate_d43_c02.py`; targeted tests; bounded evidence under `experiments/sim/eval_gz2d/d43_c02_calibration_20260721T073151Z/`.
+**Phase:** posterior E5 — Gazebo D-43 qualification
+**Gate context:** after G4; GE4/G4 frozen
+**Author:** Samuel Sanchez
+
+### Change
+
+Added a reproducible 28-cell Gazebo calibration with disjoint calibration and
+held-out seeds, controlled spawn-heading faults, curvature/speed/visual coverage,
+per-cycle GT-oracle/CV/cage logging, hashes, raw CSV, JSON report and figures.
+No estimator, cage threshold, verdict scenario or GE4 artefact was changed.
+
+### Rationale and result
+
+The retained split is **BLOCKED**: 0 false C-02/C-05 in the centred band and 0
+contacts, but positive heading faults were missed at both tested non-zero
+curvatures. Safe and faulty `|epsi_cv|` overlap by 0.02190 rad and the mean
+CV-GT error varies from -0.0016 rad on the straight to -0.1741 rad at the
+maximum tested curvature. This rules out a static Gazebo bias and a safe global
+threshold; raising 25 degrees or subtracting curvature would further hide real faults.
+
+### Impact
+
+D-43 remains a fail-closed prerequisite for the untrained margin022 posterior
+checkpoint. Required next evidence is either an improved estimator with a
+separately observable tangent/vehicle heading or a conservative curvature/radius
+validity envelope wired to `perception_invalid` and validated for SR-005/SR-008.
+No GE4/G4 statement changes.
+
+### Verification
+
+Targeted D-43/plausibility/calibration tests pass; traceability and scoped
+whitespace checks are recorded with the working-tree handoff.
+
+---
+
 ## [20.07.2026] — Gazebo 2-D qualification made executable: fresh 0.22 contract, checkpoint-bound D-43 preflight and preregistered SC-PERT-03 two-arm protocol
 
 **Document(s) affected:** `docs/05_scenario_library.md`; `docs/06_metrics_catalogue.md`; `docs/07_traceability_matrix.md` (post-G4 annotation only); `docs/08_odd_specification.md`; `docs/09_environment_design.md`; `docs/10_reward_function.md`; `docs/11_camera_rl_training.md`; `docs/14_isaacsim_handover_spec.md`; `docs/15_implementation_inventory.md`; `docs/16_defense_compendium.md`; `docs/DECISIONS.md` (D-49/D-59 follow-up); `README.md`; `AGENTS.md`; `CLAUDE.md`; `policy/README.md`; `tools/README.md`; `experiments/README.md`; Chapters 7, 8, 11 and 12. **Code/config/scenario:** campaign/training/eval/reward surfaces under `src/cobraflex_rl/`; `tools/run_campaign.py`; `tools/sc_pert_03_protocol.py`; `tools/d43_preflight.py`; both SC-PERT-03 YAMLs; `scenarios/_sc_pert_03_protocol.yaml`; `train_sac_camera_2d_tuned_entfix_margin022.yaml`; associated tests. **Derived evidence:** `experiments/sim/eval_gz2d/d43_*.json`.

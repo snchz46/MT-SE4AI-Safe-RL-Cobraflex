@@ -81,6 +81,11 @@ def parse_args(args: Optional[Sequence[str]] = None) -> argparse.Namespace:
                         help="Override the env cruise speed (m/s). The logical "
                              "controller's native speed is 0.10; the RL camera eval "
                              "ran at 0.20, so |ey| is the speed-fair comparison.")
+    parser.add_argument("--calibration-heading-injection-rad", type=float, default=0.0,
+                        help="Evidence-only moving yaw impulse; requires a "
+                             "category=calibration_only scenario.")
+    parser.add_argument("--calibration-heading-injection-step", type=int, default=12,
+                        help="Control step after which to inject the calibration yaw impulse.")
     cleaned = remove_ros_args(args=args)
     if cleaned and not cleaned[0].startswith("-"):
         cleaned = cleaned[1:]
@@ -119,6 +124,12 @@ def main(args: Optional[Sequence[str]] = None) -> None:
     reset_options: Optional[Dict[str, Any]] = None
     if cli.scenario:
         scenario_cfg = load_yaml(Path(cli.scenario))
+        if cli.calibration_heading_injection_rad and (
+            scenario_cfg.get("category") != "calibration_only"
+        ):
+            raise RuntimeError(
+                "heading injection is restricted to category=calibration_only"
+            )
         control_dt = float(train_cfg.get("control_dt", 0.1))
         run_config = derive_run_config(scenario_cfg, cli.rep, control_dt=control_dt, base_seed=cli.base_seed)
         scenario_id = run_config.scenario_id
@@ -162,6 +173,7 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             ros_interface=interface, centerline=centerline_points,
             lane_width=lane_width, road_width=road_width, cfg=train_cfg,
             road_centerline=road_centerline_points,
+            calibration_mode=bool(cli.calibration_heading_injection_rad),
         )
         perimeter = float(env.tracker.cumulative_lengths[-1])
         controller = CVLaneController(speed=float(train_cfg.get("fixed_speed", 0.2)))
@@ -179,6 +191,14 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             step_index = 0
             print(f"Episode {episode + 1}")
             while not (terminated or truncated):
+                if (
+                    cli.calibration_heading_injection_rad
+                    and step_index == cli.calibration_heading_injection_step
+                ):
+                    injection = env.inject_heading_fault_for_calibration(
+                        cli.calibration_heading_injection_rad
+                    )
+                    print(f"calibration heading injection: {injection}")
                 frame_res = interface.get_camera_frame()
                 frame = frame_res[0] if frame_res is not None else None
                 angular, detected = controller.compute(frame)

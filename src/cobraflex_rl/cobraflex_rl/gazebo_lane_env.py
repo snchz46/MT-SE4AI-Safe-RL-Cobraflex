@@ -90,6 +90,7 @@ class GazeboLaneEnv(gym.Env):
         road_width: Optional[float] = None,
         road_centerline: Optional[np.ndarray] = None,
         circuits: Optional[Any] = None,
+        calibration_mode: bool = False,
     ) -> None:
         super().__init__()
         self.ros_interface = ros_interface
@@ -97,6 +98,10 @@ class GazeboLaneEnv(gym.Env):
         self.fixed_speed = float(self.cfg.get("fixed_speed", 0.2))
         self.control_dt = float(self.cfg.get("control_dt", 0.1))
         self.max_episode_steps = int(self.cfg.get("max_episode_steps", 500))
+        # Evidence-only escape hatch. Normal training/evaluation retains its
+        # terminate-on-C-05 semantics; the D-43/C-02 calibrator uses this to
+        # observe the full controlled stop after a moving heading injection.
+        self.calibration_mode = bool(calibration_mode)
 
         # --- Action space (D-49/D-50) -----------------------------------------
         # "steer" (default): the frozen 1-D steering-only contract (ED-2) — every
@@ -294,11 +299,24 @@ class GazeboLaneEnv(gym.Env):
             # heading for the Isaac renderer. Unset/0.0 -> the Gazebo estimator,
             # bit-identical (D-43 verdicts untouched).
             heading_bias = float(_cage_cfg.get("perception_heading_bias_rad", 0.0))
+            heading_fit_mode = str(
+                _cage_cfg.get("perception_heading_fit_mode", "near_secant")
+            )
+            heading_gain = float(_cage_cfg.get("perception_heading_gain", 1.0))
             sup_kwargs = {}
-            if heading_bias != 0.0:
+            if (
+                heading_bias != 0.0
+                or heading_fit_mode != "near_secant"
+                or heading_gain != 1.0
+            ):
                 from .cv_lane_estimator import CvLaneEstimator, CvLaneEstimatorConfig
                 sup_kwargs["estimator"] = CvLaneEstimator(
-                    config=CvLaneEstimatorConfig(heading_bias_rad=heading_bias))
+                    config=CvLaneEstimatorConfig(
+                        heading_bias_rad=heading_bias,
+                        heading_fit_mode=heading_fit_mode,
+                        heading_gain=heading_gain,
+                    )
+                )
             if invalid_cycles is not None:
                 from .perception_health import PerceptionHealthMonitor
                 sup_kwargs["health"] = PerceptionHealthMonitor(
@@ -617,6 +635,60 @@ class GazeboLaneEnv(gym.Env):
         self._last_obs_img = obs_img
         return obs_img
 
+    def inject_heading_fault_for_calibration(self, heading_delta_rad: float) -> dict:
+        """Apply a one-cycle yaw impulse and refresh the CV/GT state.
+
+        This method is deliberately unavailable outside ``calibration_mode``.
+        The impulse goes through the real simulator actuation interface while
+        preserving measured forward speed. Ground truth is read only to report
+        the realised perturbation and label the resulting evidence.
+        """
+        if not self.calibration_mode:
+            raise RuntimeError("heading fault injection requires calibration_mode")
+        if self.obs_type != "camera":
+            raise RuntimeError("heading fault injection requires camera observation")
+        delta = float(heading_delta_rad)
+        if not math.isfinite(delta) or abs(delta) < 1e-9:
+            raise ValueError("heading_delta_rad must be finite and non-zero")
+
+        initial_state = self._compute_track_state()
+        _, _, yaw_before = self._last_pose
+        speed_before = float(self.ros_interface.get_speed())
+        impulse_rate = math.copysign(
+            min(4.8, max(1.0, abs(delta) / self.control_dt)), delta
+        )
+        substep = min(0.02, self.control_dt)
+        track_state = initial_state
+        realised_epsi_delta = 0.0
+        for _ in range(max(1, int(math.ceil(1.0 / substep)))):
+            self.ros_interface.send_action(impulse_rate, speed_before)
+            self.ros_interface.step_ros(substep)
+            track_state = self._compute_track_state()
+            realised_epsi_delta = math.atan2(
+                math.sin(track_state.epsi - initial_state.epsi),
+                math.cos(track_state.epsi - initial_state.epsi),
+            )
+            if realised_epsi_delta * math.copysign(1.0, delta) >= abs(delta):
+                break
+        # Remove the impulse immediately; the next env.step lets the cage own
+        # steering and speed again.
+        self.ros_interface.send_action(0.0, speed_before)
+
+        self.last_track_state = track_state
+        self.prev_s = float(track_state.s)
+        self._capture_camera_obs(wait_timeout_s=1.0)
+        _, _, yaw_after = self._last_pose
+        realised = math.atan2(
+            math.sin(yaw_after - yaw_before), math.cos(yaw_after - yaw_before)
+        )
+        return {
+            "requested_heading_delta_rad": delta,
+            "realised_heading_delta_rad": float(realised),
+            "realised_epsi_delta_rad": float(realised_epsi_delta),
+            "speed_before_mps": speed_before,
+            "epsi_after_rad": float(track_state.epsi),
+        }
+
     def _curvature_preview(self, segment_index: int):
         """Signed curvature (rad/m, + = left) at a near and a far look-ahead, for
         the observation. Mirrors the cage's curvature source so policy and cage
@@ -752,7 +824,11 @@ class GazeboLaneEnv(gym.Env):
         # at the same point as enforcement and the cage-efficacy contrast (max
         # excursion / road-edge contact) would vanish. Training is enforcement, so
         # this leaves the training/eval terminate-on-emergency behaviour unchanged.
-        cage_stop = cage_emergency and (self.cage_mode == "enforcement")
+        cage_stop = (
+            cage_emergency
+            and (self.cage_mode == "enforcement")
+            and not self.calibration_mode
+        )
         terminated = off_road or cage_stop
         truncated = self.step_count >= self.max_episode_steps
         # Reward is computed on the resulting state (ey/epsi/progress) and, for
@@ -1058,7 +1134,9 @@ class GazeboLaneEnv(gym.Env):
 
     def _make_info(self, track_state: TrackState, speed: float) -> Dict[str, float]:
         x, y, yaw = self._last_pose
+        sim_time = self.ros_interface.sim_now()
         info = {
+            "sim_time_s": float(sim_time) if sim_time is not None else math.nan,
             "ey": float(track_state.ey),
             "epsi": float(track_state.epsi),
             "s": float(track_state.s),

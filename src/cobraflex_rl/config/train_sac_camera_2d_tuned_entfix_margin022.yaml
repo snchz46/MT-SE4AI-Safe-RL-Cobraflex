@@ -105,6 +105,13 @@ cage:
   enabled: true
   mode: enforcement
   yaml_path: ""
+  # Gazebo D-43/C-02 calibration (21.07.2026), valid for the Lane Cam /
+  # complex_b renderer envelope only.  The shared quadratic tangent avoids the
+  # legacy curvature subtraction; the global measurement gain preserves the
+  # canonical 25-degree physical limit.  Evidence:
+  # d43_c02_calibration_20260721T082128Z (held-out dynamic PASS).
+  perception_heading_fit_mode: joint_pair_quadratic
+  perception_heading_gain: 1.60
   lookahead_segments: 5
   throttle_nominal: 0.5
   yaw_gain: 0.8

@@ -1,0 +1,133 @@
+{
+  "schema": "d43-c02-calibration/v1",
+  "status": "BLOCKED",
+  "splits": {
+    "calibration": {
+      "samples": 404,
+      "safe_centered_samples": 361,
+      "heading_fault_cells": 5,
+      "detected_heading_fault_cells": 3,
+      "false_c02_steps": 0,
+      "false_c05_steps": 0,
+      "missed_heading_fault_cells": [
+        "cal_06",
+        "cal_10"
+      ],
+      "max_detection_delay_s": 0.0,
+      "max_stopping_time_s": 0.0,
+      "road_edge_contacts": 0,
+      "max_m_s1_m": 0.072417,
+      "m_s2_steps": 4,
+      "safe_abs_epsi_cv_max": 0.252949,
+      "fault_abs_epsi_cv_min": 0.23155,
+      "global_separation_margin_rad": -0.021398999999999974,
+      "safe_error_by_curvature": {
+        "0.0": {
+          "n": 80,
+          "mean_epsi_error_rad": -0.0015958125,
+          "min_epsi_error_rad": -0.004452999999999999,
+          "max_epsi_error_rad": 0.004070000000000001
+        },
+        "0.5164800510235641": {
+          "n": 105,
+          "mean_epsi_error_rad": -0.11942400952380954,
+          "min_epsi_error_rad": -0.142406,
+          "max_epsi_error_rad": -0.093494
+        },
+        "1.0309664948298225": {
+          "n": 176,
+          "mean_epsi_error_rad": -0.17489698295454545,
+          "min_epsi_error_rad": -0.31041,
+          "max_epsi_error_rad": -0.11433399999999999
+        }
+      }
+    },
+    "validation": {
+      "samples": 404,
+      "safe_centered_samples": 362,
+      "heading_fault_cells": 5,
+      "detected_heading_fault_cells": 3,
+      "false_c02_steps": 0,
+      "false_c05_steps": 0,
+      "missed_heading_fault_cells": [
+        "val_06",
+        "val_10"
+      ],
+      "max_detection_delay_s": 0.0,
+      "max_stopping_time_s": 0.0,
+      "road_edge_contacts": 0,
+      "max_m_s1_m": 0.07219,
+      "m_s2_steps": 4,
+      "safe_abs_epsi_cv_max": 0.252949,
+      "fault_abs_epsi_cv_min": 0.231044,
+      "global_separation_margin_rad": -0.02190499999999998,
+      "safe_error_by_curvature": {
+        "0.0": {
+          "n": 80,
+          "mean_epsi_error_rad": -0.001565275,
+          "min_epsi_error_rad": -0.004026999999999999,
+          "max_epsi_error_rad": 0.004595999999999999
+        },
+        "0.5164800510235641": {
+          "n": 105,
+          "mean_epsi_error_rad": -0.12007258095238095,
+          "min_epsi_error_rad": -0.150281,
+          "max_epsi_error_rad": -0.085451
+        },
+        "1.0309664948298225": {
+          "n": 177,
+          "mean_epsi_error_rad": -0.17413172881355932,
+          "min_epsi_error_rad": -0.30967,
+          "max_epsi_error_rad": -0.11398199999999999
+        }
+      }
+    }
+  },
+  "blockers": [
+    "heading false negative"
+  ],
+  "provenance": {
+    "schema": "d43-c02-calibration/v1",
+    "created_utc": "2026-07-21T07:40:04.199258+00:00",
+    "git_commit": "b223f78091a1d4a17e4a6b1957fb3592e62642c6",
+    "git_dirty": true,
+    "artifacts": {
+      "tool": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/tools/calibrate_d43_c02.py",
+        "sha256": "31be6500730afce03fdbf496a445c2e7c9c8464ebf4879c61ab064e400cac8cd"
+      },
+      "target_train_config": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/train_sac_camera_2d_tuned_entfix_margin022.yaml",
+        "sha256": "78b263b049f21dea79478487f44347f2baa613c4273e9b71e2cac7ddc07d4f24"
+      },
+      "runtime_cv_config": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/train_ppo_camera.yaml",
+        "sha256": "88f504a2c57a0096c131f4afe9a7909a070630fafe537a895ed5ac00fde2627b"
+      },
+      "cage_yaml": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+        "sha256": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c"
+      },
+      "centerline": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml",
+        "sha256": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc"
+      },
+      "scenario_library_schema": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/scenarios/_schema.yaml",
+        "sha256": "03b1eb45353bf59a19f288eee78437e2f16d183a5d5b6d4952b004b2c0f043e5"
+      },
+      "model": {
+        "path": "",
+        "sha256": null,
+        "note": "posterior margin022 checkpoint does not exist"
+      }
+    },
+    "output": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/experiments/sim/eval_gz2d/d43_c02_calibration_20260721T073151Z",
+    "oracle_runtime_consumers": [],
+    "oracle_use": "offline metrics and calibration labels only"
+  },
+  "figures": [
+    "epsi_gt_vs_cv_calibration.png",
+    "epsi_gt_vs_cv_validation.png"
+  ]
+}

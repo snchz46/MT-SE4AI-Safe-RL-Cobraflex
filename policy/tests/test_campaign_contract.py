@@ -33,7 +33,7 @@ def _load(path: Path):
 
 
 def test_margin022_is_a_controlled_bounded_fresh_training_delta():
-    """The 0.25 evidence recipe stays intact; only preregistered knobs drift."""
+    """Historical recipe stays intact; only preregistered/D-43 knobs drift."""
 
     historical = _load(HISTORICAL_ENTFIX)
     candidate = _load(MARGIN022)
@@ -43,6 +43,10 @@ def test_margin022_is_a_controlled_bounded_fresh_training_delta():
     assert candidate["model_path"] != historical["model_path"]
     assert candidate["save_replay_buffer"] is True
     assert candidate["total_timesteps"] == 75_000
+    assert "perception_heading_fit_mode" not in historical["cage"]
+    assert "perception_heading_gain" not in historical["cage"]
+    assert candidate["cage"]["perception_heading_fit_mode"] == "joint_pair_quadratic"
+    assert candidate["cage"]["perception_heading_gain"] == pytest.approx(1.60)
 
     normalized_candidate = deepcopy(candidate)
     normalized_candidate.pop("campaign_contract")
@@ -52,6 +56,8 @@ def test_margin022_is_a_controlled_bounded_fresh_training_delta():
         "max_speed_mps"
     ]
     normalized_candidate["model_path"] = historical["model_path"]
+    normalized_candidate["cage"].pop("perception_heading_fit_mode")
+    normalized_candidate["cage"].pop("perception_heading_gain")
     assert normalized_candidate == historical
 
 

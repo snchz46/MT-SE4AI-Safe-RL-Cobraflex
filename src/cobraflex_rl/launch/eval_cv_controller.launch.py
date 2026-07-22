@@ -75,6 +75,10 @@ def generate_launch_description():
                               description="Directory holding run subdirs."),
         DeclareLaunchArgument("train_config", default_value="",
                               description="Camera env config (empty = train_ppo_camera.yaml)."),
+        DeclareLaunchArgument("calibration_heading_injection_rad", default_value="0.0",
+                              description="Calibration-only moving yaw impulse (rad)."),
+        DeclareLaunchArgument("calibration_heading_injection_step", default_value="12",
+                              description="Step at which calibration injects yaw."),
     ]
 
     gazebo = IncludeLaunchDescription(
@@ -104,6 +108,10 @@ def generate_launch_description():
             "--run-id", LaunchConfiguration("run_id"),
             "--output-root", LaunchConfiguration("output_root"),
             "--train-config", LaunchConfiguration("train_config"),
+            "--calibration-heading-injection-rad",
+            LaunchConfiguration("calibration_heading_injection_rad"),
+            "--calibration-heading-injection-step",
+            LaunchConfiguration("calibration_heading_injection_step"),
         ],
     )
 

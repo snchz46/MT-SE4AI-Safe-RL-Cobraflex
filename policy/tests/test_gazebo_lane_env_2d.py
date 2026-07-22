@@ -247,6 +247,27 @@ def test_1d_path_actuation_unchanged():
     assert info["raw_throttle"] == pytest.approx(0.5)  # the fixed nominal
 
 
+def test_calibration_mode_observes_stop_without_changing_default_termination():
+    outcomes = []
+    for calibration_mode in (False, True):
+        env = _env(action_type=None, calibration_mode=calibration_mode)
+        env.reset(seed=0)
+        env.ros_interface.yaw += 0.55
+        env.last_track_state = env._compute_track_state()
+        _, _, terminated, _, info = env.step(
+            np.array([0.0], dtype=np.float32)
+        )
+        assert info["cage_emergency"]
+        outcomes.append(terminated)
+    assert outcomes == [True, False]
+
+
+def test_heading_injector_is_unavailable_outside_calibration():
+    env = _env(action_type=None)
+    with pytest.raises(RuntimeError, match="calibration_mode"):
+        env.inject_heading_fault_for_calibration(0.48)
+
+
 # --- multi-circuit sampling (D-50) ----------------------------------------------
 
 

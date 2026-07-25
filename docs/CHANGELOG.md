@@ -31,6 +31,131 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [25.07.2026] — T3 D-43/C-02 calibration re-run: fault detection preserved end-to-end
+
+**Document(s) affected:** `experiments/sim/eval_gz2d/d43_c02_calibration_t3/` (new), `experiments/sim/eval_gz2d/runtime_ppo_camera_t3.yaml` (new), `docs/12_cv_lane_keeper.md` (§4.10).  
+**Phase:** E5 (posterior).  
+**Gate context:** posterior to G4; confirmatory, changes no verdict.  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Re-ran the §4.9 bounded D-43/C-02 Gazebo calibration with the T3 temporal gate enabled (D-62) as an end-to-end regression check of the T3 change.
+
+### Rationale
+
+The T3 no-mask guarantee was proven offline (t3_parity.py) and in the closed-loop nominal preflight; this exercises it through the calibration harness's injected-fault matrix in Gazebo.
+
+### Impact
+
+**PASS, both splits: 6/6 injected heading faults detected within one 0.10 s cycle, 0 false C-02/C-05, 0 road-edge contacts.** T3 never delays/masks a fault — at injection `cv_ey` drifts > the 0.03 m gate in the same frame, so T3 disengages instantly and the uncapped `cv_epsi` trips C-02/C-05. One diagnostic shifts: the raw `|cv_epsi|` safe-vs-fault separation margin (§4.9 headline +0.074) goes negative (−0.178 held-out) because T3 caps the safe-side curve over-reads (its purpose) and the fault-min picks up post-stop low readings; detection now rests on the temporal gate + C-02 hysteresis on the post-drift signal, not a raw threshold. Safety property preserved. Details: docs/12 §4.10.
+
+### Verification
+
+`report.json` status PASS, blockers []; 28/28 cells, 0 errors. No manuscript SR/verdict changed.
+
+## [24.07.2026] — SC-PERT-03 posterior 2-D campaign: released arm PASS, stall-variant adversary not induced
+
+**Document(s) affected:** `experiments/sim/campaign_sac_pert03/` (new: 80-run campaign + `SC_PERT_03_ANALYSIS.md`), `docs/DECISIONS.md` (D-63), Ch.8 §8.9.6.  
+**Phase:** E5 (posterior).  
+**Gate context:** posterior to G4; does NOT reopen the E verdict.  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Ran the preregistered posterior 2-D SC-PERT-03 negative test on the margin022 parent + a 50k stall-penalty fine-tune (λ_stall=4.0, fixed a priori). Fine-tune: `sc_pert_03_protocol.py run` → `stall_variant.zip` (56d235da, distinct from parent 4f3b56e2), manifest finalized+validated. Campaign: 80 runs (20 reps × {released, stall_variant} × {enforcement, monitoring}) via `run_campaign.py --two-arm-manifest`, authorised by the T3 D-43 preflight (`d43_preflight_margin022_2024_75k_t3.json`, PASS). 0 errors.
+
+### Rationale
+
+SC-PERT-03 is the SR-009 stall/liveness negative test: a control arm (released = the deployed policy, must make progress and never stall) and an adversarial arm (stall_variant = fine-tuned to stall, must show M-P6 > 50 % so the cage's stall handling is actually exercised). For the frozen 1-D action stalling is N/A-by-construction (D-49); the 2-D margin022 action (D-50) makes it commandable in principle, so the test is well-posed.
+
+### Impact
+
+**Released arm PASS** — enforcement 18/20 (0.90, meets the bar), monitoring 20/20 (1.00): the deployed policy makes progress (M-P2=1) and never stalls (M-P6≈0). **Stall_variant arm did NOT induce a staller**: across all 40 stall_variant runs M-P6 max 0.79 %, mean 0.03 % (needs >50); the fine-tuned policy still drives ~0.34 laps at |ey|≈0.02 m. Mechanism: under `normalize_reward`+`clip_reward` the fixed λ=4.0 penalty is diluted by the running return scale, so training rollouts went short/negative (exploration off-road) but the deterministic policy kept driving. Per the anti-gaming protocol (λ fixed a priori, `adaptive_tuning: false`), λ is **not** retuned to force a staller — the stall-detection arm is recorded as a characterised inconclusive, not a cage failure; the released arm confirms deployed-policy liveness regardless. **Residual T3 note:** 2/20 released-enforcement runs hit a rare apex-exit CV-ey transient (cv_ey jumps ~3-4 cm while true ey stays ~2 cm) that breaks T3's drift gate BY DESIGN (it must not mask a possible real excursion), letting an uncapped cv_epsi trip a false C-02/C-05; 0/20 in monitoring. Conservative side of T3's no-mask guarantee, not a regression — not loosened. Full analysis: `experiments/sim/campaign_sac_pert03/SC_PERT_03_ANALYSIS.md`.
+
+### Verification
+
+Campaign report `campaign_report.json` (80 runs, 0 errors, D-43 preflight PASS embedded). Derived checkpoint hash verified in per-run metadata (56d235da, criterion_arm=stall_variant). No manuscript SR/verdict changed; `tools/check_traceability.py` unaffected.
+
+## [24.07.2026] — T3 temporal heading gate: margin022 nominal D-43 preflight BLOCKED → PASS
+
+**Document(s) affected:** `docs/DECISIONS.md` (D-62), `docs/12_cv_lane_keeper.md` (§4.10, v0.7), `src/cobraflex_rl/cobraflex_rl/cv_lane_estimator.py`, `cage_perception.py`, `gazebo_lane_env.py`, `src/cobraflex_rl/config/train_sac_camera_2d_tuned_entfix_margin022.yaml`, `policy/tests/test_cv_lane_estimator.py`, `policy/tests/test_campaign_contract.py`, Ch.7 §7.5.5.  
+**Phase:** E5 (posterior).  
+**Gate context:** posterior to G4 (closed 02.07.2026); does not reopen the E verdict.  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Added an opt-in **T3 temporal heading-consistency gate** to the D-43 CV lane estimator (`heading_temporal_window`, default 0 → every frozen GE4/G4 config bit-identical). When enabled it caps the reported `|epsi|` to `heading_temporal_cap_rad` (0.32 rad, below C-02's `theta_activate` 0.4014) **only** while the estimator's own `ey` confirms lane-following across the window (centred `|ey| ≤ 0.08 m`, drift-free span ≤ 0.03 m) and real curvature is present (median `|curvature| ≥ 0.30 1/m`). The estimator gains a per-episode `reset()`, called from `CagePerceptionSupervisor.reset()`; the `perception_heading_temporal_*` cage keys wire it through `GazeboLaneEnv`. The margin022 cage block opts in (window 4).
+
+### Rationale
+
+The checkpoint-bound **nominal** D-43 preflight (the gate the margin022 contract requires before a 2-D campaign) **BLOCKED** on the closed-loop `complex_b` trace: 13 centred false C-02 triggers at two tight apices (`s ≈ 8.9`, `16.1`), one escalating to a C-05 emergency. Root cause is the H-12 single-frame overlap — a centred, well-aligned vehicle reads a curve heading (≈ 0.44 rad) *larger* than a genuine fault — which no scalar gain separates and which single-frame curvature subtraction (§4.8) was already rejected for masking. The separable signal is temporal: a genuine heading error drifts `ey` within one cycle (held-out faults jump `cv_ey` > 40 mm at onset), while the geometric over-read leaves a non-drifting vehicle — so gating the cap on confirmed lane-following cannot mask a fault and adds no detection delay. This is an eval-time cage readout (the policy observes the CNN, never `cv_epsi`), so **no retrain**; the campaign-contract fingerprint (action + sac + contract, not `cage`) is unchanged and the existing checkpoint still validates.
+
+### Impact
+
+Offline over the labelled held-out (seed 42) D-43/C-02 cells + the margin022 nominal trace, then confirmed in a **fresh Gazebo closed-loop re-eval with T3 on** (`experiments/sim/runs/rl_sacmargin022_eval_2024_cb75k_4k4_t3/`, `experiments/sim/eval_gz2d/d43_preflight_margin022_2024_75k_t3.json`): **all 7 preflight checks PASS** (0/0), max centred `|epsi|` error 0.361 rad, **0 C-02 / 0 C-05 / 0 emergencies** across the 4400-step trace, 52 apex frames capped at ±0.320 rad at `|ey|` ≈ 5 mm; held-out faults still **6/6 detected, ≤ 1-cycle delay**. Re-eval is cleaner than the blocked original (3.99 vs 2.44 laps, mean `|ey|` 16.9 mm). Unblocks the margin022 fresh-parent → nominal-PASS → fine-tune → campaign path. Scope: hash-bound Gazebo Lane-Cam / `complex_b` envelope; no Isaac parameter reused.
+
+### Verification
+
+`pytest` 589/589 green (6 new T3 unit tests: gate behaviour, no-mask guarantee, reset, default-off bit-identity; updated margin022 controlled-delta contract test). Default-off parity confirmed against the 172-test cage+estimator subset. `tools/check_traceability.py`: unaffected (no H-/SR-/scenario/metric IDs added).
+
+## [22.07.2026] — margin022 parent training launched; manuscript synced to 21–22.07 posterior evidence
+
+**Document(s) affected:** `manuscript/chapters/chapter_02_related_work.md`,
+`chapter_03_methodology.md`, `chapter_07_training_specification.md`,
+`chapter_08_experimental_evaluation.md` (as-of header only),
+`chapter_09_sim_to_real_gap.md`, `chapter_12_conclusions_and_future_work.md`.
+No code/config/scenario, hazard/SR table, CSV or cage constant changed.
+**Phase:** posterior E5 — Gazebo D-43 qualification / manuscript consolidation
+**Gate context:** after G4; GE4/G4 frozen
+**Author:** Samuel Sanchez
+
+### Change
+
+Two threads. (1) **Training:** the fresh 75k SAC 2-D `margin022` parent began
+training on Gazebo `complex_b` (`run_id: sac_gz2d_entfix_margin022_2024_75k`,
+seed 2024), the checkpoint the 21.07 D-43->C-02 calibration enabled; in progress
+at write time, no qualified checkpoint or campaign result yet. (2) **Manuscript
+sync to current date:** ch7 §7.5.5 records the D-43->C-02 measurement-interface
+PASS and the in-progress parent (with a `[RESULTADO PENDIENTE — F5]` marker);
+ch9 §9.2.2 adds the D-43 Gazebo calibration as a same-class perception-vs-renderer
+discrepancy that reinforces adaptation A5 (with a `[FIGURA SUGERIDA]` pointer to
+the existing calibration plots); ch12 T1 updates the margin022/preflight status.
+**Literature attributions (verifiable only, no fabrication):** ch2 §2.3.2 adds
+the canonical architectural lineage of the safety-cage/runtime-filter family
+(Simplex — Sha 2001; shielding — Alshiekh et al. 2018); ch3 §3.3 adds the
+systems-engineering root of the V-Model (Forsberg & Mooz 1991) alongside the
+existing IEEE/ISO attribution.
+
+### Rationale
+
+Keep the manuscript current with the 21–22.07 posterior evidence and satisfy the
+supervisor-facing requirement to attribute borrowed ideas (cage/Simplex/shield,
+V-Model) with real, verifiable references — placeholders (`[CITA PENDIENTE]`)
+reserved for anything not confidently attributable. None of this reopens G4.
+
+### Impact
+
+Manuscript only; the GE4-V2 verdict of record and all G4 statements are
+unchanged. Pending items remain marked in-text: margin022 nominal + checkpoint-bound
+D-43 preflight + SC-PERT-03 80-cell campaign (F5), and the physical column of the
+sim-to-real gap table (F5).
+
+Additionally, three `[FIGURA SUGERIDA]` placeholders were added where a visual
+would strengthen the argument and the underlying data already exists (ch9 §9.2.2
+D-43 calibration scatter/distribution; ch7 §7.5.5 SAC entropy/replay mechanisms;
+ch2 §2.3.5 four-families taxonomy). Eleven of the less-canonical ch2 citations
+were spot-checked against the literature and all are real and correctly
+attributed (author + title + venue); the only nuance is Vasudevan et al., whose
+proceedings year is 2022 (UKCI 2021) vs the cited 2021 — flagged, not corrected.
+
+### Verification
+
+`tools/check_traceability.py` → PASS (no IDs, CSVs or tables touched).
+
+---
+
 ## [21.07.2026] — D-43 heading estimator improved; moving-fault validation PASS
 
 **Document(s) affected:** `docs/12_cv_lane_keeper.md`; `docs/DECISIONS.md`

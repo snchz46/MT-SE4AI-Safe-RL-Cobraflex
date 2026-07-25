@@ -109,6 +109,11 @@ class CagePerceptionSupervisor:
         """Per-episode reset (fresh persistence counters, no stale reference)."""
         self.health.reset()
         self.plausibility.reset()
+        # Clear the estimator's temporal heading-consistency window (T3, D-62)
+        # so a new rollout cannot inherit the previous episode's confirmation.
+        estimator_reset = getattr(self.estimator, "reset", None)
+        if callable(estimator_reset):
+            estimator_reset()
 
     def update(
         self,

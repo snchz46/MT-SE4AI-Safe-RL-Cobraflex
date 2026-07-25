@@ -1,0 +1,178 @@
+{
+  "schema": "d43-c02-calibration/v2",
+  "status": "PASS",
+  "splits": {
+    "calibration": {
+      "samples": 560,
+      "safe_centered_samples": 392,
+      "heading_fault_cells": 6,
+      "detected_heading_fault_cells": 6,
+      "false_c02_steps": 0,
+      "false_c05_steps": 0,
+      "missed_heading_fault_cells": [],
+      "max_detection_delay_s": 0.10000000000000009,
+      "max_stopping_time_s": 0.1,
+      "min_fault_injection_speed_mps": 0.219999,
+      "road_edge_contacts": 0,
+      "max_m_s1_m": 0.031742,
+      "m_s2_steps": 0,
+      "safe_abs_epsi_cv_max": 0.308731,
+      "fault_abs_epsi_cv_min": 0.32,
+      "global_separation_margin_rad": 0.011269000000000029,
+      "safe_error_by_curvature": {
+        "0.0": {
+          "n": 104,
+          "mean_epsi_error_rad": -0.018582653846153846,
+          "min_epsi_error_rad": -0.029968,
+          "max_epsi_error_rad": 0.00022400000000000024
+        },
+        "0.5164800510235641": {
+          "n": 104,
+          "mean_epsi_error_rad": -0.07271526923076924,
+          "min_epsi_error_rad": -0.11494099999999999,
+          "max_epsi_error_rad": 0.059597
+        },
+        "1.0309664948298225": {
+          "n": 184,
+          "mean_epsi_error_rad": -0.15823196195652175,
+          "min_epsi_error_rad": -0.331109,
+          "max_epsi_error_rad": 0.022789
+        }
+      }
+    },
+    "validation": {
+      "samples": 560,
+      "safe_centered_samples": 392,
+      "heading_fault_cells": 6,
+      "detected_heading_fault_cells": 6,
+      "false_c02_steps": 0,
+      "false_c05_steps": 0,
+      "missed_heading_fault_cells": [],
+      "max_detection_delay_s": 0.10000000000000009,
+      "max_stopping_time_s": 0.1,
+      "min_fault_injection_speed_mps": 0.219999,
+      "road_edge_contacts": 0,
+      "max_m_s1_m": 0.031738,
+      "m_s2_steps": 0,
+      "safe_abs_epsi_cv_max": 0.289425,
+      "fault_abs_epsi_cv_min": 0.111129,
+      "global_separation_margin_rad": -0.17829599999999998,
+      "safe_error_by_curvature": {
+        "0.0": {
+          "n": 104,
+          "mean_epsi_error_rad": -0.018777701923076925,
+          "min_epsi_error_rad": -0.029821,
+          "max_epsi_error_rad": -0.007470000000000001
+        },
+        "0.5164800510235641": {
+          "n": 104,
+          "mean_epsi_error_rad": -0.07323493269230769,
+          "min_epsi_error_rad": -0.106682,
+          "max_epsi_error_rad": 0.058517000000000007
+        },
+        "1.0309664948298225": {
+          "n": 184,
+          "mean_epsi_error_rad": -0.15732810869565217,
+          "min_epsi_error_rad": -0.330998,
+          "max_epsi_error_rad": 0.019963
+        }
+      }
+    }
+  },
+  "blockers": [],
+  "provenance": {
+    "schema": "d43-c02-calibration/v2",
+    "created_utc": "2026-07-24T22:04:08.337772+00:00",
+    "git_commit": "6427fd6c95f36966b38644b43c2bb52a2fe2152e",
+    "git_dirty": true,
+    "artifacts": {
+      "tool": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/tools/calibrate_d43_c02.py",
+        "sha256": "5e42966ba79dfdd5efbcc0a61885c6828dafb8e5bd4449078e36ecd0dfbb00c7"
+      },
+      "target_train_config": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/train_sac_camera_2d_tuned_entfix_margin022.yaml",
+        "sha256": "d5a80601336a552648eca8cb0d8d899b003c51e4cbc7436a5ae35baf0bdc6b39"
+      },
+      "runtime_cv_config": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/experiments/sim/eval_gz2d/d43_c02_calibration_t3/runtime_config.yaml",
+        "sha256": "2e67aac2c9bf35fd15e12e26027cd97fca629e8e1e045158c574531df804742b"
+      },
+      "cage_yaml": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+        "sha256": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c"
+      },
+      "centerline": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/complex_b_right_lane_centerline.yaml",
+        "sha256": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc"
+      },
+      "scenario_library_schema": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/scenarios/_schema.yaml",
+        "sha256": "03b1eb45353bf59a19f288eee78437e2f16d183a5d5b6d4952b004b2c0f043e5"
+      },
+      "cv_estimator_source": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/cobraflex_rl/cv_lane_estimator.py",
+        "sha256": "f52d78af06c339708e23e145b7d77533989a6990741d456b1dbfba88bd0818cb"
+      },
+      "camera_geometry_source": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/cobraflex_rl/camera_geometry.py",
+        "sha256": "1d325dd45aeba66edbe83d424ea40372b63a7a29c474ab05127a25dea2fe59c4"
+      },
+      "cage_perception_source": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/cobraflex_rl/cage_perception.py",
+        "sha256": "a5047be2508a34bab99a3b133b22b2a21a88d6fa2d2d79dd8f9d1624b6ce8055"
+      },
+      "plausibility_source": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/cobraflex_rl/lane_plausibility.py",
+        "sha256": "2c47e4279dd32d4b323d01d30ad9960cf943d3200ea939af5b339c6e98a2a6e0"
+      },
+      "gazebo_env_source": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py",
+        "sha256": "ec5ea06713ad224e83244f5adb0c2f0dbcc219cf05dd879e727d374aa948b8c3"
+      },
+      "eval_controller_source": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/cobraflex_rl/eval_cv_controller.py",
+        "sha256": "fdfa938caea82c5e87f891e9f95596270749912a66b4c94ecadfc95d49c8ebff"
+      },
+      "eval_logging_source": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/cobraflex_rl/eval_policy.py",
+        "sha256": "aaab66ee4289b4e8d19e3abc29f4ca821e0fa071d15d1a7a477fd42877f27207"
+      },
+      "gazebo_world": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex/worlds/lane_following_oval_complex.world",
+        "sha256": "3b218c07104b70ae6e914265c489d81364ead8098ae823792314112256d2e06e"
+      },
+      "gazebo_camera_urdf": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex/urdf/my_robot_gazebo_mesh.urdf",
+        "sha256": "56773a628ed2c16ecb39b897b5bca801b5bcd7796002acea7cf20717710ff43e"
+      },
+      "generated_scenarios": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/experiments/sim/eval_gz2d/d43_c02_calibration_t3/calibration_scenarios",
+        "sha256": "7a3af6aa3f64564b448aff811e7e27583f407e6aaff9805dae77e1b304676afb",
+        "count": 28
+      },
+      "scenario_matrix": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/experiments/sim/eval_gz2d/d43_c02_calibration_t3/matrix.json",
+        "sha256": "fd82e4b787f1175aa81ffa642df1fa0eb4ad47cd01dd1975d7aabf4ab6e752a4"
+      },
+      "raw_cycles": {
+        "path": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/experiments/sim/eval_gz2d/d43_c02_calibration_t3/raw_cycles.csv",
+        "sha256": "5e8b13af2f17348eae0fc9e4e32c20853b87058eb38f45ead9e37cbf66382c48"
+      },
+      "model": {
+        "path": "",
+        "sha256": null,
+        "note": "posterior margin022 checkpoint does not exist"
+      }
+    },
+    "output": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/experiments/sim/eval_gz2d/d43_c02_calibration_t3",
+    "oracle_runtime_consumers": [],
+    "oracle_use": "offline metrics and calibration labels only"
+  },
+  "figures": [
+    "epsi_gt_vs_cv_calibration.png",
+    "epsi_abs_distribution_calibration.png",
+    "epsi_gt_vs_cv_validation.png",
+    "epsi_abs_distribution_validation.png"
+  ]
+}

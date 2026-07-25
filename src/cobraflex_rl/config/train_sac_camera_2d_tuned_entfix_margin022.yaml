@@ -112,6 +112,19 @@ cage:
   # d43_c02_calibration_20260721T082128Z (held-out dynamic PASS).
   perception_heading_fit_mode: joint_pair_quadratic
   perception_heading_gain: 1.60
+  # Temporal heading-consistency gate (T3, D-62, 24.07.2026). Eval-time cage
+  # readout only — the policy observes the CNN camera, never cv_epsi, so this is
+  # not a training/observation change and needs no retrain. Caps the CV heading
+  # ONLY while the estimator's own ey confirms lane-following (centred + drift-
+  # free) with real curvature present — conditions a genuine heading fault breaks
+  # within one cycle, so it cannot mask a fault. Resolves the H-12 single-frame
+  # over-read that blocked the D-43 preflight (13 -> 0 centred false triggers
+  # offline; held-out D-43/C-02 faults still 6/6 detected, <=1-cycle delay).
+  perception_heading_temporal_window: 4
+  perception_heading_temporal_ey_track_m: 0.08
+  perception_heading_temporal_ey_drift_m: 0.03
+  perception_heading_temporal_kappa_gate: 0.30
+  perception_heading_temporal_cap_rad: 0.32
   lookahead_segments: 5
   throttle_nominal: 0.5
   yaw_gain: 0.8

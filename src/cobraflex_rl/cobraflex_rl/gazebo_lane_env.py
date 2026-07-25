@@ -303,19 +303,34 @@ class GazeboLaneEnv(gym.Env):
                 _cage_cfg.get("perception_heading_fit_mode", "near_secant")
             )
             heading_gain = float(_cage_cfg.get("perception_heading_gain", 1.0))
+            # Temporal heading-consistency gate (T3, D-62). 0 -> disabled, so
+            # every config without the key builds a bit-identical estimator.
+            heading_tw = int(_cage_cfg.get("perception_heading_temporal_window", 0))
             sup_kwargs = {}
             if (
                 heading_bias != 0.0
                 or heading_fit_mode != "near_secant"
                 or heading_gain != 1.0
+                or heading_tw > 0
             ):
                 from .cv_lane_estimator import CvLaneEstimator, CvLaneEstimatorConfig
+                _est_kwargs = dict(
+                    heading_bias_rad=heading_bias,
+                    heading_fit_mode=heading_fit_mode,
+                    heading_gain=heading_gain,
+                    heading_temporal_window=heading_tw,
+                )
+                # Optional T3 tunables; defaults match CvLaneEstimatorConfig.
+                for _key, _cfgkey in (
+                    ("heading_temporal_ey_track_m", "perception_heading_temporal_ey_track_m"),
+                    ("heading_temporal_ey_drift_m", "perception_heading_temporal_ey_drift_m"),
+                    ("heading_temporal_kappa_gate", "perception_heading_temporal_kappa_gate"),
+                    ("heading_temporal_cap_rad", "perception_heading_temporal_cap_rad"),
+                ):
+                    if _cfgkey in _cage_cfg:
+                        _est_kwargs[_key] = float(_cage_cfg[_cfgkey])
                 sup_kwargs["estimator"] = CvLaneEstimator(
-                    config=CvLaneEstimatorConfig(
-                        heading_bias_rad=heading_bias,
-                        heading_fit_mode=heading_fit_mode,
-                        heading_gain=heading_gain,
-                    )
+                    config=CvLaneEstimatorConfig(**_est_kwargs)
                 )
             if invalid_cycles is not None:
                 from .perception_health import PerceptionHealthMonitor

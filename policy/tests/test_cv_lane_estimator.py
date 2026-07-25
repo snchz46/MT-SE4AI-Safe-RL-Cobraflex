@@ -298,6 +298,75 @@ def test_heading_gain_must_be_positive_and_finite(gain):
 
 
 # --------------------------------------------------------------------------
+# Temporal heading-consistency gate (T3, D-62). Unit-level tests of
+# CvLaneEstimator._temporal_heading_gate: the mechanism that resolves the H-12
+# single-frame heading over-read on tight curves. Validated end-to-end offline
+# against the held-out D-43/C-02 fault cells and the margin022 nominal trace.
+# --------------------------------------------------------------------------
+_T3 = dict(
+    heading_temporal_window=4,
+    heading_temporal_ey_track_m=0.08,
+    heading_temporal_ey_drift_m=0.03,
+    heading_temporal_kappa_gate=0.30,
+    heading_temporal_cap_rad=0.32,
+)
+
+
+def test_t3_disabled_by_default_is_noop():
+    """window == 0 (the default) must leave epsi untouched — frozen GE4/G4
+    configs stay bit-identical."""
+    est = CvLaneEstimator(config=CvLaneEstimatorConfig())
+    for _ in range(6):
+        assert est._temporal_heading_gate(0.02, -0.44, 0.9) == -0.44
+
+
+def test_t3_negative_window_rejected():
+    with pytest.raises(ValueError, match="heading_temporal_window"):
+        CvLaneEstimator(config=CvLaneEstimatorConfig(heading_temporal_window=-1))
+
+
+def test_t3_caps_confirmed_tracking_over_read():
+    """A centred, non-drifting vehicle on a real curve whose CV heading
+    over-reads past C-02 gets capped once the window fills (sign preserved)."""
+    est = CvLaneEstimator(config=CvLaneEstimatorConfig(**_T3))
+    out = [est._temporal_heading_gate(0.03, -0.44, 0.8) for _ in range(4)]
+    # window not full for the first three frames -> pass-through
+    assert out[:3] == [-0.44, -0.44, -0.44]
+    # fourth frame: window full, gate holds -> capped to -0.32
+    assert out[3] == pytest.approx(-0.32)
+
+
+def test_t3_never_masks_a_drifting_fault():
+    """A genuine heading fault moves the vehicle: once ey drifts past the bound
+    the over-read passes through unchanged, whatever the curvature."""
+    est = CvLaneEstimator(config=CvLaneEstimatorConfig(**_T3))
+    for _ in range(4):  # confirm lane-following first (centred, still)
+        est._temporal_heading_gate(0.02, -0.20, 0.8)
+    # fault onset: ey jumps > drift bound in one cycle, heading spikes
+    assert est._temporal_heading_gate(0.09, -0.90, 0.8) == -0.90
+
+
+def test_t3_does_not_cap_on_a_straight():
+    """No real curvature -> no geometric over-read to attribute; pass through
+    so a true heading fault on a straight keeps full sensitivity."""
+    est = CvLaneEstimator(config=CvLaneEstimatorConfig(**_T3))
+    out = [est._temporal_heading_gate(0.02, -0.44, 0.05) for _ in range(5)]
+    assert all(v == -0.44 for v in out)
+
+
+def test_t3_reset_clears_window():
+    """reset() drops the confirmation history so a new episode starts at full
+    sensitivity (no cap until the window refills)."""
+    est = CvLaneEstimator(config=CvLaneEstimatorConfig(**_T3))
+    for _ in range(4):
+        est._temporal_heading_gate(0.03, -0.44, 0.8)
+    assert est._temporal_heading_gate(0.03, -0.44, 0.8) == pytest.approx(-0.32)
+    est.reset()
+    # first post-reset frame: window not full again -> pass-through
+    assert est._temporal_heading_gate(0.03, -0.44, 0.8) == -0.44
+
+
+# --------------------------------------------------------------------------
 # Pure-pursuit controller (cobraflex_rl.cv_lane_controller). Shares this file's
 # synthetic-frame fixtures; verifies the look-ahead law turns the right way and
 # by the right amount where the PD law under-steered (the curve regression).

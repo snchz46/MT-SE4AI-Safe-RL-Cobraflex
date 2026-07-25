@@ -48,6 +48,20 @@ def test_margin022_is_a_controlled_bounded_fresh_training_delta():
     assert candidate["cage"]["perception_heading_fit_mode"] == "joint_pair_quadratic"
     assert candidate["cage"]["perception_heading_gain"] == pytest.approx(1.60)
 
+    # Temporal heading-consistency gate (T3, D-62): an eval-time cage-readout
+    # delta (the policy never observes cv_epsi), not a training/observation
+    # change. Absent from the historical parent; a controlled addition here.
+    t3_keys = (
+        "perception_heading_temporal_window",
+        "perception_heading_temporal_ey_track_m",
+        "perception_heading_temporal_ey_drift_m",
+        "perception_heading_temporal_kappa_gate",
+        "perception_heading_temporal_cap_rad",
+    )
+    for key in t3_keys:
+        assert key not in historical["cage"]
+    assert candidate["cage"]["perception_heading_temporal_window"] == 4
+
     normalized_candidate = deepcopy(candidate)
     normalized_candidate.pop("campaign_contract")
     normalized_candidate.pop("save_replay_buffer")
@@ -58,6 +72,8 @@ def test_margin022_is_a_controlled_bounded_fresh_training_delta():
     normalized_candidate["model_path"] = historical["model_path"]
     normalized_candidate["cage"].pop("perception_heading_fit_mode")
     normalized_candidate["cage"].pop("perception_heading_gain")
+    for key in t3_keys:
+        normalized_candidate["cage"].pop(key)
     assert normalized_candidate == historical
 
 

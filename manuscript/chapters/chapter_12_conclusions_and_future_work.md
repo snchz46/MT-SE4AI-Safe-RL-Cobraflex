@@ -288,7 +288,13 @@ y del config antes de arrancar Gazebo. El meta-test también quedó preregistrad
 independiente de *released*/*stall_variant*. Lo pendiente ya no es diseñar el
 test: es entrenar desde cero el parent 0.22, ejecutar su SC-NOM-01 nominal,
 obtener un preflight D-43 `PASS`, correr el fine-tune único y sólo entonces las
-80 celdas de SC-PERT-03. Los informes históricos muestran por qué el gate es
+80 celdas de SC-PERT-03. *Estado al 22.07.2026:* el prerrequisito de **interfaz
+de medición** se cerró primero —la calibración D-43→C-02 del readout de rumbo
+(`joint_pair_quadratic` + ganancia 1.60) **pasó** el 21.07.2026 (docs/12 §4.9)—
+y el **parent fresco de 75k comenzó a entrenar** el 22.07.2026 (SAC 2-D,
+`sac_gz2d_entfix_margin022_2024_75k`); la cadena restante (nominal → preflight
+D-43 ligado al checkpoint → fine-tune → 80 celdas) queda **[EN CURSO / PENDIENTE
+— F5]**. Los informes históricos muestran por qué el gate es
 necesario: entfix-2024/42 pasan individualmente, mientras auto-175k queda
 bloqueado a 0.25 y en el probe 0.22 por el over-read CV. Isaac sigue siendo una
 réplica de transferencia —sus checkpoints no son compatibles con Gazebo— y no

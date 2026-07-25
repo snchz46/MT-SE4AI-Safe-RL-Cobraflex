@@ -1,9 +1,12 @@
 # Capítulo 9 — Caracterización del Gap Sim-to-Real
 
 Convención: las secciones marcadas [BORRADOR POST-G4] contienen prosa provisional
-redactada tras el cierre de G4 (02.07.2026) con la evidencia disponible a
-16.07.2026; las marcadas [ESQUELETO — F5] son encabezados a poblar cuando exista
-la evidencia correspondiente (campaña Isaac cerrada / corridas físicas de Fase 5).
+redactada tras el cierre de G4 (02.07.2026); la evidencia posterior incorporada
+se extiende hasta el 22.07.2026 (estudio de algoritmos SAC en Gazebo §7.5.5, la
+calibración D-43→C-02 del readout de rumbo en Gazebo, y el parent 2-D margin022
+en entrenamiento). Las secciones marcadas [ESQUELETO — F5] son encabezados a
+poblar cuando exista la evidencia correspondiente (campaña Isaac cerrada /
+corridas físicas de Fase 5).
 Este capítulo materializa la adaptación **A5** del V-Model (L1' reformulada como
 Operational Validation con caracterización del gap): el testing en simulación no
 equivale a validación operacional, y la diferencia se **mide**, no se asume.
@@ -85,6 +88,24 @@ el curriculum de spawn en secciones difíciles (`random_start_s`, D-58) y la
 configuración 2-D de Gazebo (que deliberadamente **no** hereda `yaw_gain 2.4` ni
 `cage_isaac.yaml` — la cinemática DiffDrive de Gazebo es ~1:1 y su estimador está
 calibrado a 25°).
+
+Que la clase de discrepancia sea real —y no un artefacto de Isaac— quedó
+confirmado de forma independiente dentro de **Gazebo mismo**: al preparar el
+parent 2-D margin022, el readout de rumbo del estimador CV bajo el renderer Lane
+Cam exhibió su propio sesgo dependiente de curvatura, que hubo de medirse y
+calibrarse con una prueba controlada (D-43→C-02, 21.07.2026): estimador
+`joint_pair_quadratic` con ganancia de medición 1.60, validado con 6/6 fallos de
+rumbo detectados y 0 falsos C-02/C-05 sobre 392 ciclos centrados, ligado por hash
+al renderer y a la geometría `complex_b` (docs/12 §4.9). Es el análogo
+Gazebo-interno del sesgo de heading que en Isaac exigió D-55/D-57: la lección A5
+—*el estimador de percepción debe re-calibrarse a cada renderer, y esa
+discrepancia se mide, no se hereda*— aparece por tanto en dos entornos
+distintos, lo que la eleva de anécdota a patrón. **[FIGURA SUGERIDA:** dispersión
+GT-vs-CV y separación de distribuciones seguro/fallo de la calibración D-43
+—las gráficas ya existen en
+`experiments/sim/eval_gz2d/d43_c02_calibration_20260721T082128Z/`
+(`epsi_gt_vs_cv_validation.png`, `epsi_abs_distribution_validation.png`)— como
+ilustración compacta de "la discrepancia es medible y calibrable".]**
 
 ### 9.2.3 Resultados de la campaña Isaac  [ESQUELETO — pendiente]
 

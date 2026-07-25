@@ -789,8 +789,42 @@ D-43 ligado a hashes de checkpoint/config debe pasar antes de cualquier campaña
 El follow-up SC-PERT-03 también queda fijo antes de generar datos: continuación
 única de 50k desde ese parent con `lambda_stall=4.0`, replay/VecNormalize
 restaurados, brazos *released* y *stall_variant*, y criterio porcentual
-`M-P6 > 50.0` frente a `M-P6 == 0 ∧ M-P2 == 1`. No hay todavía curva, checkpoint
-ni resultado experimental bajo este contrato.
+`M-P6 > 50.0` frente a `M-P6 == 0 ∧ M-P2 == 1`.
+
+**Estado al 24.07.2026.** El contrato dejó de ser teórico en tres pasos.
+Primero, la **interfaz de medición de rumbo** que el config margin022 activa
+—el estimador `joint_pair_quadratic` con ganancia de medición de Gazebo 1.60—
+se calibró y **pasó** su prueba controlada D-43→C-02 (21.07.2026): 6/6 fallos
+reales de rumbo detectados, 0 falsos C-02/C-05 sobre 392 ciclos centrados
+seguros, retardo máximo 0,10 s, ligado por hash al renderer Lane Cam y a la
+geometría `complex_b` (docs/12 §4.9; `d43_c02_calibration_20260721T082128Z`).
+Segundo, el **parent fresco 75k se entrenó** (SAC 2-D cámara, seed 2024,
+`complex_b`; checkpoint `cobraflex_sac_gz2d_lane_tuned_entfix_margin022_75k_v1`,
+hash `4f3b56e2…`). Tercero —y este fue el bloqueador real— el **preflight D-43
+ligado al checkpoint** sobre la traza nominal en bucle cerrado **quedó
+BLOQUEADO**: 13 falsos disparos de C-02 en ventana centrada en dos ápices
+cerrados de `complex_b` (`s ≈ 8,9` y `16,1`), uno escalando a emergencia C-05.
+La causa es el solapamiento monofotograma de **H-12**: un vehículo *centrado y
+bien alineado* produce en el ápice un rumbo CV (≈ 0,44 rad) *mayor* que un fallo
+de rumbo genuino, por lo que ninguna ganancia escalar los separa y la resta de
+curvatura monofotograma ya se había rechazado por enmascarar fallos (§4.8). La
+salida es **temporal** (**D-62**, docs/12 §4.10): un fallo real *desplaza* el
+vehículo —`ey` deriva en un ciclo— mientras que la sobre-lectura geométrica deja
+un vehículo centrado y sin deriva. El **gate T3 de consistencia temporal** (opt-in,
+`heading_temporal_window`) limita `|epsi|` a 0,32 rad (bajo el `theta_activate`
+de C-02) *sólo* mientras el propio `ey` del estimador confirma seguimiento de
+carril (centrado y sin deriva) con curvatura real presente; como un fallo rompe
+esa condición al instante, el límite **no puede enmascarar un fallo** ni añade
+retardo. Con T3 el preflight nominal **pasa a PASS** en un re-eval fresco de
+Gazebo: los 7 chequeos en 0/0, error máximo de `|epsi|` centrado 0,361 rad, **0
+C-02 / 0 C-05 / 0 emergencias** en los 4400 pasos, 52 fotogramas de ápice
+limitados a ±0,320 rad con `|ey|` ≈ 5 mm, y los fallos held-out todavía **6/6
+detectados** (`d43_preflight_margin022_2024_75k_t3.json`;
+`rl_sacmargin022_eval_2024_cb75k_4k4_t3`, 3,99 vueltas, `|ey|` medio 16,9 mm).
+Al ser una lectura del cage en tiempo de evaluación —la política observa la CNN,
+nunca `cv_epsi`— no requiere reentrenar y no altera el fingerprint del contrato.
+Con ello el nominal D-43 queda satisfecho; **[PENDIENTE — F5:** el fine-tune de
+50k y la campaña de 80 celdas SC-PERT-03 bajo este contrato**.]**
 
 **Frontera de validez.** Estas corridas son trabajo **posterior E5**. Ninguna
 agotó el presupuesto nominal de 1M; las réplicas cubren N=3 en 1-D y N=2 en
@@ -800,6 +834,16 @@ agotó el presupuesto nominal de 1M; las réplicas cubren N=3 en 1-D y N=2 en
 emerge —suelo de entropía + buffer dimensionado al horizonte— es una hipótesis
 de diseño respaldada por evidencia, no un nuevo veredicto de seguridad. El
 veredicto de récord continúa siendo GE4-V2 sobre el PPO 297k.
+
+**[FIGURA SUGERIDA — fig_7_10 (los datos ya existen en
+`experiments/sim/training/sac_*`):** panel de dos mecanismos que hoy el texto
+describe pero no ilustra. (a) *Temperatura de entropía:* `ep_rew_mean` y entropía
+frente a pasos para `auto` (caída abrupta ~143k en 1-D / ciclos en 2-D) vs
+`ent_coef=0.005` (banda estable) — muestra el suelo de exploración. (b)
+*Reemplazo del replay:* la variante buffer-100k perdiendo pico frente al probe
+buffer-200k que sostiene la banda 690–745 hasta 180k. Es la evidencia visual más
+compacta de los "dos mecanismos distintos" (§7.5.5) y refuerza el mensaje
+metodológico "una curva alta no reemplaza la evaluación cerrada".]**
 
 ---
 

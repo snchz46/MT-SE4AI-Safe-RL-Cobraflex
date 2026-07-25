@@ -152,11 +152,13 @@ del proyecto.
 
 ## 3.3 V-Model clásico y sus supuestos implícitos  [LISTO D9]
 
-El V-Model clásico, formalizado en IEEE 1220, ISO/IEC/IEEE 15288 y adoptado
-por ISO 26262 para automoción, estructura el proceso de ingeniería en cinco
-niveles jerárquicos, con correspondencia bidireccional entre especificación
-(rama izquierda descendente) y verificación/validación (rama derecha
-ascendente).
+El V-Model clásico, con raíz en la ingeniería de sistemas —donde Forsberg y
+Mooz (1991) lo articulan como relación entre el ciclo de proyecto y la
+descomposición técnica— y posteriormente formalizado en IEEE 1220,
+ISO/IEC/IEEE 15288 y adoptado por ISO 26262 para automoción, estructura el
+proceso de ingeniería en cinco niveles jerárquicos, con correspondencia
+bidireccional entre especificación (rama izquierda descendente) y
+verificación/validación (rama derecha ascendente).
 
 <img src="../figures/fig_3_1_adopted_classical_v_model.png" alt="Figura 3.1 — V-Model adoptado por ISO 26262 simplificado, instanciado sobre el caso lane-following." width="500"/>
 

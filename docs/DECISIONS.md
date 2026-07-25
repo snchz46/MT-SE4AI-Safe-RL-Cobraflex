@@ -2812,3 +2812,131 @@ verdict changes. Commands and future reproductions use `/opt/ros/jazzy`; the
 architectural reasoning in D-13 (ROS2 pub/sub, bags and inspection tooling)
 remains valid. Historical Phase-0 provenance is preserved by marking D-13
 superseded rather than rewriting its original rationale.
+
+---
+
+### D-62 — T3 temporal heading-consistency gate: the structural fix for the H-12 curve over-read (opt-in, posterior margin022)
+
+| Field | Value |
+| --- | --- |
+| Section | `docs/12_cv_lane_keeper.md` §4.10; Ch.7 §7.5.5; `cv_lane_estimator.py` |
+| Status | CONFIRMED — nominal D-43 preflight flips BLOCKED → PASS on the margin022 closed loop (24.07.2026) |
+| Date | 24.07.2026 |
+
+**Context.** The D-43/C-02 calibration (D-43 follow-up, 21.07.2026) PASSed on the
+bounded calibration matrix with `joint_pair_quadratic` + gain `1.60`, but the
+*checkpoint-bound nominal* D-43 preflight — the gate the margin022 contract
+requires before a 2-D campaign — **BLOCKED** on the margin022 closed-loop trace
+(`experiments/sim/eval_gz2d/d43_preflight_margin022_2024_75k.json`): 13 centred
+false triggers, all C-02, at two tight `complex_b` apices (s ≈ 8.9, 16.1), one
+escalating to a C-05 emergency (SR-010 Part-1 joint-envelope assertion). Root
+cause is the **H-12 single-frame overlap**: at those apices a *centred, well-
+aligned* vehicle produces a raw CV heading (up to ≈ 0.44 rad after gain) that
+*exceeds* a genuine mid-curve heading fault's reading. No scalar gain separates
+them, and single-frame curvature subtraction was already rejected (§4.8) because
+the per-frame `c2` is noise-corrupted and masks real faults. Proven
+non-separable on the data: centred-curve raw heading 0.2743 > real-fault raw
+0.2394.
+
+**Decision.** Add an **opt-in temporal gate** to `CvLaneEstimator`
+(`heading_temporal_window > 0`) that caps the reported `|epsi|` to
+`heading_temporal_cap_rad` (0.32, below C-02's `theta_activate` = 0.4014)
+**only while the estimator's own `ey` confirms lane-following** across the
+window — centred (`|ey| ≤ 0.08`), drift-free (window span ≤ 0.03 m) — **and real
+curvature is present** (median `|curvature| ≥ 0.30`). Default `window = 0`
+disables it, so every frozen GE4/G4 config is bit-identical; only the posterior
+margin022 cage block opts in (window 4). The estimator gains a per-episode
+`reset()`, called from `CagePerceptionSupervisor.reset()`. Eval-time cage
+readout only — the policy observes the CNN camera, never `cv_epsi`, so this is
+not a training/observation change and needs **no retrain**; the campaign-contract
+fingerprint (action + sac + contract block, not `cage`) is unchanged, so the
+existing checkpoint still validates.
+
+**Rationale — why temporal separates what single-frame cannot.** A genuine
+heading error *moves the vehicle*: `ey` drifts > the bound within one control
+cycle (measured: the held-out D-43/C-02 faults jump `cv_ey` > 40 mm in one
+frame at onset). The curvature-induced geometric over-read leaves a *centred,
+non-drifting* vehicle. Gating the cap on confirmed lane-following therefore
+**cannot mask a fault** — a fault breaks the gate the instant it exists — while
+it removes the false triggers. This is the temporal escape flagged as the only
+structural fix in the D-48 note (§4.4). No detection delay is added: the cap is
+instantaneous and a fault bypasses it (the calibration budget is ≤ 0.2 s = 2
+cycles; measured max delay stays 0.1 s).
+
+**Evidence.** Offline over the labelled held-out (seed 42) D-43/C-02 cells and
+the margin022 nominal trace, then confirmed in a fresh Gazebo closed-loop
+re-eval with T3 on: **all 7 preflight checks PASS** (0/0 everywhere;
+`d43_preflight_margin022_2024_75k_t3.json`), max centred `|epsi|` error 0.361 rad
+(< 0.40), **0 C-02, 0 C-05, 0 emergencies** in the whole 4400-step trace, 52
+apex frames capped at exactly ±0.320 with the vehicle at `|ey|` ≈ 5 mm; held-out
+faults still **6/6 detected, ≤ 1-cycle delay, 0 false triggers**. The re-eval is
+cleaner than the blocked original (3.99 vs 2.44 laps; the cage no longer
+false-brakes at apices), `mean |ey|` 16.9 mm, `max |ey|` 67 mm. Unit tests in
+`policy/tests/test_cv_lane_estimator.py` cover the gate, the no-mask guarantee,
+reset, and default-off bit-identity (589/589 suite green).
+
+**Consequences.** The margin022 nominal D-43 preflight is satisfied; the fresh-
+parent → nominal-PASS → fine-tune → campaign path is unblocked. Scope is the
+hash-bound Gazebo Lane-Cam / `complex_b` envelope (same as §4.8/§4.9); no Isaac
+parameter is reused. The gate is a conservative *availability* trade at worst
+(a confirmed-tracking vehicle's heading is never allowed to trip C-02); C-01
+(lateral) and C-03 (TTLC) keep full sensitivity, and the SR-014 plausibility
+temporal check remains the backstop for the wrong-side lock. Cites D-43 (the CV
+interface), D-48 (the flagged temporal fix), §4.8/§4.9 (rejected single-frame
+routes).
+
+---
+
+### D-63 — SC-PERT-03 posterior 2-D negative test: released arm PASS, stall adversary not induced at the preregistered λ (not retuned)
+
+| Field | Value |
+| --- | --- |
+| Section | `experiments/sim/campaign_sac_pert03/SC_PERT_03_ANALYSIS.md`; Ch.8 §8.9.6 |
+| Status | CONFIRMED — 80-run campaign executed cleanly (0 errors); recorded as a characterised result |
+| Date | 24.07.2026 |
+
+**Context.** SC-PERT-03 is the SR-009 stall/liveness negative test for the 2-D
+(steer+throttle) action. It has a *control* arm (`released` = the deployed
+margin022 policy: must make progress, M-P2=1, and never stall, M-P6≈0) and an
+*adversarial* arm (`stall_variant` = a 50k fine-tune with a throttle penalty
+`r' = r − λ_stall·|throttle|`, which must reach M-P6 > 50 % so the cage's stall
+handling is actually exercised). The protocol fixes λ_stall = 4.0 **a priori**
+with `adaptive_tuning: false`, precisely so the adversary cannot be fished for a
+convenient outcome. Executed on the margin022 parent (4f3b56e2) + its T3-gated
+D-43 preflight authorisation (D-62); 80 runs (20 reps × 2 arms × 2 modes).
+
+**Decision / finding.** Report the campaign as-is: **released arm PASS**
+(enforcement 18/20 = 0.90, monitoring 20/20 = 1.00 — deployed-policy liveness
+confirmed), **stall_variant arm inconclusive** because the preregistered λ = 4.0
+did **not** manufacture a deterministic staller (M-P6 max 0.79 %, mean 0.03 %
+across 40 runs; the fine-tuned checkpoint 56d235da, genuinely distinct from the
+parent, still drives ~0.34 laps at |ey|≈0.02 m). **λ is NOT retuned** to force a
+staller — that is exactly the post-hoc fishing the fixed-a-priori protocol
+forbids.
+
+**Rationale — why λ = 4.0 did not induce a stall.** The parent config uses
+`normalize_reward: true` (VecNormalize) + `clip_reward: 10.0`. The fixed additive
+penalty is applied to the *raw* reward, then divided by the running return std
+(~10²–10³) and clipped, diluting λ to a small fraction of the normalized
+advantage. Training rollouts still went short/negative (`ep_rew_mean → −100`,
+`ep_len ≈ 60`: exploration under the penalty ran the *stochastic* policy
+off-road), but the *deterministic* mean-action policy that is evaluated kept the
+base policy's competent driving. A genuine deterministic staller would need a
+larger λ or λ on the unnormalized reward — a protocol change, not a retune.
+
+**Relation to SR-009.** For the frozen 1-D steering-only action the stall arm is
+N/A-by-construction (M-P6 ≡ 0, no throttle authority; D-49). The 2-D action
+(D-50) makes stalling commandable in principle, so SC-PERT-03 is well-posed, but
+the adversary could not be produced at the preregistered λ, so the
+stall-*detection* half is untested-in-practice. The released arm's M-P6 ≈ 0
+directly confirms the deployed policy's liveness, which is what SR-009 asserts of
+the actual system.
+
+**Consequences.** Does not reopen G4 (posterior E5). No SR verdict, scenario or
+metric changes; `check_traceability.py` unaffected. A residual T3 finding is
+recorded (2/20 released-enforcement false emergencies from a rare apex-exit CV-ey
+transient that breaks T3's drift gate by design — the conservative, no-mask side
+of D-62, not loosened). Any future attempt to exercise the stall-detection arm
+must **re-preregister** a new protocol with an explicit, justified λ (or an
+unnormalized-reward penalty), not silently retune this one. Cites D-49 (1-D N/A),
+D-50 (2-D well-posed), D-62 (the authorising T3 preflight).

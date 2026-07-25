@@ -77,6 +77,15 @@ policy/checkpoints/*.pt
 policy/checkpoints/*.pth
 policy/checkpoints/*.pkl
 
+# SB3 training artifacts anywhere (checkpoints + replay/vecnormalize) — these are
+# large binaries (replay buffers reach several GB, > GitHub's 100 MB limit) and are
+# regenerable; only policy/checkpoints/ was covered before, so root-level and
+# experiments/ checkpoints leaked into a commit (fixed 25.07.2026).
+*.replay_buffer.pkl
+*.vecnormalize.pkl
+/cobraflex_*.zip
+experiments/**/*.zip
+
 # Demo/evidence videos (large; the manuscript references them as supplementary
 # material and embeds a still frame instead). Keep the .mp4 under manuscript/media/
 # or an experiments run dir; a print PDF cannot play video. Stills (.png) are tracked.

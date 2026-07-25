@@ -2,8 +2,12 @@
 
 <!--
 Estado: G4 CERRADO (02.07.2026), actualizado con evidencia posterior E5 a
-20.07.2026. GE4-V2 sigue siendo el veredicto de récord; §8.9.6 es un probe SAC
-de cinco escenarios, no una nueva campaña de veredicto.
+22.07.2026. GE4-V2 sigue siendo el veredicto de récord; §8.9.6 es un probe SAC
+de cinco escenarios, no una nueva campaña de veredicto. La evidencia posterior
+21–22.07 (calibración D-43→C-02 del readout de rumbo y arranque del entrenamiento
+del parent 2-D margin022) es *interfaz de medición y trabajo en curso*, no una
+campaña nueva: vive en ch7 §7.5.5, ch9 §9.2.2 y ch12 T1, y **no altera** ninguna
+cifra ni veredicto de este capítulo.
 Extensión objetivo: 14–18 páginas.
 Convención (igual que el Capítulo 7):
   [BORRADOR D5X]    → prosa de metodología/diseño, fijable ya (no depende de
@@ -919,6 +923,49 @@ etiqueta `2024` del selector del runner con `--model-path` fijo. Los 100
 `4d09e43c…`; estos metadatos y el hash son la fuente autoritativa para atribuir
 la segunda campaña. La inconsistencia de etiquetado no altera las trazas ni el
 roll-up, pero debe corregirse en una regeneración futura del índice.
+
+### 8.9.7 Test negativo SC-PERT-03 en 2-D: liveness confirmada, adversario de parada no inducido  [E5]
+
+El único escenario que exige acción de parada (throttle) es SC-PERT-03, el
+meta-test de detectabilidad de SR-009. Con la acción 1-D (dirección sola) la
+parada es **imposible por construcción** (M-P6 ≡ 0, D-49); la acción 2-D
+`steer_throttle` de margin022 (D-50) la hace comandable, de modo que el test
+queda bien planteado. Tras el PASS del preflight nominal D-43 con T3 (§7.5.5,
+D-62), se ejecutó el protocolo preregistrado de dos brazos
+(`experiments/sim/campaign_sac_pert03/`): un brazo *control* (`released` = la
+política desplegada) y uno *adversario* (`stall_variant` = un fine-tune de 50k
+con penalización de throttle `r' = r − λ_stall·|throttle|`, λ_stall = 4.0
+**fijada a priori**, `adaptive_tuning: false`). 80 runs (20 rep × 2 brazos × 2
+modos), 0 errores, autorizados por el reporte D-43 con T3.
+
+El brazo **control PASA** —enforcement 18/20 (0.90), monitoring 20/20 (1.00)—:
+la política desplegada progresa (M-P2 = 1) y **nunca se detiene** (M-P6 ≈ 0). El
+brazo **adversario, en cambio, no logró fabricar una parada**: en los 40 runs
+`stall_variant`, M-P6 máximo 0.79 % y medio 0.03 % (el criterio pide > 50 %); el
+checkpoint fine-tuneado (`56d235da…`, genuinamente distinto del parent) sigue
+conduciendo ~0.34 vueltas a |ey| ≈ 0.02 m. El mecanismo es instructivo: con
+`normalize_reward` + `clip_reward`, la penalización aditiva fija se aplica a la
+recompensa **cruda** y luego se divide por la escala de retornos (~10²–10³) y se
+recorta, diluyendo λ frente a la ventaja normalizada; los rollouts de
+entrenamiento sí se acortaron y volvieron negativos (`ep_rew_mean → −100`,
+`ep_len ≈ 60`: la exploración bajo la penalización sacó de pista a la política
+**estocástica**), pero la política **determinista** evaluada conservó la
+conducción competente del parent. Conforme al principio anti-gaming del
+protocolo, **λ no se re-ajusta** para forzar una parada: el brazo de detección
+se registra como un **inconcluso caracterizado**, no como un fallo de la cage.
+El M-P6 ≈ 0 del brazo control confirma directamente la liveness de la política
+que sí se desplegaría, que es lo que SR-009 afirma del sistema real. Análisis
+completo: `experiments/sim/campaign_sac_pert03/SC_PERT_03_ANALYSIS.md` (D-63).
+
+Un residuo menor de T3 aparece aquí: 2/20 runs `released` en enforcement (0/20 en
+monitoring) terminan en emergencia de la cage con el vehículo bien dentro del
+carril (excursión máx. 3–4 cm). La traza muestra a T3 capando correctamente
+`cv_epsi` en el ápice; a la salida, un transitorio de medida hace saltar `cv_ey`
+~3-4 cm (el ey real sigue en ~2 cm), lo que supera el umbral de deriva de T3 y
+**lo desengancha por diseño** —la puerta de deriva no debe enmascarar una posible
+excursión real—, dejando pasar un `cv_epsi` no capado que dispara C-02/C-05. Es
+el lado conservador de la garantía «no enmascara» de T3, no una regresión, y no
+motiva aflojarla.
 
 ---
 

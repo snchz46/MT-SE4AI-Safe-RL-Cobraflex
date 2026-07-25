@@ -1,0 +1,97 @@
+{
+  "run_id": "sac_gz2d_entfix_margin022_2024_75k",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-07-22T10:26:28.827940+00:00",
+  "git_commit": "6427fd6c95f36966b38644b43c2bb52a2fe2152e",
+  "train_config": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/src/cobraflex_rl/config/train_sac_camera_2d_tuned_entfix_margin022.yaml",
+  "train_config_hash": "3ae8f74bca9dee07b30fc9fe91aea781514b9e7cf0f02321a4f6e8945171e5c9",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "scenario_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "policy_checkpoint": "cobraflex_sac_gz2d_lane_tuned_entfix_margin022_75k_v1.zip",
+  "policy_checkpoint_hash": "4f3b56e26ab7e7998d43dd22d13ac75cba3cb927f0aade4d089fa9e39e62b08b",
+  "parent_policy_checkpoint": null,
+  "parent_policy_checkpoint_hash": null,
+  "parent_vecnormalize": null,
+  "parent_vecnormalize_hash": null,
+  "policy_vecnormalize": "cobraflex_sac_gz2d_lane_tuned_entfix_margin022_75k_v1.vecnormalize.pkl",
+  "policy_vecnormalize_hash": "fb4e1e4624f39ce03612fb5f00e91c67a176acd7505e29e37ffc68cefad48721",
+  "parent_replay_buffer": null,
+  "parent_replay_buffer_hash": null,
+  "policy_replay_buffer": "cobraflex_sac_gz2d_lane_tuned_entfix_margin022_75k_v1.replay_buffer.pkl",
+  "policy_replay_buffer_hash": "a8e2a6340364de714c5cf4c5c56a5d1bd153b5e91358087ade52d62eb9acd65e",
+  "seed": 2024,
+  "platform": "sim",
+  "total_timesteps": 75000,
+  "algorithm": "sac",
+  "hyperparameters": {
+    "learning_rate": 0.0003,
+    "lr_schedule": "constant",
+    "gamma": 0.99,
+    "batch_size": 256,
+    "normalize_reward": true,
+    "buffer_size": 150000,
+    "learning_starts": 5000,
+    "tau": 0.005,
+    "train_freq": 1,
+    "gradient_steps": 2,
+    "ent_coef": 0.005,
+    "target_update_interval": 1
+  },
+  "policy": "CnnPolicy",
+  "observation": {
+    "type": "camera",
+    "camera": {
+      "topic": "/camera/image_raw_lane",
+      "width": 84,
+      "height": 84,
+      "grayscale": true,
+      "frame_stack": 4
+    }
+  },
+  "action": {
+    "type": "steer_throttle",
+    "max_speed_mps": 0.22,
+    "throttle_deadband": 0.05
+  },
+  "campaign_contract": {
+    "schema_version": 1,
+    "id": "GZ2D-SAC-ENTFIX-MARGIN022-V1",
+    "status": "preregistered_untrained",
+    "requires_fresh_training": true,
+    "historical_checkpoint_compatible": false,
+    "algorithm": "sac",
+    "action_type": "steer_throttle",
+    "max_speed_mps": 0.22,
+    "throttle_deadband": 0.05,
+    "c04_curve_ceiling_mps": 0.25,
+    "minimum_speed_margin_mps": 0.03,
+    "d43_preflight_required": true,
+    "replay_buffer_required": true,
+    "bounded_training_required": true,
+    "planned_training_steps": 75000,
+    "planned_finetune_steps": 50000,
+    "replay_buffer_size": 150000,
+    "replay_buffer_covers_parent_and_finetune": true
+  },
+  "reward": {
+    "lateral_error": 2.5,
+    "heading_error": 0.75,
+    "steer_delta": 0.2,
+    "throttle_delta": 0.1,
+    "forward_progress": 1.0,
+    "stall_penalty": 0.5,
+    "stall_progress_min": 0.25,
+    "termination": 25.0
+  },
+  "domain_randomization": {
+    "enabled": true,
+    "p_degrade": 0.5,
+    "level_range": [
+      0.2,
+      0.8
+    ]
+  },
+  "status": "completed"
+}

@@ -1,0 +1,106 @@
+algorithm: sac
+sac:
+  buffer_size: 150000
+  learning_starts: 5000
+  tau: 0.005
+  train_freq: 1
+  gradient_steps: 2
+  ent_coef: 0.005
+  target_update_interval: 1
+total_timesteps: 50000
+learning_rate: 0.0003
+lr_schedule: constant
+target_kl: 0.5
+gamma: 0.99
+gae_lambda: 0.95
+n_steps: 1024
+batch_size: 256
+n_epochs: 10
+clip_range: 0.2
+ent_coef: 0.01
+vf_coef: 0.5
+max_grad_norm: 0.5
+normalize_reward: true
+clip_range_vf: 0.2
+clip_reward: 10.0
+device: auto
+service_timeout_ms: 3500
+seed: 2024
+max_episode_steps: 2048
+control_dt: 0.1
+fixed_speed: 0.2
+progress_bounded_tracking: false
+viz: false
+checkpoint_freq: 25000
+save_replay_buffer: true
+model_path: /media/samuel/Fast_SSD/SE4AI/thesis_repo/experiments/sim/training/sc_pert_03_margin022/stall_variant.zip
+sim_real_time_factor: 1
+policy: CnnPolicy
+action:
+  type: steer_throttle
+  max_speed_mps: 0.22
+  throttle_deadband: 0.05
+campaign_contract:
+  schema_version: 1
+  id: GZ2D-SAC-ENTFIX-MARGIN022-V1
+  status: preregistered_untrained
+  requires_fresh_training: true
+  historical_checkpoint_compatible: false
+  d43_preflight_required: true
+  replay_buffer_required: true
+  bounded_training_required: true
+  planned_training_steps: 75000
+  planned_finetune_steps: 50000
+  replay_buffer_covers_parent_and_finetune: true
+  c04_curve_ceiling_mps: 0.25
+  minimum_speed_margin_mps: 0.03
+  max_speed_mps: 0.22
+observation:
+  type: camera
+  camera:
+    topic: /camera/image_raw_lane
+    width: 84
+    height: 84
+    grayscale: true
+    frame_stack: 4
+domain_randomization:
+  enabled: true
+  p_degrade: 0.5
+  level_range:
+  - 0.2
+  - 0.8
+reward:
+  lateral_error: 2.5
+  heading_error: 0.75
+  steer_delta: 0.2
+  throttle_delta: 0.1
+  forward_progress: 1.0
+  stall_penalty: 0.5
+  stall_progress_min: 0.25
+  termination: 25.0
+  lambda_stall: 4.0
+cage:
+  enabled: true
+  mode: enforcement
+  yaml_path: ''
+  perception_heading_fit_mode: joint_pair_quadratic
+  perception_heading_gain: 1.6
+  perception_heading_temporal_window: 4
+  perception_heading_temporal_ey_track_m: 0.08
+  perception_heading_temporal_ey_drift_m: 0.03
+  perception_heading_temporal_kappa_gate: 0.3
+  perception_heading_temporal_cap_rad: 0.32
+  lookahead_segments: 5
+  throttle_nominal: 0.5
+  yaw_gain: 0.8
+  min_speed_scale: 0.35
+spawn_perturbation:
+  enabled: true
+  heading_rad: 0.15
+  lateral_m: 0.05
+  random_start_s: true
+protocol:
+  id: SC-PERT-03
+  version: 1
+  arm: stall_variant
+  adaptive_tuning: false

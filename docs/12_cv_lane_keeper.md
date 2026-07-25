@@ -3,7 +3,7 @@
 | Field | Value |
 | --- | --- |
 | Artifact | The logical (non-learned) camera lane-keeper: deployment node + shared control law + CV estimator |
-| Version | **0.6** (2026-07-13 — §4.4: both estimator limitations **measured in-situ** by the 420-pose weak-section oracle probe: the H-12 flip quantified (≈ −1 lane width at ey ≈ +0.12, everywhere) + NEW confident heading over-read in tight curves (−0.2…−0.45 rad on a centred car → crosses the 25° envelope); mechanisms of the E5 multi-seed / 2-D enforcement stops) |
+| Version | **0.7** (2026-07-24 — §4.10: the **T3 temporal heading-consistency gate** (D-62) resolves the §4.4 confident curve over-read: caps `|epsi|` only while the estimator's own `ey` confirms lane-following, so a genuine fault (which drifts `ey`) is never masked. Nominal D-43 preflight for margin022 flips BLOCKED → **PASS** in closed loop; held-out faults still 6/6. Opt-in, default off) — prior 0.6 (2026-07-13 — §4.4: both estimator limitations **measured in-situ** by the 420-pose weak-section oracle probe: the H-12 flip quantified (≈ −1 lane width at ey ≈ +0.12, everywhere) + confident heading over-read in tight curves (−0.2…−0.45 rad on a centred car → crosses the 25° envelope); mechanisms of the E5 multi-seed / 2-D enforcement stops) |
 | Phase / Gate | Track 'E' (camera) — the fair baseline for the RL camera agent (GE4 eval) |
 | Author | Samuel Sanchez |
 | Date | 2026-06-19 |
@@ -418,8 +418,84 @@ remain uncertified; in particular no Isaac parameter is reused.
 The frozen estimator default remains `near_secant`, so historical GE4/G4
 artefacts are bit-identical. Only the untrained posterior margin022 contract
 opts into `joint_pair_quadratic` + `1.60`; its new checkpoint must still pass the
-checkpoint-bound nominal D-43 preflight before a campaign. No checkpoint exists
-yet, so this PASS qualifies the measurement interface, not a learned policy.
+checkpoint-bound nominal D-43 preflight before a campaign.
+
+### 4.10 T3 temporal heading-consistency gate — the H-12 curve over-read fix (24.07.2026, D-62)
+
+The §4.9 PASS qualified the measurement interface on the bounded calibration
+matrix. When the margin022 checkpoint was trained and its **checkpoint-bound
+nominal** D-43 preflight run on the closed-loop `complex_b` trace, that preflight
+**BLOCKED**: 13 centred false triggers (all C-02) at two tight apices
+(`s ≈ 8.9`, `16.1`), one escalating to a C-05 emergency. The cause is the
+**H-12 single-frame overlap**, now measured directly: at those apices a
+*centred, well-aligned* vehicle (`|ey| ≲ 4 mm`, ground-truth `epsi ≈ 0`) reads a
+CV heading up to ≈ 0.44 rad — *larger* than a genuine mid-curve heading fault.
+No scalar gain separates the two (centred-curve raw heading 0.2743 rad
+> real-fault raw 0.2394 rad), and the §4.8 curvature subtraction was already
+rejected because the per-frame `c2` is noise-corrupted and masks faults.
+
+The escape is **temporal**, as flagged in §4.4 (D-48): a genuine heading error
+*moves the vehicle* — `ey` drifts within one control cycle (the held-out
+`+/-0.48 rad` faults jump `cv_ey` > 40 mm in a single frame at onset) — while the
+curvature-induced geometric over-read leaves a *centred, non-drifting* vehicle.
+The opt-in gate (`CvLaneEstimator`, `heading_temporal_window`) therefore caps the
+reported `|epsi|` to `heading_temporal_cap_rad` (0.32 rad, below C-02's
+`theta_activate = 0.4014 rad`) **only when, across the window, the estimator's own
+`ey` confirms lane-following** (centred `|ey| ≤ 0.08 m`, drift-free span ≤ 0.03 m)
+**and real curvature is present** (median `|curvature| ≥ 0.30 1/m`). A fault
+breaks the no-drift gate the instant it exists, so the cap **cannot mask a
+fault** and adds **no detection delay**; the cap only ever attenuates a vehicle
+*proven* to be tracking the lane centre. `window = 0` (the default) disables it
+→ every frozen GE4/G4 config is bit-identical; only the margin022 cage block
+opts in (window 4). The estimator gains a per-episode `reset()`, invoked from
+`CagePerceptionSupervisor.reset()`. This is an **eval-time cage readout** — the
+policy observes the CNN camera, never `cv_epsi` — so it needs **no retrain**, and
+the campaign-contract fingerprint (action + sac + contract block, not `cage`) is
+unchanged, so the existing checkpoint still validates.
+
+Validated offline over the labelled held-out (seed 42) D-43/C-02 cells and the
+margin022 nominal trace, then **confirmed in a fresh Gazebo closed-loop re-eval**
+(`experiments/sim/runs/rl_sacmargin022_eval_2024_cb75k_4k4_t3/`,
+`experiments/sim/eval_gz2d/d43_preflight_margin022_2024_75k_t3.json`):
+
+| Nominal D-43 preflight (margin022, `complex_b`) | Baseline | With T3 |
+| --- | ---: | ---: |
+| Verdict | **BLOCKED** | **PASS** |
+| Centred false C-02/C-03 triggers | 13 | **0** |
+| Centred heading-envelope crossings | 1 | **0** |
+| Centred emergencies (C-05) | 1 | **0** |
+| Max centred `|epsi|` error | > 0.40 | **0.361 rad** |
+| Held-out real faults detected | 6/6 | **6/6** (≤ 1-cycle delay) |
+| Completed laps / mean `|ey|` | 2.44 / 16.5 mm | **3.99 / 16.9 mm** |
+| C-02 / C-05 firings in whole trace | > 0 | **0 / 0** |
+
+In the re-eval, 52 apex frames were capped at exactly ±0.320 rad while the
+vehicle sat at `|ey|` ≈ 5 mm — the mechanism firing precisely where it should,
+with no C-02/C-05 anywhere. Scope is the hash-bound Gazebo Lane-Cam / `complex_b`
+envelope (§4.8/§4.9); no Isaac parameter is reused. C-01 (lateral) and C-03
+(TTLC) keep full sensitivity; the SR-014 plausibility temporal check remains the
+wrong-side-lock backstop. This unblocks the margin022 fresh-parent →
+nominal-PASS → fine-tune → campaign path.
+
+**End-to-end calibration re-run with T3 (25.07.2026).** As a belt-and-suspenders
+check that T3 does not regress the D-43/C-02 fault detection, the §4.9 bounded
+calibration was re-run through Gazebo with T3 enabled
+(`experiments/sim/eval_gz2d/d43_c02_calibration_t3/`, runtime
+`runtime_ppo_camera_t3.yaml`). Result: **PASS, both splits, 6/6 injected heading
+faults detected within one 0.10 s cycle, 0 false C-02/C-05 across the centred-safe
+cycles, 0 road-edge contacts.** T3 never delays or masks a fault: at injection the
+vehicle's `ey` drifts > the 0.03 m gate in the same frame (e.g. val_02: `cv_ey`
++0.007 → +0.054 at the injection step), so T3 disengages instantly and the uncapped
+`cv_epsi` trips C-02/C-05 with no added delay. One diagnostic changes character: the
+raw `|cv_epsi|` safe-vs-fault *separation margin* (the §4.9 headline, +0.074 rad)
+goes negative (−0.178 rad on the held-out split) — because T3 deliberately caps the
+safe-side curve over-reads to 0.32 rad (its whole purpose) while the metric's
+fault-side minimum picks up low post-emergency-stop readings. This does **not**
+weaken detection: with T3 the discriminant is the temporal gate plus C-02's
+hysteresis on the immediate post-drift signal, not a raw `|cv_epsi|` threshold. The
+scalar-separation framing of §4.9 is therefore superseded by the temporal one for
+any T3-enabled config; the safety property (all faults caught, no false triggers)
+is preserved end-to-end.
 
 ---
 
@@ -678,6 +754,20 @@ reads centreline-derived state (baseline); track-E cage reads the CV estimator
 
 ## Version log
 
+- **v0.7 (2026-07-24):** §4.10 adds the **T3 temporal heading-consistency gate**
+  (D-62). Caps the CV `|epsi|` (to 0.32 rad, below C-02's activate) **only** while
+  the estimator's own `ey` confirms lane-following (centred + drift-free) with real
+  curvature present — the temporal escape from the §4.4 confident curve over-read
+  that no single-frame gain or curvature subtraction could reach. A genuine fault
+  drifts `ey` and so breaks the gate, so the cap cannot mask a fault (held-out
+  faults still 6/6, ≤ 1-cycle delay). Opt-in (`heading_temporal_window`, default 0
+  → GE4/G4 bit-identical); margin022 opts in. The **nominal D-43 preflight** for
+  margin022 flips **BLOCKED → PASS** in a fresh Gazebo closed loop (0 C-02/C-05,
+  0 emergencies, 3.99 laps). Eval-time cage readout, no retrain; contract
+  fingerprint unchanged.
+- **v0.6 (2026-07-13):** §4.4 both estimator limitations **measured in-situ** by the
+  420-pose weak-section oracle probe (H-12 flip + confident curve heading over-read);
+  §4.8/§4.9 D-43→C-02 calibration (`joint_pair_quadratic` + gain 1.60, held-out PASS).
 - **v0.5 (2026-07-02):** §4.4 gains the **H-12 confident under-read** note (D-48, the
   GE4-V2 SR-001 mechanism): nearest-centre lane selection locks onto a neighbouring-lane
   pair when the vehicle departs past ~half a lane, feeding the cage a falsely-centred

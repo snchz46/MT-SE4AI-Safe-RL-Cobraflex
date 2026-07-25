@@ -33,8 +33,9 @@ geometries through the same camera model and verify recovery.
 """
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass, field
-from typing import List, Optional, Sequence, Tuple
+from typing import Deque, List, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -145,6 +146,30 @@ class CvLaneEstimatorConfig:
     # this slack the side assignment is too ambiguous to trust (H-12 risk —
     # the plausibility temporal check is the backstop).
     single_line_side_slack_m: float = 0.12
+    # --- Temporal heading-consistency gate (T3, D-62) -----------------------
+    # The single-frame escape from the H-12 heading over-read on tight curves is
+    # structurally impossible: a centred vehicle on the complex_b apex produces a
+    # *larger* raw heading than a genuine mid-curve heading fault, so no scalar
+    # gain or curvature subtraction separates them without masking real faults
+    # (the near_secant curvature term and D-48 were both rejected for exactly
+    # this). The separable signal is temporal: a genuine heading error MOVES the
+    # vehicle (ey drifts within one control cycle), whereas the curvature-induced
+    # geometric over-read leaves a *centred, non-drifting* vehicle. This gate
+    # therefore caps the reported |epsi| ONLY while the estimator's own ey has
+    # stayed centred and drift-free across the window AND real curvature is
+    # present — conditions a genuine fault breaks instantly (its ey jumps > the
+    # drift bound in one frame), so the cap can never attenuate a fault. Validated
+    # offline against the held-out D-43/C-02 fault cells (6/6 detected, ≤ 1-cycle
+    # delay, 0 false triggers) and the margin022 nominal trace (13 → 0 centred
+    # false triggers). ``heading_temporal_window == 0`` disables it → every frozen
+    # GE4/G4 config stays bit-identical. Consumes the estimator's own outputs
+    # only (never ground truth); the cap is below C-02's theta_activate so a
+    # confirmed-tracking vehicle cannot trip the reactive heading rule.
+    heading_temporal_window: int = 0        # cycles of history; 0 disables (default)
+    heading_temporal_ey_track_m: float = 0.08   # |ey| must stay under this (centred)
+    heading_temporal_ey_drift_m: float = 0.03   # window ey span must stay under this
+    heading_temporal_kappa_gate: float = 0.30   # median |curvature| gate (1/m)
+    heading_temporal_cap_rad: float = 0.32      # capped |epsi| when the gate holds
 
 
 @dataclass(frozen=True)
@@ -199,6 +224,8 @@ class CvLaneEstimator:
             )
         if not np.isfinite(self.config.heading_gain) or self.config.heading_gain <= 0.0:
             raise ValueError("heading_gain must be finite and > 0")
+        if self.config.heading_temporal_window < 0:
+            raise ValueError("heading_temporal_window must be >= 0")
         # Precompute the scan rows (image v) for the configured look-ahead band.
         v_near = self.camera.distance_to_row(self.config.near_distance_m)
         v_far = self.camera.distance_to_row(self.config.far_distance_m)
@@ -209,10 +236,63 @@ class CvLaneEstimator:
         # Running lane-width estimate for the single-line fallback, updated
         # whenever a full pair is found (EMA, lane_keeper precedent).
         self._lane_width_ema = float(self.config.lane_width_nominal_m)
+        # Temporal heading-consistency history (T3, D-62). Populated only when
+        # the gate is enabled; per-episode via reset(). Holds the recent
+        # estimator ey and |curvature| used to confirm lane-following.
+        win = self.config.heading_temporal_window
+        self._heading_hist_ey: Deque[float] = deque(maxlen=win or 1)
+        self._heading_hist_kappa: Deque[float] = deque(maxlen=win or 1)
         # Debug-only: pixel (u, v) of the per-row white-run centres accepted as
         # candidates this frame. Populated by _row_candidates, read by the lane
         # keeper's debug overlay; does not affect the estimate.
         self.debug_candidates_px: List[Tuple[int, int]] = []
+
+    # ------------------------------------------------------- temporal gate
+    def reset(self) -> None:
+        """Per-episode reset of the temporal heading-consistency history (T3).
+
+        Clears only the T3 window so a new rollout cannot inherit the previous
+        episode's lane-following confirmation. The lane-width EMA is left intact
+        (it was already persistent across episodes before T3, and must stay so
+        for the single-line fallback to behave bit-identically)."""
+        self._heading_hist_ey.clear()
+        self._heading_hist_kappa.clear()
+
+    def _temporal_heading_gate(
+        self, ey: float, epsi: float, curvature: float
+    ) -> float:
+        """Cap |epsi| iff the vehicle is provably tracking the lane centre.
+
+        Records this frame's ``ey`` and ``|curvature|`` in the T3 window, then
+        caps the magnitude of ``epsi`` (sign preserved) to
+        ``heading_temporal_cap_rad`` only when, across a full window, the
+        estimator's own ey stayed centred (``|ey| ≤ ey_track``) and drift-free
+        (window span ≤ ey_drift) while real curvature is present (median
+        ``|curvature| ≥ kappa_gate``). Those are precisely the conditions a
+        curvature-induced geometric over-read satisfies and a genuine heading
+        fault violates (a real fault moves the vehicle within one cycle), so the
+        cap cannot mask a fault. Returns ``epsi`` unchanged when the gate is
+        disabled, the window is not yet full, or any condition fails."""
+        cfg = self.config
+        win = cfg.heading_temporal_window
+        if win <= 0:
+            return epsi
+        self._heading_hist_ey.append(float(ey))
+        self._heading_hist_kappa.append(abs(float(curvature)))
+        if len(self._heading_hist_ey) < win:
+            return epsi  # insufficient history → full sensitivity
+        centred = all(
+            abs(e) <= cfg.heading_temporal_ey_track_m for e in self._heading_hist_ey
+        )
+        drift = (
+            max(self._heading_hist_ey) - min(self._heading_hist_ey)
+        ) <= cfg.heading_temporal_ey_drift_m
+        kappas = sorted(self._heading_hist_kappa)
+        kappa_med = kappas[len(kappas) // 2]
+        curved = kappa_med >= cfg.heading_temporal_kappa_gate
+        if centred and drift and curved and abs(epsi) > cfg.heading_temporal_cap_rad:
+            return float(np.copysign(cfg.heading_temporal_cap_rad, epsi))
+        return epsi
 
     # ------------------------------------------------------------------ mask
     def white_mask(self, frame_bgr: np.ndarray) -> np.ndarray:
@@ -483,6 +563,9 @@ class CvLaneEstimator:
         confidence = min(1.0, n_pair_points / (2.0 * len(self._scan_rows)))
         # Feed the running width estimate for the single-line fallback.
         self._lane_width_ema = 0.8 * self._lane_width_ema + 0.2 * lane_width
+        # Temporal heading-consistency gate (T3): caps |epsi| only while the
+        # vehicle is confirmed tracking the lane centre (never a genuine fault).
+        epsi = self._temporal_heading_gate(ey, epsi, curvature)
         return CvLaneEstimate(
             ok=True,
             ey=ey,
@@ -534,10 +617,12 @@ class CvLaneEstimator:
         confidence = cfg.single_line_confidence_scale * min(
             1.0, len(best["pts"]) / float(len(self._scan_rows))
         )
+        ey = -float(center0)
+        epsi = self._temporal_heading_gate(ey, -cfg.heading_gain * heading, curvature)
         return CvLaneEstimate(
             ok=True,
-            ey=-float(center0),
-            epsi=-cfg.heading_gain * heading,
+            ey=ey,
+            epsi=epsi,
             lane_width=float(self._lane_width_ema),
             curvature=curvature,
             confidence=float(confidence),

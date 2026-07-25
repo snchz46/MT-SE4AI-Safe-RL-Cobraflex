@@ -185,6 +185,18 @@ para razonar formalmente sobre garantías; la desventaja práctica es la
 dependencia de un modelo dinámico suficientemente preciso, lo que en sistemas
 con percepción ruidosa o dinámica desconocida resulta difícil de obtener.
 
+El linaje arquitectónico de esta familia se remonta al patrón **Simplex**
+(Sha, 2001), que introdujo la idea de un controlador complejo de alto
+rendimiento supervisado por un controlador simple y verificado que asume el
+mando cuando se viola una condición de seguridad. Su formalización moderna en
+RL como *shielding* (Alshiekh et al., 2018) sintetiza un supervisor a partir de
+una especificación temporal que corrige la acción del agente solo en la medida
+mínima necesaria para preservar la invariante. En estos términos, la cage de
+esta tesis es una instancia del patrón Simplex con reglas deterministas
+(Cap. 5), situada entre la *safety cage* de Kuutti et al. —de la que hereda la
+contención post-entrenamiento verificable— y el *shield* formal —cuya disciplina
+de intervención mínima replica en la regla C-06 de limitación de tasa—.
+
 ### 2.3.3 Robustez frente a perturbaciones
 
 La tercera familia se ocupa de la robustez de la *policy* frente a entradas
@@ -262,6 +274,14 @@ literatura tiende a presentarlas como contribuciones aisladas, sin un
 marco unificador que articule cómo se integran dentro de un ciclo de
 vida completo con trazabilidad y safety case. Este es uno de los huecos
 que esta tesis identifica explícitamente.
+
+**[FIGURA SUGERIDA — fig_2_3 (apoyo literario):** taxonomía de las cuatro
+familias de §2.3 sobre el bucle RL, situando cada una en el punto del ciclo de
+vida donde actúa —safe RL en el entrenamiento, cage/filtro en runtime, robustez
+en las interfaces de entrada/salida, monitorización en operación— con los
+trabajos representativos (Kuutti, Tearle, Wei/He, Mohseni) como anclas. Haría
+visible de un vistazo la tesis central del capítulo: *son complementarias, no
+alternativas, y ninguna las integra en un ciclo con trazabilidad*.]**
 
 ---
 

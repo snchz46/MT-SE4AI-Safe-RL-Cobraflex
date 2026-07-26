@@ -1,0 +1,79 @@
+{
+  "run_id": "sc_pert_03_stallpilot_v2_15k",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-07-25T09:34:13.951835+00:00",
+  "git_commit": "bad8d7ede3874ae76846abbced94e4eab4fa3dc0",
+  "train_config": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/experiments/sim/eval_gz2d/train_sac_stallpilot_v2.yaml",
+  "train_config_hash": "26e7dcc856dde90a7ec1ffe24c8488e862b88fa66b3c616a9261604eb32e248d",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "scenario_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "policy_checkpoint": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/experiments/sim/eval_gz2d/cobraflex_sac_gz2d_stallpilot_v2_15k.zip",
+  "policy_checkpoint_hash": "18e46af78b6eb74bda9d5043e973d4ffe4d5cc88d4ef0da6885660d8262f0475",
+  "parent_policy_checkpoint": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cobraflex_sac_gz2d_lane_tuned_entfix_margin022_75k_v1.zip",
+  "parent_policy_checkpoint_hash": "4f3b56e26ab7e7998d43dd22d13ac75cba3cb927f0aade4d089fa9e39e62b08b",
+  "parent_vecnormalize": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cobraflex_sac_gz2d_lane_tuned_entfix_margin022_75k_v1.vecnormalize.pkl",
+  "parent_vecnormalize_hash": "fb4e1e4624f39ce03612fb5f00e91c67a176acd7505e29e37ffc68cefad48721",
+  "policy_vecnormalize": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/experiments/sim/eval_gz2d/cobraflex_sac_gz2d_stallpilot_v2_15k.vecnormalize.pkl",
+  "policy_vecnormalize_hash": "1d814b4afba5776457954bde7090ecbda4ac475fd818fd11f0e8369690405d16",
+  "parent_replay_buffer": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cobraflex_sac_gz2d_lane_tuned_entfix_margin022_75k_v1.replay_buffer.pkl",
+  "parent_replay_buffer_hash": "a8e2a6340364de714c5cf4c5c56a5d1bd153b5e91358087ade52d62eb9acd65e",
+  "policy_replay_buffer": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/experiments/sim/eval_gz2d/cobraflex_sac_gz2d_stallpilot_v2_15k.replay_buffer.pkl",
+  "policy_replay_buffer_hash": "c19ef1a6966da5e93551d1d135f6f9e7fe50a51704dfc4b474ba6211d11f4bd5",
+  "seed": 2024,
+  "platform": "sim",
+  "total_timesteps": 15000,
+  "algorithm": "sac",
+  "hyperparameters": {
+    "learning_rate": 0.0003,
+    "lr_schedule": "constant",
+    "gamma": 0.99,
+    "batch_size": 256,
+    "normalize_reward": true,
+    "buffer_size": 150000,
+    "learning_starts": 5000,
+    "tau": 0.005,
+    "train_freq": 1,
+    "gradient_steps": 2,
+    "ent_coef": 0.005,
+    "target_update_interval": 1
+  },
+  "policy": "CnnPolicy",
+  "observation": {
+    "type": "camera",
+    "camera": {
+      "topic": "/camera/image_raw_lane",
+      "width": 84,
+      "height": 84,
+      "grayscale": true,
+      "frame_stack": 4
+    }
+  },
+  "action": {
+    "type": "steer_throttle",
+    "max_speed_mps": 0.22,
+    "throttle_deadband": 0.05
+  },
+  "campaign_contract": null,
+  "reward": {
+    "lateral_error": 2.5,
+    "heading_error": 0.75,
+    "steer_delta": 0.2,
+    "throttle_delta": 0.1,
+    "forward_progress": 0.0,
+    "stall_penalty": 0.0,
+    "stall_progress_min": 0.25,
+    "termination": 25.0,
+    "lambda_stall": 4.0
+  },
+  "domain_randomization": {
+    "enabled": true,
+    "p_degrade": 0.5,
+    "level_range": [
+      0.2,
+      0.8
+    ]
+  },
+  "status": "completed"
+}

@@ -56,10 +56,51 @@ C_MON = "#d95f0e"      # monitoring (no cage)
 SEED_COLOR = {"2024": "#7fb3d5", "123": "#c0392b"}
 
 SEED_LABEL_FULL = {
-    "2024": "Seed 2024 — policy que respeta restricciones",
-    "123": "Seed 123 — policy dependiente de la cage",
+    "es": {
+        "2024": "Seed 2024 — policy que respeta restricciones",
+        "123": "Seed 123 — policy dependiente de la cage",
+    },
+    "en": {
+        "2024": "Seed 2024 — constraint-respecting policy",
+        "123": "Seed 123 — cage-dependent policy",
+    },
 }
 _SEED_ORDER = {"2024": 0, "123": 1}
+
+# Bilingual figure strings. Default "es" keeps the F-track manuscript figures
+# bit-identical; "en" is used for the posterior 2-D campaign (--lang en).
+LABELS = {
+    "es": {
+        "note_pilot": "Piloto F4 · 1 run/celda (rep00) · campaña 25-rep (D-29) pendiente en host Ubuntu",
+        "note_campaign": "Campaña frontier · n={n} runs/celda · media ± std (D-29)",
+        "enf": "Enforcement (cage activa)",
+        "mon": "Monitoring (sin cage)",
+        "ylabel_exc": "Excursión lateral máxima  |ey|  (m)",
+        "leg_offroad": "Salida de calzada",
+        "leg_road": "Borde calzada (0.26 m)",
+        "leg_lane": "Borde carril (0.1225 m)",
+        "suptitle": "Eficacia de la cage — escenarios frontier (arranque fuera del ODD)",
+        "avoided": "salida\nevitada",
+        "ylabel_ben": "Beneficio de la cage:  Δ excursión = monitoring − enforcement  (m)",
+        "title_ben": "Valor protector medido de la cage por escenario y policy",
+        "hint": "Δ alto = la cage reduce mucho la excursión   ·   Δ≈0 = la policy se basta sola",
+    },
+    "en": {
+        "note_pilot": "F4 pilot · 1 run/cell (rep00) · 25-rep (D-29) campaign pending on the Ubuntu host",
+        "note_campaign": "Frontier campaign · n={n} runs/cell · mean ± std (D-29)",
+        "enf": "Enforcement (cage active)",
+        "mon": "Monitoring (cage off)",
+        "ylabel_exc": "Max lateral excursion  |ey|  (m)",
+        "leg_offroad": "Road departure",
+        "leg_road": "Road edge (0.26 m)",
+        "leg_lane": "Lane edge (0.1225 m)",
+        "suptitle": "Cage efficacy — frontier scenarios (out-of-ODD start)",
+        "avoided": "departure\navoided",
+        "ylabel_ben": "Cage benefit:  Δ excursion = monitoring − enforcement  (m)",
+        "title_ben": "Measured protective value of the cage per scenario and policy",
+        "hint": "High Δ = cage greatly reduces excursion   ·   Δ≈0 = policy suffices alone",
+    },
+}
 
 Cell = Tuple[str, str, str]  # (scenario_id, seed, mode)
 
@@ -106,25 +147,27 @@ def aggregate(cells: Dict[Cell, dict]) -> Dict[Cell, dict]:
     return agg
 
 
-def _seed_label(seed: str) -> str:
-    return SEED_LABEL_FULL.get(seed, f"Seed {seed}")
+def _seed_label(seed: str, lang: str = "es") -> str:
+    return SEED_LABEL_FULL.get(lang, SEED_LABEL_FULL["es"]).get(seed, f"Seed {seed}")
 
 
 def _short(sc: str) -> str:
     return sc.replace("SC-FRONT-", "FRONT-")
 
 
-def _note(agg: Dict[Cell, dict]) -> str:
+def _note(agg: Dict[Cell, dict], lang: str = "es") -> str:
+    L = LABELS.get(lang, LABELS["es"])
     n_max = max((a["n"] for a in agg.values()), default=0)
     if n_max <= 1:
-        return "Piloto F4 · 1 run/celda (rep00) · campaña 25-rep (D-29) pendiente en host Ubuntu"
-    return f"Campaña frontier F4 · n={n_max} runs/celda · media ± std (D-29)"
+        return L["note_pilot"]
+    return L["note_campaign"].format(n=n_max)
 
 
 # --------------------------------------------------------------------------- #
 # Figures
 # --------------------------------------------------------------------------- #
-def fig_excursion(agg, scenarios, seeds, out_dir: Path, note: str) -> Path:
+def fig_excursion(agg, scenarios, seeds, out_dir: Path, note: str, lang: str = "es") -> Path:
+    L = LABELS.get(lang, LABELS["es"])
     x = np.arange(len(scenarios))
     w = 0.38
     fig, axes = plt.subplots(1, len(seeds), figsize=(min(6.4 * len(seeds), 18), 5.2),
@@ -137,9 +180,9 @@ def fig_excursion(agg, scenarios, seeds, out_dir: Path, note: str) -> Path:
 
         enf, mon = col("enforcement", "ey_mean"), col("monitoring", "ey_mean")
         enf_e, mon_e = col("enforcement", "ey_std"), col("monitoring", "ey_std")
-        ax.bar(x - w / 2, enf, w, yerr=enf_e, capsize=3, label="Enforcement (cage activa)",
+        ax.bar(x - w / 2, enf, w, yerr=enf_e, capsize=3, label=L["enf"],
                color=C_ENF, error_kw=dict(lw=1, alpha=0.6))
-        ax.bar(x + w / 2, mon, w, yerr=mon_e, capsize=3, label="Monitoring (sin cage)",
+        ax.bar(x + w / 2, mon, w, yerr=mon_e, capsize=3, label=L["mon"],
                color=C_MON, error_kw=dict(lw=1, alpha=0.6))
         for i, s in enumerate(scenarios):
             a = agg.get((s, seed, "monitoring"), {})
@@ -154,24 +197,23 @@ def fig_excursion(agg, scenarios, seeds, out_dir: Path, note: str) -> Path:
                      if v is not None and not math.isnan(v)]
         ax.axhline(ROAD_EDGE_M, ls="--", color="red", lw=1.2)
         ax.axhline(LANE_EDGE_M, ls=":", color="gray", lw=1.2)
-        ax.set_title(_seed_label(seed), fontsize=10.5)
+        ax.set_title(_seed_label(seed, lang), fontsize=10.5)
         ax.set_xticks(x)
         ax.set_xticklabels([_short(s) for s in scenarios])
         ax.grid(axis="y", alpha=0.25)
     for ax in axes:
         ax.set_ylim(0, max(tops) * 1.12)
-    axes[0].set_ylabel("Excursión lateral máxima  |ey|  (m)")
+    axes[0].set_ylabel(L["ylabel_exc"])
     handles, labels = axes[0].get_legend_handles_labels()
     handles += [
         plt.Line2D([0], [0], marker="X", color="red", ls="", ms=10),
         plt.Line2D([0], [0], ls="--", color="red", lw=1.2),
         plt.Line2D([0], [0], ls=":", color="gray", lw=1.2),
     ]
-    labels += ["Salida de calzada", "Borde calzada (0.26 m)", "Borde carril (0.1225 m)"]
+    labels += [L["leg_offroad"], L["leg_road"], L["leg_lane"]]
     fig.legend(handles, labels, loc="upper center", ncol=5, fontsize=8.5,
                bbox_to_anchor=(0.5, 0.945), frameon=False)
-    fig.suptitle("Eficacia de la cage — escenarios frontier (arranque fuera del ODD)",
-                 fontsize=13, y=1.0)
+    fig.suptitle(L["suptitle"], fontsize=13, y=1.0)
     fig.text(0.5, 0.005, note, ha="center", fontsize=8, color="#555")
     fig.tight_layout(rect=(0, 0.02, 1, 0.88))
     out = out_dir / "fig_frontier_excursion.png"
@@ -180,7 +222,8 @@ def fig_excursion(agg, scenarios, seeds, out_dir: Path, note: str) -> Path:
     return out
 
 
-def fig_benefit(agg, scenarios, seeds, out_dir: Path, note: str) -> Path:
+def fig_benefit(agg, scenarios, seeds, out_dir: Path, note: str, lang: str = "es") -> Path:
+    L = LABELS.get(lang, LABELS["es"])
     x = np.arange(len(scenarios))
     w = 0.8 / max(len(seeds), 1)
     fig, ax = plt.subplots(figsize=(9.5, 5.4))
@@ -196,23 +239,23 @@ def fig_benefit(agg, scenarios, seeds, out_dir: Path, note: str) -> Path:
             if not math.isnan(d):
                 top = max(top, d)
         off = (j - (len(seeds) - 1) / 2) * w
-        ax.bar(x + off, benefit, w, label=_seed_label(seed).split(" — ")[0],
+        ax.bar(x + off, benefit, w, label=_seed_label(seed, lang).split(" — ")[0],
                color=SEED_COLOR.get(seed, None))
         for i, s in enumerate(scenarios):
             mon_a = agg.get((s, seed, "monitoring"), {})
             enf_a = agg.get((s, seed, "enforcement"), {})
             if mon_a.get("edge_rate", 0) > 0 and enf_a.get("edge_rate", 0) == 0 and not math.isnan(benefit[i]):
-                ax.text(x[i] + off, benefit[i] + 0.004, "salida\nevitada", ha="center",
+                ax.text(x[i] + off, benefit[i] + 0.004, L["avoided"], ha="center",
                         va="bottom", color="red", fontsize=7.5, fontweight="bold")
     ax.axhline(0, color="black", lw=0.8)
     ax.set_xticks(x)
     ax.set_xticklabels([_short(s) for s in scenarios])
-    ax.set_ylabel("Beneficio de la cage:  Δ excursión = monitoring − enforcement  (m)")
-    ax.set_title("Valor protector medido de la cage por escenario y policy", fontsize=12.5)
+    ax.set_ylabel(L["ylabel_ben"])
+    ax.set_title(L["title_ben"], fontsize=12.5)
     ax.set_ylim(top=top * 1.20)
     ax.grid(axis="y", alpha=0.25)
     ax.legend(title=None, fontsize=9.5, loc="upper left")
-    ax.text(0.5, 0.90, "Δ alto = la cage reduce mucho la excursión   ·   Δ≈0 = la policy se basta sola",
+    ax.text(0.5, 0.90, L["hint"],
             transform=ax.transAxes, ha="center", fontsize=9, color="#444", style="italic")
     fig.text(0.5, 0.01, note, ha="center", fontsize=8, color="#555")
     fig.tight_layout(rect=(0, 0.03, 1, 1))
@@ -225,9 +268,12 @@ def fig_benefit(agg, scenarios, seeds, out_dir: Path, note: str) -> Path:
 # --------------------------------------------------------------------------- #
 # Entry points
 # --------------------------------------------------------------------------- #
-def render(campaign_dir: Path = DEFAULT_CAMPAIGN_DIR, out_dir: Optional[Path] = None) -> List[Path]:
+def render(campaign_dir: Path = DEFAULT_CAMPAIGN_DIR, out_dir: Optional[Path] = None,
+           lang: str = "es") -> List[Path]:
     """Render the frontier figures for ``campaign_dir``; returns the written paths
-    (empty if the campaign has no frontier runs). Importable from run_campaign."""
+    (empty if the campaign has no frontier runs). Importable from run_campaign.
+    ``lang`` selects figure-text language ("es" default keeps the F-track
+    manuscript figures unchanged; "en" for the posterior 2-D campaign)."""
     cells = load_cells(campaign_dir)
     if not cells:
         return []
@@ -236,10 +282,10 @@ def render(campaign_dir: Path = DEFAULT_CAMPAIGN_DIR, out_dir: Optional[Path] = 
     out_dir.mkdir(parents=True, exist_ok=True)
     scenarios = sorted({k[0] for k in agg})
     seeds = sorted({k[1] for k in agg}, key=lambda s: (_SEED_ORDER.get(s, 9), s))
-    note = _note(agg)
+    note = _note(agg, lang)
     return [
-        fig_excursion(agg, scenarios, seeds, out_dir, note),
-        fig_benefit(agg, scenarios, seeds, out_dir, note),
+        fig_excursion(agg, scenarios, seeds, out_dir, note, lang),
+        fig_benefit(agg, scenarios, seeds, out_dir, note, lang),
     ]
 
 
@@ -250,8 +296,10 @@ def main(argv: Optional[List[str]] = None) -> int:
                     help="campaign root containing runs/<run_id>/summary.json (default: the pilot).")
     ap.add_argument("--out", type=Path, default=None,
                     help="output dir for the PNGs (default: <campaign-dir>/figures).")
+    ap.add_argument("--lang", choices=("es", "en"), default="es",
+                    help="figure-text language (default es keeps F-track figures; en for 2-D).")
     args = ap.parse_args(argv)
-    outs = render(args.campaign_dir, args.out)
+    outs = render(args.campaign_dir, args.out, args.lang)
     if not outs:
         print(f"No frontier (SC-FRONT-*) summaries under {args.campaign_dir}/runs")
         return 1

@@ -1,5 +1,12 @@
 # SC-PERT-03 posterior 2-D campaign — analysis (24.07.2026)
 
+> **Update (25.07.2026, D-64):** the stall_variant "inconclusive" below was root-caused to a
+> mis-designed adversary (its reward inherited the SR-009 `stall_penalty` that opposes stalling)
+> and the metrology was closed differently: a design-corrected pilot confirmed the trained policy
+> *resists* stalling, and the stall **detector** (M-P6) was validated directly with a scripted
+> ground-truth stall (`sc_pert_03_scripted_stall_2024`: speed 0, **M-P6 = 100.0**). See D-64 +
+> Ch.8 §8.9.7. The v1 record below stands.
+
 Campaign: `experiments/sim/campaign_sac_pert03/` (80 runs, 0 errors).
 Parent: `cobraflex_sac_gz2d_lane_tuned_entfix_margin022_75k_v1.zip` (4f3b56e2).
 Stall-variant (fine-tuned, λ_stall=4.0, 50k): `.../stall_variant.zip` (56d235da).

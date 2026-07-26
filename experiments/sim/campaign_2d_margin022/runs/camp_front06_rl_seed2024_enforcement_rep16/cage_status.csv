@@ -1,0 +1,4 @@
+episode,step,sim_time_s,x,y,yaw,ey,epsi,s,speed,raw_steer,safe_steer,steer_correction,raw_throttle,safe_throttle,throttle_correction,interventions,emergency,joint_envelope_violated,oscillation_persistent,cv_ok,cv_state_available,cv_perception_invalid,cv_ey,cv_epsi,cv_confidence,cv_curvature,cv_lane_width,cv_n_lines,cv_reason
+0,1,1.040000,-0.835496,-1.516391,0.225759,0.106109,0.225759,2.003440,0.057906,-0.107652,-0.107652,0.000000,0.882369,0.882369,0.000000,,0,0,0,1,1,0,-0.124032,0.378562,0.5833,-0.0135,0.2681,3,ok
+0,2,1.140000,-0.826944,-1.514573,0.223164,0.107927,0.223164,2.011992,0.111302,-0.038892,-0.038892,0.000000,0.869912,0.869912,0.000000,,0,0,0,1,1,0,-0.123564,0.361511,0.5833,-0.0361,0.2686,3,ok
+0,3,1.260000,-0.825418,-1.514288,0.223022,0.108212,0.223022,2.013517,0.000000,-0.067297,-0.067297,0.000000,0.883852,-0.500000,-1.383852,C-05,1,0,0,1,1,0,-0.122423,0.353764,0.5833,-0.0348,0.2692,3,ok

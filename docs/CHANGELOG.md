@@ -31,6 +31,29 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [25.07.2026] — SC-PERT-03 metrology closed: stall detector confirmed via a scripted ground-truth stall
+
+**Document(s) affected:** `experiments/sim/runs/sc_pert_03_scripted_stall_2024/` (new), `src/cobraflex_rl/cobraflex_rl/eval_policy.py` (`--scripted-stall`), `docs/DECISIONS.md` (D-64), Ch.8 §8.9.7. Removed the interim `experiments/sim/campaign_sac_pert03/V2_DESIGN_GOAL.md` proposal (root-cause folded into D-64).  
+**Phase:** E5 (posterior).  
+**Gate context:** posterior to G4; does NOT reopen the E verdict.  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Reframed SC-PERT-03 (per SR-009: liveness is a TRAINING mitigation, not a cage rule; the test is metrology — does M-P6 detect a stall?). Root-caused the D-63 inconclusive: the v1 adversary reward was internally contradictory (inherited `stall_penalty`=0.5, the SR-009 mitigation, opposing `lambda_stall`=4) and its a-priori λ ignored `clip_reward`+`normalize_reward` — a construction defect, not a cage result. A design-corrected pure-stall-objective pilot (forward_progress=0, stall_penalty=0, λ=4) was run as a one-way gate; when it did not induce a staller, λ was NOT iterated (anti-gaming). Added an opt-in `eval_policy --scripted-stall` mode (fixed full stop [steer 0, throttle -1]) to validate the detector with a ground-truth stall.
+
+### Rationale
+
+Fixing a mis-designed adversary is legitimate (cage untouched, pass bar unchanged); a scripted stall is a clean metrology stimulus, not a fished adversary. It sidesteps wrestling a robust driver into stalling and directly answers the SR-009 question.
+
+### Impact
+
+**Pilot:** the pure-stall fine-tune did NOT stall (ep_rew→−300, ep_len≈241 vs 2048 for a real stall) — the trained policy robustly resists stalling; recorded as evidence, not iterated. **Scripted stall** (`sc_pert_03_scripted_stall_2024`, complex_b, 400 steps, enforcement): mean/max speed 0.0000, **M-P6 = 100.0**, 0 emergencies → the detector fires on a genuine stall. **SR-009 now closes three ways:** (i) released arm drives, M-P6=0 (mitigation works); (ii) policy resists forced stalling (robustness); (iii) M-P6 detects a real stall (metrology sound). Details: D-64.
+
+### Verification
+
+`--scripted-stall` default-off (verdict runs bit-identical; eval_policy compiles + tests green). M-P6 computed by the same `campaign_metrics.compute_run_metrics` as the campaign. No manuscript SR/verdict changed; `tools/check_traceability.py` unaffected.
+
 ## [25.07.2026] — T3 D-43/C-02 calibration re-run: fault detection preserved end-to-end
 
 **Document(s) affected:** `experiments/sim/eval_gz2d/d43_c02_calibration_t3/` (new), `experiments/sim/eval_gz2d/runtime_ppo_camera_t3.yaml` (new), `docs/12_cv_lane_keeper.md` (§4.10).  

@@ -967,6 +967,30 @@ excursión real—, dejando pasar un `cv_epsi` no capado que dispara C-02/C-05. 
 el lado conservador de la garantía «no enmascara» de T3, no una regresión, y no
 motiva aflojarla.
 
+**Cierre metrológico de SR-009 (25.07.2026, D-64).** El brazo adversario del test
+no logró fabricar una parada porque su **diseño era incorrecto**, no por la cage: el
+reward del adversario heredaba `stall_penalty = 0.5` —la propia mitigación de
+entrenamiento de SR-009, que *se opone* a pararse— junto a `lambda_stall = 4.0`, y la
+derivación a-priori de λ ignoraba `clip_reward` y `normalize_reward`. Reencuadrando
+según SR-009 —cuya mitigación de liveness es una *reward shaping de entrenamiento*, no
+una regla de la cage, de modo que SC-PERT-03 es un test de **metrología** (¿detecta
+M-P6 una parada?)— se corrigió el instrumento. Un piloto con **objetivo puro de
+parada** (`forward_progress = 0`, `stall_penalty = 0`, λ = 4.0 → parar es el óptimo
+demostrable), como puerta de un solo sentido, **tampoco indujo la parada** de la
+política determinista (`ep_rew` → −300, `ep_len` ≈ 241 frente a los 2048 de un coche
+parado): la conductora, endurecida en entrenamiento con la mitigación puesta (D-56),
+**se resiste a pararse** aunque se la penalice —evidencia adicional de robustez—; λ
+**no** se iteró (anti-gaming). El **detector** se validó entonces directamente con un
+estímulo *ground-truth*: un coche **scripted** en parada total (`eval_policy
+--scripted-stall`: `[dirección 0, acelerador −1]` cada paso) por el mismo pipeline
+Gazebo + cage + métricas (`sc_pert_03_scripted_stall_2024`, complex_b, 400 pasos,
+enforcement): **velocidad media/máx 0.0000, M-P6 = 100.0, 0 emergencias** → el detector
+dispara ante una parada real. Así SR-009 cierra en tres partes: (i) la política
+desplegada conduce y nunca se para (M-P6 = 0, brazo `released`) → la mitigación
+funciona; (ii) resiste ser forzada a pararse → robustez; (iii) M-P6 detecta una parada
+cuando existe → metrología sólida. La corrección del instrumento es legítima —no toca
+la cage ni el criterio, y el resultado negativo del piloto se conserva (D-64).
+
 ---
 
 ## 8.10 Síntesis y transición al Capítulo 9  [BORRADOR D56]

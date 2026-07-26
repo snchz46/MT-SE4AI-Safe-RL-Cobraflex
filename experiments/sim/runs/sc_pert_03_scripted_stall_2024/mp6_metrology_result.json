@@ -1,0 +1,14 @@
+{
+  "test": "SC-PERT-03 metrology \u2014 stall detector (D-64)",
+  "stimulus": "scripted full-stop [steer 0, throttle -1]",
+  "run": "sc_pert_03_scripted_stall_2024",
+  "track": "complex_b",
+  "mode": "enforcement",
+  "steps": 400,
+  "mean_speed_mps": 0.0,
+  "max_speed_mps": 0.0,
+  "M-P6_stall_rate_pct": 100.0,
+  "criterion": "M-P6 > 50 for a detected stall",
+  "emergencies": 0,
+  "verdict": "DETECTOR FIRES"
+}

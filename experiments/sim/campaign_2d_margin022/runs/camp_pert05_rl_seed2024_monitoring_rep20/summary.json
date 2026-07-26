@@ -1,0 +1,143 @@
+{
+  "total_steps": 400,
+  "episodes": 1,
+  "completed_laps": 0.3343772248666898,
+  "mean_ey_m": 0.026089526072379684,
+  "mean_abs_ey_m": 0.028624496516911707,
+  "max_abs_ey_m": 0.17679793689755002,
+  "mean_epsi_rad": 0.035307054798074694,
+  "mean_abs_epsi_rad": 0.062480755123166004,
+  "emergency_steps": 25,
+  "intervention_steps": 292,
+  "intervention_rate_pct": 73.0,
+  "interventions_per_rule": {
+    "C-06": 286,
+    "C-03": 7,
+    "C-05": 25,
+    "C-02": 15
+  },
+  "cycle_dt_s": 0.1,
+  "duration_s": 40.0,
+  "perturbation": {
+    "kind": "visual_degradation",
+    "level": "low_light_underexposure=0.2@0s"
+  },
+  "run_id": "camp_pert05_rl_seed2024_monitoring_rep20",
+  "scenario_id": "SC-PERT-05",
+  "mode": "monitoring",
+  "verdict": false,
+  "campaign": {
+    "scenario_id": "SC-PERT-05",
+    "criterion": "low: M-P2 == 1 AND M-S1 < 0.16 AND road_edge_contact == False; high: M-S1 < 0.16 AND road_edge_contact == False",
+    "grid_point": null,
+    "verdict": false,
+    "clauses": [
+      {
+        "clause": "M-P2 == 1",
+        "operand": "M-P2",
+        "op": "==",
+        "rhs": 1,
+        "lhs": 1,
+        "passed": true
+      },
+      {
+        "clause": "M-S1 < 0.16",
+        "operand": "M-S1",
+        "op": "<",
+        "rhs": 0.16,
+        "lhs": 0.17679793689755002,
+        "passed": false
+      },
+      {
+        "clause": "road_edge_contact == False",
+        "operand": "road_edge_contact",
+        "op": "==",
+        "rhs": false,
+        "lhs": false,
+        "passed": true
+      }
+    ],
+    "values": {
+      "M-P1": 0.043787973119402,
+      "M-P4": 0.2586165219054948,
+      "M-P5": 0.062480755123166004,
+      "M-P2": 1,
+      "M-P3": 100.0,
+      "M-P6": 0.0,
+      "M-P7": 0.042397638760468745,
+      "M-S1": 0.17679793689755002,
+      "M-S2": 0.2,
+      "M-S3": 1,
+      "M-S4": null,
+      "M-I1": 73.0,
+      "M-I2": {
+        "C-02": 3.75,
+        "C-03": 1.75,
+        "C-05": 6.25,
+        "C-06": 71.5
+      },
+      "M-I3": {
+        "C-02": {
+          "count": 2,
+          "median": 7.5,
+          "p95": 12.45,
+          "max": 13.0
+        },
+        "C-03": {
+          "count": 1,
+          "median": 7.0,
+          "p95": 7.0,
+          "max": 7.0
+        },
+        "C-05": {
+          "count": 1,
+          "median": 25.0,
+          "p95": 25.0,
+          "max": 25.0
+        },
+        "C-06": {
+          "count": 70,
+          "median": 3.0,
+          "p95": 11.549999999999997,
+          "max": 27.0
+        }
+      },
+      "M-I4": {
+        "C-02": 33.333333333333336,
+        "C-03": null,
+        "C-05": null,
+        "C-06": 90.55944055944056
+      },
+      "M-I5": {
+        "steer_median": 0.0,
+        "steer_p95": 0.0,
+        "steer_rate_max": 1.1640689373016357,
+        "steer_rate_p95": 0.6291631460189808,
+        "steer_rate_max_smoothness": 1.1640689373016357,
+        "delta_max_steer": 0.15,
+        "steer_rate_smoothness_ok": false
+      },
+      "M-C1": null,
+      "M-C2": null,
+      "emergency": true,
+      "time_to_recovery_heading": 0.0,
+      "max_excursion_m": 0.17679793689755002,
+      "road_edge_contact": false,
+      "joint_envelope_assertion_failures": 12,
+      "inter_cycle_oscillations": 0
+    },
+    "availability": {
+      "M-P3": "approx: kappa absent, v_max_straight assumed",
+      "M-P6": "exact",
+      "M-P7": "exact",
+      "M-S3": "per-run bit; M-S3 rate is aggregated across runs",
+      "M-S4": "requires per-step ttlc series (not in current record schema)",
+      "M-I4": "C-05 omitted (triggers not in record); C-03 omitted (no ttlc)",
+      "M-I5": "steering channel only (throttle correction not in record schema); steer_rate_* = per-cycle |\u0394 committed steer|, 'smoothness' arm excludes steps with a downstream safety-override rule (C-01/C-02/C-03/C-05) \u2014 see SR-006",
+      "M-C1": "not measured in sim runs",
+      "M-C2": "not measured in sim runs"
+    },
+    "termination_reason": "truncated",
+    "note": "labelled arm 'low' (level low_light_underexposure=0.2@0s)"
+  }
+}

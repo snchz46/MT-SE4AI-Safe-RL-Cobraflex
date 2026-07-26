@@ -88,6 +88,16 @@ def parse_args(args: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument("--train-config", type=str, default=None)
     parser.add_argument("--model-path", type=str, default=None)
     parser.add_argument(
+        "--scripted-stall", action="store_true",
+        help="SC-PERT-03 metrology stimulus (D-64): ignore the policy and command "
+             "a fixed full-stop action [steer=0, throttle=-1] every step, so the "
+             "vehicle is a ground-truth stalled car. Verifies SR-009's stall "
+             "detector (M-P6) fires on a genuine stall without training an "
+             "adversary. The checkpoint is loaded only for the env/action-space "
+             "machinery; its actions are overridden. Default off — verdict runs "
+             "are bit-identical.",
+    )
+    parser.add_argument(
         "--algorithm", type=str, default=None, choices=["ppo", "sac"],
         help="SB3 class the checkpoint was trained with. Default: the "
              "train config's `algorithm` key (ppo when absent).",
@@ -427,7 +437,12 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             print(f"Episode {episode + 1}")
 
             while not (terminated or truncated):
-                action, _ = model.predict(observation, deterministic=True)
+                if cli_args.scripted_stall:
+                    # Ground-truth stall stimulus (D-64): full stop every step
+                    # (throttle -1 → u=0 < deadband → speed 0). Policy ignored.
+                    action = np.array([0.0, -1.0], dtype=np.float32)
+                else:
+                    action, _ = model.predict(observation, deterministic=True)
                 observation, reward, terminated, truncated, info = env.step(action)
                 if stacker is not None:
                     observation = stacker.step(observation)
@@ -442,6 +457,10 @@ def main(args: Optional[Sequence[str]] = None) -> None:
             last_info = info
 
         summary = summarize_eval(records, perimeter=perimeter, cycle_dt_s=env.control_dt)
+        if cli_args.scripted_stall:
+            # Honest provenance: actions were the scripted full-stop, not the
+            # loaded checkpoint (which served only the env/action-space machinery).
+            summary["scripted_stall"] = True
         if run_config is not None and run_config.perturbation.active:
             # Record which perturbation level this rep ran (σ / latency / pulse) so
             # the per-run summary.json is self-describing for the analysis.

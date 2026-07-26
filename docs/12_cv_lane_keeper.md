@@ -497,6 +497,23 @@ scalar-separation framing of §4.9 is therefore superseded by the temporal one f
 any T3-enabled config; the safety property (all faults caught, no false triggers)
 is preserved end-to-end.
 
+**Residual and its operating point (offline-proven, 25.07.2026).** The posterior
+SC-PERT-03 campaign surfaced a rare residual: 2/20 released-enforcement runs (0/20
+monitoring), both at the same apex (s≈8.9), take a *fail-safe* false emergency when
+the CV `ey` reading transiently spikes to ~4.5 cm (true ey ≈ 1–2 cm), breaking T3's
+0.03 m drift gate so the uncapped `cv_epsi` trips C-02/C-05. A candidate fix
+(disengage only when the window is genuinely off-centre, `max|cv_ey| > MAG`) was
+tested offline against all 20 campaign runs and the held-out D-43/C-02 faults
+(`experiments/sim/campaign_sac_pert03/T3_RESIDUAL_no_clean_fix.md`): it removes the
+false emergencies at every MAG, but pushes real-fault detection from 1 frame to the
+0.20 s budget **edge** (MAG ≤ 0.05) and starts **missing faults** (MAG ≥ 0.06). The
+false apex transient (~0.045 m) and a real fault's first-frame `cv_ey` jump
+(~0.054 m) sit ~9 mm apart — the H-12 thinness in the `ey` channel. **No clean fix
+exists; T3 stays at its current point** — guaranteed 1-frame fault detection at the
+cost of a rare fail-safe false stop (availability cost, not a missed hazard). Any
+fix would trade detection speed for fewer false stops, the wrong direction for a
+cage. Accepted as a CL-B residual, not a code change.
+
 ---
 
 ## 5. Camera geometry (`camera_geometry.py`)

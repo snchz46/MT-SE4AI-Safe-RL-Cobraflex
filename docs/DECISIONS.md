@@ -2940,3 +2940,61 @@ of D-62, not loosened). Any future attempt to exercise the stall-detection arm
 must **re-preregister** a new protocol with an explicit, justified λ (or an
 unnormalized-reward penalty), not silently retune this one. Cites D-49 (1-D N/A),
 D-50 (2-D well-posed), D-62 (the authorising T3 preflight).
+
+---
+
+### D-64 — SC-PERT-03 metrology closed by a scripted stall stimulus; the trained policy provably resists stalling (v1 was a mis-designed adversary, not a cage result)
+
+| Field | Value |
+| --- | --- |
+| Section | `experiments/sim/runs/sc_pert_03_scripted_stall_2024/`; Ch.8 §8.9.7; `eval_policy.py` (`--scripted-stall`) |
+| Status | CONFIRMED — stall detector M-P6 fires on a ground-truth stall (M-P6 = 100.0); the fine-tuned adversary would not stall |
+| Date | 25.07.2026 |
+
+**Context.** SC-PERT-03's stall_variant arm was recorded inconclusive at D-63 (the
+preregistered λ=4.0 did not induce a stall). Rather than retune λ (forbidden), the
+question was reframed to *"was the adversary construction correct?"* — and it was
+not. SR-009 states its liveness mitigation is a **training-level reward shaping**
+(the `stall_penalty` term), **not a cage rule** (*"a cage rule that forced
+throttle > 0 would be orthogonal to the cage's philosophy … out of scope; the cage
+instead provides observation of stall through M-P6"*). So SC-PERT-03 is a
+**metrology test**: does M-P6 *detect* an induced stall? The v1 adversary reward
+was internally contradictory — it inherited `stall_penalty = 0.5` (the SR-009
+mitigation, which *opposes* stalling) alongside `lambda_stall = 4.0`, and the
+a-priori λ derivation ignored `clip_reward = 10.0` (caps the penalty) and
+`normalize_reward` (dilutes it). A construction-validity defect in the test harness,
+independent of the cage.
+
+**Decision.** (1) A design-corrected **pure-stall-objective pilot**
+(`forward_progress = 0`, `stall_penalty = 0`, λ = 4.0 → throttle→0 is the provable
+optimum) was run as a one-way construct-validity gate (15k fine-tune from the
+margin022 parent). It did **not** produce a deterministic staller: `ep_rew_mean`
+fell to −300 and `ep_len` stayed ≈ 241 (a stalled car would truncate at 2048), i.e.
+the policy kept driving despite the throttle penalty. Root cause: resuming a
+competent driver with a driving-filled SAC replay buffer biases against discovering
+the stopping optimum. **This is recorded as a finding, not iterated** — the
+difficulty of forcing a stall is positive evidence the deployed policy robustly
+resists the park-hack it was hardened against (D-56). (2) The stall **detector**
+(M-P6) was then validated *directly* with a **scripted ground-truth stall** — a new
+opt-in `eval_policy --scripted-stall` mode commands a full stop
+(`[steer 0, throttle −1]` → speed 0) every step, through the real Gazebo + cage +
+metrics pipeline. Result (`sc_pert_03_scripted_stall_2024`, complex_b, 400 steps,
+enforcement): **mean/max speed 0.0000, M-P6 = 100.0, 0 emergencies** → the detector
+fires on a genuine stall.
+
+**Rationale — why this is legitimate, not gaming.** The cage (object under test) is
+untouched. The scripted stall is a *metrology stimulus* (a known-stall input to test
+the detector), not a fished-for adversary; it is the cleanest possible test of "does
+M-P6 flag a stall?" — a ground-truth stall with no training stochasticity. The v1
+inconclusive and the pilot's negative result are both preserved. `--scripted-stall`
+is default-off, so every verdict run is bit-identical.
+
+**Consequences — the SR-009 story is now complete and three-part.** (i) The deployed
+policy drives and never stalls (released arm PASS, M-P6 = 0, D-63) → the training
+mitigation works. (ii) The policy *resists* being forced to stall (the pilot) →
+extra robustness evidence. (iii) M-P6 correctly *detects* a stall when one exists
+(scripted stimulus, M-P6 = 100) → the verification machinery is sound. Does not
+reopen G4 (posterior E5). No SR verdict, scenario or metric changes;
+`check_traceability.py` unaffected. Supersedes the interim `V2_DESIGN_GOAL.md`
+proposal (its root-cause analysis is captured here). Cites D-56 (the anti-park
+mitigation), D-63 (the v1 inconclusive), SR-009 (metrology framing).

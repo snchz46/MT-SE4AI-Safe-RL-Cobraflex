@@ -991,6 +991,41 @@ funciona; (ii) resiste ser forzada a pararse → robustez; (iii) M-P6 detecta un
 cuando existe → metrología sólida. La corrección del instrumento es legítima —no toca
 la cage ni el criterio, y el resultado negativo del piloto se conserva (D-64).
 
+### 8.9.8 Primera campaña de veredicto completa en 2-D (margin022)  [E5]
+
+La cualificación de margin022 (nominal D-43 PASS con T3, §7.5.5/D-62; SC-PERT-03 cerrado,
+D-64; el cap 0.22 que resuelve el bloqueo del envelope de velocidad, D-59) desbloqueó la
+**primera campaña de veredicto completa sobre la acción 2-D** (dirección + acelerador):
+margin022 sobre los 28 escenarios de complex_b × {enforcement, monitoring}, seed 2024,
+**1970 runs, 0 errores**, autorizada por el preflight D-43 con T3. Es trabajo **posterior
+E5**; no reabre el veredicto E de 1-D (GE4-V2, congelado, D-49).
+
+El global sale **NOT SATISFIED (literal)** —5 SR satisfechos, 8 no, 1 indeterminado—, pero,
+como en GE4-V2, exige reconciliación (D-47): **ninguna brecha de seguridad in-ODD**. La
+métrica de seguridad lo confirma: contactos con el borde en enforcement **in-ODD = 0**,
+fuera-de-ODD = 50 (estrés frontier/edge). La cage sostiene la línea de seguridad en 2-D
+igual que en 1-D.
+
+Y el **valor de la cage es mayor que en 1-D**, ahora medido donde la política de verdad lo
+necesita: la política 2-D desnuda comete **98 contactos de borde in-ODD**, y la cage **los
+elimina todos** (0 en enforcement) mediante **433 paradas de emergencia controladas**. La
+política 2-D es materialmente más débil que la 1-D congelada, así que la cage trabaja más y
+convierte cada fallo in-ODD en un desenlace seguro —la tesis central, demostrada donde el
+policy erra.
+
+Los 8 SR en False se reducen a **cuatro escenarios**, todos no-brechas: **SC-NOM-03**
+(SR-002/005/007/008/009 — 5/25 emergencias en la corrida de resistencia de 300 s; 0 contactos
+de borde, |ey| máx 88 mm ≪ 160 mm: paradas seguras que fallan las cláusulas *completado*/
+*sin-emergencia*, un coste de **disponibilidad**); **SC-PERT-05** (SR-012/014 — low-light
+severo: 30/40 emergencias, 0 contactos: la cage parando bien ante percepción degradada,
+Trigger-8 SR-013/014 —la cage *funcionando*); **SC-EDGE-05** (SR-010 — rejilla de
+co-activación, hallazgo **CL-B genuino**, idéntico al 1-D); y **SC-PERT-03** (SR-009 — el
+constructo de parada, documentado D-64). El resultado neto en 2-D es **seguridad preservada,
+disponibilidad reducida**: la cage mantiene seguro cada caso in-ODD mientras la política 2-D
+—más expresiva (comanda acelerador) pero menos entrenada— la dispara a más paradas seguras
+que la 1-D. Figuras (inglés): `campaign_2d_margin022/figures/`. Análisis completo:
+`CAMPAIGN_2D_ANALYSIS.md` (D-65).
+
 ---
 
 ## 8.10 Síntesis y transición al Capítulo 9  [BORRADOR D56]

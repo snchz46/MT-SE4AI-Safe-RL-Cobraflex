@@ -2998,3 +2998,45 @@ reopen G4 (posterior E5). No SR verdict, scenario or metric changes;
 `check_traceability.py` unaffected. Supersedes the interim `V2_DESIGN_GOAL.md`
 proposal (its root-cause analysis is captured here). Cites D-56 (the anti-park
 mitigation), D-63 (the v1 inconclusive), SR-009 (metrology framing).
+
+---
+
+### D-65 — First full 2-D verdict campaign (margin022): NOT SATISFIED literal, but in-ODD safety holds and the cage's value is larger than in 1-D
+
+| Field | Value |
+| --- | --- |
+| Section | `experiments/sim/campaign_2d_margin022/CAMPAIGN_2D_ANALYSIS.md`; Ch.8 §8.9.8 |
+| Status | CONFIRMED — 1970 runs, 0 errors; literal NOT SATISFIED reconciled (no in-ODD breach) |
+| Date | 26.07.2026 |
+
+**Context.** The margin022 2-D (steer+throttle) qualification (nominal D-43 PASS via T3,
+D-62; SC-PERT-03 closed, D-64) unblocked the **first full verdict campaign on the 2-D
+action** — 28 complex_b scenarios × {enforcement, monitoring}, seed 2024, 1970 runs.
+Posterior E5; does not reopen the frozen 1-D E verdict (GE4-V2, D-49).
+
+**Decision.** Record the campaign as **NOT SATISFIED (literal)** with a full reconciliation
+(mirroring the GE4-V2 precedent, D-47): the global fails because 8/14 SRs fail, but the 8
+failures trace to only four scenarios and **none is an in-ODD safety breach**.
+
+**Evidence.**
+- **Core safety holds:** enforcement road-edge contacts — **in-ODD = 0**, out-of-ODD = 50
+  (frontier/edge stress). The cage produces zero in-ODD road-edge contacts, as in 1-D.
+- **Cage value, measured and larger than 1-D:** the bare 2-D policy commits **98 in-ODD
+  road-edge contacts**; the cage **removes all of them** (0 in enforcement) via **433
+  controlled emergency stops**. The 2-D policy is materially weaker than the frozen 1-D
+  policy, so the cage genuinely does more work — the central thesis claim demonstrated where
+  the policy needs it.
+- **Per-SR:** SR-002/005/007/008/009 ← **SC-NOM-03** (5/25 cage emergencies on the 300 s
+  endurance run; 0 road-edge, max \|ey\| 88 mm — safe stops failing the completed/no-emergency
+  clauses, an *availability* cost). SR-012/014 ← **SC-PERT-05** (severe low-light: 30/40 cage
+  emergencies, 0 road-edge — the cage correctly stopping under degraded perception, SR-013/014
+  Trigger-8, the cage *working*). SR-010 ← **SC-EDGE-05** (genuine CL-B co-activation, same as
+  1-D). SR-009 ← **SC-PERT-03** (the stall construct, documented D-64).
+
+**Consequences.** The 2-D result is **safety preserved, availability reduced**: the cage keeps
+every in-ODD case safe while the weaker, throttle-commanding 2-D policy trips it into more safe
+stops than the 1-D policy did. No SR verdict/scenario/metric in the manuscript changes;
+`check_traceability.py` unaffected. The literal NOT SATISFIED is not a safety failure — it is
+availability + one CL-B (SR-010) + the documented stall construct (SR-009). Cites D-47 (literal
++ reconciliation precedent), D-49 (frozen 1-D verdict), D-62/D-64 (the qualification), SR-010
+(the CL-B co-activation), M-S5 (road-edge metric).

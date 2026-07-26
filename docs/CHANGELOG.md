@@ -31,6 +31,29 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [26.07.2026] — First full 2-D verdict campaign (margin022): NOT SATISFIED literal, in-ODD safety holds
+
+**Document(s) affected:** `experiments/sim/campaign_2d_margin022/` (new: 1970-run campaign + `CAMPAIGN_2D_ANALYSIS.md` + English figures), `docs/DECISIONS.md` (D-65), Ch.8 §8.9.8, `tools/plot_frontier.py` (bilingual, default now English).  
+**Phase:** E5 (posterior).  
+**Gate context:** posterior to G4; does NOT reopen the frozen 1-D E verdict (GE4-V2).  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Ran the first full verdict campaign on the 2-D (steer+throttle) action: margin022 across the 28 complex_b scenarios × {enforcement, monitoring}, seed 2024, 1970 runs, authorised by the T3 D-43 preflight. Reconciled the literal verdict per-SR. Made `plot_frontier.py` bilingual and flipped its default to English.
+
+### Rationale
+
+margin022's qualification (T3 nominal D-43 PASS, D-62; SC-PERT-03 closed, D-64; the 0.22 cap resolving the D-59 speed-envelope kill) unblocked the first 2-D verdict campaign — a posterior E5 contribution, not a re-run of the frozen 1-D verdict.
+
+### Impact
+
+**Global NOT SATISFIED (literal)** — 5 SR Satisfied, 8 not, 1 indeterminate — but **no in-ODD safety breach** (mirrors GE4-V2, D-47). Enforcement road-edge contacts: **in-ODD = 0**, out-of-ODD = 50 (frontier/edge stress). **Cage value larger than 1-D:** the bare 2-D policy commits **98 in-ODD road-edge contacts; the cage removes all** (0 in enforcement) via 433 controlled emergency stops. The 8 failing SRs trace to 4 scenarios, all non-breaches: SC-NOM-03 (5 SRs; cage emergencies on the 300 s endurance run, 0 road-edge — availability cost), SC-PERT-05 (SR-012/014; low-light, cage stops safely under degraded perception), SC-EDGE-05 (SR-010; genuine CL-B co-activation, same as 1-D), SC-PERT-03 (SR-009; documented stall construct, D-64). Net 2-D finding: **safety preserved, availability reduced** — the weaker throttle-commanding policy trips the cage more, always safely. Full analysis: `CAMPAIGN_2D_ANALYSIS.md` (D-65).
+
+### Verification
+
+1970 runs, 0 errors, D-43 preflight PASS embedded. `plot_frontier.py --lang es` still reproduces the Spanish F-track figures bit-identically. No manuscript SR/verdict changed; `tools/check_traceability.py` unaffected.
+
 ## [25.07.2026] — SC-PERT-03 metrology closed: stall detector confirmed via a scripted ground-truth stall
 
 **Document(s) affected:** `experiments/sim/runs/sc_pert_03_scripted_stall_2024/` (new), `src/cobraflex_rl/cobraflex_rl/eval_policy.py` (`--scripted-stall`), `docs/DECISIONS.md` (D-64), Ch.8 §8.9.7. Removed the interim `experiments/sim/campaign_sac_pert03/V2_DESIGN_GOAL.md` proposal (root-cause folded into D-64).  

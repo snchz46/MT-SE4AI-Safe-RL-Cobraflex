@@ -67,8 +67,8 @@ SEED_LABEL_FULL = {
 }
 _SEED_ORDER = {"2024": 0, "123": 1}
 
-# Bilingual figure strings. Default "es" keeps the F-track manuscript figures
-# bit-identical; "en" is used for the posterior 2-D campaign (--lang en).
+# Bilingual figure strings. Default is now "en" (25.07.2026); pass --lang es to
+# reproduce the original Spanish F-track manuscript figures bit-identically.
 LABELS = {
     "es": {
         "note_pilot": "Piloto F4 · 1 run/celda (rep00) · campaña 25-rep (D-29) pendiente en host Ubuntu",
@@ -269,7 +269,7 @@ def fig_benefit(agg, scenarios, seeds, out_dir: Path, note: str, lang: str = "es
 # Entry points
 # --------------------------------------------------------------------------- #
 def render(campaign_dir: Path = DEFAULT_CAMPAIGN_DIR, out_dir: Optional[Path] = None,
-           lang: str = "es") -> List[Path]:
+           lang: str = "en") -> List[Path]:
     """Render the frontier figures for ``campaign_dir``; returns the written paths
     (empty if the campaign has no frontier runs). Importable from run_campaign.
     ``lang`` selects figure-text language ("es" default keeps the F-track
@@ -296,7 +296,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                     help="campaign root containing runs/<run_id>/summary.json (default: the pilot).")
     ap.add_argument("--out", type=Path, default=None,
                     help="output dir for the PNGs (default: <campaign-dir>/figures).")
-    ap.add_argument("--lang", choices=("es", "en"), default="es",
+    ap.add_argument("--lang", choices=("es", "en"), default="en",
                     help="figure-text language (default es keeps F-track figures; en for 2-D).")
     args = ap.parse_args(argv)
     outs = render(args.campaign_dir, args.out, args.lang)

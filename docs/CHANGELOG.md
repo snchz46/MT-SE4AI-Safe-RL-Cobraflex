@@ -31,6 +31,73 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [27.07.2026] — Competent 2-D policy: PPO cap 0.22 (reward 1755); best checkpoint by reward+cage%; campaign launched
+
+**Document(s) affected:** `experiments/sim/training/ppo_gz2d_cap022_1M_2024/` + candidate evals + `experiments/sim/campaign_2d_ppo550k/` (new), `src/cobraflex_rl/config/train_ppo_camera_2d_cap022_1M.yaml` (new), `docs/DECISIONS.md` (D-66), Ch.7 §7.5.5, `manuscript/figures/auto/fig_ppo2d_training_curve.png`.  
+**Phase:** E5 (posterior).  
+**Gate context:** posterior to G4; frozen 1-D verdict untouched.  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Trained a proper 2-D camera policy (PPO, cap 0.22, 1M, checkpoints/25k), stopped at 700k, selected the best checkpoint by deterministic driving + cage intervention, ran its D-43 preflight, and launched its verdict campaign — to contrast a competent 2-D driver against the weak margin022 (D-65).
+
+### Rationale
+
+The margin022 verdict ran on a weak SAC policy AND a decayed checkpoint (75k, past its ~54k peak). PPO (not SAC) at cap 0.22 fixes both: SAC 2-D never exceeds ~200 (crashes at ~0.28 laps); PPO 2-D reaches 1755 and a stable plateau (5.3 clean laps). A single-variable diff shows only the cap changed vs the sloppy 0.5 run (654) — the slow cap lets the policy trace the tight curves cleanly.
+
+### Impact
+
+**PPO 2-D peak ep_rew 1755 @ 472k** (vs SAC ~200, 1-D E-main 823). Cage LATENT for safety across training (C-01/02/03/05=0). Candidate selection was decisive: **the reward-peak 475k is NOT best** (14 safety interventions, max|ey| 49mm); **550k wins** (5.32 laps, |ey| 8.6mm, max 27mm, 0 emerg, **0 safety interventions**, smoothest). Selecting on reward alone picks the worst — validates using cage%. 550k D-43 preflight (cage joint_pair+1.60+T3, = margin022) **PASS** (7/7). Campaign launched (`campaign_2d_ppo550k`, 27 scenarios × {enf,mon} = 1890 runs; SC-PERT-03 excluded, closed D-64; SR-009 D-29-feasible). Honesty: the ~2× reward vs 1-D is mostly the 2048-vs-1024 step cap + longer survival (per-step 1.165 vs 1.040), not 2× better driving. Figure + D-66 detail.
+
+### Verification
+
+Preflight PASS (7/7). Nominal evals of 3 candidates. `--resume` campaign (pausable/chunkable). 594/594 pytest, `tools/check_traceability.py` unaffected. Campaign verdict PENDING (~28-30h).
+
+## [26.07.2026] — Phase-5 physical-deployment scaffolding (rl_policy_node + deploy launch + docs/17)
+
+**Document(s) affected:** `src/cobraflex_rl/.../rl_policy_node.py` (new), `src/cobraflex_rl/launch/deploy_cobraflex.launch.py` (new), `docs/17_physical_deployment.md` (new), `policy/tests/test_rl_policy_node.py` (new), `src/cobraflex_rl/setup.py` (entry point).  
+**Phase:** E5 → Phase 5 (deployment preparation).  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Prepared the physical bring-up path for the track-'E' RL camera policy behind the cage. Added the one missing piece — `rl_policy_node` (image → CNN → /raw_action Twist), reusing the exact sim preprocessing (decode_image + to_observation + k=4 stack) so the CNN sees identical observations — plus `deploy_cobraflex.launch.py` wiring the distributed chain (rl_policy → cv_lane_estimator → cage_ros → vehicle_control → cage_logger), and docs/17 with the bring-up checklist.
+
+### Rationale
+
+The last training + eval before deployment; the distributed cage_ros_node already carries the 2-D action (angular.z=steer, linear.x=throttle), so only the inference node + launch + checklist were missing. The cage as a separate process makes the A2 independence argument concrete on hardware.
+
+### Impact
+
+**Scaffolding only — NOT run on hardware.** The node's pure logic (action→Twist mapping, frame stack) is unit-tested host-side (5 tests). docs/17 flags the [VERIFY] items honestly: camera extrinsics (D-57), the 2-D throttle→speed mapping, the e-stop wiring, sim-to-real appearance gap.
+
+### Verification
+
+594/594 pytest (5 new), compile-check on node + launch, `tools/check_traceability.py` unaffected. No behaviour on the physical car is claimed.
+
+## [26.07.2026] — Defense Q&A: the "just a bad policy / bad design" objection (Q14)
+
+**Document(s) affected:** `docs/16_defense_compendium.md` (§7 Extended Q&A, new Q14).  
+**Phase:** E5 (posterior) — defense preparation.  
+**Author:** Samuel Sanchez  
+
+### Change
+
+Added Q14 to the cross-cutting defense-question bank: the objection that the cage's value is an artefact of a weak policy or a mis-designed reward/scenarios/metrics, with the honest rebuttal.
+
+### Rationale
+
+The strongest examiner objection to the central cage claim; captured with its concession (the intervention *magnitude* is policy-dependent, D-65) and its refutation (runtime assurance exists *because* a learned controller cannot be certified; safety is decoupled from reward by A2; scenarios trace to hazards; metrics are anti-gaming D-47; perception-degradation failures are irreducible by any policy; the longer-training re-run is the empirical control).
+
+### Impact
+
+Documentation only; no code, SR, scenario or metric change.
+
+### Verification
+
+`tools/check_traceability.py` unaffected (no ID changes).
+
 ## [26.07.2026] — First full 2-D verdict campaign (margin022): NOT SATISFIED literal, in-ODD safety holds
 
 **Document(s) affected:** `experiments/sim/campaign_2d_margin022/` (new: 1970-run campaign + `CAMPAIGN_2D_ANALYSIS.md` + English figures), `docs/DECISIONS.md` (D-65), Ch.8 §8.9.8, `tools/plot_frontier.py` (bilingual, default now English).  

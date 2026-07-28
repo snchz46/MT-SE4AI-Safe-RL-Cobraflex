@@ -1,0 +1,2 @@
+episode,step,sim_time_s,x,y,yaw,ey,epsi,s,speed,raw_steer,safe_steer,steer_correction,raw_throttle,safe_throttle,throttle_correction,interventions,emergency,joint_envelope_violated,oscillation_persistent,cv_ok,cv_state_available,cv_perception_invalid,cv_ey,cv_epsi,cv_confidence,cv_curvature,cv_lane_width,cv_n_lines,cv_reason
+0,1,3.100000,-0.838935,-1.628626,0.572669,-0.006126,0.572669,2.000000,0.000000,0.318203,0.000000,-0.318203,0.872048,-0.500000,-1.372048,CAGE-NODE,1,0,0,1,0,1,-0.230898,0.927184,0.5625,-0.0550,0.2663,2,ok

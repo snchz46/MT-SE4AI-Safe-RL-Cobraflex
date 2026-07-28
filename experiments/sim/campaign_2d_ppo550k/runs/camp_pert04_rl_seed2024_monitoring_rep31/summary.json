@@ -1,0 +1,144 @@
+{
+  "total_steps": 374,
+  "episodes": 1,
+  "completed_laps": 0.3463572661214107,
+  "mean_ey_m": 0.006438070435903495,
+  "mean_abs_ey_m": 0.058700745866704256,
+  "max_abs_ey_m": 0.137593249494629,
+  "mean_epsi_rad": -0.01014384601295969,
+  "mean_abs_epsi_rad": 0.04490958330910938,
+  "emergency_steps": 36,
+  "intervention_steps": 41,
+  "intervention_rate_pct": 10.962566844919786,
+  "interventions_per_rule": {
+    "C-06": 3,
+    "C-01": 2,
+    "C-02": 17,
+    "C-05": 36,
+    "C-03": 8
+  },
+  "cycle_dt_s": 0.1,
+  "duration_s": 37.4,
+  "perturbation": {
+    "kind": "visual_degradation",
+    "level": "glare_overexposure=0.6@0s"
+  },
+  "run_id": "camp_pert04_rl_seed2024_monitoring_rep31",
+  "scenario_id": "SC-PERT-04",
+  "mode": "monitoring",
+  "verdict": true,
+  "campaign": {
+    "scenario_id": "SC-PERT-04",
+    "criterion": "M-S1 < 0.16 AND road_edge_contact == False",
+    "grid_point": null,
+    "verdict": true,
+    "clauses": [
+      {
+        "clause": "M-S1 < 0.16",
+        "operand": "M-S1",
+        "op": "<",
+        "rhs": 0.16,
+        "lhs": 0.137593249494629,
+        "passed": true
+      },
+      {
+        "clause": "road_edge_contact == False",
+        "operand": "road_edge_contact",
+        "op": "==",
+        "rhs": false,
+        "lhs": false,
+        "passed": true
+      }
+    ],
+    "values": {
+      "M-P1": 0.0667312385613489,
+      "M-P4": 0.22480888766985263,
+      "M-P5": 0.04490958330910938,
+      "M-P2": 0,
+      "M-P3": 100.0,
+      "M-P6": 0.0,
+      "M-P7": 0.018253714342605497,
+      "M-S1": 0.137593249494629,
+      "M-S2": 0.0,
+      "M-S3": 1,
+      "M-S4": null,
+      "M-I1": 10.962566844919786,
+      "M-I2": {
+        "C-01": 0.5347593582887701,
+        "C-02": 4.545454545454546,
+        "C-03": 2.1390374331550803,
+        "C-05": 9.62566844919786,
+        "C-06": 0.8021390374331551
+      },
+      "M-I3": {
+        "C-01": {
+          "count": 1,
+          "median": 2.0,
+          "p95": 2.0,
+          "max": 2.0
+        },
+        "C-02": {
+          "count": 3,
+          "median": 6.0,
+          "p95": 8.7,
+          "max": 9.0
+        },
+        "C-03": {
+          "count": 1,
+          "median": 8.0,
+          "p95": 8.0,
+          "max": 8.0
+        },
+        "C-05": {
+          "count": 1,
+          "median": 36.0,
+          "p95": 36.0,
+          "max": 36.0
+        },
+        "C-06": {
+          "count": 3,
+          "median": 1.0,
+          "p95": 1.0,
+          "max": 1.0
+        }
+      },
+      "M-I4": {
+        "C-01": 100.0,
+        "C-02": 11.764705882352942,
+        "C-03": null,
+        "C-05": null,
+        "C-06": 100.0
+      },
+      "M-I5": {
+        "steer_median": 0.0,
+        "steer_p95": 0.0,
+        "steer_rate_max": 0.21882015466690063,
+        "steer_rate_p95": 0.09946284517645834,
+        "steer_rate_max_smoothness": 0.21882015466690063,
+        "delta_max_steer": 0.15,
+        "steer_rate_smoothness_ok": false
+      },
+      "M-C1": null,
+      "M-C2": null,
+      "emergency": true,
+      "time_to_recovery_heading": 0.0,
+      "max_excursion_m": 0.137593249494629,
+      "road_edge_contact": false,
+      "joint_envelope_assertion_failures": 12,
+      "inter_cycle_oscillations": 0
+    },
+    "availability": {
+      "M-P3": "approx: kappa absent, v_max_straight assumed",
+      "M-P6": "exact",
+      "M-P7": "exact",
+      "M-S3": "per-run bit; M-S3 rate is aggregated across runs",
+      "M-S4": "requires per-step ttlc series (not in current record schema)",
+      "M-I4": "C-05 omitted (triggers not in record); C-03 omitted (no ttlc)",
+      "M-I5": "steering channel only (throttle correction not in record schema); steer_rate_* = per-cycle |\u0394 committed steer|, 'smoothness' arm excludes steps with a downstream safety-override rule (C-01/C-02/C-03/C-05) \u2014 see SR-006",
+      "M-C1": "not measured in sim runs",
+      "M-C2": "not measured in sim runs"
+    },
+    "termination_reason": "off_road",
+    "note": null
+  }
+}

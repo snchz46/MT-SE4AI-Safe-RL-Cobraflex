@@ -826,6 +826,42 @@ nunca `cv_epsi`— no requiere reentrenar y no altera el fingerprint del contrat
 Con ello el nominal D-43 queda satisfecho; **[PENDIENTE — F5:** el fine-tune de
 50k y la campaña de 80 celdas SC-PERT-03 bajo este contrato**.]**
 
+**Una política 2-D competente: PPO (no SAC) a cap 0.22 (27.07.2026, D-66).** El
+veredicto 2-D de margin022 (§8.9.8) corrió sobre una política **doblemente
+sub-óptima**: SAC, 75k, y además el checkpoint **decaído** (el pico estaba en
+~54k, `ep_rew` 199; la campaña usó el de 75k, `ep_rew` 131). Se entrenó una
+política 2-D **en condiciones** para separar "límite de la acción 2-D" de
+"sub-entrenamiento". Dos cambios, ambos medidos: **(1) PPO en vez de SAC** — un
+PPO 2-D fresco (1M, cap 0.22, checkpoints/25k) alcanza `ep_rew_mean` **1755 @ 472k**
+y una **meseta alta estable**, mientras el SAC 2-D nunca pasa de ~200 (se estrella
+a ~0.28 vueltas: el SAC off-policy con cámara no domina la pista). **(2) cap 0.22
+en vez de 0.5** — un *diff de una sola variable* (solo `max_speed_mps`) muestra que
+el PPO a 0.5 pica a 654 (da >1 vuelta pero **sucio**, se pasa de las curvas
+cerradas de complex_b) frente a 1421+ a 0.22 (las traza limpio); por-paso 1.165
+(2-D@0.22) vs 1.040 (1-D E-main). El **~2× de recompensa total frente al 1-D es
+sobre todo el techo de episodio (2048 vs 1024) y la mayor supervivencia**, no "2×
+mejor conducción" — se documenta así por honestidad.
+
+La **selección del checkpoint** fue por conducción determinista **y % de
+intervención de la cage**, no por la recompensa de entrenamiento. Durante todo el
+training la cage está **latente en seguridad** (C-01/02/03/05 = 0, 0 emergencias:
+la política respeta las restricciones; solo dispara C-06, el rate limiter). Los
+evals nominales deterministas de tres candidatos fueron decisivos: **el checkpoint
+del pico de recompensa (475k) NO es el mejor** (14 intervenciones de seguridad,
+`max|ey|` 49 mm), mientras **550k gana** (5.32 vueltas, `|ey|` medio 8.6 mm, máx
+27 mm, **0 emergencias, 0 intervenciones de seguridad**, C-06 más bajo). Elegir por
+recompensa sola habría cogido el peor de los tres. El preflight D-43 del 550k (cage
+idéntico a margin022: `joint_pair_quadratic` + 1.60 + T3) **pasa** (7/7), y se lanzó
+su campaña de veredicto (`campaign_2d_ppo550k`, 27 escenarios × {enf, mon} = 1890
+runs; SC-PERT-03 excluido —meta-test cerrado en D-64, SR-009 sigue D-29-feasible),
+para **contrastar el conductor competente frente al débil** (§8.9.8) y así separar
+los fallos de disponibilidad (deberían limpiarse) de los estructurales (deberían
+persistir). Nota adicional: el 1-D E-main **colapsa** tras su pico (823 → 114) mientras
+el 2-D a 0.22 se mantiene estable —plausiblemente porque el cap lento hace del
+objetivo de conducción una cuenca ancha e indulgente. Figura:
+`fig_ppo2d_training_curve.png`. **[RESULTADO PENDIENTE — F5: el veredicto de la
+campaña del 550k.]**
+
 **Frontera de validez.** Estas corridas son trabajo **posterior E5**. Ninguna
 agotó el presupuesto nominal de 1M; las réplicas cubren N=3 en 1-D y N=2 en
 2-D, con brazos nominales todavía incompletos, y no se ejecutó una campaña de

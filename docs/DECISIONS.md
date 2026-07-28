@@ -3040,3 +3040,48 @@ stops than the 1-D policy did. No SR verdict/scenario/metric in the manuscript c
 availability + one CL-B (SR-010) + the documented stall construct (SR-009). Cites D-47 (literal
 + reconciliation precedent), D-49 (frozen 1-D verdict), D-62/D-64 (the qualification), SR-010
 (the CL-B co-activation), M-S5 (road-edge metric).
+
+---
+
+### D-66 — A competent 2-D camera policy: PPO (not SAC) at cap 0.22 — and why the reward-peak checkpoint is not the best one
+
+| Field | Value |
+| --- | --- |
+| Section | `experiments/sim/training/ppo_gz2d_cap022_1M_2024/`; Ch.7 §7.5.5; `manuscript/figures/auto/fig_ppo2d_training_curve.png` |
+| Status | CONFIRMED — best deterministic checkpoint selected (550k); its D-43 preflight PASS; verdict campaign launched (27.07.2026) |
+| Date | 27.07.2026 |
+
+**Context.** The margin022 2-D verdict (D-65) ran on a materially weak policy: SAC, 75k, and — worse
+— the *decayed* final checkpoint (peak was ~54k, ep_rew 199; the campaign used the 75k, ep_rew 131).
+The 2-D availability shortfall was suspected to be under-training, not a limit of the 2-D action.
+
+**Decision.** Train a proper 2-D policy and select its best checkpoint by driving quality, not
+training reward. (1) **Algorithm: PPO, not SAC.** A fresh PPO 2-D 1M (cap 0.22, checkpoints/25k)
+reached **ep_rew_mean 1755 @ 472k** and a *stable high plateau*; SAC 2-D never exceeded ~200 (it
+crashes at ~0.28 laps — off-policy camera SAC does not master the track). (2) **Cap 0.22, not 0.5.**
+A *single-variable* config diff (only `action.max_speed_mps` changed) shows PPO at 0.5 peaks at 654
+(drives >1 lap but *sloppily* — high lateral/heading penalty on the tight complex_b curves) vs 1421+
+at 0.22 (traces the curves cleanly); per-step reward 1.165 (2-D @0.22) vs 1.040 (1-D) — the ~2× total
+is mostly the 2048-vs-1024 episode-step cap + longer survival, not "2× better driving." (3) **Best
+checkpoint by reward AND cage %.** During training the cage is *latent for safety* throughout
+(C-01/02/03/05 = 0, 0 emergencies — the policy respects the constraints); only C-06 (rate limiter)
+fires. Deterministic nominal evals of three candidates were decisive: the **reward-peak 475k is NOT
+the best** (14 safety interventions, max\|ey\| 49 mm), while **550k wins** (5.32 laps, mean \|ey\|
+8.6 mm, max 27 mm, **0 emergencies, 0 safety interventions**, lowest C-06). Selecting on reward alone
+would have picked the worst of the three.
+
+**Evidence.** `fig_ppo2d_training_curve.png` (PPO 2-D vs 1-D E-main vs SAC 2-D). Candidate evals
+`rl_ppo2d_cap022_{400k,475k,550k}_nom_4k4`. 550k D-43 preflight (cage = joint_pair_quadratic + gain
+1.60 + T3, identical to margin022 for comparability) **PASS** (7/7,
+`d43_preflight_ppo2d_cap022_550k.json`). Verdict campaign on 550k launched
+(`experiments/sim/campaign_2d_ppo550k/`, 27 complex_b scenarios × {enf, mon} = 1890 runs; SC-PERT-03
+excluded — the stall meta-test is policy-independent and closed at D-64; SR-009 stays D-29-feasible).
+
+**Consequences.** This is the good 2-D policy the campaign should contrast against the weak margin022
+(D-65): same cage, same scenarios, better driver → tests whether the D-65 availability failures were
+policy-quality (they should clear) or structural (perception/co-activation, should persist). Also of
+note: the 1-D E-main *collapses* after its peak (exploration collapse, 823 → 114) while the 2-D @0.22
+stays stable — plausibly because the slow cap makes the driving objective a wide, forgiving basin.
+Posterior E5; frozen 1-D verdict untouched. `[RESULTADO PENDIENTE — F5: the 550k campaign verdict.]`
+Cites D-60 (algorithm switch), D-59 (the 0.22 cap / speed-envelope), D-62 (T3 preflight), D-65
+(the weak-policy campaign this contrasts).

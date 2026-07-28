@@ -1,0 +1,143 @@
+{
+  "total_steps": 100,
+  "episodes": 1,
+  "completed_laps": 0.11747268848320028,
+  "mean_ey_m": 0.009682942026486218,
+  "mean_abs_ey_m": 0.018835098806521913,
+  "max_abs_ey_m": 0.08624187550423179,
+  "mean_epsi_rad": -0.02655749187045042,
+  "mean_abs_epsi_rad": 0.06372902741518366,
+  "emergency_steps": 92,
+  "intervention_steps": 95,
+  "intervention_rate_pct": 95.0,
+  "interventions_per_rule": {
+    "C-06": 68,
+    "C-02": 2,
+    "C-05": 92
+  },
+  "cycle_dt_s": 0.1,
+  "duration_s": 10.0,
+  "run_id": "camp_edge05_rl_seed2024_monitoring_rep92",
+  "scenario_id": "SC-EDGE-05",
+  "mode": "monitoring",
+  "verdict": false,
+  "campaign": {
+    "scenario_id": "SC-EDGE-05",
+    "criterion": "joint_envelope_assertion_failures == 0 AND M-S2 == 0 AND inter_cycle_oscillations == 0",
+    "grid_point": {
+      "anchor_id": "C01_C04_C06",
+      "expected_activation": [
+        "C-01",
+        "C-04",
+        "C-06"
+      ],
+      "factor": 0.85,
+      "seed": {
+        "d_m": 0.085,
+        "v_mps": 0.3825,
+        "kappa_seed_rad_m": 0.51
+      }
+    },
+    "verdict": false,
+    "clauses": [
+      {
+        "clause": "joint_envelope_assertion_failures == 0",
+        "operand": "joint_envelope_assertion_failures",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 1,
+        "passed": false
+      },
+      {
+        "clause": "M-S2 == 0",
+        "operand": "M-S2",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 0.0,
+        "passed": true
+      },
+      {
+        "clause": "inter_cycle_oscillations == 0",
+        "operand": "inter_cycle_oscillations",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 0,
+        "passed": true
+      }
+    ],
+    "values": {
+      "M-P1": 0.030841317719282977,
+      "M-P4": 0.20685870220160532,
+      "M-P5": 0.06372902741518366,
+      "M-P2": 1,
+      "M-P3": 100.0,
+      "M-P6": null,
+      "M-P7": null,
+      "M-S1": 0.08624187550423179,
+      "M-S2": 0.0,
+      "M-S3": 1,
+      "M-S4": null,
+      "M-I1": 95.0,
+      "M-I2": {
+        "C-02": 2.0,
+        "C-05": 92.0,
+        "C-06": 68.0
+      },
+      "M-I3": {
+        "C-02": {
+          "count": 1,
+          "median": 2.0,
+          "p95": 2.0,
+          "max": 2.0
+        },
+        "C-05": {
+          "count": 1,
+          "median": 92.0,
+          "p95": 92.0,
+          "max": 92.0
+        },
+        "C-06": {
+          "count": 18,
+          "median": 2.0,
+          "p95": 9.499999999999986,
+          "max": 18.0
+        }
+      },
+      "M-I4": {
+        "C-02": 0.0,
+        "C-05": null,
+        "C-06": 97.05882352941177
+      },
+      "M-I5": {
+        "steer_median": 0.0,
+        "steer_p95": 0.0,
+        "steer_rate_max": 1.3795663714408875,
+        "steer_rate_p95": 0.8582942180335519,
+        "steer_rate_max_smoothness": 0.36676087230443954,
+        "delta_max_steer": 0.15,
+        "steer_rate_smoothness_ok": false
+      },
+      "M-C1": null,
+      "M-C2": null,
+      "emergency": true,
+      "time_to_recovery_heading": 3.4000000000000004,
+      "max_excursion_m": 0.08624187550423179,
+      "road_edge_contact": false,
+      "joint_envelope_assertion_failures": 1,
+      "inter_cycle_oscillations": 0
+    },
+    "availability": {
+      "M-P3": "approx: kappa absent, v_max_straight assumed",
+      "M-P6": "undefined: no eligible settled-nominal step with a full trailing window",
+      "M-P7": "undefined: no eligible window with sufficient history",
+      "M-S3": "per-run bit; M-S3 rate is aggregated across runs",
+      "M-S4": "requires per-step ttlc series (not in current record schema)",
+      "M-I4": "C-05 omitted (triggers not in record); C-03 omitted (no ttlc)",
+      "M-I5": "steering channel only (throttle correction not in record schema); steer_rate_* = per-cycle |\u0394 committed steer|, 'smoothness' arm excludes steps with a downstream safety-override rule (C-01/C-02/C-03/C-05) \u2014 see SR-006",
+      "M-C1": "not measured in sim runs",
+      "M-C2": "not measured in sim runs"
+    },
+    "termination_reason": "truncated",
+    "note": null
+  }
+}

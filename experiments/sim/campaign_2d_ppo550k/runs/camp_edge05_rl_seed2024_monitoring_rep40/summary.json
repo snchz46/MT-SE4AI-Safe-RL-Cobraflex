@@ -1,0 +1,150 @@
+{
+  "total_steps": 100,
+  "episodes": 1,
+  "completed_laps": 0.11659975241306256,
+  "mean_ey_m": 0.22935460131815083,
+  "mean_abs_ey_m": 0.22935460131815083,
+  "max_abs_ey_m": 0.27833361393505496,
+  "mean_epsi_rad": 0.07632378560144297,
+  "mean_abs_epsi_rad": 0.10298028470915589,
+  "emergency_steps": 92,
+  "intervention_steps": 97,
+  "intervention_rate_pct": 97.0,
+  "interventions_per_rule": {
+    "C-03": 10,
+    "C-06": 58,
+    "C-05": 92,
+    "C-02": 16
+  },
+  "cycle_dt_s": 0.1,
+  "duration_s": 10.0,
+  "run_id": "camp_edge05_rl_seed2024_monitoring_rep40",
+  "scenario_id": "SC-EDGE-05",
+  "mode": "monitoring",
+  "verdict": false,
+  "campaign": {
+    "scenario_id": "SC-EDGE-05",
+    "criterion": "joint_envelope_assertion_failures == 0 AND M-S2 == 0 AND inter_cycle_oscillations == 0",
+    "grid_point": {
+      "anchor_id": "C01_C02",
+      "expected_activation": [
+        "C-01",
+        "C-02"
+      ],
+      "factor": 0.85,
+      "seed": {
+        "d_m": 0.085,
+        "theta_deg": 10.2
+      }
+    },
+    "verdict": false,
+    "clauses": [
+      {
+        "clause": "joint_envelope_assertion_failures == 0",
+        "operand": "joint_envelope_assertion_failures",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 12,
+        "passed": false
+      },
+      {
+        "clause": "M-S2 == 0",
+        "operand": "M-S2",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 8.2,
+        "passed": false
+      },
+      {
+        "clause": "inter_cycle_oscillations == 0",
+        "operand": "inter_cycle_oscillations",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 0,
+        "passed": true
+      }
+    ],
+    "values": {
+      "M-P1": 0.236491414019796,
+      "M-P4": 0.3642054695742797,
+      "M-P5": 0.10298028470915589,
+      "M-P2": 1,
+      "M-P3": 100.0,
+      "M-P6": null,
+      "M-P7": null,
+      "M-S1": 0.27833361393505496,
+      "M-S2": 8.2,
+      "M-S3": 1,
+      "M-S4": null,
+      "M-I1": 97.0,
+      "M-I2": {
+        "C-02": 16.0,
+        "C-03": 10.0,
+        "C-05": 92.0,
+        "C-06": 58.0
+      },
+      "M-I3": {
+        "C-02": {
+          "count": 1,
+          "median": 16.0,
+          "p95": 16.0,
+          "max": 16.0
+        },
+        "C-03": {
+          "count": 1,
+          "median": 10.0,
+          "p95": 10.0,
+          "max": 10.0
+        },
+        "C-05": {
+          "count": 1,
+          "median": 92.0,
+          "p95": 92.0,
+          "max": 92.0
+        },
+        "C-06": {
+          "count": 18,
+          "median": 2.0,
+          "p95": 9.149999999999999,
+          "max": 10.0
+        }
+      },
+      "M-I4": {
+        "C-02": 87.5,
+        "C-03": null,
+        "C-05": null,
+        "C-06": 96.55172413793103
+      },
+      "M-I5": {
+        "steer_median": 0.0,
+        "steer_p95": 0.0,
+        "steer_rate_max": 1.2980254888534546,
+        "steer_rate_p95": 0.8401647880673407,
+        "steer_rate_max_smoothness": 0.017094898503273726,
+        "delta_max_steer": 0.15,
+        "steer_rate_smoothness_ok": true
+      },
+      "M-C1": null,
+      "M-C2": null,
+      "emergency": true,
+      "time_to_recovery_heading": 3.6,
+      "max_excursion_m": 0.27833361393505496,
+      "road_edge_contact": true,
+      "joint_envelope_assertion_failures": 12,
+      "inter_cycle_oscillations": 0
+    },
+    "availability": {
+      "M-P3": "approx: kappa absent, v_max_straight assumed",
+      "M-P6": "undefined: no eligible settled-nominal step with a full trailing window",
+      "M-P7": "undefined: no eligible window with sufficient history",
+      "M-S3": "per-run bit; M-S3 rate is aggregated across runs",
+      "M-S4": "requires per-step ttlc series (not in current record schema)",
+      "M-I4": "C-05 omitted (triggers not in record); C-03 omitted (no ttlc)",
+      "M-I5": "steering channel only (throttle correction not in record schema); steer_rate_* = per-cycle |\u0394 committed steer|, 'smoothness' arm excludes steps with a downstream safety-override rule (C-01/C-02/C-03/C-05) \u2014 see SR-006",
+      "M-C1": "not measured in sim runs",
+      "M-C2": "not measured in sim runs"
+    },
+    "termination_reason": "truncated",
+    "note": null
+  }
+}

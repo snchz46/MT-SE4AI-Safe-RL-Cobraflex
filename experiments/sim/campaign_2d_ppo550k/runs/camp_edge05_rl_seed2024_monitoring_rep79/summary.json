@@ -1,0 +1,143 @@
+{
+  "total_steps": 100,
+  "episodes": 1,
+  "completed_laps": 0.11956403118446715,
+  "mean_ey_m": 0.24942964618948024,
+  "mean_abs_ey_m": 0.24942964618948024,
+  "max_abs_ey_m": 0.27978864254999625,
+  "mean_epsi_rad": 0.05134365254389043,
+  "mean_abs_epsi_rad": 0.08326268525893213,
+  "emergency_steps": 98,
+  "intervention_steps": 100,
+  "intervention_rate_pct": 100.0,
+  "interventions_per_rule": {
+    "C-02": 17,
+    "C-05": 98,
+    "C-06": 60
+  },
+  "cycle_dt_s": 0.1,
+  "duration_s": 10.0,
+  "run_id": "camp_edge05_rl_seed2024_monitoring_rep79",
+  "scenario_id": "SC-EDGE-05",
+  "mode": "monitoring",
+  "verdict": false,
+  "campaign": {
+    "scenario_id": "SC-EDGE-05",
+    "criterion": "joint_envelope_assertion_failures == 0 AND M-S2 == 0 AND inter_cycle_oscillations == 0",
+    "grid_point": {
+      "anchor_id": "C01_C02_C04",
+      "expected_activation": [
+        "C-01",
+        "C-02",
+        "C-04"
+      ],
+      "factor": 1.3,
+      "seed": {
+        "d_m": 0.13,
+        "theta_deg": 15.600000000000001,
+        "v_mps": 0.5850000000000001
+      }
+    },
+    "verdict": false,
+    "clauses": [
+      {
+        "clause": "joint_envelope_assertion_failures == 0",
+        "operand": "joint_envelope_assertion_failures",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 12,
+        "passed": false
+      },
+      {
+        "clause": "M-S2 == 0",
+        "operand": "M-S2",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 9.4,
+        "passed": false
+      },
+      {
+        "clause": "inter_cycle_oscillations == 0",
+        "operand": "inter_cycle_oscillations",
+        "op": "==",
+        "rhs": 0,
+        "lhs": 0,
+        "passed": true
+      }
+    ],
+    "values": {
+      "M-P1": 0.25189928908467957,
+      "M-P4": 0.3341407794853937,
+      "M-P5": 0.08326268525893213,
+      "M-P2": 1,
+      "M-P3": 100.0,
+      "M-P6": null,
+      "M-P7": null,
+      "M-S1": 0.27978864254999625,
+      "M-S2": 9.4,
+      "M-S3": 1,
+      "M-S4": null,
+      "M-I1": 100.0,
+      "M-I2": {
+        "C-02": 17.0,
+        "C-05": 98.0,
+        "C-06": 60.0
+      },
+      "M-I3": {
+        "C-02": {
+          "count": 1,
+          "median": 17.0,
+          "p95": 17.0,
+          "max": 17.0
+        },
+        "C-05": {
+          "count": 1,
+          "median": 98.0,
+          "p95": 98.0,
+          "max": 98.0
+        },
+        "C-06": {
+          "count": 16,
+          "median": 2.0,
+          "p95": 9.75,
+          "max": 12.0
+        }
+      },
+      "M-I4": {
+        "C-02": 88.23529411764706,
+        "C-05": null,
+        "C-06": 100.0
+      },
+      "M-I5": {
+        "steer_median": 0.0,
+        "steer_p95": 0.0,
+        "steer_rate_max": 1.4312446117401123,
+        "steer_rate_p95": 1.1012537866830818,
+        "steer_rate_max_smoothness": 0.0,
+        "delta_max_steer": 0.15,
+        "steer_rate_smoothness_ok": true
+      },
+      "M-C1": null,
+      "M-C2": null,
+      "emergency": true,
+      "time_to_recovery_heading": 2.6,
+      "max_excursion_m": 0.27978864254999625,
+      "road_edge_contact": true,
+      "joint_envelope_assertion_failures": 12,
+      "inter_cycle_oscillations": 0
+    },
+    "availability": {
+      "M-P3": "approx: kappa absent, v_max_straight assumed",
+      "M-P6": "undefined: no eligible settled-nominal step with a full trailing window",
+      "M-P7": "undefined: no eligible window with sufficient history",
+      "M-S3": "per-run bit; M-S3 rate is aggregated across runs",
+      "M-S4": "requires per-step ttlc series (not in current record schema)",
+      "M-I4": "C-05 omitted (triggers not in record); C-03 omitted (no ttlc)",
+      "M-I5": "steering channel only (throttle correction not in record schema); steer_rate_* = per-cycle |\u0394 committed steer|, 'smoothness' arm excludes steps with a downstream safety-override rule (C-01/C-02/C-03/C-05) \u2014 see SR-006",
+      "M-C1": "not measured in sim runs",
+      "M-C2": "not measured in sim runs"
+    },
+    "termination_reason": "truncated",
+    "note": null
+  }
+}

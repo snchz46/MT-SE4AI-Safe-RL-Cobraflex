@@ -573,6 +573,44 @@ passed 68/100. The algorithm and the runtime-assurance layer answer different
 questions. The honest qualification is that this is a posterior subset, not a
 replacement GE4 campaign.
 
+**Q14. "The cage only looks valuable because the policy/reward/scenarios/metrics
+weren't designed well enough — fix the design and the cage is redundant."** The
+strongest objection, and it *concedes the premise*. Concede first: the
+**magnitude** of the cage's demonstrated intervention does depend on policy
+quality — the weaker 2-D policy makes it larger (bare policy commits 98 in-ODD
+road-edge contacts, enforcement removes all → 0, via 433 controlled stops; D-65),
+and a stronger policy would trigger it less. That is stated, not hidden. But the
+objection misses three things. **(1) It assumes you can design the failures away;
+the entire premise of runtime assurance (Simplex/shielding lineage, §4.1) is that
+for a *learned black-box* controller you provably cannot** — if you could certify
+the policy, you would need neither RL nor a cage. "The design isn't perfect" is
+the *justification* for the cage, not an objection to it. **(2) The safety
+argument is architecturally decoupled from the design levers the objector names.**
+Safety comes from the cage — a simple, inspectable rule set — not from the reward
+(A2, docs/10 §4): RL optimises *expected return*, never worst-case safety, and a
+reward-optimal policy can still commit a rare unsafe act; "better reward" is also
+no free lunch (we *observed* reward-hacking, the park optimum, D-56). The
+scenarios are **traceable to hazards** (Hazard→SR→Scenario), not cherry-picked,
+and the *in-ODD nominal* set — the fair test — still exhibited the failures the
+cage caught; out-of-ODD frontier/edge cells are explicitly labelled and separated
+in the reconciliation (D-65). The metrics are pre-registered and traced to SRs;
+loosening one to pass a failing case is exactly the malpractice the thesis
+refuses (anti-gaming, D-47) — their strictness is a *feature* (it distinguishes a
+safe controlled stop from a road-edge breach, which is what makes the
+reconciliation honest). **(3) Some failures are irreducible by policy design at
+all:** under severe perception degradation (SC-PERT-05 low-light) *any* driving
+policy fails, because the failure is in the camera/CV estimate, not the driving
+skill — a better policy does not see better. There the cage is not redundant, it
+is the *only* mitigation. Finally, the **empirical control**: the posterior
+longer-training run + re-run campaign is designed to test this objection directly
+— if a materially better policy clears the *availability* failures (SC-NOM-03
+endurance emergencies) while the *structural* ones persist (perception blindness
+SC-PERT-05, cage co-activation SR-010/SC-EDGE-05, the SR-009 stall construct),
+that empirically proves those residual failures are not policy-quality artefacts.
+The invariant the thesis claims — 0 in-ODD road-edge contacts under enforcement —
+held across every algorithm, seed, observation modality and action space tested;
+its *guarantee* does not depend on policy quality, only its *visibility* does.
+
 ## 8. Reference shelf
 
 Already grounded in the manuscript (Ch. 2 carries the full citations and the

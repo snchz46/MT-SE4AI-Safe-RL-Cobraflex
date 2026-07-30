@@ -3085,3 +3085,68 @@ stays stable — plausibly because the slow cap makes the driving objective a wi
 Posterior E5; frozen 1-D verdict untouched. `[RESULTADO PENDIENTE — F5: the 550k campaign verdict.]`
 Cites D-60 (algorithm switch), D-59 (the 0.22 cap / speed-envelope), D-62 (T3 preflight), D-65
 (the weak-policy campaign this contrasts).
+
+---
+
+### D-67 — Research trunk of record moves to the 2-D PPO camera policy; everything before it is reclassified as development history
+
+| Field | Value |
+| --- | --- |
+| Section | Repo-wide scoping decision. Affects `README.md`, `CLAUDE.md`, `docs/16` §8; **deliberately NOT applied to `manuscript/`** |
+| Status | ACCEPTED as a scoping decision — **conditional on the `campaign_2d_ppo550k` verdict**, which was still executing when this entry was written (30.07.2026, 1435/1890 cells) |
+| Date | 30.07.2026 |
+
+**Context.** The repository accumulated four successive research arms, each of which was at some point
+"the" result: the **F-track** state-vector policy on the oval (ground truth observations, G3/F4,
+verdict `SATISFIED`), the **1-D camera E-main** (GE4-V2 on the complex_b 297k peak, 1970 runs, the
+`verdict of record` that closed **G4** on 02.07.2026), the posterior **SAC / algorithm probes** and
+the weak **2-D margin022** campaign (D-65), and finally the **competent 2-D PPO** policy at cap 0.22,
+checkpoint 550k (D-66), whose verdict campaign is what closes this arm. Every spec document
+(`docs/02`, `03`, `04`, `05`, `06`, `08`) still names GE4-V2 as the *verdict of record*, and the
+manuscript's Chapter 8 is still organised with the F-track as §8.1–8.8 and the whole camera track
+demoted to §8.9 — i.e. the document structure is the **inverse** of the current research priority.
+Presenting all four arms as parallel results would produce a defense narrative with four competing
+headline numbers and a thesis long past the point of usefulness.
+
+**Decision.** The **2-D PPO camera policy (D-66, checkpoint 550k) is the research trunk of record**:
+the artefact the defense presents, and the one against which the developed framework — cage, D-43
+perception supervisor, scenario library, metrics catalogue, verdict spine — is evaluated and verified.
+Everything preceding it is reclassified from *parallel result* to **development history**: the path
+that had to be walked to reach the 2-D policy. Concretely:
+
+| Arm | Old role | New role |
+| --- | --- | --- |
+| F-track (state-vector, oval) | Frozen ground-truth baseline / control arm | **Method-validation stage.** Proves the framework works when perception is perfect — the reference that isolates what camera perception costs. Not a headline result |
+| 1-D camera E-main (GE4-V2, G4) | **Verdict of record** | **Predecessor + verification data.** Its D-47 verdict reconciliation, its latent→active cage flip and its SR-010 co-activation finding remain load-bearing *method* evidence |
+| SAC / algorithm + cap probes (D-59/D-60), margin022 (D-65) | Posterior E5 results | **Findings: problems encountered and how they were overcome.** Entropy collapse, replay eviction, the speed-envelope kill, the weak/decayed-checkpoint trap |
+| **2-D PPO 550k (D-66)** | Posterior E5 contrast | **THE result.** Evaluation + verification of the framework |
+
+**Two things this decision does NOT do.**
+
+1. **It does not reopen G4, and it does not retroactively relabel the GE4-V2 verdict.** G4 closed on
+   evidence that was valid when it closed; the gate record stands. "Verdict of record" as used in
+   `docs/02–08` remains historically correct **for that gate**. What changes is which arm the *thesis*
+   presents as its result. Whether those spec documents get re-pointed at the 2-D campaign is a
+   separate, deliberate edit to be made **after** the 550k verdict exists — not now, and not silently.
+2. **It is not applied to `manuscript/`.** By explicit author instruction (30.07.2026), the
+   reclassification is recorded in the repository only. The manuscripts feeding the thesis and the
+   paper must not carry the reasoning, the four-arm comparison, or the superseded results as prose —
+   that is precisely the text bloat this decision exists to prevent. In the thesis, the earlier arms
+   appear (if at all) as *findings and fixes* in the development narrative and as verification
+   cross-checks, never as a second results chapter.
+
+**Consequence — the largest pending action, deliberately deferred.** Chapter 8's structure
+(§8.1–8.8 = F-track results, §8.9 = camera track) contradicts this decision, and the 2-D PPO campaign
+has no chapter section at all. Restructuring it is a substantial authoring task that only makes sense
+once the 550k verdict is in hand; it is explicitly *not* attempted here. Same for the `docs/02–08`
+"verdict of record" pointers.
+
+**Risk to state plainly.** This decision was recorded while the campaign that justifies it was still
+running. If the 550k campaign comes back materially worse than the 1-D E-main — for instance if the
+in-ODD safety guarantee does not hold, where GE4-V2's did — the trunk claim has to be revisited rather
+than defended. The honest version of the defense narrative depends on the verdict, not on this entry.
+`[RESULTADO PENDIENTE — the campaign_2d_ppo550k verdict.]`
+
+Cites D-66 (the policy and its checkpoint selection), D-65 (the weak 2-D predecessor), D-49 (the
+frozen 1-D action), D-47 (the verdict-reconciliation precedent this arm will need again), D-43
+(the perception supervisor being verified), D-29/D-30 (the verdict spine).

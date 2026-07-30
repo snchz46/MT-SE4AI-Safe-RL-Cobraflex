@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 > Keep lean (<250 lines). Move detail into linked docs rather than inflating this file.
-> Last reviewed: 2026-07-20.
+> Last reviewed: 2026-07-30.
 
 ## What this repo is
 
@@ -24,6 +24,17 @@ script reports orphans on either side.
 
 ## Phase status (snapshot)
 
+> **THESIS TRUNK (D-67, 30.07.2026) — read this before citing any result.** The **2-D PPO camera
+> policy** (cap 0.22, checkpoint 550k, D-66) is the **research trunk of record**: what the defense
+> presents, and what the framework is evaluated/verified against. Everything earlier is
+> **development history**, not a parallel result: F-track = method validation (perfect perception
+> control arm); 1-D GE4-V2 = predecessor + verification data (it closed G4, and that gate record
+> stands); SAC/cap probes + margin022 = findings-with-fixes. **Conditional:** the 550k verdict
+> campaign was still running when D-67 was written — 2-D has a nominal eval + D-43 preflight PASS
+> but **no verdict yet**; don't state one. Narrative: docs/16 §8. `verdict of record` in docs/02–08
+> still points at GE4-V2 **on purpose** — re-pointing it is a deliberate post-verdict edit. This
+> reclassification is **repo-only**: it must not be written into `manuscript/` (author instruction).
+
 > **Two orthogonal axes — don't conflate them.** *Observation:* **F-track** (state-vector,
 > frozen baseline) vs **E-track** (camera, verdict closed). *Simulator:* **Gazebo** carries every
 > result and **all thesis verdicts** — the E verdict **closed in Gazebo** with GE4-V2 on the
@@ -39,27 +50,17 @@ script reports orphans on either side.
   **frozen as the ground-truth baseline** (control arm for "what does camera perception cost");
   track 'E' (end-to-end front camera) continues on top. Totals: **12 hazards, 14 SR, 6 cage rules,
   28 scenarios, 19 metrics** (check_traceability PASS; SC-PERT-11/12/13 + SC-FRONT-07 documented in docs/05 02.07.2026).
-- **F-track ground state — F4 Sim eval, campaign closed (2026-06-10). G3 passed 2026-06-03.**
-  Scenario library **24 scenarios**; ODD-2 adverse profiles closed (D-33); campaign runner +
-  pure-Python verdict spine (D-29/D-30) built and unit-tested. **Gazebo executor is live** —
-  `run_campaign.execute_run` drives `eval_scenario_batch.launch.py` (GZ_PARTITION isolation,
-  orphan-gz reaping, retries, resume). **Campaign done (2026-06-10):** the verdict-bearing
-  run completed — **1260 runs**, main seed 2024 (D-36), every scenario × {enforcement,
-  monitoring}; roll-up at `experiments/sim/campaign/campaign_report.json`, frontier contrast
-  (25 reps) at `experiments/sim/campaign_frontier/frontier_contrast.json`. **Global verdict
-  `SATISFIED`** — all 7 SR-CL-A satisfied (D-30 veto clear); `docs/07` verdicts filled (8
-  Satisfied + SR-011; **2 SR-CL-B held TBD** — SR-009/010). Central finding: M-S2 = 0 in
-  both modes in-ODD (cage **latent**, policy never nears the boundary); cage value shows
-  out-of-ODD in the frontier contrast (seed-123 cage removes 96–100% of road-edge contacts).
-  `docs/07` verdicts filled: 7/7 SR-CL-A + SR-011 + **SR-006 Satisfied (D-39**, scored on
-  its committed-steer rate metric via `tools/sr006_smoothness.py`: 559/559 enforcement vs
-  67.6% monitoring; no C-06 defect — large jumps are correct downstream safety overrides).
-  Aggregator indeterminate→fail collapse **reconciled (D-38)**.
-  The two F-arm CL-B TBDs (SR-009/010) closed at G4 as **documented non-vetoing abstentions**
-  (D-30), materially answered on the E arm: SR-009's stall arm is **N/A-by-construction** for the
-  shared 1-D steering-only action (M-P6 ≡ 0, D-49) and SR-010's co-activation question was answered
-  by GE4-V2's wired SC-EDGE-05 grid (30/85 in-ODD breaches, genuine CL-B finding). The F-arm
-  SC-EDGE-05 grid re-run stays optional/historical. See CHANGELOG 03.06–10.06 "F4" + 02.07 "G4".
+- **F-track ground state — method validation (D-67). F4 campaign closed 2026-06-10, G3 passed 2026-06-03.**
+  Oval scenario library **24 scenarios**; the campaign runner + pure-Python verdict spine (D-29/D-30) and the
+  live Gazebo executor (`run_campaign.execute_run` → `eval_scenario_batch.launch.py`, GZ_PARTITION isolation,
+  orphan-gz reaping, retries, resume) were all built here — that machinery is what every later arm reuses.
+  Verdict-bearing run: **1260 runs**, seed 2024 (D-36), every scenario × {enf, mon}; **global `SATISFIED`**,
+  all 7 SR-CL-A (`experiments/sim/campaign/campaign_report.json`). Central finding: **M-S2 = 0 in both modes
+  in-ODD** — with perfect perception the cage is **latent**; its value only shows out-of-ODD (frontier
+  contrast: seed-123 cage removes 96–100% of road-edge contacts). SR-006 Satisfied via D-39; D-38 reconciled
+  the aggregator's indeterminate→fail collapse; the two CL-B TBDs (SR-009/010) closed at G4 as documented
+  non-vetoing abstentions (D-30), materially answered on the E arm. Detail: CHANGELOG 03.06–10.06 "F4" +
+  02.07 "G4"; docs/07.
 - **Track 'E' (camera) — GE4-V2 verdict of record (2026-06-28); G4 CLOSED 02.07.2026 (docs/07).**
   D-41 architecture; the cage reads a **dedicated deterministic CV lane-estimator** (D-43), not the camera.
   **GE4-V2 on the 297k E-main: 1970 runs** (seed 2024, 28 complex_b scenarios × {enforcement, monitoring},
@@ -69,42 +70,51 @@ script reports orphans on either side.
   (D-47)** → no SR-CL-A safety predicate breached; verdict recorded as literal + reconciliation annotated
   (user decision). **SR-001 Satisfied** — ruta-1 clipped SC-EDGE-02's IC to the ODD (V1 spilled 9/30 spawns
   out-of-ODD) → 28/30; the 2 residuals are the **D-43/H-12 confident under-read** at the recovery-basin edge
-  (~0.120 m). Ruta-2b (conservative lane-selection) was **unnecessary + reverted** after closed-loop
-  regression (D-48; opt-in flag kept, default False — docs/12 §4.4). **SR-012/013/014 Satisfied** (D-29
-  coverage closed); SR-010 **genuine CL-B** (30/85 in-ODD co-activation grid breaches); SR-009 stall arm
-  N/A-by-construction (D-49). In-ODD safety holds: 0 in-ODD road-edge contacts; the cage **removes**
-  perception-degradation failures the bare policy commits (PERT-04/09/11/12/13 enf PASS vs mon FAIL;
-  cleanest SC-PERT-13 40/40 vs 0/40) — the latent→active flip is now measured on the E-main. The 117 enf
-  road-edge contacts are all out-of-ODD (SC-FRONT-* + OOD grid points). Historical: V1 297k
-  (`campaign_e_297k/`) and the 139k campaign (`campaign_e/`, 1660 runs, availability-cost reading).
-  Multi-seed N=5 **closed (E5, 13.07.2026)**: 5/5 trained + per-seed nominal evals — 3/5
-  constraint-respecting, 666 cage-dependent, 23 cage–CV conflict; the training curve does not
-  classify the basin (docs/11 §8.5, ch.7 §7.5.3–7.5.4; seed-2024 v2/2-D variants there too).
-  See CHANGELOG 27–28.06 + 13.07 + docs/11 §8.4 + ch.8 §8.9.
-- **Track 'E' E-main predecessor — 425k oval peak (2026-06-15, superseded by 297k on 2026-06-22; detail docs/11 §8.3).**
-  Lane-Cam retrain `ppo_newcam_train_2024_750k` → `cobraflex_ppo_newcam_lane_2024_425k_peak.zip` (peak 335.6 @ ≈425k);
-  nominal `rl_cam_eval_2024_425k_4k4` = 11.16 laps, |ey| 12.4 mm, 0 emergencies, cage latent. Its GE4 re-run was
-  prepared+dry-run-validated but **never launched** (the GE4 closure is now scoped to the 297k E-main below).
+  (~0.120 m). Ruta-2b was **unnecessary + reverted** (D-48; opt-in flag default False, docs/12 §4.4).
+  **SR-012/013/014 Satisfied**; SR-010 **genuine CL-B** (30/85 in-ODD co-activation breaches); SR-009 stall arm
+  N/A-by-construction (D-49). In-ODD safety holds: **0 in-ODD road-edge contacts**; the cage **removes**
+  perception-degradation failures the bare policy commits (cleanest SC-PERT-13 40/40 enf vs 0/40 mon) — this is
+  where the latent→active flip is first measured. The 117 enf road-edge contacts are all out-of-ODD.
+  Multi-seed N=5 closed (13.07): 3/5 constraint-respecting, 666 cage-dependent, 23 cage–CV conflict — the
+  training curve does **not** classify the basin. Historical campaigns: `campaign_e_297k/` (V1), `campaign_e/`
+  (139k, 1660 runs). Detail: docs/11 §8.4–8.5 + ch.8 §8.9 + CHANGELOG 27–28.06 / 13.07.
+- **Track 'E' E-main predecessor — 425k oval peak (2026-06-15).** Superseded by the 297k on 2026-06-22; its GE4 re-run
+  was prepared but **never launched**. Full detail docs/11 §8.3.
 - **Track 'E' E-main → complex_b 297k peak (2026-06-22, supersedes the 425k; §7.7.8/docs/11 §8).** Training moved to
   the **complex_b** circuit (perimeter 19.22 m, 2.2× the oval). Run `ppo_newcam_complex_b_2024_1M` (seed 2024, CnnPolicy,
   v3 stability stack: target_kl 0.5 + linear LR + VecNormalize + clip_range_vf) stopped manually ~662k of 1M: `ep_rew_mean`
   peaks **822.9 @ ~297k** (value_loss tiny all run — exploration collapse, not the v2 sawtooth), decays to ~113 by 662k.
   Peak rescued + verified (`num_timesteps==296960`): `cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip` in
-  `…/ppo_newcam_complex_b_2024_1M/checkpoints_peak/` (hash `44c8e912…`, gitignored; run-record `metadata.json` reconstructed,
-  status interrupted). **Nominal eval (SC-NOM-01, seed 2024, 4400 steps, DR off, complex_b):** enforcement
+  `experiments/sim/training/ppo_newcam_complex_b_2024/checkpoints_peak/` (hash `44c8e912…`, gitignored; run-record
+  `metadata.json` reconstructed, status interrupted). **Path caveat:** the 1970 GE4-V2 run metadata record the older
+  `…_2024_1M/…` directory, renamed since — the chain holds **by hash, not by path** (docs/11 §8 path note). **Nominal eval (SC-NOM-01, seed 2024, 4400 steps, DR off, complex_b):** enforcement
   `rl_newcam_eval_2024_cb297k_4k4` = **4.88 laps, mean |ey| 10.9 mm, 0 emergencies** (43.5% C-06 only); monitoring `…_mon`
   = 4.89 laps, 12.9 mm, 0 emerg. **Cage latent in-ODD both modes** (no C-01/02/03/05, F-track signature; 139k curve-apex stop
   gone). **RL beats the CV baseline on the same track** (10.9 vs 17.2 mm |ey|), reversing the oval finding. Laps NOT comparable
   across tracks (~94 m ≈ the 425k's 98 m). GE4 closure on this checkpoint = the **GE4-V2 campaign above** (verdict of record);
   docs/07 matrix rows, ch.8 §8.9 and the traceability CSV all read V2 now.
-- **Posterior E5 — Gazebo algorithm/action probes + Isaac/sim-to-real (does not reopen G4).** Gazebo now has
-  the closed PPO camera N=5 nominal battery, a PPO 2-D baseline, and SAC 1-D/2-D studies (D-60): fixed
-  `ent_coef=0.005` removes the entropy-collapse cliff; a 200k replay buffer prevented the observed slow
-  decay through the bounded 180k 1-D probe; SAC-entfix produced two full-horizon 2-D enforcement evals. Two 1-D SAC SC-PERT
-  subsets give 100/100 enforcement PASS vs 68/100 monitoring, but are probes, not verdict campaigns. Qualification is
-  ready but unexecuted: fresh-only 75k/0.22 contract (150k replay), hash-bound D-43 gate (entfix-2024/42 PASS; auto-175k both caps BLOCKED),
-  and SC-PERT-03 λ=4.0/50k two-arm orchestration. Next: fresh parent → nominal D-43 PASS → fine-tune + 80 cells. D-44 remains the bridge toward
-  the physical CobraFlex (Phase 5); Gazebo and Isaac checkpoints do not transfer.
+- **THE 2-D TRUNK — PPO cap 0.22, checkpoint 550k (D-66; trunk per D-67). Campaign RUNNING.** Fresh PPO 2-D 1M
+  on complex_b: `ep_rew_mean` peaks **1755 @ 472k**, stable plateau (SAC 2-D never exceeds ~200); cage **latent for
+  safety** across training (C-01/02/03/05 = 0). Checkpoint chosen **by driving + cage %, not reward** — the reward-peak
+  475k is the *worst* candidate (14 safety interventions, max |ey| 49 mm); **550k** wins: nominal `SC-NOM-01` enforcement
+  = **5.32 laps, |ey| 8.6 mm (max 27), 0 emergencies, 0 safety interventions** (C-06 only). D-43 preflight **PASS 7/7**
+  (`eval_gz2d/d43_preflight_ppo2d_cap022_550k.json`). **Verdict campaign in flight:** `experiments/sim/campaign_2d_ppo550k/`,
+  1890 runs (27 complex_b scenarios × {enf, mon}, seed 2024; SC-PERT-03 excluded — closed D-64). Resume with
+  `./experiments/sim/campaign_2d_ppo550k/resume_campaign.sh` (flock-guarded, two sequential phases: execute then
+  aggregate). **No verdict exists yet — do not state one.** A 29.07 concurrency incident quarantined 222 runs
+  (`_quarantine_20260729_concurrent_writers/`, operator error, not a code defect).
+- **Posterior E5 — algorithm/action probes, now reclassified as findings (D-67; does not reopen G4).** Closed PPO camera
+  N=5 nominal battery; SAC 1-D/2-D studies (D-60): `ent_coef=0.005` removes the entropy-collapse cliff, a 200k replay
+  buffer holds the peak band (eviction was the slow decay); two 1-D SAC SC-PERT subsets 100/100 enf vs 68/100 mon (probes,
+  not verdicts). First full 2-D campaign **margin022** (SAC 75k, D-65): NOT SATISFIED literal but **0 in-ODD road-edge
+  contacts** — the bare policy commits 98, the cage removes all via 433 controlled stops. That weak-and-*decayed*
+  checkpoint is what motivated D-66.
+- **Phase 5 — physical deployment scaffolding (docs/17; NOT run on hardware).** Chain complete end-to-end:
+  `csi_camera_node` (Jetson CSI → `camera/image_raw_lane`, 640×360 / 90° / 20 Hz, byte-identical GStreamer to
+  `lane_keeper_node`) → `rl_policy_node` → `cv_lane_estimator_node` → `cage_ros_node` → `vehicle_control_node` →
+  the platform's `cobraflex_ros_driver` (ROS→JSON serial, reached via Layer-1 bring-up). Blocking [VERIFY]: the **90°
+  effective HFOV** is a parameter default the sim *mirrored*, so no sim result can expose an error in it, and it scales
+  every metric `ey` the cage acts on. D-44/Isaac remains the other sim-to-real bridge; checkpoints do not transfer.
 - **F2 evidence:** `ros_run_20260523T153003Z` — 9.91 laps, 845 s,
   0 emergencies, cage v0.5.1, PD v0.8.0.
 - **F3 evidence (closed):** main run `ppo_train_2024_200k` (seed 2024, 200k, reward v1.2,
@@ -243,7 +253,8 @@ Full loop: `ros2 launch cobraflex lane_keeper_gazebo.launch.py`. The ROS2 nodes 
 | Isaac Sim utils (URDF import, ROS2 bring-up, in-process RL training + DR) | [docs/13_isaacsim_environment.md](docs/13_isaacsim_environment.md) |
 | Isaac Sim RL handover spec | [docs/14_isaacsim_handover_spec.md](docs/14_isaacsim_handover_spec.md) |
 | Implementation inventory (module/script/test map) | [docs/15_implementation_inventory.md](docs/15_implementation_inventory.md) |
-| Defense compendium (deep dives, threshold provenance, literature) | [docs/16_defense_compendium.md](docs/16_defense_compendium.md) |
+| Defense compendium (deep dives, threshold provenance, **what counts as a result vs a finding**) | [docs/16_defense_compendium.md](docs/16_defense_compendium.md) |
+| Physical deployment / Phase-5 bring-up (camera + driver + layering) | [docs/17_physical_deployment.md](docs/17_physical_deployment.md) |
 | Decisions (D-NN) | [docs/DECISIONS.md](docs/DECISIONS.md) |
 | What changed when | [docs/CHANGELOG.md](docs/CHANGELOG.md) |
 | Manuscript-to-CSV generation | [TRACEABILITY.md](TRACEABILITY.md) |

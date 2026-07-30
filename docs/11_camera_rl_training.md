@@ -720,11 +720,20 @@ brake + `lr_schedule: linear` + `VecNormalize(norm_reward=True, norm_obs=False)`
   over-anneals (0.034 → 0.018). `value_loss` stays tiny (~0.003–0.07) the whole
   run — **not** the v2 value-function sawtooth; the late decay is exploration
   collapse, so the **peak is the policy to keep** (checkpoint-on-peak).
-- **Peak checkpoint** `cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip` under
-  `experiments/sim/training/ppo_newcam_complex_b_2024_1M/checkpoints_peak/` (hash
-  `44c8e912…`, **gitignored** via the `checkpoints_peak/` rule — sync manually).
-  Verified: `num_timesteps == 296960` inside the zip matches the peak rollout.
-- **Run-record** `…/ppo_newcam_complex_b_2024_1M/metadata.json` reconstructed
+- **Peak checkpoint** `cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip`, hash
+  `44c8e912bb4cb1de…`, **gitignored** via the `checkpoints_peak/` rule (sync
+  manually). Verified: `num_timesteps == 296960` inside the zip matches the peak
+  rollout.
+  > **Path note (audit 30.07.2026).** The run directory on disk is
+  > `experiments/sim/training/ppo_newcam_complex_b_2024/checkpoints_peak/` — no
+  > `_1M` suffix. The GE4-V2 run metadata (all 1970 cells) records the older
+  > `…_2024_1M/…` path, which no longer exists; the directory was renamed after
+  > the campaign ran. **The evidence chain holds by hash, not by path**: the
+  > SHA-256 in every `metadata.json` (`44c8e912bb4cb1de…`) matches the file at the
+  > current location exactly, so the checkpoint is still identified
+  > unambiguously. Do not "fix" the recorded metadata — it is the immutable run
+  > record; resolve the artefact by hash.
+- **Run-record** `…/ppo_newcam_complex_b_2024/metadata.json` reconstructed
   post-hoc (the interrupted run never fired the trainer's end-of-run writer);
   carries the reproducibility pins, flagged `status: interrupted`.
 

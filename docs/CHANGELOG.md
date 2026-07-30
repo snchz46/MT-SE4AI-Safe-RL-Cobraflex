@@ -31,6 +31,197 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [30.07.2026] — Repo audit + D-67: the 2-D PPO policy becomes the research trunk; earlier arms reclassified as development history
+
+**Document(s) affected:** `docs/DECISIONS.md` (**D-67**), `docs/16_defense_compendium.md` (new §8, old §8 → §9, v1.2), `CLAUDE.md` (trunk banner + phase-status rewrite + docs/17 in the index), `docs/15_implementation_inventory.md` (test baseline, §4.5, `calibrate_d43_c02`), `docs/11_camera_rl_training.md` (§8 path note), `.gitignore`. **`manuscript/` deliberately untouched.**
+**Phase:** E5 (posterior) → thesis scoping.
+**Gate context:** does NOT reopen G4; the gate record stands.
+**Author:** Samuel Sanchez
+
+### Change
+
+Two things: a full repository consistency audit, and the scoping decision it fed into.
+
+**D-67 — trunk of record.** The **2-D PPO camera policy** (cap 0.22, checkpoint 550k, D-66) is now the
+research trunk: what the defense presents and what the framework is evaluated/verified against.
+The three earlier arms are reclassified from parallel results to development history — F-track =
+method validation (perfect-perception control arm), 1-D GE4-V2 = predecessor + verification data,
+SAC/cap probes + margin022 = findings-with-fixes. Recorded in `docs/DECISIONS.md`, narrated for the
+defense in `docs/16` §8 (one-sentence answer, per-arm role table, the "why isn't the earlier work in
+the thesis" argument, and the "you cherry-picked the best arm" rebuttal), and surfaced as a banner at
+the top of `CLAUDE.md`'s phase status. **By author instruction this is repo-only: none of it goes into
+`manuscript/`**, since enumerating four arms as prose is the text bloat the decision exists to avoid.
+
+**Audit fixes.** (a) `docs/15` test baseline refreshed **517 (15.07) → 602 (30.07)** with per-directory
+counts (139 + 437 + 7) — the file's own instruction is to regenerate it before each Gate/defense
+rehearsal, and it was 85 tests stale. (b) `docs/15` §4.5 added for the Phase-5 nodes (`csi_camera_node`,
+`rl_policy_node`) and `tools/calibrate_d43_c02` added to the tools table — all three were absent.
+(c) `docs/17` added to `CLAUDE.md`'s "Where to look first" table (it was missing entirely).
+(d) `CLAUDE.md`'s E5 bullet rewritten: it still described the margin022 qualification as "ready but
+unexecuted" with a "Next:" plan that had been executed two weeks earlier. (e) The dangling checkpoint
+path documented (below). (f) `.gitignore` now covers the campaign driver's `.campaign.lock` and
+per-session `*.log`, which were showing up as untracked.
+
+### Rationale
+
+Presenting four arms in parallel would give the defense four competing headline numbers across three
+tracks, two observation modalities and two action spaces — where laps are not comparable across tracks
+(oval 8.79 m vs complex_b 19.22 m) and `|ey|` is not comparable across observation modalities. The
+earlier arms are more valuable as *controls* than as results: they are what makes the cage claim
+non-trivial, since the in-ODD invariant is shown to hold across algorithm, seed, observation and
+action space. And the failures they surfaced are the contribution of a runtime-assurance thesis, so
+they belong in the development narrative as findings-with-fixes, not in a second results chapter.
+
+### Impact
+
+**The trunk claim is conditional and is recorded as such.** `campaign_2d_ppo550k` was still executing
+when D-67 was written (1435/1890 cells at 09:50). The 2-D arm has a nominal evaluation (5.32 laps,
+`|ey|` 8.6 mm, 0 emergencies, 0 safety interventions) and a D-43 preflight PASS, but **no verdict** —
+D-67, `docs/16` §8.5 and the `CLAUDE.md` banner all say so explicitly. If the campaign returns a worse
+in-ODD safety picture than GE4-V2's, the trunk decision must be revisited rather than defended.
+
+**Two deliberate non-actions, both recorded in D-67 rather than done silently:**
+
+1. **`docs/02–08` still name GE4-V2 the "verdict of record".** That is historically correct for the
+   gate it closed. Re-pointing six spec documents at a campaign whose verdict does not yet exist would
+   be premature; it is a deliberate post-verdict edit.
+2. **Chapter 8's structure contradicts the decision** — §8.1–8.8 are F-track results and the whole
+   camera track is demoted to §8.9, i.e. the inverse of the new priority, and the 2-D PPO campaign has
+   no section at all. Restructuring it is the largest pending authoring task and only makes sense once
+   the verdict is in hand.
+
+**Audit finding worth its own note — provenance holds by hash, not by path.** The 1-D
+verdict-of-record checkpoint is at `experiments/sim/training/ppo_newcam_complex_b_2024/checkpoints_peak/`,
+but all 1970 GE4-V2 run metadata records `…ppo_newcam_complex_b_2024_1M/…`, a directory that no longer
+exists (renamed after the campaign ran); `CLAUDE.md` and `docs/11` repeated the dangling path. The
+SHA-256 in every `metadata.json` (`44c8e912bb4cb1de…`) was verified against the file at its current
+location and **matches exactly**, so the artefact is still identified unambiguously. Docs corrected;
+the run metadata is left alone on purpose — it is the immutable run record, and the resolution rule
+(by hash) is now written down in `docs/11` §8.
+
+**Known structural debt, not fixed:** `CLAUDE.md` is **316 lines** against its own "<250, split if
+>200" rule. Compressed the superseded 425k, F-track and GE4-V2 bullets (whose detail lives in docs/11
+and the CHANGELOG) to offset the new content, but a real split into `CLAUDE_*.md` remains open.
+
+### Verification
+
+`tools/check_traceability.py` **PASS, 0 warnings** (12 hazards, 14 SR, 6 cage rules, 19 metrics —
+all re-counted from `docs/data/*.csv` and `docs/06` and confirmed against the totals CLAUDE.md
+claims). `sync_hazard_register.py` + `sync_safety_requirements.py` re-run: **both CSVs already
+byte-identical**, so no drift from the Markdown sources. **602 pytest passed.** Markdown link check
+over `docs/*.md` + `README.md` + `CLAUDE.md` + `TRACEABILITY.md`: **0 broken links**.
+`cage.yaml` 0.6.1 / `compatible_sr_spec_version` 1.0 consistent with
+`_ACCEPTED_SR_SPEC_VERSIONS`. 27 `experiments/**` paths cited in docs do not exist on this host;
+all but the checkpoint path above are gitignored artefacts, historical CHANGELOG references, or
+illustrative examples (docs/01's `SC-NOM-01_enforcement/run_007`). No code changed, so the running
+campaign is unaffected — verified still executing as a single process throughout.
+
+## [30.07.2026] — Physical deployment completed end-to-end: CSI lane camera published (`csi_camera_node`), platform bring-up layering, ROS→JSON serial actuation
+
+**Document(s) affected:** `src/cobraflex_rl/cobraflex_rl/csi_camera_node.py` (new), `policy/tests/test_csi_camera_node.py` (new), `src/cobraflex_rl/setup.py` (entry point), `src/cobraflex_rl/launch/deploy_cobraflex.launch.py`, `src/cobraflex_rl/package.xml` (exec_depend), `src/cobraflex/launch/cobraflex_bringup.launch.xml` (arg forwarding), `docs/17_physical_deployment.md` (§1 table, new §1b, §2 prerequisites, new §2b, §3 bring-up, §4 step 0).
+**Phase:** E5 → Phase 5 (deployment preparation).
+**Author:** Samuel Sanchez
+
+### Change
+
+Closed the two ends of the physical chain that were still open — the image source and the
+actuation sink — and aligned the RL deployment with the CobraFlex package's own bring-up layering.
+
+**1. `csi_camera_node` (new).** The physical chain had no publisher for the lane camera:
+`rl_policy_node` and `cv_lane_estimator_node` both *subscribe* to an Image topic, but the Jetson CSI
+device is opened *inside* `cobraflex.lane_keeper_node`, which also publishes `/cmd_vel` and so could
+not be reused as an image source. The new node publishes `camera/image_raw_lane` + `camera/camera_info`,
+reusing `lane_keeper_node`'s GStreamer pipeline **byte-identically** (asserted in a unit test) and its
+640×360 `INTER_AREA` downsample, and deriving the advertised `CameraInfo` intrinsics from the very
+`CameraModel` the cage's IPM uses so the two cannot drift. Output size defaults come *from*
+`camera_geometry`, and a non-default size logs an error: 640×360 is a hard contract because
+`cv_lane_estimator` falls back to `CameraModel()` and indexes its scan bands by `camera.height_px`.
+
+**2. Bring-up layering.** Audited every launch file in `cobraflex` and documented the layering in a
+new docs/17 §2b: **Layer 1** `cobraflex_bringup.launch.xml` (= `cobraflex_description`
+[robot_state_publisher + joint_state_publisher + rviz] + `cobraflex_driver` [`cobraflex_ros_driver`]),
+**Layer 2** `cobraflex_sensors.launch.xml` (SLLIDAR A2M8 + ZED Mini), **Layer 3** a controller
+(`cobraflex_lane_keeper.launch.py`, `cobraflex_automatic.launch.xml`, or the RL chain).
+`deploy_cobraflex.launch.py` is now an explicit Layer-3 launch: it starts `csi_camera_node`
+(`camera:=false` to use an external source) and can include Layer 1 via `bringup:=true` (default
+**false** — attach to a running bring-up, as `cobraflex_lane_keeper` does), forwarding
+`serial_port` / `baudrate` / `use_rviz`. `cobraflex_bringup.launch.xml` gained `serial_port` /
+`baudrate` args (defaults identical to the driver's, no behaviour change) so a caller can retarget
+the device. Added `<exec_depend>cobraflex</exec_depend>` to `cobraflex_rl`.
+
+### Rationale
+
+The RL policy must see the same camera and actuate through the same interface as every other
+CobraFlex controller (PD, CV): it keeps both ends of the chain out of the comparison, and the A2
+cage-independence argument then covers the full path from pixels to the serial link.
+`cobraflex_ros_driver` was already a complete, entry-pointed node reached through Layer 1 — but
+nothing in the RL chain referenced it, so the deploy chain stopped at `/cmd_vel` and listed "a motor
+driver" as an external prerequisite. On the image side the situation was worse: docs/17's "a camera
+driver publishing frames on `camera_topic`" papered over the fact that no such node existed at all.
+
+Crucially, the sim mirrors the hardware here and not the reverse: the Gazebo `Lane Cam` sensor's own
+comment states *"proc frames 640×360, effective hfov 90 deg, timer 20 Hz; capture is 1280×720@60 but
+only the processed stream matters"*, and those are `lane_keeper_node`'s parameter defaults. So
+reproducing the hardware path **is** reproducing the training distribution — no adaptation of the
+camera settings was needed, only a node that publishes them without also driving the car.
+
+### Impact
+
+**Scaffolding only — still NOT run on hardware, but no longer blocked.** The observation contract is
+now single-sourced and consistent across all three places it appears (`Lane Cam` sensor,
+`camera_geometry` defaults, `lane_keeper_node` params): 640×360, HFOV 90° (1.5707963 rad), 20 Hz,
+capture 1280×720@60 → `INTER_AREA`, optical frame `camera_link_optical_lane`, mount pitch 0.30 rad /
+height 0.07725 m, observation 84×84 grey k=4. `csi_camera_node` publishes `bgr8` where the sim sensor
+emitted `R8G8B8` — not a difference, since `decode_image` normalises both to the same BGR array.
+Actuation is topic-compatible with no change to the driver: `vehicle_control_node` publishes
+`/cmd_vel` (Twist), the driver emits `{"T":13,"X":vx,"Z":wz}` clamped ±0.53 m/s / ±6.0 rad/s, so the
+deployed 0.22 m/s contract is never clamped. Documented the **fail-safe chain**: no frames →
+no `/raw_action` → (it is `cage_ros_node`'s cycle trigger) no `/safe_action` →
+`vehicle_control_node`'s `safe_action_timeout_s` (0.5 s) publishes a zero Twist → the driver's
+keep-alive re-sends zeros; a dead camera stops the car without the e-stop.
+
+The audit surfaced three findings, all recorded in docs/17:
+
+1. **[VERIFY — highest priority] The 90° effective HFOV.** It originates as a *parameter default* in
+   `lane_keeper_node` (`camera_hfov_deg` 90.0) for an IMX219-**160** wide-angle lens, and the Gazebo
+   sensor mirrored it — so if it is wrong, sim and hardware are wrong the same way and **no sim result
+   can expose it**. `CameraModel.fx = (w/2)/tan(hfov/2)` = 320 px at 640×360 and the IPM's metric
+   output scales with it, so a wrong HFOV means C-01's 0.12 m threshold does not mean 0.12 m. The
+   published `CameraInfo` is deliberately the ideal pinhole the cage assumes (no distortion terms),
+   since measured intrinsics would contradict the IPM — both must be reconciled, not just extended.
+2. **[VERIFY] `steering_to_yaw_rate_gain` = 0.8** was calibrated against the **Gazebo DiffDrive
+   plugin's** reading of `angular.z` and has never been compared with the firmware's `Z` on the real
+   Ackermann chassis. Re-calibrate before the cage's C-02/C-03 margins mean anything on hardware.
+3. The driver has **no `/cmd_vel` watchdog** (`_resend_last_cmd` re-sends the last command every
+   50 ms as a firmware keep-alive). `vehicle_control_node`'s `safe_action_timeout_s` covers the cage
+   dying, but a death of `vehicle_control_node` itself leaves the car driving on its last command —
+   the hardware e-stop is the only mitigation, reinforcing why it is mandatory. Driver left untouched
+   (no atomic-stop change) because it is shared platform code and nothing is validated on the car.
+
+Two mutual-exclusion hazards documented rather than papered over: `bringup:=true` on top of a running
+Layer 1 starts a **second** `cobraflex_ros_driver` (Linux does not lock `/dev/ttyACM*`, so both
+interleave JSON writes and keep-alives with no error — hence the `false` default), and
+`cobraflex_lane_keeper.launch.py` must never run alongside the RL chain (same CSI device, competing
+`/cmd_vel`). `lane_keeper_node` itself was left untouched: its camera settings already match training,
+and it remains the classical HW baseline.
+
+### Verification
+
+**602 passed** (594 + 8 new host-side tests for `csi_camera_node`'s pure logic: 640×360 output
+geometry, 16:9 aspect preservation so the HFOV survives the downsample, no-op at target size,
+non-BGR rejection, `to_observation` shape round-trip, `CameraInfo` K/P derived from `CameraModel`,
+`fx` = (w/2)/tan(hfov/2), and byte-identity of the GStreamer string with
+`lane_keeper_node._gstreamer_pipeline` — that last one `importorskip`-guarded, since `cobraflex` is
+an `ament_python` package importable only after a colcon build). `py_compile` on the node and the
+launch; `generate_launch_description()` executed under a sourced ROS 2 Jazzy env — 14 args, **6
+nodes**, 1 include forwarding `serial_port`/`baudrate`/`use_rviz`; the include resolves to
+`install/cobraflex/share/cobraflex/launch/cobraflex_bringup.launch.xml` and
+`AnyLaunchDescriptionSource` parses it (5 entities, args `use_rviz`/`serial_port`/`baudrate`),
+confirming the forwarding patch. `package.xml` well-formed. `tools/check_traceability.py` PASS, 0
+warnings (no ID change). **Nothing launched and no GStreamer capture exercised**: that needs the
+Jetson, and a `colcon build` was deliberately deferred because the `campaign_2d_ppo550k` campaign is
+running and spawns `ros2 launch` per run out of the same `install/` tree.
+
 ## [27.07.2026] — Competent 2-D policy: PPO cap 0.22 (reward 1755); best checkpoint by reward+cage%; campaign launched
 
 **Document(s) affected:** `experiments/sim/training/ppo_gz2d_cap022_1M_2024/` + candidate evals + `experiments/sim/campaign_2d_ppo550k/` (new), `src/cobraflex_rl/config/train_ppo_camera_2d_cap022_1M.yaml` (new), `docs/DECISIONS.md` (D-66), Ch.7 §7.5.5, `manuscript/figures/auto/fig_ppo2d_training_curve.png`.  

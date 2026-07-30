@@ -611,7 +611,80 @@ The invariant the thesis claims — 0 in-ODD road-edge contacts under enforcemen
 held across every algorithm, seed, observation modality and action space tested;
 its *guarantee* does not depend on policy quality, only its *visibility* does.
 
-## 8. Reference shelf
+## 8. What is a result, and what is a finding (the defense narrative) — D-67
+
+> **Scope of this section.** It exists so the defense tells *one* story instead of
+> four. It is repo-only by author instruction (30.07.2026): none of this reasoning
+> goes into `manuscript/`, because enumerating four research arms as prose is
+> exactly the bloat the decision avoids. Full rationale, including what the
+> decision explicitly does *not* do, is **D-67**.
+
+### 8.1 The one-sentence answer
+
+> *"The framework is evaluated on an end-to-end 2-D camera policy — PPO, steering
+> and throttle, on the `complex_b` circuit. The earlier arms are how we got there:
+> each one isolated a problem, and each fix is traceable."*
+
+### 8.2 The four arms and what each is *for*
+
+| Arm | It answers | Status in the defense |
+| --- | --- | --- |
+| **F-track** — state-vector policy, oval, ground-truth observations | *Does the framework work at all when perception is perfect?* | **Method validation.** The control arm that isolates what camera perception costs. Verdict `SATISFIED`, G3/F4. Not a headline number |
+| **1-D camera E-main** — GE4-V2, complex_b 297k, 1970 runs | *Does it survive real perception?* | **Predecessor + verification data.** Closed G4. Its D-47 verdict reconciliation and its latent→active cage flip are load-bearing *method* evidence, cited as cross-checks |
+| **Algorithm / action probes** — SAC studies (D-59/D-60), 2-D margin022 (D-65) | *Is the result an artefact of one algorithm, one action space, one seed?* | **Findings: problems met and overcome.** Entropy collapse, replay eviction, the speed-envelope kill, the weak-and-decayed-checkpoint trap |
+| **2-D PPO 550k** (D-66) | *What does the framework certify?* | **THE result.** Evaluation + verification of cage, D-43 supervisor, scenario library, metrics and verdict spine |
+
+### 8.3 Answering "why is the earlier work not in the thesis?"
+
+Because it is not a *result*, it is *method*. Three defensible reasons, in the
+order an examiner will accept them:
+
+1. **A result needs one operating point.** Four arms produce four headline numbers
+   on three different tracks with two observation modalities and two action spaces
+   — laps are not comparable across tracks (oval 8.79 m vs complex_b 19.22 m),
+   and `|ey|` is not comparable across observation modalities. Presenting them in
+   parallel invites exactly the false comparison the thesis should refuse to make.
+2. **The earlier arms are load-bearing where it matters — as *controls*.** They are
+   what makes the cage claim non-trivial: the invariant "0 in-ODD road-edge
+   contacts under enforcement" is shown to hold across algorithm (PPO/SAC), seed
+   (N=5), observation (state-vector/camera) and action space (1-D/2-D). That is a
+   robustness argument about the *framework*, and it belongs in the discussion of
+   validity, not in a second results chapter.
+3. **The failures are the contribution.** The problems found — entropy collapse,
+   the decayed-checkpoint trap, H-12's confident under-read, the SR-010
+   co-activation breach — are what a runtime-assurance thesis is *supposed* to
+   surface. They are presented as findings with fixes, each traceable to a `D-NN`.
+
+### 8.4 If an examiner pushes: "you cherry-picked the best arm"
+
+Concede the shape of the objection, then separate two claims:
+
+* **Availability** *is* policy-dependent, and the thesis says so. A weak policy
+  trips the cage more (D-65: 433 controlled emergency stops); a competent one
+  barely trips it (D-66 nominal: 0 safety interventions). That is expected — and
+  it is why the availability numbers are reported for the trunk policy only.
+* **Safety is not.** The in-ODD invariant held on *every* arm tested, including the
+  weak ones. The cage's guarantee does not depend on policy quality; only its
+  *visibility* does (§7, Q14). Selecting the best policy therefore makes the cage
+  look *less* necessary, not more — the opposite of cherry-picking.
+
+Then point at the selection procedure itself: the trunk checkpoint was **not**
+chosen by reward. The reward-peak checkpoint (475k) was rejected for 14 safety
+interventions and max `|ey|` 49 mm; 550k won on driving quality and cage
+intervention rate (D-66). Selecting on reward alone would have picked the worst of
+the three candidates — that is an anti-cherry-picking control, documented before
+the verdict campaign ran.
+
+### 8.5 Honest status at the time of writing
+
+The trunk claim is **conditional**: `campaign_2d_ppo550k` was still executing when
+D-67 was recorded (30.07.2026). Until its `campaign_report.json` exists, the 2-D
+arm has a *nominal* evaluation (5.32 laps, `|ey|` 8.6 mm, 0 emergencies, 0 safety
+interventions) and a D-43 preflight PASS — but **no verdict**. Do not present it
+as one. If the campaign returns a materially worse in-ODD safety picture than
+GE4-V2's, the trunk decision has to be revisited, not defended.
+
+## 9. Reference shelf
 
 Already grounded in the manuscript (Ch. 2 carries the full citations and the
 comparison matrix): safety cages for AVs (Kuutti et al., 2019; 2021),
@@ -682,3 +755,9 @@ importing into the manuscript bibliography):
   two-seed SC-PERT subset and updated multi-seed/test-suite answers. Separates
   all posterior evidence from GE4 and records the missing-pilot-config
   provenance gap explicitly.
+- **v1.2 (2026-07-30):** adds §8, the defense narrative under **D-67** — the 2-D
+  PPO policy as the single result of record, the other three arms reclassified as
+  method validation / verification data / findings-with-fixes, the "you
+  cherry-picked the best arm" rebuttal, and the honest note that the trunk claim
+  is conditional on a campaign verdict that did not yet exist. Old §8 (reference
+  shelf) renumbered to §9.

@@ -14,39 +14,148 @@ camera-driven and 2-D. Only the **image source**, the **actuation sink**, and th
 
 | Stage | Sim (Gazebo) | Physical | Reused? |
 | --- | --- | --- | --- |
-| Image | `camera_bridge` (rendered) | camera driver (ZED/other, D-32) | topic only |
+| Image | `Lane Cam` gz sensor → `camera/image_raw_lane` | **`csi_camera_node`** (NEW) → same topic | geometry **identical** |
 | **Policy inference** | in-process `GazeboLaneEnv.step` | **`rl_policy_node`** (NEW) | preprocessing + model |
 | Cage perception (D-43) | `CagePerceptionSupervisor` in-process | `cv_lane_estimator_node` | **identical** |
 | Cage rules (C-01..C-06) | `SafetyCageNode` in-process | `cage_ros_node` | **identical** |
-| Actuation | `RosGazeboInterface` → sim `/cmd_vel` | `vehicle_control_node` → motor driver | node reused |
+| Actuation | `RosGazeboInterface` → sim `/cmd_vel` | `vehicle_control_node` → `cobraflex_ros_driver` | node reused + platform driver |
 | Evidence | `cage_status.csv` | `cage_logger_node` → CSV | **identical** |
 
-The only new code is `rl_policy_node` (`src/cobraflex_rl/.../rl_policy_node.py`);
-it reuses `camera_pipeline.decode_image` + `to_observation` + a k=4 frame stack —
-the exact preprocessing the CNN trained on — so the policy sees the same
-observation on hardware. Its pure logic is unit-tested
-(`policy/tests/test_rl_policy_node.py`).
+Two nodes are new, both in `src/cobraflex_rl/cobraflex_rl/`, both with host-side
+unit tests for their pure logic:
+
+* **`rl_policy_node`** — reuses `camera_pipeline.decode_image` + `to_observation`
+  + a k=4 frame stack, the exact preprocessing the CNN trained on, so the policy
+  sees the same observation on hardware (`policy/tests/test_rl_policy_node.py`).
+* **`csi_camera_node`** — publishes the Jetson CSI lane camera on
+  `camera/image_raw_lane` (`policy/tests/test_csi_camera_node.py`). See §1b.
+
+### 1b. The lane camera: sim mirrors hardware, not the other way round
+
+The camera the policy trained on is **the Jetson CSI cam**. The Gazebo `Lane Cam`
+sensor (`cobraflex/urdf/robot.gazebo`) was explicitly built to mirror the hardware
+pipeline — its own comment says *"proc frames 640×360, effective hfov 90 deg, timer
+20 Hz; capture is 1280×720@60 but only the processed stream matters"* — and those
+numbers are `lane_keeper_node`'s parameter defaults. So reproducing the hardware
+path **is** reproducing the training distribution. Every number has one authority
+and all three agree:
+
+| Quantity | Value | Authority |
+| --- | --- | --- |
+| Native frame | **640×360** | `Lane Cam <image>` · `camera_geometry.DEFAULT_WIDTH_PX/HEIGHT_PX` · `lane_keeper_node.proc_width/proc_height` |
+| HFOV | **90°** (1.5707963 rad) | `Lane Cam <horizontal_fov>` · `CameraModel.hfov_rad` · `lane_keeper_node.camera_hfov_deg` |
+| Rate | **20 Hz** | `Lane Cam <update_rate>` · `lane_keeper_node.timer_hz` |
+| Capture | **1280×720@60**, `INTER_AREA` → 640×360 | `lane_keeper_node.capture_*` + `_process_frame` |
+| Optical frame | `camera_link_optical_lane` | `Lane Cam <optical_frame_id>` |
+| Mount | pitch 0.30 rad, height 0.07725 m | URDF `camera_joint_lane` → `camera_geometry` |
+| Observation | 84×84 grey, `INTER_AREA`, k=4 | `camera_pipeline.OBS_*` |
+
+`csi_camera_node` reuses `lane_keeper_node`'s GStreamer pipeline **byte-identically**
+(asserted in the unit test) and its 640×360 `INTER_AREA` downsample, and derives the
+published `CameraInfo` from the same `CameraModel` the cage's IPM uses, so the
+advertised intrinsics cannot drift from the projection actually applied. It defaults
+its output size *from* `camera_geometry`, because **640×360 is a hard contract**:
+`cv_lane_estimator` falls back to `CameraModel()` and indexes its scan bands by
+`camera.height_px`, so any other size silently mis-projects every `ey`/`epsi` the
+cage acts on. It publishes `bgr8` where the sim sensor emitted `R8G8B8` — not a
+difference, since `decode_image` normalises both to the same BGR array.
+
+It is a separate node because the classical controller opens the CSI device
+*inside* `lane_keeper_node`, which also publishes `/cmd_vel`. **Never run the two
+at once**: they contend for the camera device *and* for actuation.
+
+**Fail-safe chain (a dead camera stops the car).** No frames → `rl_policy_node`
+publishes no `/raw_action` → `/raw_action` is `cage_ros_node`'s cycle trigger, so no
+`/safe_action` → `vehicle_control_node`'s `safe_action_timeout_s` (0.5 s) publishes a
+zero Twist → the driver's 50 ms keep-alive re-sends zeros. The e-stop is not needed
+for this path.
+
+**The ZED Mini is not in the loop.** It is a human monitoring view only; nothing in
+the RL chain reads it. To see exactly what the policy sees, point rviz at
+`camera/image_raw_lane`. Launch Layer 2 separately if you want the ZED view as well.
 
 ## 2. Hardware prerequisites (do these first)
 
-1. **Camera driver** publishing frames on `camera/image_raw_lane` with the SAME
-   field of view / mounting geometry the policy trained on. Installed externally
-   (not tracked, D-32).
+1. **[VERIFY — highest priority] The 90° effective HFOV.** This is the
+   load-bearing unverified number of the whole sim-to-real transfer. It originates
+   as a *parameter default* in `lane_keeper_node` (`camera_hfov_deg` 90.0) for an
+   IMX219-**160** wide-angle lens, and the Gazebo sensor mirrored it — so if it is
+   wrong, both sim and hardware are wrong in the same way and no sim result
+   exposes it. `CameraModel.fx = (w/2)/tan(hfov/2)` = 320 px at 640×360, and the
+   IPM's metric output scales with it: a wrong HFOV means every `ey` in metres is
+   mis-scaled and **C-01's 0.12 m threshold no longer means 0.12 m**. Calibrate the
+   lens on the car (a known-width lane at known distances is enough to check the
+   scale) before trusting any metric cage threshold. Note the published
+   `CameraInfo` is deliberately the *ideal pinhole the cage assumes* — no
+   distortion terms — because publishing measured intrinsics would contradict the
+   IPM; reconcile both, do not just add distortion coefficients.
 2. **[VERIFY] Camera extrinsics.** The IPM in `camera_geometry.py` is calibrated
    for pitch 0.30 rad, height 0.077 m (the URDF mount). Match the real mount to
    these, OR re-run the D-57 workflow to set `cage.perception_heading_bias_rad`
    for the real camera's near-field-slope offset. A wrong pitch corrupts the CV
    `ey`/`epsi` the cage acts on.
-3. **Motor driver** consuming `/cmd_vel` (`geometry_msgs/Twist`: `linear.x` m/s,
-   `angular.z` yaw rate). Map the CobraFlex ESC + steering servo to it.
-4. **Hardware e-stop** wired to `/external_stop` (`std_msgs/Bool`). **Mandatory
-   before any powered run** — it drives C-05 Trigger 6 (external stop).
+3. **Chassis driver — reused, no work needed.** The platform's actuation
+   interface is `cobraflex_ros_driver` (`cobraflex_driver.launch.xml`), launched
+   as part of **Layer 1** (`cobraflex_bringup.launch.xml`, see §2b). It consumes
+   `/cmd_vel` (`geometry_msgs/Twist`: `linear.x` m/s, `angular.z` yaw rate) and
+   emits `{"T":13,"X":vx,"Z":wz}` on the serial port, clamped to ±0.53 m/s /
+   ±6.0 rad/s — so the deployed 0.22 m/s contract is never clamped. The RL policy
+   therefore actuates through *exactly* the same interface as the PD and CV
+   controllers. It also publishes `/cobraflex/battery`, `/cobraflex/wheel_speeds`
+   and `/cobraflex/feedback` — independent evidence channels, currently unused by
+   the cage.
+4. **[VERIFY] `steering_to_yaw_rate_gain` (0.8).** `vehicle_control_node`
+   publishes `/cmd_vel.angular.z = safe_action.angular.z × 0.8`; that gain was
+   calibrated against the **Gazebo DiffDrive plugin's** reading of `angular.z`.
+   The firmware's `Z` is a nominally equivalent yaw rate on an Ackermann chassis,
+   but the two have never been compared on the real car. Re-calibrate before
+   trusting the cage's C-02/C-03 margins on hardware.
+5. **Hardware e-stop** wired to `/external_stop` (`std_msgs/Bool`). **Mandatory
+   before any powered run** — it drives C-05 Trigger 6 (external stop). It is
+   also the *only* mitigation for one gap: the driver has no `/cmd_vel` watchdog —
+   `_resend_last_cmd` re-sends the last command every 50 ms as a firmware
+   keep-alive. `vehicle_control_node` covers the cage dying
+   (`safe_action_timeout_s` → zero Twist), but if `vehicle_control_node` itself
+   dies the car keeps driving on its last command.
+
+## 2b. The platform's bring-up layering (what the RL launch must match)
+
+The CobraFlex package is layered, and every controller follows the same pattern:
+
+| Layer | Launch | Starts |
+| --- | --- | --- |
+| 1 — base | `cobraflex_bringup.launch.xml` | `cobraflex_description.launch.xml` (robot_state_publisher on `my_robot_gazebo_mesh.urdf`, joint_state_publisher, rviz `bot.rviz`; `use_sim_time:=false`) **+** `cobraflex_driver.launch.xml` (`cobraflex_ros_driver`) |
+| 2 — sensors | `cobraflex_sensors.launch.xml` | SLLIDAR A2M8 (`frame_id:=lidar_link`) + ZED Mini (`camera_model:=zedm`, `publish_tf:=true`) |
+| 3 — controller | `cobraflex_lane_keeper.launch.py` | `lane_keeper_node` + rviz `lane_keeper.rviz` — **no** Layer 1/2 include; it owns the CSI camera itself |
+| 3 — controller | `cobraflex_automatic.launch.xml` | Layer 2 + `lidar_avoidance_node` |
+| 3 — controller | **`deploy_cobraflex.launch.py`** | `csi_camera_node` + the RL chain (this document) |
+
+The two Layer-3 lane controllers are **mutually exclusive**: both need the same CSI
+device and both end up commanding `/cmd_vel`.
+
+Two conventions follow from this, and the RL launch obeys both:
+
+* **A controller launch attaches to a running Layer 1**; it does not start the
+  driver itself. `deploy_cobraflex.launch.py` therefore defaults `bringup:=false`.
+  Passing `bringup:=true` while Layer 1 is already up starts a **second**
+  `cobraflex_ros_driver` on the same device; Linux does not lock `/dev/ttyACM*`,
+  so the two would interleave JSON writes and 50 ms keep-alives with no error —
+  silent corruption of the actuation channel. Use it only for a standalone start.
+* **Layer 2 is not a dependency of lane following.** Neither `lane_keeper_node`
+  nor the RL chain needs the lidar or the ZED, so the RL launch omits Layer 2 —
+  the same choice `cobraflex_lane_keeper.launch.py` makes. The lane camera is the
+  CSI cam, published by `csi_camera_node` inside the Layer-3 launch (§1b), which is
+  also where `cobraflex_lane_keeper.launch.py` gets its frames from (internally).
 
 ## 3. Bring-up command
 
 ```bash
 source /opt/ros/jazzy/setup.bash && source install/setup.bash
-# start the camera + motor drivers first (external), then:
+
+# Layer 1 (once, in its own terminal) — description + ROS→JSON serial driver:
+ros2 launch cobraflex cobraflex_bringup.launch.xml use_rviz:=false
+
+# Layer 3 — csi_camera_node + the RL chain (attaches to the bring-up above):
 ros2 launch cobraflex_rl deploy_cobraflex.launch.py \
     checkpoint:=/abs/path/to/<deployed>.zip \
     algorithm:=sac \
@@ -54,8 +163,29 @@ ros2 launch cobraflex_rl deploy_cobraflex.launch.py \
     mode:=monitoring          # FIRST runs in monitoring (cage shadows, does not act)
 ```
 
+Make sure `cobraflex_lane_keeper.launch.py` is **not** running: it holds the same CSI
+device and commands `/cmd_vel`.
+
+Variants:
+
+* Standalone (no Layer 1 running): add `bringup:=true serial_port:=/dev/ttyACM1`
+  and skip the first command — never both.
+* External image source instead of the CSI cam: `camera:=false camera_topic:=<topic>`
+  (the frame must still be 640×360 at 90° HFOV — see §1b).
+* Non-Jetson bench test: run `csi_camera_node` alone with a substitute source, e.g.
+  `-p gst_pipeline:="videotestsrc ! videoconvert ! video/x-raw,format=BGR ! appsink"`.
+* Watch what the policy sees: rviz on `camera/image_raw_lane`.
+
+> Requires a `colcon build` of `cobraflex_rl` — `csi_camera_node`, `rl_policy_node`
+> and the deploy launch all postdate the current `install/` tree.
+
 ## 4. Staged, safe bring-up sequence
 
+0. **Camera first, nothing else.** Run `csi_camera_node` alone and check
+   `ros2 topic hz camera/image_raw_lane` ≈ 20 Hz and
+   `ros2 topic echo --once camera/image_raw_lane --field height` = 360 (width 640,
+   encoding `bgr8`). Look at it in rviz: this is literally the policy's input.
+   Then scale-check the HFOV (prerequisite 1) before anything moves.
 1. **Bench, wheels up.** `mode:=monitoring`. Confirm topics flow
    (`/raw_action`, `/state_obs`, `/perception_invalid`, `/cage_status`) and the
    CV estimator tracks a hand-moved lane. No actuation trusted yet.

@@ -123,3 +123,7 @@ docs/.temp_templates/
 tools/assets*
 # Ad-hoc sim launch logs from manual evidence sessions (tools/*.sh, validation runs)
 /*.log
+# Campaign driver by-products: the flock guard file and the per-session stdout
+# logs. The campaign's evidence is runs/*/ + campaign_report.json, not these.
+experiments/**/.campaign.lock
+experiments/sim/campaign_*/*.log

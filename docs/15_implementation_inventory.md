@@ -15,14 +15,17 @@
 > docs/00–14; this inventory is the map. Use it when a defense question starts
 > with "where is…", "what does the script X do…", or "how do you know Y works".
 >
-> **Latest fully green host baseline (2026-07-15):**
-> `pytest` → **517 passed** (CHANGELOG 15.07.2026);
+> **Latest fully green host baseline (2026-07-30, Ubuntu 24.04 / ROS 2 Jazzy):**
+> `pytest` → **602 passed** (139 `cage/tests` + 437 `policy/tests` + 7
+> `tools/tests` + 19 elsewhere in the collected scope);
 > `python tools/check_traceability.py` → **All checks PASSED, 0 warnings**
-> (12 hazards, 14 SRs, 6 cage rules, all scenarios/metrics linked).
-> A 20.07 collection attempt on this Windows/Python 3.14 host found 496 tests
+> (12 hazards, 14 SRs, 6 cage rules, 19 metrics, all scenarios/metrics linked).
+> Superseded baselines: 517 (2026-07-15), 594 (2026-07-26).
+> A 20.07 collection attempt on a Windows/Python 3.14 host reached 496 tests
 > before `policy/tests/test_eval_policy_2d.py` failed to import because
 > `ament_index_python` is unavailable. That is an environment/dependency limit,
-> not a newer green count or a regression verdict.
+> not a green count — regenerate on the Ubuntu/Jazzy host (`source
+> /opt/ros/jazzy/setup.bash` first) as above.
 
 ---
 
@@ -192,6 +195,19 @@ throughout.
 | [vehicle_control_node.py](../src/cobraflex_rl/cobraflex_rl/vehicle_control_node.py) | `/safe_action` → `/cmd_vel`; honours `/emergency` (forces stop) |
 | [cage_logger_node.py](../src/cobraflex_rl/cobraflex_rl/cage_logger_node.py) | `/cage_status` → CSV via the same `cage.logger.CageLogger` schema as the tests |
 
+### 4.5 Phase-5 physical-deployment nodes (`deploy_cobraflex.launch.py`)
+
+Added for the physical bring-up; **neither has been run on the car** (docs/17).
+Both keep their pure logic at module level so it is host-testable without ROS.
+
+| Module | Role |
+| --- | --- |
+| [csi_camera_node.py](../src/cobraflex_rl/cobraflex_rl/csi_camera_node.py) | Jetson CSI lane camera → `camera/image_raw_lane` + `camera/camera_info`. Reuses `lane_keeper_node`'s GStreamer pipeline byte-identically and its 640×360 `INTER_AREA` downsample; `CameraInfo` intrinsics derived from the same `CameraModel` the cage's IPM uses. Tests: `policy/tests/test_csi_camera_node.py` (8) |
+| [rl_policy_node.py](../src/cobraflex_rl/cobraflex_rl/rl_policy_node.py) | `camera/image_raw_lane` → `decode_image` + `to_observation` + k=4 stack → SB3 `predict` → `/raw_action` (Twist: `angular.z`=steer, `linear.x`=throttle). Tests: `policy/tests/test_rl_policy_node.py` (5) |
+
+The actuation sink is the platform's own `cobraflex_ros_driver` (ROS→JSON serial,
+in `src/cobraflex`), reached through Layer-1 bring-up — see docs/17 §2b.
+
 ## 5. `policy/` and `tools/`
 
 ### 5.1 `policy/`
@@ -218,6 +234,7 @@ throughout.
 | [campaign_e_failure_modes.py](../tools/campaign_e_failure_modes.py) | Post-hoc classification of every campaign FAIL by *which clause* of the pass criterion broke + cage core-safety invariant checks; regenerable numbers behind the E-campaign write-up |
 | [plot_f3_figures.py](../tools/plot_f3_figures.py) / [plot_frontier.py](../tools/plot_frontier.py) / [plot_camera_comparison.py](../tools/plot_camera_comparison.py) | Figure generators (Ch.7 training evidence; frontier cage-efficacy; F4-vs-E campaign contrast) — all read committed run artifacts, never live sims, so figures are re-derivable |
 | [validate_cv_estimator.py](../tools/validate_cv_estimator.py) | D-43's oracle validation: teleports the robot over a pose grid, compares `CvLaneEstimator` (ey, epsi) against the `PolylineTracker` ground truth, clean + degraded; evidence under `experiments/sim/runs/cv_estimator_val_*` |
+| [calibrate_d43_c02.py](../tools/calibrate_d43_c02.py) | Derives the conservative C-02 heading gain from calibration-only safe/fault separation and validates it on a held-out seed; does **not** move C-02's physical 25° threshold (evidence `experiments/sim/eval_gz2d/d43_c02_calibration_*`) |
 | [capture_camera_frames.py](../tools/capture_camera_frames.py) | Camera evidence tool: saves PNG frames (optionally over teleport poses) — proved lane-line visibility at E2 |
 | [apply_calibration.py](../tools/apply_calibration.py) | Ingests the M-1..M-5 calibration campaign results, validates schemas, applies the decision rules from the protocol docs, and reports which `[provisional]` SRS/cage parameters should change (prose edits stay manual) |
 | [close_odd_tbds.py](../tools/close_odd_tbds.py) | Idempotently substitutes resolved TBD-Q1..Q12 values into designated placeholder cells of docs/08 (never rewrites prose mentions) |
@@ -246,16 +263,18 @@ throughout.
 
 ## 6. Test inventory — what each test file proves
 
-Latest fully green host baseline (2026-07-15): **517 passed** from the repo root
-(CHANGELOG 15.07.2026; `pytest.ini` scopes collection to `cage/tests` +
-`policy/tests` + `tools/tests`; `src/` packages are colcon/ament territory,
-deliberately excluded). Per-directory counts below are retained only where they
-have been re-verified; do not sum the older headings into a newer total.
+Latest fully green host baseline (**2026-07-30**, Ubuntu 24.04 / ROS 2 Jazzy):
+**602 passed** from the repo root — `cage/tests` **139**, `policy/tests` **437**,
+`tools/tests` **7** (`pytest.ini` scopes collection to those three; `src/`
+packages are colcon/ament territory, deliberately excluded). Per-directory counts
+below are re-verified at this baseline; do not sum older headings into a newer
+total. Superseded: 517 (15.07), 594 (26.07).
 
-On this Windows/Python 3.14 host on 20.07, collection reached **496 tests** and
+A 20.07 collection attempt on a Windows/Python 3.14 host reached **496 tests** and
 then failed while importing `policy/tests/test_eval_policy_2d.py` because
-`ament_index_python` is missing. Use the Ubuntu/Jazzy-capable environment to
-regenerate the suite count; the partial collection is not a failed product test.
+`ament_index_python` is missing. Regenerate on the Ubuntu/Jazzy host
+(`source /opt/ros/jazzy/setup.bash` first); the partial collection is an
+environment limit, not a failed product test.
 
 ### 6.1 `cage/tests/` (139 tests) — the cage's verification evidence
 

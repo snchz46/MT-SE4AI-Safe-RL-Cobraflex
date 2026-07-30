@@ -17,6 +17,9 @@
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
 
+  <!-- deploy_cobraflex.launch.py includes the chassis ROS->JSON serial driver
+       from the cobraflex package (cobraflex_driver.launch.xml). -->
+  <exec_depend>cobraflex</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
 

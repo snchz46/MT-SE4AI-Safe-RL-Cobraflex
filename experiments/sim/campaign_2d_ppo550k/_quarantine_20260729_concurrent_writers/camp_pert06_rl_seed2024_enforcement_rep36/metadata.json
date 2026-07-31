@@ -1,0 +1,31 @@
+{
+  "run_id": "camp_pert06_rl_seed2024_enforcement_rep36",
+  "scenario_id": "SC-PERT-06",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-07-29T10:05:32.432590+00:00",
+  "duration_s": 0.1,
+  "git_commit": "9cf32a0962dd60e3dbc2893c246f3d3f818143df",
+  "train_config": "src/cobraflex_rl/config/train_ppo_camera_2d_cap022_1M.yaml",
+  "train_config_hash": "cf7e8f9507bd2868d0b0d9eb98a2fa4038af7e26ba889ce5e67bbc89aa5b9dd0",
+  "cage_yaml": "/media/samuel/Fast_SSD/SE4AI/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "policy_checkpoint": "policy/checkpoints/ppo_gz2d_cap022_1M_2024_550000_steps.zip",
+  "policy_checkpoint_hash": "0d4492461b24efce58fed4c53e3ada58385ffc7d6b0746863de14a6892a25867",
+  "centerline_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "scenario_yaml": "scenarios_complex_b/perturbed/sc_pert_06.yaml",
+  "scenario_yaml_hash": "0ed860941e54246bb80f2ef019f698388e1146f4c2635c131d05123e10d0f305",
+  "criterion_arm": "",
+  "protocol_manifest": "",
+  "protocol_manifest_hash": null,
+  "rep": 36,
+  "seed": 2024,
+  "algorithm": "ppo",
+  "action": {
+    "type": "steer_throttle",
+    "max_speed_mps": 0.22,
+    "throttle_deadband": 0.05
+  },
+  "campaign_contract": null,
+  "platform": "sim",
+  "status": "completed"
+}

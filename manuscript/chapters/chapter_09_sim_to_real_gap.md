@@ -178,17 +178,32 @@ durante los experimentos.
 
 Núcleo cuantitativo del capítulo: una fila por métrica clave, con valor en
 simulación, valor físico, gap absoluto/relativo e interpretación. Los valores de
-simulación de referencia (brazo de cámara, E-main 297k, SC-NOM-01, enforcement)
-ya están fijados; la columna física se puebla en F5.
+simulación de referencia (brazo de cámara, SC-NOM-01, enforcement) ya están
+fijados, ahora en dos columnas: la 1-D del E-main 297k, que es la referencia
+histórica, y la **2-D del checkpoint 550k**, que es la policy que efectivamente se
+despliega en F5 y por tanto la fila de contraste relevante. La columna física se
+puebla en F5.
 
-| Métrica | Sim (Gazebo, E-main) | Isaac | Físico | Gap | Interpretación |
-| --- | --- | --- | --- | --- | --- |
-| M-P1 — \|ey\| medio | 10.9 mm | [TBD] | [TBD F5] | — | — |
-| M-P2 — vueltas / completion | 4.88 vueltas (4k4) | [TBD] | [TBD F5] | — | — |
-| M-S1 — máx. desviación lateral | < `d_max` en todos los runs in-ODD | [TBD] | [TBD F5] | — | — |
-| M-S3 — paros de emergencia | 0 (nominal) | [TBD] | [TBD F5] | — | — |
-| M-I1 — tasa de intervención | 43.5 % (C-06 únicamente) | [TBD] | [TBD F5] | — | — |
-| Latencia de control extremo-a-extremo | 50 ms nominal (ODD-1.T_CTRL) | [TBD] | [TBD F5] | — | — |
+| Métrica | Sim 1-D (Gazebo, E-main 297k) | **Sim 2-D (Gazebo, 550k — la que se despliega)** | Isaac | Físico | Gap | Interpretación |
+| --- | --- | --- | --- | --- | --- | --- |
+| M-P1 — \|ey\| medio | 10.9 mm | **8.6 mm** (máx. 27.3 mm) | [TBD] | [TBD F5] | — | — |
+| M-P2 — vueltas / completion | 4.88 vueltas (4k4) | **5.32 vueltas** | [TBD] | [TBD F5] | — | — |
+| M-S1 — máx. desviación lateral | < `d_max` en todos los runs in-ODD | < `d_max` en todos los runs in-ODD; **0 contactos con el borde in-ODD** en enforcement | [TBD] | [TBD F5] | — | — |
+| M-S3 — paros de emergencia | 0 (nominal) | **0** (nominal; 0 intervenciones de seguridad) | [TBD] | [TBD F5] | — | — |
+| M-I1 — tasa de intervención | 43.5 % (C-06 únicamente) | **76.1 %** (C-06 únicamente) | [TBD] | [TBD F5] | — | — |
+| Velocidad de operación | 0.200 m/s fija (`ACT_DIM = 1`) | **≈0.216 m/s** bajo cap 0.22 (`ACT_DIM = 2`) | [TBD] | [TBD F5] | — | — |
+| Latencia de control extremo-a-extremo | 50 ms nominal (ODD-1.T_CTRL) | 50 ms nominal (ODD-1.T_CTRL) | [TBD] | [TBD F5] | — | — |
+
+La columna que importa para F5 es la **2-D**: es la policy que se despliega, y es también
+la que introduce el riesgo de transferencia más concreto de todo el trabajo. Su tasa de
+intervención de C-06 sube de 43.5 % a **76.1 %** porque su flujo de comandos crudo es
+~2× más brusco que el de su predecesora, hasta el punto de que **sin cage no sostiene** la
+corrida de resistencia de 300 s (17/25 runs terminan `off_road`), mientras que con cage
+conduce mejor que ninguna otra policy del repositorio. Es decir: la pareja
+*(policy + C-06)* es el objeto que se transfiere, no la policy sola. Como en la plataforma
+física la dinámica del actuador **no** es el limitador de slew simulado, el gap a vigilar
+primero no es `|ey|` sino el comportamiento de C-06 y su
+`delta_max_steering_per_cycle` (riesgo declarado **T2**; cap. 8 §8.9.9).
 
 *(Se añadirán las filas del baseline F que apliquen y las métricas de la cage
 —latencia de disparo, duración de intervención— cuando el subset físico las

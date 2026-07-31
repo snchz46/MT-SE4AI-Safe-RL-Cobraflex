@@ -1,7 +1,7 @@
 # Cage Specification
 
 **Status:** Living document — Phase 2 deliverable (G2 approved; **verified at G4, 02.07.2026**)  
-**Last update:** 07.07.2026 (current-state framing note added; cage YAML 0.6.0 → **0.6.1** — C-05 Trigger 3 staleness budget aligned to the 10 Hz control rate)  
+**Last update:** 31.07.2026 (verdict of record re-pointed to the 2-D PPO 550k pre-deployment campaign, D-69; two C-06 findings added to the framing note. Cage YAML unchanged at **0.6.1** — no rule, threshold or parameter changed on this evidence)  
 **Approved at Gate:** G2 (approved)  
 **Cage YAML version:** **0.6.1** (`cage/cage.yaml`).
 
@@ -13,8 +13,11 @@ This document specifies the runtime safety cage as an explicitly designed engine
 > `cage.yaml` are **shared, unchanged, across both tracks** — only the *source* of the
 > `state` differs (F-track: ground truth via `PolylineTracker`; track 'E': the cage's own
 > deterministic CV lane-estimator, **D-43**, the Track-E note below). The verdict of record is
-> the **track-'E' GE4-V2** campaign (`docs/07`, `docs/11` §8.4). Three findings from that
-> campaign belong here, so the knowledge is preserved:
+> the **2-D PPO 550k pre-deployment campaign** (31.07.2026, D-66/D-69); **GE4-V2** is the frozen
+> G4 gate record (`docs/07`, `docs/11` §8.4). Crucially the **cage YAML is byte-identical across
+> the 2-D campaigns** (`4287fe71…`, shared with margin022), so the D-65 → D-66 contrast isolates
+> the *policy*, not the instrument. Three findings from GE4-V2 belong here, so the knowledge is
+> preserved — followed by two the 2-D arm added:
 >
 > 1. **The cage is *latent* in-ODD but a safety asset.** At the fixed 0.20 m/s operating point
 >    it never fires C-01/C-02/C-03/C-05 on clean nominal driving, yet it **removes the
@@ -33,8 +36,26 @@ This document specifies the runtime safety cage as an explicitly designed engine
 >    in-ODD (2/30 SC-EDGE-02); the honest closure is better perception, not a single-frame
 >    rule (the ruta-2b patch was reverted, D-48).
 >
+> Two more from the **2-D verdict of record** (31.07.2026), both about C-06:
+>
+> 4. **C-06 is doing load-bearing lane-keeping, not just smoothing.** On the 300 s endurance
+>    scenario the 2-D policy holds the two tightest `complex_b` apexes with an intervention
+>    ledger of `{C-06: 58124}` and **zero C-01/C-02/C-03/C-05**; with the cage off, the *same*
+>    command stream leaves the lane in 17 of 25 runs (|ey| max 145 mm vs 36 mm, applied
+>    per-cycle Δsteer 2.0 vs the 0.15 bound). The policy's raw command is ~2× jerkier than its
+>    predecessors' and saturates the limiter in 77.5 % of steps. So **"the cage is latent
+>    in-ODD" is a statement about the *safety rules*, not about the cage**: here their latency is
+>    *produced* by C-06 acting upstream. The dependence is measured; its origin (co-adaptation to
+>    the limiter inside the training loop) is inferred — the ablation that would prove it has not
+>    been run.
+> 5. **Consequence for the physical platform.** A policy this coupled to a specific
+>    `delta_max_steering_per_cycle` is a **transfer risk** where actuator dynamics differ from the
+>    simulated rate limit (declared as T2), and SR-006's CL-B *smoothness* classification
+>    undersells what C-06 is doing. Nothing in `cage.yaml` changes on this evidence; the reading
+>    of it does.
+>
 > The parameters below stay `[provisional]` pending the physical calibrations (M-1..M-5); the
-> 2-D posterior is the first context that actually exercises the speed thresholds.
+> 2-D verdict of record is the first context that actually exercises the speed thresholds.
 
 The cage is implemented as a ROS2 node under `cage/`. Its parameters are externalised in `cage/cage.yaml`, version-controlled, and referenced by hash in the metadata of every experimental run.
 

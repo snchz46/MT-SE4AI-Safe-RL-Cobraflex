@@ -1,23 +1,29 @@
 # Safety Requirements Specification
 
 **Status:** Living document — Phase 1 deliverable (G1 approved; SR-012/013/014 added for track 'E')  
-**Last update:** 07.07.2026 (current-state framing note added; SR-012/013/014 were added 09.06.2026)  
+**Last update:** 31.07.2026 (verdict of record re-pointed to the 2-D PPO 550k pre-deployment campaign and the SR-009/SR-010 TBDs closed, D-69; SR-012/013/014 were added 09.06.2026)  
 **Approved at Gate:** G1 (approved); **verified at G4 (02.07.2026)** — verdicts in `docs/07`  
 
 ## Purpose
 
-> **Current-state framing (G4 closed, 02.07.2026).** This document is the SR **specification**;
-> the per-SR **verdicts** are recorded in `docs/07` (Traceability Matrix), not here — so the
-> `Status: Open` column of the machine-readable table below is the *spec* status, not the
-> verification outcome. At **G4** (02.07.2026): the **F-track** arm closed `SATISFIED` (frozen
-> baseline) and the **track-'E' GE4-V2** camera campaign is the **verdict of record** — every
-> SR-CL-A *safety predicate* holds; the literal global `NOT SATISFIED` is held **only** by
-> SR-002/003's oval-legacy 2.0 s recovery-time clause (both Satisfied on their own criterion,
-> **D-47**), **SR-001 Satisfied** (ruta-1, D-48), SR-012/013/014 Satisfied. Two SR notes carry
-> forward as documented, non-vetoing items: **SR-009**'s stall sub-mode is **N/A-by-construction**
-> for the frozen 1-D steering-only action (**D-49**; it becomes well-posed on the 2-D Isaac
-> posterior action, D-50), and **SR-010** is a genuine CL-B in-ODD co-activation finding. See
-> `docs/07` + `docs/11` §8.4.
+> **Current-state framing (G4 closed 02.07.2026; verdict of record updated 31.07.2026).** This
+> document is the SR **specification**; the per-SR **verdicts** are recorded in `docs/07`
+> (Traceability Matrix), not here — so the `Status: Open` column of the machine-readable table
+> below is the *spec* status, not the verification outcome. At **G4** the **F-track** arm closed
+> `SATISFIED` (frozen baseline) and the **track-'E' GE4-V2** camera campaign was the verdict of
+> record; that remains the **frozen gate record**. The **verdict of record is now the 2-D PPO
+> 550k pre-deployment campaign** (31.07.2026, 1890 runs, D-66/D-69), and it reproduces the same
+> SR-level picture: every SR-CL-A *safety predicate* holds; the literal global `NOT SATISFIED`
+> is held **only** by SR-002/003's inherited 2.0 s recovery-time clause on SC-EDGE-01 (both
+> Satisfied on their own criterion, **D-47**; the clause's metric was itself audited and
+> corrected at **D-68** without changing any verdict); **SR-001 Satisfied**; SR-012/013/014
+> Satisfied. **The two long-standing SR-CL-B TBDs are now closed (D-69):** **SR-009** is
+> **Satisfied**, scored out-of-band on its own metrology (**D-64** — nominal liveness passes,
+> the policy resists being forced to stall, and M-P6 = 100.0 on a scripted ground-truth stall;
+> its stall sub-mode had additionally been **N/A-by-construction** on the 1-D action, D-49), and
+> **SR-010** is **`Not satisfied`** — a determinate, twice-measured CL-B co-activation finding,
+> reported as a limitation and carried to future work (T4), non-vetoing per D-30. See `docs/07`
+> notes ²³ + `experiments/sim/campaign_2d_ppo550k/CAMPAIGN_2D_PPO550K_ANALYSIS.md`.
 
 This document specifies the Safety Requirements (SRs) derived from the Hazard Register. Each SR satisfies four criteria:
 
@@ -454,7 +460,7 @@ Correct, and deliberately so. A runtime rule that injected progress (SR-009) or 
 The settling clause (`Δt_settle`) and eligibility windows are bounded and one-directional: liveness is suspended only during legitimate cage responses, which are themselves governed by SR-005 / SR-008 verdicts. A policy parked in emergency mode shows up as non-zero M-S3 and a failed nominal completion (M-P2) — the evasion surfaces through a different metric, not a blind spot.
 
 **Q5. SR-010 depends on the joint-envelope assertion that the Cage Specification marks as *deferred* (Trigger 7 not implemented) — is SR-010 satisfiable today?**
-Only partially, and the document says so: the inter-cycle oscillation half of SR-010 is implemented and tested (cage 0.5.1), but the per-rule `safe_envelope_predicate` (Trigger 7) is deferred pending a rule-contract extension. SR-010's verdict therefore cannot be "Satisfied" until that lands, and the matrix carries it as TBD. No overclaim.
+Only partially, and the document says so: the inter-cycle oscillation half of SR-010 is implemented and tested (cage 0.5.1), but the per-rule `safe_envelope_predicate` (Trigger 7) is deferred pending a rule-contract extension. SR-010's verdict therefore cannot be "Satisfied" until that lands. **Update (31.07.2026, D-69):** the matrix no longer carries SR-010 as TBD — it carries it as **`Not satisfied`**. The scenario side of the gap closed (grid-IC injection wired, SC-EDGE-05 now genuinely induces co-activation), so the requirement was measured on two policies and **fails its own criterion**: `M-S2 = 0` does not hold, with 16 of 85 in-ODD grid points breaching M-S1 on the 2-D verdict-of-record arm and 30/85 on the 1-D arm, concentrated where **C-01 and C-02 co-activate**. That is the honest reading of a partially-implemented assertion meeting a real co-activation grid: the deferred Trigger 7 is now a *documented cause* of a reported negative rather than a reason to abstain. SR-010 is SR-CL-B and non-vetoing (D-30), and the work is declared as future work T4. No overclaim, and no reconciliation applied.
 
 **Q6. Why add SR-011 when SR-002 already bounds heading error — isn't it redundant?**
 No. SR-002 bounds *magnitude* (`|θ| ≤ θ_max`); SR-011 bounds *variance* (`σ_θ` over a sliding window), catching the within-band oscillation mode of H-02 that a magnitude bound passes. M-P4 alone cannot distinguish "bounded and stable" from "bounded and oscillating"; M-P7 can. The split mirrors the two branches of H-02 (divergence vs oscillation).

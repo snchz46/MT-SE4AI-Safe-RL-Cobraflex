@@ -1,7 +1,7 @@
 # Metrics Catalogue
 
 **Status:** Living document — Phase 0 baseline, refined through Phase 1; M-S5 added in F4; **verified at G4**
-**Last update:** 20.07.2026 (M-P6 percentage-unit correction and posterior 2-D protocol annotation)
+**Last update:** 31.07.2026 (M-P6's negative test closed metrologically, D-64; the SC-EDGE-01 heading-recovery metric audited and corrected, D-68; verdict of record re-pointed to the 2-D PPO 550k campaign, D-69)
 **Approved at Gate:** G1
 
 ## Purpose
@@ -10,18 +10,31 @@ This document defines the metrics computed on every experimental run. Each metri
 
 A companion CSV (`docs/data/metrics.csv`) is generated automatically.
 
-> **Current-state framing (G4 closed, 02.07.2026).** The metrics are **track-neutral** and
-> computed identically for the archived F-track baseline and the **track-'E' verdict of record**
-> (GE4-V2, `docs/07`). One metric carries a track-specific caveat worth preserving: **M-P6
-> (stall rate)** is **N/A-by-construction on the frozen 1-D steering-only action** — with no
-> speed authority the policy cannot converge to inaction, so M-P6 ≡ 0 and its negative test
-> SC-PERT-03 is inert (**D-49**). M-P6 becomes **well-posed only on a 2-D action** (steering +
-> throttle) in the posterior Gazebo or Isaac tracks, where a true stop is commandable
-> (**D-50/D-59**). Gazebo's negative-test protocol is now preregistered on the metric's
-> 0–100 percentage scale but remains unexecuted; no new SR-009 verdict is claimed.
-> **M-S5 (road-edge departure)** is the headline
-> metric of the out-of-ODD Frontier cage-efficacy study (paired enforcement-vs-monitoring
-> contrast, not folded into the global verdict — D-35).
+> **Current-state framing (G4 closed 02.07.2026; metrics updated 31.07.2026).** The metrics are
+> **track-neutral** and computed identically for the archived F-track baseline, the frozen
+> GE4-V2 gate record and the **2-D PPO 550k verdict of record** (`docs/07`, D-69). Three
+> metric-level facts carry:
+>
+> - **M-P6 (stall rate)** is **N/A-by-construction on the frozen 1-D steering-only action** —
+>   with no speed authority the policy cannot converge to inaction, so M-P6 ≡ 0 and its negative
+>   test SC-PERT-03 is inert (**D-49**). It becomes **well-posed only on a 2-D action** (steering
+>   + throttle), where a true stop is commandable (**D-50/D-59**). Its metrology is now **closed**
+>   (**D-64**): a scripted ground-truth stall driven through the real Gazebo + cage + metrics
+>   pipeline yields **M-P6 = 100.0**, so the detector demonstrably fires when a stall exists,
+>   while the deployed policy reads M-P6 = 0 and resists being forced to stall. That is what lets
+>   SR-009 close **Satisfied out-of-band** (D-69) rather than stay TBD.
+> - **`time_to_recovery_heading` (SC-EDGE-01's clause metric)** was **audited and corrected**
+>   (**D-68**). Its recovery band was a *fixed* 2.86° calibrated on the F-track PD controller on
+>   the oval; since heading error ripples about zero with a controller- and track-dependent
+>   amplitude, requiring sustained in-band samples tested **ripple**, not recovery — on
+>   *unperturbed* oval SC-NOM-02 runs it reported 50/50 "never recover". The band is now each
+>   run's own steady-state envelope, `clamp(p95(|epsi|) over the last 50 %, floor 0.05 rad, cap
+>   σ_θ_max = 5°)`; v1 stays selectable and reproduces the historical records bit-exactly
+>   (120/120 verified), and historical campaigns are **not** re-scored. The 2.0 s **bound** is
+>   untouched: this fixed a measurement, not a pass bar.
+> - **M-S5 (road-edge departure)** is the headline metric of the out-of-ODD Frontier
+>   cage-efficacy study (paired enforcement-vs-monitoring contrast, not folded into the global
+>   verdict — D-35).
 
 ## Categories
 

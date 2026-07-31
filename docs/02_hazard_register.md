@@ -1,17 +1,21 @@
 # Hazard Register
 
 **Status:** Living document — Phase 1 deliverable (G1 approved; extended for track 'E' at E0/E1)  
-**Last update:** 07.07.2026 (current-state framing note added; H-10/H-11/H-12 were added 09.06.2026 for the camera track)  
+**Last update:** 31.07.2026 (verdict of record re-pointed to the 2-D PPO 550k pre-deployment campaign, D-69; H-10/H-11/H-12 were added 09.06.2026 for the camera track)  
 **Approved at Gate:** G1 (approved); mitigations **verified at G4 (02.07.2026)** — see below  
 
 ## Purpose
 
 This document is the canonical record of the hazards identified for the lane-following function within its declared ODD. It is produced through a simplified HARA following the structure of ISO 26262, complemented by a lightweight STPA pass on selected hazards.
 
-> **Current-state framing (G4 closed, 02.07.2026).** All twelve hazards' mitigations are
-> now **verified**: the F-track (H-01..H-09) at F4 (global `SATISFIED`, frozen baseline) and
-> the camera track (**H-10/H-11/H-12**) at **GE4-V2** — the **verdict of record** (297k
-> E-main, `docs/07`, `docs/11` §8.4). Two findings from that campaign are worth recording
+> **Current-state framing (G4 closed 02.07.2026; verdict of record updated 31.07.2026).** All
+> twelve hazards' mitigations are **verified**: the F-track (H-01..H-09) at F4 (global
+> `SATISFIED`, frozen baseline) and the camera track (**H-10/H-11/H-12**) on the camera arm.
+> The **verdict of record is now the 2-D PPO 550k pre-deployment campaign** (31.07.2026, 1890
+> runs, D-66/D-69); **GE4-V2** (297k E-main) remains the **frozen G4 gate record** and is not
+> re-scored. Both arms agree on the hazard-level reading, which is why the re-pointing changes
+> no mitigation claim: **0 in-ODD road-edge contacts in enforcement on both**, and on the 2-D
+> arm the bare policy commits **60** that the cage removes. Two findings from GE4-V2 are worth recording
 > here so the knowledge is not lost: **(a)** in-ODD the cage stays *latent* under the camera
 > yet **removes the perception-degradation failures the bare policy commits** (H-10 face:
 > glare/worn/gaps), so H-10/H-11's C=2 controllability claim held empirically; **(b)** the
@@ -466,7 +470,9 @@ Both are first-class and literature-backed (H-08: Skalse et al. 2022, Krakovna e
 The register names the circularity and defuses it: the mitigation is not to improve the policy's controllability but to *substitute* the policy entirely (C-05 emergency mode, a deterministic override). C=3 is sustainable precisely because the external intervention is a substitution, not a modification of policy commands.
 
 **Q6. Why do hazards remain "Open" after the F4 campaign closed with a global `SATISFIED` verdict?**
-A hazard closes only at its Gate review, once every mitigating SR carries a "Satisfied" verdict backed by campaign evidence. After the F4 campaign (1260 runs) the per-SR sim verdicts in `docs/07` are filled — eight SR-CL-A plus SR-011 Satisfied, and SR-006 Satisfied on its own committed-steer metric (D-39) — but two SR-CL-B remain TBD pending an Ubuntu re-run (SR-009, which mitigates H-08, and SR-010, which mitigates H-09), and G4 has not been formally passed. The hazards therefore stay Open until the gate closes them; the three track-'E' perception hazards (H-10..H-12) likewise remain Open pending the GE4 camera campaign. Marking them Open is the honest state; closing them ahead of the gate would overclaim (cf. the project rule: do not claim a feature works without running it).
+A hazard closes only at its Gate review, once every mitigating SR carries a "Satisfied" verdict backed by campaign evidence. *(Answer as written before G4; kept because the reasoning is the point.)* After the F4 campaign (1260 runs) the per-SR sim verdicts in `docs/07` were filled — eight SR-CL-A plus SR-011 Satisfied, and SR-006 Satisfied on its own committed-steer metric (D-39) — but two SR-CL-B stood at TBD (SR-009, which mitigates H-08, and SR-010, which mitigates H-09), and G4 had not been formally passed. The hazards therefore stayed Open until the gate closed them; the three track-'E' perception hazards (H-10..H-12) likewise stayed Open pending the GE4 camera campaign. Marking them Open was the honest state; closing them ahead of the gate would have overclaimed (cf. the project rule: do not claim a feature works without running it).
+
+**Current answer (31.07.2026).** G4 closed on 02.07.2026 and, with the pre-deployment 2-D campaign, every SR now carries a determinate sim verdict (`docs/07`, D-69) — so the mitigations of all twelve hazards are verified in simulation. Two things nevertheless keep the `Status` column at **Open**, and both are substantive rather than bookkeeping. First, `Status: Open` is the hazard's **registration** state: a hazard does not cease to exist because it is mitigated, and the register is the standing record of what the design must keep defending. Second, one mitigating verdict is a **negative that is reported rather than resolved** — SR-010 (H-09, cage-rule composition) is `Not satisfied`: under simultaneous C-01/C-02 activation the arbitration still admits M-S1 breaches (16 of 85 in-ODD grid points on the 2-D arm, 30/85 on the 1-D arm). It is SR-CL-B and non-vetoing (D-30), it is carried as declared future work (T4), and H-09 is precisely the hazard it belongs to. Closing H-09 would be the overclaim the paragraph above warns against. **No physical evidence exists yet** (Phase 5 is scaffolded but unrun, docs/17), so no hazard has a physical closure either.
 
 --->
 ## Change log

@@ -3,8 +3,8 @@
 | Field | Value |
 | --- | --- |
 | Artifact | Cross-cutting defense-preparation compendium |
-| Version | v1.1 |
-| Date | 2026-07-20 |
+| Version | v1.3 |
+| Date | 2026-07-31 |
 | Author | Samuel Sanchez |
 | Status | LIVING |
 | Sibling document | [docs/15_implementation_inventory.md](15_implementation_inventory.md) (module/script/test map) |
@@ -675,14 +675,40 @@ intervention rate (D-66). Selecting on reward alone would have picked the worst 
 the three candidates — that is an anti-cherry-picking control, documented before
 the verdict campaign ran.
 
-### 8.5 Honest status at the time of writing
+### 8.5 Status: the condition was checked, and met (31.07.2026)
 
-The trunk claim is **conditional**: `campaign_2d_ppo550k` was still executing when
-D-67 was recorded (30.07.2026). Until its `campaign_report.json` exists, the 2-D
-arm has a *nominal* evaluation (5.32 laps, `|ey|` 8.6 mm, 0 emergencies, 0 safety
-interventions) and a D-43 preflight PASS — but **no verdict**. Do not present it
-as one. If the campaign returns a materially worse in-ODD safety picture than
-GE4-V2's, the trunk decision has to be revisited, not defended.
+When D-67 was recorded (30.07.2026) the trunk claim was **conditional**:
+`campaign_2d_ppo550k` was still executing, so the 2-D arm had a *nominal*
+evaluation and a D-43 preflight PASS but **no verdict**, and D-67 committed to
+revisiting the trunk decision — not defending it — if the campaign returned a
+materially worse in-ODD safety picture than GE4-V2's.
+
+**The campaign finished: 1890 runs, 0 errors, and the condition is met.** In-ODD
+enforcement road-edge contacts are **0 on both arms**; out-of-ODD the 2-D arm more
+than halves GE4-V2's (**56 vs 117**); the literal global verdict is `NOT SATISFIED`
+on both, blocked by the same two SRs through the same single clause on the same
+single scenario, so D-47 transfers verbatim. The verdict of record was therefore
+re-pointed to this campaign across `docs/02`–`docs/08` (**D-69**), with GE4-V2 kept
+as the frozen G4 gate record.
+
+**Three things to say plainly if asked.** (a) The condition was **tested, not
+waived** — if the numbers had gone the other way this section would read
+differently, and that is why D-67 was written before the result. (b) The matrix now
+carries **one `Not satisfied` verdict**, SR-010 (co-activation arbitration): CL-B,
+non-vetoing, twice-measured, halved-but-not-eliminated by better training, carried
+as future work T4. It is reported rather than reconciled, and it is the honest
+counterweight to the 0-in-ODD-contacts claim. (c) The one property the campaign
+surfaced that the verdict tables do not show is the **C-06 dependence** (§ the
+endurance anomaly): cage-off, the *competent* policy is the only one that cannot
+hold the 300 s run. The dependence is measured; its origin — co-adaptation to the
+rate limiter inside the training loop — is **inferred**, and the ablation that
+would prove it has not been run. Say so before being asked.
+
+**Still open, deliberately:** `verdict_phys` (Phase 5 scaffolded, not run on
+hardware), **TBD-Q10** (`ODD-3.A_LAT_MAX`, unmeasurable in simulation by
+construction, D-33), and the Chapter 8 restructure that would let the camera track
+lead rather than sit in §8.9 — the other item D-67 deferred, and an authoring
+decision rather than an evidence one.
 
 ## 9. Reference shelf
 
@@ -761,3 +787,10 @@ importing into the manuscript bibliography):
   cherry-picked the best arm" rebuttal, and the honest note that the trunk claim
   is conditional on a campaign verdict that did not yet exist. Old §8 (reference
   shelf) renumbered to §9.
+- **v1.3 (2026-07-31):** rewrites §8.5 — the D-67 condition was **checked and met**
+  (1890 runs, 0 in-ODD road-edge contacts on both arms, out-of-ODD 56 vs 117), the
+  verdict of record is re-pointed to the 2-D campaign under **D-69**, and the section
+  now states the three things to volunteer under questioning: the condition was
+  tested rather than waived, SR-010 is a reported `Not satisfied`, and the C-06
+  dependence is measured but its co-adaptation origin is inferred. Also fixes the
+  stale `Version` field, which still read v1.1 after the v1.2 entry landed.

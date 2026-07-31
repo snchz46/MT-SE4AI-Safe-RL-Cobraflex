@@ -73,9 +73,11 @@ una edición retroactiva habría ocultado.
 ## 10.4 Tabla consolidada de veredictos por SR  [BORRADOR POST-G4 — columna física ESQUELETO]
 
 Versión reducida de la matriz (la completa, con escenarios y métricas, en
-docs/07 y el Anexo de trazabilidad). Verdictos sim congelados en G4.
+docs/07 y el Anexo de trazabilidad). Los veredictos que cerraron **G4** están congelados;
+las dos abstenciones CL-B que el gate dejó explícitamente abiertas se cerraron después,
+sobre evidencia posterior y sin re-puntuar ninguna campaña histórica (D-69).
 
-| SR | Clase | Brazo F (estado) | Brazo E (cámara, GE4-V2) | Físico |
+| SR | Clase | Brazo F (estado) | Brazo E (cámara; GE4-V2 y, desde 31.07.2026, la campaña 2-D 550k) | Físico |
 | --- | --- | --- | --- | --- |
 | SR-001 (desviación lateral) | CL-A | Satisfecho | Satisfecho (ruta-1; 28/30, 2 residuos H-12 en el borde de cuenca) | [TBD F5] |
 | SR-002 (estabilidad de heading) | CL-A | Satisfecho | Literal: fallo (cláusula 2.0 s); criterio propio: **Satisfecho** (D-47) | [TBD F5] |
@@ -85,19 +87,28 @@ docs/07 y el Anexo de trazabilidad). Verdictos sim congelados en G4.
 | SR-006 (suavidad de actuación) | CL-B | Satisfecho (D-39, métrica propia) | Satisfecho (out-of-band) | [TBD F5] |
 | SR-007 (validez de estado) | CL-A | Satisfecho | Satisfecho | [TBD F5] |
 | SR-008 (parada externa) | CL-A | Satisfecho | Satisfecho | [TBD F5] |
-| SR-009 (liveness) | CL-B | Abstención documentada → N/A-por-construcción en 1-D (D-49) | Ídem; brazo vivo M-S2 cubierto. Posterior: planteado y cerrado sobre la acción 2-D (D-63/D-64) | [TBD F5 — la plataforma física comanda throttle, luego el test es bien-puesto allí] |
-| SR-010 (composición de reglas) | CL-B | Abstención documentada (grid no inyectado) | **Hallazgo CL-B**: 30/85 breaches in-ODD bajo co-activación | [TBD F5] |
+| SR-009 (liveness) | CL-B | Abstención documentada → N/A-por-construcción en 1-D (D-49) | **Satisfecho** (fuera de banda, D-64/D-69): liveness nominal M-P6 = 0 en todos los brazos; la policy resiste ser forzada a parar; el detector marca M-P6 = 100.0 ante una parada real guionizada | [TBD F5 — la plataforma física comanda throttle, luego el test es bien-puesto allí] |
+| SR-010 (composición de reglas) | CL-B | Abstención documentada (grid no inyectado) | **No satisfecho** — hallazgo CL-B no vetante (D-30/D-69): 30/85 breaches in-ODD bajo co-activación en 1-D, **16/85** en el 2-D; concentrado en C-01 ∧ C-02. Trabajo futuro T4 | [TBD F5] |
 | SR-011 (varianza de heading) | CL-B | Satisfecho | Satisfecho (métrica propia: σ_θ máx 3.0° < 5°) | [TBD F5] |
 | SR-012 (lane-keeping bajo cámara) | — | n/a (SR de track 'E') | Satisfecho (D-29 cerrado) | [TBD F5] |
 | SR-013 (degradación segura de percepción) | — | n/a | Satisfecho (SC-PERT-07 25/25 + SC-PERT-13 40/40) | [TBD F5] |
 | SR-014 (plausibilidad del estimador) | — | n/a | Satisfecho (falso-carril 25/25); residuo H-12 documentado | [TBD F5] |
 
-Lectura por subconjuntos: **12 de 14 SRs con veredicto Satisfecho** en al menos
-un brazo sobre su criterio documentado; **2 abstenciones documentadas** en el
-brazo F resueltas materialmente en el E (una como N/A-por-construcción, una como
-hallazgo genuino de composición); **0 SRs sin veredicto u omitidos** — la
-cobertura del criterio §3.7.1(2) es del 100 %, incluyendo los veredictos
-incómodos.
+Lectura por subconjuntos: **13 de 14 SRs con veredicto Satisfecho** en al menos
+un brazo sobre su criterio documentado; **1 SR `No satisfecha`** (SR-010, CL-B, no
+vetante), reportada como tal y no reconciliada; **0 SRs sin veredicto, omitidos o en
+TBD** en la columna de simulación — la cobertura del criterio §3.7.1(2) es del 100 %,
+incluyendo los veredictos incómodos.
+
+Las dos abstenciones que el brazo F arrastraba se cerraron el **31.07.2026** (D-69),
+tras la última campaña de simulación previa al despliegue físico, y conviene subrayar
+que se cerraron **en direcciones opuestas**: SR-009 hacia *Satisfecho* y SR-010 hacia
+*No satisfecho*. Un TBD afirma que falta el instrumento; una vez que existe —la
+metrología del stall guionizado en un caso, el grid de co-activación cableado en el
+otro— mantenerlo habría sido cómodo, no honesto. La columna **Físico** sigue entera en
+`[TBD F5]` por la misma razón inversa: la cadena de despliegue está montada de extremo a
+extremo (docs/17) pero **no se ha ejecutado sobre hardware**, de modo que cualquier
+veredicto físico sería inventado, no diferido.
 
 ## 10.5 Declaración de validación acotada  [BORRADOR POST-G4 — PROVISIONAL]
 

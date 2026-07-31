@@ -179,7 +179,10 @@ contaba en el denominador, colapsándolo a fallo; la divergencia se reconcilió 
 `campaign_report.json` se regeneró desde el CSV crudo de runs, sin re-ejecutar
 Gazebo). Para SC-EDGE-05 y SC-PERT-03 (§8.4–§8.5) el reporte lee así
 `verdict: null` y las SR afectadas (SR-009, SR-010) quedan *insufficient_evidence*,
-manteniéndose **TBD** en `docs/07` —hueco de instrumentación, no FAIL.
+manteniéndose **TBD** en `docs/07` —hueco de instrumentación, no FAIL. Esa distinción
+es justo lo que hace significativo el cierre posterior: cuando ambos huecos se
+instrumentaron, SR-010 pasó a `No satisfecha` como **negativo medido**, no como artefacto
+de agregación (D-69, §8.7).
 
 ### 8.2.5 Análisis estadístico
 
@@ -294,8 +297,10 @@ referencia. La causa es que las condiciones iniciales del `parameterised_grid`
 runner**. Por tanto SR-010 **no puede verificarse desde estos logs** ni siquiera
 añadiendo los contadores: primero hay que **cablear la inyección de IC del grid**
 para que el escenario realmente estrese la co-activación, y luego re-correr con los
-dos contadores en el registro. SR-010 se mantiene **TBD** (no FAIL); el trabajo es
-de runner + re-run (Ubuntu), no solo de instrumentación.
+dos contadores en el registro. SR-010 se mantiene **TBD** (no FAIL) *en este brazo*; el
+trabajo es de runner + re-run (Ubuntu), no solo de instrumentación. Ese trabajo se hizo:
+con la inyección de IC cableada, SC-EDGE-05 sí induce co-activación y SR-010 acaba
+cerrando como **`No satisfecha`** —el único negativo reportado de la matriz (§8.7, D-69).
 
 ---
 
@@ -346,7 +351,10 @@ preregistrado (`lambda_stall = 4.0`, 50k, `M-P6 > 50.0`, 20 runs por brazo/modo,
 agregación por brazo y encadenado de hashes) **sí se ejecutó** en Gazebo sobre la
 acción 2-D: 80 celdas, más el cierre metrológico con un estímulo *scripted* de
 parada total (§8.9.7, D-63/D-64). Ese resultado es **posterior** y no modifica el
-veredicto F-track de esta sección, que se mantiene TBD tal como se cerró.
+veredicto F-track de esta sección, que se mantiene TBD tal como se cerró. El veredicto
+**de la SR**, en cambio, sí se cierra más tarde —Satisfecha, puntuada fuera de banda sobre
+la metrología del stall guionizado (M-P6 = 100.0 ante una parada real; D-64/D-69, §8.7)—,
+sin re-puntuar este brazo.
 
 ---
 
@@ -436,7 +444,9 @@ están satisfechas con margen, por lo que el veto D-30 no se dispara.
 | SR-010 | CL-B | SC-EDGE-04, SC-EDGE-05 | M-S2, M-I3 | **TBD ³** |
 
 SR-006 cierra sobre su propia métrica (nota ¹, D-39); **dos** SR-CL-B quedan en TBD
-—abstenciones deliberadas, no fallos, que no vetan el veredicto global (D-30):
+—abstenciones deliberadas, no fallos, que no vetan el veredicto global (D-30). *(Estado
+del brazo F, congelado. Ambas abstenciones se cierran el 31.07.2026 sobre evidencia
+posterior: SR-009 Satisfecha fuera de banda, SR-010 `No satisfecha` — D-69, final de §8.7.)*
 
 - **¹ SR-006 (suavidad de actuación) — Satisfied (D-39).** La agregación
   `ALL`-escenarios hacía heredar a SR-006 el fallo de SC-PERT-01 (trips de
@@ -473,6 +483,29 @@ pregunta de co-activación de SR-010 la
 respondió el grid de SC-EDGE-05 **cableado en GE4-V2** (30/85 breaches in-ODD, hallazgo
 CL-B genuino, §8.9). `tools/check_traceability.py` confirma que no quedan SRs huérfanos
 a ningún lado.
+
+**Cierre definitivo de ambos TBD (31.07.2026, D-69; §8.9.9).** Tras la última campaña de
+simulación previa al despliegue físico, `docs/07` **ya no registra ningún `TBD` en la
+columna de simulación**, y los dos veredictos pendientes se cierran en direcciones
+opuestas —lo cual es el punto—:
+
+- **SR-009 → Satisfecha**, puntuada *fuera de banda* sobre su propia metrología (D-64), no
+  por agregación de campaña: la liveness nominal pasa en todos los brazos (M-P6 = 0), la
+  policy **resiste** ser forzada a detenerse (el piloto de objetivo puro-stall no produjo un
+  *staller*) y el detector **sí dispara** ante una parada real inyectada por guion
+  (**M-P6 = 100.0**). Mitigación que funciona, patología resistida, métrica sana.
+- **SR-010 → `No satisfecha`**, el único veredicto negativo de la matriz. Cerrado el hueco
+  de escenario, el requisito se midió sobre dos policies y **falla su propio criterio**
+  (`M-S2 = 0` no se cumple): 30/85 puntos de grid in-ODD con breach de M-S1 en el brazo 1-D
+  y **16/85** en el 2-D, concentrados en la co-activación **C-01 ∧ C-02** (15/20 fallos,
+  11 breaches) y nulos donde no hay conflicto lateral/rumbo (C-04 ∧ C-06: 0/20). Entrenar
+  mejor lo **reduce a la mitad sin cambiarlo de naturaleza**: la arbitración bajo activación
+  simultánea es una propiedad de **diseño de la cage**, no un defecto de la policy. Es CL-B y
+  no vetante (D-30), y se declara como trabajo futuro (**T4**).
+
+Mantener el TBD habría sido cómodo, no honesto: el instrumento que faltaba ya existe en
+ambos casos. Nada de esto reabre G4, que cerró sobre F4 + GE4-V2 sin depender de ninguna de
+las dos abstenciones.
 
 ```mermaid
 %% Fuente canónica: manuscript/figures/traceability_case_sr001.mmd
@@ -525,7 +558,8 @@ La campaña (1260 runs, seed principal 2024) cierra con **veredicto global
 se mantuvo en torno a 1/7 del umbral de 0.16 m en nominal y por debajo de él
 incluso en los escenarios límite—, y SR-011 también satisfecha. Dos SR-CL-B
 (SR-009/SR-010) quedan en TBD por abstención (huecos de instrumentación, resueltos
-materialmente en el track 'E': D-49 y el grid V2, §8.7), no por fallo de seguridad.
+materialmente en el track 'E': D-49 y el grid V2, §8.7), no por fallo de seguridad —y
+cerradas ya de forma definitiva, una Satisfecha y la otra `No satisfecha`, al final de §8.7.
 
 El resultado se lee en dos planos:
 

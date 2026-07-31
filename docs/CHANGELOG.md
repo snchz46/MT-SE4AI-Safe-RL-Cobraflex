@@ -31,6 +31,101 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [31.07.2026] — D-69: the simulation programme closes — verdict of record re-pointed to the 2-D campaign, and the last two SR-CL-B TBDs closed
+
+**Document(s) affected:** `docs/07_traceability_matrix.md` (matrix rows, notes ²³⁷, new note ⁹, new E5 block, post-gate note, CSV schema row), `docs/02`–`docs/06` (framing notes + Last-update lines), `docs/08_odd_specification.md` (**v0.9 → v0.9.1**, status line, §1, §6.5, §7.3 realisation block, §11 Q10 row, §12.3), `docs/DECISIONS.md` (**D-69**, index rows D-62..D-69, status header), `tools/traceability_matrix.csv` (evidence re-pointed + 4 new rows for SR-009/SR-010), `CLAUDE.md`, `docs/16_defense_compendium.md`, `manuscript/` chapters 8 and 10 (only the claims the closure falsifies).
+**Phase:** E5 (posterior) → end of the simulation programme, entry to F5.
+**Gate context:** does **not** reopen G4; the gate record stands on its own frozen evidence.
+**Author:** Samuel Sanchez
+
+### Change
+
+**The two follow-ups D-67 deferred are now taken — one of them.** D-67 recorded, rather than
+silently skipped, two edits that could not honestly be made before a verdict existed: re-pointing
+the `verdict of record` in `docs/02`–`docs/08`, and restructuring Chapter 8 so the camera track
+leads. The verdict now exists, so **the first is done and the second is explicitly still open**
+(it is an authoring decision, not an evidence one).
+
+**Verdict of record → `campaign_2d_ppo550k`.** `docs/02`–`docs/08` now name the 2-D PPO 550k
+pre-deployment campaign (1890 runs, 0 errors, 27 complex_b scenarios × {enf, mon}, seed 2024,
+checkpoint 550k at cap 0.22). **GE4-V2 is retained, everywhere, as the frozen G4 gate record and
+is not re-scored.** D-67's condition was **checked rather than assumed**: it required revisiting
+the trunk decision if the campaign returned a worse in-ODD safety picture than GE4-V2's. It did
+not — enforcement in-ODD road-edge contacts are **0 on both arms**, and out-of-ODD the 2-D arm
+more than halves them (**56 vs 117**).
+
+**SR-009 — TBD → `Satisfied`, scored out-of-band (D-64, ratified by D-69).** The verdict is
+deliberately *not* taken from campaign aggregation: the 2-D campaign reports
+`insufficient_evidence` because SC-PERT-03 was excluded from it by protocol, which is a fact
+about that campaign's coverage, not about the requirement. It rests on D-64's three measured
+parts — nominal liveness passes on every arm (M-P6 = 0); the policy **resists** being forced to
+stall (the pure-stall-objective pilot did not produce a staller); and the detector **fires on a
+ground-truth stall** (scripted stimulus through the real Gazebo + cage + metrics pipeline,
+**M-P6 = 100.0**). Same out-of-band pattern as SR-006/D-39, for the same reason.
+
+**SR-010 — TBD → `Not satisfied`, reported as the one negative in the matrix.** The scenario-side
+gap that justified the abstention is gone (grid-IC injection wired; SC-EDGE-05 genuinely induces
+co-activation), so the requirement was measured on two policies and **fails its own criterion**
+(`M-S2 = 0` does not hold): **30/85** in-ODD grid points breach M-S1 on the 1-D arm and **16/85**
+on the 2-D arm. The per-anchor split localises it — **C-01 ∧ C-02** 15/20 fail with 11 breaches,
+C-01∧C-02∧C-04 14/20 with 11, C-01∧C-03 15/20 with 4, and **C-04 ∧ C-06 0/20**. Better training
+halves the finding and does not change it in kind: **rule arbitration under simultaneous
+activation is a design property of the cage, not a policy defect.** CL-B, non-vetoing (D-30),
+carried as future work **T4**.
+
+**Consequently the sim column has no `TBD` left**, and `docs/07` says so explicitly: eleven SRs
+Satisfied, two Satisfied on their own criterion with the literal failure recorded and reconciled
+(SR-002/003; D-47 + the D-68 metric audit), one **Not satisfied** (SR-010). What stays open is
+stated in the same paragraph so it cannot be mistaken for completeness: the whole `verdict_phys`
+column (Phase 5 scaffolded but **not run on hardware**, `docs/17`) and **TBD-Q10**
+(`ODD-3.A_LAT_MAX`), hardware-gated by construction (D-33).
+
+**`docs/08` → v0.9.1, and a stale claim corrected.** §6.5 still read that the 0.22 m/s contract
+"has not been trained"; it has, and it is now the verdict of record. The paragraph now records
+what was measured: mean speed **≈0.215–0.218 m/s** (the policy sits essentially *at* the cap),
+throttle modulation correctly **localised** to the tightest apex (35.6 % of steps below 0.95 vs
+8.3 % overall) but **marginal in magnitude** (floor 0.81). It also records the limitation this
+exposes: 0.22 < `V_MAX_CURVE = 0.25`, which is the floor of `v_max(κ)`, so C-04 cannot bind — and
+the campaign confirms it, **C-04 firing zero times across all 1890 runs in both modes**. The
+ODD-3 speed ceiling therefore remains untested from above *even with speed authority in the
+action space*; only the Isaac 0.5 m/s contract would exercise it. The doc stays **below 1.0 by
+design**: Q10 is not an outstanding action item but a hardware dependency, since in Gazebo
+`A_LAT_MAX` is a consequence of the friction coefficient the world assumes.
+
+**Two findings promoted into the specs they belong to.** `docs/04` gains the C-06 result — on the
+300 s endurance scenario the 2-D policy holds the two tightest apexes with a ledger of
+`{C-06: 58124}` and **zero C-01/C-02/C-03/C-05**, while the same command stream leaves the lane in
+17/25 runs with the cage off — so "the cage is latent in-ODD" is a statement about the **safety
+rules**, not about the cage, and the coupling to a specific `delta_max_steering_per_cycle` is a
+declared physical-transfer risk (T2). `docs/06` gains the D-64 metrology closure and the D-68
+metric correction.
+
+### Rationale
+
+A TBD is a claim that the instrument is missing. Both instruments now exist — the stall metrology
+(D-64) and the wired co-activation grid — so continuing to abstain would turn an honest gap into a
+convenient one. Recording SR-010 as `Not satisfied` costs nothing the work is entitled to keep
+(CL-B, vetoes no global verdict, no SR-CL-A safety predicate involved) and buys the register its
+credibility: the document that reports 0 in-ODD road-edge contacts also reports the one
+requirement that is not met.
+
+### Impact
+
+The simulation programme is closed; what remains is F5 (physical). **Deliberately not done:** G4 is
+not reopened, no historical campaign is re-scored, no ODD parameter / SR threshold / cage rule /
+`cage.yaml` value changes, no physical verdict is asserted, and **Chapter 8 is not restructured**
+— that item stays open. `cage.yaml` remains at 0.6.1.
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED, 0 warnings** (before and after). The
+SR-010 numbers are read from
+`experiments/sim/campaign_2d_ppo550k/failure_mode_breakdown.json` → `sc_edge05_grid_split_enforcement`;
+the C-04 claim is aggregated directly from the 1890 per-run `summary.json` ledgers rather than
+inferred from the cap arithmetic.
+
+---
+
 ## [31.07.2026] — The 2-D PPO 550k verdict campaign closes; manuscript brought up to the 2-D state and the steering-only figures retired
 
 **Document(s) affected:** `experiments/sim/campaign_2d_ppo550k/` (`campaign_report.json`, `failure_mode_breakdown.json`, `figures/`, new `CAMPAIGN_2D_PPO550K_ANALYSIS.md`), `docs/DECISIONS.md` (D-66 outcome, D-67 condition resolved), `docs/11_camera_rl_training.md`, `tools/plot_campaign_contrast.py` (new), `tools/plot_f3_figures.py`, `manuscript/` chapters 7–12, `manuscript/figures/` (2 PNG + 2 new SVG sources + 3 `.mmd` + `DESIGN_PROMPTS.md`).

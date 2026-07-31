@@ -1,7 +1,7 @@
 # Traceability Matrix
 
 **Status:** Living document — Phase 0 baseline, refined through every phase, closed at G6
-**Last update:** 20.07.2026 (post-G4 annotation only: the Gazebo 2-D SC-PERT-03 protocol/runner and qualification gates are implemented but **unexecuted**; no matrix row or Gate verdict changed. **Gate G4 closed** — Phase-4 evaluation complete on both arms; see the G4 closure note below. F-track F4: global `SATISFIED`, frozen. Track-'E' GE4-V2 (28.06.2026, verdict of record): 1970 runs, global `NOT SATISFIED` (literal), blocking SR-CL-A **SR-002/003 only**; both fail *only* SC-EDGE-01's oval-legacy 2.0 s recovery-time clause and are Satisfied on their own criterion (D-47), so no safety predicate is breached. **SR-001 Satisfied** (ruta-1 in-ODD IC clip → SC-EDGE-02 28/30; 2 boundary-edge residuals; the abandoned ruta-2b estimator change was unnecessary + reverted, D-48). SR-012/013/014 Satisfied — the matrix rows now read GE4-V2. SR-010 genuine CL-B in-ODD co-activation; SR-009 stall arm N/A-by-construction (D-49). Isaac remains a separate sim-to-real posterior track (docs/13–14, D-44/D-49). See the GE4-V2 note below + docs/11 §8.4. V1 (campaign_e_297k) + the 139k block are historical.)
+**Last update:** 31.07.2026 (**verdict of record re-pointed to the 2-D PPO 550k campaign, and the last two sim-side TBDs closed — D-69.** The pre-deployment campaign `campaign_2d_ppo550k` finished: 1890 runs, 0 errors, 27 complex_b scenarios × {enf, mon}, seed 2024, on the 2-D PPO camera policy at cap 0.22, checkpoint 550k (D-66/D-67). Global `NOT SATISFIED` (literal), blocking SR-CL-A **SR-002/003 only**, again *only* through SC-EDGE-01's recovery-time clause — D-47 applies verbatim, and D-68 shows the failure is a real performance property, not a measurement artefact. **0 in-ODD road-edge contacts in enforcement** against 60 committed by the bare policy. **SR-009 and SR-010 are no longer TBD**: SR-009 closes out-of-band on the D-64 scripted-stall metrology (notes ²), SR-010 closes as a determinate, twice-measured **CL-B finding — Not satisfied, non-vetoing** (notes ³). **Gate G4 remains closed on its own frozen record** — F-track F4 (global `SATISFIED`) + track-'E' **GE4-V2** (28.06.2026, 1970 runs), which stays the *gate* evidence and is **not** re-scored; the re-pointing is a post-verdict edit deferred by D-67 and taken now that a verdict exists. Isaac remains a separate sim-to-real posterior track (docs/13–14, D-44/D-49). See the E5 note below + `experiments/sim/campaign_2d_ppo550k/CAMPAIGN_2D_PPO550K_ANALYSIS.md`. V1 (campaign_e_297k) + the 139k block are historical.)
 **Approved at Gate:** every Gate (incrementally)
 
 ## Purpose
@@ -37,19 +37,19 @@ The full matrix is in `tools/traceability_matrix.csv`. The summary below shows t
 | Hazard | Safety Requirement | Cage Rule(s) | Scenarios | Verifying Metric(s) | Verdict (Sim) |
 | ------ | ------------------ | ------------ | --------- | ------------------- | ------- |
 | H-01 | SR-001 | C-01 | SC-NOM-01, SC-NOM-02, SC-EDGE-02 | M-S1 | **Satisfied** |
-| H-01, H-02 | SR-003 | C-03 | SC-NOM-02, SC-EDGE-01 | M-S4 | **Satisfied** |
-| H-02 | SR-002 | C-02 | SC-EDGE-01, SC-EDGE-04 | M-P4 | **Satisfied** |
+| H-01, H-02 | SR-003 | C-03 | SC-NOM-02, SC-EDGE-01 | M-S4 | **Satisfied** ⁷ |
+| H-02 | SR-002 | C-02 | SC-EDGE-01, SC-EDGE-04 | M-P4 | **Satisfied** ⁷ |
 | H-02 | SR-011 | C-06 + training | SC-EDGE-01, SC-EDGE-04 | M-P7 | **Satisfied** |
 | H-03 | SR-004 | C-04 | SC-NOM-02, SC-EDGE-03 | M-P3 | **Satisfied** |
 | H-04, H-07 | SR-005 | C-05 | SC-EDGE-04 | M-S3 | **Satisfied** |
 | H-05 | SR-006 | C-06 | All scenarios | M-I5 | **Satisfied** ¹ |
 | H-06 | SR-007 | C-05 (state-validity triggers) | SC-PERT-02 | M-S3 | **Satisfied** |
 | H-07 | SR-008 | C-05 (external-stop trigger) | SC-NOM-03, SC-EDGE-04 | M-S3 | **Satisfied** |
-| H-08 | SR-009 | training | SC-NOM-01, SC-NOM-02, SC-NOM-03, SC-PERT-03 | M-P6, M-S2 (monitoring) | TBD ² |
-| H-09 | SR-010 | arbiter | SC-EDGE-04, SC-EDGE-05 | M-S2, M-I3 | TBD ³ |
-| H-10 | SR-012 | C-01, C-02, C-03 (over CV state) + training | SC-NOM-01, SC-PERT-04, SC-PERT-05, SC-PERT-06, SC-PERT-09, SC-PERT-10, SC-PERT-11, SC-PERT-12, SC-PERT-13 | M-S1, M-S2 | **Satisfied** (track 'E', GE4-V2; D-29 coverage closed) ⁴ ⁶ |
-| H-11 | SR-013 | C-05 (CV-estimator health → controlled stop) | SC-NOM-01, SC-PERT-07, SC-PERT-13 | M-S3 | **Satisfied** (track 'E', GE4-V2; SC-PERT-07 25/25 + SC-PERT-13 40/40; D-29 closed by D-46) ⁵ ⁶ |
-| H-12 | SR-014 | C-05 (plausibility check → controlled stop) | SC-NOM-01, SC-PERT-08, SC-PERT-04..06, SC-PERT-09..10, SC-PERT-11..13 | M-S1, M-S3 | **Satisfied** (track 'E', GE4-V2; SC-PERT-08 false-lane 25/25) ⁴ ⁶ |
+| H-08 | SR-009 | training | SC-NOM-01, SC-NOM-02, SC-NOM-03, SC-PERT-03 | M-P6, M-S2 (monitoring) | **Satisfied** (out-of-band, D-64/D-69) ² |
+| H-09 | SR-010 | arbiter | SC-EDGE-04, SC-EDGE-05 | M-S2, M-I3 | **Not satisfied** — CL-B finding, non-vetoing (D-69) ³ |
+| H-10 | SR-012 | C-01, C-02, C-03 (over CV state) + training | SC-NOM-01, SC-PERT-04, SC-PERT-05, SC-PERT-06, SC-PERT-09, SC-PERT-10, SC-PERT-11, SC-PERT-12, SC-PERT-13 | M-S1, M-S2 | **Satisfied** (2-D PPO 550k, verdict of record; GE4-V2 gate record; D-29 coverage closed) ⁴ ⁶ ⁹ |
+| H-11 | SR-013 | C-05 (CV-estimator health → controlled stop) | SC-NOM-01, SC-PERT-07, SC-PERT-13 | M-S3 | **Satisfied** (2-D PPO 550k, verdict of record; GE4-V2 gate record: SC-PERT-07 25/25 + SC-PERT-13 40/40; D-29 closed by D-46) ⁵ ⁶ ⁹ |
+| H-12 | SR-014 | C-05 (plausibility check → controlled stop) | SC-NOM-01, SC-PERT-08, SC-PERT-04..06, SC-PERT-09..10, SC-PERT-11..13 | M-S1, M-S3 | **Satisfied** (2-D PPO 550k, verdict of record; GE4-V2 gate record: SC-PERT-08 false-lane 25/25) ⁴ ⁶ ⁹ |
 
 The last three rows (**H-10 / H-11 / H-12 → SR-012 / SR-013 / SR-014**) belong to the parallel **track 'E'** (end-to-end front-camera, **D-41 / D-43**): the cage's state comes from its **own deterministic CV lane-estimator** (D-43, supersedes D-42), separate from the policy's CNN, so it generalises to any road with visible lines and still reuses C-01..C-06 unchanged. H-12 (cage lane-misdetection) is the new failure mode that the CV estimator introduces. Since E2 (10.06.2026) the implementation chain is **live**: SC-PERT-04..10 are full schema-valid YAMLs (`docs/05`; 09/10 are the world-variant pair added 11.06.2026), the C-05 **Trigger 8** path is implemented (cage 0.6.1, `docs/04`) and the estimator is validated against the sim ground-truth oracle (`experiments/sim/runs/cv_estimator_val_*`). The per-SR verdicts are now filled from the **GE4-V2 camera campaign** (the GE4-V2 note below; `experiments/sim/campaign_e_v2/campaign_report.json` — the *E-track sim evidence* block further down is the historical 139k roll-up); they are *not* part of the F-track G4 verdict above, which stays **frozen** as the ground-truth-state baseline.
 
@@ -62,9 +62,12 @@ in-ODD set**, i.e. the constraint-respecting main policy does not approach the
 boundary inside the ODD and the cage is **latent** there; its protective value
 materialises out-of-ODD in the D-35 frontier contrast (§8.6, `frontier_contrast.json`).
 
-One SR-CL-B verdict (**SR-006**) is now resolved by a dedicated metric analysis
-(note ¹, D-39); **two** SR-CL-B verdicts remain **TBD** by deliberate abstention
-(they do **not** veto the global verdict, D-30):
+One SR-CL-B verdict (**SR-006**) is resolved by a dedicated metric analysis
+(note ¹, D-39). The other **two** (SR-009, SR-010) were carried as deliberate **TBD
+abstentions** through F4 and G4 — they never vetoed the global verdict (D-30) — and are
+**closed as of 31.07.2026 (D-69)**: SR-009 out-of-band on the D-64 metrology, SR-010 as a
+determinate, twice-measured negative. The abstention history is kept below because it is the
+audit trail of *why* each verdict took the shape it did:
 
 - **¹ SR-006 (actuator smoothness) — Satisfied (D-39).** The coarse `ALL`-scenarios
   aggregation had made SR-006 inherit the SC-PERT-01 fraction fail (σ = 0.05
@@ -82,7 +85,23 @@ One SR-CL-B verdict (**SR-006**) is now resolved by a dedicated metric analysis
   `ALL` inheritance; the current runner marks SR-006 `scored_out_of_band` instead
   of inheriting unrelated scenario failures. The evidence artifact is not silently
   rewritten, and the correction does not change the global verdict (CL-B, D-39).
-- **² SR-009 (liveness) — TBD abstention; resolved N/A-by-construction at G4 (D-49).**
+- **² SR-009 (liveness) — CLOSED 31.07.2026: Satisfied, scored out-of-band on its own
+  evidence (D-64, ratified D-69).** The verdict is *not* taken from campaign aggregation —
+  the 2-D pre-deployment campaign reports SR-009 `insufficient_evidence` because SC-PERT-03
+  was **excluded from it by protocol** (the stall meta-test is policy-independent and was
+  already closed; re-running it would have added no information). The closure rests on the
+  three-part evidence D-64 assembled, each part measured: **(i)** the deployed policy drives
+  and never stalls — nominal liveness passes on SC-NOM-01/02/03 (M-P6 = 0, M-P2 = 1) on every
+  arm, including all 27 scenarios of the 2-D campaign; **(ii)** the policy *resists* being
+  forced to stall — the design-corrected pure-stall-objective pilot (`forward_progress = 0`,
+  `stall_penalty = 0`, λ = 4.0, where throttle→0 is the provable optimum) failed to produce a
+  deterministic staller, which is positive evidence for the D-56 anti-park hardening;
+  **(iii)** the detector is sound — a **scripted ground-truth stall** through the real Gazebo
+  + cage + metrics pipeline (`sc_pert_03_scripted_stall_2024`, `eval_policy --scripted-stall`,
+  default-off) yields mean/max speed 0.0000 and **M-P6 = 100.0**. So the mitigation works, the
+  policy resists the pathology, and the metric detects it when it exists — the same
+  own-metric closure pattern as SR-006 (note ¹, D-39). Scored out-of-band, so it does not
+  depend on the D-29 run-count gate that the exclusion breaks. **Abstention history:**
   Nominal liveness (SC-NOM-01/02/03) passes; the verdict is driven by **SC-PERT-03**,
   a two-arm failure-injection meta-test (released vs stall-variant). The multi-arm
   evaluator already existed (`criterion_eval.evaluate_labelled`); the F-campaign gap
@@ -96,8 +115,25 @@ One SR-CL-B verdict (**SR-006**) is now resolved by a dedicated metric analysis
   them independently, but no parent/fine-tune/cell has run; this new capability does
   not alter the frozen abstention. Isaac remains a separate backend replica. Not a
   liveness failure.
-- **³ SR-010 (cage-rule composition) — TBD abstention on the F arm; answered on the E
-  arm at G4.** SC-EDGE-04 passes. SC-EDGE-05's per-run predicate references operands
+- **³ SR-010 (cage-rule composition) — CLOSED 31.07.2026: `Not satisfied`, a determinate
+  CL-B finding (D-69).** This is the one SR the work reports as **not met**, and it is
+  reported rather than reconciled. Its criterion is `M-S2 = 0` in enforcement across
+  SC-EDGE-04/05 plus no joint-envelope assertion failure; SC-EDGE-04 passes, SC-EDGE-05 does
+  not. Measured **twice, on two different policies, with the grid-IC injection wired**:
+  GE4-V2 (1-D) **30/85 in-ODD grid points breach M-S1**, the 2-D PPO 550k pre-deployment
+  campaign **16/85** (with 43 of those 85 in-ODD runs failing the scenario criterion; the
+  out-of-ODD bracket points fail 13/15 with 10 M-S1 breaches, out of scope by construction). Better training **attenuates the finding by roughly half but does not change it in
+  kind** — which is the substantive result: rule arbitration under simultaneous activation is
+  a *design* property of the cage, not a policy defect. The per-anchor split localises it:
+  the failures concentrate on **C-01 ∧ C-02** (lateral + heading co-activation: 15/20 fail,
+  11 M-S1 breaches) and C-01∧C-02∧C-04 (14/20, 11), are milder on C-01∧C-03 (15/20, 4
+  breaches), and **vanish** where no lateral/heading conflict exists — C-01∧C-04∧C-06 breaches
+  0/20 and C-04∧C-06 fails 0/20. SR-010 is **SR-CL-B, so it does not veto the global verdict**
+  (D-30) and no SR-CL-A safety predicate is involved; it is carried as declared future work
+  (**T4**, arbitration under co-activation) and stated as a limitation, not closed by
+  redefinition. Evidence:
+  `experiments/sim/campaign_2d_ppo550k/failure_mode_breakdown.json` →
+  `sc_edge05_grid_split_enforcement`. **Abstention history:** SC-EDGE-04 passes. SC-EDGE-05's per-run predicate references operands
   (`joint_envelope_assertion_failures`, `inter_cycle_oscillations`) **absent from
   the run-record schema**, *and*, more fundamentally, the scenario **as-run induced
   zero rule co-activation** — 0 interventions across all 100 runs, the vehicle drove
@@ -106,7 +142,10 @@ One SR-CL-B verdict (**SR-006**) is now resolved by a dedicated metric analysis
   for the E-track campaigns**, and GE4-V2 scored SC-EDGE-05 determinately (30/85
   in-ODD co-activation breaches — a genuine CL-B finding, note ⁸), answering the
   composition question on the camera arm. The F-arm (oval, ground-truth state) re-run
-  stays optional/historical. Not a composition failure.
+  stays optional/historical. *(The abstention's closing line used to read "not a composition
+  failure" — meaning the F-arm TBD was an instrumentation gap, not evidence of one. Once the
+  instrument existed, the measurement went the other way: it **is** a composition finding, on
+  the camera arms, which is exactly why the abstention could not be left standing.)*
 
 > **Aggregator reconciliation (D-38).** The campaign runner now treats an
 > *indeterminate* (`None`) per-run verdict the same way as the unit-tested D-29/D-30
@@ -115,15 +154,51 @@ One SR-CL-B verdict (**SR-006**) is now resolved by a dedicated metric analysis
 > In the regenerated `campaign_report.json` (rebuilt from the raw per-run
 > `campaign_runs.csv`, no Gazebo re-run) SC-EDGE-05 and SC-PERT-03 read
 > `verdict: null` (`fraction_pass: null`) and **SR-009 / SR-010 read
-> `insufficient_evidence`, not `false`** — the SR-009 / SR-010 matrix verdicts stay
-> **TBD** (genuine gaps, not violations) until the scenario/evaluator gaps are closed
-> and re-scored (notes ²³). SR-006 read `failed` in `campaign_report.json` from the
+> `insufficient_evidence`, not `false`** — which is why the SR-009 / SR-010 matrix verdicts
+> were held at **TBD** (genuine gaps, not violations) rather than collapsed to failures.
+> Both gaps are now closed and re-scored (notes ²³, D-69): the grid-IC injection was wired and
+> SC-EDGE-05 scores determinately, and SR-009 is closed on its own metrology. The distinction
+> the D-38 fix protects is exactly what makes those closures meaningful — SR-010's `Not
+> satisfied` is a *measured* negative, not an aggregation artefact. SR-006 read `failed` in `campaign_report.json` from the
 > coarse `ALL`-scenario inheritance of SC-PERT-01; it is now verified directly on its
 > own metric and is **Satisfied** (note ¹, D-39), with the report re-pointing flagged
 > as a follow-up. None of this affects the SR-CL-A global verdict, which stays
 > `SATISFIED`.
 
-> **GE4-V2 COMPLETE (28.06.2026) — the current camera verdict; V1 (`campaign_e_297k`) + the 139k
+> **E5 — 2-D PPO 550k campaign COMPLETE (31.07.2026): the VERDICT OF RECORD, and the last
+> campaign before physical deployment.** `experiments/sim/campaign_2d_ppo550k/` — **1890 runs,
+> 0 errors**, 27 `complex_b` scenarios × {enforcement, monitoring}, seed 2024, on the **2-D PPO
+> camera policy** (steer + throttle, cap 0.22 m/s, checkpoint 550k, D-66), authorised by its
+> hash-bound D-43 preflight **PASS 7/7**. Cage `4287fe71…` — *identical* to the margin022
+> campaign, so the contrast with D-65 is a contrast of **policy**, not of instrument.
+> **Global `NOT SATISFIED` (literal), blocking SR-CL-A SR-002/003 only**, and again *only*
+> through SC-EDGE-01's `time_to_recovery_heading < 2.0 s` clause: across its 30 enforcement
+> runs that is the **only** clause ever violated (22 runs), with **0 emergencies**, max M-S1
+> **0.043 m** ≪ 0.16 m, max M-P4 **14.2°** ≤ 25°, max σ_θ **3.77°** < 5°. **D-47 applies
+> verbatim** — both are Satisfied on their own criterion, so **no SR-CL-A safety predicate is
+> breached**, and SR-011 rides the same artefact. The clause was **audited, not excused**
+> (**D-68**): its metric had a real defect (a fixed 2.86° band that tested heading *ripple*),
+> and under the corrected run-referenced band this campaign **still fails** SC-EDGE-01 (8/30 →
+> 15/30, bar 90 %) while the frozen 1-D arm would **pass** it (17/30 → 28/30) — the correction
+> favours the arm the thesis does *not* present, and the 550k failure is a genuine performance
+> property (a ringing recovery on a straight), not a measurement artefact.
+> **The core safety invariant holds: 0 in-ODD road-edge contacts in enforcement**, against
+> **60 committed by the bare policy** in monitoring, removed at a cost of 406 controlled stops;
+> out-of-ODD 56 enforcement contacts against GE4-V2's 117. Availability failures seen on the
+> weak margin022 checkpoint (D-65) **clear** — SC-NOM-03 20/25 → **25/25 with 0 emergencies**,
+> SC-PERT-05 30/40 → **40/40**, all 12 SC-PERT enforcement verdicts `True` — while the
+> **structural** residuals persist: SC-EDGE-01's inherited clause and SR-010's co-activation
+> (note ³). One finding is recorded that the verdict tables do not show: on the 300 s endurance
+> scenario the *competent* policy is the only one that cannot hold the lane **without** the
+> cage (17/25 `off_road` in monitoring vs 25/25 completed in enforcement), and the rule holding
+> it is **C-06** — ledger `{C-06: 58124}`, zero C-01/02/03/05. "The cage is latent in-ODD" is
+> true of the **safety rules**, not of the cage as a whole, and the coupling to a specific
+> `delta_max_steering_per_cycle` is a declared **physical-transfer risk** (T2). Full analysis:
+> `experiments/sim/campaign_2d_ppo550k/CAMPAIGN_2D_PPO550K_ANALYSIS.md`; decisions D-66, D-67,
+> D-68, D-69.
+>
+> **GE4-V2 COMPLETE (28.06.2026) — the frozen G4 gate record, superseded as *verdict of record*
+> by the E5 campaign above (D-69) but NOT re-scored; V1 (`campaign_e_297k`) + the 139k
 > block below are historical.** The verdict campaign was re-run on the complex_b 297k E-main with
 > the validated V2 prep: **1970 runs**, seed 2024, 28 scenarios × {enf, mon}, 0 errors
 > (`experiments/sim/campaign_e_v2/`; detail docs/11 §8.4, ch.8 §8.9). **Global `NOT SATISFIED`
@@ -167,6 +242,13 @@ One SR-CL-B verdict (**SR-006**) is now resolved by a dedicated metric analysis
 > are frozen in Gazebo. Next: the Isaac Sim / sim-to-real posterior track** (docs/13–14, D-44) —
 > physical-platform bridge, 2-D action retrain (D-49) and the sim-to-real gap study; it does not
 > reopen G4.
+>
+> **Post-gate note (31.07.2026, D-69).** The two open items this gate record lists as
+> abstentions have since been **closed on posterior E5 evidence** — SR-009 out-of-band (D-64)
+> and SR-010 as a determinate CL-B negative (notes ²³). This **does not reopen G4**: the gate
+> closed on the F4 + GE4-V2 evidence base described above, that evidence is unchanged and
+> un-re-scored, and closing a documented non-vetoing abstention with *more* evidence cannot
+> retroactively weaken a gate that passed without it.
 
 **E-track sim evidence — historical 139k campaign (12.06.2026; superseded by GE4-V2
 above).** The matrix verdicts for H-10/11/12 → SR-012/013/014 now read **GE4-V2**
@@ -247,6 +329,24 @@ frozen; the E re-runs of F-track scenarios are reported only as a contrast in §
 > the oval set, not a safety predicate. Re-scored on own criterion à la note ¹ (D-39) / note ⁴
 > (SR-012). In **V2 these are the *only* literal blocking SR-CL-A** (SR-001 closed by ruta-1), so the
 > global `NOT SATISFIED` rests entirely on this clause — no safety predicate is breached. See **D-47**.
+> **Re-measured on the verdict of record (2-D PPO 550k, 31.07.2026):** the same two SRs, the same
+> single scenario, the same single clause — 22/30 enforcement runs violate `time_to_recovery_heading`
+> and **nothing else** (0 emergencies, max M-S1 0.043 m ≪ 0.16 m, max M-P4 **14.2°** ≤ 25°). The
+> reconciliation is therefore not a one-campaign convenience: it reproduces across policy, action
+> space and checkpoint. What *did* change is that the clause was audited (**D-68**) — its band
+> measured ripple rather than recovery — and under the corrected metric this arm still fails while
+> the 1-D arm would pass, so the failure is a genuine, reportable **performance** property of the
+> 2-D policy's bang-bang command stream, not a metric artefact. The 2.0 s **bound** was deliberately
+> left untouched: D-68 fixes a measurement, not a pass bar.
+>
+> ⁹ **The verdict of record is the 2-D PPO 550k campaign (31.07.2026, D-69).** SR-012/013/014 are
+> Satisfied on **both** camera arms; the rows above cite the E5 campaign as current evidence and
+> retain GE4-V2 as the frozen G4 gate record. Re-pointing was deferred by **D-67** precisely
+> because, at the time, the 2-D arm had a nominal evaluation and a D-43 preflight but **no
+> verdict** — D-67 stated that if the campaign returned a worse in-ODD safety picture than
+> GE4-V2's the trunk decision had to be revisited rather than defended. It did not: in-ODD
+> enforcement road-edge contacts are **0** on both arms, and out-of-ODD the 2-D arm more than
+> halves them (56 vs 117). The condition is met, so the deferred edit is taken.
 >
 > ⁸ **CL-B GE4 readings (do not gate the global safety verdict) — reconciled / characterised
 > (D-48).** **SR-011** (heading-variance) reads `failed` only by inheriting SC-EDGE-01's
@@ -270,7 +370,14 @@ frozen; the E re-runs of F-track scenarios are reported only as a contrast in §
 > nominal/monitoring runs. So SR-009 is **satisfied-by-construction on the stall arm + covered on the
 > M-S2 arm** for track E; the well-posed stall test is deferred to the 2-D-action Isaac work (D-49).
 
-The remaining "TBD" verdicts are closed in Phase 5 (physical results, where applicable).
+**No `TBD` verdict remains in the simulation column (31.07.2026, D-69).** Every SR now carries a
+determinate, evidence-backed `verdict_sim`: eleven **Satisfied**, two **Satisfied on their own
+criterion** with the literal failure recorded and reconciled (SR-002/003, note ⁷ + D-47/D-68), and
+one **Not satisfied** reported as a limitation (SR-010, note ³). The `verdict_phys` column stays
+`tbd` throughout — Phase 5 has been scaffolded end-to-end but **not run on hardware** (docs/17), so
+a physical verdict would be fabricated, not deferred. The one open ODD parameter, `ODD-3.A_LAT_MAX`
+(**TBD-Q10**, docs/08 §11), is likewise hardware-gated by construction (**D-33**): it is
+unmeasurable in simulation, so no simulation campaign — this one included — could have closed it.
 
 The `Cage Rule(s)` column accepts three implementation kinds (cf. D-25 in `docs/DECISIONS.md`): a numbered rule `C-XX`, a `training` constraint discharged at policy-training time (SR-009), or an `arbiter` property of the cage pipeline (SR-010). SR-011 is implemented jointly by `C-06` (runtime attenuation of high-frequency content) and a training-side heading-variance penalty.
 
@@ -315,7 +422,7 @@ Every update is recorded in `docs/08_change_log.md`.
 | `hazard_id` | string | H-XX |
 | `sr_id` | string | SR-XXX |
 | `cage_rule_id` | string | C-XX or empty if implementation is not a cage rule |
-| `implementation_kind` | string | "cage_rule", "training_constraint", or "scenario_test" |
+| `implementation_kind` | string | "cage_rule", "training_constraint", "arbiter", or "scenario_test" (the four kinds D-25 admits; `arbiter` is a structural property of the cage pipeline rather than a numbered rule — SR-010) |
 | `scenario_id` | string | SC-* |
 | `metric_id` | string | M-* |
 | `verdict_sim` | enum | "satisfied", "partial", "not_satisfied", "tbd" |
@@ -332,7 +439,8 @@ Each row of the CSV represents one chain from a hazard to a metric (with possibl
 <!--
 ## Anticipated defense questions
 
-**Q1. Every verdict in the matrix is "TBD" — so at this point does the traceability matrix prove anything?**
+**Q1. Every verdict in the matrix was "TBD" before Phase 4 — so at that point did the traceability matrix prove anything?**
+(Historical form of the question; as of 31.07.2026 the sim column is fully filled — see the closure note above.)
 It proves the *structure* is complete and orphan-free: the eight coverage constraints, mechanically enforced by `check_traceability.py`, guarantee every hazard has a mitigation path down to a metric. The verdicts are the *evidence* layer, filled in Phase 4 / 5. A complete-but-TBD matrix is the honest pre-campaign state — it guarantees that when evidence arrives there is exactly one place to record each verdict and no claim is left without a home.
 
 **Q2. The Frontier scenarios are "deliberately absent" from the matrix — doesn't omitting scenarios from the master record contradict the no-orphans rule?**

@@ -29,11 +29,13 @@ script reports orphans on either side.
 > presents, and what the framework is evaluated/verified against. Everything earlier is
 > **development history**, not a parallel result: F-track = method validation (perfect perception
 > control arm); 1-D GE4-V2 = predecessor + verification data (it closed G4, and that gate record
-> stands); SAC/cap probes + margin022 = findings-with-fixes. **Conditional:** the 550k verdict
-> campaign was still running when D-67 was written — 2-D has a nominal eval + D-43 preflight PASS
-> but **no verdict yet**; don't state one. Narrative: docs/16 §8. `verdict of record` in docs/02–08
-> still points at GE4-V2 **on purpose** — re-pointing it is a deliberate post-verdict edit. This
-> reclassification is **repo-only**: it must not be written into `manuscript/` (author instruction).
+> stands); SAC/cap probes + margin022 = findings-with-fixes. **Condition met (31.07.2026, D-69):**
+> the 550k campaign finished — 1890 runs, 0 errors, global `NOT SATISFIED` **literal** (SR-002/003
+> via SC-EDGE-01's recovery clause only, D-47/D-68), **0 in-ODD road-edge contacts** in enforcement
+> vs 60 by the bare policy, out-of-ODD 56 vs GE4-V2's 117. `verdict of record` in docs/02–08 **now
+> points here**; GE4-V2 stays the frozen G4 gate record and is not re-scored. Narrative: docs/16 §8.
+> This reclassification is **repo-only**: it must not be written into `manuscript/` (author
+> instruction) — the manuscript edits made were only corrections of claims the closure falsified.
 
 > **Two orthogonal axes — don't conflate them.** *Observation:* **F-track** (state-vector,
 > frozen baseline) vs **E-track** (camera, verdict closed). *Simulator:* **Gazebo** carries every
@@ -61,7 +63,7 @@ script reports orphans on either side.
   the aggregator's indeterminate→fail collapse; the two CL-B TBDs (SR-009/010) closed at G4 as documented
   non-vetoing abstentions (D-30), materially answered on the E arm. Detail: CHANGELOG 03.06–10.06 "F4" +
   02.07 "G4"; docs/07.
-- **Track 'E' (camera) — GE4-V2 verdict of record (2026-06-28); G4 CLOSED 02.07.2026 (docs/07).**
+- **Track 'E' (camera) — GE4-V2, the frozen G4 gate record (2026-06-28); G4 CLOSED 02.07.2026 (docs/07). Superseded as *verdict of record* by the 2-D trunk below (D-69) and NOT re-scored.**
   D-41 architecture; the cage reads a **dedicated deterministic CV lane-estimator** (D-43), not the camera.
   **GE4-V2 on the 297k E-main: 1970 runs** (seed 2024, 28 complex_b scenarios × {enforcement, monitoring},
   0 errors; `experiments/sim/campaign_e_v2/campaign_report.json` + `failure_mode_breakdown.json` + 7 figures).
@@ -93,16 +95,34 @@ script reports orphans on either side.
   gone). **RL beats the CV baseline on the same track** (10.9 vs 17.2 mm |ey|), reversing the oval finding. Laps NOT comparable
   across tracks (~94 m ≈ the 425k's 98 m). GE4 closure on this checkpoint = the **GE4-V2 campaign above** (verdict of record);
   docs/07 matrix rows, ch.8 §8.9 and the traceability CSV all read V2 now.
-- **THE 2-D TRUNK — PPO cap 0.22, checkpoint 550k (D-66; trunk per D-67). Campaign RUNNING.** Fresh PPO 2-D 1M
+- **THE 2-D TRUNK — PPO cap 0.22, checkpoint 550k (D-66; trunk per D-67). CAMPAIGN CLOSED 31.07.2026 — this is
+  the VERDICT OF RECORD (D-69), and the last simulation campaign before physical deployment.** Fresh PPO 2-D 1M
   on complex_b: `ep_rew_mean` peaks **1755 @ 472k**, stable plateau (SAC 2-D never exceeds ~200); cage **latent for
   safety** across training (C-01/02/03/05 = 0). Checkpoint chosen **by driving + cage %, not reward** — the reward-peak
   475k is the *worst* candidate (14 safety interventions, max |ey| 49 mm); **550k** wins: nominal `SC-NOM-01` enforcement
-  = **5.32 laps, |ey| 8.6 mm (max 27), 0 emergencies, 0 safety interventions** (C-06 only). D-43 preflight **PASS 7/7**
-  (`eval_gz2d/d43_preflight_ppo2d_cap022_550k.json`). **Verdict campaign in flight:** `experiments/sim/campaign_2d_ppo550k/`,
-  1890 runs (27 complex_b scenarios × {enf, mon}, seed 2024; SC-PERT-03 excluded — closed D-64). Resume with
-  `./experiments/sim/campaign_2d_ppo550k/resume_campaign.sh` (flock-guarded, two sequential phases: execute then
-  aggregate). **No verdict exists yet — do not state one.** A 29.07 concurrency incident quarantined 222 runs
-  (`_quarantine_20260729_concurrent_writers/`, operator error, not a code defect).
+  = **5.32 laps, |ey| 8.6 mm (max 27), 0 emergencies, 0 safety interventions** (C-06 only). D-43 preflight **PASS 7/7**.
+  **Verdict:** `experiments/sim/campaign_2d_ppo550k/` — **1890 runs, 0 errors** (27 complex_b scenarios × {enf, mon},
+  seed 2024; SC-PERT-03 excluded — closed D-64). Global **`NOT SATISFIED` literal, blocking SR-002/003 only**, again
+  *only* via SC-EDGE-01's recovery-time clause (0 emergencies, max M-S1 0.043 m, max M-P4 14.2°) → **D-47 verbatim**,
+  no SR-CL-A safety predicate breached. **0 in-ODD road-edge contacts in enforcement** (bare policy commits 60);
+  out-of-ODD 56 vs GE4-V2's 117. margin022's availability failures **clear** (SC-NOM-03 25/25, SC-PERT-05 40/40, all 12
+  SC-PERT enf `True`); the **structural** ones persist (SC-EDGE-01 clause; SR-010 co-activation 16/85 in-ODD, halved
+  from 30/85 but unchanged in kind → T4). **Two findings that outrank the verdict table:** (i) **C-06 is load-bearing** —
+  on the 300 s endurance run the ledger is `{C-06: 58124}` with zero C-01/02/03/05, yet cage-off the same policy goes
+  `off_road` 17/25 (|ey| 145 mm vs 36 mm); "cage latent in-ODD" is about the **safety rules**, not the cage, and the
+  coupling to `delta_max_steering_per_cycle` is a **physical-transfer risk** (T2). Origin (co-adaptation) is *inferred* —
+  the ablation was not run. (ii) **C-04 never fires** (0/1890 runs, both modes): 0.22 < `V_MAX_CURVE` 0.25, so the ODD-3
+  speed ceiling stays untested from above even with speed authority. Analysis:
+  `campaign_2d_ppo550k/CAMPAIGN_2D_PPO550K_ANALYSIS.md`. A 29.07 concurrency incident quarantined 222 runs
+  (`_quarantine_20260729_concurrent_writers/`, operator error, not a code defect; re-executed under a flock'd serial driver).
+- **TBD status (D-69, 31.07.2026): no `TBD` remains in the sim column.** SR-009 → **Satisfied**, scored out-of-band on
+  the D-64 metrology (nominal liveness M-P6=0 on every arm; the policy resists a forced stall; the detector reads
+  M-P6=100.0 on a scripted ground-truth stall). SR-010 → **`Not satisfied`**, the one reported negative: CL-B,
+  non-vetoing (D-30), twice-measured, concentrated on **C-01 ∧ C-02** co-activation, carried as future work T4.
+  **Still open on purpose:** the whole `verdict_phys` column (Phase 5 scaffolded, **not run on hardware**, docs/17) and
+  **TBD-Q10** (`ODD-3.A_LAT_MAX`) — unmeasurable in simulation by construction (D-33), so docs/08 stays below v1.0 by
+  design (now v0.9.1). Also still open: the **Chapter 8 restructure** so the camera track leads instead of sitting in
+  §8.9 — the other follow-up D-67 deferred; an authoring decision, not an evidence one.
 - **Posterior E5 — algorithm/action probes, now reclassified as findings (D-67; does not reopen G4).** Closed PPO camera
   N=5 nominal battery; SAC 1-D/2-D studies (D-60): `ent_coef=0.005` removes the entropy-collapse cliff, a 200k replay
   buffer holds the peak band (eviction was the slow decay); two 1-D SAC SC-PERT subsets 100/100 enf vs 68/100 mon (probes,

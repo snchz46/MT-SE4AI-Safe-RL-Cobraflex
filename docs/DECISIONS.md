@@ -1,8 +1,8 @@
 # DECISIONS.md — Project decision log
 
 <!--
-Status: decisions through D-61. D-47..D-49 close/reconcile GE4; D-50..D-58 cover the Isaac posterior; D-59/D-60 cover Gazebo 2-D and PPO/SAC; D-61 reconciles the implemented Jazzy/Harmonic stack and supersedes D-13's preliminary Humble distribution choice.
-Last update: 2026-07-20.
+Status: decisions through D-69. D-47..D-49 close/reconcile GE4; D-50..D-58 cover the Isaac posterior; D-59/D-60 cover Gazebo 2-D and PPO/SAC; D-61 reconciles the implemented Jazzy/Harmonic stack and supersedes D-13's preliminary Humble distribution choice; D-62..D-66 build and qualify the 2-D arm; D-67 makes it the research trunk (conditionally); D-68 audits the heading-recovery metric; D-69 closes the simulation programme — verdict of record re-pointed, SR-009/SR-010 TBDs closed.
+Last update: 2026-07-31.
 -->
 
 ## Purpose of this file
@@ -98,6 +98,14 @@ consistent with the chapters.
 | D-59 | Add posterior Gazebo 2-D config and separate portable/non-portable Isaac findings | `docs/11`; `docs/13` | ACCEPTED |
 | D-60 | Select PPO/SAC through the shared trainer config | `docs/11` §4.2 | ACCEPTED |
 | D-61 | Implemented middleware baseline is ROS2 Jazzy + Gazebo Sim Harmonic | Ch.6 §6.2.1; `docs/15` | CONFIRMED |
+| D-62 | T3 temporal heading-consistency gate for the H-12 curve over-read | `docs/12`; `docs/11` | ACCEPTED |
+| D-63 | SC-PERT-03 2-D negative test: adversary not induced at the preregistered λ | Ch.8 §8.9.7 | SUPERSEDED by D-64 |
+| D-64 | Close SC-PERT-03 metrology with a scripted stall stimulus | Ch.8 §8.9.7 | CONFIRMED |
+| D-65 | First full 2-D verdict campaign (margin022) | `docs/11`; Ch.8 | ACCEPTED |
+| D-66 | Competent 2-D camera policy: PPO at cap 0.22, checkpoint 550k | `docs/11`; Ch.7 | CONFIRMED |
+| D-67 | Research trunk of record moves to the 2-D PPO camera policy | `docs/16` §8 | CONFIRMED (condition met, D-69) |
+| D-68 | Heading-recovery band referenced to each run's own envelope | `docs/06`; `docs/05` | ACCEPTED |
+| D-69 | Verdict of record re-pointed to the 2-D PPO 550k campaign; SR-009/SR-010 TBDs closed; simulation programme declared complete | `docs/07`; `docs/02`–`docs/08` | ACCEPTED |
 
 > **Renumbering note (11.06.2026, pre-merge).** The E-track decisions above were
 > originally allocated **D-38 / D-39 / D-40** on the `e2e-camera` branch, while
@@ -3242,3 +3250,82 @@ left open here: this entry fixes a measurement defect, not a pass bar.
 
 Cites D-47 (reconciliation precedent), D-30 (aggregation semantics), D-39 (out-of-band scoring of a
 metric the per-scenario aggregation mis-attributes), D-66 (the campaign that surfaced it).
+
+---
+
+### D-69 — The simulation programme closes: verdict of record re-pointed to the 2-D PPO 550k campaign, and the last two SR-CL-B TBDs closed (one Satisfied, one reported as `Not satisfied`)
+
+| Field | Value |
+| --- | --- |
+| Section | `docs/07`; framing notes of `docs/02`–`docs/06`, `docs/08` v0.9.1; `tools/traceability_matrix.csv` |
+| Status | ACCEPTED — the D-67 condition is met and the two deferred follow-ups it recorded are taken |
+| Date | 31.07.2026 |
+
+**Context.** `campaign_2d_ppo550k` — the last simulation campaign before physical
+deployment — finished on 31.07.2026 with 1890 runs and 0 errors. Two edits had been
+deliberately deferred, both recorded rather than done silently: **D-67** declared the 2-D
+PPO policy the research trunk **conditionally**, because at the time the arm had a nominal
+evaluation and a D-43 preflight but *no verdict*, and it stated that if the campaign returned
+a worse in-ODD safety picture than GE4-V2's the trunk decision must be **revisited rather
+than defended**. Separately, SR-009 and SR-010 had been carried as documented, non-vetoing
+**TBD abstentions** since F4 — through G4, which closed without them.
+
+**Decision — three parts.**
+
+**(1) The verdict of record is the 2-D PPO 550k campaign.** `docs/02`–`docs/08` now name it;
+**GE4-V2 remains the frozen G4 gate record** and is **not** re-scored, so the gate still
+rests on the evidence it actually closed on. The D-67 condition is checked, not assumed: the
+in-ODD safety picture is **not worse** — enforcement in-ODD road-edge contacts are **0 on both
+arms**, and out-of-ODD the 2-D arm more than halves them (56 vs 117). The literal global verdict
+is `NOT SATISFIED` on both arms, blocked by the same two SRs through the same single clause on
+the same single scenario, so D-47 transfers verbatim rather than being re-argued.
+
+**(2) SR-009 → Satisfied, scored out-of-band (ratifying D-64).** The 2-D campaign reports
+SR-009 `insufficient_evidence` because SC-PERT-03 was excluded from it by protocol; that is a
+statement about the campaign's coverage, not about the requirement. The verdict is taken from
+the dedicated evidence D-64 assembled — nominal liveness passes on every arm (M-P6 = 0), the
+policy **resists** being forced to stall (the pure-stall-objective pilot failed to produce a
+staller), and the detector **fires on a ground-truth stall** (scripted stimulus through the
+real Gazebo + cage + metrics pipeline, M-P6 = 100.0). Mitigation works, pathology resisted,
+metric sound. This is the same out-of-band pattern as SR-006/D-39 and it is used for the same
+reason: per-scenario aggregation is the wrong instrument for this requirement.
+
+**(3) SR-010 → `Not satisfied`, and reported as such.** The scenario-side gap that justified
+the abstention is gone — the grid-IC injection is wired and SC-EDGE-05 genuinely induces
+co-activation — so the requirement was measured, twice, and **fails its own criterion**
+(`M-S2 = 0` does not hold): **30/85** in-ODD grid points breach M-S1 on the 1-D arm, **16/85**
+on the 2-D arm, concentrated on **C-01 ∧ C-02** (15/20 fail, 11 breaches) and vanishing where
+no lateral/heading conflict exists (C-04 ∧ C-06: 0/20 fail). Better training halves it and does
+not change it in kind, which is the substantive finding: **arbitration under simultaneous
+activation is a design property of the cage, not a policy defect.** It is SR-CL-B and
+non-vetoing (D-30), and it is carried as declared future work (**T4**).
+
+**Rationale — why closing a TBD as a failure is the point, not a problem.** A TBD says "we do
+not know"; the thesis is only entitled to that while the instrument is genuinely missing. Both
+instruments now exist, so continuing to abstain would convert an honest gap into a convenient
+one. Recording SR-010 as the single `Not satisfied` verdict in the matrix costs nothing the
+work is entitled to keep — it is CL-B, it vetoes no global verdict, and no SR-CL-A safety
+predicate is involved — and it buys the register's credibility: the same document that reports
+0 in-ODD road-edge contacts also reports the one requirement that is not met.
+
+**What is deliberately NOT done.** (a) **G4 is not reopened.** The gate closed on F4 + GE4-V2,
+that evidence is unchanged, and closing a documented non-vetoing abstention with *more*
+evidence cannot retroactively weaken a gate that passed without it. (b) **No historical
+campaign is re-scored** (D-30/D-47/D-68 precedent). (c) **TBD-Q10 (`ODD-3.A_LAT_MAX`) stays
+open**, and no simulation number is invented for it: it is unmeasurable in simulation by
+construction (D-33), since in Gazebo it is a consequence of the friction coefficient the world
+assumes. (d) **The `verdict_phys` column stays `tbd` throughout** — Phase 5 is scaffolded
+end-to-end but has not been run on hardware (`docs/17`). (e) **Chapter 8 is not restructured**
+so the camera track leads; that authoring task, the other item D-67 deferred, remains open and
+is a manuscript decision rather than an evidence one. (f) **No ODD parameter, SR threshold,
+cage rule or `cage.yaml` value changes** on this evidence.
+
+**Verification.** `python tools/check_traceability.py` → All checks PASSED, 0 warnings. The
+C-04 claim added to `docs/08` §6.5 is measured, not inferred: C-04 fires **zero** times across
+all 1890 runs in both modes (enforcement ledger `C-06 181620, C-03 764, C-02 721, C-05 361,
+C-01 159`).
+
+Cites D-67 (the conditional trunk decision and the two deferred follow-ups), D-66 (the policy
+and checkpoint), D-64 (SR-009's metrology), D-47 + D-68 (the SR-002/003 reconciliation and the
+audited clause metric), D-30 (CL-B non-veto), D-39 (out-of-band precedent), D-33 (Q10's
+hardware dependency), D-49 (the frozen 1-D verdict).

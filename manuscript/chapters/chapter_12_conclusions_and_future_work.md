@@ -368,10 +368,15 @@ enforcement) y los que **persisten** son estructurales —la cláusula heredada 
 SC-EDGE-01 y la co-activación SR-010—, con la invariante de seguridad in-ODD
 intacta en los dos casos.
 
-Lo que queda es, por tanto, más estrecho y más concreto: **(i)** documentar la
-reconciliación de criterio propio al estilo D-47 para la campaña de 550k y
-decidir entonces —como edición deliberada, no silenciosa— si los documentos de
-especificación deben re-apuntar su *veredicto de récord*; **(ii)** atacar el
+De ese "lo que queda", el punto **(i)** ya se ejecutó el 31.07.2026 (D-69): la
+reconciliación de criterio propio al estilo D-47 está documentada para la campaña de
+550k —el clausulado de SC-EDGE-01 es lo único que falla, con 0 emergencias, M-S1 máx.
+0.043 m y M-P4 máx. 14.2°— y, con el veredicto ya existente, los documentos de
+especificación **re-apuntaron su *veredicto de récord*** a esta campaña como edición
+deliberada, dejando GE4-V2 como registro congelado del gate. En la misma decisión se
+cerraron las dos últimas abstenciones CL-B (SR-009 Satisfecha fuera de banda,
+SR-010 `No satisfecha`), de modo que la columna de simulación de `docs/07` ya no tiene
+ningún TBD. Queda, por tanto: **(ii)** atacar el
 residuo estructural que ninguna mejora de policy resolvió, es decir el arbitraje
 de reglas de SR-010 (T4) y el over-read/under-read del estimador CV (T3); y
 **(iii)** trasladar el brazo a Isaac como réplica de backend, recordando que sus
@@ -406,13 +411,21 @@ sensor para el estado de la cage. El criterio de éxito es concreto: eliminar lo
 regresión en lazo cerrado (el test que ruta-2b falló).
 
 **T4 — Diseño y verificación del arbitraje de reglas (SR-010)** *(Hallazgo 8).*
-Los 30/85 breaches in-ODD bajo co-activación piden pasar de la composición por
+Es la única SR que el trabajo cierra como **`No satisfecha`** (D-69), y se reporta
+así en `docs/07` en vez de reconciliarse. Los breaches in-ODD bajo co-activación
+—**30/85** en el brazo 1-D y **16/85** en el 2-D— piden pasar de la composición por
 orden fijo (C-06→C-04→C-02→C-03→C-01→C-05) a un análisis del envelope conjunto:
 caracterizar en qué subregión del espacio de estado la composición secuencial
 produce acciones fuera del envelope seguro que cada regla garantiza por
 separado, y o bien re-ordenar/parametrizar, o bien documentar la subregión como
-exclusión del ODD. El grid de SC-EDGE-05 ya cableado es el instrumento de
-medida; el re-run del brazo F (óvalo) queda como réplica opcional.
+exclusión del ODD. Medirlo sobre dos policies acota el problema con precisión
+útil: **entrenar mejor lo reduce a la mitad pero no lo cambia de naturaleza**, luego
+el residuo es de diseño de la cage y no de la policy —y el desglose por anclaje
+señala dónde—: la co-activación **C-01 ∧ C-02** (lateral + rumbo) concentra los
+fallos (15/20, 11 breaches), mientras que allí donde no hay conflicto
+lateral/rumbo el arbitraje es limpio (C-04 ∧ C-06: 0/20 fallos). El grid de
+SC-EDGE-05 ya cableado es el instrumento de medida; el re-run del brazo F (óvalo)
+queda como réplica opcional.
 
 **T5 — Disponibilidad: robustez del disparador C-05 a ruido de percepción**
 *(Hallazgo 9).* Histéresis/persistencia en el trigger de validez de estado y en

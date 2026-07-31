@@ -15,9 +15,10 @@
 > docs/00–14; this inventory is the map. Use it when a defense question starts
 > with "where is…", "what does the script X do…", or "how do you know Y works".
 >
-> **Latest fully green host baseline (2026-07-30, Ubuntu 24.04 / ROS 2 Jazzy):**
-> `pytest` → **602 passed** (139 `cage/tests` + 437 `policy/tests` + 7
-> `tools/tests` + 19 elsewhere in the collected scope);
+> **Latest fully green host baseline (2026-07-31, Ubuntu 24.04 / ROS 2 Jazzy):**
+> `pytest` → **608 passed** (139 `cage/tests` + 443 `policy/tests` + 26
+> `tools/tests`; the three directories `pytest.ini` collects, and they sum
+> exactly — the older "+19 elsewhere" split was a mis-attribution);
 > `python tools/check_traceability.py` → **All checks PASSED, 0 warnings**
 > (12 hazards, 14 SRs, 6 cage rules, 19 metrics, all scenarios/metrics linked).
 > Superseded baselines: 517 (2026-07-15), 594 (2026-07-26).
@@ -232,7 +233,9 @@ in `src/cobraflex`), reached through Layer-1 bring-up — see docs/17 §2b.
 | [frontier_contrast.py](../tools/frontier_contrast.py) | Paired enforcement-vs-monitoring analysis of the out-of-ODD frontier study (D-35): road-edge-contact rate, max excursion, emergency rate per (scenario, seed) |
 | [sr006_smoothness.py](../tools/sr006_smoothness.py) | Dedicated SR-006 verification on its own committed-steer-rate metric (D-39), computed from `cage_status.csv` traces — outside the per-scenario aggregation that would let unrelated failures contaminate it |
 | [campaign_e_failure_modes.py](../tools/campaign_e_failure_modes.py) | Post-hoc classification of every campaign FAIL by *which clause* of the pass criterion broke + cage core-safety invariant checks; regenerable numbers behind the E-campaign write-up |
-| [plot_f3_figures.py](../tools/plot_f3_figures.py) / [plot_frontier.py](../tools/plot_frontier.py) / [plot_camera_comparison.py](../tools/plot_camera_comparison.py) | Figure generators (Ch.7 training evidence; frontier cage-efficacy; F4-vs-E campaign contrast) — all read committed run artifacts, never live sims, so figures are re-derivable |
+| [plot_f3_figures.py](../tools/plot_f3_figures.py) / [plot_frontier.py](../tools/plot_frontier.py) / [plot_camera_comparison.py](../tools/plot_camera_comparison.py) | Figure generators (Ch.7 training evidence; frontier cage-efficacy; F4-vs-E campaign contrast) — all read committed run artifacts, never live sims, so figures are re-derivable. **Caveat:** `plot_camera_comparison` has the GE4-V1 narrative baked into its annotations and scenario picks; it is *not* portable to another campaign |
+| [plot_campaign_contrast.py](../tools/plot_campaign_contrast.py) | Portable enforcement-vs-monitoring figures for **any** campaign dir: per-scenario pass fraction sorted by the cage's contribution, and the road-edge-contact safety invariant split in-ODD/out-of-ODD (`--compare` overlays other campaigns) |
+| [rescore_recovery_clause.py](../tools/rescore_recovery_clause.py) | Offline re-scoring of SC-EDGE-01's `time_to_recovery_heading` under the corrected v2 band (D-68), with a fidelity check that recomputed v1 reproduces every stored value; never rewrites campaign artifacts |
 | [validate_cv_estimator.py](../tools/validate_cv_estimator.py) | D-43's oracle validation: teleports the robot over a pose grid, compares `CvLaneEstimator` (ey, epsi) against the `PolylineTracker` ground truth, clean + degraded; evidence under `experiments/sim/runs/cv_estimator_val_*` |
 | [calibrate_d43_c02.py](../tools/calibrate_d43_c02.py) | Derives the conservative C-02 heading gain from calibration-only safe/fault separation and validates it on a held-out seed; does **not** move C-02's physical 25° threshold (evidence `experiments/sim/eval_gz2d/d43_c02_calibration_*`) |
 | [capture_camera_frames.py](../tools/capture_camera_frames.py) | Camera evidence tool: saves PNG frames (optionally over teleport poses) — proved lane-line visibility at E2 |
@@ -263,9 +266,9 @@ in `src/cobraflex`), reached through Layer-1 bring-up — see docs/17 §2b.
 
 ## 6. Test inventory — what each test file proves
 
-Latest fully green host baseline (**2026-07-30**, Ubuntu 24.04 / ROS 2 Jazzy):
-**602 passed** from the repo root — `cage/tests` **139**, `policy/tests` **437**,
-`tools/tests` **7** (`pytest.ini` scopes collection to those three; `src/`
+Latest fully green host baseline (**2026-07-31**, Ubuntu 24.04 / ROS 2 Jazzy):
+**608 passed** from the repo root — `cage/tests` **139**, `policy/tests` **443**,
+`tools/tests` **26** (`pytest.ini` scopes collection to those three; `src/`
 packages are colcon/ament territory, deliberately excluded). Per-directory counts
 below are re-verified at this baseline; do not sum older headings into a newer
 total. Superseded: 517 (15.07), 594 (26.07).

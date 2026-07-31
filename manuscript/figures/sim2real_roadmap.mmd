@@ -5,9 +5,11 @@
 %%
 %% Pre-empts the "and the real car?" defense question. All thesis verdicts
 %% closed in Gazebo (F4 global SATISFIED; GE4-V2 verdict of record; G4 closed
-%% 02.07.2026). Isaac (D-44) is posterior work: URDF import + ROS2 bring-up +
-%% in-process RL (docs/13), and the 2-D action retrain (steer + throttle,
-%% D-49/D-50) that makes SR-009's stall test well-posed. What transfers is the
+%% 02.07.2026), and the posterior 2-D camera arm (steer + throttle, D-59/D-66)
+%% also runs in Gazebo — that is where SR-009's stall test became well-posed and
+%% was closed (D-63/D-64) and where the 550k verdict campaign ran (1890 runs,
+%% 31.07.2026; posterior, does not reopen G4). Isaac (D-44) is posterior work: URDF import + ROS2
+%% bring-up + in-process RL (docs/13) and its own 2-D retrain. What transfers is the
 %% code and the specs (duck-typed env interface, pure-Python cage + cage.yaml,
 %% scenario/SR artefacts, handover spec docs/14); policy checkpoints do NOT
 %% transfer — Isaac policies are independent retrains, not a re-do of the 297k
@@ -16,16 +18,17 @@
 %% inline copy in sync with this file. Also a defense slide.
 
 flowchart LR
-    subgraph GZB ["Gazebo &mdash; all thesis verdicts (closed)"]
+    subgraph GZB ["Gazebo &mdash; all thesis verdicts (closed) + posterior 2-D arm"]
         direction TB
         F["F-track (state obs)<br/>F4 campaign: 1260 runs, seed 2024<br/>global <b>SATISFIED</b> &middot; frozen baseline"]
-        E["E-track (front camera)<br/>GE4-V2: 1970 runs on 297k E-main<br/>verdict of record &middot; <b>G4 closed 02.07.2026</b>"]
+        E["E-track (front camera, 1-D action)<br/>GE4-V2: 1970 runs on 297k E-main<br/>verdict of record &middot; <b>G4 closed 02.07.2026</b>"]
+        E2D["Posterior E5 &mdash; 2-D action: steer + throttle<br/>cap 0.22 m/s (D-59/D-66) &middot; SR-009 stall test<br/>posed and closed here (D-63/D-64)<br/>550k campaign: 1890 runs &middot; 0 in-ODD edge contacts<br/><i>posterior &mdash; does not reopen G4</i>"]
     end
 
     subgraph ISC ["Isaac Sim &mdash; posterior bridge (D-44)"]
         direction TB
         I1["URDF import + ROS2 bring-up<br/>+ in-process RL training &amp; DR<br/><i>docs/13</i>"]
-    I2["2-D action retrain: steer + throttle<br/>multi-circuit env (D-49 / D-50)<br/>makes SR-009 stall test executable (not yet run)"]
+    I2["2-D action retrain: steer + throttle<br/>multi-circuit env (D-49 / D-50)<br/>independent of the Gazebo 2-D arm"]
     end
 
     subgraph PHY ["Physical CobraFlex 1:14 &mdash; Phase 5"]
@@ -47,7 +50,7 @@ flowchart LR
     classDef note_ok fill:#E1F5EE,stroke:#0F6E56,color:#04342C,stroke-width:1px;
     classDef note_no fill:#FAECE7,stroke:#993C1D,color:#4A1B0C,stroke-width:1px;
     class F,E closed;
-    class I1,I2 post;
+    class E2D,I1,I2 post;
     class P1 future;
     class T note_ok;
     class NT note_no;

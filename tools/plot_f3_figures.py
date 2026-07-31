@@ -9,8 +9,10 @@ reading order (§7.4 training dynamics, then §7.5 evaluation):
   * fig_7_2_intervention.png — cage intervention + C-05 emergency rate vs
     timesteps and the per-rule breakdown: the co-adaptation evidence (§7.4).
   * fig_7_3_ppo_health.png   — PPO value loss + policy entropy vs timesteps (§7.4).
-  * fig_7_4_action_distribution.png — policy raw-steering histogram, early vs
-    late training (§7.4).
+  * fig_7_4_action_distribution.png — raw policy action histogram, early vs
+    late training (§7.4): one panel per action dimension, so a 2-D
+    ``steer_throttle`` run (D-50/D-59) also gets its throttle panel. Render it
+    for a single run under its own name with --action-run/--action-stem.
   * fig_7_5_trajectory.png   — RL trajectory on the oval (exact, from x/y) with
     the PD baseline overlaid (reconstructed from its ey + speed-integrated arc
     length, since the F2 PD log has no world pose) and the lane centerline (§7.5).
@@ -330,41 +332,55 @@ def fig_ppo_health(train_run: Path, out: Path) -> None:
     print(f"  wrote {out/'fig_7_3_ppo_health.png'}")
 
 
-def fig_action_distribution(train_run: Path, out: Path, frac: float = 0.1) -> None:
-    """Fig. 7.6 — policy raw-steering distribution at the start vs the end of
+def fig_action_distribution(train_run: Path, out: Path, frac: float = 0.1,
+                            stem: str = "fig_7_4_action_distribution") -> None:
+    """Fig. 7.4 — raw policy action distribution at the start vs the end of
     training (plan §11.1 Fig. 6), from the subsampled action_samples.csv.
-    Skipped if that file is absent."""
+
+    One panel per action dimension: steering always, plus throttle when the run
+    used the 2-D ``steer_throttle`` action map (D-50/D-59) and therefore logged
+    a ``raw_throttle`` column. Skipped if action_samples.csv is absent."""
     path = train_run / "action_samples.csv"
     if not path.is_file():
-        print("  skip fig_7_4_action_distribution (no action_samples.csv; re-train with the extended logger)")
+        print(f"  skip {stem} (no action_samples.csv; re-train with the extended logger)")
         return
     rows = _read_csv(path)
     if not _has_columns(rows, ["timestep", "raw_steer"]):
-        print("  skip fig_7_4_action_distribution (action_samples.csv missing columns)")
+        print(f"  skip {stem} (action_samples.csv missing columns)")
         return
     ts = _col(rows, "timestep")
-    steer = _col(rows, "raw_steer")
     tmax = ts.max() if len(ts) else 0.0
-    early = steer[ts <= frac * tmax]
-    late = steer[ts >= (1.0 - frac) * tmax]
+    early_mask = ts <= frac * tmax
+    late_mask = ts >= (1.0 - frac) * tmax
 
-    fig, ax = plt.subplots(figsize=(7, 4))
+    dims = [("raw_steer", "raw policy steering")]
+    if _has_columns(rows, ["raw_throttle"]):
+        dims.append(("raw_throttle", "raw policy throttle"))
+
+    fig, axes = plt.subplots(1, len(dims), figsize=(7 * len(dims), 4), squeeze=False)
     bins = np.linspace(-1.0, 1.0, 41)
-    if len(early):
-        ax.hist(early, bins=bins, density=True, alpha=0.5, color="#1f77b4",
-                label=f"early (first {frac:.0%} of steps)")
-    if len(late):
-        ax.hist(late, bins=bins, density=True, alpha=0.5, color="#d62728",
-                label=f"late (last {frac:.0%} of steps)")
-    ax.set_xlabel("raw policy steering")
-    ax.set_ylabel("density")
-    ax.set_title("Fig. 7.4 — Policy action distribution: early vs late training")
-    ax.legend(fontsize=8)
-    ax.grid(True, alpha=0.3)
+    for ax, (column, xlabel) in zip(axes[0], dims):
+        values = _col(rows, column)
+        early, late = values[early_mask], values[late_mask]
+        if len(early):
+            ax.hist(early, bins=bins, density=True, alpha=0.5, color="#1f77b4",
+                    label=f"early (first {frac:.0%} of steps)")
+        if len(late):
+            ax.hist(late, bins=bins, density=True, alpha=0.5, color="#d62728",
+                    label=f"late (last {frac:.0%} of steps)")
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel("density")
+        ax.legend(fontsize=8)
+        ax.grid(True, alpha=0.3)
+    action_label = "2-D (steer + throttle)" if len(dims) == 2 else "1-D (steer)"
+    # Only the canonical Fig. 7.4 output carries the figure number in-image; a
+    # run rendered under its own stem is numbered by the chapter that embeds it.
+    prefix = "Fig. 7.4 — " if stem == "fig_7_4_action_distribution" else ""
+    fig.suptitle(f"{prefix}Policy action distribution, {action_label}: early vs late training")
     fig.tight_layout()
-    fig.savefig(out / "fig_7_4_action_distribution.png", dpi=150)
+    fig.savefig(out / f"{stem}.png", dpi=150)
     plt.close(fig)
-    print(f"  wrote {out/'fig_7_4_action_distribution.png'}")
+    print(f"  wrote {out/f'{stem}.png'}")
 
 
 def _seed_of(run: Path) -> str:
@@ -497,8 +513,19 @@ def main() -> None:
                     help="semicolon-separated label=run_dir pairs for the training-variant "
                          "comparison (Fig. 7.9), e.g. 'v1, fixed spawn=experiments/.../run1;...' "
                          "(labels may contain commas)")
+    ap.add_argument("--action-run", type=Path, default=None,
+                    help="training run for the action-distribution figure alone (one panel per "
+                         "action dimension; 2-D runs get the throttle panel too).")
+    ap.add_argument("--action-stem", type=str, default="fig_7_4_action_distribution",
+                    help="output file stem for --action-run (e.g. fig_ppo2d_action_distribution).")
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
+
+    if args.action_run:
+        print(f"action run: {args.action_run.name}\nout      : {args.out}")
+        fig_action_distribution(args.action_run, args.out, stem=args.action_stem)
+        if not (args.train_run or args.rl_run or args.seed_runs or args.variant_runs):
+            return  # only the action-distribution figure was requested
 
     if args.variant_runs:
         specs = [(lbl.strip(), Path(p.strip()))

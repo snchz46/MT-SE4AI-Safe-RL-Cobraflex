@@ -2,12 +2,14 @@
 
 <!--
 Estado: G4 CERRADO (02.07.2026), actualizado con evidencia posterior E5 a
-22.07.2026. GE4-V2 sigue siendo el veredicto de récord; §8.9.6 es un probe SAC
-de cinco escenarios, no una nueva campaña de veredicto. La evidencia posterior
-21–22.07 (calibración D-43→C-02 del readout de rumbo y arranque del entrenamiento
-del parent 2-D margin022) es *interfaz de medición y trabajo en curso*, no una
-campaña nueva: vive en ch7 §7.5.5, ch9 §9.2.2 y ch12 T1, y **no altera** ninguna
-cifra ni veredicto de este capítulo.
+31.07.2026. GE4-V2 sigue siendo el veredicto de récord; §8.9.6 es un probe SAC
+de cinco escenarios, no una nueva campaña de veredicto. El brazo posterior de
+acción 2-D vive en §8.9.7 (SC-PERT-03 ejecutado y cerrado, D-63/D-64), §8.9.8
+(campaña margin022, D-65) y §8.9.9 (campaña sobre la policy PPO 550k, cerrada el
+31.07.2026: 1890 runs, `NOT SATISFIED` literal reconciliable, 0 contactos in-ODD
+en enforcement — D-66). Nada de ello altera las cifras ni los veredictos de
+§8.1–§8.9.5, ni reabre G4; el veredicto de récord sigue siendo GE4-V2 mientras no
+se decida explícitamente lo contrario.
 Extensión objetivo: 14–18 páginas.
 Convención (igual que el Capítulo 7):
   [BORRADOR D5X]    → prosa de metodología/diseño, fijable ya (no depende de
@@ -339,11 +341,12 @@ se ejecutó** (los 40 runs logueados son un solo brazo) y el driver de entonces 
 agrupaba ambos brazos antes de puntuar, por lo que los runs quedaron `None`. La
 liveness **nominal** sí está
 verificada y pasa (SC-NOM-01/02/03, M-P6 = 0, M-P2 = 1). Por tanto SR-009 se
-mantiene **TBD** en ese brazo, no FAIL. Como trabajo posterior (20.07.2026), el
-protocolo 2-D ya fija `lambda_stall = 4.0`, 50k, `M-P6 > 50.0` y 20 runs por
-brazo/modo; el runner agrupa cada brazo por separado y encadena sus hashes. No se
-ha ejecutado el fine-tune ni una celda Gazebo, por lo que no existe un veredicto
-SR-009 nuevo.
+mantiene **TBD** en ese brazo, no FAIL. Como trabajo posterior, el protocolo 2-D
+preregistrado (`lambda_stall = 4.0`, 50k, `M-P6 > 50.0`, 20 runs por brazo/modo,
+agregación por brazo y encadenado de hashes) **sí se ejecutó** en Gazebo sobre la
+acción 2-D: 80 celdas, más el cierre metrológico con un estímulo *scripted* de
+parada total (§8.9.7, D-63/D-64). Ese resultado es **posterior** y no modifica el
+veredicto F-track de esta sección, que se mantiene TBD tal como se cerró.
 
 ---
 
@@ -463,8 +466,9 @@ como **abstenciones documentadas y no-vetantes** (D-30), pero ambos quedaron
 *materialmente* respondidos por el track 'E': el brazo stall de SR-009 es **N/A por
 construcción** para el espacio de acción solo-dirección que comparten ambos tracks
 (M-P6 ≡ 0; la inyección de reward de SC-PERT-03 es inerte — D-49). La extensión
-posterior 2-D de Gazebo ya hace el test técnicamente ejecutable, pero la celda
-SC-PERT-03 aún no se ha corrido; Isaac queda como réplica de backend separada. La
+posterior 2-D de Gazebo hizo el test ejecutable y **se corrió** (§8.9.7,
+D-63/D-64), después del cierre de G4 y sin reabrirlo; Isaac queda como réplica de
+backend separada. La
 pregunta de co-activación de SR-010 la
 respondió el grid de SC-EDGE-05 **cableado en GE4-V2** (30/85 breaches in-ODD, hallazgo
 CL-B genuino, §8.9). `tools/check_traceability.py` confirma que no quedan SRs huérfanos
@@ -722,8 +726,9 @@ aplica al espacio de acción solo-dirección**: la policy no controla throttle, 
 converger a la inacción, así que M-P6 ≡ 0 por construcción y la inyección de reward del
 escenario es inerte (D-49). Su brazo vivo de SR-009 —M-S2 bajo monitoring— sí queda
 cubierto por la familia nominal. El test de stall bien-puesto se difiere a la acción
-2-D posterior (D-49). En Gazebo, su protocolo/runner ya están preparados pero
-siguen sin ejecución; Isaac sería una réplica de backend independiente.
+2-D posterior (D-49) y allí **se ejecutó y se cerró** —80 celdas de dos brazos más
+la validación del detector con una parada *scripted*— sin tocar este veredicto
+(§8.9.7, D-63/D-64); Isaac sería una réplica de backend independiente.
 
 ### 8.9.4 Matriz E-track y trabajo de cierre
 
@@ -1026,6 +1031,163 @@ disponibilidad reducida**: la cage mantiene seguro cada caso in-ODD mientras la 
 que la 1-D. Figuras (inglés): `campaign_2d_margin022/figures/`. Análisis completo:
 `CAMPAIGN_2D_ANALYSIS.md` (D-65).
 
+### 8.9.9 Campaña de veredicto sobre la policy 2-D competente (PPO 550k)  [E5]
+
+La campaña de §8.9.8 dejó una pregunta abierta y bien planteada: sus fallos de
+disponibilidad, ¿son de la **acción 2-D** o de **aquella policy**? El
+checkpoint que la corrió era doblemente sub-óptimo (SAC, 75k y además el
+checkpoint *decaído*, D-65/D-66). La respuesta exige el mismo experimento con un
+conductor competente y todo lo demás fijo, y eso es lo que se ejecutó.
+
+**El artefacto bajo prueba.** La policy 2-D de cámara PPO con cap 0,22 m/s,
+checkpoint **550k** (§7.5.5, D-66), seleccionada por conducción determinista y
+porcentaje de cage —no por recompensa, que habría elegido el peor de los tres
+candidatos—. Su antecedente nominal `SC-NOM-01` en enforcement (4400 pasos,
+`complex_b`, DR off) es **5,32 vueltas, `|ey|` medio 8,6 mm (máx. 27,3 mm), 0
+emergencias y 0 intervenciones de seguridad**: sólo dispara C-06 (76,1 % de los
+pasos, el rate limiter), es decir la cage entra **latente en seguridad**, la
+firma que el brazo F y el E-main 1-D también mostraron en nominal.
+
+**El protocolo.** 27 escenarios de `complex_b` × {enforcement, monitoring},
+seed 2024, **1890 celdas** (`experiments/sim/campaign_2d_ppo550k/`).
+**SC-PERT-03 queda excluido a propósito**: su meta-test de detectabilidad de
+SR-009 se cerró en D-64 (§8.9.7) y es independiente de la policy, de modo que
+repetirlo no añadiría información. La cage es la **misma** que autorizó
+margin022 —`joint_pair_quadratic`, ganancia 1,60 y el gate temporal T3 (D-62)—
+para que el contraste con §8.9.8 sea de policy y no de instrumento, y la
+autorización es el **preflight D-43 ligado a hashes**, con **PASS 7/7**
+(`eval_gz2d/d43_preflight_ppo2d_cap022_550k.json`).
+
+**Integridad de la evidencia.** Se registra un incidente **operativo** del
+29.07.2026: dos procesos del runner concurrentes escribieron sobre el mismo
+directorio de campaña, por lo que **222 runs afectados quedaron en cuarentena**
+(`_quarantine_20260729_concurrent_writers/`) y se re-ejecutaron bajo un driver
+serial con cerrojo de fichero. Es error de operación, no defecto del runner ni
+de la cage, y no contamina el conjunto agregado precisamente porque las celdas
+afectadas se apartaron en lugar de mezclarlas. El roll-up final cubre las
+**1890 celdas con 0 errores**.
+
+**Veredicto global: `NOT SATISFIED` (literal), bloqueado sólo por SR-002/003.**
+De los 10 SR de clase A, **8 salen Satisfechos** (SR-001/004/005/007/008/012/
+013/014) y sólo SR-002 y SR-003 quedan en `failed`; entre los CL-B, SR-010 falla,
+SR-011 falla, SR-006 se puntúa fuera de banda (D-39) y SR-009 queda como
+`insufficient_evidence` **por construcción del protocolo** (su escenario está
+excluido; D-29 no puede satisfacerse sin él). Como en GE4-V2, el literal exige
+reconciliación (D-47) y por el **mismo motivo exacto**: SR-002/003 y SR-011
+fallan únicamente vía **SC-EDGE-01**, y en sus 30 runs de enforcement la única
+cláusula incumplida es `time_to_recovery_heading < 2.0` —la cláusula heredada del
+óvalo— 22 veces, con **0 emergencias, `max M-S1` = 43 mm ≪ 160 mm y `max M-P4`
+= 14,2° ≤ 25°**. Sobre su propio criterio, SR-002/003 se cumplen; SR-011 también
+(σ_θ máx. **3,77°** en SC-EDGE-01 y 3,29° en SC-EDGE-04, bajo su umbral de 5°).
+Ningún predicado de seguridad SR-CL-A queda incumplido.
+
+**La cláusula se auditó, no se excusó (D-68).** Antes de apoyarse por tercera vez
+en la reconciliación convenía saber si la cláusula mide lo que dice. Su métrica
+**sí tenía un defecto**: la banda de recuperación era un ángulo *fijo* de 2,86°
+calibrado sobre el controlador PD del óvalo, y como el error de rumbo riza en
+torno a cero con amplitud dependiente del controlador y la pista (p90 3,0–4,8°),
+exigir cinco muestras consecutivas dentro de esa banda convierte el test en una
+medida de **rizado**: aplicada a runs **sin perturbación alguna**, la cláusula
+falla de plano —50/50 runs de SC-NOM-02 en el óvalo "nunca recuperan"—. La
+métrica se corrige refiriendo la banda a la envolvente de régimen del propio run
+(D-68). Y aquí está lo importante: **re-puntuada con la métrica corregida, esta
+campaña sigue fallando SC-EDGE-01** (8/30 → 15/30, con el listón en el 90 %),
+mientras el brazo 1-D congelado sí pasaría (17/30 → 28/30). De modo que la
+corrección **no** puede leerse como ajustar el criterio a favor del brazo que la
+tesis presenta —favorece al otro—, y el fallo del 550k **no es un artefacto de
+medida**: su recuperación oscila de verdad (13,6° → 1,4° → vuelve a 5,9°, y no
+se asienta hasta ≈2,5 s) y ocurre **en recta**, con curvatura de referencia 0,00
+en todo el tramo — la firma en lazo cerrado del comando casi *bang-bang* y del
+limitador C-06 descrita más abajo. Sigue siendo una propiedad de **rendimiento**,
+no de seguridad, y la reconciliación D-47 se sostiene sobre una base más firme
+que "la cláusula viene heredada". Ningún veredicto histórico se re-puntúa
+(D-68); el informe es `rescore_recovery_clause_d68.json`.
+
+**La invariante de seguridad se mantiene, y el contraste con margin022 responde
+la pregunta.** Contactos con el borde de la calzada, con la misma partición por
+familias que §8.9.8 (in-ODD = nominal + perturbado; fuera-de-ODD = edge +
+frontier):
+
+| Contactos de borde | in-ODD | fuera-de-ODD |
+| --- | ---: | ---: |
+| **Enforcement (cage on)** | **0** | 56 |
+| Monitoring (cage off) | 60 | 217 |
+
+La partición es **por familia de escenario**, igual que en §8.9.8 y en GE4-V2, de
+modo que SC-EDGE-05 entra entera en la columna fuera-de-ODD; sus puntos de grid
+que sí son individualmente in-ODD **no se diluyen aquí**, sino que se atribuyen
+por separado al hallazgo SR-010 (abajo). Se dice explícitamente para que las dos
+cifras no parezcan contradictorias.
+
+Es decir: **cero contactos in-ODD con la cage activa**, y la policy desnuda
+comete **60 que la cage elimina por completo** —el mismo mecanismo que
+margin022 (98→0) medido ahora sobre un conductor competente, con menos trabajo
+para la cage (406 emergencias frente a 433). Fuera del ODD la mejora también es
+grande frente al 1-D: 56 contactos en enforcement contra los 117 de GE4-V2, con
+SC-FRONT-03 pasando de 25 contactos a **0** y SC-FRONT-06 de 24 a 8.
+
+**Y los fallos de disponibilidad eran de calidad de policy, no estructurales.**
+La predicción de §8.9.8 se cumple en las dos direcciones. Se limpian:
+**SC-NOM-03** pasa de 5/25 fallos por emergencia a **25/25 aprobados sin ninguna
+emergencia**, y **SC-PERT-05** de 10 fallos (30 emergencias) a **40/40
+aprobados** —todavía con 20 paradas controladas, pero ya dentro de su criterio,
+que es el comportamiento esperado ante *low-light* severo—; de hecho **los 12 escenarios
+SC-PERT tienen veredicto de enforcement `True`**, incluido SC-PERT-13 (40/40 enf
+frente a 20/40 mon). Persisten los estructurales: **SC-EDGE-01** (la cláusula
+de recuperación heredada) y **SC-EDGE-05** (co-activación, SR-010), este último
+además atenuado —16/85 breaches de M-S1 en puntos in-ODD frente a los 30/85 del
+1-D, y 8 contactos in-ODD del grid frente a 24—, pero **cualitativamente el
+mismo hallazgo CL-B**: el arbitraje entre reglas sigue siendo el problema
+abierto, y no lo arregla entrenar mejor.
+
+**El contraste cage-on/cage-off es el más nítido de la tesis.** Además de los
+SC-PERT, el enforcement rescata escenarios completos que el monitoring pierde:
+SC-EDGE-04 (30/30 frente a 0/30), SC-FRONT-03 (25/25 frente a 0/25), SC-FRONT-05
+(25/25 frente a 6/25), SC-FRONT-06 (17/25 frente a 0/25) y SC-NOM-03 (25/25
+frente a 8/25). El mismo contraste aparece **fuera de la agregación por
+escenario** en SR-006 (D-39): la traza de steering comprometido respeta el límite
+de C-06 en **840/840 runs de enforcement (100 %)** frente a **263/945 (27,8 %)**
+en monitoring, con un delta por ciclo máximo de 2,0 sin cage.
+
+**Una inversión que obliga a matizar «la cage está latente».** SC-NOM-03 se
+comporta al revés de lo esperado entre campañas: la policy **competente** es la
+única que **no** aguanta los 300 s sin cage (17/25 terminan en `off_road`,
+2,17 vueltas), mientras la débil margin022 los completa 25/25 y el E-main 1-D
+24/25. El análisis lo localiza y lo aísla. Los 17 abandonos ocurren en **dos
+arcos concretos** —s ≈ 9,4 m y s ≈ 17,2 m, los dos ápices más cerrados de
+`complex_b`, los mismos que motivaron el gate T3 (D-62)— y en los últimos 5 s el
+jerk **baja** (0,172 frente a 0,411 de media): es un sobre-viraje sostenido, no
+una oscilación. Entre los dos modos sólo cambia C-06: con el **mismo comando
+crudo** (|steer| máx 1,00 en ambos), el steering **aplicado** llega a 0,84 con
+cage y a 1,00 sin ella, el Δ por ciclo queda en la cota 0,15 frente a 2,0, y el
+|ey| máximo pasa de **36 mm a 145 mm**. En los 25 runs de enforcement el libro de
+intervenciones es **`{C-06: 58124}` y nada más** —cero C-01/02/03/05—, de modo
+que quien sostiene el carril en esos ápices es el **rate limiter**, una regla
+CL-B de suavidad. La causa de fondo es de entrenamiento: esta policy emite un
+comando casi *bang-bang* (|Δsteer| crudo medio 0,33–0,41 frente a 0,16–0,19 del
+E-main y de margin022) y satura C-06 en el 77,5 % de los pasos, porque aprendió
+con el limitador dentro del lazo de actuación. La velocidad no lo explica (sólo
+un 7,5 % sobre el E-main, que sí sobrevive). La consecuencia para la lectura de
+esta tesis es directa: **«latente» describe las reglas de seguridad, no la cage
+entera** —esa latencia la *produce* C-06 actuando aguas arriba—, y una policy tan
+acoplada a un `delta_max_steering_per_cycle` concreto es un **riesgo de
+transferencia** a la plataforma física, donde la dinámica del actuador no es ese
+límite. Detalle completo, incluida la ablación que faltaría para probar la
+co-adaptación causalmente, en `CAMPAIGN_2D_PPO550K_ANALYSIS.md`; hallazgo 14 en
+§12.2.3.
+
+Roll-up: `campaign_2d_ppo550k/campaign_report.json`; desglose por modo de fallo e
+invariante de seguridad: `failure_mode_breakdown.json`; reconciliación completa
+al estilo D-47, tablas de contraste y trazabilidad de hashes:
+`CAMPAIGN_2D_PPO550K_ANALYSIS.md`. Figuras (inglés, todas re-derivables):
+`figures/fig_campaign_pass_fraction.png` y `fig_campaign_safety_invariant.png`
+(`tools/plot_campaign_contrast.py`), más las dos de frontier del runner.
+
+**[PENDIENTE — F5: decidir —como edición deliberada— si los documentos de
+especificación deben re-apuntar su *veredicto de récord* a esta campaña, y si el
+Capítulo 8 se reestructura para que el track de cámara encabece en lugar de vivir
+en §8.9 (ambas cosas las difirió D-67 hasta tener veredicto; ya lo hay).]**
+
 ---
 
 ## 8.10 Síntesis y transición al Capítulo 9  [BORRADOR D56]
@@ -1050,22 +1212,23 @@ se cierra en simulación. Las campañas SAC posteriores (§8.9.6) muestran que l
 dirección protectora del contraste cage-on/cage-off se replica de PPO a SAC en
 los cinco estresores probados, pero su global
 `INCOMPLETE` preserva deliberadamente esa frontera. El trabajo posterior —SAC,
-Isaac Sim, acción 2-D (D-49) y el gap sim-to-real hacia la plataforma física—
-parte de estos veredictos congelados.
+Isaac Sim, la acción 2-D (§8.9.7–§8.9.9) y el gap sim-to-real hacia la
+plataforma física— parte de estos veredictos congelados.
 
 ```mermaid
 %% Fuente canónica: manuscript/figures/sim2real_roadmap.mmd
 flowchart LR
-    subgraph GZB ["Gazebo &mdash; all thesis verdicts (closed)"]
+    subgraph GZB ["Gazebo &mdash; all thesis verdicts (closed) + posterior 2-D arm"]
         direction TB
         F["F-track (state obs)<br/>F4 campaign: 1260 runs, seed 2024<br/>global <b>SATISFIED</b> &middot; frozen baseline"]
-        E["E-track (front camera)<br/>GE4-V2: 1970 runs on 297k E-main<br/>verdict of record &middot; <b>G4 closed 02.07.2026</b>"]
+        E["E-track (front camera, 1-D action)<br/>GE4-V2: 1970 runs on 297k E-main<br/>verdict of record &middot; <b>G4 closed 02.07.2026</b>"]
+        E2D["Posterior E5 &mdash; 2-D action: steer + throttle<br/>cap 0.22 m/s (D-59/D-66) &middot; SR-009 stall test<br/>posed and closed here (D-63/D-64)<br/>550k campaign: 1890 runs &middot; 0 in-ODD edge contacts<br/><i>posterior &mdash; does not reopen G4</i>"]
     end
 
     subgraph ISC ["Isaac Sim &mdash; posterior bridge (D-44)"]
         direction TB
         I1["URDF import + ROS2 bring-up<br/>+ in-process RL training &amp; DR<br/><i>docs/13</i>"]
-        I2["2-D action retrain: steer + throttle<br/>multi-circuit env (D-49 / D-50)<br/>makes SR-009 stall test executable (not yet run)"]
+        I2["2-D action retrain: steer + throttle<br/>multi-circuit env (D-49 / D-50)<br/>independent of the Gazebo 2-D arm"]
     end
 
     subgraph PHY ["Physical CobraFlex 1:14 &mdash; Phase 5"]
@@ -1087,17 +1250,21 @@ flowchart LR
     classDef note_ok fill:#E1F5EE,stroke:#0F6E56,color:#04342C,stroke-width:1px;
     classDef note_no fill:#FAECE7,stroke:#993C1D,color:#4A1B0C,stroke-width:1px;
     class F,E closed;
-    class I1,I2 post;
+    class E2D,I1,I2 post;
     class P1 future;
     class T note_ok;
     class NT note_no;
 ```
 
 **Figura 8.2 — Hoja de ruta sim-to-real desde los veredictos congelados.**
-Todos los veredictos de la tesis cierran en Gazebo; Isaac Sim (D-44) es
-trabajo posterior —incluido el retrain con acción 2-D (D-49/D-50), que hace
-ejecutable el test de stall de SR-009 aunque su protocolo two-arm siga pendiente—
-y no reabre G4. Transfieren el código
+Todos los veredictos de la tesis cierran en Gazebo, y el brazo posterior de
+**acción 2-D** (dirección + acelerador, cap 0,22 m/s; D-59/D-66) también corre
+en Gazebo: es allí donde el test de stall de SR-009 quedó bien planteado y se
+cerró (§8.9.7, D-63/D-64), y donde corrió la campaña de veredicto de la policy
+2-D de 550k (§8.9.9, 1890 runs, **0 contactos de borde in-ODD** en enforcement;
+posterior, no reabre G4). Isaac Sim (D-44) es
+trabajo posterior con su propio retrain 2-D, independiente del de Gazebo, y no
+reabre G4. Transfieren el código
 del entorno (interfaz duck-typed), la cage pura + `cage.yaml` y las
 especificaciones (handover en `docs/14`); **no** transfieren los checkpoints
 de policy: las políticas Isaac son retrains independientes; las variantes ya
@@ -1134,10 +1301,10 @@ F4 (campaña):
        el re-run F es opcional/histórico.
   [—] SR-009 / SC-PERT-03: N/A para la acción solo-dirección — el test negativo de stall
        requiere control de throttle (M-P6≡0 by construction, reward-injection inerte; D-49).
-       Brazo vivo M-S2-monitoring cubierto. El protocolo/runner Gazebo 2-D ya están
-       preregistrados (`lambda_stall=4.0`, 50k, M-P6>50 %, hashes, agregación por brazo),
-       pero el parent fresh-0.22, su preflight D-43 y la ejecución siguen pendientes
-       (posterior, no reabre GE4); Isaac sería una réplica aparte.
+       Brazo vivo M-S2-monitoring cubierto. CERRADO en el posterior 2-D de Gazebo
+       (D-63/D-64, §8.9.7): parent 0.22 entrenado, preflight D-43 PASS con T3, 80 celdas
+       de dos brazos ejecutadas y detector validado con parada scripted (M-P6 = 100).
+       No reabre GE4; Isaac sería una réplica aparte.
   [ ] Resolver la decisión de métrica QED (D-17/D-21/D-22) si aplica a §8.6
   [ ] (Pendiente análisis estadístico §8.2.5: como M-S2=0 in-ODD en ambos modos,
        los tests χ²/Welch sobre el delta son degenerados; documentar o aplicar
@@ -1160,8 +1327,19 @@ E4 / track 'E' (campaña GE4 cámara, §8.9):
        replicado). La curva de entrenamiento no clasifica la cuenca (D-36 ext.). §7.5.3–7.5.4,
        docs/11 §8.5. No toca el veredicto GE4-V2.
   [—] SR-009/SC-PERT-03: stall test N/A para acción solo-dirección (M-P6≡0 by construction, D-49);
-       el posterior Gazebo 2-D ya tiene protocolo y runner ejecutables, pero todavía no
-       existe el parent 0.22 cualificado ni se ha corrido la celda.
+       ejecutado y cerrado en el posterior Gazebo 2-D (D-63/D-64, §8.9.7).
+
+E5 / brazo posterior de acción 2-D (§8.9.7–§8.9.9):
+  [x] SC-PERT-03 de dos brazos + cierre metrológico de SR-009 (D-63/D-64)
+  [x] Primera campaña de veredicto 2-D completa: margin022, 1970 runs (D-65, §8.9.8)
+  [x] campaign_2d_ppo550k (policy PPO 550k, D-66): 1890 celdas, 0 errores, preflight
+       D-43 PASS 7/7. Cerrada 31.07.2026 → §8.9.9 redactada con el veredicto.
+  [x] Documento de análisis CAMPAIGN_2D_PPO550K_ANALYSIS.md (reconciliación D-47,
+       tablas de contraste, hashes) + figuras re-derivables (tools/plot_campaign_contrast.py).
+  --- PENDIENTE (decisiones, no trabajo de datos) ---
+  [ ] Decidir si docs/02–08 re-apuntan el 'veredicto de récord' a la 550k y si el cap. 8
+       se reestructura con el track de cámara al frente (ambas diferidas por D-67 hasta
+       tener veredicto; ya existe).
 
 Fase 6:
   [ ] Pulido de prosa; verificar coherencia cruzada con Cap.7 (§7.5/§7.6) y

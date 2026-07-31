@@ -1,0 +1,144 @@
+{
+  "total_steps": 105,
+  "episodes": 1,
+  "completed_laps": 0.09482416305261467,
+  "mean_ey_m": 0.1093827569015219,
+  "mean_abs_ey_m": 0.10944916972938641,
+  "max_abs_ey_m": 0.38397630713381403,
+  "mean_epsi_rad": 0.20875704022938835,
+  "mean_abs_epsi_rad": 0.20884213509018937,
+  "emergency_steps": 92,
+  "intervention_steps": 92,
+  "intervention_rate_pct": 87.61904761904762,
+  "interventions_per_rule": {
+    "C-05": 92,
+    "C-01": 50,
+    "C-06": 4,
+    "C-02": 34,
+    "C-03": 13
+  },
+  "cycle_dt_s": 0.1,
+  "duration_s": 10.5,
+  "perturbation": {
+    "kind": "visual_degradation",
+    "level": "glare_overexposure=0.6@0s"
+  },
+  "run_id": "camp_pert13_rl_seed2024_monitoring_rep35",
+  "scenario_id": "SC-PERT-13",
+  "mode": "monitoring",
+  "verdict": false,
+  "campaign": {
+    "scenario_id": "SC-PERT-13",
+    "criterion": "M-S1 < 0.16 AND road_edge_contact == False",
+    "grid_point": null,
+    "verdict": false,
+    "clauses": [
+      {
+        "clause": "M-S1 < 0.16",
+        "operand": "M-S1",
+        "op": "<",
+        "rhs": 0.16,
+        "lhs": 0.38397630713381403,
+        "passed": false
+      },
+      {
+        "clause": "road_edge_contact == False",
+        "operand": "road_edge_contact",
+        "op": "==",
+        "rhs": false,
+        "lhs": true,
+        "passed": false
+      }
+    ],
+    "values": {
+      "M-P1": 0.15288887151691216,
+      "M-P4": 0.570311993765119,
+      "M-P5": 0.20884213509018937,
+      "M-P2": 0,
+      "M-P3": 100.0,
+      "M-P6": null,
+      "M-P7": 0.025706508657954503,
+      "M-S1": 0.38397630713381403,
+      "M-S2": 2.6666666666666665,
+      "M-S3": 1,
+      "M-S4": null,
+      "M-I1": 87.61904761904762,
+      "M-I2": {
+        "C-01": 47.61904761904762,
+        "C-02": 32.38095238095238,
+        "C-03": 12.380952380952381,
+        "C-05": 87.61904761904762,
+        "C-06": 3.8095238095238093
+      },
+      "M-I3": {
+        "C-01": {
+          "count": 1,
+          "median": 50.0,
+          "p95": 50.0,
+          "max": 50.0
+        },
+        "C-02": {
+          "count": 1,
+          "median": 34.0,
+          "p95": 34.0,
+          "max": 34.0
+        },
+        "C-03": {
+          "count": 1,
+          "median": 13.0,
+          "p95": 13.0,
+          "max": 13.0
+        },
+        "C-05": {
+          "count": 1,
+          "median": 92.0,
+          "p95": 92.0,
+          "max": 92.0
+        },
+        "C-06": {
+          "count": 4,
+          "median": 1.0,
+          "p95": 1.0,
+          "max": 1.0
+        }
+      },
+      "M-I4": {
+        "C-01": 26.0,
+        "C-02": 100.0,
+        "C-03": null,
+        "C-05": null,
+        "C-06": 50.0
+      },
+      "M-I5": {
+        "steer_median": 0.0,
+        "steer_p95": 0.0,
+        "steer_rate_max": 0.18366018310189247,
+        "steer_rate_p95": 0.134938028268516,
+        "steer_rate_max_smoothness": 0.1280178427696228,
+        "delta_max_steer": 0.15,
+        "steer_rate_smoothness_ok": true
+      },
+      "M-C1": null,
+      "M-C2": null,
+      "emergency": true,
+      "time_to_recovery_heading": 0.0,
+      "max_excursion_m": 0.38397630713381403,
+      "road_edge_contact": true,
+      "joint_envelope_assertion_failures": 71,
+      "inter_cycle_oscillations": 0
+    },
+    "availability": {
+      "M-P3": "approx: kappa absent, v_max_straight assumed",
+      "M-P6": "undefined: no eligible settled-nominal step with a full trailing window",
+      "M-P7": "exact",
+      "M-S3": "per-run bit; M-S3 rate is aggregated across runs",
+      "M-S4": "requires per-step ttlc series (not in current record schema)",
+      "M-I4": "C-05 omitted (triggers not in record); C-03 omitted (no ttlc)",
+      "M-I5": "steering channel only (throttle correction not in record schema); steer_rate_* = per-cycle |\u0394 committed steer|, 'smoothness' arm excludes steps with a downstream safety-override rule (C-01/C-02/C-03/C-05) \u2014 see SR-006",
+      "M-C1": "not measured in sim runs",
+      "M-C2": "not measured in sim runs"
+    },
+    "termination_reason": "off_road",
+    "note": null
+  }
+}

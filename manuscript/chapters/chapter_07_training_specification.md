@@ -119,19 +119,39 @@ difícil que D-41 asume, con su coste presupuestado en datos
 
 ### 7.2.2 Arquitectura de la política y espacio de acción
 
-El espacio de acción es común a ambos tracks: un flotante `action =
-[steering]` en [-1, 1], con velocidad fija (`fixed_speed = 0.2 m/s`)
-durante el entrenamiento; el agente no controla el throttle. Esta elección
-reduce la dimensionalidad del aprendizaje; si el control de velocidad
-resulta necesario para los escenarios perturbados de Fase 4, la
-especificación se revisa.
+El espacio de acción se especificó **1-D** para los dos tracks del cuerpo de la
+tesis: un flotante `action = [steering]` en [-1, 1], con velocidad fija
+(`fixed_speed = 0.2 m/s`) durante el entrenamiento; el agente no controla el
+throttle. Esta elección reduce la dimensionalidad del aprendizaje, y la
+especificación dejó abierta su revisión si el control de velocidad resultaba
+necesario. **Esa revisión ocurrió.** El mapa de acción es hoy un parámetro de
+configuración —`action.type: steering | steer_throttle`— y no una bifurcación
+del entorno (D-50):
+
+| Mapa | `action` | Longitudinal | Dónde se usa |
+| --- | --- | --- | --- |
+| `steering` (1-D) | `[steer]` ∈ [-1, 1] | `fixed_speed = 0,2 m/s` | Baseline F, E-main 1-D **congelado** (GE4-V2, D-49) |
+| `steer_throttle` (2-D) | `[steer, throttle]` ∈ [-1, 1]² | `throttle` × `max_speed_mps`, con `throttle_deadband = 0,05` | Trabajo posterior E5: policy 2-D de cámara (§7.5.4–§7.5.5) |
+
+El cap longitudinal del 2-D es **`max_speed_mps = 0,22`** (no el techo del ODD
+de 0,5): la revisión D-59 lo fijó tras medir que la envolvente de velocidad de
+la cage está calibrada para el régimen 1-D, y D-66 lo confirmó como el mejor de
+un *diff* de una sola variable. La consecuencia de verificación es concreta: con
+la acción 1-D el test de stall de SR-009 es **N/A por construcción** (M-P6 ≡ 0,
+D-49), y sólo el mapa 2-D lo hace planteable —lo que ocurrió en Gazebo y se
+cerró en cap. 8 §8.9.7 (D-63/D-64).
 
 **Primario (E):** `CnnPolicy` de SB3 (extractor NatureCNN: conv 32@8×8/4 →
 64@4×4/2 → 64@3×3/1 → FC 512, con normalización de imagen interna), sobre la
 observación apilada (84×84×4 tras `VecFrameStack` + `VecTransposeImage`).
 **Baseline (F):** `MlpPolicy` por defecto (dos capas de 64 `tanh`, redes
 separadas pi/vf), sobre el vector de 6 dimensiones. Ambas producen salida
-Gaussiana diagonal (media + `log_std` independiente del estado).
+Gaussiana diagonal (media + `log_std` independiente del estado), con una
+componente por dimensión de acción: escalar en 1-D, dos componentes
+(dirección y acelerador) bajo `steer_throttle`. La cadena de la cage no cambia
+con el mapa: su contrato de entrada siempre es la tupla `(steering, throttle)`
+(cap. 5 §5.5.6 y §5.7), de modo que bajo la acción 1-D el componente longitudinal
+simplemente llega constante y C-04/C-06 lo arbitran igual.
 
 ### 7.2.3 Función de recompensa
 
@@ -271,7 +291,8 @@ Los checkpoints se guardan cada `n_steps` pasos (denominación SB3
 `learning_curve.csv` (una fila por rollout: `ep_rew_mean`, `ep_len_mean`,
 salud de PPO `explained_variance/value_loss/entropy/approx_kl/clip_fraction/std`
 y actividad del cage `intervention_rate/emergency_rate/int_rate_C-0x`),
-`action_samples.csv` (steering crudo submuestreado) y `metadata.json`
+`action_samples.csv` (acción cruda submuestreada: `raw_steer`, más
+`raw_throttle` en los runs con acción 2-D) y `metadata.json`
 (commit, hashes de cage/escenario/checkpoint, semilla, hiperparámetros, y —
 track 'E'— clase de política, bloque de observación y envolvente de DR). La
 instrumentación reside en `cobraflex_rl/callbacks.py` y el módulo puro
@@ -386,7 +407,10 @@ tardío de recompensa es exploración, no el crítico. Generada por
 <img src="../figures/fig_7_4_action_distribution_newcam.png" alt="Figura 7.4 — Distribución del steering crudo de la política de cámara, inicio vs fin." width="560"/>
 
 *Figura 7.4 — Distribución de la acción (steering crudo) al inicio vs al
-final del entrenamiento de cámara. Generada por `tools/plot_f3_figures.py`.*
+final del entrenamiento de cámara. Es el E-main de **acción 1-D**, donde la
+dirección es la única dimensión aprendida (§7.2.2); la contraparte 2-D, con su
+panel de acelerador, es la Figura 7.11. Generada por
+`tools/plot_f3_figures.py`.*
 
 ### 7.4.3 La inestabilidad del PPO de cámara como hallazgo de track
 
@@ -851,27 +875,64 @@ del pico de recompensa (475k) NO es el mejor** (14 intervenciones de seguridad,
 `max|ey|` 49 mm), mientras **550k gana** (5.32 vueltas, `|ey|` medio 8.6 mm, máx
 27 mm, **0 emergencias, 0 intervenciones de seguridad**, C-06 más bajo). Elegir por
 recompensa sola habría cogido el peor de los tres. El preflight D-43 del 550k (cage
-idéntico a margin022: `joint_pair_quadratic` + 1.60 + T3) **pasa** (7/7), y se lanzó
-su campaña de veredicto (`campaign_2d_ppo550k`, 27 escenarios × {enf, mon} = 1890
-runs; SC-PERT-03 excluido —meta-test cerrado en D-64, SR-009 sigue D-29-feasible),
+idéntico a margin022: `joint_pair_quadratic` + 1.60 + T3) **pasa** (7/7), lo que
+autorizó su campaña de veredicto (`campaign_2d_ppo550k`, 27 escenarios ×
+{enf, mon} = 1890 runs; SC-PERT-03 excluido —meta-test cerrado en D-64),
 para **contrastar el conductor competente frente al débil** (§8.9.8) y así separar
 los fallos de disponibilidad (deberían limpiarse) de los estructurales (deberían
 persistir). Nota adicional: el 1-D E-main **colapsa** tras su pico (823 → 114) mientras
 el 2-D a 0.22 se mantiene estable —plausiblemente porque el cap lento hace del
-objetivo de conducción una cuenca ancha e indulgente. Figura:
-`fig_ppo2d_training_curve.png`. **[RESULTADO PENDIENTE — F5: el veredicto de la
-campaña del 550k.]**
+objetivo de conducción una cuenca ancha e indulgente. La campaña **cerró el
+31.07.2026** (1890 runs, 0 errores) y confirma la lectura: los fallos de
+disponibilidad de margin022 se limpian y los estructurales persisten, con **0
+contactos de borde in-ODD** en enforcement — cap. 8 §8.9.9.
+
+<img src="../figures/auto/fig_ppo2d_training_curve.png" alt="Figura 7.10 — Curva de entrenamiento de la política 2-D de cámara (PPO, cap 0,22) frente al E-main 1-D y al SAC 2-D." width="640"/>
+
+*Figura 7.10 — Recompensa de entrenamiento de la política **2-D** de cámara
+(PPO, cap 0,22 m/s, seed 2024, `complex_b`) frente al E-main 1-D y al SAC 2-D.
+Pico 1755 @ 472k y **meseta alta estable** —frente al colapso post-pico del 1-D
+y al techo de ~200 del SAC 2-D—, con los checkpoints candidatos evaluados
+marcados. El eje de recompensa no es comparable 1:1 entre mapas de acción (el
+techo de episodio es 2048 pasos en 2-D frente a 1024 en 1-D); el juicio es el
+eval nominal, y por eso el pico de recompensa (475k) **no** es el checkpoint
+elegido (D-66).*
+
+<img src="../figures/auto/fig_ppo2d_action_distribution.png" alt="Figura 7.11 — Distribución de la acción cruda 2-D (dirección y acelerador), inicio vs fin del entrenamiento." width="720"/>
+
+*Figura 7.11 — Distribución de la **acción cruda 2-D** al inicio (primer 10 %
+de pasos) frente al final (último 10 %) del run `ppo_gz2d_cap022_1M_2024`, una
+panel por dimensión — la contraparte 2-D de la Figura 7.4, que sólo muestra
+dirección. **Dirección:** el bang-bang inicial se disuelve (36,9 % → 7,1 % de
+muestras saturadas a |steer| > 0,95; σ 0,73 → 0,42), la misma firma de
+suavizado del 1-D. **Acelerador:** evoluciona en sentido contrario, hacia la
+saturación (48,2 % → 89,6 % por encima de 0,95; media 0,99): la política aprende
+a pedir **el cap casi siempre**. El eval determinista del 550k lo confirma —
+`raw_throttle` medio 0,989 (mín. 0,655) y velocidad media 0,218 m/s contra un
+cap de 0,22. Hay modulación y está **bien localizada**: el 8,3 % de pasos con
+acelerador < 0,95 se concentra en curvatura alta (|κ| medio 0,635 frente a 0,413
+en el resto) y sube al 35,6 % en el ápice más cerrado del circuito. Pero su
+**magnitud es marginal** —el acelerador baja a 0,81 y la velocidad apenas cae de
+0,218 a 0,216 m/s—, de modo que la política llega a las curvas más cerradas
+prácticamente al cap. Lectura honesta de la autoridad longitudinal: la usa para
+*fijar* el régimen de velocidad, no para trazar un perfil, y la modulación en
+curva es direccionalmente correcta pero demasiado pequeña para cambiar la
+dinámica. Generada por
+`tools/plot_f3_figures.py --action-run … --action-stem fig_ppo2d_action_distribution`.*
 
 **Frontera de validez.** Estas corridas son trabajo **posterior E5**. Ninguna
-agotó el presupuesto nominal de 1M; las réplicas cubren N=3 en 1-D y N=2 en
-2-D, con brazos nominales todavía incompletos, y no se ejecutó una campaña de
-28 escenarios equivalente a GE4. Los dos probes SC-PERT con SAC se analizan en
-§8.9.6, pero son subconjuntos deliberados. En consecuencia, la receta que
-emerge —suelo de entropía + buffer dimensionado al horizonte— es una hipótesis
-de diseño respaldada por evidencia, no un nuevo veredicto de seguridad. El
-veredicto de récord continúa siendo GE4-V2 sobre el PPO 297k.
+agotó el presupuesto nominal de 1M y las réplicas de semilla cubren N=3 en 1-D y
+N=2 en 2-D, con brazos nominales todavía incompletos; los dos probes SC-PERT con
+SAC (§8.9.6) son subconjuntos deliberados. Sí existen ya **dos campañas de
+escenarios completas sobre la acción 2-D** —margin022 (§8.9.8) y la policy PPO
+de 550k (§8.9.9)—, de modo que la frontera ya no es "no hay campaña", sino que
+esa evidencia **no ha pasado por un gate**: sigue siendo posterior, y el
+veredicto de récord continúa siendo GE4-V2 sobre el PPO 297k mientras no se
+decida explícitamente re-apuntarlo. La receta de entrenamiento que emerge del
+estudio SAC —suelo de entropía + buffer dimensionado al horizonte— es, ella sí,
+una hipótesis de diseño respaldada por evidencia, no un veredicto de seguridad.
 
-**[FIGURA SUGERIDA — fig_7_10 (los datos ya existen en
+**[FIGURA SUGERIDA — fig_7_12 (los datos ya existen en
 `experiments/sim/training/sac_*`):** panel de dos mecanismos que hoy el texto
 describe pero no ilustra. (a) *Temperatura de entropía:* `ep_rew_mean` y entropía
 frente a pasos para `auto` (caída abrupta ~143k en 1-D / ciclos en 2-D) vs

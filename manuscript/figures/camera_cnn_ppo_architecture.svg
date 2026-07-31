@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="819" viewBox="0 0 1360 819" font-family="Lato, 'Open Sans', 'Noto Sans', sans-serif">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5F5E5A"/>
+    </marker>
+  </defs>
+  <rect width="1360" height="819" fill="#ffffff"/>
+
+  <!-- trunk title -->
+  <text x="675" y="152" text-anchor="middle" font-size="20" fill="#3B3B39">NatureCNN feature extractor (shared trunk)</text>
+
+  <!-- trunk boxes -->
+  <g>
+    <rect x="90"   y="168" width="211" height="109" rx="11" fill="#EEEDFE" stroke="#534AB7" stroke-width="2"/>
+    <text x="195.5" y="212" text-anchor="middle" font-size="20" font-weight="700" fill="#26215C">Camera obs</text>
+    <text x="195.5" y="244" text-anchor="middle" font-size="17" fill="#3E3A6B">84×84×4</text>
+
+    <rect x="330"  y="168" width="211" height="109" rx="11" fill="#EEEDFE" stroke="#534AB7" stroke-width="2"/>
+    <text x="435.5" y="212" text-anchor="middle" font-size="20" font-weight="700" fill="#26215C">Conv 8×8 s4</text>
+    <text x="435.5" y="244" text-anchor="middle" font-size="17" fill="#3E3A6B">32 → 20²</text>
+
+    <rect x="570"  y="168" width="211" height="109" rx="11" fill="#EEEDFE" stroke="#534AB7" stroke-width="2"/>
+    <text x="675.5" y="212" text-anchor="middle" font-size="20" font-weight="700" fill="#26215C">Conv 4×4 s2</text>
+    <text x="675.5" y="244" text-anchor="middle" font-size="17" fill="#3E3A6B">64 → 9²</text>
+
+    <rect x="810"  y="168" width="211" height="109" rx="11" fill="#EEEDFE" stroke="#534AB7" stroke-width="2"/>
+    <text x="915.5" y="212" text-anchor="middle" font-size="20" font-weight="700" fill="#26215C">Conv 3×3 s1</text>
+    <text x="915.5" y="244" text-anchor="middle" font-size="17" fill="#3E3A6B">64 → 7²</text>
+
+    <rect x="1050" y="168" width="211" height="109" rx="11" fill="#EEEDFE" stroke="#534AB7" stroke-width="2"/>
+    <text x="1155.5" y="212" text-anchor="middle" font-size="20" font-weight="700" fill="#26215C">Flatten·FC</text>
+    <text x="1155.5" y="244" text-anchor="middle" font-size="17" fill="#3E3A6B">→ 512 ReLU</text>
+  </g>
+
+  <!-- trunk arrows -->
+  <g stroke="#5F5E5A" stroke-width="2.6" fill="none" marker-end="url(#ah)">
+    <path d="M 301 222.5 L 322 222.5"/>
+    <path d="M 541 222.5 L 562 222.5"/>
+    <path d="M 781 222.5 L 802 222.5"/>
+    <path d="M 1021 222.5 L 1042 222.5"/>
+  </g>
+
+  <!-- under labels -->
+  <text x="195.5" y="316" text-anchor="middle" font-size="18" fill="#4A4A47">policy input (pixels)</text>
+  <text x="640" y="316" text-anchor="middle" font-size="18" fill="#4A4A47">SB3 VecTransposeImage → 4×84×84</text>
+
+  <!-- split from FC to the two heads -->
+  <g stroke="#5F5E5A" stroke-width="2.6" fill="none">
+    <path d="M 1159.5 277 L 1159.5 344" marker-end="url(#ah)"/>
+    <path d="M 1159.5 318 L 889.5 318 L 889.5 344" marker-end="url(#ah)"/>
+  </g>
+
+  <!-- heads -->
+  <rect x="771" y="349" width="237" height="98" rx="11" fill="#EEEDFE" stroke="#534AB7" stroke-width="2"/>
+  <text x="889.5" y="388" text-anchor="middle" font-size="20" font-weight="700" fill="#26215C">Policy head</text>
+  <text x="889.5" y="418" text-anchor="middle" font-size="17" fill="#3E3A6B">mean μ &amp; log σ per action dim</text>
+
+  <rect x="1041" y="349" width="237" height="98" rx="11" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="2"/>
+  <text x="1159.5" y="388" text-anchor="middle" font-size="20" font-weight="700" fill="#2C2C2A">Value head</text>
+  <text x="1159.5" y="418" text-anchor="middle" font-size="17" fill="#45443F">V(s) baseline</text>
+
+  <!-- policy head -> action -->
+  <path d="M 889.5 447 L 889.5 486" stroke="#5F5E5A" stroke-width="2.6" fill="none" marker-end="url(#ah)"/>
+
+  <!-- action box -->
+  <rect x="771" y="491" width="237" height="112" rx="11" fill="#FAECE7" stroke="#993C1D" stroke-width="2.4"/>
+  <text x="889.5" y="527" text-anchor="middle" font-size="20" font-weight="700" fill="#4A1B0C">Action: steer + throttle</text>
+  <text x="889.5" y="556" text-anchor="middle" font-size="17" fill="#6B2A12">[−1,1]² → cage</text>
+  <text x="889.5" y="583" text-anchor="middle" font-size="15" fill="#8A5A45">1-D E-main: steer only (D-49)</text>
+
+  <!-- value head -> training region -->
+  <path d="M 1159.5 447 L 1159.5 624" stroke="#5F5E5A" stroke-width="2.6" fill="none"
+        stroke-dasharray="9 7" marker-end="url(#ah)"/>
+  <text x="1177" y="505" font-size="18" fill="#4A4A47">V(s)</text>
+
+  <!-- training-only region -->
+  <rect x="90" y="628" width="1180" height="153" rx="12" fill="#F6F8F0" stroke="#5F5E5A"
+        stroke-width="2" stroke-dasharray="10 8"/>
+  <text x="132" y="681" font-size="20" font-weight="700" fill="#2C2C2A">Trained with PPO — clipped-surrogate actor–critic</text>
+  <text x="132" y="726" font-size="18" fill="#3B3B39" xml:space="preserve">advantage Â = r + γV(s′) − V(s);    reward r(ey, eψ, progress) is sim-only (docs/10)</text>
+  <text x="132" y="761" font-size="18" fill="#3B3B39">gradient step updates θ over the shared trunk + both heads — no reward at deployment</text>
+</svg>

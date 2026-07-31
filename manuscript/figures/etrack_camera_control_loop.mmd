@@ -1,7 +1,14 @@
 %% Camera control loop (track 'E') — end-to-end front-camera + safety cage.
-%% Canonical figure source. Render to PNG (Phase 6 / POLISH):
-%%   mmdc -i etrack_camera_control_loop.mmd -o etrack_camera_control_loop.png -b transparent -w 1600
-%% (mmdc = mermaid-cli, https://github.com/mermaid-js/mermaid-cli)
+%% Canonical STRUCTURE source (this file). The PNG shipped in the manuscript is
+%% the laid-out house-style version rendered from the sibling SVG — keep the two
+%% in sync when the structure changes:
+%%   etrack_camera_control_loop.svg  ->  etrack_camera_control_loop.png  (1360x1180)
+%%   chrome --headless --no-sandbox --hide-scrollbars --force-device-scale-factor=1 \
+%%          --window-size=1360,1180 --screenshot=etrack_camera_control_loop.png \
+%%          file://$PWD/etrack_camera_control_loop.svg
+%% A plain mermaid render also works for drafts (loses the legend and the layout):
+%%   grep -v '^%%' etrack_camera_control_loop.mmd > /tmp/f.mmd && mmdc -i /tmp/f.mmd -o out.png -b transparent -w 1600
+%% (mmdc = mermaid-cli; mermaid v11 rejects the leading %% comment block, hence the grep)
 %%
 %% One Gazebo camera frame is degraded once, then split to two PARALLEL
 %% consumers: the deterministic CV lane estimator that feeds the safety cage
@@ -9,6 +16,11 @@
 %% Both meet at the cage (coral); its safe action drives /cmd_vel and steps the
 %% sim, closing the loop. Ground truth is the sim-only reward/metrics oracle
 %% (not shown) — never an input to the policy or the cage (D-43).
+%%
+%% Action space: the raw action is 2-D (steer + throttle) on the current
+%% steer_throttle map (D-50/D-59; cap 0.22 m/s, D-66). The frozen 1-D E-main
+%% is the same loop with the throttle component held at fixed_speed (D-49);
+%% the cage contract is identical in both cases.
 
 flowchart TD
     GZ["Gazebo + Lane Cam<br/>IMX219 mirror &middot; 640&times;360"]
@@ -16,7 +28,7 @@ flowchart TD
     CV["CV lane estimator<br/>deterministic &middot; D-43"]
     DS["Downsample 84&times;84<br/>grayscale &middot; frame stack &times;4"]
     SUP["Perception supervisor<br/>SR-013 / SR-014 checks"]
-    CNN["CNN policy<br/>PPO &middot; CnnPolicy"]
+    CNN["CNN policy<br/>PPO &middot; CnnPolicy<br/>2-D action head"]
     CAGE["Safety cage .step()<br/>ordered 6-rule chain"]
     CMD["safe_action &rarr; /cmd_vel<br/>Twist: linear, angular.z"]
     STEP["Gazebo step (0.10 s)<br/>advance one control cycle"]
@@ -27,7 +39,7 @@ flowchart TD
     CV --> SUP
     DS --> CNN
     SUP -- "cage State" --> CAGE
-    CNN -- "steering" --> CAGE
+    CNN -- "raw_action: steer + throttle<br/>(1-D E-main: steer, fixed speed)" --> CAGE
     CAGE -- "safe_action, emergency" --> CMD
     CMD --> STEP
     STEP -- "next control cycle" --> GZ

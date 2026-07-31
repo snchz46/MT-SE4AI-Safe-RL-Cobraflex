@@ -85,7 +85,7 @@ docs/07 y el Anexo de trazabilidad). Verdictos sim congelados en G4.
 | SR-006 (suavidad de actuación) | CL-B | Satisfecho (D-39, métrica propia) | Satisfecho (out-of-band) | [TBD F5] |
 | SR-007 (validez de estado) | CL-A | Satisfecho | Satisfecho | [TBD F5] |
 | SR-008 (parada externa) | CL-A | Satisfecho | Satisfecho | [TBD F5] |
-| SR-009 (liveness) | CL-B | Abstención documentada → N/A-por-construcción en 1-D (D-49) | Ídem; brazo vivo M-S2 cubierto | [TBD — bien-puesto solo con acción 2-D] |
+| SR-009 (liveness) | CL-B | Abstención documentada → N/A-por-construcción en 1-D (D-49) | Ídem; brazo vivo M-S2 cubierto. Posterior: planteado y cerrado sobre la acción 2-D (D-63/D-64) | [TBD F5 — la plataforma física comanda throttle, luego el test es bien-puesto allí] |
 | SR-010 (composición de reglas) | CL-B | Abstención documentada (grid no inyectado) | **Hallazgo CL-B**: 30/85 breaches in-ODD bajo co-activación | [TBD F5] |
 | SR-011 (varianza de heading) | CL-B | Satisfecho | Satisfecho (métrica propia: σ_θ máx 3.0° < 5°) | [TBD F5] |
 | SR-012 (lane-keeping bajo cámara) | — | n/a (SR de track 'E') | Satisfecho (D-29 cerrado) | [TBD F5] |
@@ -128,8 +128,18 @@ Y declara con el mismo peso lo que **no** afirma:
    constraint-respecting; una es cage-dependent y una exhibe conflicto cage–CV.
    El veredicto de campaña se emitió sobre la semilla principal (D-36); la
    variabilidad está caracterizada, no eliminada.
+5. **Esta declaración es sobre la acción 1-D.** Los veredictos declarados
+   provienen de campañas con **acción 1-D** (dirección; velocidad fija). El brazo
+   posterior de acción 2-D —dirección + acelerador, cap 0,22 m/s— sí produjo el
+   cierre de SR-009 (cap. 8 §8.9.7) y dos campañas completas (§8.9.8–§8.9.9), y
+   su resultado es **concordante**: la invariante in-ODD se sostiene (0 contactos
+   de borde en enforcement) y el literal `NOT SATISFIED` se reconcilia por la
+   misma cláusula heredada. Pero esa evidencia es **posterior** y no se ha
+   sometido al proceso de gate, de modo que respalda la declaración sin
+   ampliarla; elevarla exigiría una decisión explícita.
 
-*(Re-enunciado con la columna física: [TBD F5].)*
+*(Re-enunciado con la columna física: [TBD F5]; incorporación formal del brazo
+2-D: decisión post-verdicto pendiente.)*
 
 ## 10.6 De la declaración a la tesis metodológica  [BORRADOR POST-G4]
 

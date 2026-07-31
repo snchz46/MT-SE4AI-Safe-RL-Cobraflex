@@ -31,6 +31,119 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [31.07.2026] — The 2-D PPO 550k verdict campaign closes; manuscript brought up to the 2-D state and the steering-only figures retired
+
+**Document(s) affected:** `experiments/sim/campaign_2d_ppo550k/` (`campaign_report.json`, `failure_mode_breakdown.json`, `figures/`, new `CAMPAIGN_2D_PPO550K_ANALYSIS.md`), `docs/DECISIONS.md` (D-66 outcome, D-67 condition resolved), `docs/11_camera_rl_training.md`, `tools/plot_campaign_contrast.py` (new), `tools/plot_f3_figures.py`, `manuscript/` chapters 7–12, `manuscript/figures/` (2 PNG + 2 new SVG sources + 3 `.mmd` + `DESIGN_PROMPTS.md`).
+**Phase:** E5 (posterior).
+**Gate context:** does **not** reopen G4; the GE4-V2 gate record stands.
+**Author:** Samuel Sanchez
+
+### Change
+
+**The campaign closed.** `campaign_2d_ppo550k` finished on 31.07.2026: **1890 runs, 0 errors**, 27
+`complex_b` scenarios × {enforcement, monitoring}, seed 2024, on the PPO 2-D camera policy at cap
+0.22 m/s, checkpoint 550k (D-66). Global **`NOT SATISFIED` (literal)**, blocked by **SR-002/003 only**
+and only through SC-EDGE-01's oval-legacy 2.0 s recovery clause — 0 emergencies there, max M-S1
+0.043 m ≪ 0.16 m, max heading 14.2° ≤ 25° — so the D-47 reconciliation applies verbatim, and SR-011
+with it (σ_θ 3.77° < 5°). 8/10 SR-CL-A Satisfied; SR-006 Satisfied out-of-band (840/840 enforcement
+runs within the C-06 bound vs 263/945 monitoring); SR-009 `insufficient_evidence` **by protocol**
+(SC-PERT-03 excluded, closed at D-64). **In-ODD road-edge contacts in enforcement: 0**; the bare
+policy commits 60 and the cage removes all of them with 406 controlled stops. Out-of-ODD: 56 vs
+GE4-V2's 117. Analysis written to `CAMPAIGN_2D_PPO550K_ANALYSIS.md`.
+
+**Manuscript brought up to the 2-D state.** Ch.7 §7.2.2 now specifies the action map as configuration
+(`steering` 1-D vs `steer_throttle` 2-D, cap 0.22, deadband 0.05) instead of declaring a 1-D action
+"common to both tracks"; §7.5.5 embeds the 2-D training curve (Fig. 7.10) and a new Fig. 7.11.
+Ch.8 gains **§8.9.9** with the verdict above, and the stale claims that the 2-D SC-PERT-03 test and
+2-D campaigns were "not yet run" were corrected in §8.5, §8.6, §8.9.3 and the internal checklists.
+Ch.9 §9.2.1 no longer calls the 2-D action an Isaac-only extension; Ch.10 SR-009 row and the bounded
+declaration updated; Ch.11 (61 decisions, checkpoint-selection evidence) and Ch.12 (T1/T6 rewritten,
+Hallazgo 5 extended, **Hallazgo 13** added) follow.
+
+**Steering-only figures retired.** `etrack_camera_control_loop` and `camera_cnn_ppo_architecture`
+showed the policy output as steering alone; both now show the 2-D action, in the `.mmd` structure
+source, the inline copies in `docs/11`, the design prompts, **and the shipped PNGs** — which were
+rebuilt from new versioned SVG sources rendered with headless Chrome, so those figures are
+re-derivable for the first time (command in each `.mmd` header). `sim2real_roadmap` (Fig. 8.2) lost
+its stale "SR-009 stall test … (not yet run)" and gained the Gazebo 2-D arm.
+
+**Tools.** New `tools/plot_campaign_contrast.py` (per-scenario pass fraction + the safety-invariant
+split, fully data-driven, works on any campaign dir). `tools/plot_f3_figures.py` renders one panel
+per action dimension and takes `--action-run/--action-stem`. Note recorded in the analysis doc:
+`plot_camera_comparison.py` is **not** reusable here — its annotations are hard-coded to the GE4-V1
+narrative and are false for this campaign.
+
+**New finding out of the SC-NOM-03 anomaly — Hallazgo 14 (Ch.12 §12.2.3, Ch.8 §8.9.9).** The
+*competent* policy is the only one that cannot hold the 300 s endurance run **without** the cage
+(17/25 `off_road`, against 25/25 completed by the weak margin022 and 24/25 by the 1-D E-main). The
+failures are geometric, not accumulative: two arc-lengths (s ≈ 9.4 m and 17.2 m, the two tightest
+apexes, the same pair that forced T3) and the jerk *falls* in the last 5 s (0.172 vs 0.411) — a
+sustained over-steer. Enforcement and monitoring differ only in C-06: same raw command
+(|steer| max 1.00), applied steer 0.84 vs 1.00, per-cycle Δ 0.15 vs 2.0, |ey| max **36 mm vs 145 mm**.
+Across the 25 enforcement runs the intervention ledger is `{C-06: 58124}` with **zero**
+C-01/02/03/05: in those apexes the lane is held by the **rate limiter**, formally a CL-B *smoothness*
+rule. The policy's raw command is ~2× jerkier than its predecessors' (0.33–0.41 vs 0.16–0.19) and
+saturates C-06 in 77.5 % of steps; speed does not explain it (+7.5 % over the E-main, which survives).
+Consequences recorded: "the cage is latent in-ODD" is true of the **safety rules**, not of the cage
+as a whole; the coupling to a specific `delta_max_steering_per_cycle` is a **physical-transfer risk**
+now written into T2; and a 300-step nominal eval passes 50/50 in monitoring, so it cannot detect the
+property. The dependence is measured, its origin (co-adaptation to the limiter in the training loop)
+is inferred — the ablation that would prove it has not been run.
+
+**Correction.** The Fig. 7.11 caption first said the 2-D policy "brakes in curves". Measurement
+refines that: throttle modulation is correctly localised (35.6 % of steps below 0.95 at the tightest
+apex vs 8.3 % overall) but marginal in magnitude — throttle floor 0.81, speed 0.218 → 0.216 m/s — so
+the policy reaches the tightest curves essentially at the cap. Caption fixed.
+
+**D-68 — the heading-recovery metric was audited and corrected.** SC-EDGE-01's
+`time_to_recovery_heading` is the single cause of the literal `NOT SATISFIED` in both camera
+campaigns, so it was checked rather than excused. It had a real defect: the recovery band was a
+*fixed* 0.05 rad (2.86°) calibrated on the F-track PD controller on the oval, and since heading error
+ripples about zero with a controller- and track-dependent amplitude (p90 3.0–4.8°), requiring five
+consecutive in-band samples tests **ripple**, not recovery — applied to **unperturbed** runs it fails
+outright (50/50 oval SC-NOM-02 "never recover", median 12.2 s). The band is now the run's own
+steady-state envelope, `clamp(p95(|epsi|) over the last 50 %, floor 0.05 rad, cap σ_θ_max = 5°)`
+(`scenario_metrics.heading_recovery_band_rad`); v1 stays selectable and reproduces the historical
+records bit-exactly (**120/120 runs verified**). The rule was pre-registered and applied **once**,
+with its acceptance test fixed in advance (false positives on unperturbed scenarios must collapse —
+they do, 0/50 → 50/50).
+
+**No verdict changes, and the correction favours the arm we do not present.** Re-scored
+(`tools/rescore_recovery_clause.py` → `campaign_2d_ppo550k/rescore_recovery_clause_d68.json`):
+SC-EDGE-01 goes 17/30 → **28/30 (pass)** on the frozen 1-D GE4-V2 arm but only 8/30 → **15/30 (still
+fail)** on the 2-D PPO 550k. Historical campaigns are **not** re-scored (D-30/D-47 precedent; G4
+untouched). The useful consequence: the 550k's SC-EDGE-01 failure is **not** a measurement artefact —
+its recovery genuinely rings (13.6° → 1.4° → 5.9°, settling ≈2.5 s) on a **straight** (reference
+curvature 0.00), the closed-loop signature of Hallazgo 14's bang-bang command stream under C-06 slew
+limiting. Still a performance property, not a safety one. The 2.0 s **bound** is deliberately left
+alone: this fixes a measurement, not a pass bar. Propagated to `docs/05` (SC-EDGE-01 + the recovery
+note), Ch.8 §8.9.9, Ch.12 T7(a) and the campaign analysis. Test baseline 602 → **608**.
+
+### Rationale
+
+The campaign existed to separate "limit of the 2-D action" from "limit of that policy" (D-65 ran on a
+weak, decayed SAC checkpoint). It answered in both directions: availability failures **cleared**
+(SC-NOM-03 20/25 → 25/25 with zero emergencies; SC-PERT-05 30/40 → 40/40; all 12 SC-PERT enforcement
+verdicts True) while the **structural** residuals persisted — the inherited SC-EDGE-01 clause and
+SR-010 co-activation (attenuated 30/85 → 16/85 in-ODD M-S1 breaches, unchanged in kind). The
+manuscript edits follow from the same evidence; the figure work is the part a reader sees first.
+
+### Impact
+
+D-67's trunk decision was recorded **conditional** on this verdict; the condition is now met and the
+entry says so. Two deliberate follow-ups are unblocked but **not** taken here: re-pointing the
+`verdict of record` in `docs/02`–`docs/08`, and restructuring Chapter 8 so the camera track leads.
+The frozen 1-D verdict (GE4-V2) and the G4 record are untouched. The 29.07 concurrency incident
+remains documented: 222 quarantined runs, re-executed under a `flock`-guarded serial driver.
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED, 0 warnings**. Campaign roll-up: 1890 runs,
+0 errors. `tools/campaign_e_failure_modes.py` and `tools/sr006_smoothness.py` re-run against this
+campaign; both figures regenerated from the campaign's own artefacts.
+
+---
+
 ## [30.07.2026] — Repo audit + D-67: the 2-D PPO policy becomes the research trunk; earlier arms reclassified as development history
 
 **Document(s) affected:** `docs/DECISIONS.md` (**D-67**), `docs/16_defense_compendium.md` (new §8, old §8 → §9, v1.2), `CLAUDE.md` (trunk banner + phase-status rewrite + docs/17 in the index), `docs/15_implementation_inventory.md` (test baseline, §4.5, `calibrate_d43_c02`), `docs/11_camera_rl_training.md` (§8 path note), `.gitignore`. **`manuscript/` deliberately untouched.**

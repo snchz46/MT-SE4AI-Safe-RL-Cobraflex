@@ -54,7 +54,7 @@ flowchart TD
     CV["CV lane estimator<br/>deterministic &middot; D-43"]
     DS["Downsample 84&times;84<br/>grayscale &middot; frame stack &times;4"]
     SUP["Perception supervisor<br/>SR-013 / SR-014 checks"]
-    CNN["CNN policy<br/>PPO &middot; CnnPolicy"]
+    CNN["CNN policy<br/>PPO &middot; CnnPolicy<br/>2-D action head"]
     CAGE["Safety cage .step()<br/>ordered 6-rule chain"]
     CMD["safe_action &rarr; /cmd_vel<br/>Twist: linear, angular.z"]
     STEP["Gazebo step (0.10 s)<br/>advance one control cycle"]
@@ -65,7 +65,7 @@ flowchart TD
     CV --> SUP
     DS --> CNN
     SUP -- "cage State" --> CAGE
-    CNN -- "steering" --> CAGE
+    CNN -- "raw_action: steer + throttle<br/>(1-D E-main: steer, fixed speed)" --> CAGE
     CAGE -- "safe_action, emergency" --> CMD
     CMD --> STEP
     STEP -- "next control cycle" --> GZ
@@ -257,9 +257,9 @@ flowchart LR
         C1 --> C2 --> C3 --> FC
     end
     OBS --> C1
-    FC --> PH["Policy head<br/>mean &mu; &amp; log &sigma;"]
+    FC --> PH["Policy head<br/>mean &mu; &amp; log &sigma;<br/>per action dimension"]
     FC --> VH["Value head<br/>V(s) baseline"]
-    PH --> ACT["Action: steer<br/>[&minus;1,1] &rarr; cage"]
+    PH --> ACT["Action &rarr; cage<br/>steer &middot; throttle &isin; [&minus;1,1]&sup2;<br/>(1-D E-main: steer only)"]
     REW["Reward (sim oracle)<br/>ey, epsi, progress &middot; train only"]
     PPO["PPO clipped-surrogate update<br/>advantage = r + &gamma;V(s&prime;) &minus; V(s)"]
     VH -. "V(s)" .-> PPO
@@ -274,7 +274,7 @@ flowchart LR
     class VH,REW,PPO sim;
 ```
 
-*Figure — the camera policy network (source: [`manuscript/figures/camera_cnn_ppo_architecture.mmd`](../manuscript/figures/camera_cnn_ppo_architecture.mmd)). The conv dims are for the 84×84 input; the policy head's steering action is the only thing actuated, the value head and reward exist for PPO training alone.*
+*Figure — the camera policy network (source: [`manuscript/figures/camera_cnn_ppo_architecture.mmd`](../manuscript/figures/camera_cnn_ppo_architecture.mmd)). The conv dims are for the 84×84 input; the policy head's action is the only thing actuated — 2-D `steer_throttle` on the current action map (D-50/D-59, cap 0.22 m/s per D-66), steer-only on the frozen 1-D E-main (D-49) — while the value head and reward exist for PPO training alone.*
 
 Three wrapper details, each load-bearing:
 

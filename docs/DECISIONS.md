@@ -3048,7 +3048,7 @@ availability + one CL-B (SR-010) + the documented stall construct (SR-009). Cite
 | Field | Value |
 | --- | --- |
 | Section | `experiments/sim/training/ppo_gz2d_cap022_1M_2024/`; Ch.7 §7.5.5; `manuscript/figures/auto/fig_ppo2d_training_curve.png` |
-| Status | CONFIRMED — best deterministic checkpoint selected (550k); its D-43 preflight PASS; verdict campaign launched (27.07.2026) |
+| Status | CONFIRMED — best deterministic checkpoint selected (550k); its D-43 preflight PASS; **verdict campaign closed 31.07.2026** (1890 runs, 0 errors; `CAMPAIGN_2D_PPO550K_ANALYSIS.md`) |
 | Date | 27.07.2026 |
 
 **Context.** The margin022 2-D verdict (D-65) ran on a materially weak policy: SAC, 75k, and — worse
@@ -3082,9 +3082,22 @@ excluded — the stall meta-test is policy-independent and closed at D-64; SR-00
 policy-quality (they should clear) or structural (perception/co-activation, should persist). Also of
 note: the 1-D E-main *collapses* after its peak (exploration collapse, 823 → 114) while the 2-D @0.22
 stays stable — plausibly because the slow cap makes the driving objective a wide, forgiving basin.
-Posterior E5; frozen 1-D verdict untouched. `[RESULTADO PENDIENTE — F5: the 550k campaign verdict.]`
+Posterior E5; frozen 1-D verdict untouched.
+
+**Outcome (31.07.2026) — the hypothesis held in both directions.** 1890 runs, 0 errors. Global
+`NOT SATISFIED` **literal**, blocked by SR-002/003 **only**, and only through SC-EDGE-01's inherited
+2.0 s recovery clause (0 emergencies there, max M-S1 0.043 m ≪ 0.16, max heading 14.2° ≤ 25°) — the
+D-47 reconciliation applies verbatim, and SR-011 with it (σ_θ 3.77° < 5°). 8/10 SR-CL-A Satisfied;
+SR-009 `insufficient_evidence` by protocol (SC-PERT-03 excluded). **In-ODD road-edge contacts in
+enforcement: 0** (the bare policy commits 60, all removed, with 406 controlled stops vs margin022's
+433). Availability failures **cleared** — SC-NOM-03 20/25 → 25/25 with zero emergencies,
+SC-PERT-05 30/40 → 40/40, all 12 SC-PERT enforcement verdicts True — while the **structural**
+residuals persisted: SC-EDGE-01's clause and SC-EDGE-05 co-activation (SR-010, attenuated 30/85 →
+16/85 in-ODD M-S1 breaches but unchanged in kind). Out-of-ODD contacts 56 vs GE4-V2's 117. Full
+analysis: `experiments/sim/campaign_2d_ppo550k/CAMPAIGN_2D_PPO550K_ANALYSIS.md`; write-up Ch.8 §8.9.9.
+
 Cites D-60 (algorithm switch), D-59 (the 0.22 cap / speed-envelope), D-62 (T3 preflight), D-65
-(the weak-policy campaign this contrasts).
+(the weak-policy campaign this contrasts), D-47 (the reconciliation applied).
 
 ---
 
@@ -3093,7 +3106,7 @@ Cites D-60 (algorithm switch), D-59 (the 0.22 cap / speed-envelope), D-62 (T3 pr
 | Field | Value |
 | --- | --- |
 | Section | Repo-wide scoping decision. Affects `README.md`, `CLAUDE.md`, `docs/16` §8; **deliberately NOT applied to `manuscript/`** |
-| Status | ACCEPTED as a scoping decision — **conditional on the `campaign_2d_ppo550k` verdict**, which was still executing when this entry was written (30.07.2026, 1435/1890 cells) |
+| Status | ACCEPTED as a scoping decision. The condition it was written under **has since been met**: the `campaign_2d_ppo550k` verdict closed 31.07.2026 and is not materially worse than GE4-V2 (see the risk note at the end of this entry) |
 | Date | 30.07.2026 |
 
 **Context.** The repository accumulated four successive research arms, each of which was at some point
@@ -3145,8 +3158,87 @@ once the 550k verdict is in hand; it is explicitly *not* attempted here. Same fo
 running. If the 550k campaign comes back materially worse than the 1-D E-main — for instance if the
 in-ODD safety guarantee does not hold, where GE4-V2's did — the trunk claim has to be revisited rather
 than defended. The honest version of the defense narrative depends on the verdict, not on this entry.
-`[RESULTADO PENDIENTE — the campaign_2d_ppo550k verdict.]`
+
+**Resolved (31.07.2026).** The campaign closed and the risk did not materialise: in-ODD road-edge
+contacts in enforcement are **0**, as in GE4-V2; the literal `NOT SATISFIED` reconciles through the
+*same* inherited SC-EDGE-01 clause under the same D-47 precedent; availability is *better* than the
+2-D predecessor (all 12 SC-PERT enforcement verdicts True) and the only structural residual, SR-010
+co-activation, is attenuated rather than worsened. The trunk claim stands on the verdict, not on this
+entry. Two follow-ups this now unblocks, both still deliberate edits rather than automatic ones:
+re-pointing the `verdict of record` in `docs/02`–`docs/08`, and restructuring Chapter 8. Evidence:
+`experiments/sim/campaign_2d_ppo550k/CAMPAIGN_2D_PPO550K_ANALYSIS.md` (D-66).
 
 Cites D-66 (the policy and its checkpoint selection), D-65 (the weak 2-D predecessor), D-49 (the
 frozen 1-D action), D-47 (the verdict-reconciliation precedent this arm will need again), D-43
 (the perception supervisor being verified), D-29/D-30 (the verdict spine).
+
+---
+
+### D-68 — The heading-recovery metric measured ripple, not recovery: band referenced to the run's own envelope
+
+| Field | Value |
+| --- | --- |
+| Section | `src/cobraflex_rl/cobraflex_rl/scenario_metrics.py`; SC-EDGE-01 (`scenarios*/edge/sc_edge_01.yaml`); `tools/rescore_recovery_clause.py`; Ch.8 §8.9.9 |
+| Status | ACCEPTED — metric corrected, applies to **future** scoring; historical campaign records are not re-scored |
+| Date | 31.07.2026 |
+
+**Context.** `time_to_recovery_heading` (SC-EDGE-01's clause operand) returned the first time
+`|epsi|` drops below a **fixed** 0.05 rad (2.86°) band *and holds it for 0.5 s*. That band was
+calibrated on the F-track PD controller on the oval, where every run recovers in 0.6–0.7 s with a
+3× margin, and it was never re-derived when the camera track moved to `complex_b`. The clause is the
+sole cause of the literal `NOT SATISFIED` in both camera campaigns (GE4-V2 and the 2-D PPO 550k), so
+it is worth knowing whether it measures what it claims.
+
+**The defect, demonstrated on runs with nothing to recover from.** Heading error ripples about zero
+with a controller- and track-dependent amplitude (median `|epsi|` 1.2–1.4°, but p90 3.0–4.8°).
+Requiring *five consecutive* samples under a fixed 2.86° therefore tests **ripple amplitude**, not
+recovery. Applied to **unperturbed** scenarios the clause fails outright: on the oval's SC-NOM-02
+(sustained curve, no perturbation) **50/50 F-track runs "never recover"**, median 12.2 s. On
+`complex_b` SC-NOM-02 it false-positives on 7/50 (2-D 550k) and 3/50 (1-D E-main). A metric that
+reports "never recovered" for a run that was never perturbed is measuring the wrong thing.
+
+**Decision.** The recovery band becomes the run's **own steady-state envelope**:
+`band = clamp(p95(|epsi|) over the run's last 50 %, floor = 0.05 rad, cap = 0.0873 rad)`.
+The floor is the v1 bar, so v2 can never be *more permissive* on a well-damped run; the cap is
+SR-011's `σ_θ_max` = 5°, so a policy cannot buy itself a wider band by oscillating more — past that
+bar the run is an SR-011 finding, which is where such behaviour belongs. Physically: a perturbation
+is recovered when the heading is back inside the envelope the vehicle occupies in normal operation.
+v1 remains selectable (`ripple_reference=False`, or an explicit `threshold_rad`) so the historical
+records stay bit-exactly reproducible — verified: **120/120 runs** re-derive their stored value.
+
+**Pre-registration and the anti-gaming guard.** The rule above was written down and applied **once**,
+before looking at what it did to any verdict, and it was **not** iterated against the failing runs.
+Its acceptance test was fixed in advance: the false-positive rate on unperturbed scenarios must
+collapse. It did — oval SC-NOM-02 goes 0/50 → **50/50**.
+
+**Consequence — and this is the point worth stating plainly: no current verdict changes.**
+Re-scored under v2 (`tools/rescore_recovery_clause.py`, report in
+`experiments/sim/campaign_2d_ppo550k/rescore_recovery_clause_d68.json`):
+
+| campaign | SC-EDGE-01 v1 | SC-EDGE-01 v2 |
+| --- | --- | --- |
+| F4 (oval, state) | 30/30 PASS | 30/30 PASS |
+| GE4-V2 (1-D camera) | 17/30 fail | **28/30 PASS** |
+| margin022 (2-D, weak) | 30/30 PASS | 30/30 PASS |
+| **2-D PPO 550k** | 8/30 fail | **15/30 fail** |
+
+The correction helps the **frozen historical arm** (GE4-V2) more than the current one, and the 2-D
+PPO 550k still fails the clause under the corrected metric. Two things follow. First, the fix cannot
+be read as tuning the criterion to pass the arm the thesis presents — it does not. Second, and more
+useful: the 550k's SC-EDGE-01 failure is **not a measurement artefact**. Its recovery genuinely
+*rings* — the trace shows 13.6° → 1.4° → back out to 5.9° → settling only at ~2.5 s, on a **straight**
+(reference curvature 0.00 along the whole stretch), which is the closed-loop signature of the
+bang-bang command stream and C-06 slew limiting documented in Hallazgo 14. It remains a
+**performance**, not a safety, property: M-P4 max 14.2° ≤ 25°, M-S1 max 0.043 m ≪ 0.16 m, σ_θ 3.77° <
+5°. The D-47 reconciliation therefore still carries the verdict, now on firmer ground than "the
+clause is inherited".
+
+**What is deliberately NOT done.** GE4-V2 and F4 are **not** re-scored: verdicts stand as scored with
+the metric in force when the gate closed (D-30/D-47 precedent), and G4's record is untouched. The
+re-score report is an annotation, not a replacement. Whether SC-EDGE-01's 2.0 s **bound** should also
+be re-derived for the actuator regime (C-06 caps steering slew at 0.15/cycle, so an out-and-back
+correction plus the 0.5 s hold has a floor near 1.2–1.6 s) is a **separate** decision, deliberately
+left open here: this entry fixes a measurement defect, not a pass bar.
+
+Cites D-47 (reconciliation precedent), D-30 (aggregation semantics), D-39 (out-of-band scoring of a
+metric the per-scenario aggregation mis-attributes), D-66 (the campaign that surfaced it).

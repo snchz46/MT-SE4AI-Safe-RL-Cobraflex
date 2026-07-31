@@ -73,6 +73,19 @@ budgets — e.g. SC-EDGE-01 heading recovery ≤ 2 s = 0.4 m, SC-EDGE-02 lateral
 recovery ≤ 3 s = 0.6 m — complete well within the 1.5 m straight, before the
 curve begins, so the single-rule isolation each scenario intends is preserved.
 
+> **How "recovered" is measured (v2, D-68).** The heading-recovery operand is not
+> a fixed angle band. Until 31.07.2026 it was: `|epsi|` below **0.05 rad (2.86°)**
+> held for 0.5 s — a bar calibrated on the F-track PD controller on this oval,
+> which does not transfer. Heading error ripples about zero with a controller- and
+> track-dependent amplitude (p90 3.0–4.8°), so a fixed band turns the sustained
+> window into a test of *ripple*: applied to **unperturbed** runs it fails
+> outright (50/50 oval SC-NOM-02 "never recover"). The band is now the run's own
+> steady-state envelope — `clamp(p95(|epsi|) over the last 50 % of the run,
+> floor 0.05 rad, cap σ_θ_max = 5°)` — floored so it is never more permissive than
+> before and capped so oscillation cannot buy a wider band. The **2.0 s bound is
+> unchanged**; only the measurement is corrected, and no historical verdict is
+> re-scored (D-68).
+
 The dedicated **`straight_road.world`** (a pure straight) is reserved for the
 physical subset (Phase 5), where a straight is simpler to set up than an oval.
 
@@ -170,7 +183,7 @@ physical subset (Phase 5), where a straight is simpler to set up than an oval.
 
 **Metrics primary.** M-I1 (especially for C-02, C-03), M-S3, M-P7 (heading variability — verifies SR-011 anti-oscillation), time-to-recovery (heading < 3 deg).
 
-**Pass criterion per run.** No emergency stop; heading recovered to < 3 deg within 2 s; no lane exit; M-P7 95th percentile below `σ_θ_max` after the initial transient (first 0.5 s excluded from the M-P7 verdict to admit the legitimate corrective response).
+**Pass criterion per run.** No emergency stop; heading recovered **into the run's steady-state envelope** (v2 band, D-68 — see §"How 'recovered' is measured"; the v1 formulation was "< 3 deg", i.e. the fixed 0.05 rad band) and held 0.5 s, within 2 s; no lane exit; M-P7 95th percentile below `σ_θ_max` after the initial transient (first 0.5 s excluded from the M-P7 verdict to admit the legitimate corrective response).
 
 **Pass criterion per scenario.** ≥ 90% of runs pass.
 

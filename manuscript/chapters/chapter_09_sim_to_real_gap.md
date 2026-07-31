@@ -2,9 +2,10 @@
 
 Convención: las secciones marcadas [BORRADOR POST-G4] contienen prosa provisional
 redactada tras el cierre de G4 (02.07.2026); la evidencia posterior incorporada
-se extiende hasta el 22.07.2026 (estudio de algoritmos SAC en Gazebo §7.5.5, la
-calibración D-43→C-02 del readout de rumbo en Gazebo, y el parent 2-D margin022
-en entrenamiento). Las secciones marcadas [ESQUELETO — F5] son encabezados a
+se extiende hasta el 31.07.2026 (estudio de algoritmos SAC en Gazebo §7.5.5, la
+calibración D-43→C-02 del readout de rumbo en Gazebo, y el brazo de acción 2-D
+de Gazebo hasta la campaña de la policy PPO 550k, cerrada el 31.07.2026 — cap. 8
+§8.9.7–§8.9.9). Las secciones marcadas [ESQUELETO — F5] son encabezados a
 poblar cuando exista la evidencia correspondiente (campaña Isaac cerrada /
 corridas físicas de Fase 5).
 Este capítulo materializa la adaptación **A5** del V-Model (L1' reformulada como
@@ -53,12 +54,18 @@ El puente comprende: la importación URDF→USD del vehículo
 docs/14, y un **entrenador RL in-process** (D-44: el bucle de RL corre dentro del
 proceso de Isaac, sin el overhead del puente ROS2 durante el entrenamiento), con
 randomización de dominio y evaluador nominal integrado. Sobre él, dos extensiones
-que Gazebo no tiene: la **acción 2-D** (dirección + throttle, D-50), que da a la
-policy autoridad longitudinal real hasta `max_speed = 0.5 m/s = ODD-1.V_MAX` y
-hace **bien-puesto el test de stall de SR-009** (M-P6 deja de ser ≡ 0), y el
-**muestreo multi-circuito por episodio** sobre el trío CV-safe
-`complex_b`/`complex_d`/`complex_e` (D-50/D-51, con `complex_e` re-cortado en
-sentido horario para equilibrar la lateralidad del steering). Todo el stack fue
+que Gazebo no tenía entonces: la **acción 2-D** (dirección + throttle, D-50), que
+da a la policy autoridad longitudinal real hasta
+`max_speed = 0.5 m/s = ODD-1.V_MAX` y hace **bien-puesto el test de stall de
+SR-009** (M-P6 deja de ser ≡ 0), y el **muestreo multi-circuito por episodio**
+sobre el trío CV-safe `complex_b`/`complex_d`/`complex_e` (D-50/D-51, con
+`complex_e` re-cortado en sentido horario para equilibrar la lateralidad del
+steering). De las dos, **la acción 2-D volvió a Gazebo** —el mismo mapa
+`steer_throttle`, pero con cap 0,22 m/s tras la revisión D-59 de la envolvente de
+velocidad (cap. 7 §7.2.2)—, y es allí donde el test de stall de SR-009 se ejecutó
+y se cerró (cap. 8 §8.9.7, D-63/D-64) y donde corre la campaña de veredicto 2-D
+(§8.9.8–§8.9.9). El muestreo multi-circuito sigue siendo exclusivo de Isaac.
+Todo el stack fue
 validado en vivo extremo-a-extremo en el host Ubuntu + Isaac (importación, escena
 de tres circuitos, aislamiento de la Lane Cam, piloto 2-D de 20k — CHANGELOG
 03.07.2026).
@@ -111,9 +118,11 @@ ilustración compacta de "la discrepancia es medible y calibrable".]**
 
 *(A poblar cuando exista un run 2-D de Isaac con eval nominal aceptable y, en su
 caso, una campaña de escenarios. Contenido previsto: curva de entrenamiento del
-run final, eval nominal multi-modo, primera verificación bien-puesta de SR-009
-—stall arm— y activación real del arbitraje C-04/C-06 a 0.5 m/s; contraste de
-métricas contra el peldaño Gazebo.)*
+run final, eval nominal multi-modo y activación real del arbitraje C-04/C-06 a
+0.5 m/s; contraste de métricas contra el peldaño Gazebo. Nota: la verificación
+bien-puesta de SR-009 ya **no** depende de este peldaño —se cerró sobre la acción
+2-D de Gazebo (cap. 8 §8.9.7, D-63/D-64)—, de modo que Isaac aportaría aquí una
+réplica de backend, no la primera medición.)*
 
 - Entrenamiento final y selección de checkpoint — [TBD]
 - Eval nominal (enforcement + monitoring) — [TBD]

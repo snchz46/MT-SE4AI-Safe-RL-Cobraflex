@@ -32,9 +32,15 @@ sobre el E-main de 297k, veredicto global `NOT SATISFIED` *literal*, reconciliad
 en criterio propio, D-47)—, con la cadena de trazabilidad completa (12 hazards →
 14 Safety Requirements → 6 reglas de cage → 28 escenarios → 19 métricas →
 evidencia loggeada → veredicto) verificada sin huérfanos por `check_traceability.py`
-en cada gate. El despliegue físico y la caracterización del gap sim-to-real
-(Capítulo 9) no han comenzado; el puente de fidelidad Isaac Sim (D-44) está en
-curso como trabajo posterior que no reabre G4.
+en cada gate. Ambos veredictos son de **acción 1-D** (dirección; velocidad fija):
+el brazo posterior de **acción 2-D** —dirección + acelerador, cap 0,22 m/s— ya
+cerró la verificación de SR-009 (cap. 8 §8.9.7) y **dos campañas completas**: la
+de margin022 (§8.9.8) y la de la policy competente de 550k (§8.9.9, 1890 runs,
+cerrada el 31.07.2026), cuyo resultado concuerda con los veredictos congelados
+—invariante in-ODD intacta, literal reconciliable por la misma cláusula
+heredada— sin entrar en la cadena de gate. El despliegue físico y la
+caracterización del gap sim-to-real (Capítulo 9) no han comenzado; el puente de
+fidelidad Isaac Sim (D-44) está en curso como trabajo posterior que no reabre G4.
 
 ---
 
@@ -113,10 +119,22 @@ hallazgo empírico central de la tesis, medido en tres planos:
   SC-PERT-04/09/11/12. El mecanismo operativo cambia además de naturaleza: de
   corrección de acción (F-track) a **parada controlada por salud del estimador**
   (SR-013 / Trigger 8).
+- *Con autoridad longitudinal (acción 2-D):* el mismo flip se replica sobre otro
+  espacio de acción y sobre dos policies de calidad muy distinta. La policy
+  desnuda comete **98** contactos de borde in-ODD en la campaña margin022 y
+  **60** en la de la 550k; en enforcement, **ambas cifras caen a cero**
+  (§8.9.8–§8.9.9). Que el número de contactos evitados baje al mejorar el
+  conductor —y que la cuenta con la cage siga siendo 0 en los dos casos— es
+  justamente la forma que debe tener una garantía: su valor escala con la
+  necesidad, su resultado no.
 
 La formulación que condensa el resultado: la cage es una **garantía cuyo valor
 es nulo cuando no hace falta y decisivo cuando hace falta**, y la comparación
 enforcement-vs-monitoring es el instrumento que permite afirmarlo causalmente.
+Con una matización que el Hallazgo 14 mide y que conviene no perder: "latente"
+se predica de las reglas de **seguridad** (C-01/02/03/05), no de la cage entera
+—C-06 puede estar trabajando aguas arriba y ser lo que hace posible esa
+latencia—.
 
 **Hallazgo 6 — El coste de la percepción por cámara es medible, localizado y
 tiene un modo de fallo residual caracterizado (H-12).** El estimador CV
@@ -149,7 +167,11 @@ stall de SR-009 resultó **N/A-por-construcción** para el espacio de acción
 solo-dirección que ambos tracks comparten (M-P6 ≡ 0; la inyección de reward es
 inerte sobre throttle fijo, D-49): un requisito de liveness longitudinal no es
 verificable en una plataforma sin autoridad longitudinal. Ambos son resultados
-sobre los *límites del método*, tan citables como los veredictos.
+sobre los *límites del método*, tan citables como los veredictos — y el segundo
+tiene su confirmación por la vía positiva: al dotar de acelerador a la policy
+(acción 2-D), el mismo requisito **pasa a ser verificable y se verifica**
+(cap. 8 §8.9.7, D-63/D-64). El límite estaba en el espacio de acción, no en el
+método.
 
 **Hallazgo 9 — El conservadurismo fail-safe cuesta disponibilidad, y ese coste
 delimita el borde del ODD.** Bajo ruido de observación severo (SC-PERT-01,
@@ -209,6 +231,63 @@ antes de que ningún entrenamiento progresara. Un checkpoint de Gazebo no
 transfiere a Isaac; tampoco, se comprobó, transfieren silenciosamente las
 calibraciones. Esto anticipa la forma que tendrá el gap Gazebo→físico y valida
 la adaptación A5 (caracterizar el gap, no asumirlo).
+
+**Hallazgo 13 — El checkpoint del pico de recompensa puede ser el peor de los
+candidatos; la selección tiene que ser conductual.** Es la forma más nítida del
+Hallazgo 4, y aparece justo donde importa, al elegir el artefacto que se lleva a
+campaña. Sobre el PPO 2-D de cámara con cap 0,22 (D-66) se evaluaron tres
+checkpoints con el mismo protocolo nominal determinista: el del **pico de
+recompensa (475k)** acumuló **14 intervenciones de seguridad** y `max |ey|`
+49 mm, mientras el de **550k** condujo mejor con **0 emergencias, 0
+intervenciones de seguridad**, `|ey|` medio 8,6 mm y el menor uso de C-06.
+Seleccionar por la curva habría entregado a la campaña el peor de los tres. El
+criterio que sí discrimina combina conducción (vueltas, `|ey|`) con **porcentaje
+y tipo de intervención de la cage**: durante todo ese entrenamiento la cage está
+**latente en seguridad** (C-01/02/03/05 = 0), de modo que la señal útil no es
+"cuánta recompensa" sino "qué reglas dispara y cuándo". La acción 2-D añade su
+propio matiz de honestidad: su recompensa total, ~2× la del 1-D, procede sobre
+todo del techo de episodio (2048 vs 1024 pasos) y de la mayor supervivencia, no
+de conducir "2× mejor" —una razón más para no comparar curvas entre
+configuraciones (cap. 7 §7.5.5).
+
+**Hallazgo 14 — La cage no sólo filtra a la policy: la *moldea*. Y lo que la
+mantiene en el carril puede ser la regla que la taxonomía llama "de confort".**
+Es la matización del Hallazgo 5, y salió de una inversión que las tablas de
+veredicto no muestran: en el run de resistencia de 300 s (SC-NOM-03), la policy
+2-D **competente** es la única que **no** aguanta sin cage —17/25 terminan en
+`off_road`— mientras la débil (margin022) lo completa 25/25 y el E-main 1-D
+24/25. Cuatro medidas acotan la causa. **(i)** El fallo es *geométrico*, no
+acumulativo: los 17 abandonos caen en dos arcos, s ≈ 9,4 m y s ≈ 17,2 m —los dos
+ápices más cerrados del circuito— y en los últimos 5 s el jerk **baja** (0,172
+frente a 0,411): sobre-viraje sostenido, no oscilación. **(ii)** Entre
+enforcement y monitoring sólo cambia C-06: mismo comando crudo (|steer| máx
+1,00), steering aplicado 0,84 frente a 1,00, Δ por ciclo 0,15 frente a 2,0, y
+|ey| máximo **36 mm frente a 145 mm**. **(iii)** En los 25 runs de enforcement
+sólo dispara C-06 (58 124 intervenciones; cero C-01/02/03/05): en esos ápices, el
+carril lo sostiene el **rate limiter**, formalmente una regla **CL-B de
+suavidad** (SR-006). **(iv)** El comando crudo de esta policy es ~2× más brusco
+que el de sus predecesoras (0,33–0,41 frente a 0,16–0,19) y satura C-06 en el
+77,5 % de los pasos, frente al 43 % del E-main; la velocidad no lo explica (+7,5 %
+sobre el E-main, que sí sobrevive).
+
+La lectura: entrenada con el limitador **dentro del lazo de actuación**, la
+política aprendió que emitir un comando casi *bang-bang* no se penaliza —C-06 lo
+integra—. Con cage, la pareja policy+C-06 conduce mejor que cualquier otro
+artefacto de esta tesis (8,6 mm de |ey| medio, 90,7 vueltas de resistencia sin
+pasar de 55 mm); sin cage, ese mismo flujo de comandos se sale del carril **una
+vez cada ~3,2 vueltas**. Tres consecuencias, en orden de importancia: primero,
+**"la cage está latente in-ODD" describe las reglas de seguridad, no la cage
+entera** — esa latencia la *produce* C-06 aguas arriba, y presentarla como
+"la cage no hace nada" sería falso; segundo, es un **riesgo de transferencia**
+identificado para la Fase 5, porque el actuador físico no implementa ese
+`delta_max_steering_per_cycle`; tercero, es un aviso metodológico: SC-NOM-01
+(300 pasos) pasa **50/50 en monitoring** y no detecta nada — el fallo necesita el
+horizonte de 3000 pasos, así que **un eval nominal corto no clasifica esta
+propiedad**, exactamente como el Hallazgo 4 dice de la curva de entrenamiento.
+La dependencia está **medida**; su origen queda **inferido**: probar la
+co-adaptación causalmente exige una ablación (reentrenar con C-06 fuera del lazo)
+que no se ha ejecutado, y que §12.5 recoge junto a la línea de transferencia
+física.
 
 ---
 
@@ -274,38 +353,45 @@ análisis agregado.
 
 Cada línea traza a un hallazgo o decisión concreta.
 
-**T1 — Verificación 2-D bien-puesta de SR-009 y traslado a Isaac** *(Hallazgos
-8, 10, 12; D-44/D-49/D-50/D-59).* Gazebo ya demostró la autoridad longitudinal
-y dos evals nominales full-horizon, pero aún no ejecutó **SC-PERT-03** sobre una
-policy 2-D ni produjo una campaña 2-D. La infraestructura de cualificación ya
-está fijada: el contrato **fresh-training-only** `margin022` deja 0.03 m/s bajo
-C-04, acota el parent a 75k y retiene parent + fine-tune en un buffer de 150k;
-el fingerprint queda embebido en el checkpoint y el preflight D-43 compara CV con el
-oráculo y el runner exige un `PASS` ligado a los hashes exactos del checkpoint
-y del config antes de arrancar Gazebo. El meta-test también quedó preregistrado:
-`lambda_stall = 4.0`, continuación única de 50k, criterio porcentual
-`M-P6 > 50.0`, 20 runs por brazo y modo, manifest con hashes y agregación
-independiente de *released*/*stall_variant*. Lo pendiente ya no es diseñar el
-test: es entrenar desde cero el parent 0.22, ejecutar su SC-NOM-01 nominal,
-obtener un preflight D-43 `PASS`, correr el fine-tune único y sólo entonces las
-80 celdas de SC-PERT-03. *Estado al 22.07.2026:* el prerrequisito de **interfaz
-de medición** se cerró primero —la calibración D-43→C-02 del readout de rumbo
-(`joint_pair_quadratic` + ganancia 1.60) **pasó** el 21.07.2026 (docs/12 §4.9)—
-y el **parent fresco de 75k comenzó a entrenar** el 22.07.2026 (SAC 2-D,
-`sac_gz2d_entfix_margin022_2024_75k`); la cadena restante (nominal → preflight
-D-43 ligado al checkpoint → fine-tune → 80 celdas) queda **[EN CURSO / PENDIENTE
-— F5]**. Los informes históricos muestran por qué el gate es
-necesario: entfix-2024/42 pasan individualmente, mientras auto-175k queda
-bloqueado a 0.25 y en el probe 0.22 por el over-read CV. Isaac sigue siendo una
-réplica de transferencia —sus checkpoints no son compatibles con Gazebo— y no
-reabre G4.
+**T1 — Cerrar el brazo de acción 2-D y trasladarlo a Isaac** *(Hallazgos 8, 10,
+12, 13; D-44/D-49/D-50/D-59/D-66).* La parte que era trabajo futuro al cierre de
+G4 **ya se ejecutó**: la cadena de cualificación completa —calibración
+D-43→C-02 del readout de rumbo (21.07), gate temporal T3 (D-62), parent 2-D
+fresco, preflight D-43 ligado a hashes— habilitó la **verificación bien-puesta
+de SR-009** (80 celdas de dos brazos + validación del detector con una parada
+*scripted*, cap. 8 §8.9.7, D-63/D-64) y **dos campañas 2-D completas**:
+margin022 sobre una policy débil (§8.9.8, D-65) y la campaña sobre la policy PPO
+competente de 550k (§8.9.9, D-66, cerrada el 31.07.2026). El contraste entre
+ambas ya respondió su pregunta: los fallos de disponibilidad eran de **calidad
+de policy** (SC-NOM-03 y SC-PERT-05 se limpian; los doce SC-PERT aprueban en
+enforcement) y los que **persisten** son estructurales —la cláusula heredada de
+SC-EDGE-01 y la co-activación SR-010—, con la invariante de seguridad in-ODD
+intacta en los dos casos.
+
+Lo que queda es, por tanto, más estrecho y más concreto: **(i)** documentar la
+reconciliación de criterio propio al estilo D-47 para la campaña de 550k y
+decidir entonces —como edición deliberada, no silenciosa— si los documentos de
+especificación deben re-apuntar su *veredicto de récord*; **(ii)** atacar el
+residuo estructural que ninguna mejora de policy resolvió, es decir el arbitraje
+de reglas de SR-010 (T4) y el over-read/under-read del estimador CV (T3); y
+**(iii)** trasladar el brazo a Isaac como réplica de backend, recordando que sus
+checkpoints no son compatibles con Gazebo y que nada de esto reabre G4.
 
 **T2 — Despliegue físico y caracterización del gap sim-to-real (Fase 5 /
-Capítulo 9)** *(pregunta subordinada; adaptación A5).* Portar el subconjunto
-físico de la biblioteca (SC-NOM-01/02, SC-EDGE-01) a la plataforma CobraFlex con
-el sistema **tal como salió de Fase 4** (sin parcheo entre corridas), producir
-la tabla de gap por métrica (sim vs físico, absoluto/relativo) y emitir el
-veredicto de corrección funcional de la cage en hardware. El componente con
+Capítulo 9)** *(pregunta subordinada; adaptación A5; Hallazgo 14).* Portar el
+subconjunto físico de la biblioteca (SC-NOM-01/02, SC-EDGE-01) a la plataforma
+CobraFlex con el sistema **tal como salió de Fase 4** (sin parcheo entre
+corridas), producir la tabla de gap por métrica (sim vs físico,
+absoluto/relativo) y emitir el veredicto de corrección funcional de la cage en
+hardware. **Riesgo identificado de antemano (Hallazgo 14):** la policy 2-D está
+acoplada al `delta_max_steering_per_cycle` de C-06 —satura el limitador en el
+77,5 % de los pasos y sin él abandona el carril cada ~3,2 vueltas—, y el actuador
+físico no implementa ese límite. Dos comprobaciones baratas antes de conducir:
+medir la respuesta de slew real del servo frente a la cota de la cage, y correr
+**un horizonte largo, no el nominal corto**, porque SC-NOM-01 a 300 pasos no
+detecta la dependencia. La ablación que cerraría el mecanismo —reentrenar con
+C-06 fuera del lazo de actuación y comparar el comando crudo— es barata en
+simulación y debería preceder al hardware. El componente con
 mejor pronóstico de transferencia es la cage misma, por estar especificada sobre
 el estado abstracto e independiente de la calidad de policy y percepción.
 
@@ -342,11 +428,14 @@ automática; el probe 1-D acotado apoya la evicción del replay como segundo
 mecanismo observado. Terminar por inercia los presupuestos 1M
 interrumpidos no añade un veredicto. El cierre reproducible exige ahora
 archivar los configs exactos de cada variante y enlazar explícitamente cada
-eval con su `train_config`, checkpoint y hashes. El único retrain 2-D justificado
-por T1 ya tiene hipótesis predeclarada: **entfix (`0.005`) + cap 0.22 + parent
-75k + buffer 150k para los 125k parent/fine-tune**, seguida de selección conductual de checkpoint,
-preflight D-43, réplicas de semilla y SC-PERT-03; esa combinación aún no se ha
-entrenado. El
+eval con su `train_config`, checkpoint y hashes. El retrain 2-D predeclarado por
+T1 —**entfix (`0.005`) + cap 0.22 + parent 75k + buffer 150k para los 125k
+parent/fine-tune**, con selección conductual de checkpoint, preflight D-43 y
+SC-PERT-03— **se entrenó y se ejecutó** (margin022: §8.9.7–§8.9.8), y su
+comparación con el PPO 2-D de D-66 dejó además una lección de algoritmo: sobre
+cámara, el SAC 2-D no supera ~200 de recompensa mientras el PPO 2-D alcanza una
+meseta estable de ~1755, de modo que la consolidación SAC pendiente es de
+**réplicas de semilla y archivado**, no de capacidad de conducción. El
 resultado seguirá siendo posterior y comparativo: no sustituye el E-main PPO
 ni entra en la cadena GE4 salvo una decisión futura explícita.
 
@@ -355,7 +444,15 @@ vi).* Tres artefactos generalizables que esta tesis deja especificados pero no
 cerrados: (a) **higiene de criterios versionada** — separar formalmente en el
 esquema de escenario las cláusulas-predicado-de-SR de las sobrecapas de
 performance, con migración explícita al cambiar de geometría (el defecto que
-produjo el `NOT SATISFIED` literal); (b) **el eval conductual multi-modo como
+produjo el `NOT SATISFIED` literal). Un primer paso ya está dado y muestra cómo
+debe hacerse: la métrica de recuperación de rumbo se auditó, se le encontró un
+defecto real —banda fija calibrada en otra pista, que convertía el test en una
+medida de rizado y fallaba en runs *sin perturbar*— y se corrigió refiriéndola a
+la envolvente del propio run, con la regla **pre-registrada y aplicada una sola
+vez**, sin re-puntuar ningún veredicto histórico (D-68). Que la corrección
+beneficie al brazo congelado y **no** al que la tesis presenta —que sigue
+fallando la cláusula— es la prueba de que el procedimiento, no el resultado,
+mandó; (b) **el eval conductual multi-modo como
 gate de selección de checkpoint** — institucionalizar que ninguna policy se
 declara apta por curva de entrenamiento (D-36 extendido); (c) **el análisis
 forense de intervenciones como artefacto estándar** — cerrar el reporte agregado
@@ -391,8 +488,9 @@ el sitio exacto (A5, Capítulo 9) donde su respuesta debe encajar.
 <!--
 APÉNDICE INTERNO — TRABAJO PENDIENTE EN ESTE CAPÍTULO
 
-Estado: BORRADOR POST-G4 (actualizado 20.07.2026), pre-Fase 5. Redactado con la
-evidencia de G4 + posterior E5 (multi-seed, Gazebo 2-D y estudio SAC largo).
+Estado: BORRADOR POST-G4 (actualizado 31.07.2026), pre-Fase 5. Redactado con la
+evidencia de G4 + posterior E5 (multi-seed, brazo de acción 2-D en Gazebo y
+estudio SAC largo).
 
   [ ] Ítems específicos del autor pendientes de incorporar (solicitados tras
        este borrador).
@@ -402,6 +500,17 @@ evidencia de G4 + posterior E5 (multi-seed, Gazebo 2-D y estudio SAC largo).
        desarrollo de limitaciones → cap. 11; aquí queda síntesis + futuro.
   [x] Hallazgo 11 elevado de piloto a estudio posterior: runs SAC largos 1-D/2-D,
       entfix y probe de replay ejecutados; sigue fuera del veredicto GE4.
+  [x] T1 reescrito (31.07): SC-PERT-03 2-D y las campañas 2-D ya no son futuro —
+      ejecutados (D-63/D-64, D-65); T1 queda acotado al cierre de §8.9.9 y a Isaac.
+  [x] Hallazgo 13 añadido (D-66): el checkpoint del pico de recompensa no es el
+      mejor; selección conductual + % de cage.
+  [x] Hallazgo 14 añadido (31.07): C-06 sostiene el carril en dos ápices; "latente"
+      se predica de las reglas de seguridad, no de la cage entera. Matiza el
+      Hallazgo 5, alimenta T2 (riesgo de transferencia) y deja pendiente la
+      ablación sin-C-06 que probaría la co-adaptación.
+  [x] §8.9.9 cerrada (31.07): T1, §12.1 y el Hallazgo 5 citan ya el veredicto 2-D.
+  [ ] Decisión pendiente (post-verdicto, D-67): si §12.3/§12.4 y los documentos de
+      especificación amplían su alcance del 1-D al brazo 2-D. Hoy declaran 1-D.
   [ ] Números a re-verificar contra los reportes al pulir: 96-100% frontier
        (frontier_contrast.json), 30/85 (failure_mode_breakdown.json), 10.9/17.2 mm
        (docs/12 §8), SAC largo/entfix/cap probes (CHANGELOG 17–20.07).

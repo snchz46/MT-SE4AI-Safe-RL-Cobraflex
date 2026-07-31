@@ -9,6 +9,20 @@
 > Paleta común (ya embebida en cada prompt): morado = policy aprendida,
 > verde-azulado (teal) = percepción determinista, coral = safety cage,
 > gris cálido = simulador/infraestructura.
+>
+> **Estado de los PNG (31.07.2026).** `camera_cnn_ppo_architecture.png` y
+> `etrack_camera_control_loop.png` ya **no** dependen de la herramienta de diseño:
+> su fuente versionada es el `.svg` hermano y se re-renderizan con Chrome headless
+> (comando exacto en la cabecera del `.mmd` correspondiente). Si se vuelven a
+> generar desde estos prompts, hay que actualizar también el SVG o borrarlo, para
+> no dejar dos fuentes divergentes.
+>
+> **Pendiente conocido:** `CNN Policy Architecture - Cobraflex.png` (la versión
+> grande de P1, con marca de la casa) sigue siendo **1-D**: rotula `Linear 512→1`,
+> `steering mean μ`, `δ steering ∈ [-1,1]` y "constant cruise speed —
+> steering-only action (1-D)". No es incorrecta —describe el E-main congelado—
+> pero no representa el tronco 2-D; decidir si se re-genera o se re-etiqueta
+> explícitamente como "E-main 1-D (D-49)".
 
 ---
 
@@ -22,7 +36,7 @@ el placeholder que deje la herramienta se sustituye luego.
 ```text
 Create a clean, academic engineering figure (SVG, 16:9 landscape, flat design, no
 gradients, white background, sans-serif like Inter/Helvetica, legible at 1600 px
-wide) titled "From camera pixels to steering action — end-to-end policy (track E)".
+wide) titled "From camera pixels to vehicle action — end-to-end policy (track E)".
 
 It shows a left-to-right pipeline in the style of classic CNN architecture
 diagrams (AlexNet-style 3D slabs for conv feature maps). Stages, with exact
@@ -43,23 +57,28 @@ numbers (do not invent any):
    - "Conv 3x3, stride 1 → 64 @ 7x7, ReLU"
    - "Flatten 3136 → FC 512, ReLU"
 5. Two small heads branching from the 512 features:
-   - "Policy head: Gaussian steering — mean μ + learned log σ" (purple) →
-     arrow to stage 6.
+   - "Policy head: diagonal Gaussian over (steer, throttle) — mean μ + learned
+     log σ per dimension" (purple) → arrow to stage 6.
    - "Value head V(s) — training only" (gray, dashed border) → arrow into a
      dashed "training-only" region at the bottom containing "reward (sim
      oracle: ey, epsi, progress)" and "PPO clipped-surrogate update"; a dashed
      gradient arrow ∇θ returns from PPO to the CNN trunk. Label the region
      "exists only during training — no reward, no V(s) at deployment".
 6. "Safety cage — 6 deterministic rules, order C-06→C-04→C-02→C-03→C-01→C-05"
-   as a coral box (fill #FAECE7, stroke #993C1D): input "raw steering ∈ [−1,1]",
-   output "safe action".
+   as a coral box (fill #FAECE7, stroke #993C1D): input "raw action
+   (steer, throttle) ∈ [−1,1]²", output "safe action".
 7. "Actuation: geometry_msgs/Twist on /cmd_vel — angular.z = steer × 0.8,
-   linear.x = 0.2 m/s" (neutral gray), with a loop-back arrow labeled "Gazebo
-   step 0.10 s (10 Hz control)" returning to stage 1.
+   linear.x = throttle × 0.22 m/s (speed cap, D-66)" (neutral gray), with a
+   loop-back arrow labeled "Gazebo step 0.10 s (10 Hz control)" returning to
+   stage 1.
 
 Under-annotate, don't over-decorate: thin arrows, small caption-size labels,
 generous white space. The visual emphasis order is: input image → conv slabs →
-steering distribution → cage.
+action distribution → cage.
+
+Small footnote strip at the bottom, gray: "2-D steer_throttle action map
+(D-50/D-59); the frozen 1-D E-main is the same figure with a steer-only head
+and linear.x fixed at 0.2 m/s (D-49)."
 ```
 
 ---
@@ -81,7 +100,8 @@ horizontal branches:
 
 TOP branch (purple, fill #EEEDFE, stroke #534AB7) — "What the learned policy
 sees": the frame downsampled to "84x84 grayscale, stack of 4" (draw 4 small
-overlapping squares) → "CNN policy (PPO, NatureCNN)" → output "steering ∈ [−1,1]".
+overlapping squares) → "CNN policy (PPO, NatureCNN)" → output "raw action
+(steer, throttle) ∈ [−1,1]²".
 
 BOTTOM branch (teal, fill #E1F5EE, stroke #0F6E56) — "What the cage's
 deterministic CV estimator sees" as five mini-stages, each a small thumbnail of
@@ -183,7 +203,7 @@ EXACT row data (do not invent):
   SR-006 · C-06 rate limiter         · F: Satisfied (D-39: 559/559 enforcement vs 67.6% monitoring) · E: Satisfied
   SR-007 · C-05 state validity       · F: Satisfied · E: Satisfied
   SR-008 · C-05 controlled stop      · F: Satisfied · E: Satisfied
-  SR-009 · training constraint       · F: documented abstention (D-30) · E: N/A-by-construction — "1-D steering-only action ⇒ stall test ill-posed (M-P6 ≡ 0, D-49); deferred to Isaac 2-D action"
+  SR-009 · training constraint       · F: documented abstention (D-30) · E: N/A-by-construction — "1-D steering-only action ⇒ stall test ill-posed (M-P6 ≡ 0, D-49); posed and closed later on the Gazebo 2-D action (D-63/D-64)"
   SR-010 · arbiter property          · F: documented abstention (D-30) · E: genuine CL-B finding — "wired SC-EDGE-05 grid: 30/85 in-ODD co-activation breaches"
   SR-011 · C-06 + training           · F: Satisfied · E: Satisfied
   SR-012 · camera lane-keeping       · F: — (not in F verdict) · E: Satisfied (GE4-V2, D-29 coverage closed)

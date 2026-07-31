@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="1180" viewBox="0 0 1360 1180" font-family="Lato, 'Open Sans', 'Noto Sans', sans-serif">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5F5E5A"/>
+    </marker>
+  </defs>
+  <rect width="1360" height="1180" fill="#ffffff"/>
+
+  <!-- ================= sim / actuation column ================= -->
+  <rect x="490" y="57" width="380" height="89" rx="11" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="2"/>
+  <text x="680" y="95" text-anchor="middle" font-size="21" font-weight="700" fill="#2C2C2A">Gazebo + Lane Cam</text>
+  <text x="680" y="125" text-anchor="middle" font-size="18" fill="#45443F">IMX219 mirror · 640×360</text>
+
+  <path d="M 680 146 L 680 195" stroke="#5F5E5A" stroke-width="2.6" fill="none" marker-end="url(#ah)"/>
+  <text x="700" y="178" font-size="18" fill="#4A4A47">camera frame</text>
+
+  <rect x="490" y="200" width="380" height="89" rx="11" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="2"/>
+  <text x="680" y="238" text-anchor="middle" font-size="21" font-weight="700" fill="#2C2C2A">Degradation injector</text>
+  <text x="680" y="268" text-anchor="middle" font-size="18" fill="#45443F">DR draw or scenario stressor</text>
+
+  <!-- split to the two parallel consumers -->
+  <g stroke="#5F5E5A" stroke-width="2.6" fill="none">
+    <path d="M 680 289 L 680 318"/>
+    <path d="M 300 318 L 1060 318"/>
+    <path d="M 300 318 L 300 378" marker-end="url(#ah)"/>
+    <path d="M 1060 318 L 1060 378" marker-end="url(#ah)"/>
+  </g>
+  <text x="680" y="360" text-anchor="middle" font-size="18" fill="#4A4A47">one native frame → both consumers · D-43</text>
+
+  <!-- ================= perception branch (teal) ================= -->
+  <rect x="107" y="383" width="386" height="93" rx="11" fill="#E1F5EE" stroke="#0F6E56" stroke-width="2"/>
+  <text x="300" y="423" text-anchor="middle" font-size="21" font-weight="700" fill="#04342C">CV lane estimator</text>
+  <text x="300" y="453" text-anchor="middle" font-size="18" fill="#0F5343">deterministic · D-43</text>
+
+  <path d="M 300 476 L 300 518" stroke="#5F5E5A" stroke-width="2.6" fill="none" marker-end="url(#ah)"/>
+
+  <rect x="107" y="523" width="386" height="93" rx="11" fill="#E1F5EE" stroke="#0F6E56" stroke-width="2"/>
+  <text x="300" y="563" text-anchor="middle" font-size="21" font-weight="700" fill="#04342C">Perception supervisor</text>
+  <text x="300" y="593" text-anchor="middle" font-size="18" fill="#0F5343">SR-013 / SR-014 checks</text>
+
+  <!-- ================= policy branch (purple) ================= -->
+  <rect x="867" y="383" width="386" height="93" rx="11" fill="#EEEDFE" stroke="#534AB7" stroke-width="2"/>
+  <text x="1060" y="423" text-anchor="middle" font-size="21" font-weight="700" fill="#26215C">Downsample 84×84</text>
+  <text x="1060" y="453" text-anchor="middle" font-size="18" fill="#3E3A6B">grayscale · frame stack ×4</text>
+
+  <path d="M 1060 476 L 1060 518" stroke="#5F5E5A" stroke-width="2.6" fill="none" marker-end="url(#ah)"/>
+
+  <rect x="867" y="523" width="386" height="93" rx="11" fill="#EEEDFE" stroke="#534AB7" stroke-width="2"/>
+  <text x="1060" y="558" text-anchor="middle" font-size="21" font-weight="700" fill="#26215C">CNN policy</text>
+  <text x="1060" y="588" text-anchor="middle" font-size="18" fill="#3E3A6B">PPO · CnnPolicy · 2-D action head</text>
+
+  <!-- converge on the cage -->
+  <g stroke="#5F5E5A" stroke-width="2.6" fill="none">
+    <path d="M 300 616 L 300 651"/>
+    <path d="M 1060 616 L 1060 651"/>
+    <path d="M 300 651 L 1060 651"/>
+    <path d="M 680 651 L 680 690" marker-end="url(#ah)"/>
+  </g>
+  <text x="322" y="641" font-size="18" fill="#4A4A47">cage State</text>
+  <text x="1032" y="638" text-anchor="end" font-size="18" fill="#4A4A47">raw action: steer + throttle</text>
+
+  <rect x="490" y="695" width="380" height="100" rx="11" fill="#FAECE7" stroke="#993C1D" stroke-width="2.4"/>
+  <text x="680" y="737" text-anchor="middle" font-size="21" font-weight="700" fill="#4A1B0C">Safety cage .step()</text>
+  <text x="680" y="767" text-anchor="middle" font-size="18" fill="#6B2A12">ordered 6-rule chain</text>
+
+  <path d="M 680 795 L 680 848" stroke="#5F5E5A" stroke-width="2.6" fill="none" marker-end="url(#ah)"/>
+  <text x="700" y="829" font-size="18" fill="#4A4A47">safe_action, emergency</text>
+
+  <rect x="490" y="853" width="380" height="90" rx="11" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="2"/>
+  <text x="680" y="891" text-anchor="middle" font-size="21" font-weight="700" fill="#2C2C2A">safe_action → /cmd_vel</text>
+  <text x="680" y="921" text-anchor="middle" font-size="18" fill="#45443F">Twist: linear.x, angular.z</text>
+
+  <path d="M 680 943 L 680 988" stroke="#5F5E5A" stroke-width="2.6" fill="none" marker-end="url(#ah)"/>
+
+  <rect x="490" y="993" width="380" height="90" rx="11" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="2"/>
+  <text x="680" y="1031" text-anchor="middle" font-size="21" font-weight="700" fill="#2C2C2A">Gazebo step (0.10 s)</text>
+  <text x="680" y="1061" text-anchor="middle" font-size="18" fill="#45443F">advance one control cycle</text>
+
+  <!-- feedback loop -->
+  <path d="M 490 1038 L 70 1038 L 70 101 L 485 101" stroke="#5F5E5A" stroke-width="2.6" fill="none"
+        marker-end="url(#ah)"/>
+  <text x="200" y="1020" font-size="18" fill="#4A4A47">next control cycle</text>
+
+  <!-- legend -->
+  <g font-size="18" fill="#3B3B39">
+    <rect x="152" y="1122" width="20" height="20" rx="4" fill="#E1F5EE" stroke="#0F6E56" stroke-width="2"/>
+    <text x="182" y="1139">cage perception</text>
+    <rect x="480" y="1122" width="20" height="20" rx="4" fill="#EEEDFE" stroke="#534AB7" stroke-width="2"/>
+    <text x="510" y="1139">learned policy</text>
+    <rect x="790" y="1122" width="20" height="20" rx="4" fill="#FAECE7" stroke="#993C1D" stroke-width="2"/>
+    <text x="820" y="1139">safety cage</text>
+    <rect x="1078" y="1122" width="20" height="20" rx="4" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="2"/>
+    <text x="1108" y="1139">sim / actuation</text>
+  </g>
+</svg>

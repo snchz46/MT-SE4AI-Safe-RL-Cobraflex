@@ -15,7 +15,10 @@ _PKG_PARENT = Path(__file__).resolve().parents[2] / "src" / "cobraflex_rl"
 if str(_PKG_PARENT) not in sys.path:
     sys.path.insert(0, str(_PKG_PARENT))
 
-from cobraflex_rl.scenario_metrics import time_to_recovery_heading  # noqa: E402
+from cobraflex_rl.scenario_metrics import (  # noqa: E402
+    heading_recovery_band_rad,
+    time_to_recovery_heading,
+)
 
 np = pytest.importorskip("numpy")
 from cobraflex_rl.scenario_runner import derive_run_config, run_seed  # noqa: E402
@@ -49,6 +52,58 @@ def test_no_sustained_recovery_returns_inf():
 
 def test_empty_run_returns_none():
     assert time_to_recovery_heading([], control_dt=0.1) is None
+
+
+# --------------------------------------------------------------------------- #
+# heading_recovery_band_rad + the v2 ripple-referenced metric (D-68)
+# --------------------------------------------------------------------------- #
+def test_band_floors_at_the_v1_threshold_for_a_quiet_run():
+    # A well-damped run ripples far below 0.05 rad → the band must not shrink
+    # below the v1 bar, so v2 can never be more permissive there.
+    recs = [_rec(0.3) for _ in range(10)] + [_rec(0.001) for _ in range(30)]
+    assert heading_recovery_band_rad(recs) == pytest.approx(0.05)
+
+
+def test_band_widens_to_the_runs_own_ripple():
+    # Steady-state ripple of 0.07 rad → the band follows it (between floor and cap).
+    recs = [_rec(0.07 if i % 2 else 0.02) for i in range(40)]
+    band = heading_recovery_band_rad(recs)
+    assert 0.05 < band <= 0.0873
+
+
+def test_band_is_capped_at_sr011_sigma_theta_max():
+    # A wildly oscillating run cannot buy itself an arbitrarily wide band:
+    # beyond 5 deg it is an SR-011 finding, not a "recovered" run.
+    recs = [_rec(0.5 if i % 2 else 0.0) for i in range(40)]
+    assert heading_recovery_band_rad(recs) == pytest.approx(0.0873)
+
+
+def test_v2_recovers_where_v1_reports_never_on_a_rippling_run():
+    # The demonstrated pathology: steady ripple straddling the fixed 2.86 deg band
+    # with NOTHING to recover from. v1 never finds a sustained window; v2 does,
+    # because the band is the run's own envelope.
+    recs = [_rec(0.06 if i % 3 == 0 else 0.01) for i in range(60)]
+    assert time_to_recovery_heading(recs, control_dt=0.1, ripple_reference=False) == math.inf
+    assert time_to_recovery_heading(recs, control_dt=0.1) == pytest.approx(0.0)
+
+
+def test_v1_behaviour_is_reproducible_for_historical_records():
+    # Campaign records were scored under v1 and are immutable evidence: both the
+    # explicit threshold and the opt-out must reproduce it bit-exactly.
+    recs = [_rec(0.3) for _ in range(10)] + [_rec(0.01) for _ in range(10)]
+    v1_explicit = time_to_recovery_heading(recs, control_dt=0.1, threshold_rad=0.05)
+    v1_optout = time_to_recovery_heading(recs, control_dt=0.1, ripple_reference=False)
+    assert v1_explicit == pytest.approx(1.0)
+    assert v1_optout == pytest.approx(1.0)
+
+
+def test_v2_never_reports_later_recovery_than_v1():
+    # Monotonicity: the band only ever widens, so recovery can only come earlier.
+    recs = [_rec(0.4) for _ in range(8)] + [_rec(0.055 if i % 4 == 0 else 0.02)
+                                            for i in range(40)]
+    v1 = time_to_recovery_heading(recs, control_dt=0.1, ripple_reference=False)
+    v2 = time_to_recovery_heading(recs, control_dt=0.1)
+    assert v2 <= v1
 
 
 # --------------------------------------------------------------------------- #

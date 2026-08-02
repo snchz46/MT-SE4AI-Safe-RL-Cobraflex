@@ -1,0 +1,111 @@
+# Capítulo 2 — Estado del arte
+
+## 2.1 Propósito y estructura del capítulo
+
+Este capítulo organiza la literatura relevante en un mapa coherente y, sobre todo, identifica **las costuras entre líneas de trabajo** que la tesis pretende abordar de forma unificada. La revisión es selectiva, no exhaustiva: prioriza trabajos de los últimos siete años y aquellos con influencia visible sobre el discurso académico o normativo. Se avanza de lo general a lo particular —aprendizaje por refuerzo en conducción (§2.2), familias de aproximaciones a la seguridad (§2.3), validación basada en escenarios (§2.4), estándares (§2.5), adaptaciones del ciclo de vida (§2.6) y gap sim-to-real (§2.7)— para cerrar con una síntesis crítica que posiciona la tesis (§2.8).
+
+## 2.2 Aprendizaje por refuerzo en conducción autónoma
+
+El uso de aprendizaje automático en control de vehículos ha evolucionado en tres oleadas. La primera, de clonación de comportamiento e *imitation learning*, demostró que una red podía mapear píxeles a comandos de volante, pero adolecía de fragilidad bajo desviaciones del estado experto. La segunda, de aprendizaje por refuerzo profundo (DRL), prometía superar esa limitación permitiendo al agente explorar activamente las consecuencias de sus decisiones (Kuutti et al., 2019a). La tercera, en curso, combina ambas mediante esquemas híbridos e integra modelos de mundo y representaciones explícitas de seguridad.
+
+<img src="../figures/fig_2_1_classical_rl_framework.png" alt="Figura 2.1 — El marco clásico de aprendizaje por refuerzo." width="400"/>
+
+*Figura 2.1 — El marco clásico de aprendizaje por refuerzo (Sutton y Barto, 1998). El agente elige una acción `At` en el estado `St` y recibe la recompensa correspondiente; su objetivo es maximizar la recompensa acumulada a lo largo de una secuencia larga de transiciones.*
+
+Dos algoritmos dominan los trabajos recientes. **PPO** (Schulman et al., 2017) ofrece estabilidad de entrenamiento gracias a su pérdida con recorte, lo que lo hace atractivo cuando la reproducibilidad importa y la sensibilidad a hiperparámetros es un problema operativo. **SAC** (Haarnoja et al., 2018) optimiza un objetivo de máxima entropía que favorece exploración y robustez y, al ser *off-policy*, resulta más eficiente en muestras. Ambos se emplean en este trabajo y se comparan experimentalmente en el Capítulo 7.
+
+En el dominio concreto de seguimiento de carril, Cheng et al. (2025) muestran la viabilidad de DRL puro entrenado con aleatorización de dominio y desplegado sobre plataforma física, y Zhao et al. (2024) abordan la decisión en autopista mediante políticas restringidas tipo CMDP con *replay buffer*. La tendencia es clara: para horizontes de decisión cortos y dominios acotados el DRL da resultados sólidos; para horizontes largos y dominios abiertos, la comunidad reconoce que es insuficiente sin mecanismos adicionales de garantía.
+
+La variante **end-to-end con visión** tiene linaje propio, que el track primario de esta tesis retoma: ALVINN (Pomerleau, 1989) con una red minúscula sobre 30×32 píxeles; PilotNet/DAVE-2 (Bojarski et al., 2016), que lo escaló por clonación de comportamiento a carretera real; y Kendall et al. (2019), que cerraron el círculo con DRL entrenando seguimiento de carril desde imagen monocular en un vehículo real. En paralelo, la **aleatorización de dominio** —visual (Tobin et al., 2017) y de dinámica (Peng et al., 2018)— se consolidó como mitigación estándar de la fragilidad de la percepción aprendida. Esta tesis se sitúa en esa línea, pero su aportación no es el conductor end-to-end en sí: es la **instrumentación de seguridad a su alrededor**. La envolvente en tiempo de ejecución no comparte la red aprendida —razona sobre un estimador de carril clásico y determinista, independiente por algoritmo— y la degradación visual se convierte en un eje de evaluación controlado por escenario, no solo en ruido de entrenamiento.
+
+El problema estructural que comparten todos estos trabajos es el mismo: el comportamiento de la policy no es derivable de una especificación escrita a priori, lo que rompe el supuesto fundacional de los marcos clásicos de seguridad funcional.
+
+## 2.3 Aproximaciones a la seguridad en sistemas con componentes aprendidos
+
+La literatura puede organizarse en cuatro familias, cada una atacando el problema desde un ángulo distinto del ciclo de vida.
+
+**(a) Safe RL: seguridad incorporada al entrenamiento.** La taxonomía clásica es la de García y Fernández (2015), que distingue dos ejes: modificación del criterio de optimización y modificación del proceso de exploración. Trabajos recientes incorporan representaciones explícitas de seguridad en el espacio de estados o en la función de valor —Keswani y Bhattacharyya (2025) codifican la proximidad a estados inseguros como representación predictiva aprendida, con mejoras significativas sobre baselines no informados por seguridad. La aproximación es elegante, pero comparte una limitación estructural con todo el paradigma: la garantía sigue siendo **estadística y dependiente de la distribución de entrenamiento**, y no se transfiere automáticamente a un dominio operacional desplazado.
+
+**(b) Safety cages y filtros en tiempo de ejecución.** Complementaria de la anterior, opera en inferencia y trata la policy como caja negra cuyas salidas deben filtrarse. Kuutti et al. (2019b) introducen la *safety cage* aplicada a vehículos autónomos: un módulo determinista que monitoriza las salidas de la red y las sustituye cuando el comportamiento propuesto violaría una invariante; al estar escrito con reglas explícitas es enteramente verificable por técnicas clásicas. Kuutti et al. (2021) extienden la idea a un doble papel —contención en despliegue y supervisión débil durante el entrenamiento—, estableciendo una vía por la que la cage no solo contiene sino que *forma* el comportamiento del agente. Esa dualidad reaparece, de forma no buscada, entre los hallazgos del Capítulo 8.
+
+<img src="../figures/fig_2_2_safety_cage_idea.png" alt="Figura 2.2 — La safety cage aplicada al marco clásico de RL." width="400"/>
+
+*Figura 2.2 — La safety cage aplicada al marco clásico de aprendizaje por refuerzo.*
+
+Una línea relacionada propone *predictive safety filters* basados en control predictivo por modelo: en lugar de evaluar acciones puntualmente, el filtro proyecta las consecuencias de la acción propuesta y solo la admite si la trayectoria predicha permanece en el conjunto seguro (Tearle et al., 2021). Su ventaja es la elegancia formal; su desventaja práctica, la dependencia de un modelo dinámico suficientemente preciso, difícil de obtener con percepción ruidosa. El linaje arquitectónico se remonta al patrón **Simplex** (Sha, 2001) —controlador complejo supervisado por uno simple y verificado— y a su formalización moderna como *shielding* (Alshiekh et al., 2018), que corrige la acción solo en la medida mínima necesaria. La cage de esta tesis es una instancia del patrón Simplex con reglas deterministas, situada entre la cage de Kuutti et al., de la que hereda la contención verificable, y el *shield* formal, cuya disciplina de intervención mínima replica en su regla de limitación de tasa.
+
+**(c) Robustez frente a perturbaciones.** He et al. (2024) estudian empíricamente un controlador Q-learning sobre TORCS frente a dos modelos de amenaza. El hallazgo es contraintuitivo y metodológicamente importante: las perturbaciones sobre sensores apenas afectan al sistema —tasa de éxito de ataque cercana a cero por la discretización del espacio de acciones— mientras que la alteración directa de la acción tiene éxito entre el 60 % y el 78 % de las veces. La discretización emerge como robustez *accidental* frente a un canal y deja el otro expuesto. Wei et al. (2026) atacan esa asimetría concentrando los ataques en estados críticos bajo presupuesto limitado y entrenando sobre un *replay buffer* dual. La implicación metodológica es directa: la caracterización de la policy debe incluir su respuesta a entradas y salidas fuera de la distribución nominal, y **la cage debe diseñarse asumiendo que tanto la policy como sus interfaces pueden fallar**.
+
+**(d) Monitorización en operación.** Transversal a las tres anteriores, se ocupa de detectar errores durante la operación misma. Mohseni et al. (2019) organizan el espacio de soluciones en torno a las cinco carencias que el ML introduce sobre los estándares clásicos —especificación, transparencia, verificación, rendimiento y *runtime monitoring*— y mapean cada una a las cuatro estrategias de seguridad de Varshney. Su aportación clave para esta tesis es identificar la **función de monitorización como categoría arquitectónica propia**, con tres familias de técnicas para materializarla: estimación de incertidumbre, detección de error en distribución y detección fuera de distribución. La adaptación A3 del Capítulo 3 hereda directamente esa filosofía. Vasudevan et al. (2021) extienden la línea proponiendo aprendizaje profundo evidencial para cuantificar incertidumbre en cumplimiento explícito con ISO 26262.
+
+Las cuatro familias son **complementarias, no alternativas**: un sistema maduro debería incorporar elementos de todas. La literatura, sin embargo, tiende a presentarlas como contribuciones aisladas, sin un marco que articule su integración dentro de un ciclo de vida con trazabilidad y safety case. Ese es uno de los huecos que esta tesis identifica.
+
+## 2.4 Validación basada en escenarios
+
+Mientras lo anterior trata de cómo *construir* sistemas seguros, esta línea trata de cómo *evaluarlos*. La pregunta central es qué significa validar un sistema cuyo dominio operacional es continuo y, en sentido estricto, infinito; la respuesta dominante es evaluar contra una biblioteca curada de situaciones representativas en lugar de pretender cobertura exhaustiva.
+
+El problema teórico de fondo es la noción de cobertura. De Gelder et al. (2024) formalizan qué significa que una biblioteca *cubra* el dominio, distinguiendo cobertura sobre parámetros del escenario, sobre interacciones entre agentes y sobre clases de eventos críticos. Sin métricas de cobertura, cualquier biblioteca puede defenderse como «suficiente» mediante argumentos circulares. En el plano operativo, CARLA (Dosovitskiy et al., 2017) se ha consolidado como simulador de referencia urbano; Gao et al. (2021) proponen sobre él una métrica compuesta calibrada contra evaluadores humanos, y Paniego et al. (2024) publican una herramienta abierta que sistematiza la captura y agregación de métricas tanto en simulación como en plataformas físicas.
+
+Una línea emergente usa el propio aprendizaje por refuerzo para generar escenarios de prueba. Giamattei et al. (2025) replican y extienden trabajos previos y encuentran algo contraintuitivo: una vez controlados los sesgos de medición de colisiones, **el RL no supera al muestreo aleatorio**; solo al sanear la función de recompensa y adecuar el algoritmo al espacio continuo convierte su ventaja teórica en mejora empírica. La lección práctica —la calidad de la métrica de fallo pesa más que la sofisticación nominal del método— es directamente aplicable al diseño de la campaña del Capítulo 8.
+
+La limitación común de esta línea es que se ocupa de la evaluación pero no del ciclo de vida: es una pieza necesaria de un marco metodológico, pero por sí sola no constituye uno.
+
+## 2.5 Estándares y marcos normativos
+
+Cinco documentos vertebran el espacio normativo, y ninguno lo cierra.
+
+**ISO 26262:2018** establece el marco de seguridad funcional y formaliza el V-Model como ciclo de vida de referencia; su limitación reconocida es que asume sistemas determinísticos especificables a priori. **ISO 21448:2022 (SOTIF)** extiende el alcance a comportamientos peligrosos que no provienen de fallos sino de limitaciones de la función en condiciones no anticipadas —la primera respuesta institucional al hecho de que un sistema con ML puede comportarse incorrectamente sin que nada haya «fallado» en sentido clásico. Wang et al. (2024) proponen, de forma notable para esta tesis, una reformulación del V-Model con una fase de operación continua que integra la monitorización posdespliegue como brazo derecho extendido. **ISO/IEC TR 5469:2024** es el documento más específico sobre IA en funciones de seguridad: clasifica los elementos de tecnología IA en clases I y II según admitan o no verificación tradicional —una policy RL cae típicamente en Clase II— y propone un principio de realización en tres etapas. **ISO/PAS 8800:2024** es su especialización automotriz e indica qué cláusulas de ISO 26262 se mantienen, cuáles se adaptan y cuáles se sustituyen ante un componente de IA; su aplicación temprana a un caso real por BSI y el UK CAM (2024) constituye la primera plantilla pública para articular ISO 26262 + SOTIF + PAS 8800 sobre una cadena ML. **UL 4600** formaliza el *safety case* bajo la filosofía afirmación–argumento–evidencia (Koopman, 2023).
+
+<img src="../figures/fig_3_6_normative_pyramid.png" alt="Figura 2.3 — Pirámide normativa aplicable." width="440"/>
+
+*Figura 2.3 — Pirámide normativa: ISO 26262 como ciclo de vida base, SOTIF como complemento para condiciones no anticipadas, TR 5469 como paraguas de IA, PAS 8800 como especialización automotriz, UL 4600 como safety case envolvente y AMLAS como patrones argumentativos transversales.*
+
+Fuera de los estándares, dos síntesis completan el cuadro. Wäschle et al. (2022) revisan sistemáticamente 145 referencias sobre seguridad de IA en conducción altamente automatizada e identifican como vacíos centrales la ausencia de métricas universalmente aceptadas y la inmadurez de los procesos de certificación. Paterson et al. (2025) consolidan **AMLAS**, metodología de seis etapas con patrones GSN para construir argumentos de seguridad sobre componentes ML, alineada con un ciclo de vida data-céntrico; es la pieza argumentativa que faltaba y se está incorporando a los estándares emergentes.
+
+La síntesis es que cada documento cubre un ángulo necesario —el ciclo clásico, las condiciones no anticipadas, la naturaleza de la IA, su especialización automotriz, la estructuración de la evidencia y los patrones argumentativos— pero **ninguno prescribe una metodología ejecutable que los integre en un proyecto concreto**. Esa integración queda a cargo del equipo de ingeniería, y es precisamente lo que esta tesis propone.
+
+## 2.6 Adaptaciones del V-Model para sistemas con IA
+
+El nivel más cercano a la aportación de la tesis es el de los trabajos que adaptan explícitamente el ciclo de vida.
+
+**Salay, Queiroz y Czarnecki (2017)** son el antecedente fundacional. Su análisis sobre las diez partes de ISO 26262 identifica cinco áreas de impacto —identificación de hazards (incluidos modos propios del RL como el *reward hacking*), faltas y modos de fallo, uso de conjuntos de entrenamiento en sustitución de especificaciones, nivel arquitectónico frente a unidad de implementación, y aplicabilidad de las técnicas de la Parte 6— y cuantifican que **cerca del 40 % de las 75 técnicas de software del estándar no aplica a componentes ML sin modificación**. Los cinco supuestos que el Capítulo 3 desarrolla son una reformulación operativa de ese análisis, articulada de modo que cada supuesto admita una adaptación correspondiente.
+
+**Ullrich et al. (2025)** son la referencia más relevante en la línea actual: proponen modificaciones estructurales concretas al V-Model clásico —ciclos iterativos entre niveles, fases data-céntricas explícitas, monitorización en operación como brazo derecho extendido y artefactos propios del paradigma dirigido por datos. La diferencia con esta tesis es de naturaleza, no de objetivo: Ullrich et al. articulan el *qué* a nivel de marco transferible; esta tesis articula el *cómo* en tres dimensiones que aquel deja abiertas —operacionalización ejecutable de cada modificación, concreción sobre un caso documentado de extremo a extremo, y caracterización empírica del gap sim-to-real como nivel obligatorio de validación.
+
+**Vasudevan et al. (2021)** representan un paso intermedio, acotado a la gestión de incertidumbre y sin caso de aplicación completo. **Sprockhoff et al. (2023)**, desde el dominio aeroespacial, ofrecen una perspectiva complementaria vía ingeniería de sistemas basada en modelos: su filosofía —el modelo es el artefacto central, no la documentación textual— casa naturalmente con la trazabilidad estricta que exigen los sistemas con IA, pero la curva de adopción de las herramientas industriales las hace poco accesibles a proyectos de menor escala, donde una aproximación basada en archivos de texto versionados resulta más operativa manteniendo equivalencia funcional.
+
+Más allá de estos trabajos, la literatura sobre adaptaciones del ciclo de vida es notablemente escasa frente a la dedicada a aspectos puntuales. La asimetría es comprensible —las contribuciones puntuales son más publicables y admiten evaluación más limpia—, pero explica por qué la adopción industrial de IA en funciones de seguridad sigue siendo un proceso *ad hoc*, dependiente del juicio del equipo más que de un marco compartido.
+
+## 2.7 El gap sim-to-real y su caracterización
+
+Toda policy entrenada en simulación enfrenta al desplegarse una pregunta inevitable: ¿en qué medida se transfiere el comportamiento aprendido? Las técnicas para reducir el gap se agrupan en tres familias complementarias: **aleatorización de dominio**, que entrena sobre una distribución amplia de variantes simuladas; **adaptación de dominio**, que ajusta la policy o sus representaciones al dominio real con datos limitados; e **identificación de sistema**, que mejora la simulación calibrándola contra datos físicos.
+
+El problema, sin embargo, no es solo reducir el gap sino **caracterizarlo honestamente**. Un sistema desplegado puede comportarse bien en promedio y catastróficamente mal en condiciones específicas no caracterizadas. La literatura es rica en propuestas para reducirlo y pobre en marcos sistemáticos para *medirlo* en términos útiles para un safety case; esa carencia motiva que la adaptación A5 incorpore la caracterización del gap como nivel obligatorio del ciclo de vida.
+
+El simulador adoptado es Gazebo (Koenig y Howard, 2004), operado a través de una interfaz gymnasium–Gazebo–ROS2 reutilizada de un trabajo previo del autor; la elección se justifica en §3.6.1. Baste señalar aquí que su fidelidad visual es inferior a la de los motores gráficos que sustentan CARLA, lo que aumenta la magnitud esperable del gap que A5 exige caracterizar, y que para vehículos a escala 1:14 la correspondencia entre dinámica simulada y real introduce discrepancias específicas —fricción de neumáticos, latencias del lazo, ruido de sensores embebidos— que requieren caracterización empírica con independencia del simulador. Cheng et al. (2025) ofrecen el precedente más directo, pero, como el resto de la literatura, se concentran en la *reducción* del gap más que en su caracterización sistemática. Ese es el contenido del Capítulo 9.
+
+## 2.8 Síntesis crítica y posicionamiento
+
+La tabla siguiente resume el estado del arte sobre siete ejes de interés. La versión completa, con las veintiuna líneas de trabajo revisadas, se recoge en el **Anexo G**.
+
+| Línea de trabajo | Entren. seguro | Cage / filtro | Escenarios | Ciclo de vida | Trazab. explícita | Gap sim-to-real | Caso E2E |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| Safe RL (García y Fernández; Keswani; Wei) | ✓ | – | – | – | – | – | – |
+| Safety cages y filtros (Kuutti; Tearle) | parcial | ✓ | – | – | – | – | – |
+| Validación por escenarios (De Gelder; Gao; Paniego) | – | – | ✓ | – | – | – | – |
+| Sim-to-real aplicado (Cheng et al.) | parcial | – | – | – | – | parcial | parcial |
+| Estándares y safety case (SOTIF; UL 4600; AMLAS; PAS 8800) | – | – | parcial | ✓ | parcial | – | parcial |
+| Adaptación del ciclo de vida (Salay; Ullrich; Sprockhoff) | parcial | parcial | parcial | ✓ | parcial | – | – |
+| **Esta tesis** | **parcial** | **✓** | **✓** | **✓** | **✓** | **✓** | **parcial** |
+
+*Tabla 2.1 — Espacio de posicionamiento de la tesis (versión resumida; completa en el Anexo G).*
+
+De la tabla se siguen tres observaciones.
+
+**Primera.** Las contribuciones puntuales son sólidas y a menudo profundas. No es razonable ni necesario pretender mejorarlas en ningún eje individual: la tesis **adopta** soluciones existentes para entrenamiento (PPO), para contención (la tradición de las safety cages) y para validación (la metodología basada en escenarios).
+
+**Segunda.** Sí existen propuestas que adaptan el ciclo de vida, y varias de las modificaciones que esta tesis propone encuentran precedente en ellas: la monitorización en operación como brazo derecho extendido anticipa A3; los patrones GSN de AMLAS comparten filosofía con la trazabilidad bidireccional de A4. La novedad no está, por tanto, en haber inventado las adaptaciones, sino en tres dimensiones que ningún trabajo previo cubre simultáneamente: **operacionalización ejecutable** —cada adaptación se materializa en artefactos y validadores en lugar de quedar como recomendación—; **trazabilidad como restricción dura** —convertida en propiedad verificada por herramienta, lo que excede el plano descriptivo de AMLAS y de la ingeniería basada en modelos—; y **caso de aplicación de extremo a extremo**, con los puntos de fricción y los costes reales documentados.
+
+**Tercera.** La caracterización del gap sim-to-real es el eje más débilmente cubierto. Existen técnicas para reducirlo, pero escasean los marcos para *medirlo* en términos compatibles con un safety case. La adaptación A5 y el Capítulo 9 son una contribución específica en ese eje, con validez externa limitada al caso de un vehículo a escala sobre pista controlada.
+
+Con este panorama establecido, el Capítulo 3 desarrolla el marco metodológico que constituye el aporte académico central de la tesis.

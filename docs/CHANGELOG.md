@@ -31,6 +31,74 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [31.07.2026] — Submission build: `draft_V5.docx` rebuilt from Markdown to the university guidelines, body cut from 180 to 96 pages
+
+**Document(s) affected:** `manuscript/draft_v5/` (new source tree: `front/`, `body/`, `back/`), `tools/build_thesis_docx.py` (new), `tools/thesis_page_budget.py` (new), `manuscript/README.md`, `manuscript/figures/` (3 campaign figures copied in as `fig_8_*`). Output: `B:/SE4AI/Documentos/draft_V5.docx` (`draft_V4.docx` untouched).
+**Phase:** E5 / thesis production.
+**Gate context:** none — editorial, no evidence changes.
+**Author:** Samuel Sanchez
+
+### Change
+
+**The problem.** `draft_V4.docx` had a **180-page body** (pp. 13–192) against the guidelines'
+**80–100**, and it used 1.08 line spacing where the guidelines require 1.5 — so merely applying
+the mandated layout would have pushed it to roughly 240–250. It was also a week stale: no §8.9.9,
+no 2-D campaign, none of the 31.07 closures.
+
+**The approach, chosen deliberately** (author decision): move the evidence to **appendices**,
+which the guidelines exclude from the page count, and condense the body prose around them —
+rather than deleting content or merging chapters. Nothing is lost; the body keeps the argument
+and cites the appendix.
+
+**New source tree** `manuscript/draft_v5/`: front matter (cover with both examiners, the required
+**certification of authenticity**, abstract, preface, TOC, list of figures/tables, abbreviations),
+twelve condensed chapters, bibliography and **appendices A–I**. `manuscript/chapters/` stays the
+research working source; `draft_v5/` is the submission source, derived editorially rather than
+mechanically. Appendices A, B, D, E, F, G, H and I are **extracted or generated** from the living
+documents and the campaign artefacts — the hazard register, the SRS with its rationale, the ODD
+parameter table, `cage.yaml` verbatim, the traceability matrix and CSV, the full positioning
+matrix, the hyperparameters and algorithm study, and a per-scenario campaign breakdown produced
+directly from `campaign_report.json` and `failure_mode_breakdown.json` — so they stay
+re-derivable instead of being hand-copied.
+
+**New tooling.** `tools/build_thesis_docx.py` renders the tree to DOCX with the guideline layout
+encoded as constants at the top of the file: A4, 12 pt, 1.5 spacing, justified, first-line indent,
+margins 1.5"/1"/1.25", preliminary pages in lower-case roman centred at the bottom with no number
+on the title page, body in arabic upper-right restarting at 1. It embeds figures, renders GFM
+tables, drops HTML comments and editorial `[BORRADOR …]` tags, and builds a **working list of
+figures and tables** via bookmarks and `PAGEREF` fields (a `TOC \c` field would have come out
+empty, since the captions are not Word caption fields). `tools/thesis_page_budget.py` drives Word
+over COM to repaginate, exports a PDF and reports per-chapter page spans plus the **body page
+count** against the 80–100 bar — the build's acceptance check.
+
+**Result.** Body **96 pages** (pp. 18–113), 159 pages in total including 17 of front matter,
+3 of bibliography and 43 of appendices; 41 391 words; 16 figures embedded; 32 captions listed.
+Content is current: the abstract, Ch. 7, Ch. 8, Ch. 10 and Ch. 12 carry the 2-D verdict of record,
+the C-06 dependence finding, the SR-010 negative and the D-69 closures.
+
+### Rationale
+
+The page limit is a hard submission requirement and the draft was ~2× over it before the mandated
+layout was even applied. Appendices are the guidelines' own mechanism for exactly this: the body
+carries the argument, the appendix carries the evidence. Rebuilding from Markdown rather than
+patching the DOCX also removes the staleness problem structurally — the document is now
+regenerable in one command, so a result change no longer means hand-editing a binary.
+
+### Impact
+
+`draft_V4.docx` is left untouched as the previous submission draft. Two items stay open and are
+recorded in `manuscript/README.md`: the **language** (the guidelines ask for standard English; the
+manuscript is in Spanish — the author's decision was Spanish now, English afterwards over the
+reduced text), and the **physical results**, which remain absent because Phase 5 has not run.
+
+### Verification
+
+`python tools/check_traceability.py` → All checks PASSED, 0 warnings. Build reproduced from a
+clean invocation; page budget verified by Word repagination, not estimated. Cover, abstract, TOC,
+list of figures, a body page and an appendix page inspected as rendered PDF.
+
+---
+
 ## [31.07.2026] — D-69: the simulation programme closes — verdict of record re-pointed to the 2-D campaign, and the last two SR-CL-B TBDs closed
 
 **Document(s) affected:** `docs/07_traceability_matrix.md` (matrix rows, notes ²³⁷, new note ⁹, new E5 block, post-gate note, CSV schema row), `docs/02`–`docs/06` (framing notes + Last-update lines), `docs/08_odd_specification.md` (**v0.9 → v0.9.1**, status line, §1, §6.5, §7.3 realisation block, §11 Q10 row, §12.3), `docs/DECISIONS.md` (**D-69**, index rows D-62..D-69, status header), `tools/traceability_matrix.csv` (evidence re-pointed + 4 new rows for SR-009/SR-010), `CLAUDE.md`, `docs/16_defense_compendium.md`, `manuscript/` chapters 8 and 10 (only the claims the closure falsifies).

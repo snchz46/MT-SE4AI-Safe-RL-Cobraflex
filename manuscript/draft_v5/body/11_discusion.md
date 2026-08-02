@@ -1,0 +1,51 @@
+# Capítulo 11 — Discusión
+
+## 11.1 Propósito y método
+
+Este capítulo evalúa **el marco**, no el sistema. La distinción es la que §3.2.1 estableció al declarar el trabajo como investigación constructiva: el artefacto sometido a juicio es el V-Model adaptado, y el sistema de seguimiento de carril es el instrumento con el que se le ha sometido a prueba. El método es el fijado por adelantado en §3.7.1 —cinco criterios con su indicador— más la evaluación de las tres hipótesis del Capítulo 1. Fijar los criterios antes de conocer el resultado es lo que permite que esta evaluación sea algo más que una defensa.
+
+## 11.2 El marco frente a sus cinco criterios
+
+**(1) Integridad de la trazabilidad — criterio: cero huérfanos. Cumplido.** El validador pasó sin huérfanos en cada puerta de revisión y sobre la matriz consolidada al cierre. El dato relevante no es el cero final sino que la restricción operó como **puerta dura durante** el desarrollo: los identificadores huérfanos se detectaban al introducirse, no en una auditoría posterior. Un cero obtenido por auditoría final habría medido la diligencia del autor; obtenido de forma continua, mide la propiedad del marco.
+
+**(2) Cobertura de requisitos por evidencia — criterio: 100 % con veredicto, aunque sea negativo. Cumplido.** Los catorce requisitos tienen veredicto respaldado por evidencia cuantitativa. La cláusula «preferible un veredicto honesto a una omisión» se ejercitó de verdad y en tres direcciones: el veredicto global del brazo de cámara quedó registrado como literalmente negativo; dos requisitos conservan su fallo literal junto a la reconciliación en lugar de reescribirse; y un requisito se cierra como **no satisfecho**, con su medición y su desglose por combinación de reglas. El criterio no se cumplió a pesar de los resultados incómodos, sino **mediante** ellos.
+
+**(3) Anticipación de peligros — criterio: la mayoría de lo observado estaba anticipado y lo emergente es auditable. Sustancialmente cumplido.** Casi todos los peligros que se manifestaron estaban en el registro desde la fase de análisis o se añadieron al abrir el track de cámara **antes** de que la campaña los midiera. Dos casos son instructivos por emergentes. El primero es el **conflicto entre la cage y su propio estimador**: la envolvente degradando a una política competente por una lectura confiada pero errónea; su raíz estaba registrada como peligro, pero no su manifestación como modo propio. El segundo es el **óptimo degenerado de detenerse** que aparece al dar autoridad longitudinal a la política: el registro anticipaba la familia —explotación de la recompensa— pero la instancia concreta hubo que descubrirla. En ambos casos el marco absorbió el emergente por la vía prevista: identificador, decisión registrada, artefacto.
+
+Un tercer emergente merece mención aparte porque el marco **no** lo anticipó en ninguna forma: la **dependencia de una regla de clase B** para el mantenimiento del carril (§8.5). El registro de peligros contempla que la cage falle, que arbitre mal o que lea mal; no contempla que la policy se adapte a la cage hasta necesitarla para conducir. Es un modo de fallo del *acoplamiento* entre componente aprendido y envolvente, y sugiere una categoría de peligro que el análisis inicial no tenía.
+
+**(4) Coste de adopción — criterio: proporcional al beneficio. Cumplido de forma provisional.** El registro contiene más de sesenta decisiones, el validador, las plantillas y una docena de documentos vivos mantenidos al día de los resultados por una sola persona *mientras* se ejecutaban dos pistas de entrenamiento, varias campañas de evaluación y un puente entre simuladores. El reparto exacto entre esfuerzo de marco y esfuerzo técnico no se midió en horas —límite declarado de antemano—; el indicador registrado es que **ninguna puerta de revisión se retrasó por artefactos del marco**, mientras que sí hubo retrasos por causas técnicas.
+
+**(5) Productividad de la matriz — criterio: casos documentados donde aceleró el análisis de impacto. Cumplido, con un contraejemplo.** Tres casos concretos: el defecto de higiene de criterios que produjo el veredicto negativo literal se **localizó en minutos** siguiendo la fila requisito → escenario → cláusula, porque la cadena estaba materializada; la re-puntuación de un requisito sobre su métrica propia fue posible porque la matriz distinguía qué escenario ejercita qué requisito con qué métrica; y la migración de la biblioteca a una geometría nueva reutilizó las cadenas existentes con cambios auditables.
+
+El contraejemplo se registra con el mismo peso, porque señala un límite real del marco: la matriz **no detectó por sí sola** que un escenario se estaba ejecutando sin inyectar sus condiciones iniciales, de modo que durante un tiempo produjo cero co-activación y un veredicto indeterminado que parecía un hueco de instrumentación. La trazabilidad garantiza que el escenario existe y referencia a su requisito; **no garantiza que el ejecutor lo ejecute como está especificado**. Esa distinción —validación de *ejecución* frente a validación de *referencia*— es la mejora más concreta que este trabajo identifica sobre su propio marco.
+
+## 11.3 Las tres hipótesis
+
+**H1 (de constructo) — soportada.** Las cinco adaptaciones bastaron para cubrir los modos de fallo encontrados a lo largo del ciclo, y ninguno exigió inventar un mecanismo fuera del marco. La matización es que «bastaron» significa «no se encontró ninguno que no cupiera», lo que es evidencia de suficiencia práctica y no de completitud.
+
+**H2 (de operatividad) — soportada.** Cada adaptación produjo artefactos concretos, mantenidos por una persona, sin que ninguno se convirtiera en el cuello de botella del proyecto. La adaptación más barata resultó ser la de trazabilidad —un validador de unos cientos de líneas— y es también la que más valor produjo, lo que constituye el resultado de coste-beneficio más claro del trabajo.
+
+**H3 (de utilidad) — soportada con una precisión importante.** El marco produjo un veredicto fundamentado con sus límites de validez, que es exactamente lo que la hipótesis afirmaba. La precisión es que **el veredicto es incómodo**: global negativo en su forma literal, con un requisito no satisfecho y una regla sin ejercitar. Un lector podría leerlo como fracaso del sistema; sería un error de nivel. La hipótesis versa sobre la capacidad del marco de producir un juicio trazable, no sobre el signo de ese juicio, y un marco que solo pudiera producir juicios favorables no sería útil sino decorativo.
+
+## 11.4 Lecciones aprendidas
+
+**La trazabilidad es barata y la instrumentación es cara.** El validador costó poco y rindió mucho; lo que consumió tiempo fue conseguir que los escenarios midieran de verdad lo que decían medir —inyectar condiciones iniciales, registrar las magnitudes que los criterios referencian, distinguir indeterminación de fallo—. La lección para quien replique el marco es que el esfuerzo debe presupuestarse en la instrumentación, no en la documentación.
+
+**Un criterio heredado sin auditar contamina el veredicto.** Una cláusula de rendimiento calibrada sobre un controlador y una geometría anteriores sobrevivió a dos migraciones y bloqueó el veredicto global de dos campañas. Auditarla reveló que medía una propiedad distinta de la que su nombre sugería. La lección: **los criterios de aceptación son artefactos versionados y deben migrarse con la misma disciplina que el código**.
+
+**Las métricas de entrenamiento no clasifican el comportamiento.** Semillas con curvas indistinguibles produjeron políticas que caen a lados opuestos de la línea que separa «respeta las restricciones» de «depende de la envolvente». Un marco que aceptara la selección por recompensa habría entregado, en este trabajo, la peor de tres políticas candidatas.
+
+**La envolvente puede moldear al componente que contiene.** Es la lección más inesperada y la que tiene consecuencias más amplias: al entrenar con la cage en la cadena de actuación, lo que se optimiza es la pareja, no la política. La contención en tiempo de ejecución no es un filtro neutro sobre un componente dado; es parte del sistema que el componente aprende a habitar.
+
+## 11.5 Comparación con prácticas alternativas
+
+Frente a **no usar marco**, la diferencia observable es que las afirmaciones tienen destino: cada resultado tiene exactamente un lugar donde registrarse y ninguna queda sin evidencia. Frente a **ingeniería basada en modelos**, el marco renuncia a la potencia de un modelo central a cambio de una barrera de entrada mucho menor —ficheros de texto versionados y un validador—, manteniendo la propiedad esencial de trazabilidad verificada. Frente a **safe RL puro**, mantiene una garantía que no depende de la distribución de entrenamiento y que sobrevive al reemplazo de la política. Frente a **validación por escenarios sin ciclo de vida**, aporta la conexión hacia arriba: cada escenario existe porque un requisito lo pide y un peligro lo justifica, en lugar de porque pareciera interesante.
+
+## 11.6 Riesgos residuales
+
+Cuatro riesgos quedan abiertos al cierre y se enuncian sin atenuantes. La **arbitración bajo co-activación** no cumple su requisito y su corrección es un problema de diseño abierto. La **dependencia del limitador de tasa** hace que lo que se transfiera a hardware sea una pareja acoplada y no una política. La **causa común entre percepción de la policy y percepción de la cage** es estructural: comparten imagen, y una degradación suficientemente severa las ciega a la vez; las mitigaciones existentes degradan a parada segura pero no eliminan la dependencia. Y la **ausencia total de evidencia física** significa que ninguna afirmación de este trabajo está validada sobre el vehículo real.
+
+## 11.7 Síntesis
+
+El marco cumple los cinco criterios que se fijó, incluido el que exigía veredictos para todos los requisitos aunque resultaran desfavorables. Su límite más instructivo no es ninguno de los declarados de antemano sino el que descubrió al aplicarse: la trazabilidad valida referencias, no ejecuciones, y esa asimetría permitió que un escenario corriera durante meses sin hacer lo que su especificación decía. El Capítulo 12 recoge las conclusiones y traduce estos hallazgos en líneas de trabajo concretas.

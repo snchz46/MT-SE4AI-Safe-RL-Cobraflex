@@ -117,6 +117,48 @@ the RL chain reads it. To see exactly what the policy sees, point rviz at
    keep-alive. `vehicle_control_node` covers the cage dying
    (`safe_action_timeout_s` → zero Twist), but if `vehicle_control_node` itself
    dies the car keeps driving on its last command.
+6. **Inference stack — installed and verified 2026-08-04, no action needed.**
+   `torch` 2.13.0+cpu, `stable-baselines3` 2.9.0, `gymnasium` 1.3.0 and
+   `numpy` 1.26.4 live in `~/rl_deploy_venv` (a `--system-site-packages`
+   virtualenv), reached via `scripts/setup_deploy_env.sh`. Notes for whoever
+   rebuilds this:
+   * **CPU, not CUDA.** `rl_policy_node`'s `device` parameter is `"cpu"` by
+     design, so the stock PyPI `manylinux_2_28_aarch64` wheel is the right one —
+     the NVIDIA JetPack build is not required. Measured on this Jetson's CPU:
+     the full cycle (`to_observation` → k=4 stack → `predict` → Twist mapping)
+     is **17.6 ms ≈ 57 Hz**, against a 10 Hz control loop and a 20 Hz camera. That
+     retires the "compute cadence" item in §5 for the inference half; the camera
+     driver remains the untested part.
+   * **Do not activate the venv.** The colcon-installed node scripts have a
+     `#!/usr/bin/python3` shebang, so activation is silently ignored. `PYTHONPATH`
+     is the mechanism that works.
+   * **`LD_PRELOAD` of torch's bundled OpenBLAS is mandatory**, not a nicety. The
+     system `libopenblas.so.0` (Ubuntu 22.04) lacks `sbgemm_`; torch's copy exports
+     it; the first one loaded wins process-wide, and system OpenCV loads the system
+     one — so `import cv2` before `import torch`, which is exactly what the node
+     chain does, kills `import torch` with `undefined symbol: sbgemm_`. Preloading
+     makes it order-independent. `LD_LIBRARY_PATH` is **not** a substitute: it also
+     overrides `libgomp` and breaks numpy's own sanity check.
+   * numpy 1.26.4 shadows the system's 1.21.5 inside this environment. Verified
+     that `rclpy`, `cv_bridge` and `cv2` 4.5.4 all still import and run under it
+     (C-extensions built against numpy 1.21 are forward-compatible within the 1.x
+     ABI). The system Python is left untouched, so nothing outside the RL chain
+     changes.
+7. **[BLOCKER] The deployed checkpoint is not on the car.** Checkpoint binaries are
+   gitignored, so the repo checkout carries the campaign's CSVs but not the `.zip`.
+   Copy from the training machine:
+
+   | | |
+   | --- | --- |
+   | File | `ppo_gz2d_cap022_1M_2024_550000_steps.zip` |
+   | Source | `policy/checkpoints/` on the training host |
+   | SHA-256 | `0d4492461b24efce58fed4c53e3ada58385ffc7d6b0746863de14a6892a25867` |
+   | Algorithm | `ppo` · `max_speed_mps` 0.22 · `throttle_deadband` 0.05 |
+   | Provenance | `experiments/sim/runs/rl_ppo2d_cap022_550000_nom_4k4/metadata.json` |
+
+   Verify the hash on arrival — it is the only link between the car and the verdict
+   of record. The observation contract the node reconstructs (84×84 grey, k=4) was
+   checked against `train_ppo_camera_2d_cap022_1M.yaml` and matches.
 
 ## 2b. The platform's bring-up layering (what the RL launch must match)
 
@@ -149,19 +191,31 @@ Two conventions follow from this, and the RL launch obeys both:
 
 ## 3. Bring-up command
 
+The car host (`admit14-cobraflex`, Jetson / L4T R36.4.7, aarch64) runs **ROS 2
+Humble**, not the dev machine's Jazzy, and its workspace is `~/ros2_ws` — see §3b
+for how the repo packages are wired into it.
+
 ```bash
-source /opt/ros/jazzy/setup.bash && source install/setup.bash
+# Sources Humble + the colcon overlay AND wires the inference venv (§2 item 6).
+# Use it in every terminal of the bring-up; plain `source install/setup.bash` is
+# enough for the Layer-1 terminal but harmless everywhere.
+source ~/MT-SE4AI-Safe-RL-Cobraflex/scripts/setup_deploy_env.sh
 
 # Layer 1 (once, in its own terminal) — description + ROS→JSON serial driver:
 ros2 launch cobraflex cobraflex_bringup.launch.xml use_rviz:=false
 
 # Layer 3 — csi_camera_node + the RL chain (attaches to the bring-up above):
 ros2 launch cobraflex_rl deploy_cobraflex.launch.py \
-    checkpoint:=/abs/path/to/<deployed>.zip \
-    algorithm:=sac \
+    checkpoint:=/abs/path/to/ppo_gz2d_cap022_1M_2024_550000_steps.zip \
+    algorithm:=ppo \
     max_speed_mps:=0.22 \
     mode:=monitoring          # FIRST runs in monitoring (cage shadows, does not act)
 ```
+
+`algorithm` and `max_speed_mps` are the launch defaults (`ppo`, `0.22`) because the
+deployed trunk is the **2-D PPO cap-0.22 550k** checkpoint (D-66/D-67); they are
+spelled out above only to make the contract explicit. A wrong `algorithm` is not a
+soft failure — SB3 refuses to load the zip.
 
 Make sure `cobraflex_lane_keeper.launch.py` is **not** running: it holds the same CSI
 device and commands `/cmd_vel`.
@@ -178,6 +232,37 @@ Variants:
 
 > Requires a `colcon build` of `cobraflex_rl` — `csi_camera_node`, `rl_policy_node`
 > and the deploy launch all postdate the current `install/` tree.
+
+## 3b. How the repo is wired into the car's `~/ros2_ws` (done 2026-08-04)
+
+The four packages are **symlinks** into the repo checkout, not copies:
+
+```text
+~/ros2_ws/src/{cobraflex,cobraflex_rl,cobraflex_safety_msgs,safety_cage}
+    -> ~/MT-SE4AI-Safe-RL-Cobraflex/src/<pkg>
+```
+
+Symlinks (plus `colcon build --symlink-install`) are load-bearing, not cosmetic:
+`cage_ros_node._resolve_cage_yaml` and `_bootstrap_cage_import` both **walk up from
+the node's own source file** to find the repo's `cage/`. A copied workspace has no
+`cage/` above it, so the cage would either fail to import or fail to find
+`cage.yaml`. With the symlink the node resolves the repo's own
+`cage/cage.yaml` — verified at build time to hash
+`4287fe71…`, i.e. **bit-identical to the cage that produced the 550k verdict of
+record** (`experiments/sim/runs/rl_ppo2d_cap022_550000_nom_4k4/metadata.json`).
+
+`cage` / `policy` are additionally put on the interpreter path by
+`~/.local/lib/python3.10/site-packages/se4ai-thesis-repo.pth` (one line: the repo
+root). This is the `pip install -e .` of CLAUDE.md by other means — the host's
+pip 22.0.2 + setuptools 59.6 combination cannot do a PEP-660 editable install, and
+upgrading setuptools on the car is not worth it (`colcon-core` pins `<80` and
+Humble's `ament_python` builds are sensitive to setuptools ≥64).
+
+Two `COLCON_IGNORE` markers keep the workspace buildable: `~/ros2_ws/warren/`
+(rosbag test data colcon otherwise scans) and `~/ros2_ws/src_copies_backup_20260804/`
+(the pre-symlink copies, kept until the first successful hardware run — delete
+afterwards). The gitignored 87 MB `rplidar-a2m4-r1.stl` was moved into the repo's
+`src/cobraflex/meshes/` so the Layer-1 description still has it.
 
 ## 4. Staged, safe bring-up sequence
 
@@ -205,9 +290,12 @@ Variants:
   H-10 domain randomisation (training-side), the D-57 calibration precedent.
 - **`[provisional]` thresholds** (M-1..M-5) were calibrated on sim noise; the
   calibration campaign exists to re-derive them on hardware.
-- **Compute cadence**: the loop is 10 Hz in sim; confirm the real camera→inference
-  →actuation path sustains it (CPU inference is ample; the camera driver is the
-  likely bottleneck).
+- **Compute cadence**: the loop is 10 Hz in sim. The *inference* half is now
+  measured on the car — 17.6 ms/cycle ≈ 57 Hz on the Jetson CPU with the deployed
+  observation contract (§2 item 6) — so "CPU inference is ample" is no longer a
+  guess. What is still unmeasured is the **camera→inference→actuation path end to
+  end**; the CSI driver remains the likely bottleneck and can only be timed on the
+  car.
 - **Which checkpoint**: deploy the rescued *peak* checkpoint of the final training
   (monitor the 25k-cadence learning curve), not necessarily the last step.
 

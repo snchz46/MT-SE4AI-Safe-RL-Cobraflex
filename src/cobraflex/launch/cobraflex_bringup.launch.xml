@@ -3,8 +3,6 @@
     <!-- Base bringup for the physical robot: model, sensors and serial driver. -->
 
     <arg name="use_rviz" default="true"/>
-    <!-- Forwarded to the driver so a caller can retarget the serial device
-         without editing this file. Defaults match cobraflex_driver.launch.xml. -->
     <arg name="serial_port" default="/dev/ttyACM1"/>
     <arg name="baudrate" default="115200"/>
 

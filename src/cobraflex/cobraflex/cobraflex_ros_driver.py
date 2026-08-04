@@ -5,6 +5,7 @@ import json
 
 from geometry_msgs.msg import Twist
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 import serial
 from std_msgs.msg import Float32, String
@@ -156,12 +157,20 @@ def main(args=None):
     try:
         node = CobraFlexROSDriver()
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
+        # Under `ros2 launch` a ctrl-c arrives as ExternalShutdownException, not
+        # KeyboardInterrupt. Letting it escape aborted main() before the motors
+        # were stopped and made the node exit 1 on every shutdown.
         pass
     finally:
         if node is not None:
+            # Stops the motors and closes the port. Safe after an external
+            # shutdown: it only touches the serial device, not the ROS context.
             node.destroy_node()
-        rclpy.shutdown()
+        # Already down when the shutdown came from outside; calling it twice
+        # raises and would again mask the clean exit.
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

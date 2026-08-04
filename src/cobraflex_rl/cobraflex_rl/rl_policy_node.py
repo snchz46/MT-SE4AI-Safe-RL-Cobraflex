@@ -21,7 +21,8 @@ cage arbitrates the raw command exactly as in simulation.
 
 Parameters
     checkpoint        (str)  SB3 .zip to load (the verdict/deploy checkpoint).
-    algorithm         (str)  'sac' | 'ppo' — the class the checkpoint was trained with.
+    algorithm         (str)  'ppo' (default, the deployed trunk) | 'sac' — the class
+                             the checkpoint was trained with.
     image_topic       (str)  camera frames the policy saw (default camera/image_raw_lane).
     raw_action_topic  (str)  where the raw policy action is published (default /raw_action).
     frame_stack       (int)  k (default 4, the E-design value).
@@ -85,7 +86,9 @@ def main(argv: Optional[List[str]] = None) -> None:
         def __init__(self) -> None:
             super().__init__("rl_policy_node")
             self.declare_parameter("checkpoint", "")
-            self.declare_parameter("algorithm", "sac")
+            # ppo: the deployed trunk is the 2-D PPO cap-0.22 550k checkpoint
+            # (D-66/D-67); the SAC 2-D arms are findings, not the verdict of record.
+            self.declare_parameter("algorithm", "ppo")
             self.declare_parameter("image_topic", "camera/image_raw_lane")
             self.declare_parameter("raw_action_topic", "/raw_action")
             self.declare_parameter("frame_stack", 4)

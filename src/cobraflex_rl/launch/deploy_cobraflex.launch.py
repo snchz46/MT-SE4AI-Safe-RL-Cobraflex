@@ -71,20 +71,30 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import AnyLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description() -> LaunchDescription:
-    cage_yaml_default = os.path.join(
+    # Only override the node's own resolution if a cage.yaml is actually installed
+    # in this package's share/config. It normally is NOT (cage.yaml lives at the
+    # repo root, cage/cage.yaml, and is not a cobraflex_rl data_file), and an empty
+    # default is what lets cage_ros_node._resolve_cage_yaml walk up to it. Testing
+    # isdir(config) instead of isfile(cage.yaml) would hand the node a path that
+    # does not exist — non-empty, so the walk-up never runs and SafetyCageNode
+    # raises on load.
+    _cage_yaml_installed = os.path.join(
         get_package_share_directory("cobraflex_rl"), "config", "cage.yaml"
-    ) if os.path.isdir(
-        os.path.join(get_package_share_directory("cobraflex_rl"), "config")
-    ) else ""
+    )
+    cage_yaml_default = _cage_yaml_installed if os.path.isfile(_cage_yaml_installed) else ""
 
     args = [
         DeclareLaunchArgument("checkpoint", description="SB3 .zip to deploy (required)."),
-        DeclareLaunchArgument("algorithm", default_value="sac", description="sac|ppo."),
+        # ppo, not sac: the deployed trunk is the 2-D PPO cap-0.22 550k checkpoint
+        # (D-66/D-67) — the SAC 2-D arms are findings, not the verdict of record.
+        # A wrong algorithm here is not a soft failure: SB3 refuses to load the zip.
+        DeclareLaunchArgument("algorithm", default_value="ppo", description="ppo|sac."),
         DeclareLaunchArgument("cage_yaml", default_value=cage_yaml_default,
                               description="cage.yaml (empty → node default)."),
         DeclareLaunchArgument("mode", default_value="enforcement",
@@ -179,11 +189,15 @@ def generate_launch_description() -> LaunchDescription:
     # already up would start a SECOND cobraflex_ros_driver on the same serial
     # device — Linux does not lock /dev/ttyACM*, so both would interleave JSON
     # writes and keep-alives undetected.
+    # The path is a *substitution*, not get_package_share_directory(): the latter
+    # resolves while the launch description is being built, i.e. even under
+    # bringup:=false, which would make the whole Layer-3 RL launch unusable on a
+    # workspace where `cobraflex` is not built. FindPackageShare is evaluated only
+    # when the (conditional) include is actually visited.
     platform_bringup = IncludeLaunchDescription(
-        AnyLaunchDescriptionSource(os.path.join(
-            get_package_share_directory("cobraflex"), "launch",
-            "cobraflex_bringup.launch.xml",
-        )),
+        AnyLaunchDescriptionSource(PathJoinSubstitution([
+            FindPackageShare("cobraflex"), "launch", "cobraflex_bringup.launch.xml",
+        ])),
         launch_arguments={
             "serial_port": LaunchConfiguration("serial_port"),
             "baudrate": LaunchConfiguration("baudrate"),

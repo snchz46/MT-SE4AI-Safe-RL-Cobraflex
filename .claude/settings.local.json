@@ -56,6 +56,9 @@
       "PowerShell(& B:\\\\SE4AI\\\\thesis_repo\\\\.venv-win\\\\Scripts\\\\python.exe -m pytest policy/tests/test_gazebo_lane_env_2d.py policy/tests/test_rewards.py policy/tests/test_cage_bridge.py -q --no-header 2>$null)",
       "Bash(mmdc --version)",
       "Bash(command -v npx)"
+    ],
+    "additionalDirectories": [
+      "/home/admit14/ros2_ws"
     ]
   }
 }

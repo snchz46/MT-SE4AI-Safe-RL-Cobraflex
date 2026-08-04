@@ -17,9 +17,14 @@
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
 
-  <!-- deploy_cobraflex.launch.py includes the chassis ROS->JSON serial driver
-       from the cobraflex package (cobraflex_driver.launch.xml). -->
-  <exec_depend>cobraflex</exec_depend>
+  <!-- NOT declared: <exec_depend>cobraflex</exec_depend>. deploy_cobraflex.launch.py
+       resolves cobraflex_bringup.launch.xml through ament_index at runtime, and only
+       under bringup:=true (the non-default standalone path) — while `cobraflex`
+       already exec_depends on this package (lane_keeper_gazebo_node imports the CV
+       lane estimator). Declaring both directions makes the dependency graph cyclic
+       and colcon refuses to order the workspace at all
+       ("Unable to order packages topologically"). The code-level direction
+       cobraflex -> cobraflex_rl is the real one and is the one kept. -->
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
 

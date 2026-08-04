@@ -1,5 +1,8 @@
 [build-system]
-requires = ["setuptools>=61"]
+# >=64, not >=61: PEP 660 (the build_editable hook) landed in setuptools 64, and
+# `pip install -e .` is how the ROS2 nodes get `cage` on their path (CLAUDE.md).
+# With 61 the isolated build backend has no build_editable and pip hard-fails.
+requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]

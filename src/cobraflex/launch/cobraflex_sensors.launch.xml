@@ -18,4 +18,9 @@
         <arg name="publish_map_tf" value="false"/>
         <arg name="reset_odom_with_loop_closure" value="true"/>
     </include>
+
+    <node pkg="robot_localization" exec="ekf_node" name="ekf_filter_node" output="screen">
+        <param from="$(find-pkg-share cobraflex)/config/ekf_hw.yaml"/>
+    </node>
+
 </launch>

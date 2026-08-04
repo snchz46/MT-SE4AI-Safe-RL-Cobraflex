@@ -21,15 +21,7 @@
     <xacro:property name="wheel_off_x" value="0.060" /> 
     <xacro:property name="wheel_off_y" value="${(chassis_width/2) + (wheel_width/2) + 0.002}" /> 
 
-    <link name="base_footprint">
-        <visual>
-            <origin xyz="0 0 0" rpy="0 0 0"/>
-        </visual>
-        <collision>
-            <origin xyz="0 0 0" rpy="0 0 0"/>
-        </collision>
-    </link>
-
+    <link name="base_footprint"/>
 
     <link name="base_link">
         <visual>

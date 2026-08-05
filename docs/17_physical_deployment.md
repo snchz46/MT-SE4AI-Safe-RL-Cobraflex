@@ -1,10 +1,21 @@
 # 17 · Physical deployment (Phase 5) — bring-up plan for the real CobraFlex
 
-**Status: scaffolding prepared, NOT yet run on hardware.** This document is the
-bring-up checklist for taking the verdict-bearing RL camera policy + safety cage
-from Gazebo to the physical 1:14 CobraFlex. Every sim-side component it reuses is
-validated; the hardware I/O and the items flagged **[VERIFY]** are not, by
-construction — they need the car.
+**Status: scaffolding prepared; the node chain has now been RUN ON THE CAR
+(2026-08-05, bench, `mode:=monitoring`, no track, no actuation trusted) — the car
+has still NOT been driven.** This document is the bring-up checklist for taking
+the verdict-bearing RL camera policy + safety cage from Gazebo to the physical
+1:14 CobraFlex. Every sim-side component it reuses is validated; the hardware I/O
+and the items flagged **[VERIFY]** are not, by construction — they need the car.
+
+> **2026-08-05 bench review — five defects found and fixed, all silent.** The
+> chain as scaffolded would have started, logged, and driven *wrongly* rather than
+> failed. See §6b for the full list and the evidence. In short: the throttle
+> reached the cage in the wrong domain; the speed map was the frozen 1-D one; the
+> policy and cage ran at the camera's 20 Hz instead of the trained 10 Hz; one
+> `msg.data = ...tobytes()` assignment capped the camera at ~8 Hz; and a camera
+> that had failed to acquire the sensor still reported itself ready. After the
+> fixes the bench chain holds **10 Hz** end to end with zero watchdog stops, on
+> the real 550k checkpoint.
 
 ## 1. What changes from simulation, and what does not
 
@@ -144,9 +155,16 @@ the RL chain reads it. To see exactly what the policy sees, point rviz at
      (C-extensions built against numpy 1.21 are forward-compatible within the 1.x
      ABI). The system Python is left untouched, so nothing outside the RL chain
      changes.
-7. **[BLOCKER] The deployed checkpoint is not on the car.** Checkpoint binaries are
-   gitignored, so the repo checkout carries the campaign's CSVs but not the `.zip`.
-   Copy from the training machine:
+7. **The deployed checkpoint — ON THE CAR since 2026-08-05, hash verified.** It sits
+   at the repo root as `ppo_gz2d_cap022_1M_2024_550000_steps.zip` (20 MB); `.gitignore`
+   gained `/*_steps.zip` so it cannot be committed (the 25.07 rule only caught the
+   `cobraflex_*` naming). Verified on arrival: sha256 exact, SB3 loads it,
+   `num_timesteps` 550000, `ActorCriticCnnPolicy`, obs `Box(0,255,(4,84,84),uint8)`,
+   action `Box(-1,1,(2,),float32)` — the deployed contract — and `predict()` is
+   deterministic at **9.2 ms** median (p95 14.2 ms) against the 100 ms budget at
+   10 Hz. SB3 warns `Could not deserialize object lr_schedule` on load: that is the
+   training host's pickled schedule lambda, unused for inference; the weights load
+   from `policy.pth` separately and the action output is deterministic and in range.
 
    | | |
    | --- | --- |
@@ -156,9 +174,21 @@ the RL chain reads it. To see exactly what the policy sees, point rviz at
    | Algorithm | `ppo` · `max_speed_mps` 0.22 · `throttle_deadband` 0.05 |
    | Provenance | `experiments/sim/runs/rl_ppo2d_cap022_550000_nom_4k4/metadata.json` |
 
-   Verify the hash on arrival — it is the only link between the car and the verdict
-   of record. The observation contract the node reconstructs (84×84 grey, k=4) was
+   The hash is the only link between the car and the verdict of record — re-verify it
+   after any copy. The observation contract the node reconstructs (84×84 grey, k=4) was
    checked against `train_ppo_camera_2d_cap022_1M.yaml` and matches.
+8. **Odometry — Layer 2 must be running, or the cage loses half its rules.** The
+   cage's `State.speed` comes from `cv_lane_estimator_node`'s odometry
+   subscription. On this platform **nothing publishes `/odom`** (that is a Gazebo
+   topic): `cobraflex_ros_driver` emits `/cobraflex/wheel_speeds` (a
+   `geometry_msgs/Twist` carrying the raw `odl`/`odr` encoder fields, not a
+   `nav_msgs/Odometry`), and the odometry proper is the ekf's `/odometry/filtered`,
+   fused from the ZED's visual odometry in `cobraflex_sensors.launch.xml`. With no
+   speed the chain still runs and still logs — but C-03 sees every TTLC as infinite
+   (speed under `v_min_estimate_mps` 0.05), C-04 never finds an excess over
+   `v_max_curve`, and C-05's high-energy variant (`v_warning_mps` 0.4) can never
+   arm. Nothing errors. The launch now defaults `odom_topic:=/odometry/filtered`
+   and the node logs an error if frames arrive but odometry does not.
 
 ## 2b. The platform's bring-up layering (what the RL launch must match)
 
@@ -166,16 +196,31 @@ The CobraFlex package is layered, and every controller follows the same pattern:
 
 | Layer | Launch | Starts |
 | --- | --- | --- |
-| 1 — base | `cobraflex_bringup.launch.xml` | `cobraflex_description.launch.xml` (robot_state_publisher on `my_robot_gazebo_mesh.urdf`, joint_state_publisher, rviz `bot.rviz`; `use_sim_time:=false`) **+** `cobraflex_driver.launch.xml` (`cobraflex_ros_driver`) |
-| 2 — sensors | `cobraflex_sensors.launch.xml` | SLLIDAR A2M8 (`frame_id:=lidar_link`) + ZED Mini (`camera_model:=zedm`, `publish_tf:=true`) |
+| 1 — base | `cobraflex_bringup.launch.xml` | `cobraflex_description.launch.xml` (robot_state_publisher on **`my_robot_basic.urdf`**, joint_state_publisher, rviz `bot.rviz`; `use_sim_time:=false`) **+** `cobraflex_driver.launch.xml` (`cobraflex_ros_driver`) |
+| 2 — sensors | `cobraflex_sensors.launch.xml` | SLLIDAR A2M8 (`frame_id:=lidar_link`) + ZED Mini (`camera_model:=zedm`, `publish_tf:=true`) + **the Jetson CSI lane camera** (`csi_camera_node`) + the **ekf** (`ekf_hw.yaml` → `/odometry/filtered`) |
 | 3 — controller | `cobraflex_lane_keeper.launch.py` | `lane_keeper_node` + rviz `lane_keeper.rviz` — **no** Layer 1/2 include; it owns the CSI camera itself |
 | 3 — controller | `cobraflex_automatic.launch.xml` | Layer 2 + `lidar_avoidance_node` |
-| 3 — controller | **`deploy_cobraflex.launch.py`** | `csi_camera_node` + the RL chain (this document) |
+| 3 — controller | **`deploy_cobraflex.launch.py`** | the RL chain (this document); `camera:=false` by default — Layer 2 publishes the frames |
 
 The two Layer-3 lane controllers are **mutually exclusive**: both need the same CSI
-device and both end up commanding `/cmd_vel`.
+device and both end up commanding `/cmd_vel`. Run `cobraflex_lane_keeper.launch.py`
+only with Layer 2's `use_lane_camera:=false`, or without Layer 2 at all.
 
-Two conventions follow from this, and the RL launch obeys both:
+> **URDF correction (2026-08-05).** This table previously named
+> `my_robot_gazebo_mesh.urdf` as Layer 1's description. It is not, and must not be:
+> `cobraflex_description.launch.xml` defaults to `my_robot_basic.urdf`, which is the
+> **only** variant whose TF root is `zed_camera_link` (`footprint_joint`'s parent) —
+> exactly what `ekf_hw.yaml` needs to resolve the ZED→`base_footprint` offset. The
+> mesh variant has no `footprint_joint` and is the sim description.
+> The two disagree on the lane camera's height: `my_robot_gazebo_mesh.urdf` carries
+> a `-0.01` body offset that `my_robot_basic.urdf` lacks, so the hardware
+> description places the camera at **0.08725 m** while the cage's IPM
+> (`camera_geometry.DEFAULT_CAMERA_HEIGHT_M`) assumes **0.07725 m**. The IPM reads
+> the constant, not the TF, so nothing breaks silently *because of* the URDF — but
+> the platform's own description disagreeing with the IPM by 13 % is a concrete
+> lead for the §2 item 2 [VERIFY]: measure the real mount and reconcile all three.
+
+Three conventions follow from this, and the RL launch obeys all of them:
 
 * **A controller launch attaches to a running Layer 1**; it does not start the
   driver itself. `deploy_cobraflex.launch.py` therefore defaults `bringup:=false`.
@@ -183,11 +228,14 @@ Two conventions follow from this, and the RL launch obeys both:
   `cobraflex_ros_driver` on the same device; Linux does not lock `/dev/ttyACM*`,
   so the two would interleave JSON writes and 50 ms keep-alives with no error —
   silent corruption of the actuation channel. Use it only for a standalone start.
-* **Layer 2 is not a dependency of lane following.** Neither `lane_keeper_node`
-  nor the RL chain needs the lidar or the ZED, so the RL launch omits Layer 2 —
-  the same choice `cobraflex_lane_keeper.launch.py` makes. The lane camera is the
-  CSI cam, published by `csi_camera_node` inside the Layer-3 launch (§1b), which is
-  also where `cobraflex_lane_keeper.launch.py` gets its frames from (internally).
+* **Layer 2 owns every sensor, including the lane camera** (changed 2026-08-05, so
+  a bring-up is three commands and no sensor is left to a side script). The RL
+  launch therefore defaults `camera:=false` and attaches to
+  `camera/image_raw_lane`. `nvarguscamerasrc` does not share a sensor, so opening
+  it twice simply fails — never run Layer 2's camera and `camera:=true` together.
+* **Layer 2 IS a dependency of the RL chain**, unlike the classical lane keeper —
+  not for the lidar or the ZED image, but because its ekf publishes
+  `/odometry/filtered`, the only source of speed the cage has (§2 item 8).
 
 ## 3. Bring-up command
 
@@ -195,43 +243,64 @@ The car host (`admit14-cobraflex`, Jetson / L4T R36.4.7, aarch64) runs **ROS 2
 Humble**, not the dev machine's Jazzy, and its workspace is `~/ros2_ws` — see §3b
 for how the repo packages are wired into it.
 
+**Three commands, three terminals**, in this order. Each attaches to the previous
+layer; none of them re-starts what an earlier one already owns.
+
 ```bash
-# Sources Humble + the colcon overlay AND wires the inference venv (§2 item 6).
-# Use it in every terminal of the bring-up; plain `source install/setup.bash` is
-# enough for the Layer-1 terminal but harmless everywhere.
+# In EVERY terminal: Humble + the colcon overlay + the inference venv (§2 item 6).
 source ~/MT-SE4AI-Safe-RL-Cobraflex/scripts/setup_deploy_env.sh
 
-# Layer 1 (once, in its own terminal) — description + ROS→JSON serial driver:
+# 1 · Layer 1 — description + ROS→JSON serial driver:
 ros2 launch cobraflex cobraflex_bringup.launch.xml use_rviz:=false
 
-# Layer 3 — csi_camera_node + the RL chain (attaches to the bring-up above):
+# 2 · Layer 2 — lidar + ZED + the CSI lane camera + the ekf:
+ros2 launch cobraflex cobraflex_sensors.launch.xml
+
+# 3 · Layer 3 — the RL chain (policy + D-43 estimator + cage + actuation + evidence):
 ros2 launch cobraflex_rl deploy_cobraflex.launch.py \
     checkpoint:=/abs/path/to/ppo_gz2d_cap022_1M_2024_550000_steps.zip \
-    algorithm:=ppo \
-    max_speed_mps:=0.22 \
     mode:=monitoring          # FIRST runs in monitoring (cage shadows, does not act)
 ```
 
-`algorithm` and `max_speed_mps` are the launch defaults (`ppo`, `0.22`) because the
-deployed trunk is the **2-D PPO cap-0.22 550k** checkpoint (D-66/D-67); they are
-spelled out above only to make the contract explicit. A wrong `algorithm` is not a
-soft failure — SB3 refuses to load the zip.
+With the car on the physical **complex_b** track and `mode:=enforcement`, that is
+the whole deployment: every other parameter of the deployed contract is already a
+launch default.
+
+**What the launch defaults now encode** (all of them reproduce the 550k campaign;
+see §6b for why three of them had to change):
+
+| Argument | Default | What it fixes |
+| --- | --- | --- |
+| `algorithm` / `max_speed_mps` | `ppo` / `0.22` | the D-66/D-67 trunk. A wrong `algorithm` is not soft — SB3 refuses the zip |
+| `control_rate_hz` | `10.0` | the trained `control_dt`; the policy + cage cycle here, NOT at the camera's 20 Hz |
+| `throttle_deadband` | `0.05` | the 2-D contract's stop band |
+| `odom_topic` | `/odometry/filtered` | the ekf, not Gazebo's `/odom` — the cage's only speed source |
+| `heading_fit_mode` / `heading_gain` / `heading_temporal_window` | `joint_pair_quadratic` / `1.6` / `4` | the **posterior** D-43 estimator the trunk was scored with, not the frozen GE4 `near_secant`/1.0 the node defaults to |
+| `camera` | `false` | Layer 2 owns the CSI device |
+| `evidence_dir` | `<repo>/experiments/physical/runs` | physical evidence, not `experiments/sim/runs` relative to the shell's cwd |
 
 Make sure `cobraflex_lane_keeper.launch.py` is **not** running: it holds the same CSI
 device and commands `/cmd_vel`.
 
 Variants:
 
-* Standalone (no Layer 1 running): add `bringup:=true serial_port:=/dev/ttyACM1`
-  and skip the first command — never both.
-* External image source instead of the CSI cam: `camera:=false camera_topic:=<topic>`
-  (the frame must still be 640×360 at 90° HFOV — see §1b).
+* Standalone (no Layer 1/2 running): add `bringup:=true serial_port:=/dev/ttyACM1
+  camera:=true` and skip commands 1–2 — never both. Note the cage then runs with
+  **no speed** (nothing publishes odometry), so C-03/C-04 stay inert; the node logs
+  an error saying so. Use it for camera/perception bench work only.
+* External image source: `camera_topic:=<topic>` (the frame must still be 640×360
+  at 90° HFOV — see §1b).
 * Non-Jetson bench test: run `csi_camera_node` alone with a substitute source, e.g.
   `-p gst_pipeline:="videotestsrc ! videoconvert ! video/x-raw,format=BGR ! appsink"`.
 * Watch what the policy sees: rviz on `camera/image_raw_lane`.
 
-> Requires a `colcon build` of `cobraflex_rl` — `csi_camera_node`, `rl_policy_node`
-> and the deploy launch all postdate the current `install/` tree.
+> **After a `kill -9`, clear the DDS state before relaunching.** A hard kill leaves
+> `/dev/shm/fastrtps_*` segments behind, and the next launch then comes up
+> *partially* connected: every node starts, the cage logs "loaded", and no image or
+> `/cage_status` ever flows — observed on the car 2026-08-05. A clean Ctrl-C
+> releases them. Recovery: `ros2 daemon stop && rm -f /dev/shm/fastrtps_*`.
+> (Not dangerous — `vehicle_control_node`'s watchdog stops the car — but it looks
+> exactly like a healthy start.)
 
 ## 3b. How the repo is wired into the car's `~/ros2_ws` (done 2026-08-04)
 
@@ -274,11 +343,13 @@ afterwards). The gitignored 87 MB `rplidar-a2m4-r1.stl` was moved into the repo'
 1. **Bench, wheels up.** `mode:=monitoring`. Confirm topics flow
    (`/raw_action`, `/state_obs`, `/perception_invalid`, `/cage_status`) and the
    CV estimator tracks a hand-moved lane. No actuation trusted yet.
-2. **[VERIFY] 2-D throttle→speed mapping.** The sim maps the cage's safe throttle
-   via `cage_bridge.target_speed_from_throttle_2d` (max_speed·u, full stop below
-   the deadband); `vehicle_control_node` scales `fixed_speed_mps` by the safe
-   throttle. Confirm they agree (set `fixed_speed_mps` = `action.max_speed_mps`,
-   check the deadband/stop) so commanded speeds match the campaign.
+2. **Throttle→speed, now on rails but still worth watching once.** The domain and
+   the map were wrong and are fixed (§6b items 1–2); the equality with the sim is
+   now asserted host-side
+   (`test_deployed_chain_speed_equals_the_sim_speed`). What remains is to see it:
+   with the wheels up, `ros2 topic echo /cmd_vel` while the policy runs — the
+   commanded `linear.x` must span 0 … 0.22 m/s and reach a **true 0** when the
+   cage's safe throttle drops below the 0.05 deadband.
 3. **Low-speed enforcement, tethered.** `mode:=enforcement`, e-stop in hand,
    `max_speed_mps` reduced. Verify C-05 stops the car and the e-stop overrides.
 4. **Full deploy** only after 1–3 pass.
@@ -290,18 +361,132 @@ afterwards). The gitignored 87 MB `rplidar-a2m4-r1.stl` was moved into the repo'
   H-10 domain randomisation (training-side), the D-57 calibration precedent.
 - **`[provisional]` thresholds** (M-1..M-5) were calibrated on sim noise; the
   calibration campaign exists to re-derive them on hardware.
-- **Compute cadence**: the loop is 10 Hz in sim. The *inference* half is now
-  measured on the car — 17.6 ms/cycle ≈ 57 Hz on the Jetson CPU with the deployed
-  observation contract (§2 item 6) — so "CPU inference is ample" is no longer a
-  guess. What is still unmeasured is the **camera→inference→actuation path end to
-  end**; the CSI driver remains the likely bottleneck and can only be timed on the
-  car.
+- **Compute cadence — measured end to end, 2026-08-05, and it now closes.** The
+  loop is 10 Hz in sim. Inference was already measured at 17.6 ms/cycle ≈ 57 Hz
+  (§2 item 6). The remaining unknown — the camera→inference→actuation path — was
+  the bottleneck, and it was a software defect, not the CSI driver (§6b item 4).
+  With it fixed, the bench chain sustains **10.0 Hz** of cage cycles (50 per 5 s,
+  camera stamp gaps 50 ms median) with **zero** `/safe_action` watchdog stops,
+  measured *while* a desktop session, AnyDesk and an IDE were competing for the
+  same 6 cores. Residual: occasional single-cycle camera starvation (p90 stamp gap
+  101 ms) which the fail-safe chain absorbs.
 - **Which checkpoint**: deploy the rescued *peak* checkpoint of the final training
   (monitor the 25k-cadence learning curve), not necessarily the last step.
 
 ## 6. What is and isn't claimed
 
 Prepared and host-verified: the inference node's preprocessing + action mapping,
-the launch wiring, the reuse of the identical cage logic. **Not** verified: any
-behaviour on the physical car. First bring-up is the Phase-5 experiment this plan
-scaffolds; the `[VERIFY]` items are its explicit agenda.
+the launch wiring, the reuse of the identical cage logic. **Bench-verified on the
+car** (2026-08-05, `mode:=monitoring`, synthetic checkpoint, no track, wheels not
+driven): the six nodes come up and stay up; the cage loads the repo's own
+`cage.yaml` v0.6.1 through the symlink walk-up; the chain cycles at 10 Hz; the
+recorded `/raw_action` throttle lands in the cage's [0, 1] domain; `/cage_status`
+evidence is written to `experiments/physical/runs/<run_id>/` stamped with the
+*actual* mode; and pointing the camera at a non-track scene produces exactly the
+expected refusal (`C-02;C-05` + `perception_invalid`) rather than a command.
+**Not** verified: any *driving* behaviour on the physical car. First bring-up on
+the complex_b track is the Phase-5 experiment this plan scaffolds; the `[VERIFY]`
+items are its explicit agenda.
+
+## 6b. The 2026-08-05 bench review: four silent defects
+
+Found by reading the chain against the sim it is supposed to reproduce, then
+running it on the car. Every one of them would have produced a *running* system
+with wrong behaviour — none would have raised.
+
+1. **Throttle in the wrong domain** (`rl_policy_node`). `/raw_action.linear.x` is
+   the cage's normalised throttle u ∈ [0, 1]; the node published the policy's raw
+   action a ∈ [-1, 1]. `GazeboLaneEnv.step` applies
+   `cage_bridge.policy_throttle_to_cage` (u = (a+1)/2) *before* the cage, so both
+   C-04/C-06 and `vehicle_control_node` were reading a number in the wrong scale.
+   Concretely: a = 0 — the middle of the policy's range, 0.11 m/s in sim — arrived
+   as throttle 0, a commanded stop; the whole negative half of the action space
+   collapsed onto "stop". Fixed by importing the sim's own mapping. Regression:
+   `test_action_to_twist_matches_the_sim_bridge_across_the_range`.
+2. **The frozen 1-D speed map on a 2-D contract** (`vehicle_control_node`). The
+   node only implemented `target_speed_from_throttle` (scale a cruise speed by
+   throttle/nominal, clamped to [0.35, 1]). Under it a 2-D checkpoint saturates at
+   u = 0.5 instead of u = 1, and the cage can never command below 0.35·0.22 =
+   0.077 m/s — so C-04's attenuation authority is truncated and SR-009's
+   commandable stall is unreachable. Added `speed_map:=linear_2d`, which calls
+   `cage_bridge.target_speed_from_throttle_2d` directly (no second implementation
+   to drift). Regression: `test_deployed_chain_speed_equals_the_sim_speed`.
+3. **The loop ran at camera rate, not control rate** (`rl_policy_node`). Inference
+   sat in the image callback, so at 20 Hz camera the policy published 20 Hz of
+   `/raw_action` — and `/raw_action` is `cage_ros_node`'s cycle trigger. That grants
+   C-06's per-cycle `delta_max_steering_per_cycle` (0.15) twice as often, i.e.
+   **doubles the steering slew the rate limiter allows**, on the rule the 550k
+   analysis singles out as load-bearing (T2). It also halves the k=4 frame stack's
+   horizon (0.2 s vs the trained 0.4 s). Added `control_rate_hz` (default 10.0):
+   frames are buffered, a timer consumes the latest one — exactly what
+   `GazeboLaneEnv.step` does.
+4. **One line capped the camera at 8 Hz** (`csi_camera_node`, and the same defect
+   in `lane_keeper_node`, `lane_keeper_gazebo_node`, `cage_viz`). `msg.data =
+   frame.tobytes()` looks free. rclpy's generated setter for a `uint8[]` field
+   fast-paths **only** `array.array('B')`; everything else falls into a `__debug__`
+   assertion that walks all 691 200 elements in Python, twice
+   (`all(isinstance(v, int) …) and all(0 <= val < 256 …)`). Measured per 640×360
+   BGR frame on this Jetson:
+
+   | assignment | cost | implied ceiling |
+   | --- | --- | --- |
+   | `msg.data = out.tobytes()` | **127.01 ms** | 7.9 Hz |
+   | `msg.data = array.array('B', out.tobytes())` | **0.12 ms** | — |
+
+   The node advertises 20 Hz, so it silently ran at ~8: measured publisher stamp
+   gaps were **117 ms median** — not a multiple of 50 ms, which is what identified
+   the *producer* rather than the transport as the cause. Downstream, the 10 Hz
+   control loop starved on about a third of its cycles and tripped
+   `vehicle_control_node`'s `/safe_action` watchdog. After the fix: 50 ms median
+   stamp gap, `csi_camera_node` CPU 140 % → 62 % of a core, 10.0 Hz cage cycles,
+   0 watchdog stops. Note this also affected the **classical CV lane keeper**,
+   which publishes four debug image topics per cycle.
+
+5. **A failed camera looked like a healthy one** (`csi_camera_node`) — found on the
+   second pass, once the real checkpoint was on the car. When Argus refuses the
+   capture session, `nvarguscamerasrc` logs `Failed to create CaptureSession` but
+   the GStreamer pipeline still reaches PLAYING, so `cv2.VideoCapture.isOpened()`
+   returns **True**. The node's only startup guard tested exactly that, so it
+   announced `ready: 640x360 @ 20.0 Hz`, the launch printed six healthy nodes, and
+   every `read()` then failed forever — 1141 of them in the observed run. Nothing
+   was unsafe (no frames → no `/raw_action` → the watchdog stops the car), but
+   nothing said *why*. The node now proves a first frame actually arrives
+   (`open_timeout_s`, 4 s) before declaring itself a camera, and names the causes
+   and the recovery in the error.
+
+   **Why Argus refused it is worth knowing**, because it is a race, not a wedged
+   daemon: the failure reproduced *only* when `csi_camera_node` started inside the
+   RL launch (`camera:=true`) while `rl_policy_node` was unpickling the 20 MB
+   checkpoint and initialising torch on the same six cores — the identical pipeline
+   opened cleanly seconds before and seconds after, and never failed with the 7 MB
+   synthetic checkpoint. Argus loses the session negotiation under that startup CPU
+   spike. `open_retries` (3) wins it back. **The three-command bring-up avoids the
+   race structurally**, which is an argument for the layering independent of tidiness:
+   Layer 2 starts the camera long before Layer 3 loads any checkpoint. Verified both
+   ways on the car with the real 550k checkpoint.
+
+Two smaller ones fixed alongside:
+
+* **Evidence was mislabelled and misplaced.** `cage_logger_node` defaults
+  `output_dir` to `experiments/sim/runs` *relative to the shell's cwd* and
+  `cage_mode` to `"enforcement"` regardless of the cage's actual mode — so a
+  monitoring run on the car would have written physical evidence into a sim path,
+  stamped as enforcement. The launch now passes `evidence_dir`, `run_id` and the
+  real `mode`.
+* **The D-43 perception contract was not applied.** `cv_lane_estimator_node`
+  exposed only `heading_fit_mode`/`heading_gain` and defaulted to the frozen GE4
+  `near_secant`/1.0, while the 550k trunk was trained and scored with
+  `joint_pair_quadratic`, gain 1.6 and the T3 temporal window 4. The node now
+  exposes the whole set (plus `heading_bias_rad` for the D-57 workflow and
+  `perception_min_invalid_cycles`) and the launch forwards the trunk's values. The
+  four `heading_temporal_*` tunables are deliberately *not* restated in the launch:
+  the training config's values are already the `CvLaneEstimatorConfig` defaults.
+
+One measured improvement that is not a defect fix: `csi_camera_node` now inserts
+`videorate drop-only=true` at 1.5× its read rate *before* the CPU `videoconvert`,
+so the pipeline stops colour-converting the frames the node was going to discard
+(the sensor still runs at 60 fps, same mode, same exposure regime, same
+`INTER_AREA` resize — no pixel of any delivered frame changes). Measured 72.3 % →
+61.3 % of a core. Throttling exactly to the read rate saves a little more but makes
+producer and consumer beat, and `read()` starts blocking inside the timer callback
+(p95 0.8 ms → 6.6 ms) — hence 1.5×, not 1×.

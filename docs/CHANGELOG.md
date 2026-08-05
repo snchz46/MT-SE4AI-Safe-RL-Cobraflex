@@ -31,6 +31,98 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [05.08.2026] — Phase-5 bench review on the car: five silent defects in the deploy chain fixed, sensors layer now owns the lane camera, deployed checkpoint verified on the car
+
+**Document(s) affected:** `docs/17_physical_deployment.md` (status, §2 item 8, §2b, §3, §4, §5, §6, new §6b).
+Code: `src/cobraflex_rl/cobraflex_rl/{rl_policy_node,vehicle_control_node,cv_lane_estimator_node,csi_camera_node,cage_viz}.py`,
+`src/cobraflex/cobraflex/{lane_keeper_node,lane_keeper_gazebo_node}.py`,
+`src/cobraflex/launch/cobraflex_sensors.launch.xml`, `src/cobraflex_rl/launch/deploy_cobraflex.launch.py`,
+`policy/tests/{test_rl_policy_node,test_csi_camera_node}.py`, `.gitignore`.
+**Phase:** E5 / Phase 5 (physical deployment).
+**Gate context:** none — the G4 record and the 550k verdict of record are untouched; this is deployment-side only.
+**Author:** Samuel Sanchez
+
+### Change
+
+First review of the Phase-5 chain **on the car** (`admit14-cobraflex`, Jetson / L4T R36.4.7,
+ROS 2 Humble), read against the simulation it must reproduce and then run end to end on the
+bench in `mode:=monitoring`, first with a synthetic checkpoint and then with the real 550k one.
+Five defects, all silent — the chain started, logged and would have driven *wrongly* rather than
+failed. Full detail in docs/17 §6b:
+
+1. `rl_policy_node` published the policy's raw action a ∈ [-1, 1] on `/raw_action.linear.x`,
+   where the cage expects its normalised throttle u ∈ [0, 1]. The sim applies
+   `cage_bridge.policy_throttle_to_cage` before the cage; the node now imports the same mapping.
+2. `vehicle_control_node` only had the frozen 1-D cruise-scaling speed map. Added
+   `speed_map:=linear_2d`, delegating to `cage_bridge.target_speed_from_throttle_2d`.
+3. Inference ran in the image callback, so policy **and cage** cycled at the camera's 20 Hz
+   instead of the trained 10 Hz — doubling how often C-06's per-cycle steering budget is granted.
+   Added `control_rate_hz` (default 10.0), timer-driven off the latest buffered frame.
+4. `msg.data = frame.tobytes()` on a `sensor_msgs/Image` costs **127 ms** per 640×360 frame,
+   because rclpy's generated `uint8[]` setter fast-paths only `array.array('B')` and otherwise
+   validates every element in Python twice under `__debug__`. Fixed in all four publishers
+   (including the classical `lane_keeper_node`, which publishes four debug topics per cycle).
+5. `csi_camera_node` treated `cv2.VideoCapture.isOpened()` as proof of a working camera. When
+   Argus refuses the capture session the pipeline still reaches PLAYING, so the node announced
+   `ready` and then failed every `read()` — 1141 in the observed run — with no statement of why.
+   It now probes for a real first frame (`open_timeout_s` 4 s) and retries the open
+   (`open_retries` 3), because the refusal turned out to be a *startup race*: it reproduced only
+   when the camera started inside the RL launch while `rl_policy_node` was loading the 20 MB
+   checkpoint on the same six cores. The three-command bring-up avoids the race structurally.
+
+Alongside: `cage_logger_node` now receives the real `cage_mode`, a `run_id` and
+`experiments/physical/runs` (it defaulted to `experiments/sim/runs` relative to the shell cwd,
+stamped `enforcement` whatever the mode); `cv_lane_estimator_node` now exposes the full D-43
+estimator contract and the launch forwards the 550k trunk's values (`joint_pair_quadratic`,
+gain 1.6, temporal window 4) instead of silently running the frozen GE4 `near_secant`/1.0; and
+`odom_topic` defaults to `/odometry/filtered` (nothing publishes `/odom` on this platform, and
+with speed stuck at 0 the cage's C-03/C-04 and C-05 high-energy trigger are inert).
+
+**Pipeline change (author request).** `cobraflex_sensors.launch.xml` now starts the Jetson CSI
+lane camera together with the lidar and the ZED, so a bring-up is three commands —
+`cobraflex_bringup` → `cobraflex_sensors` → `deploy_cobraflex` — and no sensor is left to a side
+script. `deploy_cobraflex.launch.py` therefore defaults `camera:=false`.
+
+### Rationale
+
+The 550k campaign is the verdict of record, and the point of Phase 5 is that the *same* policy
+behind the *same* cage runs on the car. Three of the four defects broke exactly that equality —
+the throttle domain, the actuation map and the control rate all changed what the cage arbitrates
+— and none of them was observable from simulation, because the simulation path is the one that
+was right. The fourth was a pure performance defect that starved the loop below its own control
+rate. All are fixed by delegating to the sim's own functions rather than by re-implementing them,
+so they cannot drift apart again.
+
+### Impact
+
+No sim result, gate record or verdict changes: `cage/cage.yaml` is untouched (still v0.6.1, hash
+`4287fe71…`, bit-identical to the 550k campaign), and no rule, threshold, scenario, metric or SR
+is affected. The changed nodes are deployment transport only — `gazebo_lane_env` and
+`cage_bridge`, which carry every scored result, are unmodified.
+
+The deployed checkpoint `ppo_gz2d_cap022_1M_2024_550000_steps.zip` **is now on the car** (repo
+root), sha256 `0d449246…` verified exact against the campaign metadata, SB3-loadable, 550 000
+timesteps, obs/action spaces matching the deployed contract, `predict()` deterministic at 9.2 ms
+median on the Jetson CPU. `.gitignore` gained `/*_steps.zip`: the 25.07 root-level rule only
+matched the `cobraflex_*` naming, so an SB3 `CheckpointCallback` artefact staged at the root was
+still trackable. The physical run now remains blocked only on the mandatory `/external_stop`
+e-stop, plus the standing `[VERIFY]` items (HFOV, camera height, yaw-rate gain).
+
+### Verification
+
+`pytest` 613 passed (was 612; +4 rewritten action-mapping tests, +1 chain-equality test,
++1 pipeline-throttle test). `python tools/check_traceability.py` PASS.
+
+Bench runs on the car, both bring-up orders, with the **real 550k checkpoint**: six nodes up,
+cage v0.6.1 loaded through the symlink walk-up, ~**10 Hz** cage cycles (44–50 per 5 s), camera
+stamp gaps 50 ms median (was 117 ms), `csi_camera_node` CPU 140 % → 62 % of a core, **0**
+`/safe_action` watchdog stops (was tripping). Evidence written to `experiments/physical/runs/`
+stamped with the real mode. The policy commanded `raw_throttle` 0.652–0.755 — inside the cage's
+[0, 1] domain, i.e. 0.143–0.166 m/s under the 2-D map — and a non-track (desk) scene was
+correctly answered with `C-05` via `perception_invalid` rather than a drive command.
+
+---
+
 ## [31.07.2026] — Submission build: `draft_V5.docx` rebuilt from Markdown to the university guidelines, body cut from 180 to 96 pages
 
 **Document(s) affected:** `manuscript/draft_v5/` (new source tree: `front/`, `body/`, `back/`), `tools/build_thesis_docx.py` (new), `tools/thesis_page_budget.py` (new), `manuscript/README.md`, `manuscript/figures/` (3 campaign figures copied in as `fig_8_*`). Output: `B:/SE4AI/Documentos/draft_V5.docx` (`draft_V4.docx` untouched).

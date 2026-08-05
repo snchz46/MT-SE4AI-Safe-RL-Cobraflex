@@ -12,6 +12,7 @@ It supersedes the previous histogram pure-P controller, whose uncalibrated
 The CV+PD law tracks the nominal oval to RMSE ~10 mm at 0.2 m/s (req < 50 mm).
 """
 
+import array
 import time
 
 import cv2
@@ -148,7 +149,9 @@ class LaneKeeperGazeboNode(Node):
         msg.encoding = "mono8" if image.ndim == 2 else "bgr8"
         msg.is_bigendian = False
         msg.step = int(image.strides[0])
-        msg.data = image.tobytes()
+        # array.array('B', ...): the only fast path through rclpy's uint8[]
+        # setter — see lane_keeper_node._build_image_msg for the measurement.
+        msg.data = array.array("B", image.tobytes())
         return msg
 
     def _publish_zero(self):

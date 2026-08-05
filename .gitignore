@@ -84,6 +84,11 @@ policy/checkpoints/*.pkl
 *.replay_buffer.pkl
 *.vecnormalize.pkl
 /cobraflex_*.zip
+# The 25.07 rule above only caught the `cobraflex_*` naming. SB3's
+# CheckpointCallback writes `<run_name>_<steps>_steps.zip`, so a checkpoint
+# staged at the repo root for a deploy — e.g. the Phase-5
+# `ppo_gz2d_cap022_1M_2024_550000_steps.zip` (20 MB) — was still trackable.
+/*_steps.zip
 experiments/**/*.zip
 
 # Demo/evidence videos (large; the manuscript references them as supplementary

@@ -18,6 +18,7 @@ package) stays importable without ROS for the pure-Python tests.
 
 from __future__ import annotations
 
+import array
 from typing import Optional, Sequence, Tuple
 
 import numpy as np
@@ -172,5 +173,7 @@ class CageViz:
         msg.encoding = "mono8"
         msg.is_bigendian = 0
         msg.step = int(arr.shape[1])
-        msg.data = arr.tobytes()
+        # array.array('B', ...): the only fast path through rclpy's uint8[]
+        # setter — see csi_camera_node._on_tick for the measurement.
+        msg.data = array.array("B", arr.tobytes())
         self.obs_pub.publish(msg)

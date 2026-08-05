@@ -113,3 +113,21 @@ def test_gstreamer_pipeline_matches_the_proven_lane_keeper_pipeline():
         {"width": 640, "height": 360, "fps": 30},
     ):
         assert gstreamer_pipeline(**kwargs) == reference(**kwargs)
+
+
+def test_capture_throttle_only_inserts_videorate_before_the_cpu_convert():
+    # The throttle must drop frames BEFORE videoconvert (that is the whole point
+    # — the CPU conversion is what it saves) and must leave every other element,
+    # including the INTER_AREA-fed appsink, exactly as proven.
+    plain = gstreamer_pipeline()
+    throttled = gstreamer_pipeline(throttle_fps=30)
+    assert "videorate" not in plain
+    assert "videorate drop-only=true" in throttled
+    assert throttled.index("videorate") < throttled.index("videoconvert")
+    assert "framerate=(fraction)30/1 ! videoconvert" in throttled
+    # Removing the inserted segment reproduces the proven pipeline byte for byte.
+    assert throttled.replace(
+        "videorate drop-only=true ! video/x-raw, framerate=(fraction)30/1 ! ", ""
+    ) == plain
+    # 0 and negative are both "no throttle element".
+    assert gstreamer_pipeline(throttle_fps=0) == plain

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Lane keeping node for the CobraFlex robot."""
+import array
 import math
 import time
 import cv2
@@ -415,7 +416,14 @@ class LaneKeeperNode(Node):
         msg.encoding = encoding
         msg.is_bigendian = False
         msg.step = int(image.strides[0])
-        msg.data = image.tobytes()
+        # array.array('B', ...) is the ONLY fast path through rclpy's generated
+        # uint8[] setter. A plain bytes/numpy value falls through to a __debug__
+        # assertion that walks every element in Python, twice: measured at
+        # 127 ms for one 640x360 BGR frame on the Jetson, i.e. a ~8 Hz ceiling
+        # per published image against this node's 20 Hz timer — and it publishes
+        # four debug topics per cycle. With array.array the same assignment is
+        # 0.12 ms.
+        msg.data = array.array("B", image.tobytes())
         return msg
 
     def _build_camera_info_msg(self, width, height, stamp, frame_id, hfov_deg):

@@ -8,7 +8,27 @@ visible lane lines.
 
 Subscribes:
     camera/image_raw_lane  sensor_msgs/Image  (the same frames the policy sees)
-    /odom              nav_msgs/Odometry      (speed only — plausibility + cage state)
+    odom_topic         nav_msgs/Odometry      (speed only — plausibility + cage state)
+
+    ``odom_topic`` defaults to ``/odom``, which is what Gazebo publishes. **On the
+    physical platform nothing publishes ``/odom``** — `cobraflex_ros_driver` emits
+    `/cobraflex/wheel_speeds`, and the odometry is the EKF's `/odometry/filtered`
+    (`cobraflex_sensors.launch.xml` → `robot_localization` over the ZED). Left at
+    the default there, `speed` stays 0.0 forever and the cage's speed-dependent
+    rules go silently inert: C-03 sees every TTLC as infinite (speed below
+    `v_min_estimate_mps`), C-04 never finds an excess over `v_max_curve`, and
+    C-05's high-energy variant (`v_warning_mps`) can never arm. Nothing errors —
+    the rules just never fire. `deploy_cobraflex.launch.py` therefore passes
+    `/odometry/filtered`, and this node warns if no odometry ever arrives.
+
+Perception contract (D-43): the estimator parameters below are NOT cosmetic
+tunables — they select which lane readout the cage acts on. The frozen GE4/G4
+record used `near_secant` with gain 1.0 (the defaults here); the posterior
+Gazebo contract the 2-D PPO 550k trunk was trained and scored against uses
+`joint_pair_quadratic`, gain 1.6 and the T3 temporal gate (window 4). Deploying
+with the defaults would put a *different* heading estimate under C-02/C-03 than
+the campaign measured. The authoritative values live in the training config's
+`cage:` block (`perception_heading_*`), and the deploy launch forwards them.
 
 Publishes (at ``publish_rate_hz``):
     /state_obs           std_msgs/Float64MultiArray
@@ -63,14 +83,53 @@ class CvLaneEstimatorNode(Node):
         self.declare_parameter("road_width_m", 0.52)
         self.declare_parameter("heading_fit_mode", "near_secant")
         self.declare_parameter("heading_gain", 1.0)
+        # Rest of the D-43 estimator contract (see module docstring). Defaults
+        # reproduce the frozen GE4 estimator bit-identically, so a launch that
+        # passes none of them keeps the old behaviour.
+        self.declare_parameter("heading_bias_rad", 0.0)
+        self.declare_parameter("heading_temporal_window", 0)
+        self.declare_parameter("heading_temporal_ey_track_m", -1.0)
+        self.declare_parameter("heading_temporal_ey_drift_m", -1.0)
+        self.declare_parameter("heading_temporal_kappa_gate", -1.0)
+        self.declare_parameter("heading_temporal_cap_rad", -1.0)
+        # Supervisor invalid-persistence budget; <0 keeps CagePerceptionSupervisor's
+        # own live-tuned default (min_invalid_cycles=4 at the 10 Hz control rate).
+        self.declare_parameter("perception_min_invalid_cycles", -1)
 
-        estimator = CvLaneEstimator(config=CvLaneEstimatorConfig(
+        cfg_kwargs = dict(
             heading_fit_mode=str(self.get_parameter("heading_fit_mode").value),
             heading_gain=float(self.get_parameter("heading_gain").value),
-        ))
-        self._supervisor = CagePerceptionSupervisor(estimator=estimator)
+            heading_bias_rad=float(self.get_parameter("heading_bias_rad").value),
+            heading_temporal_window=int(
+                self.get_parameter("heading_temporal_window").value
+            ),
+        )
+        # A negative value means "not set" — ROS2 parameters have no null, and
+        # every one of these is a physical quantity that is >= 0 when meant.
+        for _key in (
+            "heading_temporal_ey_track_m",
+            "heading_temporal_ey_drift_m",
+            "heading_temporal_kappa_gate",
+            "heading_temporal_cap_rad",
+        ):
+            _val = float(self.get_parameter(_key).value)
+            if _val >= 0.0:
+                cfg_kwargs[_key] = _val
+
+        estimator = CvLaneEstimator(config=CvLaneEstimatorConfig(**cfg_kwargs))
+        sup_kwargs = {"estimator": estimator}
+        _min_invalid = int(self.get_parameter("perception_min_invalid_cycles").value)
+        if _min_invalid >= 0:
+            from .perception_health import PerceptionHealthMonitor
+
+            sup_kwargs["health"] = PerceptionHealthMonitor(
+                min_confidence=0.10, min_invalid_cycles=_min_invalid
+            )
+        self._supervisor = CagePerceptionSupervisor(**sup_kwargs)
         self._image_msg: Optional[Image] = None
         self._speed = 0.0
+        self._odom_seen = False
+        self._odom_warned = False
         self._road_width = float(self.get_parameter("road_width_m").value)
 
         self.create_subscription(
@@ -96,7 +155,9 @@ class CvLaneEstimatorNode(Node):
         self.get_logger().info(
             "cv_lane_estimator_node up (D-43 cage perception source; "
             f"heading_fit_mode={estimator.config.heading_fit_mode}, "
-            f"heading_gain={estimator.config.heading_gain:.3f})"
+            f"heading_gain={estimator.config.heading_gain:.3f}, "
+            f"heading_temporal_window={estimator.config.heading_temporal_window}, "
+            f"odom_topic={self.get_parameter('odom_topic').value})"
         )
 
     def _on_image(self, msg: Image) -> None:
@@ -108,9 +169,21 @@ class CvLaneEstimatorNode(Node):
         speed = math.sqrt(float(lin.x) ** 2 + float(lin.y) ** 2)
         if math.isfinite(speed):
             self._speed = speed
+            self._odom_seen = True
 
     def _tick(self) -> None:
         """One supervisor cycle: decode the latest frame, publish invalid flag + state."""
+        if not self._odom_seen and not self._odom_warned and self._image_msg is not None:
+            # Frames are flowing but odometry is not: the cage will run with
+            # speed = 0 and its speed-dependent rules (C-03 TTLC, C-04, C-05
+            # high-energy) can never fire. Silent by construction — say it once.
+            self._odom_warned = True
+            self.get_logger().error(
+                "camera frames are arriving but no odometry on "
+                f"'{self.get_parameter('odom_topic').value}' — publishing speed 0.0. "
+                "C-03/C-04 and C-05's high-energy trigger are inert until this is "
+                "fixed (physical platform: /odometry/filtered from the EKF)."
+            )
         now = self.get_clock().now().nanoseconds * 1e-9
         frame = None
         stamp = 0.0

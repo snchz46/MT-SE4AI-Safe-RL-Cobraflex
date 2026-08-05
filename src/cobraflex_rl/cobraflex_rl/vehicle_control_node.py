@@ -9,6 +9,26 @@ latched True, /cmd_vel.linear.x is forced to zero so the controlled stop
 of C-05 is actuated.
 
 The steering on /cmd_vel.angular.z always comes from /safe_action.angular.z.
+
+`speed_map` selects which of the two actuation maps in `cage_bridge` this node
+reproduces — they are NOT interchangeable, and picking the wrong one silently
+changes what the cage's speed authority means:
+
+  * `cruise_scaling` (default, the frozen 1-D/F2 contract) —
+    `cage_bridge.target_speed_from_throttle`: scale `fixed_speed_mps` by
+    safe_throttle/`throttle_nominal`, clamped to [`min_speed_scale`, 1]. The
+    floor is deliberate there: the 1-D policy has no speed authority, so the
+    cage may only attenuate, never stop, outside C-05.
+  * `linear_2d` (the 2-D `steer_throttle` contract, D-50/D-66) —
+    `cage_bridge.target_speed_from_throttle_2d`: `max_speed_mps · u` with a full
+    stop below `throttle_deadband` and NO lower clamp, so C-04 has attenuation
+    authority all the way to zero and a stall stays commandable (SR-009).
+    Under `cruise_scaling` a 2-D checkpoint would reach full speed already at
+    u = `throttle_nominal` (0.5) and could never be brought below
+    `min_speed_scale`·`fixed_speed_mps`.
+
+The map is imported from `cage_bridge`, not re-implemented, so the deployed
+speed cannot drift from the one the campaign scored.
 """
 
 from __future__ import annotations
@@ -22,6 +42,8 @@ from rclpy.node import Node
 from rclpy.qos import QoSPresetProfiles
 from std_msgs.msg import Bool
 
+from .cage_bridge import target_speed_from_throttle_2d
+
 
 class VehicleControlNode(Node):
     """Actuation relay /safe_action → /cmd_vel with emergency + watchdog logic."""
@@ -34,6 +56,9 @@ class VehicleControlNode(Node):
         self.declare_parameter("use_safe_throttle", True)
         self.declare_parameter("throttle_nominal", 0.5)
         self.declare_parameter("min_speed_scale", 0.35)
+        # Which cage_bridge actuation map to reproduce (see module docstring).
+        self.declare_parameter("speed_map", "cruise_scaling")
+        self.declare_parameter("throttle_deadband", 0.05)
         self.declare_parameter("safe_action_topic", "/safe_action")
         self.declare_parameter("emergency_topic", "/emergency")
         self.declare_parameter("cmd_vel_topic", "/cmd_vel")
@@ -85,6 +110,19 @@ class VehicleControlNode(Node):
                 ),
             ),
         )
+        self._speed_map = (
+            self.get_parameter("speed_map").get_parameter_value().string_value
+            or "cruise_scaling"
+        )
+        if self._speed_map not in ("cruise_scaling", "linear_2d"):
+            raise RuntimeError(
+                "vehicle_control_node: speed_map must be 'cruise_scaling' or "
+                f"'linear_2d', got {self._speed_map!r}"
+            )
+        self._throttle_deadband = float(
+            self.get_parameter("throttle_deadband").get_parameter_value().double_value
+            or 0.05
+        )
         self._emergency = False
         self._last_safe: Optional[Twist] = None
         # Wall-clock timestamp of the last /safe_action received. Wall time
@@ -130,7 +168,8 @@ class VehicleControlNode(Node):
             f"Relaying {self.get_parameter('safe_action_topic').value} -> "
             f"{self.get_parameter('cmd_vel_topic').value} "
             f"(fixed_speed={self._fixed_speed} m/s, "
-            f"use_safe_throttle={self._use_safe_throttle}, emergency-aware)."
+            f"use_safe_throttle={self._use_safe_throttle}, "
+            f"speed_map={self._speed_map}, emergency-aware)."
         )
 
     def _on_emergency(self, msg: Bool) -> None:
@@ -180,9 +219,17 @@ class VehicleControlNode(Node):
         self._pub.publish(cmd)
 
     def _target_speed_from_throttle(self, safe_throttle: float) -> float:
-        """Scale the cruise speed by safe_throttle/nominal, clamped to [min_scale, 1]."""
+        """Cage safe throttle → commanded speed, on the configured `speed_map`."""
         if not self._use_safe_throttle:
             return self._fixed_speed
+
+        if self._speed_map == "linear_2d":
+            # `fixed_speed_mps` IS action.max_speed_mps on this map (the launch
+            # sets both from the same value), so u = 1 gives the contract's top
+            # speed and u < deadband gives a true stop.
+            return target_speed_from_throttle_2d(
+                safe_throttle, self._fixed_speed, self._throttle_deadband
+            )
 
         throttle = max(0.0, min(self._throttle_nominal, safe_throttle))
         if throttle <= 1e-9:

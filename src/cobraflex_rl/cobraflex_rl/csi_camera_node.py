@@ -71,9 +71,21 @@ Parameters
     gst_pipeline   (str)  override the whole GStreamer string (bench testing on a
                           non-Jetson host, e.g. a videotestsrc or filesrc); empty
                           = build the proven nvarguscamerasrc pipeline.
+    capture_throttle_fps (int) -1 = auto (1.5x rate_hz), 0 = off, >0 = explicit.
+                          Drops frames before the CPU colour conversion; changes
+                          no pixel of any delivered frame (see gstreamer_pipeline).
+    open_timeout_s (float) 4.0 — refuse to start if no frame arrives in this many
+                          seconds. isOpened() alone does not detect a stolen
+                          sensor; 0 disables the probe.
+    open_retries   (int)  3 — re-opens of the capture before giving up, covering
+                          Argus losing the session negotiation under a startup
+                          CPU spike.
 """
 from __future__ import annotations
 
+import array
+import math
+import time
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -106,16 +118,45 @@ def gstreamer_pipeline(
     height: int = DEFAULT_CAPTURE_HEIGHT,
     fps: int = DEFAULT_CAPTURE_FPS,
     flip_method: int = 0,
+    throttle_fps: int = 0,
 ) -> str:
     """The Jetson CSI pipeline, kept identical to the one ``lane_keeper_node``
     proved on this hardware (nvarguscamerasrc -> NV12 -> BGRx -> BGR, latest
-    frame only). Deviating here would change what the CNN sees for no reason."""
+    frame only). Deviating here would change what the CNN sees for no reason.
+
+    ``throttle_fps`` > 0 inserts a ``videorate drop-only=true`` between the VIC
+    conversion and the CPU ``videoconvert``. This changes **no pixel** of any
+    frame that reaches the node: the sensor still runs at ``fps`` (same mode,
+    same auto-exposure regime), the surviving frames go through the identical
+    BGRx->BGR conversion and the identical INTER_AREA resize. What it removes is
+    work on frames the node was going to discard anyway — it reads at
+    ``rate_hz``, so at the default 60 fps capture two of every three converted
+    frames were thrown away. Measured on this Jetson (15 s, 20 Hz reader,
+    in-process CPU of the capture + resize + tobytes loop):
+
+        capture 60, no throttle : 20.00 Hz · 72.3 % of a core · read() p95 0.8 ms
+        throttle 30             : 20.00 Hz · 61.3 % of a core · read() p95 0.8 ms
+        throttle 20             : 19.99 Hz · 56.6 % of a core · read() p95 6.6 ms
+
+    Hence the auto value is 1.5x the read rate, not 1x: throttling exactly to the
+    read rate makes producer and consumer beat against each other and ``read()``
+    starts blocking inside the timer callback. Headroom matters here — the node
+    measured 149 % of a core with the full RL chain attached (the 691 kB image
+    messages to two subscribers are the other half).
+    """
+    throttle = (
+        f"videorate drop-only=true ! "
+        f"video/x-raw, framerate=(fraction){int(throttle_fps)}/1 ! "
+        if throttle_fps and throttle_fps > 0
+        else ""
+    )
     return (
         f"nvarguscamerasrc sensor-id={sensor_id} ! "
         f"video/x-raw(memory:NVMM), width=(int){width}, height=(int){height}, "
         f"format=(string)NV12, framerate=(fraction){fps}/1 ! "
         f"nvvidconv flip-method={flip_method} ! "
         f"video/x-raw, width=(int){width}, height=(int){height}, format=(string)BGRx ! "
+        f"{throttle}"
         f"videoconvert ! "
         f"video/x-raw, format=(string)BGR ! "
         f"appsink drop=true max-buffers=1 sync=false"
@@ -186,6 +227,16 @@ def main(argv: Optional[List[str]] = None) -> None:
             self.declare_parameter("frame_id", DEFAULT_FRAME_ID)
             self.declare_parameter("hfov_rad", DEFAULT_HFOV_RAD)
             self.declare_parameter("gst_pipeline", "")
+            # -1 = auto (1.5x rate_hz), 0 = off (the exact legacy pipeline),
+            # >0 = explicit. See gstreamer_pipeline for the measurements.
+            self.declare_parameter("capture_throttle_fps", -1)
+            # Seconds to wait for the FIRST frame before refusing to start.
+            # 0 disables the probe (bench replay against a source that is slow
+            # to produce, e.g. a filesrc that has not been seeked yet).
+            self.declare_parameter("open_timeout_s", 4.0)
+            # Re-opens of the whole capture on failure. Covers the startup race
+            # against a CPU spike (see __init__); 0 = fail on the first attempt.
+            self.declare_parameter("open_retries", 3)
 
             self._out_w = int(self.get_parameter("out_width").value)
             self._out_h = int(self.get_parameter("out_height").value)
@@ -208,22 +259,66 @@ def main(argv: Optional[List[str]] = None) -> None:
             )
             self._k, self._p = camera_info_matrices(self._model)
 
+            capture_fps = int(self.get_parameter("capture_fps").value)
+            rate = float(self.get_parameter("rate_hz").value)
+            throttle_fps = int(self.get_parameter("capture_throttle_fps").value)
+            if throttle_fps < 0:
+                throttle_fps = min(capture_fps, int(math.ceil(1.5 * rate)))
             pipeline = str(self.get_parameter("gst_pipeline").value) or gstreamer_pipeline(
                 sensor_id=int(self.get_parameter("sensor_id").value),
                 width=int(self.get_parameter("capture_width").value),
                 height=int(self.get_parameter("capture_height").value),
-                fps=int(self.get_parameter("capture_fps").value),
+                fps=capture_fps,
                 flip_method=int(self.get_parameter("flip_method").value),
+                throttle_fps=throttle_fps,
             )
             self.get_logger().info(f"CSI pipeline: {pipeline}")
             if cv2 is None:
                 raise RuntimeError("csi_camera_node: cv2 is required")
-            self._cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
-            if not self._cap.isOpened():
+            # Opening is retried, and isOpened() is NOT the success criterion.
+            # Two distinct failures hide behind a "successful" open:
+            #
+            #  * Another Argus client still holds the sensor. nvarguscamerasrc
+            #    logs "Failed to create CaptureSession", yet the GStreamer
+            #    pipeline still reaches PLAYING — isOpened() returns True and
+            #    every read() then fails forever. Observed on the car
+            #    2026-08-05: the node announced "ready", the launch looked
+            #    healthy, and the car simply never moved.
+            #  * A startup race. The same error appeared reproducibly when this
+            #    node was started *inside* the RL launch (camera:=true) while
+            #    rl_policy_node was unpickling the 20 MB checkpoint and
+            #    initialising torch on the same 6 cores; the identical pipeline
+            #    opened cleanly seconds earlier and seconds later. Argus loses
+            #    the session negotiation under that CPU spike. Retrying wins it.
+            #    (The three-command bring-up avoids the race structurally — Layer 2
+            #    starts the camera long before Layer 3 loads a checkpoint.)
+            probe_s = float(self.get_parameter("open_timeout_s").value)
+            retries = max(0, int(self.get_parameter("open_retries").value))
+            self._cap = None
+            for attempt in range(retries + 1):
+                cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
+                if cap.isOpened() and (
+                    probe_s <= 0.0 or self._probe_first_frame(cap, probe_s)
+                ):
+                    self._cap = cap
+                    break
+                cap.release()
+                if attempt < retries:
+                    self.get_logger().warn(
+                        f"CSI camera produced no frame (attempt {attempt + 1}/"
+                        f"{retries + 1}); retrying — another Argus client may still "
+                        "be releasing the sensor."
+                    )
+                    time.sleep(1.0)
+            if self._cap is None:
                 raise RuntimeError(
-                    "csi_camera_node: could not open the CSI camera. Check that "
-                    "nothing else holds it (lane_keeper_node opens the same "
-                    "device) and that the sensor_id is right."
+                    f"csi_camera_node: the pipeline opened but produced no frame in "
+                    f"{retries + 1} attempts of {probe_s:.1f} s. Something else holds "
+                    "the sensor — lane_keeper_node, a previous RL chain still shutting "
+                    "down, or Layer 2's own csi_camera_node (deploy_cobraflex.launch.py "
+                    "defaults camera:=false for exactly that reason). Check with "
+                    "'fuser -v /dev/video0'; if nothing holds it, the daemon is wedged: "
+                    "'sudo systemctl restart nvargus-daemon'."
                 )
 
             self._image_pub = self.create_publisher(
@@ -235,13 +330,25 @@ def main(argv: Optional[List[str]] = None) -> None:
                 qos_profile_sensor_data,
             )
             self._drops = 0
-            rate = float(self.get_parameter("rate_hz").value)
             self.create_timer(1.0 / rate, self._on_tick)
             self.get_logger().info(
                 f"csi_camera_node ready: {self._out_w}x{self._out_h} @ {rate} Hz, "
                 f"HFOV {self._model.hfov_rad:.7f} rad, frame_id {self._frame_id} "
                 "(Phase-5 scaffolding)."
             )
+
+        @staticmethod
+        def _probe_first_frame(cap, timeout_s: float) -> bool:
+            """True as soon as one frame is actually read (see the caller)."""
+            deadline = time.monotonic() + timeout_s
+            while time.monotonic() < deadline:
+                ok, frame = cap.read()
+                if ok and frame is not None:
+                    return True
+                # A failed Argus session returns immediately; without this the
+                # loop would spin the CPU for the whole timeout.
+                time.sleep(0.05)
+            return False
 
         def _on_tick(self) -> None:
             ok, frame = self._cap.read()
@@ -270,7 +377,20 @@ def main(argv: Optional[List[str]] = None) -> None:
             img.encoding = "bgr8"
             img.is_bigendian = False
             img.step = int(out.strides[0])
-            img.data = out.tobytes()
+            # array.array('B', ...) is NOT a style choice — it is the only fast
+            # path through rclpy's generated setter for a uint8[] field. Anything
+            # else (bytes, numpy, list) falls through to a __debug__ assertion
+            # that walks all 691 200 elements in Python, twice
+            # (`all(isinstance(v, int) ...) and all(0 <= val < 256 ...)`).
+            # Measured on this Jetson, per 640x360 BGR frame:
+            #     img.data = out.tobytes()                  127.01 ms  -> 7.9 Hz ceiling
+            #     img.data = array.array('B', out.tobytes())  0.12 ms  -> no ceiling
+            # The node advertises 20 Hz, so the old assignment silently capped the
+            # whole chain at ~8 Hz: measured publisher stamp gaps were 117 ms
+            # median (not multiples of 50 ms — the producer, not the transport),
+            # which starved the 10 Hz control loop about a third of the time and
+            # tripped vehicle_control's /safe_action watchdog.
+            img.data = array.array("B", out.tobytes())
             self._image_pub.publish(img)
 
             info = CameraInfo()

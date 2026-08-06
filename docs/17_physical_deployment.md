@@ -197,7 +197,7 @@ The CobraFlex package is layered, and every controller follows the same pattern:
 | Layer | Launch | Starts |
 | --- | --- | --- |
 | 1 — base | `cobraflex_bringup.launch.xml` | `cobraflex_description.launch.xml` (robot_state_publisher on **`my_robot_basic.urdf`**, joint_state_publisher, rviz `bot.rviz`; `use_sim_time:=false`) **+** `cobraflex_driver.launch.xml` (`cobraflex_ros_driver`) |
-| 2 — sensors | `cobraflex_sensors.launch.xml` | SLLIDAR A2M8 (`frame_id:=lidar_link`) + ZED Mini (`camera_model:=zedm`, `publish_tf:=true`) + **the Jetson CSI lane camera** (`csi_camera_node`) + the **ekf** (`ekf_hw.yaml` → `/odometry/filtered`) |
+| 2 — sensors | `cobraflex_sensors.launch.xml` | SLLIDAR A2M8 (`frame_id:=lidar_link`) + ZED Mini (`camera_model:=zedm`, `publish_tf:=false` — the ekf owns `odom -> base_footprint`) + **the Jetson CSI lane camera** (`csi_camera_node`) + the **ekf** (`ekf_hw.yaml` → `/odometry/filtered`) |
 | 3 — controller | `cobraflex_lane_keeper.launch.py` | `lane_keeper_node` + rviz `lane_keeper.rviz` — **no** Layer 1/2 include; it owns the CSI camera itself |
 | 3 — controller | `cobraflex_automatic.launch.xml` | Layer 2 + `lidar_avoidance_node` |
 | 3 — controller | **`deploy_cobraflex.launch.py`** | the RL chain (this document); `camera:=false` by default — Layer 2 publishes the frames |
@@ -208,10 +208,28 @@ only with Layer 2's `use_lane_camera:=false`, or without Layer 2 at all.
 
 > **URDF correction (2026-08-05).** This table previously named
 > `my_robot_gazebo_mesh.urdf` as Layer 1's description. It is not, and must not be:
-> `cobraflex_description.launch.xml` defaults to `my_robot_basic.urdf`, which is the
-> **only** variant whose TF root is `zed_camera_link` (`footprint_joint`'s parent) —
-> exactly what `ekf_hw.yaml` needs to resolve the ZED→`base_footprint` offset. The
-> mesh variant has no `footprint_joint` and is the sim description.
+> `cobraflex_description.launch.xml` defaults to `my_robot_basic.urdf`. The mesh
+> variant is the sim description.
+>
+> **Frame-graph restructure (2026-08-06).** `my_robot_basic.urdf` used to be rooted
+> at `zed_camera_link`, via a `footprint_joint` that hung `base_footprint` off the
+> camera. It is now rooted at **`base_footprint`**, with the ZED attached by
+> `zed_mount_joint` (`body_link` → `zed_camera_link`, offset `0.11 0 0.02`), and
+> `ekf_hw.yaml` names `base_link_frame: base_footprint` to match. The constraint is
+> hard: the ekf publishes `odom -> base_link_frame` while robot_state_publisher
+> publishes the URDF from its root, so those two frames must be the same one or it
+> gets two parents. Three things drove the direction chosen: `two_d_mode` pins
+> z/roll/pitch of `base_link_frame` to zero, which is only meaningful for a
+> ground-projected frame (rooted at the camera it sank `base_footprint` to
+> z = −0.13725); the filter's velocity — the cage's **only** speed source — is
+> reported at `base_link_frame`, and at the camera it picked up an ω·0.11 lever-arm
+> term inflating speed ~8 % in curves at the 0.22 m/s contract; and `ekf_gazebo.yaml`
+> plus the Gazebo descriptions already root at `base_footprint`, so the hardware
+> frame graph now matches the one every recorded result was produced under.
+> The ZED's hardcoded `<camera_name>_camera_link` odometry child frame does **not**
+> constrain this — robot_localization transforms the measurement into
+> `base_link_frame` via the static TF, which is precisely what `base_link_frame` is
+> for. The wrapper's own TF broadcast stays off (`publish_tf:=false`).
 > The two disagree on the lane camera's height: `my_robot_gazebo_mesh.urdf` carries
 > a `-0.01` body offset that `my_robot_basic.urdf` lacks, so the hardware
 > description places the camera at **0.08725 m** while the cage's IPM

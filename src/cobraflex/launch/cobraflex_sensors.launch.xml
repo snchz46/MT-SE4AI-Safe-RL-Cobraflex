@@ -34,7 +34,7 @@
         <arg name="camera_model" value="zedm"/>
         <arg name="camera_name" value="zed"/>
         <arg name="publish_urdf" value="false"/>
-        <arg name="publish_tf" value="true"/>
+        <arg name="publish_tf" value="false"/>
 
         <!-- ZED IMU -->
         <arg name="publish_imu_tf" value="true"/>

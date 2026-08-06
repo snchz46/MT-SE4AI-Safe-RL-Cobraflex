@@ -2,15 +2,15 @@
 #
 # Hardware counterpart of ekf_gazebo.yaml. The difference that matters is
 # `publish_tf`: in sim the Gazebo ground-truth OdometryPublisher owns
-# odom -> base_footprint, so the ekf must not compete for it. On the physical
+# odom -> zed_camera_link, so the ekf must not compete for it. On the physical
 # robot nobody else publishes that TF -- the ZED wrapper cannot, because it
 # hardcodes its TF child frame to `<camera_name>_camera_link` -- so here the
-# ekf is the single owner of odom -> base_footprint.
+# ekf is the single owner of odom -> zed_camera_link.
 #
 # Data flow:
 #   ZED  -> /zedm/zed_node/odom (nav_msgs/Odometry, child = zedm_camera_link)
 #        -> ekf_filter_node
-#        -> TF odom -> base_footprint   (+ /odometry/filtered)
+#        -> TF odom -> zed_camera_link   (+ /odometry/filtered)
 #
 # The ekf resolves the zedm_camera_link -> base_footprint offset through the
 # static TF that robot_state_publisher emits from the URDF mount joint, so
@@ -25,12 +25,12 @@ ekf_filter_node:
         publish_acceleration: false
 
         # ON, unlike the Gazebo config: on hardware the ekf is the only
-        # producer of odom -> base_footprint.
+        # producer of odom -> zed_camera_link.
         publish_tf: true
 
         map_frame: map
         odom_frame: odom
-        base_link_frame: base_footprint
+        base_link_frame: zed_camera_link
         world_frame: odom
 
         # ZED visual odometry: the most reliable source on this platform.

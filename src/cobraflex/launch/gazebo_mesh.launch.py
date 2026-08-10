@@ -51,7 +51,7 @@ def generate_launch_description():
     spawn_z = LaunchConfiguration("spawn_z")
     spawn_yaw = LaunchConfiguration("spawn_yaw")
 
-    world_path = os.path.join(package_share, "worlds", "lane_following_oval.world")
+    world_path = os.path.join(package_share, "worlds", "lane_following_oval_complex.world")
     urdf_path = os.path.join(package_share, "urdf", "my_robot_gazebo_mesh.urdf")
     bridge_params = os.path.join(package_share, "config", "gz_bridge.yaml")
     rviz_config = os.path.join(package_share, "rviz", "bot.rviz")
@@ -199,7 +199,7 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "spawn_y",
-                default_value="-0.1225",
+                default_value="-1.625",
                 description="Robot spawn Y position in Gazebo.",
             ),
             DeclareLaunchArgument(

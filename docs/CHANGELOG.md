@@ -31,16 +31,20 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
-## [17.08.2026] — First physical measurement of the platform reaches the specification: URDF mass rescaled 6.59 → 3.5 kg, and the real chassis measured at 0.4954× commanded yaw
+## [17.08.2026] — First physical measurement of the platform reaches the specification: URDF mass corrected 6.59 → 3.5 kg, the real chassis measured at 0.4954× commanded yaw, and the "measured" 0.53 m/s² acceleration limit refuted as a unit error
 
-**Document(s) affected:** `docs/08_odd_specification.md` (§8.1 + version row v0.9.2),
+**Document(s) affected:** `docs/08_odd_specification.md` (§8.1 + version rows v0.9.2 / v0.9.3),
+`docs/09_environment_design.md` (C-06 acceleration bound),
 `docs/13_isaacsim_environment.md` (drivetrain note + friction-table calibration target),
-`docs/14_isaacsim_handover_spec.md` (§2.2 rewritten, §2.3 table, new §2.3a),
+`docs/14_isaacsim_handover_spec.md` (§2.2 rewritten, §2.3 table + two notes, new §2.3a),
 `docs/17_physical_deployment.md` (§2 item 4), `docs/DECISIONS.md` (D-70).
 Code: `src/cobraflex/urdf/{my_robot_gazebo_mesh,my_robot_gazebo,my_robot_mesh,my_robot_basic}.urdf`,
 `src/cobraflex/urdf/cobraflex_isaac.urdf`, `src/cobraflex/urdf/cobraflex_isaac/payloads/Physics/physics.usda`,
-`src/cobraflex/urdf/robot.gazebo`, `src/cobraflex_rl/cobraflex_rl/vehicle_control_node.py`,
+`src/cobraflex/urdf/robot.gazebo`, `src/cobraflex_rl/cobraflex_rl/{vehicle_control_node,cage_bridge}.py`,
 `src/cobraflex_rl/launch/deploy_cobraflex.launch.py`, `tools/isaac_scene.py`.
+**Sources:** the platform team's bench sheet *CobraFlex 1:14 Parameters_0813* (13.08.2026), its
+itemised bill of materials (17.08.2026), and the platform repo
+`Waveshare-Cobra-Flex-ROS2-Autonomous-Car` (`assets/Mathematical Model/`).
 **Phase:** E5 / Phase 5 (physical deployment).
 **Gate context:** none — G4 and the 550k verdict of record are untouched. No SR, cage rule,
 `cage.yaml` value or `ODD-N.<PARAM>` is re-valued.
@@ -84,6 +88,23 @@ The platform team supplied the first bench characterisation of the physical car
    exists.
 5. **`docs/08` §8.1** (`ODD-PHYS-1`) records the measured platform envelope in the table that
    section was written to receive; version row **v0.9.2** added.
+6. **The `0.53 m/s²` acceleration limit is refuted — it was a unit error.** `robot.gazebo` is
+   corrected from `max_linear_acceleration 0.53` / `min −10` to **±2.5 m/s²**, and the four live
+   citations of "the platform's *measured* max linear accel 0.53 m/s²" (`docs/09`, `docs/13`,
+   `docs/14`, `cage_bridge.py`) are corrected with a note. The platform repo's own parameter
+   document states the diagnosis: **0.53 is this chassis's maximum velocity in m/s, copied into an
+   acceleration field**; −10 was an arbitrary 20× braking limit. New platform figures recorded:
+   **3.2 rad/s²** angular acceleration, **20 N·m** max wheel torque. **`cage.yaml` is deliberately
+   untouched** — see Impact. D-50's prose is left as the historical record it is.
+7. **New geometry error recorded, not corrected: the URDF wheelbase is 0.120 m against 0.154 m
+   measured** (`wheel_off_x = ±0.060`, all four xacro URDFs). Inert in Gazebo (kinematic DiffDrive
+   consumes only `wheel_separation`), material in Isaac, where it under-models the scrub behind
+   the yaw deficit. Left for the Isaac regeneration pass; noted in `docs/13` and `docs/14` §2.3.
+8. **Open conflict with the platform repo logged in `docs/14` §2.2.** It splits the same 3.5 kg as
+   **2.20/0.71** chassis/body and places the **Jetson in the body**. Both are contradicted — the
+   0.71 kg body is arithmetically impossible (weighed PLA 277.8 + powerbank 550 + ZED 62 = 890 g,
+   180 g over the whole link), and the team confirmed the Jetson rides on the chassis. This repo
+   keeps the itemised split; the platform repo should adopt it rather than the reverse.
 
 ### Rationale
 
@@ -123,9 +144,22 @@ confirmation.
   `friction 0.05` (D-54). Isaac's `--turn` calibration target becomes **≈1.44 rad/s**, after which
   `cage.yaw_gain` should return from 2.4 to 0.8. `docs/13` notes that one isotropic friction knob
   probably cannot match both axes and that anisotropic wheel friction is the likely requirement.
-- **Frozen campaigns.** F4, GE4-V2 and `campaign_2d_ppo550k` ran with the 6.59 kg budget; they are
-  pinned by git commit and remain reproducible from it, **not from HEAD**. Second-order in Gazebo
-  (kinematic velocity plugin — traction/slip only), first-order for Isaac.
+- **No safety argument weakens on the acceleration correction.** Every citation of 0.53 m/s² was an
+  *upper*-bound argument, and the bound grew 5×: C-06's throttle rate limit bounds commanded
+  acceleration to **0.22 m/s²** at the 0.22 m/s trunk cap and 0.5 m/s² on the Isaac contract, both
+  far inside 2.5 m/s² rather than marginally inside 0.53. **`cage.yaml` is deliberately unchanged:**
+  `a_min_mps2 = 0.3 [provisional, M-3]` and SR-008's `t_stop_max = 1.7 s` sit in a consistency
+  relation, and 2.5 m/s² would make `a_min` ~8× conservative — but the replacement figure has **no
+  stated measurement provenance either** (the 0813 bench sheet reports the same copied
+  "≈0.5–0.53 m/s²" by a second route), and revising a braking parameter on an unsourced number is
+  precisely the error being corrected here. **M-3 is informed, not closed.**
+- **Frozen campaigns.** F4, GE4-V2 and `campaign_2d_ppo550k` ran with the 6.59 kg budget and the
+  0.53 / −10 acceleration limits; they are pinned by git commit and remain reproducible from it,
+  **not from HEAD**. Second-order in Gazebo (kinematic velocity plugin — traction/slip only;
+  the acceleration limit never bound at 0.22 m/s), first-order for Isaac.
+- **The camera is untouched by all of this.** Neither the bench sheet nor the platform parameter
+  package specifies the lane camera, and the platform repo carries the same unverified
+  `camera_hfov_deg = 90.0` default — so it is **not** independent corroboration.
 - **Re-runs required:** none for any verdict. `tools/build_isaac_urdf.py` must be re-run on the
   Ubuntu host and the URDF re-imported in Isaac (see Verification).
 - **Still open, unchanged:** **TBD-Q10 / `ODD-3.A_LAT_MAX`** — no lateral-accel envelope was

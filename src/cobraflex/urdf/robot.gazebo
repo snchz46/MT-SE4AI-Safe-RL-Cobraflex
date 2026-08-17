@@ -18,14 +18,26 @@
                  0.65 % gain, while the real transfer error on this axis is the 2x
                  yaw deficit documented in docs/14 sec 2.3a (real chassis delivers
                  0.4954 x commanded yaw; this plugin delivers ~1:1).
-                 max_linear_acceleration 0.53 m/s^2 is weakly corroborated - the
-                 sheet reports "approximately 0.5-0.53 m/s^2", numerically equal to
-                 the 0.53 m/s speed clamp, so the two may share an origin. -->
+
+                 ACCELERATION LIMITS CORRECTED 2026-08-17. They used to read 0.53
+                 and -10. The platform repo's own parameter document
+                 (assets/Mathematical Model/parameters.md sec 3.2) states the
+                 diagnosis outright: 0.53 is this chassis's maximum VELOCITY in
+                 m/s, copied into an acceleration field, and -10 was an arbitrary
+                 20x braking limit. The platform figures are +/-2.5 m/s^2 linear
+                 and 3.2 rad/s^2 angular, max wheel torque 20 N.m. Note the
+                 provenance of the 2.5 is NOT stated as a measurement - the 0813
+                 bench sheet reports "approximately 0.5-0.53 m/s^2" for linear
+                 acceleration, which is the same copied number. Treat 2.5 as the
+                 platform spec and 0.53 as refuted; M-3 is informed, not closed.
+                 No practical effect on any campaign: at the 0.22 m/s trunk cap
+                 C-06 bounds commanded acceleration to 0.22 m/s^2, an order of
+                 magnitude under either limit. -->
             <wheel_separation>0.154</wheel_separation>
             <wheel_radius>0.03725</wheel_radius>
 
-            <max_linear_acceleration>0.53</max_linear_acceleration>
-            <min_linear_acceleration>-10</min_linear_acceleration>
+            <max_linear_acceleration>2.5</max_linear_acceleration>
+            <min_linear_acceleration>-2.5</min_linear_acceleration>
 
             <topic>cmd_vel</topic>
 

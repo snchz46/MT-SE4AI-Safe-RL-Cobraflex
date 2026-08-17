@@ -176,8 +176,12 @@ def safe_action_to_cmd(
 #     true stop, which is what makes SR-009's stall/liveness sub-mode (M-P6)
 #     and the SC-PERT-03 negative test well-posed (D-49).
 #   * C-06's throttle rate limit then bounds commanded acceleration to
-#     max_speed · 0.10 / control_dt = 0.5 m/s² at 10 Hz — matching the
-#     platform's measured max linear accel (0.53 m/s², docs/14 §2.3).
+#     max_speed · 0.10 / control_dt = 0.5 m/s² at 10 Hz — well inside the
+#     platform's max linear accel of 2.5 m/s² (docs/14 §2.3). Corrected
+#     17.08.2026: this comment used to claim a "measured 0.53 m/s²", but
+#     0.53 is the chassis's max VELOCITY in m/s that had been copied into
+#     an acceleration field (platform repo, Mathematical Model §3.2). The
+#     bound still holds — with 5x the margin, not 6%.
 
 
 def policy_throttle_to_cage(action_throttle: float) -> float:

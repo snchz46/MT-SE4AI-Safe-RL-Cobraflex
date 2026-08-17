@@ -377,6 +377,13 @@ env vars, no rebuild:
 >    forward tracking further from 0.99. Expect to need **anisotropic wheel friction**
 >    (low lateral / high longitudinal) rather than a lower isotropic `mu`. Not yet
 >    attempted; recorded so the next Isaac session does not re-derive it.
+> 3. **Check the wheelbase before touching friction at all.** The URDF places the wheels at
+>    `wheel_off_x = ±0.060` → a **0.120 m wheelbase, against 0.154 m measured on the real car
+>    (22 % short)**. Gazebo never exposed this because its DiffDrive is kinematic and consumes
+>    only `wheel_separation`; PhysX resolves real contacts, so in Isaac a short wheelbase
+>    **geometrically under-models the scrub** that produces the whole yaw deficit. Correct the
+>    geometry first, then re-measure `--turn`, then tune friction — otherwise the friction value
+>    absorbs a geometry error and the calibration will not transfer. See docs/14 §2.3.
 
 ```bash
 WHEEL_FRICTION=0.1 GROUND_FRICTION=0.1 ~/isaacsim/python.sh tools/isaac_ros2_bringup.py
@@ -602,7 +609,8 @@ is the **full-authority** setup — the D-49 deferral taken up now that G4 is cl
   (= ODD-1.V_MAX), so — unlike the 1-D path, whose actuation capped speed at 0.20 m/s,
   *below every C-04 ceiling* — the cage's speed rules (C-04 attenuation, C-05 Trigger B,
   C-06 throttle rate) **genuinely arbitrate against the policy**. C-06 then bounds
-  commanded acceleration to 0.5 m/s² (platform limit 0.53, docs/14 §2.3). A true stop is
+  commanded acceleration to 0.5 m/s² (platform limit **2.5**, docs/14 §2.3 — corrected
+  17.08.2026 from 0.53, which was the max *velocity* copied into an acceleration field). A true stop is
   commandable, so SR-009's stall/liveness sub-mode (M-P6, SC-PERT-03) is **well-posed**
   on this action space. Reward adds a `throttle_delta` raw-delta smoothness term
   (longitudinal mirror of the v1.2 steering term). The frozen 1-D contract is the

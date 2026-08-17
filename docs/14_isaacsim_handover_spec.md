@@ -55,7 +55,7 @@ Exact topic names and frame ids below.
 > 0.05 deadband — **no** `[0.35, 1]` lower clamp on this path, so the cage has speed authority
 > to zero. `|linear.x|` on this contract therefore reaches **0.5 m/s** (not just cruise 0.20)
 > and the cage speed rules (C-04/C-05-B/C-06) genuinely arbitrate; C-06 bounds commanded
-> acceleration to 0.5 m/s² (≤ the 0.53 platform limit, §2.3). SR-009's liveness/stall
+> acceleration to 0.5 m/s² (≤ the **2.5** platform limit, §2.3). SR-009's liveness/stall
 > sub-mode (M-P6, SC-PERT-03) is **well-posed** on this action space. The wheel mapping above
 > is unchanged. See D-50 (design) and docs/13 (usage); an Isaac-trained 2-D policy is a new
 > baseline and does not reopen the Gazebo verdicts.
@@ -162,6 +162,21 @@ motors, wheels, driver board, motor battery — is a single derived remainder. T
 highest-value follow-up measurements are **one wheel** and **the bare rolling chassis**;
 together they would close the budget completely.
 
+> **Open conflict with the platform repo — reconcile before either is cited.** The platform
+> repo (`Waveshare-Cobra-Flex-ROS2-Autonomous-Car`, `assets/Mathematical Model/parameters.md`
+> §2.1, and its URDFs) reaches the same 3.5 kg total but splits it **2.20 / 0.71** for
+> chassis / body, against the **2.0172 / 0.8928** above. Its 0.71 kg body is **arithmetically
+> impossible** on the itemisation: the weighed PLA (277.8 g) plus the powerbank (550 g by
+> datasheet, 500 g as quoted) plus the ZED (62 g) already comes to **890 g — 180 g more than
+> the whole link**. The 2.20 / 0.71 split has no stated provenance and predates the weighing,
+> so this document keeps the itemised one; the platform repo should adopt it rather than the
+> reverse. Second conflict, same section: `parameters.md` places the **Jetson in the body**
+> ("upper deck, Jetson, LiPo, wiring"), whereas the platform team confirmed on 17.08.2026 that
+> it rides on the **chassis**. Both discrepancies are the platform team's to settle; flagging
+> them here so the two repos do not silently diverge. Note the platform document **agrees** on
+> the two points that matter most: the ZED is ~62 g and carries no separate inertial, and the
+> lidar is 0.19 kg.
+
 **Inertias: still NOT measured.** The tensor the platform team supplied
 (`Ixx/Iyy/Izz = 0.008542 / 0.023160 / 0.028702`) is *this repo's own value read
 back out of Isaac* — it reproduces `(1/12)·m·(…)` for the URDF chassis box at the
@@ -196,15 +211,39 @@ Links and frames can be found in [`cobraflex_isaac.urdf`](../src/cobraflex/urdf/
 | --- | --- | --- |
 | wheel_radius | 0.03725 m | **measured** — matches the URDF exactly |
 | wheel_separation | 0.154 m | sim value; **measured track is 0.153 m** (0.65 % high, see note) |
-| wheelbase | 0.154 m | **measured** (not used by the diff-drive kinematics) |
+| wheelbase (measured) | **0.154 m** | **measured**. The URDF places the wheels at `wheel_off_x = ±0.060` → **0.120 m**, 22 % short. See note. |
 | left wheels | front_left + rear_left | |
 | right wheels | front_right + rear_right | |
-| max linear accel | 0.53 m/s² | weakly corroborated: the sheet gives "≈0.5–0.53 m/s²" |
-| min linear accel | −10 m/s² | modelling value |
+| max linear accel | **±2.5 m/s²** | platform spec — **corrected 17.08.2026 from 0.53 / −10**, see note |
+| max angular accel | **3.2 rad/s²** | platform spec (new) |
+| max wheel torque | **20 N·m** | platform spec (new) |
 | cruise speed | 0.20 m/s | |
 | max linear velocity | 0.53 m/s | firmware clamp, ~0.99 tracking measured to 0.53 |
 | max angular velocity | 6.0 rad/s | firmware clamp — **not achievable**, see note |
 | **plant yaw gain (real)** | **0.4954 × commanded** | **measured** (§2.3a) |
+
+> **Note — the 0.53 m/s² "measured acceleration" was a unit error, now refuted.** `robot.gazebo`
+> carried `max_linear_acceleration 0.53` / `min_linear_acceleration −10`, and this spec, docs/09,
+> docs/13, `cage_bridge.py` and D-50 all cited 0.53 m/s² as *the platform's measured max linear
+> acceleration*. The platform repo's own parameter document diagnoses it: **0.53 is this chassis's
+> maximum velocity in m/s, copied into an acceleration field**, and −10 was an arbitrary 20×
+> braking limit. The platform figures are **±2.5 m/s²** linear and **3.2 rad/s²** angular. All four
+> citations were corrected; **every conclusion survives with a larger margin** — C-06 bounds
+> commanded acceleration to 0.5 m/s² on the Isaac contract and 0.22 m/s² at the 0.22 m/s trunk cap,
+> so the bound went from "6 % of headroom" to "5× of headroom". Caveat on the replacement: the
+> 2.5 m/s² has **no stated measurement provenance** either, and the 0813 bench sheet independently
+> reports "≈0.5–0.53 m/s²" — i.e. the same copied number. Treat 0.53 as refuted and 2.5 as the
+> platform spec; **M-3 (deceleration) is informed, not closed.**
+
+> **Note — the URDF wheelbase is 0.120 m, the real one is 0.154 m (22 % short).** Three different
+> values are in circulation: the URDF's `wheel_off_x = ±0.060` → **0.120 m**; the platform repo's
+> Mathematical Model → **0.1356 m** "(calculated)"; the physical measurement → **0.154 m**. Gazebo's
+> DiffDrive is unaffected — it is kinematic and consumes only `wheel_separation` — which is why this
+> never surfaced. **Isaac is affected, and in the direction that matters:** PhysX resolves real
+> contacts, and a 22 %-short wheelbase geometrically *under-models the very scrub* that produces the
+> measured 0.4954 yaw deficit. Fixing it is therefore part of the Isaac yaw calibration (docs/13),
+> not a cosmetic change. Left as-is pending that work, because moving the wheels also perturbs the
+> contact geometry of the frozen Gazebo plant.
 
 > **Note — `wheel_separation` 0.154 is the wheelbase, not the track.** The measured
 > track is 0.153 m and the wheelbase is 0.154 m; the plugin/`isaac_scene` constant

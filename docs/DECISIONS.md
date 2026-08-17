@@ -106,7 +106,7 @@ consistent with the chapters.
 | D-67 | Research trunk of record moves to the 2-D PPO camera policy | `docs/16` §8 | CONFIRMED (condition met, D-69) |
 | D-68 | Heading-recovery band referenced to each run's own envelope | `docs/06`; `docs/05` | ACCEPTED |
 | D-69 | Verdict of record re-pointed to the 2-D PPO 550k campaign; SR-009/SR-010 TBDs closed; simulation programme declared complete | `docs/07`; `docs/02`–`docs/08` | ACCEPTED |
-| D-70 | First physical measurement of the platform: mass rescaled to 3.5 kg, and the yaw-rate transfer gap (0.4954) quantified | `docs/08` §8.1; `docs/13`–`docs/14`; `docs/17` | ACCEPTED |
+| D-70 | First physical measurement of the platform: mass corrected to 3.5 kg, the yaw-rate transfer gap (0.4954) quantified, and the "measured" 0.53 m/s² acceleration limit refuted as a unit error | `docs/08` §8.1; `docs/09`; `docs/13`–`docs/14`; `docs/17` | ACCEPTED |
 
 > **Renumbering note (11.06.2026, pre-merge).** The E-track decisions above were
 > originally allocated **D-38 / D-39 / D-40** on the `e2e-camera` branch, while
@@ -3333,11 +3333,11 @@ hardware dependency), D-49 (the frozen 1-D verdict).
 
 ---
 
-### D-70 — First physical measurement of the platform: the simulated car was 1.88× too heavy, and the real chassis delivers half the commanded yaw
+### D-70 — First physical measurement of the platform: the simulated car was 1.88× too heavy, the real chassis delivers half the commanded yaw, and the "measured" acceleration limit was a unit error
 
 | Field | Value |
 | --- | --- |
-| Section | `docs/08` §8.1 (v0.9.2); `docs/13` drivetrain + friction table; `docs/14` §2.2/§2.3/§2.3a; `docs/17` §2 item 4; `src/cobraflex/urdf/*`; `src/cobraflex_rl/launch/deploy_cobraflex.launch.py`; `tools/isaac_scene.py` |
+| Section | `docs/08` §8.1 (v0.9.2 + v0.9.3); `docs/09` §accel bound; `docs/13` drivetrain + friction table; `docs/14` §2.2/§2.3/§2.3a; `docs/17` §2 item 4; `src/cobraflex/urdf/*`; `src/cobraflex_rl/cobraflex_rl/cage_bridge.py`; `src/cobraflex_rl/launch/deploy_cobraflex.launch.py`; `tools/isaac_scene.py` |
 | Status | ACCEPTED — parameter/provenance change only; no SR, cage rule, `cage.yaml` value, ODD parameter or verdict is re-valued |
 | Date | 17.08.2026 (source measurement 13.08.2026) |
 
@@ -3463,8 +3463,61 @@ cage acts on — is still the load-bearing unverified number of the whole transf
 `a_min` (M-3, deceleration — the sheet gives acceleration only), actuator latency (M-2), and the
 real surface friction.
 
-**Reproducibility note.** The frozen Gazebo campaigns were executed with the 6.59 kg budget. They
-are pinned by git commit and remain reproducible from it; they are **not** reproducible from HEAD.
+**Addendum, same day — cross-check against the platform repo.** The platform team's own
+repository (`Waveshare-Cobra-Flex-ROS2-Autonomous-Car`) carries a parameter package under
+`assets/Mathematical Model/`. Cross-reading it against this repo produced one refutation, one new
+geometry error, and one unresolved conflict.
+
+**(5) The `0.53 m/s²` "measured max linear acceleration" is refuted — it was a unit error.**
+`robot.gazebo` carried `max_linear_acceleration 0.53` / `min −10`, and `docs/09`, `docs/13`,
+`docs/14`, `cage_bridge.py` and **D-50** all cited 0.53 m/s² as *the platform's measured maximum
+linear acceleration*. The platform document states the diagnosis outright: **0.53 is this
+chassis's maximum velocity in m/s, copied into an acceleration field**, and −10 was an arbitrary
+20× braking limit. The platform figures are **±2.5 m/s²** linear, **3.2 rad/s²** angular and
+**20 N·m** max wheel torque. `robot.gazebo` and all four live citations are corrected; D-50's
+prose is left as the historical record it is.
+
+**No conclusion changes, and no safety argument weakens** — all of them were *upper*-bound
+arguments and the bound grew 5×: C-06's throttle rate limit bounds commanded acceleration to
+0.22 m/s² at the 0.22 m/s trunk cap and 0.5 m/s² on the Isaac full-authority contract, both far
+inside 2.5 m/s² instead of marginally inside 0.53. Two cautions. First, **the replacement has no
+stated measurement provenance either**, and the 0813 bench sheet independently reports
+"≈0.5–0.53 m/s²" for linear acceleration — the same copied number reaching us by a second route.
+Second, **`cage.yaml` is deliberately untouched**: `a_min_mps2 = 0.3 [provisional, M-3]` and
+SR-008's `t_stop_max = 1.7 s` sit in a consistency relation, and 2.5 m/s² would make `a_min` ~8×
+conservative — but revising a braking parameter on an unsourced figure is exactly the move this
+addendum is warning against. **M-3 is informed, not closed.**
+
+**(6) New geometry error: the URDF wheelbase is 0.120 m against 0.154 m measured (22 % short).**
+`wheel_off_x = ±0.060` in all four xacro URDFs. Three values are in circulation — URDF 0.120,
+platform Mathematical Model 0.1356 "(calculated)", physical measurement 0.154. Gazebo never
+exposed it because its DiffDrive is kinematic and consumes only `wheel_separation`. **Isaac is
+affected in the direction that matters:** PhysX resolves real contacts, so a short wheelbase
+*geometrically under-models the scrub* that produces the measured 0.4954 yaw deficit — the
+geometry must be corrected **before** the friction calibration in part (4)'s consequence, or the
+friction value will silently absorb a geometry error and fail to transfer. Not changed here:
+moving the wheels also perturbs the contact geometry of the frozen Gazebo plant, and the change
+belongs with the Isaac regeneration pass. Recorded in `docs/13` and `docs/14` §2.3.
+
+**(7) Unresolved conflict on the mass split — logged, not settled.** The platform repo reaches the
+same 3.5 kg total but splits it **2.20 / 0.71** chassis/body (its URDFs already carry those
+values), and places the **Jetson in the body**. Both are contradicted: the 0.71 kg body is
+*arithmetically impossible* on the itemisation — weighed PLA 277.8 g + powerbank 550 g + ZED 62 g
+= **890 g, 180 g more than the whole link** — and the platform team confirmed on 17.08.2026 that
+the Jetson rides on the chassis. The 2.20/0.71 split has no stated provenance and predates the
+weighing, so this repo keeps the itemised one and the platform repo should adopt it rather than
+the reverse. Flagged in `docs/14` §2.2 so the two repositories do not silently diverge. The
+platform document **agrees** on the two points that matter most: the ZED is ~62 g with no separate
+inertial, and the lidar is 0.19 kg.
+
+**The camera is still untouched by any of this.** Neither the bench sheet nor the platform
+parameter package contains a lane-camera specification; the platform repo carries the same
+unverified `camera_hfov_deg = 90.0` default this repo does, so it is *not* independent
+corroboration. `docs/17` §2 item 1 remains the highest-priority open risk of the whole transfer.
+
+**Reproducibility note.** The frozen Gazebo campaigns were executed with the 6.59 kg budget and
+the 0.53 / −10 acceleration limits. They are pinned by git commit and remain reproducible from it;
+they are **not** reproducible from HEAD.
 Gazebo's DiffDrive is a kinematic velocity controller, so the mass change is second-order there
 (traction/slip only) — but it is first-order for Isaac, which is dynamics-based.
 

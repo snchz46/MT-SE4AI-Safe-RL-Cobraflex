@@ -414,6 +414,49 @@ afterwards). The gitignored 87 MB `rplidar-a2m4-r1.stl` was moved into the repo'
   101 ms) which the fail-safe chain absorbs.
 - **Which checkpoint**: deploy the rescued *peak* checkpoint of the final training
   (monitor the 25k-cadence learning curve), not necessarily the last step.
+- **Yaw gain: the firmware turns through a wider track than the sim does — OPEN.**
+  Waveshare published the Cobra Flex ESP32-S3 source after this model was built
+  (`Cobra_Driver/ugv_config.h`, block `mainType:02 Cobra_Flex`). It declares
+  `TRACK_WIDTH 0.159` and `WHEEL_D 0.0739`, and `rosCtrl` in
+  `Cobra_Driver/movtion_module.h` uses both to turn **every** twist we send into
+  wheel RPM: `setpointA = rosX - rosZ*TRACK_WIDTH/2`, then `*60/(pi*WHEEL_D)`.
+  Gazebo's DiffDrive does the same job through **0.154**, and the tape says the
+  real track is **0.153** — so the firmware constant sits 3.9 % above the
+  measured track and the simulator does not. That is a systematic yaw gain
+  offset in precisely the channel the policy controls, and a candidate
+  contributor to whatever `perception_heading_bias_rad` is currently absorbing.
+  **Not corrected**, because the two numbers are not the same quantity: 0.153 is
+  geometry and belongs in the URDF, whereas 0.159 is a control constant with
+  scrub compensation baked in and, if anything, belongs in the DiffDrive plugin.
+  Deciding needs one bench number — `wz = 1.0 rad/s`, `vx = 0`, 10 s, measure the
+  angle actually turned. Note the reachable yaw rate is already ~half the ideal
+  (§8.1 / docs/14 §2.3), so 3.9 % cannot be the whole scrub story.
+- **Two driver defects the same source exposed — FIXED.** The `T=1001` frame is
+  built by `base_info_feedback()` in `Cobra_Driver/ugv_advance.h`, which settles
+  fields we had been reading by inference: `v` is `(int)(loadVoltage_V * 100)`,
+  i.e. **centivolts**, so `/cobraflex/battery` had been publishing ~1180 where
+  11.80 V was meant; and `odl`/`odr` are `(long int)(en_odom_l * 100)`, i.e.
+  cumulative **integer centimetres** per side — odometers, not the speeds the
+  `/cobraflex/wheel_speeds` topic name claims. The voltage scale is corrected;
+  the odometry topic is left as-is on purpose, pending the wheel-geometry
+  question above and a decision on wiring wheel odometry into the ekf at all.
+  Also carried over from Waveshare's own ROS driver, but **shipped disabled**: a
+  stiction floor for turning on the spot (`min_angular_in_place`, default 0.0).
+  The chassis genuinely cannot break static friction below ~0.2 rad/s with no
+  forward speed, so Nav2's `rotate_to_goal` stalls silently and the parameter
+  exists to fix that — but it must not be on while the cage drives. The reason
+  is `safe_action_to_cmd_2d`, which derives `linear_x` and `angular_z`
+  independently: a throttle under `throttle_deadband` gives `linear_x == 0.0`
+  while the steer still maps through `steering_to_yaw_rate_gain` (0.8), so a
+  C-04 attenuation down to a true stall — which **SR-009 requires to be
+  commandable** — reaches the driver as `vx == 0` with `|wz| < 0.2` for any
+  steer inside a quarter of its range. A stiction floor would turn that
+  deliberate stop into a 0.2 rad/s spin. Enable it for Nav2 or teleop bring-up
+  only. Two further facts worth recording:
+  `M1..M4` are always 0 in the shipped build (`ddsm_fb_*` is never assigned), and
+  the IMU fields plus the whole `T=1002` frame are commented out — the chassis
+  carries an ICM-20948, so the ekf's second source is a recompile away, not a
+  wiring problem.
 
 ## 6. What is and isn't claimed
 

@@ -23,6 +23,41 @@ class CobraFlexROSDriver(Node):
         self.declare_parameter("max_linear", 0.53)
         self.declare_parameter("max_angular", 6.0)
         self.declare_parameter("turn_threshold", 0.3)
+        # Deadman. `_resend_last_cmd` exists to defeat the firmware's own
+        # command timeout, so without this the last velocity is re-sent for
+        # ever: if the publisher of /cmd_vel dies, its process is killed or the
+        # DDS link drops, the physical robot keeps driving at that velocity
+        # until someone cuts the power. Zero the command after this many
+        # seconds without a fresh /cmd_vel. Set to 0.0 to disable (bench only).
+        self.declare_parameter("cmd_timeout", 0.5)
+        # Cap on feedback lines drained per read tick, so a chatty firmware
+        # cannot starve the keep-alive timer that shares this executor thread.
+        self.declare_parameter("max_lines_per_read", 20)
+        # Stiction floor for turning on the spot -- OFF BY DEFAULT, and the
+        # reason it is off matters more than the feature.
+        #
+        # The firmware maps a twist to wheel RPM linearly (`rosCtrl` in
+        # movtion_module.h) with no deadband compensation of its own, so a small
+        # yaw command with zero forward speed asks for an RPM the motors cannot
+        # break static friction with: the robot buzzes, does not move, and
+        # nothing reports an error. Waveshare's own ugv_bringup lifts such
+        # commands to 0.2 rad/s, and that is the right value -- but only on a
+        # stack where a stall is never a deliberate command.
+        #
+        # On this one it is. `safe_action_to_cmd_2d` (cobraflex_rl/cage_bridge)
+        # derives linear_x and angular_z independently: a throttle below
+        # `throttle_deadband` yields linear_x == 0.0 while the steer still maps
+        # through `steering_to_yaw_rate_gain` (0.8). So the cage attenuating
+        # C-04 down to a true stall -- which SR-009 explicitly requires to be
+        # commandable -- reaches this node as vx == 0 with |wz| < 0.2 for any
+        # steer inside a quarter of its range. Lifting that would spin a robot
+        # the cage had just brought to a stop, which is the opposite of what
+        # every layer above intended.
+        #
+        # Set it to 0.2 for Nav2 bring-up or teleop, where `rotate_to_goal`
+        # otherwise stalls silently with no error. Leave it at 0.0 whenever the
+        # cage or the RL policy is driving.
+        self.declare_parameter("min_angular_in_place", 0.0)
 
         port = str(self.get_parameter("port").value)
         baud = int(self.get_parameter("baud").value)
@@ -30,9 +65,14 @@ class CobraFlexROSDriver(Node):
         self.max_linear = float(self.get_parameter("max_linear").value)
         self.max_angular = float(self.get_parameter("max_angular").value)
         self.turn_threshold = float(self.get_parameter("turn_threshold").value)
+        self.cmd_timeout = float(self.get_parameter("cmd_timeout").value)
+        self.max_lines_per_read = int(self.get_parameter("max_lines_per_read").value)
+        self.min_angular_in_place = float(self.get_parameter("min_angular_in_place").value)
 
         self.last_vx = 0.0
         self.last_wz = 0.0
+        self.last_cmd_time = None
+        self.cmd_expired = False
         self.ser = None
 
         try:
@@ -73,17 +113,58 @@ class CobraFlexROSDriver(Node):
         else:
             self._turn_lights(True, True)
 
+    def _lift_in_place_yaw(self, vx, wz):
+        """Raise a small pure-rotation yaw command to the stiction floor.
+
+        See the `min_angular_in_place` declaration for why this exists. Guarded
+        so it can only ever affect a turn on the spot: a zero yaw stays zero,
+        and any command with forward speed passes through untouched.
+        """
+        if self.min_angular_in_place <= 0.0 or vx != 0.0 or wz == 0.0:
+            return wz
+
+        if abs(wz) < self.min_angular_in_place:
+            return self.min_angular_in_place if wz > 0.0 else -self.min_angular_in_place
+
+        return wz
+
     def _cmd_callback(self, msg):
         """Translate an incoming /cmd_vel into the serial JSON drive command."""
         vx = max(-self.max_linear, min(self.max_linear, msg.linear.x))
         wz = max(-self.max_angular, min(self.max_angular, msg.angular.z))
+        wz = self._lift_in_place_yaw(vx, wz)
 
         self.last_vx = vx
         self.last_wz = wz
+        self.last_cmd_time = self.get_clock().now()
+
+        if self.cmd_expired:
+            self.cmd_expired = False
+            self.get_logger().info("/cmd_vel recovered, resuming drive commands")
+
         self._update_lights(wz)
+
+    def _cmd_is_stale(self):
+        """True when no /cmd_vel arrived within `cmd_timeout` seconds."""
+        if self.cmd_timeout <= 0.0 or self.last_cmd_time is None:
+            return False
+
+        age = (self.get_clock().now() - self.last_cmd_time).nanoseconds / 1e9
+        return age > self.cmd_timeout
 
     def _resend_last_cmd(self):
         """Re-send the last drive command (keep-alive against the firmware timeout)."""
+        if self._cmd_is_stale():
+            if not self.cmd_expired:
+                self.cmd_expired = True
+                self.get_logger().warning(
+                    f"No /cmd_vel for {self.cmd_timeout:.2f} s, stopping the robot"
+                )
+                self._turn_lights(True, True)
+
+            self.last_vx = 0.0
+            self.last_wz = 0.0
+
         self._send_json({"T": 13, "X": self.last_vx, "Z": self.last_wz})
 
     def _stop_robot(self):
@@ -108,30 +189,77 @@ class CobraFlexROSDriver(Node):
         self._send_json({"T": 131, "cmd": 1})
         self.get_logger().info("Requested feedback stream (T=131)")
 
+    def _publish_feedback(self, raw):
+        """Parse one feedback line and republish it on the ROS topics.
+
+        The T=1001 frame is built by `base_info_feedback()` in the stock
+        Cobra_Flex firmware (Cobra_Driver/ugv_advance.h). What that build
+        actually puts on the wire, which is less than the protocol comment in
+        json_cmd.h advertises:
+
+          odl, odr  cumulative distance travelled by each side, as
+                    `(long int)(en_odom_l * 100)` -- INTEGER CENTIMETRES, and
+                    monotonic. They are odometers, not speeds (see below).
+          v         battery, as `(int)(loadVoltage_V * 100)` -- CENTIVOLTS.
+          M1..M4    per-motor feedback, but `ddsm_fb_*` is initialised to 0 and
+                    the line that would refresh it is commented out upstream,
+                    so these are always 0. Do not build anything on them.
+
+        The IMU fields (gx/gy/gz, ax/ay/az, mx/my/mz) that json_cmd.h documents
+        in this frame are commented out in the shipped build, as is the whole
+        T=1002 frame. The chassis does carry an ICM-20948, so it is a recompile
+        away, not a wiring problem -- but nothing arrives today.
+
+        The firmware rate-limits this frame to `feedbackFlowExtraDelay` = 50 ms,
+        i.e. 20 Hz. `_read_serial` polls at 50 Hz only so the OS buffer never
+        backs up; it does not make the data any fresher.
+        """
+        data = json.loads(raw)
+        self.feedback_pub.publish(String(data=json.dumps(data)))
+
+        if data.get("T", -1) != 1001:
+            return
+
+        # Centivolts -> volts. Publishing the raw field put ~1180 on a topic
+        # named `battery`, where 11.80 V was meant.
+        battery = float(data.get("v", 0.0)) / 100.0
+        self.battery_pub.publish(Float32(data=battery))
+
+        # NOT speeds, despite the topic name: these are the two odometers
+        # described above, republished raw (integer centimetres, cumulative).
+        # Nothing subscribes to this topic today. Converting them into a real
+        # nav_msgs/Odometry is deliberately still open -- it needs the wheel
+        # geometry question settled first (see parameters.md 1.4), and the 1 cm
+        # quantisation makes them a poor speed source without filtering.
+        twist = Twist()
+        twist.linear.x = float(data.get("odl", 0.0))
+        twist.linear.y = float(data.get("odr", 0.0))
+        self.wheels_pub.publish(twist)
+
     def _read_serial(self):
-        """Drain and parse incoming serial feedback lines."""
+        """Drain and parse whatever feedback the OS buffer already holds."""
         if self.ser is None:
             return
 
+        # Gated on in_waiting instead of calling readline() unconditionally.
+        # readline() blocks for the port's full timeout (20 ms) whenever the
+        # firmware is quiet, and this node runs on a single-threaded executor
+        # shared with the 20 Hz keep-alive timer -- a silent link used to eat a
+        # whole timer period on every one of these 50 Hz ticks.
+        lines = 0
         try:
-            raw = self.ser.readline().decode("utf-8").strip()
-            if not raw:
-                return
+            while self.ser.in_waiting and lines < self.max_lines_per_read:
+                raw = self.ser.readline().decode("utf-8", errors="replace").strip()
+                lines += 1
+                if not raw:
+                    continue
 
-            data = json.loads(raw)
-            self.feedback_pub.publish(String(data=json.dumps(data)))
-
-            t_code = data.get("T", -1)
-            if t_code == 1001:
-                battery = float(data.get("v", 0.0))
-                self.battery_pub.publish(Float32(data=battery))
-
-                twist = Twist()
-                twist.linear.x = float(data.get("odl", 0.0))
-                twist.linear.y = float(data.get("odr", 0.0))
-                self.wheels_pub.publish(twist)
+                try:
+                    self._publish_feedback(raw)
+                except (ValueError, TypeError) as exc:
+                    self.get_logger().warning(f"Serial parse error: {exc}")
         except Exception as exc:
-            self.get_logger().warning(f"Serial parse error: {exc}")
+            self.get_logger().warning(f"Serial read failed: {exc}")
 
     def destroy_node(self):
         """Stop the robot and release the serial device on shutdown."""

@@ -28,8 +28,10 @@
                                + wiring + fasteners
 
          The ZED Mini's 60 g is folded in here because zed_macro.urdf.xacro
-         declares no <inertial> at all. Composite CoG sits 0.0566 m above
-         base_link (0.0938 m above ground).
+         declares no <inertial> at all. Composite CoG sat 0.0566 m above
+         base_link while body_link used the inertial_box macro; since that link
+         was replaced by the CAD measurement (see its comment below) it sits at
+         0.0534 m (0.0906 m above ground).
          NOTE: every frozen Gazebo campaign (F4, GE4-V2, campaign_2d_ppo550k)
          was executed with the 6.59 kg budget. Re-running them at HEAD will not
          reproduce them byte-for-byte; the runs are pinned by git commit. -->
@@ -278,9 +280,54 @@
             </geometry>
         </collision>
 
-        <xacro:inertial_box mass="${body_mass}" x="${body_length}" y="${body_width}" z="${body_height}">
-            <origin xyz="0 0 ${body_height/2}" rpy="0 0 0"/>
-        </xacro:inertial_box>
+        <!-- ==== body_link inertia is MEASURED, not macro-derived. Do not
+             restore inertial_box here. The box smears body_mass uniformly
+             through 0.228 x 0.180 x 0.100, but the real deck is dominated by
+             the 550 g powerbank sitting compact and low in the centre shell,
+             so the box overstates every moment by 35-54 %:
+
+                        macro          measured
+                 ixx    0.00315456     0.00206253    -34.6 %
+                 iyy    0.00461161     0.00210198    -54.4 %
+                 izz    0.00627817     0.00359719    -42.7 %
+
+             Source is an Inventor assembly of the built car with every
+             component at its weighed density (body composite 0.908 g/cm3; the
+             PLA shells at the 0.539 g/cm3 that reproduces their measured
+             277.8 g). The tensor is about the link CoG, scaled from the CAD
+             mass 898.7 g to body_mass. Unlike the supplied tensor rejected in
+             docs/08, this is not our own box read back out of a third-party
+             tool - it is an independent model that DISAGREES with the box.
+
+             The CoG also sits 12.6 mm below the box centre: the CAD puts it
+             52.6 mm under the lidar, which lidar_joint fixes at 0.090 - hence
+             the 0.037415 origin instead of body_height/2.
+
+             The CAD reports ixz = 1.26e-04 (6 % of ixx: the sensor mast is
+             forward and high, the powerbank low). Left at zero until the CAD's
+             +X direction is confirmed - the macro cannot express it anyway,
+             and a sign error there couples pitch the wrong way, which is worse
+             than omitting the term.
+
+             base_link, the wheels and the lidar were checked against the same
+             assembly and all three land within 5-6 % of their macro values, so
+             they keep the macros. The CAD's own chassis mass split is NOT
+             usable: its composite density is 3.25 g/cm3, i.e. still placeholder
+             materials, and it attributed 302 g to each wheel - the official
+             Waveshare wheel file is 87.14 cm3, so 100 g implies 1.148 g/cm3,
+             which is exactly right for rubber on a plastic hub. That is why
+             only this one link changed.
+
+             NOTE: like the 6.59 -> 3.5 kg correction above, this shifts the
+             dynamics again. Every frozen campaign predates it; the runs stay
+             pinned by git commit. See docs/14 section 2.2. -->
+        <inertial>
+            <origin xyz="0 0 0.037415" rpy="0 0 0"/>
+            <mass value="${body_mass}" />
+            <inertia ixx="0.00206253" ixy="0.0" ixz="0.0"
+                     iyy="0.00210198" iyz="0.0"
+                     izz="0.00359719" />
+        </inertial>
     </link>
 
     <joint name="body_joint" type="fixed">

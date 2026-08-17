@@ -82,11 +82,25 @@ tunables in that config are already the ``CvLaneEstimatorConfig`` defaults
 source of truth.
 
 KNOWN ITEMS TO VERIFY ON HARDWARE:
-  1. The ``steering_to_yaw_rate_gain`` (0.8). It was calibrated against the
-     Gazebo DiffDrive plugin's reading of /cmd_vel.angular.z; the firmware's
-     ``Z`` in ``{"T":13,...}`` is a nominally equivalent yaw rate on an Ackermann
-     chassis, but the two have never been compared on the real car. Re-calibrate
-     before trusting the cage's C-02/C-03 margins on hardware.
+  1. The ``steering_to_yaw_rate_gain``. The Gazebo value is 0.8, calibrated
+     against the DiffDrive plugin, whose plant tracks commanded yaw ~1:1. The
+     platform team's bench calibration (CobraFlex 1:14 Parameters_0813, in-place
+     rotation over 10 s at 0.20 / 0.40 / 0.53 / 0.80 rad/s) measured the real
+     skid-steer chassis delivering only **0.4954 x commanded yaw** — a clean
+     linear deficit, no offset (per-point gains 0.485 / 0.500 / 0.495 / 0.495),
+     while straight-line tracking is ~0.99. Implied effective track 0.309 m vs a
+     physical 0.153 m, i.e. the four fixed wheels scrub through roughly half the
+     commanded rotation. The deploy default is therefore raised to
+     ``0.8 / 0.4954 = 1.615`` so the *achieved* yaw on hardware matches the
+     0.8 rad/s the policy and the cage were trained and verified against.
+     STILL TO VERIFY, and the reason this stays a launch argument:
+       * skid-steer scrub is SURFACE-DEPENDENT. 0.4954 was measured on the
+         platform team's bench surface, not on the lane circuit. Re-run the
+         in-place rotation test on the real track before a full-speed run.
+       * this makes the car turn ~2x harder than the previous default. Bring it
+         up at 0.22 m/s with the hardware e-stop in hand (item 2), and check
+         C-02/C-03 do not chatter before trusting their margins.
+     Set ``steering_to_yaw_rate_gain:=0.8`` to fall back to the sim value.
   2. The driver has NO /cmd_vel watchdog: ``_resend_last_cmd`` re-sends the last
      command every 50 ms as a firmware keep-alive. ``vehicle_control_node``
      covers the cage dying (``safe_action_timeout_s`` → zero Twist), but if
@@ -165,9 +179,13 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("control_rate_hz", default_value="10.0",
                               description="policy + cage cycle rate = 1/control_dt of "
                                           "the training config. NOT the camera's 20 Hz."),
-        DeclareLaunchArgument("steering_to_yaw_rate_gain", default_value="0.8",
-                              description="normalised steering -> /cmd_vel.angular.z "
-                                          "[VERIFY on hardware]."),
+        DeclareLaunchArgument("steering_to_yaw_rate_gain", default_value="1.615",
+                              description="normalised steering -> /cmd_vel.angular.z. "
+                                          "0.8 (Gazebo, ~1:1 plant) / 0.4954 (measured "
+                                          "real skid-steer yaw gain) = 1.615, so the "
+                                          "ACHIEVED yaw matches the verified sim. "
+                                          "Surface-dependent — re-check on the real "
+                                          "track; pass 0.8 for the sim value."),
         # D-43 perception contract of the deployed trunk (training config `cage:`).
         DeclareLaunchArgument("heading_fit_mode", default_value="joint_pair_quadratic",
                               description="near_secant = frozen GE4; "

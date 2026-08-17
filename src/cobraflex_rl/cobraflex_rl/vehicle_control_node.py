@@ -80,6 +80,16 @@ class VehicleControlNode(Node):
         # leaving comfortable headroom over the oval's R=0.8 m curves;
         # the previous 0.4 left only ~0.5 m and caused the PD to
         # saturate against C-05 on the curve.
+        #
+        # 0.8 IS THE SIM VALUE AND STAYS THE DEFAULT: the Gazebo plant
+        # tracks commanded yaw ~1:1, and every frozen verdict was produced
+        # against it. The real chassis does NOT — the platform team's
+        # in-place rotation calibration (13.08.2026) measured it delivering
+        # 0.4954 x commanded yaw, linear and offset-free, while straight-
+        # line speed tracks at ~0.99 (four fixed wheels scrubbing; docs/14
+        # §2.3a). Hardware therefore overrides this parameter to
+        # 0.8 / 0.4954 = 1.615 from deploy_cobraflex.launch.py so the
+        # ACHIEVED yaw matches the verified sim. Do not "fix" it here.
         self._yaw_gain = float(
             self.get_parameter("steering_to_yaw_rate_gain")
             .get_parameter_value()

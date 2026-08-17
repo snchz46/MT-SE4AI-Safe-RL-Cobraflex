@@ -115,12 +115,36 @@ the RL chain reads it. To see exactly what the policy sees, point rviz at
    controllers. It also publishes `/cobraflex/battery`, `/cobraflex/wheel_speeds`
    and `/cobraflex/feedback` — independent evidence channels, currently unused by
    the cage.
-4. **[VERIFY] `steering_to_yaw_rate_gain` (0.8).** `vehicle_control_node`
-   publishes `/cmd_vel.angular.z = safe_action.angular.z × 0.8`; that gain was
-   calibrated against the **Gazebo DiffDrive plugin's** reading of `angular.z`.
-   The firmware's `Z` is a nominally equivalent yaw rate on an Ackermann chassis,
-   but the two have never been compared on the real car. Re-calibrate before
-   trusting the cage's C-02/C-03 margins on hardware.
+4. **[MEASURED 13.08.2026 — `steering_to_yaw_rate_gain` raised 0.8 → 1.615].**
+   `vehicle_control_node` publishes `/cmd_vel.angular.z = safe_action.angular.z ×
+   gain`; 0.8 was calibrated against the **Gazebo DiffDrive plugin's** reading of
+   `angular.z`, whose plant tracks commanded yaw ~1:1. The platform team's bench
+   calibration (*CobraFlex 1:14 Parameters_0813*; in-place rotation, 10 s per
+   point, 0.20/0.40/0.53/0.80 rad/s) measured the real chassis delivering only
+   **0.4954 × commanded yaw** — per-point gains 0.485/0.500/0.495/0.495, linear,
+   no offset — while straight-line motion tracks at ~0.99. The deficit is purely
+   rotational: the four fixed wheels scrub, giving an effective track of 0.309 m
+   against a physical 0.153 m. The **deploy launch default is now
+   `0.8 / 0.4954 = 1.615`**, so the *achieved* yaw on hardware matches the
+   0.8 rad/s the trunk policy and the cage were verified against. Note the
+   chassis is **skid-steer, not Ackermann** (four fixed wheels, no steering
+   angle — docs/08 §11), which is *why* the deficit exists. Two things still
+   gate this:
+   - **Scrub is surface-dependent.** 0.4954 came from the platform team's bench
+     surface, not the lane circuit. Re-run the in-place rotation test on the real
+     track before a full run, and re-derive the gain if it moves.
+   - **This turns the car ~2× harder than the previous default.** Bring it up at
+     0.22 m/s with the e-stop in hand (item 5) and confirm C-02/C-03 do not
+     chatter before trusting their margins. `steering_to_yaw_rate_gain:=0.8`
+     restores the old behaviour.
+
+   Consequence for the cage, now quantified — this is the **T2** transfer risk:
+   at `steer = 1.0` the achievable yaw is 0.396 rad/s real vs 0.800 rad/s in
+   Gazebo; the minimum turn radius at 0.22 m/s goes 0.275 m → 0.555 m; and C-06's
+   `delta_max_steering_per_cycle = 0.15` bounds yaw acceleration at 2.40 rad/s² in
+   sim but **1.19 rad/s² on hardware** (20 Hz). The tightest `complex_b` curve
+   (driven `R_min ≈ 0.998 m`) needs 0.220 rad/s at 0.22 m/s = 27.6 % of full steer
+   in sim, **55.6 % on hardware**. Feasible, but the headroom drops 3.6× → 1.8×.
 5. **Hardware e-stop** wired to `/external_stop` (`std_msgs/Bool`). **Mandatory
    before any powered run** — it drives C-05 Trigger 6 (external stop). It is
    also the *only* mitigation for one gap: the driver has no `/cmd_vel` watchdog —

@@ -8,12 +8,25 @@
             <right_joint>front_right_wheel_joint</right_joint>
             <right_joint>rear_right_wheel_joint</right_joint>
 
+            <!-- Physical measurement 13.08.2026 (CobraFlex 1:14 Parameters_0813):
+                 track 0.153 m, wheelbase 0.154 m, wheel radius 0.03725 m. The
+                 0.154 below is therefore the WHEELBASE, not the track the
+                 diff-drive kinematics actually need — the two happen to agree to
+                 0.65 % on this chassis, which is why it never showed. LEFT AS-IS
+                 on purpose: correcting it would perturb the plant that produced
+                 every frozen verdict (F4, GE4-V2, campaign_2d_ppo550k) for a
+                 0.65 % gain, while the real transfer error on this axis is the 2x
+                 yaw deficit documented in docs/14 sec 2.3a (real chassis delivers
+                 0.4954 x commanded yaw; this plugin delivers ~1:1).
+                 max_linear_acceleration 0.53 m/s^2 is weakly corroborated - the
+                 sheet reports "approximately 0.5-0.53 m/s^2", numerically equal to
+                 the 0.53 m/s speed clamp, so the two may share an origin. -->
             <wheel_separation>0.154</wheel_separation>
             <wheel_radius>0.03725</wheel_radius>
 
             <max_linear_acceleration>0.53</max_linear_acceleration>
             <min_linear_acceleration>-10</min_linear_acceleration>
-            
+
             <topic>cmd_vel</topic>
 
             <odom_topic>odom</odom_topic>

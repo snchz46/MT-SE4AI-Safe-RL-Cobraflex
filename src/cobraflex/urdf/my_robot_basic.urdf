@@ -9,12 +9,36 @@
     <xacro:property name="chassis_length" value="0.228" />
     <xacro:property name="chassis_width" value="0.130" />
     <xacro:property name="chassis_height" value="0.060" />
-    <xacro:property name="chassis_mass" value="5.0" />
+    <!-- Mass budget = the MEASURED 3.5 kg total (CobraFlex 1:14
+         Parameters_0813, 13.08.2026), distributed from the itemised bill of
+         materials the platform team supplied on 17.08.2026. Previous budget
+         summed to 6.59 kg (1.88x too heavy), and the itemisation shows the
+         WHOLE overshoot sat in this one chassis placeholder:
+
+           body_link 0.8928 = PLA shells 0.2778 (measured: 91.3 g bottom /
+                              118.5 g centre / 68 g top cover) + powerbank 0.550
+                              (XT-27000DC datasheet; the team quoted 500 g) +
+                              ZED Mini 0.060 + lane cam ~0.005
+           lidar     0.190   = manufacturer (RPLIDAR A2M4) - unchanged
+           wheel     0.1 x4  = NOT MEASURED, left at the original value
+           chassis   2.0172  = remainder: frame + 4 motors + driver board +
+                               motor battery + Jetson Orin Nano DevKit (0.175,
+                               NVIDIA SP-11324-001 p33; chassis placement
+                               CONFIRMED by the platform team, not assumed)
+                               + wiring + fasteners
+
+         The ZED Mini's 60 g is folded in here because zed_macro.urdf.xacro
+         declares no <inertial> at all. Composite CoG sits 0.0566 m above
+         base_link (0.0938 m above ground).
+         NOTE: every frozen Gazebo campaign (F4, GE4-V2, campaign_2d_ppo550k)
+         was executed with the 6.59 kg budget. Re-running them at HEAD will not
+         reproduce them byte-for-byte; the runs are pinned by git commit. -->
+    <xacro:property name="chassis_mass" value="2.0172" />
 
     <xacro:property name="body_length" value="0.228" />
     <xacro:property name="body_width" value="0.180" />
     <xacro:property name="body_height" value="0.100" />
-    <xacro:property name="body_mass" value="1.0" />
+    <xacro:property name="body_mass" value="0.8928" />
     
     <xacro:property name="wheel_radius" value="0.03725" /> 
     <xacro:property name="wheel_width" value="0.02" />

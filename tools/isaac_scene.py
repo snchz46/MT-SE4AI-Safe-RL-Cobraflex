@@ -24,8 +24,13 @@ import os
 import shutil
 
 # --- Drivetrain (matches src/cobraflex/urdf/robot.gazebo and the handover spec) -
-WHEEL_RADIUS = 0.03725          # m
-WHEEL_SEPARATION = 0.154        # m
+WHEEL_RADIUS = 0.03725          # m — confirmed by physical measurement (13.08.2026)
+WHEEL_SEPARATION = 0.154        # m — see note
+# NOTE (2026-08-17): 0.154 m is the measured WHEELBASE; the measured track the
+# diff-drive kinematics want is 0.153 m. Kept at 0.154 for continuity with
+# robot.gazebo and every frozen campaign — the 0.65% disagreement is negligible
+# next to the real actuation error on this axis: the physical chassis delivers
+# only 0.4954x commanded yaw (docs/14 §2.3a), where this ideal model assumes 1:1.
 # Order matters: jointNames[i] is commanded with velCmd[i]; the trainer resolves
 # the articulation DOF indices in this exact order.
 WHEEL_JOINTS = [

@@ -288,7 +288,10 @@ node works unchanged.
 The drive train is the only non-trivial mapping: the Gazebo DiffDrive drove
 `left = front_left+rear_left`, `right = front_right+rear_right`. A ScriptNode runs
 the same kinematics (wheel_radius 0.03725 m, wheel_separation 0.154 m) and commands
-all four wheels. **Velocity control in PhysX needs a drive with damping**, which the
+all four wheels. (`wheel_radius` is confirmed by physical measurement;
+`wheel_separation` 0.154 m is in fact the measured *wheelbase* — the measured
+*track* is 0.153 m. Deliberately left as-is: 0.65 %, versus the 2× yaw error in
+docs/14 §2.3a. See the note there.) **Velocity control in PhysX needs a drive with damping**, which the
 imported `continuous` joints lack — the bring-up script applies a stiffness-0 /
 high-damping angular drive to each wheel joint, otherwise a commanded velocity
 produces no torque and the robot does not move.
@@ -354,6 +357,26 @@ It is a genuine trade-off: lower friction turns better but slips more on
 straights; higher friction tracks straights better but resists turning. The
 default 0.05 prioritises responsive turning (the reported problem). Tune live with
 env vars, no rebuild:
+
+> **Calibration target added 2026-08-17 — the real car measures 0.4954.** The
+> platform team's in-place rotation test (*CobraFlex 1:14 Parameters_0813*, docs/14
+> §2.3a) puts the physical chassis at **0.4954 × commanded yaw, and 0.99 × commanded
+> forward speed**. Against the ideal 2.9 rad/s of the `--turn` test that is a target
+> of **≈1.44 rad/s achieved** — well above the 0.53 rad/s the default 0.05 delivers.
+> Two things follow:
+>
+> 1. **Isaac is ~2.75× pessimistic on yaw**, Gazebo ~2× optimistic (its DiffDrive
+>    tracks ~1:1). The truth sits between them, closer to Gazebo. D-54's
+>    `cage.yaw_gain 2.4` was compensating a plant that is too slippery; the
+>    physically-correct fix is to tune friction until `--turn` returns ≈1.44 rad/s
+>    and then restore `yaw_gain` to the Gazebo 0.8.
+> 2. **One friction knob probably cannot match both axes.** The real car is
+>    0.99 forward / 0.495 yaw. At 0.05 Isaac is already down to 65 % forward while
+>    still only reaching 0.18 yaw — the knob trades the two against each other in the
+>    wrong proportion, and extrapolating the table toward 1.44 rad/s would push
+>    forward tracking further from 0.99. Expect to need **anisotropic wheel friction**
+>    (low lateral / high longitudinal) rather than a lower isotropic `mu`. Not yet
+>    attempted; recorded so the next Isaac session does not re-derive it.
 
 ```bash
 WHEEL_FRICTION=0.1 GROUND_FRICTION=0.1 ~/isaacsim/python.sh tools/isaac_ros2_bringup.py

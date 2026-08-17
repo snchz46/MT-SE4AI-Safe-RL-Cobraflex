@@ -106,6 +106,7 @@ consistent with the chapters.
 | D-67 | Research trunk of record moves to the 2-D PPO camera policy | `docs/16` §8 | CONFIRMED (condition met, D-69) |
 | D-68 | Heading-recovery band referenced to each run's own envelope | `docs/06`; `docs/05` | ACCEPTED |
 | D-69 | Verdict of record re-pointed to the 2-D PPO 550k campaign; SR-009/SR-010 TBDs closed; simulation programme declared complete | `docs/07`; `docs/02`–`docs/08` | ACCEPTED |
+| D-70 | First physical measurement of the platform: mass rescaled to 3.5 kg, and the yaw-rate transfer gap (0.4954) quantified | `docs/08` §8.1; `docs/13`–`docs/14`; `docs/17` | ACCEPTED |
 
 > **Renumbering note (11.06.2026, pre-merge).** The E-track decisions above were
 > originally allocated **D-38 / D-39 / D-40** on the `e2e-camera` branch, while
@@ -3329,3 +3330,151 @@ Cites D-67 (the conditional trunk decision and the two deferred follow-ups), D-6
 and checkpoint), D-64 (SR-009's metrology), D-47 + D-68 (the SR-002/003 reconciliation and the
 audited clause metric), D-30 (CL-B non-veto), D-39 (out-of-band precedent), D-33 (Q10's
 hardware dependency), D-49 (the frozen 1-D verdict).
+
+---
+
+### D-70 — First physical measurement of the platform: the simulated car was 1.88× too heavy, and the real chassis delivers half the commanded yaw
+
+| Field | Value |
+| --- | --- |
+| Section | `docs/08` §8.1 (v0.9.2); `docs/13` drivetrain + friction table; `docs/14` §2.2/§2.3/§2.3a; `docs/17` §2 item 4; `src/cobraflex/urdf/*`; `src/cobraflex_rl/launch/deploy_cobraflex.launch.py`; `tools/isaac_scene.py` |
+| Status | ACCEPTED — parameter/provenance change only; no SR, cage rule, `cage.yaml` value, ODD parameter or verdict is re-valued |
+| Date | 17.08.2026 (source measurement 13.08.2026) |
+
+**Context.** The platform team delivered the first bench characterisation of the physical
+CobraFlex 1:14 (*CobraFlex 1:14 Parameters_0813*): mass, CoG, an inertia tensor, chassis
+geometry, dynamic maxima, and two validation campaigns — straight-line distance and in-place
+rotation, both over 10 s. Until now `docs/14` §2.2 read literally *"Total mass to be measured
+from real car. Inertias to be measured from real car."*, and `docs/17` §2 item 4 carried
+`steering_to_yaw_rate_gain` as an open `[VERIFY]`. This is the first hardware evidence to reach
+the specification.
+
+**What the data actually says.** Three of the supplied rows are measurements, three are not,
+and the distinction is the substance of this decision.
+
+*Measured and consistent:* total mass **3.5 kg**; wheelbase **0.154 m**, track **0.153 m**,
+wheel radius **0.03725 m**; straight-line tracking **≈0.99** of commanded up to 0.53 m/s
+(1.998/2.000, 3.964/4.000, 5.207/5.300).
+
+*Measured and contradicting the simulator:* in-place rotation delivers only
+**0.4954 × commanded yaw** — least squares through the origin over four commands
+(0.20/0.40/0.53/0.80 rad/s), per-point gains 0.485/0.500/0.495/0.495, linear with no offset.
+Gazebo's DiffDrive plugin delivers ~1:1. The forward axis transfers at 0.99 and the rotational
+axis at 0.50, so this is scrub, not a speed error: four fixed wheels dragging sideways, giving
+an effective track of `0.153/0.4954 = 0.309 m`, ≈2.02× the physical track.
+
+*Not measurements, recorded so they are not mistaken for evidence:*
+
+- The **inertia tensor** `0.008542 / 0.023160 / 0.028702` reproduces `(1/12)·m·(…)` for **this
+  repo's own URDF chassis box at the old 5.0 kg** to nine decimals. It is our assumption read
+  back out of Isaac after a URDF import — circular, and internally inconsistent with the 3.5 kg
+  measured beside it.
+- **`v_max 0.53 m/s` and `ω_max 6.0 rad/s`** are the serial driver's clamp constants already
+  recorded in `docs/17` §2 item 3. The 6.0 figure is not reachable: ideal diff-drive gives
+  `2·v_max/T = 6.93 rad/s`, and ≈3.4 rad/s after the measured scrub. The campaign only reached
+  0.396 rad/s achieved.
+- The **CoG** `(0.006, −0.004, 0.030) m` is frame-ambiguous and, read in `base_link`,
+  unreachable by this link layout: with the 0.19 kg lidar at z = 0.16 m, placing *all* remaining
+  mass at z = 0.030 m still floors the composite at 0.037 m.
+
+**Decision — four parts.**
+
+**(1) Correct the URDF mass budget to 3.5 kg, distributed from the bill of materials.** It
+summed to **6.59 kg** — chassis 5.0 + body 1.0 + 4×0.1 wheels + 0.19 lidar — i.e. **1.88× too
+heavy** through F4, GE4-V2 and `campaign_2d_ppo550k`.
+
+The first cut was a **uniform** scale `k = 3.5/6.59`, on the reasoning that only the total was
+measured. Later the same day the platform team supplied the **itemised bill of materials** — the
+three printed body shells weighed individually (91.3 g bottom / 118.5 g centre / 68.0 g top
+cover) plus the three bought-in components — and that supersedes it, because it shows the
+**entire 3.09 kg overshoot sat in one link**: the `chassis_mass` placeholder. `body_link`,
+`lidar_link` and the wheels were already right, so the uniform scale had taken three correct
+values and made them wrong (most visibly the lidar, driven to 0.101 kg when the manufacturer
+figure is 0.190 kg and the original URDF already had it exactly). The uniform scale was replaced
+with the itemised one:
+
+| Link | Value | Composition | Confidence |
+| --- | --- | --- | --- |
+| `body_link` | 0.8928 | PLA 0.2778 (measured) + powerbank 0.550 + ZED Mini 0.060 + lane cam ≈0.005 | measured + datasheet |
+| `lidar_link` | 0.190 | RPLIDAR A2M4, manufacturer — restored to the original value | manufacturer |
+| wheel ×4 | 0.1 | **not measured**; left at the original value | assumption |
+| `base_link` | 2.0172 | remainder: frame + 4 motors + driver board + motor battery + Jetson DevKit 0.175 + wiring | derived total; Jetson placement **confirmed** on the chassis (platform team, 17.08.2026) |
+
+Two figures quoted with the parts were corrected against datasheets already in the project's
+own reference folder: the **powerbank is 550 g, not 500 g** (XTPower XT-27000DC, *"Weigth 550g"*)
+and the **Jetson Orin Nano DevKit is 175 g** (NVIDIA SP-11324-001 v1.3 p33), previously
+unaccounted for anywhere. The ZED Mini's 60 g is folded into `body_link` because
+`zed_macro.urdf.xacro` declares **no `<inertial>` at all** — the ZED is a massless link in every
+URDF, and correcting that properly means editing a vendor description. Inertias in the two
+generated Isaac files were recomputed from the same primitives the generator uses, verified
+beforehand to reproduce the previous values exactly at the previous masses.
+
+**2.25 kg — 64 % of the vehicle — remains a single derived remainder.** The rolling chassis has
+never been weighed. The two measurements that would close the budget are **one wheel** and **the
+bare chassis**; requested from the platform team.
+
+**(2) Do not apply the CoG or the inertia tensor.** Both fail the check above. On the CoG the
+itemisation is decisive rather than merely suggestive: the powerbank (550 g, heaviest single
+item) is in the *centre* shell and the lidar (190 g) on the *top* cover, so **740 g — 21 % of the
+car — is demonstrably in the upper two layers**. The itemised composite sits at **0.0566 m**
+above `base_link` (0.0938 m above ground), nearly 2× the claimed 0.030 m. Read from the **chassis
+box centre** the supplied figure would land at 0.060 m, **3.4 mm from the model** — close enough
+to be a confirmation of the reference frame rather than a coincidence, but it stays a hypothesis
+until the platform team confirms. A real inertia tensor still needs a bifilar-pendulum or CAD
+measurement.
+
+**(3) Compensate the yaw gap at the command side on hardware, and nowhere else.**
+`deploy_cobraflex.launch.py` raises `steering_to_yaw_rate_gain` from 0.8 to
+**`0.8 / 0.4954 = 1.615`**, so the *achieved* yaw on the car matches the 0.8 rad/s the trunk
+policy and the cage were trained and verified against. The `vehicle_control_node` default stays
+**0.8** — that is the sim value and every frozen verdict was produced against it. Two caveats are
+carried in the launch file and in `docs/17`: scrub is **surface-dependent** (0.4954 came from a
+bench surface, not the lane circuit), and the new default turns the car ~2× harder, so bring-up
+runs at 0.22 m/s with the e-stop in hand.
+
+**(4) Leave `wheel_separation = 0.154` alone, but record why.** It is the measured *wheelbase*;
+the diff-drive kinematics want the *track*, 0.153 m. The two agree to 0.65 % on this chassis,
+which is why the mix-up never surfaced. Correcting it would perturb the plant that produced every
+frozen verdict for a 0.65 % gain, three orders of magnitude below the yaw error on the same axis.
+Provenance comments added in `robot.gazebo`, `tools/isaac_scene.py`, `docs/13` and `docs/14`.
+
+**Consequence — this is transfer risk T2, now quantified.** Every cage margin expressed through
+steering buys **half** the physical yaw it buys in Gazebo. At `steer = 1.0`: 0.800 rad/s sim →
+0.396 rad/s real. Minimum turn radius at 0.22 m/s: 0.275 m → 0.555 m. C-06's
+`delta_max_steering_per_cycle = 0.15` bounds yaw acceleration at 2.40 rad/s² sim → 1.19 rad/s²
+real (20 Hz). The tightest `complex_b` curve (driven `R_min ≈ 0.998 m`) needs 0.220 rad/s at
+0.22 m/s: **27.6 % of full steer in sim, 55.6 % on hardware**. Still feasible — the headroom drops
+from 3.6× to 1.8×, it does not vanish.
+
+**Consequence — the two simulators now bracket the truth, and Isaac gets a calibration target.**
+Gazebo ≈1.00, real **0.4954**, Isaac ≈0.18 at `friction 0.05` (D-54). Gazebo is ~2× optimistic,
+Isaac ~2.75× pessimistic. D-54 raised Isaac's `cage.yaw_gain` to 2.4 to paper over a plant that
+was too slippery; the physically-correct fix is to tune friction until the `--turn` test returns
+**≈1.44 rad/s** (0.4954 × the 2.9 rad/s ideal) and then restore `yaw_gain` to 0.8. Recorded in
+`docs/13` with the caveat that one isotropic friction knob probably cannot match both axes — the
+real car is 0.99 forward / 0.495 yaw, while Isaac at 0.05 is already down to 65 % forward at only
+0.18 yaw, so **anisotropic wheel friction** is the likely requirement. Not yet attempted.
+
+**Explicitly NOT closed.** **TBD-Q10 (`ODD-3.A_LAT_MAX`)** — no lateral-accel envelope was
+supplied, so **M-4 remains open** and `docs/08` stays below v1.0 (D-33 unchanged). The camera
+`[VERIFY]` items remain the highest-priority open risk: the document contains **nothing about the
+camera**, and `docs/17` §2 item 1 — the 90° effective HFOV, which scales every `ey` in metres the
+cage acts on — is still the load-bearing unverified number of the whole transfer. Also still open:
+`a_min` (M-3, deceleration — the sheet gives acceleration only), actuator latency (M-2), and the
+real surface friction.
+
+**Reproducibility note.** The frozen Gazebo campaigns were executed with the 6.59 kg budget. They
+are pinned by git commit and remain reproducible from it; they are **not** reproducible from HEAD.
+Gazebo's DiffDrive is a kinematic velocity controller, so the mass change is second-order there
+(traction/slip only) — but it is first-order for Isaac, which is dynamics-based.
+
+**Verification.** `python tools/check_traceability.py` → All checks PASSED. Mass totals asserted
+programmatically at 3.5000 kg in `cobraflex_isaac.urdf` and `physics.usda`. `pytest` unaffected
+(no cage or policy logic touched). **Not verified:** neither URDF has been loaded in Gazebo or
+Isaac since the rescale — `xacro` is unavailable on the Windows authoring host, so
+`tools/build_isaac_urdf.py` could not be re-run, and `cobraflex_isaac.urdf` + `physics.usda` are
+hand-patched generated artefacts. Regenerate both on the Ubuntu host before any Isaac work.
+
+Cites D-54 (Isaac's yaw wall and the `yaw_gain 2.4` workaround this retargets), D-33 (Q10's
+hardware dependency), D-69 (the frozen verdict of record the mass change post-dates), D-44/D-50
+(the Isaac bridge).

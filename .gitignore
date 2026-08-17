@@ -132,3 +132,8 @@ tools/assets*
 # logs. The campaign's evidence is runs/*/ + campaign_report.json, not these.
 experiments/**/.campaign.lock
 experiments/sim/campaign_*/*.log
+
+# M-6 camera calibration: keep the raw checkerboard views (the evidence chain for
+# the measured HFOV) but not the corner-overlay renders, which are regenerable
+# by re-running tools/calibrate_camera_hfov.py board-solve.
+experiments/calibration/M6_camera_hfov/**/view_*_corners.png

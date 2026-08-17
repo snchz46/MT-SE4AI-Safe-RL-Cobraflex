@@ -1,0 +1,22 @@
+{
+  "label": "d014",
+  "distance_m": 0.145,
+  "distance_reference": "optical objective (~10 mm behind the lens barrel front)",
+  "captured_utc": "2026-08-17T14:43:21Z",
+  "git_commit": "59d47c3b",
+  "raw_png": "d014_raw.png",
+  "annotated_png": "d014_annotated.png",
+  "note": "transversal 30 cm steel tape; green 10 cm ruler below",
+  "topic": "camera/image_raw_lane",
+  "frames_requested": 15,
+  "frames_received": 15,
+  "wall_s": 3.353,
+  "encodings": [
+    "bgr8"
+  ],
+  "shapes": [
+    "360x640"
+  ],
+  "rate_hz_from_stamps": 8.75,
+  "max_stamp_gap_s": 0.3544
+}

@@ -16,7 +16,9 @@ that need empirical confirmation before they can be defended at G1 with
 the level of rigour required by the V-Model adaptation A4 (traceability).
 
 This directory contains the protocols for the five measurements (M-1 to
-M-5) that close those gaps. Each measurement is a self-contained
+M-5) that close those gaps. **M-6 was added later (Phase 5)** and is not a
+pre-G1 item: it closes the two geometric `[VERIFY]` assumptions that only the
+physical camera can answer. Each measurement is a self-contained
 experiment with a procedure, an expected output format, and a decision
 rule that determines whether the corresponding SR parameter is confirmed
 or must be revised.
@@ -28,6 +30,7 @@ or must be revised.
 | [M-3](M3_max_deceleration.md) | SR-005 a_min, SR-008 t_stop_max | 1 h | physical platform |
 | [M-4](M4_speed_vs_curvature.md) | SR-004 v_max_curve | 2 h | physical platform + hand-tuned PD |
 | [M-5](M5_actuator_rate.md) | SR-006 δ_max for steering and throttle | 1 h | physical platform |
+| [M-6](M6_camera_hfov.md) | docs/17 §2 [VERIFY] #1 (effective HFOV) + #2 (mount pitch) | <1 h | physical platform + tape measure |
 
 Total effort estimate: approximately 6 hours of empirical work,
 distributed across simulator and platform.
@@ -41,6 +44,7 @@ distributed across simulator and platform.
 | M-3         | stub ready | —           | `M3_results.json` (scaffold, fill in)     |
 | M-4         | stub ready | —           | `M4_results.json` (scaffold, fill in)     |
 | M-5         | stub ready | —           | `M5_results.json` (scaffold, fill in)     |
+| M-6         | **executed — both parts** | 17.08.2026 | `M6_results.json` + `M6_pitch_results.json` — HFOV **77.89°** vs 90° assumed (verdict **Blocking**); pitch **17.84°** vs 17.19° (confirmed). Not applied in code |
 
 Each result file follows the schema declared at the bottom of its
 protocol document. The stub files already exist in this directory;

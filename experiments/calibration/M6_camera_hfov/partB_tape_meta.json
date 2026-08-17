@@ -1,0 +1,22 @@
+{
+  "label": "partB_tape",
+  "distance_m": 0.0,
+  "distance_reference": "n/a - forward tape for pitch",
+  "captured_utc": "2026-08-17T19:12:15Z",
+  "git_commit": "59d47c3b",
+  "raw_png": "partB_tape_raw.png",
+  "annotated_png": "partB_tape_annotated.png",
+  "note": "Part B: tape laid forward along the optical axis, camera height ~77 mm above the surface (to be fitted)",
+  "topic": "camera/image_raw_lane",
+  "frames_requested": 21,
+  "frames_received": 21,
+  "wall_s": 4.301,
+  "encodings": [
+    "bgr8"
+  ],
+  "shapes": [
+    "360x640"
+  ],
+  "rate_hz_from_stamps": 10.81,
+  "max_stamp_gap_s": 0.3007
+}

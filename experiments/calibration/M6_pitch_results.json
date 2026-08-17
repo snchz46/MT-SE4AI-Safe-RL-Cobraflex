@@ -1,0 +1,13 @@
+{
+  "pitch_rad": 0.31132,
+  "pitch_deg": 17.837,
+  "height_fitted_m": 0.07794,
+  "height_measured_m": 0.077,
+  "tape_offset_m": -0.0035,
+  "residual_rms_px": 0.485,
+  "n_marks": 17,
+  "fy_px": 395.93,
+  "cy_px": 193.2,
+  "pitch_assumed_rad": 0.3,
+  "pitch_error_deg": 0.649
+}

@@ -1,0 +1,78 @@
+{
+  "camera_height_m": 0.077,
+  "height_px": 360,
+  "cy_px": 193.2,
+  "fx_px": 395.93,
+  "source_image": "experiments/calibration/M6_camera_hfov/partB_tape_raw.png",
+  "note": "cm number-block centres on the forward tape; a constant number-to-tick offset is absorbed by the fitted tape offset",
+  "marks": [
+    {
+      "s_m": 0.1,
+      "v_px": 344.95
+    },
+    {
+      "s_m": 0.11,
+      "v_px": 325.53
+    },
+    {
+      "s_m": 0.12,
+      "v_px": 307.34
+    },
+    {
+      "s_m": 0.13,
+      "v_px": 289.47
+    },
+    {
+      "s_m": 0.14,
+      "v_px": 276.36
+    },
+    {
+      "s_m": 0.15,
+      "v_px": 264.27
+    },
+    {
+      "s_m": 0.16,
+      "v_px": 253.13
+    },
+    {
+      "s_m": 0.17,
+      "v_px": 243.57
+    },
+    {
+      "s_m": 0.18,
+      "v_px": 234.68
+    },
+    {
+      "s_m": 0.19,
+      "v_px": 226.62
+    },
+    {
+      "s_m": 0.2,
+      "v_px": 219.13
+    },
+    {
+      "s_m": 0.21,
+      "v_px": 213.01
+    },
+    {
+      "s_m": 0.22,
+      "v_px": 206.71
+    },
+    {
+      "s_m": 0.23,
+      "v_px": 201.2
+    },
+    {
+      "s_m": 0.24,
+      "v_px": 196.07
+    },
+    {
+      "s_m": 0.25,
+      "v_px": 191.24
+    },
+    {
+      "s_m": 0.26,
+      "v_px": 186.77
+    }
+  ]
+}

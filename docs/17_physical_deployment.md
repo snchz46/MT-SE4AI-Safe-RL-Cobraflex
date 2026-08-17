@@ -1,8 +1,11 @@
 # 17 · Physical deployment (Phase 5) — bring-up plan for the real CobraFlex
 
-**Status: scaffolding prepared; the node chain has now been RUN ON THE CAR
-(2026-08-05, bench, `mode:=monitoring`, no track, no actuation trusted) — the car
-has still NOT been driven.** This document is the bring-up checklist for taking
+**Status: RUN ON THE CAR — bench only (2026-08-05 and 2026-08-17, `mode:=monitoring`,
+wheels off the ground, no track). The car has still NOT been driven.** Both §2
+`[VERIFY]` items are now measured (M-6, 17.08.2026) and the HFOV one came back
+**wrong — 77.89°, not 90°**; the resulting decision is open and nothing has been
+changed in code. The 2026-08-17 session (§6c) verified the perception-loss
+fail-safe and the actuation sign convention on hardware.** This document is the bring-up checklist for taking
 the verdict-bearing RL camera policy + safety cage from Gazebo to the physical
 1:14 CobraFlex. Every sim-side component it reuses is validated; the hardware I/O
 and the items flagged **[VERIFY]** are not, by construction — they need the car.
@@ -51,10 +54,19 @@ numbers are `lane_keeper_node`'s parameter defaults. So reproducing the hardware
 path **is** reproducing the training distribution. Every number has one authority
 and all three agree:
 
+> **⚠ Falsified for HFOV, 17.08.2026 (M-6).** The three *code* locations below
+> still agree with each other, but they no longer agree with the **camera**: the
+> measured effective HFOV is **77.89°**, not 90° (`fx` 395.93 px, not 320). The
+> agreement was circular — the sim mirrored a hardware *parameter default* that
+> had never been measured. So for HFOV, reproducing this path is **not**
+> reproducing the training distribution: real frames are ~24 % narrower in field
+> of view than every frame the 550k policy trained on. Every other row of the
+> table is unaffected. See §2 item 1.
+
 | Quantity | Value | Authority |
 | --- | --- | --- |
 | Native frame | **640×360** | `Lane Cam <image>` · `camera_geometry.DEFAULT_WIDTH_PX/HEIGHT_PX` · `lane_keeper_node.proc_width/proc_height` |
-| HFOV | **90°** (1.5707963 rad) | `Lane Cam <horizontal_fov>` · `CameraModel.hfov_rad` · `lane_keeper_node.camera_hfov_deg` |
+| HFOV | **90°** (1.5707963 rad) — *assumed; the real camera measures 77.89°, M-6* | `Lane Cam <horizontal_fov>` · `CameraModel.hfov_rad` · `lane_keeper_node.camera_hfov_deg` |
 | Rate | **20 Hz** | `Lane Cam <update_rate>` · `lane_keeper_node.timer_hz` |
 | Capture | **1280×720@60**, `INTER_AREA` → 640×360 | `lane_keeper_node.capture_*` + `_process_frame` |
 | Optical frame | `camera_link_optical_lane` | `Lane Cam <optical_frame_id>` |
@@ -87,24 +99,66 @@ the RL chain reads it. To see exactly what the policy sees, point rviz at
 
 ## 2. Hardware prerequisites (do these first)
 
-1. **[VERIFY — highest priority] The 90° effective HFOV.** This is the
-   load-bearing unverified number of the whole sim-to-real transfer. It originates
-   as a *parameter default* in `lane_keeper_node` (`camera_hfov_deg` 90.0) for an
-   IMX219-**160** wide-angle lens, and the Gazebo sensor mirrored it — so if it is
-   wrong, both sim and hardware are wrong in the same way and no sim result
-   exposes it. `CameraModel.fx = (w/2)/tan(hfov/2)` = 320 px at 640×360, and the
-   IPM's metric output scales with it: a wrong HFOV means every `ey` in metres is
-   mis-scaled and **C-01's 0.12 m threshold no longer means 0.12 m**. Calibrate the
-   lens on the car (a known-width lane at known distances is enough to check the
-   scale) before trusting any metric cage threshold. Note the published
-   `CameraInfo` is deliberately the *ideal pinhole the cage assumes* — no
-   distortion terms — because publishing measured intrinsics would contradict the
-   IPM; reconcile both, do not just add distortion coefficients.
+1. **[MEASURED 17.08.2026 — the 90° HFOV is WRONG. Effective HFOV is 77.89°.]**
+   This was the load-bearing unverified number of the whole sim-to-real transfer:
+   a *parameter default* in `lane_keeper_node` (`camera_hfov_deg` 90.0) for an
+   IMX219-**160** wide-angle lens, which the Gazebo sensor mirrored — so sim and
+   hardware were wrong in the same way and no sim result could expose it.
+   Checkerboard calibration on the car (rms 0.238 px, all conditioning
+   checks passed over 58 views covering 16/16 image regions) measures
+   **`fx` = `fy` = 395.93 px, not 320** — see
+   [M-6](../experiments/calibration/M6_camera_hfov.md) and
+   `experiments/calibration/M6_results.json`. Cause is coherent with the
+   hardware: the "160°" is a *diagonal* figure for the full 3280×2464 sensor, but
+   `csi_camera_node` captures the **1280×720 crop mode**, which throws field of
+   view away rather than downscaling.
+   **Consequences, none yet actioned in code (see the open decision in M-6):**
+   * every `ey` the IPM reports is inflated by 395.93/320 = **1.237**, so C-01's
+     a raw single-point `ey` is over-read. **But that is not the number that
+     reaches C-01** — see the next bullet, which supersedes it. **The sim results
+     stand** either way: Gazebo's sensor really was 90° and the IPM really assumed
+     90°, so in sim C-01 fired at exactly 0.16 m. Only the *transfer* is broken.
+   * **The cage fires LATE, not early — this reverses an earlier reading of this
+     measurement.** Propagating the full measured model through the estimator's
+     actual construction (two lane markings 0.245 m apart, per-row midpoints, a
+     quadratic `Y(X)` fit, `ey = −c0`) gives **reported `ey` = 0.72 × true, bias
+     −1 mm**. The principal-point offset largely cancels because the two markings
+     are close and symmetric, but the **28 % under-read does not**: C-01 and C-05
+     both trigger at a *larger* true excursion than their nominal 0.16 m / 0.12 m.
+     Extrapolating the gain linearly puts C-01 at a true ±0.22 m — though that
+     extrapolation is beyond the ±0.12 m range over which the gain was modelled,
+     since the two-marking geometry breaks down first and the estimator falls into
+     single-side mode. The safe statement: **on hardware the cage is less
+     protective than the campaign verified, not more.**
+   * `cx` = 305.39 px (14.61 px off centre) adds a **lateral bias**, not just a
+     gain, and measured barrel distortion is k1 = −0.339 against the IPM's
+     assumed zero. Combining all of it with the measured pitch, the running IPM
+     misplaces real lane points by **−57 mm to +167 mm** laterally — the worst
+     case exceeding C-01's whole 160 mm `d_max_m`. See M-6 for the per-point table.
+   * **Correcting `fx` alone would make the mean error worse** (49.4 → 52.2 mm):
+     the scale error and the principal-point offset were partially cancelling.
+     And with every scalar corrected, a pinhole IPM still leaves ~44 mm — closing
+     it requires the estimator to **undistort**, not just to be re-parameterised.
+   * the 550k trunk policy trained on 90° Gazebo frames but will see 77.89° ones,
+     i.e. images ~24 % "zoomed in" relative to its entire training distribution —
+     an observation-space domain shift no IPM correction touches.
+   Note the published `CameraInfo` is deliberately the *ideal pinhole the cage
+   assumes* — no distortion terms — because publishing measured intrinsics would
+   contradict the IPM; reconcile both, do not just add distortion coefficients.
 2. **[VERIFY] Camera extrinsics.** The IPM in `camera_geometry.py` is calibrated
    for pitch 0.30 rad, height 0.077 m (the URDF mount). Match the real mount to
    these, OR re-run the D-57 workflow to set `cage.perception_heading_bias_rad`
    for the real camera's near-field-slope offset. A wrong pitch corrupts the CV
-   `ey`/`epsi` the cage acts on.
+   `ey`/`epsi` the cage acts on. **[MEASURED 17.08.2026 — the mount is
+   essentially right.]** M-6 Part B fits the pitch at **0.3113 rad (17.84°)**
+   against the URDF's 0.3000 rad — **+0.65°**, inside the 1° "confirmed" band, so
+   **no physical adjustment of the mount is needed** and the D-57 heading-bias
+   workflow is not called for on this account. The fit recovered the camera height
+   as **77.9 mm** without being told it, against 77 mm measured by hand — a 0.9 mm
+   agreement that independently validates `fx`, the pitch and the mark extraction
+   at once. Note the intrinsic `cy` offset is worth a further +1.91° of *equivalent*
+   pitch in the row→distance mapping, but it is **not** a mount error and the two
+   must not be added: most of that error lives in the principal point.
 3. **Chassis driver — reused, no work needed.** The platform's actuation
    interface is `cobraflex_ros_driver` (`cobraflex_driver.launch.xml`), launched
    as part of **Layer 1** (`cobraflex_bringup.launch.xml`, see §2b). It consumes
@@ -331,7 +385,9 @@ Variants:
   **no speed** (nothing publishes odometry), so C-03/C-04 stay inert; the node logs
   an error saying so. Use it for camera/perception bench work only.
 * External image source: `camera_topic:=<topic>` (the frame must still be 640×360
-  at 90° HFOV — see §1b).
+  at the HFOV the code assumes — see §1b, and note M-6 measured the real camera
+  at 77.89°, so "matching the code" and "matching the car" are not yet the same
+  requirement).
 * Non-Jetson bench test: run `csi_camera_node` alone with a substitute source, e.g.
   `-p gst_pipeline:="videotestsrc ! videoconvert ! video/x-raw,format=BGR ! appsink"`.
 * Watch what the policy sees: rviz on `camera/image_raw_lane`.
@@ -381,7 +437,9 @@ afterwards). The gitignored 87 MB `rplidar-a2m4-r1.stl` was moved into the repo'
    `ros2 topic hz camera/image_raw_lane` ≈ 20 Hz and
    `ros2 topic echo --once camera/image_raw_lane --field height` = 360 (width 640,
    encoding `bgr8`). Look at it in rviz: this is literally the policy's input.
-   Then scale-check the HFOV (prerequisite 1) before anything moves.
+   The HFOV scale-check of prerequisite 1 is **done** (M-6, 17.08.2026): it came
+   back 77.89°, not 90°, and the resulting decision is still open — read §2 item 1
+   before anything moves.
 1. **Bench, wheels up.** `mode:=monitoring`. Confirm topics flow
    (`/raw_action`, `/state_obs`, `/perception_invalid`, `/cage_status`) and the
    CV estimator tracks a hand-moved lane. No actuation trusted yet.
@@ -575,3 +633,56 @@ so the pipeline stops colour-converting the frames the node was going to discard
 61.3 % of a core. Throttling exactly to the read rate saves a little more but makes
 producer and consumer beat, and `read()` starts blocking inside the timer callback
 (p95 0.8 ms → 6.6 ms) — hence 1.5×, not 1×.
+
+## 6c. The 2026-08-17 bench session: the safety chain verified on hardware
+
+Car on a platform, **wheels off the ground**, no track and no lane markings.
+Layers 1–3 up, `mode:=monitoring`, on the hash-verified 550k trunk checkpoint
+(`0d4492461b24efce…`, matching the verdict campaign). Driven by
+`tools/preflight_deploy.py`, which turns §4's stages into PASS/FAIL.
+
+**Stage 0 (camera) — all pass.** 640×360 `bgr8`; median stamp gap **50.0 ms
+(20.0 Hz exactly)**, p90 52.6 ms. This retires an earlier suspicion: gaps at
+100/200/400 ms seen while the Jetson was loaded were transport loss at an extra
+subscriber, not the node publishing slowly.
+
+**Stage 1 (chain) — all pass.** Five topics flowing; cage cycling at **9.8 Hz**,
+i.e. the trained `control_dt` and not the camera's 20 Hz (the §6b item-3 defect
+stays fixed); `cycles_since_last_state` max **0**; state vector finite and inside
+`state_validity_ranges`; `ey` live (0.149 m span under a hand-moved target);
+`cage.yaml 0.6.1` stamped. Evidence written to
+`experiments/physical/runs/ros_run_20260817T194009Z/cage_status.csv` — 18 columns,
+`mode` stamped, `safe_* == raw_*` as monitoring requires.
+
+**The perception-loss fail-safe, demonstrated outside simulation for the first
+time.** With no lane markings the estimator cannot produce a valid lane, so:
+
+> `perception_invalid` → C-05 latches emergency → `/emergency` = true →
+> `vehicle_control_node` (emergency-aware) commands a zero Twist → **97/97
+> `/cmd_vel` samples exactly 0.0** on both axes → wheels never moved
+
+while `action_raw.linear.x` stayed at ≈ 0.70, i.e. the policy *was* asking for
+throttle throughout. That is H-11/H-12 → SR-005 → C-05 → actuation stop, end to
+end, on the real platform. Note C-05's exit is deliberately asymmetric: it needs
+the condition **cleared AND** a reset on `/cage_reset`, not either — so on a bare
+bench there is no way out, by design. **Operational consequence for track work:
+any momentary perception loss stops the car until `/cage_reset` is published.**
+
+**Actuation sign — verified in both directions, previously untested.** Commanding
+`angular.z = +0.5` with Layer 3 stopped turned the right wheels forward and the
+left wheels backward: counter-clockwise, i.e. left, per REP-103, and matching the
+firmware's `setpointA = rosX − rosZ·TRACK_WIDTH/2`. The cage's half of the same
+convention was checked host-side: `ey` = +0.20 (left of centre) → steering
+**−0.12** (right), `ey` = −0.20 → **+0.12**, centred → 0. The full chain
+estimator → cage → `vehicle_control_node` → firmware → wheels is sign-correct.
+
+**Other measurements.** `/odometry/filtered` alive at 14.6 Hz (the cage's only
+speed source; without it C-03/C-04 are inert). `/cobraflex/battery` reads
+**10.89 V**, confirming the §6b centivolt fix — but that is ~3.63 V/cell on 3S,
+so charge before a track session.
+
+**Not established here**, because they need a lane or the ground: §4 step 2's
+throttle envelope (C-05 was latched, so `/cmd_vel` is identically zero and the
+envelope cannot be exercised), step 3's e-stop test, and the §5 yaw-gain bench
+number (`wz = 1.0`, 10 s, measure the angle turned — needs wheels down).
+

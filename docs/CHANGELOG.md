@@ -31,6 +31,196 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [17.08.2026] — Bench session on the car: the perception-loss fail-safe and the actuation sign convention are verified on hardware for the first time
+
+**Document(s) affected:** `docs/17_physical_deployment.md` (new §6c).
+New artefact: `tools/preflight_deploy.py`.
+Evidence: `experiments/physical/runs/ros_run_20260817T194009Z/cage_status.csv`.
+**Code changed:** none.
+**Phase:** Phase 5 (physical deployment)
+**Gate context:** after G4; prerequisite work for the first hardware drive
+**Author:** Samuel Sanchez
+
+### Change
+
+Ran docs/17 §4 stages 0 and 1 on the car (platform, **wheels off the ground**, no
+track, no lane markings), Layers 1–3 up in `mode:=monitoring` on the
+hash-verified 550k trunk checkpoint. Added `tools/preflight_deploy.py`, which
+turns those stages into PASS/FAIL assertions instead of an rviz eyeball. Recorded
+the results as §6c.
+
+### Rationale
+
+The 2026-08-05 review found five defects that were all *silent* — the chain
+started, logged and would have driven wrongly rather than failing. That class of
+fault is invisible to inspection, so the staged sequence needs machine-checked
+invariants: frame contract, cage cadence at the trained 10 Hz rather than the
+camera's 20, state-vector validity and liveness, and evidence actually reaching
+disk.
+
+### Impact
+
+* **Stage 0 and stage 1 pass.** Camera at exactly 20.0 Hz median (retiring an
+  earlier suspicion that the node published slowly — the gaps were transport loss
+  at an extra subscriber); cage at 9.8 Hz; `cycles_since_last_state` max 0;
+  evidence CSV written with `mode` stamped.
+* **The perception-loss fail-safe is demonstrated outside simulation for the
+  first time.** No lane markings → `perception_invalid` → C-05 latches →
+  `/emergency` → `vehicle_control_node` commands a zero Twist → **97/97
+  `/cmd_vel` samples exactly 0.0**, while the policy was asking for ≈ 0.70
+  throttle throughout. H-11/H-12 → SR-005 → C-05 → actuation stop, end to end.
+* **The actuation sign convention is verified in both directions**, previously
+  untested on hardware: `angular.z = +0.5` turns right wheels forward and left
+  wheels backward (counter-clockwise = left, REP-103), matching the firmware's
+  `setpointA = rosX − rosZ·TRACK_WIDTH/2`; and the cage's half checked host-side
+  (`ey` +0.20 → steering −0.12, `ey` −0.20 → +0.12, centred → 0).
+* **Operational finding for track work:** C-05's exit is deliberately asymmetric
+  — condition cleared **AND** a reset on `/cage_reset`, not either. Any momentary
+  perception loss therefore stops the car until a reset is published. On a bare
+  bench there is no way out at all, by design.
+* `/odometry/filtered` alive at 14.6 Hz. `/cobraflex/battery` reads 10.89 V,
+  confirming the §6b centivolt fix; that is ~3.63 V/cell on 3S and wants charging.
+* **Not established:** §4 step 2's throttle envelope (C-05 latched, so `/cmd_vel`
+  is identically zero and the envelope cannot be exercised), step 3's e-stop
+  test, and the §5 yaw-gain bench number — all need a lane or the ground.
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED, 0 warnings** (no
+hazard/SR/scenario/metric artefact touched). The preflight tool's own stage
+assertions are the verification of the bench state; §6c records the measured
+values behind each.
+
+---
+
+## [17.08.2026] — M-6: the lane camera's "90° effective HFOV" is measured on the car and refuted — it is 77.89°, the assumption was circular because the simulator mirrored it, and the mount pitch it was confused with turns out to be fine
+
+**Document(s) affected:** `docs/17_physical_deployment.md` (§1b table + new falsification
+note, §2 items 1 and 2, §5 launch note, §7 bring-up step),
+`experiments/calibration/M6_camera_hfov.md` (new protocol + result),
+`experiments/calibration/README.md` (M-6 rows).
+New artefacts: `tools/calibrate_camera_hfov.py`,
+`experiments/calibration/M6_results.json`, `experiments/calibration/M6_pitch_results.json`,
+`experiments/calibration/M6_camera_hfov/` (checkerboard, 58 views; forward-tape capture
++ `partB_obs.json`; 3 rejected captures retained as evidence of rejection).
+**Code changed:** none — see Impact.
+**Phase:** Phase 5 (physical deployment)
+**Gate context:** after G4; prerequisite work for the first hardware drive
+**Author:** Samuel Sanchez
+
+### Change
+
+Executed M-6, a new calibration measurement closing the highest-priority
+`[VERIFY]` of docs/17 §2. Checkerboard calibration of the lane camera on the
+bench (26 views, 20.0 mm squares, `csi_camera_node` publishing 640×360,
+`lane_keeper_node` down) measures:
+
+| Quantity | Measured | Assumed |
+| --- | --- | --- |
+| `fx` = `fy` | **395.93 px** | 320.00 |
+| Effective HFOV | **77.89°** | 90.00° |
+| `cx` / `cy` | 305.39 / 193.20 px | 320 / 180 |
+| Distortion k1 | **−0.339** (barrel) | 0 |
+| rms reprojection | 0.238 px (58 views, 16/16 image regions) | — |
+| **Mount pitch** | **0.3113 rad / 17.84°** | 0.3000 rad / 17.19° |
+| Camera height | 77.9 mm *fitted*, vs 77 mm measured by hand | 77.25 mm (URDF) |
+
+Part B (mount pitch) was executed in the same session and **closes `[VERIFY]` #2
+as well**: the mount is right to +0.65°, inside the 1° confirmed band, so no
+physical adjustment is needed. The fit recovered the camera height to within
+0.9 mm of the operator's tape reading *without being given it* — an independent
+cross-validation of `fx`, the pitch and the mark extraction simultaneously, only
+possible because Part 0 ran first and broke the height/focal-length degeneracy.
+
+docs/17 §1b's claim that the three code locations "all agree" is annotated as
+**falsified for HFOV**: they still agree with each other, but no longer with the
+camera.
+
+### Rationale
+
+The 90° figure was a *parameter default* in `lane_keeper_node` for an
+IMX219-**160** lens which the Gazebo `Lane Cam` was then built to mirror. That
+made the assumption circular and unfalsifiable in simulation — including by the
+1890-run verdict-of-record campaign. Cause of the discrepancy is coherent with
+the hardware: "160°" is a *diagonal* figure for the full 3280×2464 sensor, while
+`csi_camera_node` captures the **1280×720 crop mode**, which discards field of
+view rather than downscaling.
+
+Two prior capture attempts using a tape measure were **rejected on target
+geometry** and are retained as evidence of the rejection, not as results; a
+Monte-Carlo identifiability study run before touching hardware established that
+a single image cannot separate focal length from camera pose (zero-noise fits
+returned fx = 334 px and fx = 351 px against a truth of 400 px, at zero
+residual). An 8-view checkerboard attempt was likewise rejected by the tool's own
+conditioning gate: its free-aspect probe read `fy/fx` = 1.85, impossible for this
+pipeline's isotropic resize.
+
+### Impact
+
+**No source file was changed.** `camera_geometry.py`,
+`lane_keeper_node.camera_hfov_deg`, `Lane Cam <horizontal_fov>` and `cage.yaml`
+all still carry 90°, deliberately — the three possible responses (correct the IPM
+only; correct the sim sensor and retrain; change the capture mode) differ by
+whether they invalidate the trunk policy and the verdict-of-record campaign, and
+that choice is the author's. Recorded as an open decision in the M-6 document.
+
+* A raw single-point `ey` is over-read by 395.93/320 = **1.237**. **Propagated
+  through the estimator's real construction, however, the sign reverses** — this
+  corrects a first reading of this measurement. With the two lane markings
+  0.245 m apart, per-row midpoints, a quadratic `Y(X)` fit and `ey = −c0`, the
+  reported `ey` comes out **0.72 × true with a −1 mm bias**: the principal-point
+  offset cancels (the markings are close and symmetric), the 28 % under-read does
+  not. **C-01 and C-05 therefore fire at a larger true excursion than specified —
+  on hardware the cage is *less* protective than the campaign verified, not more.**
+  Linear extrapolation of the gain puts C-01 at a true ±0.22 m, but that is beyond
+  the ±0.12 m range over which the gain was modelled (the two-marking geometry
+  breaks down first, into single-side mode), so treat it as a direction, not a
+  figure.
+* **The simulation results are not invalidated.** Gazebo's sensor really was 90°
+  and the IPM really assumed 90°, so in sim C-01 fired at exactly 0.16 m. Only
+  the sim-to-real *transfer* is affected.
+* `cx` being 14.61 px off centre adds a **lateral bias**, not just a gain.
+  Propagating the full measured model (intrinsics + distortion + measured pitch)
+  through the *running* IPM misplaces real lane points by **−57 mm to +167 mm**
+  laterally; the worst case exceeds C-01's whole 160 mm `d_max_m`, and forward
+  distance at 1.0 m decodes as 1.34 m.
+* **Two counter-intuitive findings that constrain the fix.** (i) Correcting `fx`
+  *alone* makes the mean lateral error **worse** (49.4 → 52.2 mm) — the scale
+  error and the principal-point offset were partially cancelling, so the smallest
+  plausible patch is the one change that must not be shipped on its own.
+  (ii) With `fx`, `cx`, `cy`, pitch and height all corrected, a pinhole IPM still
+  leaves ~44 mm: closing it requires the estimator to **undistort**, not merely to
+  be re-parameterised.
+* The 550k trunk policy trained on 90° frames but will see 77.89° ones — images
+  ~24 % narrower in field of view than its entire training distribution. This is
+  an observation-space domain shift that no IPM correction addresses.
+* `cy` being 13.20 px low is worth **+1.91° of equivalent pitch** in the
+  row→distance mapping, but Part B shows the *mount* is off by only +0.65°. The
+  two are not the same quantity and must not be added: most of that error lives in
+  the principal point, not in how the camera is bolted on.
+* Correction of a docs/17 wording error: it called 0.12 m "C-01's threshold".
+  C-01 uses `d_max_m` = 0.16; 0.12 is C-05's `d_warning_m`.
+
+Both `[VERIFY]` items of docs/17 §2 are now **measured**. What remains open is
+purely the decision of what to change in response, recorded in the M-6 document.
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED, 0 warnings** (no
+hazard/SR/scenario/metric artefact was touched). The calibration tooling was
+validated against synthetic ground truth before hardware: fx to 0.04 %, `cx`/`cy`
+to ~1 px, k1 to 0.01 by exact inverse-ray rendering through a known `K` and
+`plumb_bob` distortion. Result stability across independent solves: fx = 396.10
+(58 views) / 396.10 (26) / 396.29 (34) / 395.70 (13-view half), spread 0.15 % while
+the view count grew 4×; worst single-view reprojection 0.381 px, no outlier view.
+The free-aspect probe returned `fy/fx` = 1.004 without that being imposed — the
+isotropic-resize square-pixel physics recovered from the data. The result is also
+**invariant to the square-size measurement**, verified by re-solving at 20.00,
+18.03 and 50.00 mm for identical `fx` and k1. Part B: residual rms 0.48 px, max
+1.07 px over 17 marks, and the height cross-check above.
+
+---
+
 ## [17.08.2026] — First physical measurement of the platform reaches the specification: URDF mass corrected 6.59 → 3.5 kg, the real chassis measured at 0.4954× commanded yaw, and the "measured" 0.53 m/s² acceleration limit refuted as a unit error
 
 **Document(s) affected:** `docs/08_odd_specification.md` (§8.1 + version rows v0.9.2 / v0.9.3),

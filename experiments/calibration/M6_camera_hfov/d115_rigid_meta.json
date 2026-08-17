@@ -1,0 +1,22 @@
+{
+  "label": "d115_rigid",
+  "distance_m": 0.115,
+  "distance_reference": "sensor",
+  "captured_utc": "2026-08-17T15:01:47Z",
+  "git_commit": "59d47c3b",
+  "raw_png": "d115_rigid_raw.png",
+  "annotated_png": "d115_rigid_annotated.png",
+  "note": "rigid green ruler transversal; yellow 40 cm tape forward",
+  "topic": "camera/image_raw_lane",
+  "frames_requested": 15,
+  "frames_received": 15,
+  "wall_s": 2.851,
+  "encodings": [
+    "bgr8"
+  ],
+  "shapes": [
+    "360x640"
+  ],
+  "rate_hz_from_stamps": 5.08,
+  "max_stamp_gap_s": 0.8465
+}

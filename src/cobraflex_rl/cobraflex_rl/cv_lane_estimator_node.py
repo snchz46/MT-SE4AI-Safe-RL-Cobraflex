@@ -86,6 +86,17 @@ class CvLaneEstimatorNode(Node):
         # Rest of the D-43 estimator contract (see module docstring). Defaults
         # reproduce the frozen GE4 estimator bit-identically, so a launch that
         # passes none of them keeps the old behaviour.
+        # Illuminant calibration (physical platform, 2026-08-18). The D-43
+        # defaults white_sat_max=30 / white_val_min=150 were set against
+        # Gazebo's neutral illuminant, where a painted line renders at S~0. The
+        # real hall's lighting is warm, so the same white tape reaches the
+        # sensor tinted: measured S 36..50 at V 228..255 on the physical track.
+        # S<=30 therefore rejects BOTH lane lines outright and the estimator
+        # falls through to _single_line_estimate on background clutter. Negative
+        # means "not set" and keeps the frozen GE4/campaign values bit-identical,
+        # so nothing in simulation changes unless a launch passes these.
+        self.declare_parameter("white_sat_max", -1)
+        self.declare_parameter("white_val_min", -1)
         self.declare_parameter("heading_bias_rad", 0.0)
         self.declare_parameter("heading_temporal_window", 0)
         self.declare_parameter("heading_temporal_ey_track_m", -1.0)
@@ -106,6 +117,10 @@ class CvLaneEstimatorNode(Node):
         )
         # A negative value means "not set" — ROS2 parameters have no null, and
         # every one of these is a physical quantity that is >= 0 when meant.
+        for _key in ("white_sat_max", "white_val_min"):
+            _iv = int(self.get_parameter(_key).value)
+            if _iv >= 0:
+                cfg_kwargs[_key] = _iv
         for _key in (
             "heading_temporal_ey_track_m",
             "heading_temporal_ey_drift_m",

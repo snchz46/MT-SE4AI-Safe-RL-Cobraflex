@@ -137,3 +137,14 @@ experiments/sim/campaign_*/*.log
 # the measured HFOV) but not the corner-overlay renders, which are regenerable
 # by re-running tools/calibrate_camera_hfov.py board-solve.
 experiments/calibration/M6_camera_hfov/**/view_*_corners.png
+
+# Physical-platform rosbags: raw 640x360 lane camera is 13.8 MB/s, so a 2-minute
+# circuit recording is ~1 GB. Keep them on the car / on backup, not in git. The
+# derived measurements live in experiments/calibration/M7_track_perception.md.
+experiments/physical/bags/
+
+# Lane-dataset frames: PNG imagery for closing the appearance gap, ~500 MB per
+# few sessions. The labels beside them (labels.csv / rejects.csv) ARE tracked —
+# they carry every measurement M-7 §3b cites.
+experiments/physical/datasets/*/frames/
+experiments/calibration/M7_offset_response_frames/

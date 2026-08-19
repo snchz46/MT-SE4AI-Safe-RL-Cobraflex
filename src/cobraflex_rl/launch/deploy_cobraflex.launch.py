@@ -191,6 +191,18 @@ def generate_launch_description() -> LaunchDescription:
                               description="near_secant = frozen GE4; "
                                           "joint_pair_quadratic = the 2-D trunk."),
         DeclareLaunchArgument("heading_gain", default_value="1.6"),
+        DeclareLaunchArgument("policy", default_value="true",
+                              description="false = do not start rl_policy_node, "
+                                          "leaving /raw_action free for another "
+                                          "controller behind the same cage."),
+        DeclareLaunchArgument("white_sat_max", default_value="-1",
+                              description="HSV S ceiling for a white-marking "
+                                          "pixel; -1 keeps the D-43 default 30. "
+                                          "The physical hall needs ~45: its warm "
+                                          "lighting tints the tape to S 36..50."),
+        DeclareLaunchArgument("white_val_min", default_value="-1",
+                              description="HSV V floor for a white-marking "
+                                          "pixel; -1 keeps the D-43 default 150."),
         DeclareLaunchArgument("heading_temporal_window", default_value="4",
                               description="T3 temporal heading gate (0 = disabled)."),
         DeclareLaunchArgument("camera", default_value="false",
@@ -244,6 +256,12 @@ def generate_launch_description() -> LaunchDescription:
     )
     rl_policy = Node(
         package="cobraflex_rl", executable="rl_policy_node", output="screen",
+        # `policy:=false` brings the chain up WITHOUT the RL controller, so a
+        # different controller can own /raw_action behind the same cage. Added
+        # 18.08.2026 for the docs/12 pure-pursuit control arm (M-7/D-71): two
+        # publishers on /raw_action interleave silently, so this must be a launch
+        # switch, not a "just don't run it" convention.
+        condition=IfCondition(LaunchConfiguration("policy")),
         parameters=[{
             "checkpoint": checkpoint, "algorithm": algorithm,
             "image_topic": camera_topic, "raw_action_topic": "/raw_action",
@@ -262,6 +280,8 @@ def generate_launch_description() -> LaunchDescription:
             "publish_rate_hz": LaunchConfiguration("control_rate_hz"),
             "heading_fit_mode": LaunchConfiguration("heading_fit_mode"),
             "heading_gain": LaunchConfiguration("heading_gain"),
+            "white_sat_max": LaunchConfiguration("white_sat_max"),
+            "white_val_min": LaunchConfiguration("white_val_min"),
             "heading_temporal_window": LaunchConfiguration("heading_temporal_window"),
         }],
     )

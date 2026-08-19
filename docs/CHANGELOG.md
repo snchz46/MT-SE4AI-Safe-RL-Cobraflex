@@ -31,6 +31,129 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [18.08.2026] — First run on the physical lane circuit: the D-43 estimator transfers at its shipped settings, the trunk camera policy does not, and three single-pose conclusions are retracted
+
+**Document(s) affected:** `experiments/calibration/M7_track_perception.md` (new),
+`docs/DECISIONS.md` (D-71), `docs/17_physical_deployment.md` (§2, §5, §6d),
+`experiments/calibration/README.md`, `CLAUDE.md`,
+`src/cobraflex_rl/cobraflex_rl/cv_lane_estimator_node.py`,
+`src/cobraflex_rl/launch/deploy_cobraflex.launch.py`, `tools/lane_probe.py` (new),
+`tools/measure_yaw_gain.py` (new), `tools/cv_controller_node.py` (new, unproven),
+`tools/preflight_deploy.py` (`lanecheck` subcommand)
+**Phase:** 5 (physical deployment)
+**Gate context:** after G4; no gate re-scored
+**Author:** Samuel Sanchez
+
+### Change
+
+The car was placed on the physical lane circuit and the Phase-5 chain was run end to end with
+the 2-D PPO 550k trunk checkpoint for the first time. M-7 records the session; D-71 carries the
+decisions.
+
+1. `white_sat_max`, `white_val_min` and `policy` are exposed as launch arguments of
+   `deploy_cobraflex.launch.py` (the first two also as `cv_lane_estimator_node` parameters),
+   all inert by default — `-1` = not set for the thresholds, `policy:=true` for the node switch.
+   `policy:=false` leaves `/raw_action` free for another controller behind the same cage.
+2. Three measurement tools added: `tools/lane_probe.py`, `tools/measure_yaw_gain.py`, and a
+   `lanecheck` subcommand on `tools/preflight_deploy.py`. `tools/cv_controller_node.py` is also
+   added but **has never processed a frame** — the session ended before it could be tested.
+3. M-6's propagated claim that `reported ey = 0.72 × true` is **retracted** in `docs/17` §2 and
+   in M-7. M-6's camera measurement itself is unchanged.
+
+### Rationale
+
+Replaying a 2-minute recording of the whole circuit (1521 frames,
+`experiments/physical/bags/circuit_20260818T140357Z`) through the estimator offline: at the
+**default** `white_sat_max = 30` it pairs **95.4 %** of frames and reads a mean lane width of
+**252.9 mm against a ruler-measured 250 — 2.9 mm of error, scale 1.012**. That refutes M-6's
+propagation: in `camera_geometry.pixel_to_ground` an under-estimated `f` inflates `xo` and `yo`
+by the same factor, `xo` multiplies while `yo` divides inside `denom`, so the two cancel in the
+near field — and `c0`, hence `ey` and `lane_width`, is evaluated at `X = 0`, inside the
+cancelling region. The error survives only in the far field, which is where the heading slope is
+fitted: `joint_pair_quadratic`/1.6 is **unbiased (mean +0.04°) but has sd 14.29° and puts 7.8 %
+of frames past C-02's 25° limit**, against `near_secant`/1.0's 5.31° and 0.8 %.
+
+**The `ey` channel under-reads, confirmed hands-off against a tape.** With the car parked on the
+ground at tape-measured offsets over ±100 mm (15 points, ~190 frames each,
+`experiments/calibration/M7_offset_response.csv`), the transfer is
+**reported = 0.68…0.83 × true − 10 mm**, robust to every filtering of the points (r up to 0.99).
+M-6 predicted 0.72 and the measurement brackets it, so **C-01's 160 mm fires at a true 207–241 mm**
+and C-05's 120 mm at a true 172–212 mm, against a 255 mm road half-width. An intra-session
+retraction of M-6's prediction — made from the lane-width figure of 252.9 mm — is itself withdrawn:
+`lane_width` is a *difference* straddling the optical axis, `ey` an *absolute* off-axis position,
+and the unmodelled barrel distortion (`k1 = −0.339`) compresses the second while preserving the
+first. At a true offset of 0 the width reads 0.975 of the ruler while `ey` reads −9.8 mm. A second,
+independent defect: re-placing the car at the same tape offset elsewhere along the track moves the
+reading by a mean of 13.2 mm and up to 29.4 mm, against ~2 mm of tape precision.
+
+That 95.4 % pairing figure is also a **centre-of-lane** figure, and the qualification is the
+session's other consequential result. The recording spent 90 % of its time within ±72 mm of centre. Sweeping the
+car deliberately across the lane (2639 evaluated frames over two capture sessions) shows the
+share of frames whose measured width lands within 40 mm of the ruler's 250 falling
+**18 % → 30 % → 87 % → 95 % rejected** across the 0–30 / 30–55 / 55–80 / 80–120 mm bands. The
+failure is systematic — 183.8 mm with sd 23.9 in the 80–120 band, `n_lines` predominantly 4, i.e.
+both lanes in view and the wrong pair chosen — and is not explained by heading. **The estimator
+feeding C-01 (`d_max` 160 mm) and C-05 (`d_warning` 120 mm) is therefore trustworthy only within
+roughly ±55 mm of lane centre, entirely inside the band where those rules never act**, and pairing
+rate does not detect it. Recorded as indicative rather than established: both sweeps moved the car
+by hand, the IPM reads a constant pitch rather than the TF, and a hands-off measurement at
+tape-measured offsets has not been run (M-7 §3b).
+
+The same recording retracts three conclusions drawn earlier the same day from a **stationary car
+at one spot**: that `white_sat_max` had to go 30 → 45 (over the circuit 45 pairs only 69.4 %, and
+puts 37 % of frames within 15 mm of the `lane_width_tol_m` rejection floor); that the read was
+0–12 % low and pose-dependent; and that `joint_pair_quadratic`/1.6 carried +17.28° of heading
+bias. The underlying single-pose observations were real — at that location the lines genuinely
+measured V 228…255 with S 36…50 and were genuinely rejected — but each derived fix makes the rest
+of the circuit worse. Offline replay of a recorded circuit therefore replaces the stationary rig
+as the primary characterisation method.
+
+With the car moved by hand across a 332 mm span of `ey` and the chain running without actuation
+(`experiments/physical/runs/policy_bias_probe/cage_status.csv`, 5665 logged cycles), the policy's
+steering response has the correct sign but is an order of magnitude too weak:
+`steer = −0.000166·ey_mm + 0.1155`, `r = −0.243`, `r² = 0.059`. The lane-dependent swing across
+the whole span is **0.055** against a **constant left offset of +0.1155 — 2.1× the swing** — and
+only 29 of 5665 samples (0.5 %) command a right turn at all. This conclusion rests on the
+policy's own output barely moving, so it is robust to estimator error.
+
+Separately, over 7721 cycles of drive attempts the speed reaching the cage carries outliers to
+**6.960 m/s** on a 0.22 m/s car (ZED visual odometry through the ekf); 0.43 % of cycles exceed
+the `state_validity_ranges.speed_mps` ceiling of 1.50 and **all of them are in emergency** —
+SR-007 rejecting a hardware fault no simulation produced.
+
+### Impact
+
+No simulation result changes; the D-69 verdict of record is a Gazebo result and stands as
+recorded. `cage.yaml` is untouched, no cage rule or SR is re-valued, and no gate is re-scored.
+What changes is the Chapter-9 sim-to-real account: real imagery induces a large constant steering
+bias that swamps the trunk's retained (correctly-signed) lane response, while the deterministic
+estimator beside it transfers unchanged. Closing the gap is off-track work — fine-tuning or
+domain randomisation calibrated against real imagery — carried as future work alongside T2/T4.
+
+Withdrawn from the 17.08 M-6 entry's forward-looking text: "C-01/C-05 fire LATE" as a 0.72
+scalar, and any margin table derived from it. Withdrawn from earlier drafts of this entry: the
+`white_sat_max:=45` recommendation, the "0–12 % low" scale, and the `heading_bias_rad` correction.
+
+New tool: `tools/record_lane_dataset.py` captures a labelled real-lane dataset at 5 Hz as PNG
+with inline estimator labels (~1 MB/s against the 13.8 MB/s of a raw bag, which is what crashed
+the board), gates each frame on lane-width sanity so a wrong pair is discarded rather than saved
+with a confident wrong label, logs every rejection to `rejects.csv`, and prints live |ey| coverage
+bars per side. First two sessions: `lane_00_firstpass` (1205 frames, ungated, 44 % width-sane) and
+`lane_A` (631 saved / 803 rejected, width 237.4 mm sd 18.9).
+
+Undecided and recorded as such: which heading configuration to deploy (`near_secant`/1.0 is
+markedly cleaner but rescales the trained observation), the compressive yaw plant, and the
+estimator's localised colour-gate failures.
+
+### Verification
+
+`python tools/check_traceability.py` — All checks PASSED, 0 warnings. Perception and heading
+figures reproduce by replaying `experiments/physical/bags/circuit_20260818T140357Z` through
+`CvLaneEstimator`; the policy sweep is the 5665-row `policy_bias_probe` log. The session ended in
+a Jetson crash: the bag's `metadata.yaml` was regenerated with `ros2 bag reindex`
+(`PRAGMA quick_check` on the `.db3` returns `ok`) and `circuit_survey/cage_status.csv` was
+truncated at its last complete line (see that run's `REPAIR_NOTE.md`).
+
 ## [17.08.2026] — Bench session on the car: the perception-loss fail-safe and the actuation sign convention are verified on hardware for the first time
 
 **Document(s) affected:** `docs/17_physical_deployment.md` (new §6c).

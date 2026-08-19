@@ -11,6 +11,7 @@ non-zero if any fails.
     stage0   camera alone            (needs Layer 2)
     stage1   chain flowing, wheels up, mode:=monitoring   (needs Layer 3)
     stage2   actuation envelope, WHEELS UP                (needs Layer 3)
+    lanecheck  static ey vs a tape measure, ON the track  (needs Layer 3)
 
 Stage 3 of docs/17 §4 (e-stop / C-05 on a tether) is a physical test and is not
 automated; `stage2 --watch-emergency` will at least tell you whether C-05
@@ -350,15 +351,114 @@ def stage2(args) -> int:
     return r.report("STAGE 2 — actuation envelope, WHEELS UP (docs/17 §4 step 2)")
 
 
+def lanecheck(args) -> int:
+    """Static lane-estimator validation ON the real track. Nothing moves.
+
+    This is the one measurement M-6 left open. M-6 measured the *camera*
+    (fx 395.93 px, HFOV 77.89 deg, pitch 17.84 deg) and then *propagated* that
+    through the estimator's construction to predict that the reported ey is
+    0.72x the true one — i.e. C-01/C-05 fire late. That propagation has never
+    been checked against a ruler on a real lane, and it is the number that
+    decides whether the trunk policy's campaign verdict transfers.
+
+    Park the car at a tape-measured lateral offset from the lane centreline,
+    hold still, and run this. Sign convention follows the estimator: ey = -c0,
+    positive = the car is LEFT of centre (lane centre appears to the right).
+    """
+    import rclpy
+    from rclpy.node import Node
+    from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+    from std_msgs.msg import Float64MultiArray, Bool
+
+    r = Result()
+    rclpy.init(args=None)
+    node = Node("preflight_lanecheck")
+    rq = QoSProfile(reliability=ReliabilityPolicy.RELIABLE,
+                    history=HistoryPolicy.KEEP_LAST, depth=200)
+    print(f"\nholding still for {args.seconds:.0f} s — do not touch the car\n")
+    got = _collect(node, {"/state_obs": (Float64MultiArray, rq),
+                          "/perception_invalid": (Bool, rq)}, args.seconds)
+    obs, inv = got["/state_obs"], got["/perception_invalid"]
+
+    r.check(len(obs) >= 10, "/state_obs is publishing",
+            f"{len(obs)} msgs in {args.seconds:.0f} s")
+    if inv:
+        bad = sum(1 for m in inv if m.data)
+        r.check(bad == 0, "perception valid for the whole window",
+                f"{bad}/{len(inv)} cycles invalid"
+                + ("" if bad == 0 else "\nthe estimator is not locked onto the lane — "
+                                       "reposition before trusting any number below"))
+    if not obs:
+        node.destroy_node(); rclpy.shutdown()
+        return r.report("LANECHECK — static ey validation (M-6 follow-up)")
+
+    ey = [m.data[0] for m in obs if len(m.data) > 1]
+    ep = [m.data[1] for m in obs if len(m.data) > 1]
+    mean_ey, mean_ep = statistics.mean(ey), statistics.mean(ep)
+    sd_ey = statistics.pstdev(ey) if len(ey) > 1 else 0.0
+    sd_ep = statistics.pstdev(ep) if len(ep) > 1 else 0.0
+
+    r.check(None, "reported ey",
+            f"mean {mean_ey*1000:+.1f} mm, sd {sd_ey*1000:.1f} mm, "
+            f"range {min(ey)*1000:+.1f}..{max(ey)*1000:+.1f} mm")
+    r.check(None, "reported epsi",
+            f"mean {math.degrees(mean_ep):+.2f} deg, sd {math.degrees(sd_ep):.2f} deg")
+    # A parked car must produce a quiet estimate. Jitter here is jitter the
+    # policy sees at every cycle, and it enters C-01/C-03 unfiltered.
+    r.check(sd_ey <= 0.010, "the parked estimate is quiet (sd_ey <= 10 mm)",
+            f"sd {sd_ey*1000:.1f} mm — anything larger is noise the cage acts on")
+    # C-02's threshold is 25 deg and the whole 550k verdict campaign never saw a
+    # heading error above 14.2 deg. A PARKED car whose epsi jitters by more than
+    # that is not a measurement problem — it is the policy's obs[1] and C-02's
+    # input, live.
+    r.check(math.degrees(sd_ep) <= 5.0,
+            "the parked heading estimate is quiet (sd_epsi <= 5 deg)",
+            f"sd {math.degrees(sd_ep):.2f} deg vs C-02's 25 deg limit and the "
+            f"14.2 deg worst case of the entire 550k campaign")
+
+    if args.true_ey is not None:
+        t = args.true_ey
+        r.check(None, "tape-measured true ey", f"{t*1000:+.1f} mm")
+        if abs(t) < 0.015:
+            r.check(abs(mean_ey) <= 0.015,
+                    "centred: reported ey is within 15 mm of zero",
+                    f"{mean_ey*1000:+.1f} mm — a centred car reading non-zero is a "
+                    "cx/mounting offset, not a scale error; run an offset point too")
+        else:
+            ratio = mean_ey / t
+            r.check(None, "single-point ratio  reported/true",
+                    f"{ratio:.3f}\nNOT the scale: this assumes the estimator reads "
+                    "exactly 0 at true 0. Take the centred point too and use the "
+                    "SLOPE between points. Better still, use tools/lane_probe.py, "
+                    "which reads the measured lane width and needs no positioning "
+                    "at all.")
+            r.check(None, "M-6 predicted scale", "0.72  (fx 395.93 vs the assumed 320)")
+            r.check(None, "if the M-6 prediction holds",
+                    f"C-01 (d_max 0.16 m) actually fires at a true "
+                    f"{0.16/ratio*1000:.0f} mm, and C-05's 0.12 m warning at a true "
+                    f"{0.12/ratio*1000:.0f} mm" if abs(ratio) > 1e-6 else "n/a")
+            r.check(None, "verdict on the M-6 propagation",
+                    "not decidable from one offset point — see lane_probe.py")
+
+    node.destroy_node()
+    rclpy.shutdown()
+    return r.report("LANECHECK — static ey validation on the real track (M-6 follow-up)")
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description=__doc__.split("\n")[1],
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     for name, fn, default_s in (("stage0", stage0, 12.0),
                                 ("stage1", stage1, 15.0),
-                                ("stage2", stage2, 20.0)):
+                                ("stage2", stage2, 20.0),
+                                ("lanecheck", lanecheck, 10.0)):
         c = sub.add_parser(name)
         c.add_argument("--seconds", type=float, default=default_s)
+        if name == "lanecheck":
+            c.add_argument("--true-ey", type=float, default=None,
+                           help="tape-measured lateral offset in METRES, signed: "
+                                "positive = car is left of the lane centreline.")
         if name == "stage0":
             c.add_argument("--image-topic", default="/camera/image_raw_lane")
             c.add_argument("--info-topic", default="/camera/camera_info")

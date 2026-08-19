@@ -129,21 +129,37 @@ script reports orphans on either side.
   not verdicts). First full 2-D campaign **margin022** (SAC 75k, D-65): NOT SATISFIED literal but **0 in-ODD road-edge
   contacts** — the bare policy commits 98, the cage removes all via 433 controlled stops. That weak-and-*decayed*
   checkpoint is what motivated D-66.
-- **Phase 5 — physical deployment (docs/17). RUN ON THE CAR, bench only; the car has still NOT been driven.**
-  Chain complete end-to-end: `csi_camera_node` (Jetson CSI → `camera/image_raw_lane`, 640×360 / 20 Hz, byte-identical
-  GStreamer to `lane_keeper_node`) → `rl_policy_node` → `cv_lane_estimator_node` → `cage_ros_node` →
-  `vehicle_control_node` → the platform's `cobraflex_ros_driver` (ROS→JSON serial, via Layer-1 bring-up).
-  **Both docs/17 §2 `[VERIFY]` items are MEASURED (M-6, 17.08.2026) — and the HFOV one came back WRONG: 77.89°,
-  not 90°** (`fx` 395.93 px, not 320). The assumption was circular (the Gazebo sensor mirrored an unmeasured hardware
-  parameter default), so no sim result could expose it; cause is the 1280×720 **crop** capture mode. Mount pitch is
-  fine (17.84° vs 17.19°). Through the estimator's real construction the reported `ey` is **0.72 × true**, so
-  **C-01/C-05 fire LATE — the hardware cage is *less* protective than the campaign verified** — and the trunk policy
-  faces a ~24 % observation-space shift. **Nothing changed in code**; the three responses differ by whether they
-  invalidate the trunk, and that call is open. Sim results stand. **Bench 17.08 (§6c), wheels up:** §4 stages 0–1 pass
-  via `tools/preflight_deploy.py`; the perception-loss fail-safe and the actuation sign convention are verified on
-  hardware for the first time. §4 steps 2–3 and the §5 yaw gain still need a lane or the ground.
-  Detail: [M-6](experiments/calibration/M6_camera_hfov.md) + docs/17 §2/§6c. D-44/Isaac remains the other
-  sim-to-real bridge; checkpoints do not transfer.
+- **Phase 5 — physical deployment (docs/17). RUN ON THE TRACK (18.08.2026, M-7/D-71).**
+  Chain complete: `csi_camera_node` → `rl_policy_node` → `cv_lane_estimator_node` → `cage_ros_node` →
+  `vehicle_control_node` → `cobraflex_ros_driver`. **Headline: the D-43 estimator reads lane WIDTH correctly and lateral
+  OFFSET badly; the 550k trunk camera policy does NOT transfer; the cage contained it.** At the
+  **default** `white_sat_max = 30` it pairs 95.4 % of circuit frames and reads width **252.9 mm vs
+  a ruler 250**. But `ey` measured hands-off against a tape (15 points over ±100 mm,
+  `M7_offset_response.csv`) is **0.68–0.83 × true − 10 mm**, robust to every filtering (r up to
+  0.99) — so **C-01's 160 mm fires at a true 207–241 mm**, leaving 14–48 mm to the road edge
+  instead of 95. Width is a *difference* straddling the optical axis, `ey` an *absolute* off-axis
+  position, and the unmodelled barrel distortion (`k1 = −0.339`) compresses the second only. Two
+  further estimator defects: **repeatability** — re-placing at the same tape offset elsewhere moves
+  the reading a mean 13.2 mm, worst 29.4 (tape ~2 mm) — and **pairing collapse beyond ~±55 mm**
+  (width-sane share 18 % → 30 % → 87 % → 95 % rejected across 0–30/30–55/55–80/80–120 mm bands,
+  `n_lines` mostly 4 = wrong pair). All three sit inside the band where C-01 and C-05 act.
+  **M-6's propagated `ey` under-read of 0.72 is CONFIRMED** by that tape measurement (an
+  intra-session retraction of it, made from the lane-width figure, is itself withdrawn — see D-71 §2);
+  the camera measurement (fx 395.93, HFOV 77.89°, pitch 17.84°) stands, its mechanism is `cx` +
+  distortion rather than a pure `fx` scale, and its operative conclusion — **undistort, do not just
+  re-parameterise** — stands verbatim,
+  and its real cost is heading **noise**: `joint_pair_quadratic`/1.6 sd 14.3°, 7.8 % past C-02's 25°,
+  vs `near_secant`/1.0's 5.3° / 0.8 %. **Method lesson (D-71 §3): match the measurement to the
+  quantity** — three single-pose conclusions (sat 45, a 0–12 % scale error, a +17.28° heading bias)
+  were overturned by a recorded circuit, and a fourth (`ey` reads true) by realising lane width had
+  been used as a proxy for something it cannot measure. A claim that survives every filtering of the
+  data is the only kind that held up. **§5 yaw resolved:**
+  neither 0.159 nor 0.154 — the plant is compressive (0.48→0.34); 0.4954 confirmed while moving and
+  already compensated by `steering_to_yaw_rate_gain 1.615`. Open: the appearance gap (off-track
+  fine-tune / DR against real imagery, raw material in `experiments/physical/bags/`), which heading
+  config to deploy, localised colour-gate failures. Sim results and the D-69 verdict unaffected.
+  Detail: [M-7](experiments/calibration/M7_track_perception.md) + [M-6](experiments/calibration/M6_camera_hfov.md)
+  + docs/17 §2/§5/§6c/§6d.
 - **F2 evidence:** `ros_run_20260523T153003Z` — 9.91 laps, 845 s,
   0 emergencies, cage v0.5.1, PD v0.8.0.
 - **F3 evidence (closed):** main run `ppo_train_2024_200k` (seed 2024, 200k, reward v1.2,

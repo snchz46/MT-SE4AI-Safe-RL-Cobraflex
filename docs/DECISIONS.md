@@ -3531,3 +3531,119 @@ hand-patched generated artefacts. Regenerate both on the Ubuntu host before any 
 Cites D-54 (Isaac's yaw wall and the `yaw_gain 2.4` workaround this retargets), D-33 (Q10's
 hardware dependency), D-69 (the frozen verdict of record the mass change post-dates), D-44/D-50
 (the Isaac bridge).
+
+---
+
+### D-71 — First track run: the trunk camera policy does not transfer, the D-43 estimator does, and a stationary rig characterises a location rather than a track
+
+| Field | Value |
+| --- | --- |
+| Section | `src/cobraflex_rl/cobraflex_rl/cv_lane_estimator_node.py`; `src/cobraflex_rl/launch/deploy_cobraflex.launch.py`; `docs/17` §2/§5/§6d; `experiments/calibration/M7_track_perception.md` |
+| Status | ACCEPTED — three new launch/node parameters, all inert by default; no SR, cage rule, `cage.yaml` value, ODD parameter or verdict is re-valued |
+| Date | 18.08.2026 |
+
+**Context.** The car was placed on the physical lane circuit and the deployed Phase-5 chain was
+run end to end with the 2-D PPO 550k trunk checkpoint for the first time.
+
+**1. The trunk camera policy does not transfer.** With the car moved by hand across a 332 mm
+span of `ey` while the chain ran without actuation
+(`experiments/physical/runs/policy_bias_probe/cage_status.csv`, 5665 logged cycles):
+`steer = −0.000166·ey_mm + 0.1155`, `r = −0.243`, `r² = 0.059`. The response has the **correct
+sign** — the policy has not forgotten lane-following outright — but it is an order of magnitude
+too weak to close the loop. The operative numbers are ratios: the lane-dependent swing across
+the **whole** 332 mm is **0.055**, against a **constant left offset of +0.1155**, i.e. **2.1× the
+entire swing**, and only **29 of 5665 samples (0.5 %) command a right turn at all**. In closed
+loop the bias dominates and the car departs left regardless of position, which is what was
+observed before the cage stopped it. Corroborated offline: mirroring the observation — which must
+mirror a lane-follower's steering — moves the action by 0.04, and all-black, grey and random
+noise land in the same band, always left. This conclusion is robust to estimator error: it rests
+on the policy's own output barely moving, not on the accuracy of `ey`.
+
+**2. The estimator reads lane WIDTH correctly and lateral OFFSET badly — and M-6's `ey`
+under-read is reinstated by direct measurement.** At its **default** `white_sat_max = 30` the
+estimator pairs 95.4 % of circuit frames and reads a mean lane width of 252.9 mm against a
+ruler-measured 250 (scale 1.012). An earlier draft of this decision inferred from that figure that
+"the IPM reads lateral distance correctly" and retracted M-6's propagated `ey` scale. **That
+inference was invalid and is itself withdrawn.** `lane_width` is `(left.c0 − right.c0)·cos(heading)`
+— a *difference* between two positions straddling the optical axis — while `ey` is `−c0`, an
+*absolute* off-axis position. M-6 measured barrel distortion `k1 = −0.339`, which
+`camera_geometry` does not model, and barrel distortion compresses off-axis positions while
+largely preserving a symmetric difference across the axis. At a true offset of 0 the width reads
+243.8 mm (0.975 of the ruler) while `ey` reads −9.8 mm.
+
+Measured hands-off against a tape (`tools/measure_offset_response.py`; car parked on the ground,
+sampled 10 s per point, ~190 frames each, 15 points over ±100 mm with repeats;
+`experiments/calibration/M7_offset_response.csv`), the `ey` transfer is:
+
+| filtering | n | slope | intercept | r |
+| --- | --- | --- | --- | --- |
+| all points | 15 | 0.715 | −10.1 mm | +0.943 |
+| width-sane ≥ 50 % | 6 | 0.768 | −11.7 mm | +0.990 |
+| stable (`ey` sd ≤ 12 mm) | 7 | 0.677 | −2.7 mm | +0.808 |
+| sane and stable | 4 | 0.827 | −10.8 mm | +0.984 |
+
+The under-read survives **every** filtering — slope 0.68–0.83, intercept ≈ −10 mm — which is what
+separates it from the three artefacts in (3), each of which reversed with the subset inspected.
+**M-6 predicted 0.72 and the measurement brackets it.** What does not survive from M-6 is its
+mechanism: a pure `fx` scale cannot produce the intercept or the side-asymmetry, which point at
+the principal-point offset (`cx` 305.39 against an assumed 320) plus the unmodelled distortion.
+M-6's operative conclusion stands verbatim — correcting `fx` alone is not enough, the estimator
+must undistort.
+
+**Cost to the cage.** C-01's nominal `d_max` of 160 mm fires at a true **207–241 mm** across the
+four fittings and C-05's 120 mm warning at a true 172–212 mm, against a road half-width of 255 mm:
+the lane-boundary limit sits 47–81 mm later than designed, leaving 14–48 mm of margin instead of
+95 mm. Extrapolated past the ±100 mm measured range, so indicative in magnitude; the direction and
+order are not in doubt.
+
+**A second, separate defect: repeatability.** Re-placing the car at the same tape offset elsewhere
+along the track moves the reading by a mean of 13.2 mm and up to 29.4 mm, against ~2 mm of tape
+precision. The reading is not a function of lateral offset alone. This sits on top of the gain
+error and is not removable by re-parameterising a scale.
+
+**3. A stationary rig characterises a location, not a track — and it produced three confidently
+wrong answers.** The session first characterised perception with the car parked at one spot,
+where the lane lines genuinely measured **V 228…255 with S 36…50** and were genuinely rejected by
+`white_sat_max = 30`, dropping the estimator into `_single_line_estimate` on background clutter.
+Three fixes were derived from that pose and all three are **retracted** by the circuit recording:
+`white_sat_max` 30 → 45 (over the circuit 45 pairs only 69.4 % against 30's 95.4 %, and puts
+37 % of frames within 15 mm of the `lane_width_tol_m` rejection floor); "the read is 0–12 % low,
+pose-dependent" (it is +1.2 %); and "`joint_pair_quadratic`/1.6 carries +17.28° of heading bias"
+(over the circuit its mean is **+0.04°**). Each pointed at a change that makes the rest of the
+track worse. The parameters are still exposed — an illuminant knob is right for a physical
+platform — but their **values stay at the defaults**, and offline replay of a recorded circuit
+replaces the stationary rig as the primary characterisation method.
+
+*What survives about the heading:* not bias but **noise**. On identical circuit frames,
+`joint_pair_quadratic`/1.6 has sd **14.29°** and puts **7.8 %** of frames past C-02's 25° limit,
+against `near_secant`/1.0's sd 5.31° and 0.8 %. Consistent with the same mechanism as (2): the
+quadratic is fitted across the band out to 1 m where the `f` error survives, while `near_secant`
+reads only the cancelling near field. Undecided: `near_secant`/1.0 is cleaner but rescales the
+observation the trunk trained with. The `heading_bias_rad` correction proposed mid-session is
+withdrawn — there is no general bias to subtract.
+
+**4. SR-007's state-validity range caught a real sensor fault.** Over 7721 cycles of drive
+attempts the speed reaching the cage carries physically impossible outliers: 2.28 % above the
+0.22 m/s contract ceiling, 0.43 % above the 1.50 m/s `state_validity_ranges.speed_mps` limit,
+peaking at **6.960 m/s** — the ZED visual odometry through the ekf producing ~30× excursions. All
+33 out-of-range cycles are in emergency. A `[provisional]` parameter is rejecting a hardware
+fault that no simulation produced.
+
+**What this does and does not change.** No simulation result is affected: the D-69 verdict of
+record is a Gazebo result and stands as recorded. What is now known is that the trunk's
+*perception-to-action* mapping is Gazebo-specific while the deterministic estimator beside it is
+not — a Chapter-9 sim-to-real finding, not a defect in the verdict. Closing it is off-track work
+(fine-tuning or domain randomisation against real imagery) and is carried as future work
+alongside T2/T4.
+
+**Why this is a result rather than a setback.** On a track where the trained policy is
+ineffective, the runtime cage kept the platform safe: C-05 stopped the car on every excursion,
+`/cmd_vel` reached an exact zero Twist, and no road-edge contact occurred — and it separately
+rejected the odometry fault above. Containment of a policy that fails outside its training
+distribution is the cage's entire value proposition, and this is the first time it has been
+demonstrated on hardware rather than in simulation.
+
+Cites M-6 (the camera measurement whose propagation this corrects), M-7 (the session record),
+D-43 (the estimator, vindicated at its shipped thresholds), D-57 (`heading_bias_rad`, the
+mechanism whose use here is withdrawn), D-66/D-69 (the trunk and the verdict of record, both
+unchanged), D-70 (the yaw characterisation this session re-measured on the track surface).

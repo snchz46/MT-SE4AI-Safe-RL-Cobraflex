@@ -31,6 +31,7 @@ or must be revised.
 | [M-4](M4_speed_vs_curvature.md) | SR-004 v_max_curve | 2 h | physical platform + hand-tuned PD |
 | [M-5](M5_actuator_rate.md) | SR-006 δ_max for steering and throttle | 1 h | physical platform |
 | [M-6](M6_camera_hfov.md) | docs/17 §2 [VERIFY] #1 (effective HFOV) + #2 (mount pitch) | <1 h | physical platform + tape measure |
+| [M-7](M7_track_perception.md) | perception + policy on the physical lane circuit; docs/17 §5 yaw gain | ~3 h | physical platform on the real track |
 
 Total effort estimate: approximately 6 hours of empirical work,
 distributed across simulator and platform.
@@ -45,6 +46,7 @@ distributed across simulator and platform.
 | M-4         | stub ready | —           | `M4_results.json` (scaffold, fill in)     |
 | M-5         | stub ready | —           | `M5_results.json` (scaffold, fill in)     |
 | M-6         | **executed — both parts** | 17.08.2026 | `M6_results.json` + `M6_pitch_results.json` — HFOV **77.89°** vs 90° assumed (verdict **Blocking**); pitch **17.84°** vs 17.19° (confirmed). Not applied in code |
+| M-7         | **executed** | 18.08.2026 | Hands-off tape measurement of the `ey` transfer: **0.68–0.83 × true − 10 mm**, robust to every filtering (r ≤ 0.99) → **C-01's 160 mm fires at a true 207–241 mm** (road half-width 255). M-6's under-read **confirmed**; the intra-session retraction from lane width is withdrawn (width is a difference straddling the axis, `ey` an absolute off-axis position; `k1 = −0.339` unmodelled). Also: repeatability spread 13.2 mm mean / 29.4 worst, pairing collapse beyond ~±55 mm, heading noise sd 14.3°, and the trunk policy **does not transfer**. See D-71 |
 
 Each result file follows the schema declared at the bottom of its
 protocol document. The stub files already exist in this directory;

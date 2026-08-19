@@ -3,7 +3,9 @@
 **Status: RUN ON THE CAR — bench only (2026-08-05 and 2026-08-17, `mode:=monitoring`,
 wheels off the ground, no track). The car has still NOT been driven.** Both §2
 `[VERIFY]` items are now measured (M-6, 17.08.2026) and the HFOV one came back
-**wrong — 77.89°, not 90°**; the resulting decision is open and nothing has been
+**wrong — 77.89°, not 90°**; its propagated `ey` under-read was CONFIRMED on
+18.08.2026 by hands-off tape measurement (M-7 §4/D-71: 0.68–0.83 × true − 10 mm), and
+the heading channel is separately noisy; the resulting decision is open and nothing has been
 changed in code. The 2026-08-17 session (§6c) verified the perception-loss
 fail-safe and the actuation sign convention on hardware.** This document is the bring-up checklist for taking
 the verdict-bearing RL camera policy + safety cage from Gazebo to the physical
@@ -118,18 +120,37 @@ the RL chain reads it. To see exactly what the policy sees, point rviz at
      reaches C-01** — see the next bullet, which supersedes it. **The sim results
      stand** either way: Gazebo's sensor really was 90° and the IPM really assumed
      90°, so in sim C-01 fired at exactly 0.16 m. Only the *transfer* is broken.
-   * **The cage fires LATE, not early — this reverses an earlier reading of this
-     measurement.** Propagating the full measured model through the estimator's
-     actual construction (two lane markings 0.245 m apart, per-row midpoints, a
-     quadratic `Y(X)` fit, `ey = −c0`) gives **reported `ey` = 0.72 × true, bias
-     −1 mm**. The principal-point offset largely cancels because the two markings
-     are close and symmetric, but the **28 % under-read does not**: C-01 and C-05
-     both trigger at a *larger* true excursion than their nominal 0.16 m / 0.12 m.
-     Extrapolating the gain linearly puts C-01 at a true ±0.22 m — though that
-     extrapolation is beyond the ±0.12 m range over which the gain was modelled,
-     since the two-marking geometry breaks down first and the estimator falls into
-     single-side mode. The safe statement: **on hardware the cage is less
-     protective than the campaign verified, not more.**
+   * **The cage fires LATE — CONFIRMED 18.08.2026 by hands-off measurement
+     against a tape (M-7 §4, D-71).** The `ey` transfer, with the car parked on
+     the ground at tape-measured offsets over ±100 mm, is
+     **reported = 0.68…0.83 × true − 10 mm**, robust to every filtering of the 15
+     points (r up to 0.99). M-6 predicted 0.72 and the measurement brackets it.
+     **C-01's 160 mm therefore fires at a true 207–241 mm** and C-05's 120 mm at a
+     true 172–212 mm, against a road half-width of 255 mm — 14–48 mm of margin
+     where 95 mm was designed.
+     *A retraction of this bullet, made earlier the same day on the strength of a
+     lane-width measurement (252.9 mm against a ruler 250), is itself withdrawn:
+     `lane_width` is a **difference** straddling the optical axis while `ey` is an
+     **absolute** off-axis position, and the unmodelled barrel distortion
+     (`k1 = −0.339`) compresses the second while preserving the first. At a true
+     offset of 0 the width reads 0.975 of the ruler while `ey` reads −9.8 mm.*
+   * **Second defect, independent of the gain: repeatability.** Re-placing the car
+     at the same tape offset elsewhere along the track moves the reading by a mean
+     of 13.2 mm and up to 29.4 mm (tape precision ~2 mm). The reading is not a
+     function of lateral offset alone, and no scale correction removes this.
+   * **Where the error does bite is the HEADING** — as **noise, not bias**. The
+     slope is fitted across the scan band out to 1 m, where `X` is compressed and
+     `Y` is not, so the cancellation above does not apply. Over the same 1521
+     circuit frames, `joint_pair_quadratic`/1.6 — the estimator the 550k trunk was
+     trained and scored with — is **unbiased (mean +0.04°) but has sd 14.29° and
+     puts 7.8 % of frames past C-02's 25° limit**, against `near_secant`/1.0's
+     sd 5.31° and 0.8 %; `numpy` reports `RankWarning: Polyfit may be poorly
+     conditioned` on those fits. **This is the operative consequence of M-6 — not
+     a gain on `ey`.** A stationary measurement at one pose showed +17.28° of
+     apparent bias; the circuit says that was local, and a `heading_bias_rad`
+     (D-57) correction is therefore **withdrawn** — there is no general bias to
+     subtract. Undecided: `near_secant`/1.0 is markedly cleaner but rescales the
+     observation the trunk trained with.
    * `cx` = 305.39 px (14.61 px off centre) adds a **lateral bias**, not just a
      gain, and measured barrel distortion is k1 = −0.339 against the IPM's
      assumed zero. Combining all of it with the measured pitch, the running IPM
@@ -486,9 +507,31 @@ afterwards). The gitignored 87 MB `rplidar-a2m4-r1.stl` was moved into the repo'
   **Not corrected**, because the two numbers are not the same quantity: 0.153 is
   geometry and belongs in the URDF, whereas 0.159 is a control constant with
   scrub compensation baked in and, if anything, belongs in the DiffDrive plugin.
-  Deciding needs one bench number — `wz = 1.0 rad/s`, `vx = 0`, 10 s, measure the
-  angle actually turned. Note the reachable yaw rate is already ~half the ideal
-  (§8.1 / docs/14 §2.3), so 3.9 % cannot be the whole scrub story.
+  **MEASURED on the track 18.08.2026 (M-7 §5) — and the question as posed is not
+  the dominant term.** `tools/measure_yaw_gain.py`, yaw integrated from
+  `/odometry/filtered`:
+
+  | `vx` (m/s) | `wz` cmd | `wz` achieved | ratio |
+  | --- | --- | --- | --- |
+  | 0.20 | 0.00 | −0.004 | — (**−1.0° drift over 4 s: the chassis tracks straight**) |
+  | 0.00 | 1.00 | 0.150 | 0.150 |
+  | 0.20 | 0.20 | 0.096 | 0.482 |
+  | 0.20 | 0.40 | 0.174 | 0.436 |
+  | 0.20 | 0.80 | 0.273 | 0.341 |
+
+  Three readings. (i) The platform team's **0.4954 is confirmed while moving**
+  (0.482/0.436/0.341 bracket it), and the deploy default
+  `steering_to_yaw_rate_gain = 0.8/0.4954 = 1.615` already compensates it — so the
+  policy is *not* driving an uncompensated deficit. (ii) The in-place 0.150 on this
+  floor is far below their bench 0.4954: the surface-dependence warning above is
+  real, and in-place is not the policy's regime. (iii) **New, and the part that
+  matters: the plant is compressive** — marginal gain falls from 0.39 (0.2→0.4) to
+  0.25 (0.4→0.8), so a single linear gain is calibrated at moderate demand and
+  under-delivers at high demand, which is exactly when C-01/C-02 correct.
+
+  **Resolution: neither 0.159 nor 0.154.** No 3.2 % constant fits a channel whose
+  gain runs from 0.48 to 0.34 across the operating range; carry the compression as
+  the open item instead.
 - **Two driver defects the same source exposed — FIXED.** The `T=1001` frame is
   built by `base_info_feedback()` in `Cobra_Driver/ugv_advance.h`, which settles
   fields we had been reading by inference: `v` is `(int)(loadVoltage_V * 100)`,
@@ -686,3 +729,65 @@ throttle envelope (C-05 was latched, so `/cmd_vel` is identically zero and the
 envelope cannot be exercised), step 3's e-stop test, and the §5 yaw-gain bench
 number (`wz = 1.0`, 10 s, measure the angle turned — needs wheels down).
 
+
+## 6d. The 2026-08-18 track session: the estimator held, the policy did not
+
+First run of the deployed chain on the **physical lane circuit**. Full record:
+[M-7](../experiments/calibration/M7_track_perception.md), decision D-71.
+
+**Read M-7 §2 first.** Three conclusions drawn from a stationary rig at one spot were all
+overturned by a 2-minute recording of the whole circuit replayed offline. A parked car
+characterises a location, not a track, and each single-pose "fix" made the rest of the circuit
+worse.
+
+**1. The D-43 estimator transfers at its shipped settings — near the lane centre.** Over 1521
+circuit frames the **default** `white_sat_max = 30` pairs **95.4 %** and reads a mean lane width
+of **252.9 mm against a ruler-measured 250 — 2.9 mm of error, scale 1.012**. **That is a
+centre-of-lane figure** (90 % of those frames sit within ±72 mm) and the qualification matters
+more than the headline: swept deliberately across the lane, the share of width-sane frames falls
+**18 % → 30 % → 87 % → 95 % rejected** over the 0–30 / 30–55 / 55–80 / 80–120 mm bands,
+systematically (183.8 mm, sd 23.9, `n_lines` mostly 4 — both lanes in view, wrong pair) and not
+through heading. **The estimator feeding C-01 (160 mm) and C-05 (120 mm) is trustworthy only
+within roughly ±55 mm**, entirely inside the band where those rules act, and *pairing rate does
+not detect this* — it pairs, the pair is wrong. Indicative rather than established: both sweeps
+moved the car by hand and the IPM reads a constant pitch, so a hands-off measurement at
+tape-measured offsets is the outstanding test (M-7 §3b). The value proposed mid-session
+(45) pairs only 69.4 % and puts 37 % of frames within 15 mm of the `lane_width_tol_m` rejection
+floor. `white_sat_max` / `white_val_min` are now node parameters and launch arguments (`-1` = not
+set, defaults bit-identical) because an illuminant knob belongs on a physical platform — but
+**their values stay at the defaults**. The one location that genuinely failed (lines at
+V 228…255 with S 36…50, rejected on saturation) is a real localised limit of a global HSV gate;
+the fix is a per-row adaptive threshold or exposure control, neither tested.
+
+**2. M-6's propagated `ey` scale is retracted** — see §2 item 1. Measured scale is 1.01. What
+survives on the heading is **noise, not bias**: on identical circuit frames
+`joint_pair_quadratic`/1.6 has sd **14.29°** and puts **7.8 %** of frames past C-02's 25° limit,
+against `near_secant`/1.0's 5.31° and 0.8 %.
+
+**3. The trunk camera policy does not transfer.** With the car moved by hand across a 332 mm span
+of `ey` and the chain running at `cmd_vel_topic:=/cmd_vel_dryrun`
+(`experiments/physical/runs/policy_bias_probe/cage_status.csv`, 5665 cycles):
+`steer = −0.000166·ey_mm + 0.1155`, `r² = 0.059`. The response keeps the correct sign but the
+lane-dependent swing across the whole span is **0.055** against a **constant left offset of
++0.1155 — 2.1× the swing** — and only **0.5 %** of samples ever command a right turn. In closed
+loop the bias dominates and the car departs left regardless of position.
+
+**4. SR-007 rejected a real sensor fault.** Over 7721 cycles the speed reaching the cage carries
+outliers to **6.960 m/s** on a 0.22 m/s car — ZED visual odometry through the ekf. 0.43 % of
+cycles exceed the `state_validity_ranges.speed_mps` ceiling of 1.50 and **all of them are in
+emergency**. A `[provisional]` parameter catching a hardware fault no simulation produced.
+
+**What the session demonstrates.** On a track where the trained policy is ineffective, the
+runtime cage kept the platform safe: C-05 stopped the car on every excursion, `/cmd_vel` reached
+an exact zero Twist, no road-edge contact. Containment of a policy that fails outside its
+training distribution is the cage's value proposition, demonstrated on hardware for the first
+time.
+
+**Operational notes.** A killed launch leaves an evidence CSV with only its header — the logger
+flushes on clean shutdown, so `Ctrl-C` the launch. A dry run is genuinely safe: with
+`cmd_vel_topic` redirected, `ros2 topic info /cmd_vel` reports **publisher count 0** while the
+whole chain runs. `policy:=false` brings the chain up without `rl_policy_node`, leaving
+`/raw_action` free for another controller behind the same cage. And recording raw 640×360 at
+20 Hz is **13.8 MB/s** to eMMC: the session ended in a Jetson crash, the bag lost its
+`metadata.yaml` (recovered with `ros2 bag reindex`) and one CSV lost its final block; treat
+rates measured while recording as I/O-limited, not as chain capability.

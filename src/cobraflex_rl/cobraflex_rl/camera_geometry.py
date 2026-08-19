@@ -28,16 +28,32 @@ import math
 from dataclasses import dataclass
 from typing import Tuple
 
-# URDF-derived defaults (my_robot_gazebo_mesh.urdf — the variant every
-# train/eval launch includes via gazebo_mesh.launch.py): base_link at
-# wheel_radius 0.03725, body_link at +body_height/2+chassis_height/2-0.01
-# (0.05+0.03-0.01, mesh-variant body offset), camera_link_lane at -0.03
-# → 0.07725 m above ground; pitch 0.30 rad (matches the camera_link_lane joint
-# rpy="0 0.30 0" in my_robot_gazebo_mesh.urdf — re-run
-# tools/validate_cv_estimator.py if it changes). NOTE the non-mesh URDF
-# variants currently lack the -0.01 body offset (camera 1 cm higher).
-DEFAULT_CAMERA_HEIGHT_M = 0.03725 + 0.05 + 0.03 - 0.01 - 0.03
-DEFAULT_CAMERA_PITCH_RAD = 0.30
+# MEASURED extrinsics (M-6, 17.08.2026): pitch and height fitted jointly over 17
+# tape marks on the real car, residual rms 0.485 px —
+# experiments/calibration/M6_pitch_results.json.
+#
+# The direction of authority reversed here on 19.08.2026. These used to be
+# *derived from the URDF* (0.30 rad, 0.07725 m), which was a hand-picked mount
+# nobody had measured; the sim and this model agreed with each other and with
+# nothing else — the same circular agreement M-6 found for HFOV. Now the
+# measurement is the authority and the URDF chain is solved to land on it:
+# camera_joint_lane z = 0.07794 - (0.03725 + 0.075) = -0.03431 in all five
+# variants of src/cobraflex/urdf/. Re-run tools/validate_cv_estimator.py after
+# any change to either side, and keep them in step — a captured Gazebo frame
+# puts the horizon at row 81 for this pitch and at 180 for a zero one, which is
+# how the 10.08 regression (a44ed5f0 dropped rpy="0 0.30 0" in an .stl commit)
+# was eventually caught.
+#
+# The 550k trunk trained at 0.30 / 0.07725, i.e. 0.65 deg and 0.7 mm from these —
+# far inside the 0.15 rad spawn heading perturbation it already trains under, so
+# adopting the measured pair does not invalidate a continuation of it.
+#
+# Not modelled, and small: the mount sits 1.5 mm off the vehicle centreline
+# (y = -0.0015 in the URDF). The projection below assumes a pitch-only mount, so
+# that appears as a constant 1.5 mm ey bias — an order of magnitude under the
+# estimator's own 13.2 mm re-placement repeatability (M-7 §4).
+DEFAULT_CAMERA_HEIGHT_M = 0.07794
+DEFAULT_CAMERA_PITCH_RAD = 0.31132
 DEFAULT_HFOV_RAD = 1.5707963
 DEFAULT_WIDTH_PX = 640
 DEFAULT_HEIGHT_PX = 360

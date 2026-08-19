@@ -31,6 +31,93 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [19.08.2026 · later] — The sim camera had lost its pitch since 10.08; the measured extrinsics become the authority and all five URDF variants are unified
+
+**Document(s) affected:** `src/cobraflex/urdf/my_robot_gazebo_mesh.urdf`,
+`src/cobraflex/urdf/my_robot_mesh.urdf`, `src/cobraflex/urdf/my_robot_gazebo.urdf`,
+`src/cobraflex/urdf/my_robot_basic.urdf`, `src/cobraflex/urdf/cobraflex_isaac.urdf`
+(regenerated), `src/cobraflex_rl/cobraflex_rl/camera_geometry.py`,
+`policy/tests/test_camera_geometry.py`
+**Phase:** 5 (physical deployment)
+**Gate context:** after G4; no gate re-scored, no recorded result restated
+**Author:** Samuel Sanchez
+
+### Change
+
+1. **A latent regression, found while transferring the new printed-model
+   geometry.** Commit `a44ed5f0` (10.08, an `.stl` commit) dropped
+   `rpy="0 0.30 0"` from `camera_joint_lane` in `my_robot_gazebo_mesh.urdf` —
+   the variant `gazebo_mesh.launch.py` loads, i.e. the one every Gazebo training
+   and evaluation uses. The other four variants and `camera_geometry` kept
+   0.30 rad. Nine days passed unnoticed because no Gazebo run happened in
+   between. A captured frame from the live sim measures it: **horizon at row 182
+   against row 83** on a trunk-era frame, asphalt down from 50.2 % of the frame
+   to 29.1 %. With zero pitch the estimator's near scan row (X = 0.15 m) maps to
+   **row 364 of a 360-row image** — the near field C-01 acts on is not in frame.
+2. **The direction of authority is reversed.** `camera_geometry`'s extrinsics
+   were derived from a hand-picked URDF mount (0.30 rad, 0.07725 m) that nobody
+   had measured — sim and code agreed with each other and with nothing else, the
+   same circular agreement M-6 found for HFOV. They are now the **measured** pair
+   (M-6: pitch 0.31132 rad, height 0.07794 m, fitted jointly over 17 tape marks,
+   residual rms 0.485 px) and the URDF chain is solved to land on them:
+   `camera_joint_lane` z = 0.07794 − (0.03725 + 0.075) = −0.03431.
+3. **All five URDF variants unified**, with the 19.08 printed-model values
+   carried across: the mesh visual origins (`body_link` 0.028 −0.059 0,
+   `lidar_link` −0.003 −0.078 −0.03) to the mesh-bearing variants only, and the
+   `body_joint` −0.005 offset plus the lane-camera joint to all of them. That
+   also closes the drift `camera_geometry` used to carry as a NOTE (the non-mesh
+   variants sat 1 cm higher). `cobraflex_isaac.urdf` was **regenerated** with
+   `tools/build_isaac_urdf.py` rather than hand-edited; the 3.5 kg hand-patched
+   mass budget survives untouched (it lives in the source xacro), and the file is
+   now byte-identical to the generator's output — which is what the stale
+   hand-patch note in it asked for. Its diff is large only because the generator
+   emits LF where the hand-patched file was CRLF; five lines of content changed.
+4. **The URDF↔code contract is now tested.** `test_camera_geometry.py` parses the
+   kinematic chain out of all five variants and asserts each one lands on
+   `DEFAULT_CAMERA_{HEIGHT_M,PITCH_RAD}`, plus that the five agree with each
+   other. Pure text and arithmetic, no ROS. This is the test whose absence let
+   the 10.08 regression live for nine days.
+
+### Rationale
+
+Transferring the printed-model values was the request; the pitch loss was found
+on the way and outranks it. The user's ruling settles which numbers win: the
+track measurements are the real geometry, the simulation used hand-picked ones.
+
+### Impact
+
+* **The fine-tune must not be launched against the broken geometry.** The 550k
+  trunk trained at 0.30 / 0.07725, i.e. 0.65° and 0.7 mm from the measured pair —
+  an 0.89 % lateral scale change and a 4 px horizon shift, far inside the
+  0.15 rad spawn heading perturbation it already trains under, so a continuation
+  is sound. A continuation against pitch 0 would not have been.
+* Verified on the live sim after rebuilding: horizon back to **row 79** against a
+  model prediction of 77, asphalt back to **50.2 %** — the trunk-era value.
+* `tools/validate_cv_estimator.py` re-run against the ground-truth oracle on
+  complex_b (reduced grid, 18 clean samples): **detection 1.0**, `ey` bias
+  +6.5 mm, **MAE 8.0 mm**, p95 15.5 mm. The `epsi` bias of −0.14 rad is the
+  documented curvature over-read on a tight circuit with the T3 gate disabled
+  (D-62), not a new effect — the grid ran with estimator defaults, while the
+  trunk's training config enables `heading_temporal_window: 4`. **No paired
+  comparison against the trunk's old extrinsics was run**, so no accuracy
+  improvement is claimed; only that the corrected geometry yields a healthy
+  estimator.
+* **Isaac needs a re-import.** `cobraflex_isaac/payloads/Physics/physics.usda`
+  was hand-patched and the URDF geometry has now moved; re-import to regenerate
+  it before any further Isaac work. Not done here — Isaac is posterior work.
+* Not modelled, and stated: the mount sits 1.5 mm off the vehicle centreline
+  (`y = -0.0015`), which a pitch-only IPM reads as a constant 1.5 mm `ey` bias —
+  an order of magnitude under the estimator's own 13.2 mm re-placement
+  repeatability (M-7 §4).
+
+### Verification
+
+`pytest` 657 passed (6 new URDF-contract tests). `python tools/check_traceability.py`
+— unchanged, no ID added or removed. Live-sim frame capture and the reduced
+oracle grid above; both run on the Ubuntu host, both reaped clean.
+
+---
+
 ## [19.08.2026] — The sim-to-real gap is photometric, not geometric: reproduced offline, an offline gate to catch it, and the fine-tune that closes it
 
 **Document(s) affected:** `docs/17_physical_deployment.md` (§1b, §2 item 1),

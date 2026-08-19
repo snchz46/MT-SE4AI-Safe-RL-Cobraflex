@@ -1,11 +1,18 @@
 """
 Contract test for the sim-to-real fine-tune config (M-7/D-71).
 
-The run's whole claim is that it changes ONE experimental variable against the
-2-D trunk it continues from. That is a checkable property, so it is checked here
-rather than asserted in a comment: a stray edit to the cage block, the reward
-weights or the stressor schedule would silently turn the fine-tune into an
-uninterpretable two-variable run.
+The run's CONFIG changes one variable against the 2-D trunk it continues from.
+That is a checkable property, so it is checked here rather than asserted in a
+comment: a stray edit to the cage block, the reward weights or the stressor
+schedule would silently turn the fine-tune into an uninterpretable two-variable
+run.
+
+This pins the config only. The *environment* moved independently between the
+parent checkpoint (27.07) and this run — vehicle mass 6.59 -> 3.5 kg with
+body_link inertia down 35-54 % (13-17.08), and the camera extrinsics replaced by
+the measured pair (19.08). Nothing here asserts otherwise, and the config's own
+header says so: this run produces a policy meant to transfer, it does not
+measure what the photometric term contributes.
 """
 import sys
 from pathlib import Path

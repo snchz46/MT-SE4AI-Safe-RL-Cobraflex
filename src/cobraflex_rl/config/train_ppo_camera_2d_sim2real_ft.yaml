@@ -16,9 +16,25 @@
 # The markings already agree to 6 %. The whole error is the road, which
 # generate_complex_track.py paints as literal black.
 #
-# WHAT CHANGES vs train_ppo_camera_2d_cap022_1M.yaml (the parent)
-# Exactly three things, so the run has one variable plus the standard fine-tune
-# discipline:
+# WHAT THIS RUN IS *NOT*
+# It is not a controlled ablation of the photometric term, and must not be
+# reported as one. The parent checkpoint was trained on 27.07; the ENVIRONMENT
+# has moved twice since, independently of this config:
+#   * the vehicle mass went 6.59 -> 3.5 kg with body_link's inertia down 35-54 %
+#     (measured, 13-17.08) — the URDF says so itself: "every frozen Gazebo
+#     campaign was executed with the 6.59 kg budget";
+#   * the camera extrinsics became the measured pair (19.08): +0.65 deg pitch and
+#     +0.9 % height vs the trunk, i.e. a 4 px horizon shift.
+# The dynamics change is the material one. It is tolerable here because PPO is
+# on-policy — every gradient comes from rollouts in the current sim, so the new
+# plant is in the data from step 1 — and because gz-sim-diff-drive-system is
+# velocity-controlled, so mass moves the transient and not the steady-state
+# speed. What this run produces is a policy intended to transfer, not a
+# measurement of what the DR term contributes.
+#
+# WHAT CHANGES vs train_ppo_camera_2d_cap022_1M.yaml (the parent config)
+# Exactly three keys, so the CONFIG carries one variable plus the standard
+# fine-tune discipline (the environment caveat above is separate):
 #   1. domain_randomization gains the photometric operating-point term (below);
 #   2. learning_rate 3e-4 -> 1e-4, the usual fine-tune reduction against
 #      catastrophic forgetting — the trunk already drives complex_b, this run

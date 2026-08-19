@@ -140,12 +140,19 @@ the car is worth more than any single fix here.
   statistics. Launch:
 
   ```
+  export CFG=$(ros2 pkg prefix cobraflex_rl)/share/cobraflex_rl/config
   ros2 launch cobraflex_rl train_lane.launch.py \
-    train_config:=train_ppo_camera_2d_sim2real_ft.yaml \
+    train_config:=$CFG/train_ppo_camera_2d_sim2real_ft.yaml \
     resume_from:=<abs>/ppo_gz2d_cap022_1M_2024_550000_steps.zip \
     resume_vecnormalize:=<abs>/ppo_gz2d_cap022_1M_2024_vecnormalize_550000_steps.pkl \
     run_id:=ppo_gz2d_sim2real_ft_2024
   ```
+
+  **Every path must be absolute.** `train_lane.launch.py` forwards
+  `train_config` verbatim; only its *default* is a share path, so a bare
+  filename reaches the trainer as a relative path and dies on `FileNotFoundError`
+  after Gazebo has already come up. Same for the two resume arguments. This is
+  the docs/11 §9 `$CFG/...` idiom.
 
   400k on top of 550k → ends at 950k, checkpoints every 25k. **Pick the
   checkpoint with `tools/sim2real_probe.py`, not by reward** — D-66's lesson

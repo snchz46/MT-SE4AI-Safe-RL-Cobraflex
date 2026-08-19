@@ -31,6 +31,152 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [19.08.2026] — The sim-to-real gap is photometric, not geometric: reproduced offline, an offline gate to catch it, and the fine-tune that closes it
+
+**Document(s) affected:** `docs/17_physical_deployment.md` (§1b, §2 item 1),
+`src/cobraflex_rl/cobraflex_rl/visual_degradation.py`,
+`src/cobraflex_rl/cobraflex_rl/visual_domain_randomization.py`,
+`src/cobraflex_rl/cobraflex_rl/camera_geometry.py`,
+`src/cobraflex_rl/cobraflex_rl/cv_lane_estimator_node.py`,
+`tools/sim2real_probe.py` (new), `tools/README.md`,
+`src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py`,
+`src/cobraflex_rl/config/train_ppo_camera_2d_sim2real_ft.yaml` (new),
+`policy/tests/test_sim2real_finetune_config.py` (new),
+`policy/tests/test_visual_degradation.py`,
+`policy/tests/test_visual_degradation_eval_modes.py`,
+`policy/tests/test_visual_domain_randomization.py`,
+`policy/tests/test_camera_geometry.py`, `tools/tests/test_sim2real_probe.py` (new)
+**Phase:** 5 (physical deployment)
+**Gate context:** after G4; no gate re-scored, no sim verdict touched
+**Author:** Samuel Sanchez
+
+### Change
+
+All of it derived on the simulation host from the 18.08 recordings — **nothing here
+has been run on the car.**
+
+1. **The M-7 §4 under-read is reproduced by a forward model** (render the real lane
+   geometry through the M-6 camera, feed the shipped estimator): slope **0.674**
+   against the tape's 0.68–0.83, C-01 firing at a true **239 mm** against the
+   measured 207–241. The control arm (render through the assumed model) reads
+   0.997, so the model is sound. M-6's "undistort, do not just re-parameterise" is
+   now a measurement: correcting `fx`/`cx`/`cy` **without** undistorting gives
+   **0.644** — worse — while undistorting into the canonical camera gives **0.998**
+   with lane width 249.9 ± 1.5 mm against a 250 mm ruler.
+2. **`camera_geometry.rectification_maps_from_calibration`** builds those maps,
+   reading `M6_results.json` directly so the intrinsics keep one authority and are
+   never copied into code. `cv_lane_estimator_node` gains `rectify_calibration`,
+   `camera_pitch_rad` and `camera_height_m` — **all inert by default**, so every
+   Gazebo path stays bit-identical and the physical path opts in explicitly.
+3. **The trunk policy's failure is photometric.** Single-factor ablation on Gazebo
+   frames, where the policy works (steering swing 0.363, right turns 48.6 %):
+   pasting the entire workshop above the horizon changes **nothing** (0.352,
+   47.9 %); matching the frames' grey statistics to the real ones collapses it to
+   swing **0.004**, bias +0.134, right turns **0.0 %** — the deployed symptom,
+   reproduced in simulation from one transform. Calibrated cause: Gazebo renders
+   the road at grey **27** and the markings at 197; the physical circuit reads
+   **106** and 209 across three independent sessions (contrast ratio 7.3× vs 2.0×).
+4. **New DR mode `low_contrast`** (lifted black level + compressed range) covers
+   it. `MODES` stays the frozen H-10 trio so every past run's DR draw is
+   reproducible; the new `TRAINABLE_MODES` is what training may draw from, and the
+   eval-only stressors stay excluded. At `level≈0.75` it lands on the measured
+   hall, i.e. inside — not at the edge of — the standard `(0.2, 1.0)` draw. Opt in
+   per run via `domain_randomization.modes` in the training YAML.
+5. **`tools/sim2real_probe.py`** scores a checkpoint's lane response on recorded
+   physical frames against the Gazebo control arm and fails closed. On the 550k
+   trunk it returns BLOCKED for three independent reasons from recorded data alone.
+6. **M-7 §4b's open `epsi` decision is answered with data.** On rectified frames
+   `joint_pair_quadratic`/1.6 drops from sd 14.24° / 8.5 % past C-02 to
+   10.61° / 1.6 %, and `near_secant`/1.0 is both unbiased (mean −0.03°) and
+   cleanest (sd 4.94°, 0.7 %). The as-shipped column reproduces M-7's live table
+   to 0.05°, which is what validates the offline replay.
+7. **docs/17's HFOV claim is corrected** (§1b, §2 item 1): "real frames are ~24 %
+   narrower" is wrong in sign. 77.89° is the pinhole-equivalent; actual coverage is
+   94.6° × 52.2°, *wider* than the 90° trained on — consistent with the IMX219-160
+   the JetRacer kit ships (the standard 79.3°-diagonal optic would give ~50° in
+   this crop mode, off by 1.88×).
+8. **The DR sampler gains an operating-point term.** `low_contrast` must not go in
+   `modes`: the sampler draws one stressor per episode, so a four-mode list at
+   `p_degrade 0.5` would show the policy the physical track's photometry in ~12 %
+   of episodes — as if a mid-grey floor were a rare event rather than the constant
+   condition M-7 measured. `DegradationSpec` now carries an optional base term
+   drawn on its own schedule and applied *before* the stressor (the physical
+   order: the camera sees a mid-grey floor, and then glare happens to that image).
+   With no `base_mode` configured the sampler consumes the RNG exactly as before —
+   short-circuit evaluation, pinned by a test against a transcription of the old
+   algorithm — so every pre-19.08 run stays reproducible from its seed.
+9. **`config/train_ppo_camera_2d_sim2real_ft.yaml`** — the fine-tune, continuing
+   the 550k trunk. It differs from its parent in exactly four keys
+   (`domain_randomization`, `learning_rate` 3e-4 → 1e-4, `total_timesteps`,
+   `model_path`), which a contract test asserts, so the run has one experimental
+   variable plus the standard fine-tune LR reduction. `base_level_range` spans the
+   full `[0, 1]`: level 0 is the Gazebo render itself, kept in distribution because
+   every scored campaign still evaluates there; 0.75 is the measured hall; 1.0 is
+   headroom above it, and is capped by keeping the road under the D-43 white gate
+   rather than by preference.
+
+### Rationale
+
+The 18.08 session ended with two separable defects fused into one narrative. Both
+turn out to be diagnosable from the recordings, and they need opposite fixes: the
+cage's is geometric and is closed by rectification; the policy's is photometric and
+needs a retrain. Attacking either with the other's fix wastes a track session —
+rectification moves the trunk's lane response from 0.097 to 0.090.
+
+The gate exists because the evidence for the failure was already sitting in frames
+recorded that morning. Turning "will it transfer?" into a number computable without
+the car is worth more than any single fix here.
+
+### Impact
+
+* **No frozen evidence is touched.** `MODES` unchanged, every world and texture
+  unchanged, every node default inert. The D-69 verdict of record stands.
+* **The fine-tune is prepared but NOT launched** — it runs on the second machine.
+  It needs two artefacts git does not carry (`policy/checkpoints/*.zip|*.pkl` are
+  gitignored): `ppo_gz2d_cap022_1M_2024_550000_steps.zip` (sha256 `0d449246…`, the
+  hash M-7 records for the trunk) and its paired
+  `…_vecnormalize_550000_steps.pkl` (sha256 `5c1df0b2…`). `normalize_reward` is
+  true, so resuming without the `.pkl` silently resets the running reward
+  statistics. Launch:
+
+  ```
+  ros2 launch cobraflex_rl train_lane.launch.py \
+    train_config:=train_ppo_camera_2d_sim2real_ft.yaml \
+    resume_from:=<abs>/ppo_gz2d_cap022_1M_2024_550000_steps.zip \
+    resume_vecnormalize:=<abs>/ppo_gz2d_cap022_1M_2024_vecnormalize_550000_steps.pkl \
+    run_id:=ppo_gz2d_sim2real_ft_2024
+  ```
+
+  400k on top of 550k → ends at 950k, checkpoints every 25k. **Pick the
+  checkpoint with `tools/sim2real_probe.py`, not by reward** — D-66's lesson
+  holds, the reward peak was the worst driving candidate there.
+* Rectification is implemented but **unproven on hardware**: enable it on the car
+  behind a `preflight_deploy.py lanecheck`, not blind. Offline on 3357 real frames
+  it removes the offset-dependent collapse (lane-width by |ey| band 244→229→207→183
+  becomes 267→268→264→256) but leaves a **session-dependent** +8…+30 mm scale
+  error — so once the optics are corrected, the dominant term is the mount pose,
+  and the hands-off tape measurement M-7 §3b called for is still the open
+  measurement. `camera_pitch_rad`/`camera_height_m` exist for that.
+* The `epsi` mode is decided on evidence but not yet deployed: `near_secant`/1.0
+  changes the readout the trunk's cage was trained against, so it is a Phase-5
+  configuration choice, not a retro-fit to any scored run.
+
+### Verification
+
+`pytest` 651 passed (25 new: 4 rectification, 9 probe, 6 fine-tune config
+contract, plus the DR assertions — including that no `low_contrast` level can
+push the markings under, or the road over, the D-43 white gate the cage's
+estimator shares with the policy, and that a config without a base term leaves
+the RNG generator at the identical position).
+`python tools/check_traceability.py` — unchanged, no ID added or removed.
+
+Not verified, and stated as such: the fine-tune has not been run, the rectified
+estimator has not seen hardware, and `sim2real_probe.py` has been exercised only
+on checkpoints that fail it — no policy has yet passed the gate, so its PASS
+branch is asserted by unit test, not by a driven car.
+
+---
+
 ## [18.08.2026] — First run on the physical lane circuit: the D-43 estimator transfers at its shipped settings, the trunk camera policy does not, and three single-pose conclusions are retracted
 
 **Document(s) affected:** `experiments/calibration/M7_track_perception.md` (new),

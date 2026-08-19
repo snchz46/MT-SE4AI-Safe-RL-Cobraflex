@@ -136,3 +136,70 @@ class CameraModel:
             raise ValueError(f"row {v} is at/above the horizon")
         t = self.height_m / denom
         return t / self.fx
+
+
+def rectification_maps_from_calibration(
+    calibration_path,
+    camera: "CameraModel | None" = None,
+):
+    """Maps that undistort a *measured physical* camera into this module's model.
+
+    Everything above assumes an ideal pinhole with the optical axis at the image
+    centre. The physical camera is neither: M-6 measured ``fx = fy = 395.93`` (not
+    the assumed 320), ``cx = 305.39`` (not 320) and plumb-bob distortion with
+    ``k1 = -0.339``, which displaces a mid-row edge pixel by 129 px. Feeding those
+    frames to the model above is what makes the deployed estimator under-read
+    ``ey`` (M-7 §4: 0.68-0.83 x true, so C-01's 160 mm fires at a true 207-241 mm).
+
+    Correcting the intrinsics *without* undistorting does not help — it makes it
+    marginally worse (0.674 -> 0.644 on the forward model, because the focal and
+    range errors partly cancel). Undistorting into the canonical model restores it
+    (slope 0.998, lane width 249.9 ± 1.5 mm against a 250 mm ruler). That is M-6's
+    "undistort, do not just re-parameterise", as a measurement rather than a claim.
+
+    The canonical target is deliberately ``CameraModel()`` itself — the camera the
+    simulator renders — so the rectified frame is one the rest of the stack, and
+    every frozen sim result, already describes. It fits: the physical camera's true
+    horizontal coverage including distortion is ~94.6°, *wider* than the canonical
+    90°, so the rectified frame is 93 % filled overall and 100 % filled across the
+    estimator's scan band. (The 77.89° in M-6/docs-17 is the pinhole-equivalent
+    ``2·atan(320/fx)``, not the camera's angular coverage.)
+
+    Parameters
+    ----------
+    calibration_path:
+        ``experiments/calibration/M6_results.json`` — the single authority for
+        these numbers; they are never copied into code.
+    camera:
+        Canonical target, default ``CameraModel()``.
+
+    Returns ``(map1, map2)`` for ``cv2.remap``. Raises if the calibration was
+    solved at a different resolution, because the intrinsics would not apply.
+    """
+    import json
+    from pathlib import Path
+
+    import cv2
+    import numpy as np
+
+    cam = camera or CameraModel()
+    data = json.loads(Path(calibration_path).read_text())
+    if int(data["width_px"]) != cam.width_px or int(data["height_px"]) != cam.height_px:
+        raise ValueError(
+            f"calibration solved at {data['width_px']}x{data['height_px']} but the "
+            f"camera model is {cam.width_px}x{cam.height_px} — intrinsics do not apply"
+        )
+    k_measured = np.array(
+        [[data["fx_px"], 0.0, data["cx_px"]],
+         [0.0, data["fy_px"], data["cy_px"]],
+         [0.0, 0.0, 1.0]],
+        dtype=float,
+    )
+    k_canonical = np.array(
+        [[cam.fx, 0.0, cam.cx], [0.0, cam.fy, cam.cy], [0.0, 0.0, 1.0]], dtype=float
+    )
+    distortion = np.asarray(data["distortion_plumb_bob"], dtype=float)
+    return cv2.initUndistortRectifyMap(
+        k_measured, distortion, None, k_canonical,
+        (cam.width_px, cam.height_px), cv2.CV_32FC1,
+    )

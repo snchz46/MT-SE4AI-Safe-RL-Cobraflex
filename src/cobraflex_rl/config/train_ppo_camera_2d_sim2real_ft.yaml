@@ -1,0 +1,167 @@
+# Sim-to-real photometric fine-tune of the 2-D PPO 550k trunk (M-7/D-71).
+#
+# WHAT THIS RUN IS FOR
+# The 18.08.2026 deployment showed the trunk does not transfer: on real imagery
+# its steering swing collapses from 0.363 to 0.097, a constant +0.14 left bias
+# dominates it, and it commands a right turn on 0.8 % of frames. The cause was
+# isolated offline to ONE factor. Pasting the entire workshop above the horizon
+# into Gazebo frames changes nothing (swing 0.352 vs 0.363); matching the frames'
+# grey statistics to the real ones collapses the policy to swing 0.004 with 0.0 %
+# right turns — the deployed symptom, reproduced in simulation. Measured inside
+# the estimator's scan band:
+#
+#     Gazebo complex_b   line 197   road  27   contrast ratio 7.3x
+#     physical circuit   line 209   road 106   contrast ratio 2.0x   (3 sessions)
+#
+# The markings already agree to 6 %. The whole error is the road, which
+# generate_complex_track.py paints as literal black.
+#
+# WHAT CHANGES vs train_ppo_camera_2d_cap022_1M.yaml (the parent)
+# Exactly three things, so the run has one variable plus the standard fine-tune
+# discipline:
+#   1. domain_randomization gains the photometric operating-point term (below);
+#   2. learning_rate 3e-4 -> 1e-4, the usual fine-tune reduction against
+#      catastrophic forgetting — the trunk already drives complex_b, this run
+#      teaches invariance, not driving;
+#   3. total_timesteps is the fine-tune budget, ADDED on top of the parent's
+#      step count (SB3 reset_num_timesteps=False).
+# Everything else is copied verbatim, including the whole cage block. In
+# particular the cage keeps joint_pair_quadratic/1.6: the 19.08 finding that
+# near_secant/1.0 is cleaner applies to the RECTIFIED PHYSICAL image, not to the
+# Gazebo render, and changing it here would put a second variable in the run.
+#
+# HOW TO LAUNCH — see the 19.08 CHANGELOG entry. Needs --resume-from with the
+# 550k checkpoint AND its paired VecNormalize .pkl (normalize_reward is true, so
+# resuming without it silently resets the running reward statistics).
+#
+# HOW TO PICK THE CHECKPOINT — not by reward. Score each with
+# tools/sim2real_probe.py against the recorded physical frames; it fails closed
+# and is a necessary condition, not a sufficient one. D-66's lesson applies
+# unchanged: the reward peak was the worst driving candidate.
+total_timesteps: 400000
+learning_rate: 0.0001
+lr_schedule: linear
+target_kl: 0.5
+gamma: 0.99
+gae_lambda: 0.95
+n_steps: 1024
+batch_size: 64
+n_epochs: 10
+clip_range: 0.2
+ent_coef: 0.01
+vf_coef: 0.5
+max_grad_norm: 0.5
+normalize_reward: true
+clip_range_vf: 0.2
+clip_reward: 10.0
+device: auto
+service_timeout_ms: 3500
+seed: 2024
+max_episode_steps: 2048
+control_dt: 0.1
+fixed_speed: 0.2
+progress_bounded_tracking: false
+viz: true
+model_path: cobraflex_ppo_gz2d_sim2real_ft
+checkpoint_freq: 25000
+sim_real_time_factor: 1
+policy: CnnPolicy
+action:
+  type: steer_throttle
+  max_speed_mps: 0.22
+  throttle_deadband: 0.05
+observation:
+  type: camera
+  camera:
+    topic: /camera/image_raw_lane
+    width: 84
+    height: 84
+    grayscale: true
+    frame_stack: 4
+domain_randomization:
+  enabled: true
+  # --- H-10 stressors: unchanged from the parent -------------------------
+  # Glare / dusk / motion blur stay events that sometimes happen, at the rate
+  # the trunk trained with. Touching these would confound the run.
+  p_degrade: 0.5
+  level_range:
+  - 0.2
+  - 0.8
+  # --- photometric operating point: the point of this run ----------------
+  # low_contrast is deliberately NOT in `modes`. The sampler draws one stressor
+  # per episode, so a four-mode list at p_degrade 0.5 would show the policy the
+  # physical track's photometry in ~12 % of episodes — as if a mid-grey floor
+  # were a rare event rather than the constant condition M-7 measured. Drawn as
+  # a base term it lands on every episode, before the stressor, at a level
+  # sampled across the whole road-albedo axis.
+  #
+  # base_level_range spans the full [0, 1] on purpose, and the endpoints are
+  # both load-bearing:
+  #   level 0.00 -> road  27 = the Gazebo render itself. Kept in distribution
+  #                 because every scored campaign still evaluates in Gazebo.
+  #   level 0.75 -> road  99 = the measured hall (106 ± 3 over 1521 frames).
+  #   level 1.00 -> road 123 = headroom above it for a brighter floor.
+  # The ceiling is not free choice: apply_low_contrast's defaults are set so the
+  # road stays under the D-43 white gate (V >= 150) at every level, because the
+  # cage's estimator consumes this same frame. A larger lift would blind the
+  # safety monitor rather than stress the policy.
+  base_mode: low_contrast
+  p_base: 1.0
+  base_level_range:
+  - 0.0
+  - 1.0
+dynamics_randomization:
+  enabled: false
+  friction_range:
+  - 0.04
+  - 0.07
+  mass_scale_range:
+  - 0.85
+  - 1.15
+  yaw_scale_range:
+  - 0.8
+  - 1.2
+  latency_steps_range:
+  - 0
+  - 2
+scene_randomization:
+  enabled: false
+  dome_intensity_scale:
+  - 0.6
+  - 1.4
+  sun_intensity_scale:
+  - 0.5
+  - 1.5
+  light_tint: 0.1
+  asphalt_jitter: 0.08
+  line_jitter: 0.15
+  grass_jitter: 0.1
+reward:
+  lateral_error: 2.5
+  heading_error: 0.75
+  steer_delta: 0.2
+  throttle_delta: 0.1
+  forward_progress: 1.0
+  stall_penalty: 0.5
+  stall_progress_min: 0.25
+  termination: 25.0
+cage:
+  enabled: true
+  mode: enforcement
+  yaml_path: ''
+  lookahead_segments: 5
+  throttle_nominal: 0.5
+  yaw_gain: 0.8
+  min_speed_scale: 0.35
+  perception_heading_fit_mode: joint_pair_quadratic
+  perception_heading_gain: 1.6
+  perception_heading_temporal_window: 4
+  perception_heading_temporal_ey_track_m: 0.08
+  perception_heading_temporal_ey_drift_m: 0.03
+  perception_heading_temporal_kappa_gate: 0.3
+  perception_heading_temporal_cap_rad: 0.32
+spawn_perturbation:
+  enabled: true
+  heading_rad: 0.15
+  lateral_m: 0.05
+  random_start_s: true

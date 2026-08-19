@@ -66,6 +66,7 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import Bool, Float64MultiArray
 
 from .cage_perception import CagePerceptionSupervisor
+from .camera_geometry import CameraModel
 from .camera_pipeline import decode_image
 from .cv_lane_estimator import CvLaneEstimator, CvLaneEstimatorConfig
 
@@ -106,6 +107,26 @@ class CvLaneEstimatorNode(Node):
         # Supervisor invalid-persistence budget; <0 keeps CagePerceptionSupervisor's
         # own live-tuned default (min_invalid_cycles=4 at the 10 Hz control rate).
         self.declare_parameter("perception_min_invalid_cycles", -1)
+        # --- physical-camera rectification (M-6/M-7, D-71) --------------------
+        # The IPM above assumes an ideal pinhole with the axis at the image
+        # centre; the real camera is a 160-degree lens read through a crop, and
+        # feeding its distorted frames to that model is what makes C-01 fire at a
+        # true 207-241 mm instead of 160 (M-7 §4). Point this at
+        # experiments/calibration/M6_results.json to undistort each frame into the
+        # canonical camera first. EMPTY BY DEFAULT: every Gazebo run renders the
+        # canonical camera already, so the sim path stays bit-identical, and the
+        # physical path opts in explicitly after a lanecheck on the car.
+        self.declare_parameter("rectify_calibration", "")
+        # Mount extrinsics. <0 keeps the URDF-derived CameraModel defaults (pitch
+        # 0.30 rad, height 0.07725 m). The physical mount measured 0.311 rad /
+        # 0.0779 m (M-6 pitch fit), and fitting the rectified estimator against
+        # the ruler's 250 mm lane preferred 0.310 / 0.0779. Note the residual
+        # scale error after rectification is session-dependent (+8..+30 mm across
+        # three recordings), i.e. what dominates once the optics are corrected is
+        # the mount pose, not the camera — see M-7 §4 and the open hands-off
+        # tape measurement.
+        self.declare_parameter("camera_pitch_rad", -1.0)
+        self.declare_parameter("camera_height_m", -1.0)
 
         cfg_kwargs = dict(
             heading_fit_mode=str(self.get_parameter("heading_fit_mode").value),
@@ -131,7 +152,29 @@ class CvLaneEstimatorNode(Node):
             if _val >= 0.0:
                 cfg_kwargs[_key] = _val
 
-        estimator = CvLaneEstimator(config=CvLaneEstimatorConfig(**cfg_kwargs))
+        cam_kwargs = {}
+        for _key, _attr in (("camera_pitch_rad", "pitch_rad"),
+                            ("camera_height_m", "height_m")):
+            _val = float(self.get_parameter(_key).value)
+            if _val >= 0.0:
+                cam_kwargs[_attr] = _val
+        camera = CameraModel(**cam_kwargs) if cam_kwargs else None
+        estimator = CvLaneEstimator(
+            camera=camera, config=CvLaneEstimatorConfig(**cfg_kwargs)
+        )
+        # Rectification maps are built once here so a bad calibration path fails
+        # at start-up rather than on the first frame with the car moving.
+        self._rectify_maps = None
+        _calib = str(self.get_parameter("rectify_calibration").value).strip()
+        if _calib:
+            from .camera_geometry import rectification_maps_from_calibration
+
+            self._rectify_maps = rectification_maps_from_calibration(
+                _calib, camera or CameraModel()
+            )
+            self.get_logger().info(
+                f"rectifying camera frames into the canonical model using {_calib}"
+            )
         sup_kwargs = {"estimator": estimator}
         _min_invalid = int(self.get_parameter("perception_min_invalid_cycles").value)
         if _min_invalid >= 0:
@@ -209,6 +252,16 @@ class CvLaneEstimatorNode(Node):
                     msg.data, int(msg.height), int(msg.width),
                     msg.encoding, int(msg.step),
                 )
+                if self._rectify_maps is not None:
+                    import cv2
+
+                    # BORDER_REPLICATE, not a black fill: the unmapped strip is
+                    # the extreme near-field corner, and a black wedge there
+                    # would read as a dark object rather than as more road.
+                    frame = cv2.remap(
+                        frame, self._rectify_maps[0], self._rectify_maps[1],
+                        cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE,
+                    )
                 stamp = float(msg.header.stamp.sec) + float(msg.header.stamp.nanosec) * 1e-9
             except ValueError as exc:
                 self.get_logger().warning(f"camera decode failed: {exc}")

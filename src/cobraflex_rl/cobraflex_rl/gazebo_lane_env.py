@@ -371,6 +371,14 @@ class GazeboLaneEnv(gym.Env):
                         level_range=tuple(
                             dr_cfg.get("level_range", (0.2, 1.0))
                         ),
+                        # Operating-point term (sim-to-real, M-7/D-71). Absent
+                        # from every pre-19.08 config, and absent means the
+                        # sampler behaves exactly as it did, RNG stream included.
+                        base_mode=dr_cfg.get("base_mode", None),
+                        p_base=float(dr_cfg.get("p_base", 1.0)),
+                        base_level_range=tuple(
+                            dr_cfg.get("base_level_range", (0.0, 1.0))
+                        ),
                     )
                 )
         else:

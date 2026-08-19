@@ -21,12 +21,14 @@ Mode strings match ``perturbations.mode`` in
 * ``"glare_overexposure"``      — SC-PERT-04 (H-10)
 * ``"low_light_underexposure"`` — SC-PERT-05 (H-10)
 * ``"motion_blur"``             — SC-PERT-06 (H-10)
+* ``"low_contrast"``            — sim-to-real photometry (M-7/D-71); training-only
 * ``"occlusion"``               — SC-PERT-07 (H-11; perception loss)
 * ``"false_lane"``              — SC-PERT-08 (H-12; misleading marking)
 
-``MODES`` is the H-10 trio the training-side domain randomisation draws from
-(`visual_domain_randomization`, SR-012 mitigation); occlusion and false-lane
-are **eval stressors** — training on them would teach the policy to ignore
+``MODES`` is the frozen H-10 trio the SR-012 training-side domain randomisation
+drew from; ``TRAINABLE_MODES`` adds ``low_contrast``, which no scenario exercises
+because it is not a hazard — it is the *physical track's own photometry*, added
+after M-7 measured it. Occlusion and false-lane are **eval stressors** — training on them would teach the policy to ignore
 exactly the cues whose loss must trigger the SR-013/SR-014 stop — and are
 exposed separately via ``EVAL_ONLY_MODES`` / ``ALL_MODES``.
 
@@ -40,11 +42,20 @@ import numpy as np
 GLARE = "glare_overexposure"
 LOW_LIGHT = "low_light_underexposure"
 MOTION_BLUR = "motion_blur"
+LOW_CONTRAST = "low_contrast"
 OCCLUSION = "occlusion"
 FALSE_LANE = "false_lane"
+# The frozen H-10 trio. Left EXACTLY as it was so every past training run's DR
+# draw stays reproducible (the 550k trunk included) — new modes go in
+# TRAINABLE_MODES, never in here.
 MODES = (GLARE, LOW_LIGHT, MOTION_BLUR)
+# What training-time DR may draw from. LOW_CONTRAST is the sim-to-real addition
+# (M-7/D-71); occlusion and false-lane stay out for the reason in the module
+# docstring — training on them teaches the policy to ignore the very cues whose
+# loss must trigger the SR-013/SR-014 stop.
+TRAINABLE_MODES = MODES + (LOW_CONTRAST,)
 EVAL_ONLY_MODES = (OCCLUSION, FALSE_LANE)
-ALL_MODES = MODES + EVAL_ONLY_MODES
+ALL_MODES = TRAINABLE_MODES + EVAL_ONLY_MODES
 
 _MAX = 255.0
 
@@ -90,6 +101,61 @@ def apply_low_light(img: np.ndarray, level: float, *,
     f = img.astype(np.float32)
     mean = float(f.mean())
     out = ((f - mean) * contrast + mean) * gain
+    return np.clip(out, 0.0, _MAX).astype(np.uint8)
+
+
+def apply_low_contrast(img: np.ndarray, level: float, *,
+                       max_black_lift: float = 110.0, min_gain: float = 0.5) -> np.ndarray:
+    """Lifted black level + compressed dynamic range — the *physical track's*
+    photometry, and the sim-to-real gap the 550k trunk fell into (M-7/D-71).
+
+    Neither existing primitive can produce it. ``apply_glare`` needs gain >= 1
+    and saturates the markings; ``apply_low_light`` compresses toward the mean
+    and then *darkens*. The real hall does the opposite of both: it leaves the
+    markings where they are and raises the road out of black.
+
+    Measured inside the estimator's scan band, over three independent physical
+    sessions (1521-frame circuit survey + two hand sweeps) against 420 Gazebo
+    complex_b frames:
+
+    ======================  ======  =========  =====
+    ..                      line    road       ratio
+    ======================  ======  =========  =====
+    Gazebo complex_b        197     **27**     7.3x
+    physical lane circuit   209-217 **106-108**  2.0x
+    ======================  ======  =========  =====
+
+    The markings already agree to 6 %; the whole error is the road, which
+    ``generate_complex_track.ASPHALT = (0, 0, 0)`` renders as near-black while a
+    real hall floor sits at mid grey. Squeezing a sim frame into that band is
+    enough on its own to destroy the trunk policy — its lane response collapses
+    from a 0.363 steering swing to 0.004 and it stops commanding right turns
+    entirely, reproducing the observed physical failure. Pasting the entire
+    workshop above the horizon, by contrast, changes nothing (0.352 vs 0.363),
+    so this is *the* appearance term worth randomising.
+
+    ``level=0`` is the identity. ``level=1`` gives ``min_gain`` with a
+    ``max_black_lift`` pedestal. The defaults are chosen so the **measured**
+    physical condition lands at ``level≈0.75`` (road 27 -> 99, line 197 -> 206,
+    ratio 2.07 against the measured 106/209/2.0) — i.e. inside, not at the edge
+    of, the standard ``level_range=(0.2, 1.0)`` draw, leaving the run headroom
+    on both sides for a different hall or a different floor.
+
+    Fixing the world's asphalt colour instead would hit the same centre but
+    would regenerate every track texture and world, perturbing frozen sim
+    evidence for a single point estimate; randomising the *frame* covers the
+    range and leaves every world bit-identical.
+
+    Deliberately gain-and-pedestal only: the cage's D-43 estimator consumes this
+    same frame (the common-cause design in ``camera_pipeline``), and its white
+    gate is ``V >= 150``. Across the whole level range the markings stay above
+    it and the road stays below, so the DR cannot silently blind the safety
+    monitor during training — asserted in ``test_visual_degradation.py``.
+    """
+    _check(img, level)
+    gain = 1.0 - level * (1.0 - min_gain)
+    lift = level * max_black_lift
+    out = img.astype(np.float32) * gain + lift
     return np.clip(out, 0.0, _MAX).astype(np.uint8)
 
 
@@ -185,6 +251,8 @@ def degrade(img: np.ndarray, mode: str, level: float) -> np.ndarray:
         return apply_low_light(img, level)
     if mode == MOTION_BLUR:
         return apply_motion_blur(img, level)
+    if mode == LOW_CONTRAST:
+        return apply_low_contrast(img, level)
     if mode == OCCLUSION:
         return apply_occlusion(img, level)
     if mode == FALSE_LANE:

@@ -61,9 +61,30 @@ and all three agree:
 > measured effective HFOV is **77.89°**, not 90° (`fx` 395.93 px, not 320). The
 > agreement was circular — the sim mirrored a hardware *parameter default* that
 > had never been measured. So for HFOV, reproducing this path is **not**
-> reproducing the training distribution: real frames are ~24 % narrower in field
-> of view than every frame the 550k policy trained on. Every other row of the
-> table is unaffected. See §2 item 1.
+> reproducing the training distribution. Every other row of the table is
+> unaffected. See §2 item 1.
+>
+> **⚠ Corrected again, 19.08.2026.** The reading that real frames are "~24 %
+> narrower in field of view" is **wrong in sign**. 77.89° is `2·atan(320/fx)` —
+> a *pinhole-equivalent* that discards the barrel distortion, which displaces a
+> mid-row edge pixel by **129 px**. The camera's actual angular coverage is
+> **94.6° horizontal / 52.2° vertical**, i.e. *wider* than the 90° the policy
+> trained on, not 24 % narrower. (Wider is what an IMX219-**160** read through
+> the cropped 1280×720 mode should give; the standard 79.3°-diagonal optic would
+> deliver ~50° here, off by a factor 1.88, so the lens identification is
+> confirmed by the calibration.) The practical consequence is favourable:
+> undistorting the real frame into the canonical 90° camera fills **93 %** of it
+> overall and **100 %** across the estimator's scan band. What is *not* corrected
+> is the conclusion — the geometry still has to be undistorted, and §2 item 1's
+> "correcting `fx` alone makes it worse" is now measured rather than propagated
+> (0.674 → 0.644 on a forward model of the whole chain; undistorting gives
+> 0.998). See the 19.08 CHANGELOG entry.
+>
+> One caveat for later: the plumb-bob polynomial M-6 fitted folds back at
+> `r_u = 1.483` (a 364 px image radius) and the frame corners reach 372 px, so
+> the corners are extrapolation. It is adequate for this crop and for building
+> the rectification maps, which use the *forward* model only. A full-FOV capture
+> mode (`1640×1232`) would need `cv2.fisheye`, not `calibrateCamera`.
 
 | Quantity | Value | Authority |
 | --- | --- | --- |
@@ -160,9 +181,15 @@ the RL chain reads it. To see exactly what the policy sees, point rviz at
      the scale error and the principal-point offset were partially cancelling.
      And with every scalar corrected, a pinhole IPM still leaves ~44 mm — closing
      it requires the estimator to **undistort**, not just to be re-parameterised.
-   * the 550k trunk policy trained on 90° Gazebo frames but will see 77.89° ones,
-     i.e. images ~24 % "zoomed in" relative to its entire training distribution —
-     an observation-space domain shift no IPM correction touches.
+   * ~~the 550k trunk policy trained on 90° Gazebo frames but will see 77.89°
+     ones, i.e. images ~24 % "zoomed in"~~ — **retracted 19.08.2026.** The real
+     coverage is 94.6°, *wider* than 90° (see the §1b correction), and the
+     geometric shift is not what breaks the policy: rectifying the real frames
+     into the canonical camera moves its lane response by essentially nothing
+     (steering swing 0.097 → 0.090). The observation-space shift that *does*
+     break it is **photometric** — Gazebo renders the road at grey 27, the real
+     hall floor sits at 106 — and it is reproducible in simulation by that one
+     transform. See the 19.08 CHANGELOG entry and `tools/sim2real_probe.py`.
    Note the published `CameraInfo` is deliberately the *ideal pinhole the cage
    assumes* — no distortion terms — because publishing measured intrinsics would
    contradict the IPM; reconcile both, do not just add distortion coefficients.

@@ -20,6 +20,7 @@ from cobraflex_rl.visual_degradation import (  # noqa: E402
     FALSE_LANE,
     MODES,
     OCCLUSION,
+    TRAINABLE_MODES,
     apply_false_lane,
     apply_occlusion,
     degrade,
@@ -32,11 +33,16 @@ def _img(seed: int = 0, shape=(40, 60, 3)) -> np.ndarray:
 
 
 def test_mode_partition():
-    # The DR training envelope (MODES) must stay the H-10 trio; the eval-only
-    # stressors live beside it, and degrade() dispatches all of them.
+    # Three-way partition since the sim-to-real photometry mode was added
+    # (M-7/D-71): MODES is the frozen H-10 trio every past training run drew
+    # from, TRAINABLE_MODES is what training may draw from *today*, and the
+    # eval-only stressors live outside both. degrade() dispatches all of them.
     assert OCCLUSION not in MODES and FALSE_LANE not in MODES
     assert set(EVAL_ONLY_MODES) == {OCCLUSION, FALSE_LANE}
-    assert set(ALL_MODES) == set(MODES) | set(EVAL_ONLY_MODES)
+    assert set(MODES) <= set(TRAINABLE_MODES)
+    assert set(ALL_MODES) == set(TRAINABLE_MODES) | set(EVAL_ONLY_MODES)
+    # The load-bearing one: an eval stressor must never become trainable.
+    assert not set(EVAL_ONLY_MODES) & set(TRAINABLE_MODES)
 
 
 @pytest.mark.parametrize("mode", EVAL_ONLY_MODES)

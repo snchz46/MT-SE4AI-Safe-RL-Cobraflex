@@ -48,7 +48,7 @@ from .cage_bridge import (
 )
 from .cage_perception import CagePerceptionSupervisor
 from .cage_viz import CageViz
-from .camera_pipeline import CameraPipeline
+from .camera_pipeline import CameraPipeline, mirror_frame
 from .polyline_tracker import PolylineTracker, TrackState
 from .rewards import compute_reward
 from .scenario_perturbations import NONE as NO_PERTURBATION
@@ -64,6 +64,10 @@ from .visual_degradation import degrade
 from .visual_domain_randomization import (
     DomainRandomizationConfig,
     VisualDomainRandomizer,
+)
+from .geometric_domain_randomization import (
+    GeometricDomainRandomizer,
+    GeometricRandomizationConfig,
 )
 
 
@@ -279,6 +283,13 @@ class GazeboLaneEnv(gym.Env):
         # CagePerceptionSupervisor — never from ground truth, which stays the
         # reward/termination/metrics oracle only.
         self.obs_type = str(obs_cfg.get("type", "state"))
+        # Camera-only augmentations, declared here so the state-vector path can
+        # read them unconditionally (it never enables either).
+        self.mirror_enabled = False
+        self.mirror_probability = 0.0
+        self._mirror = False
+        self.geometric_randomizer = None
+        self._geom_spec = None
         if self.obs_type == "camera":
             cam_cfg = dict(obs_cfg.get("camera", {}))
             grayscale = bool(cam_cfg.get("grayscale", True))
@@ -379,8 +390,61 @@ class GazeboLaneEnv(gym.Env):
                         base_level_range=tuple(
                             dr_cfg.get("base_level_range", (0.0, 1.0))
                         ),
+                        # Second band concentrating the draw on the measured
+                        # hall while keeping the Gazebo render in distribution.
+                        base_level_focus_range=(
+                            tuple(dr_cfg["base_level_focus_range"])
+                            if dr_cfg.get("base_level_focus_range") is not None
+                            else None
+                        ),
+                        p_base_focus=float(dr_cfg.get("p_base_focus", 0.75)),
                     )
                 )
+            # --- Camera geometry randomisation (M-7/D-71) ---------------------
+            # The second sim-to-real term: mount pose, and optionally the full
+            # measured lens. Separate config block from the photometric one
+            # because they are separate physical causes and a run may want one
+            # without the other. Disabled => no RNG consumed.
+            geom_cfg = dict(self.cfg.get("geometric_randomization", {}))
+            self.geometric_randomizer = GeometricDomainRandomizer(
+                GeometricRandomizationConfig(
+                    enabled=bool(geom_cfg.get("enabled", False)),
+                    p_pose=float(geom_cfg.get("p_pose", 1.0)),
+                    pitch_delta_rad=tuple(
+                        geom_cfg.get("pitch_delta_rad", (-0.026, 0.026))
+                    ),
+                    height_scale=tuple(geom_cfg.get("height_scale", (0.90, 1.10))),
+                    p_lens=float(geom_cfg.get("p_lens", 0.0)),
+                    calibration_path=geom_cfg.get("calibration_path"),
+                )
+            )
+            self._geom_spec = None
+            # --- Mirror augmentation (D-71 follow-up) -------------------------
+            # complex_b is driven counter-clockwise and is 6.5:1 left-dominant
+            # (~13 m of driven left arc against ~2 m right per lap; the figure is
+            # scripts/generate_complex_track.py's own). A policy trained only on
+            # it learns "turn left" as a prior: measured over the 285k-step
+            # sim-to-real fine-tune, mean raw steering held at +0.112...+0.120,
+            # flat, and the lane-INDEPENDENT steering bias on the probe did not
+            # move at all (+0.122 -> +0.124) while the lane-dependent response
+            # grew 14x around it. On the real circuit that constant is what drove
+            # the car off the lane regardless of what it saw.
+            #
+            # Mirroring the loop fixes the distribution rather than the policy.
+            # It is exact and needs no second world: the frame flip is applied at
+            # the one point both consumers share, so the policy obs and the
+            # cage's CV estimator stay consistent, and the estimator itself is
+            # antisymmetric to 0.075 mm in ey and 0.165 deg in epsi over 420
+            # frames (420/420 pairing either way) — three orders of magnitude
+            # under its own 13.2 mm re-placement repeatability. The reward is
+            # already sign-invariant (it reads abs(ey) and abs(steer delta)), so
+            # only the actuated steering has to be negated back.
+            mirror_cfg = dict(self.cfg.get("mirror_augmentation", {}))
+            self.mirror_enabled = bool(mirror_cfg.get("enabled", False))
+            self.mirror_probability = float(mirror_cfg.get("p", 0.5))
+            if not 0.0 <= self.mirror_probability <= 1.0:
+                raise ValueError("mirror_augmentation.p must be in [0, 1]")
+            self._mirror = False
         else:
             # [ey, epsi, speed, prev_steer, kappa_near, kappa_far]
             self.observation_space = spaces.Box(
@@ -586,6 +650,10 @@ class GazeboLaneEnv(gym.Env):
         ``options["visual_degradation"]`` ({"mode", "level"} from an SC-PERT
         scenario), or None (clean).
         """
+        # Cleared up-front: the early returns below are the scenario paths
+        # (SC-* eval), which must never inherit a previous episode's mirror.
+        self._mirror = False
+        self._geom_spec = None
         injector = opts.get("visual_injector")
         if injector is not None:
             return injector
@@ -609,12 +677,47 @@ class GazeboLaneEnv(gym.Env):
                 return degrade(frame, mode, level)
 
             return scenario_injector
+        # Training-side augmentation chain. Ordered as the physical world is:
+        # the scene is mirrored first (it is a coordinate convention over the
+        # whole world), the lens and mount see that scene, and the sensor's
+        # photometry happens last. Reversing any pair would model the camera as
+        # sitting in front of the world instead of behind it.
+        #
+        # Every draw is gated on its own switch and consumes RNG only when that
+        # switch is on, so a config carrying none of these blocks leaves the
+        # generator exactly where it was.
+        self._mirror = bool(
+            self.mirror_enabled and self.np_random.random() < self.mirror_probability
+        )
+        geom_spec = None
+        if self.geometric_randomizer is not None:
+            geom_spec = self.geometric_randomizer.sample(self.np_random)
+            self._geom_spec = geom_spec
+            if geom_spec.is_identity:
+                geom_spec = None
+        photometric_spec = None
         if self.dr_enabled and self.domain_randomizer is not None:
             spec = self.domain_randomizer.sample(self.np_random)
             self._dr_spec = spec
             if not spec.is_clean:
-                return lambda frame: self.domain_randomizer.apply(frame, spec)
-        return None
+                photometric_spec = spec
+        if self._mirror is False and geom_spec is None and photometric_spec is None:
+            return None
+
+        mirror = self._mirror
+        geometric = self.geometric_randomizer
+
+        def training_injector(frame):
+            out = frame
+            if mirror:
+                out = mirror_frame(out)
+            if geom_spec is not None:
+                out = geometric.apply(out, geom_spec)
+            if photometric_spec is not None:
+                out = self.domain_randomizer.apply(out, photometric_spec)
+            return out
+
+        return training_injector
 
     def _prime_cage_perception(self, timeout_s: float = 2.0) -> bool:
         """Run the supervisor on fresh spawn frames until it accepts one (or
@@ -805,6 +908,13 @@ class GazeboLaneEnv(gym.Env):
         # `latency_steps` cycles late. Identity for an unperturbed run.
         cmd_linear, cmd_angular = self._delayed_command(cmd_linear, cmd_angular)
 
+        # Undo the mirror at the actuator. Everything above this line — the
+        # policy, the cage, its CV estimate, C-06's rate memory — lives in the
+        # mirrored convention consistently, so this is the single point where
+        # the convention meets the real vehicle. The reward needs no such
+        # treatment: it reads abs(ey) and abs(steer delta) and is invariant.
+        if self._mirror:
+            cmd_angular = -cmd_angular
         # send_action(steer, speed) publishes Twist(angular.z=steer, linear.x=speed).
         self.ros_interface.send_action(cmd_angular, cmd_linear)
         self.ros_interface.step_ros(self.control_dt)
@@ -1172,4 +1282,14 @@ class GazeboLaneEnv(gym.Env):
         if self._multi_circuit:
             info["circuit_index"] = self._active_circuit
             info["circuit_name"] = self._circuits[self._active_circuit]["name"]
+        # Episode-level augmentation draws, logged so a run's handedness balance
+        # and geometry coverage are auditable after the fact rather than assumed
+        # from the config. `ey` above stays the TRUE ground-truth offset in the
+        # unmirrored world, so metrics are unaffected by the convention.
+        if self.mirror_enabled:
+            info["mirrored"] = bool(self._mirror)
+        if self._geom_spec is not None and not self._geom_spec.is_identity:
+            info["geom_lens"] = bool(self._geom_spec.lens)
+            info["geom_pitch_delta_rad"] = float(self._geom_spec.pitch_delta_rad)
+            info["geom_height_scale"] = float(self._geom_spec.height_scale)
         return info

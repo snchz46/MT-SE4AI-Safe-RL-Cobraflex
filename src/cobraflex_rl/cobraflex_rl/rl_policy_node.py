@@ -145,6 +145,26 @@ def main(argv: Optional[List[str]] = None) -> None:
             self.declare_parameter("control_rate_hz", 10.0)
             self.declare_parameter("throttle_map", "policy_2d")
             self.declare_parameter("throttle_nominal", 0.5)
+            # --- physical-camera rectification (M-6/M-7, D-71) ----------------
+            # THE POLICY AND THE CAGE MUST SEE THE SAME FRAME. cv_lane_estimator_node
+            # gained this first, and pointing only that node at a calibration
+            # splits the chain: the cage would arbitrate a rectified world while
+            # the CNN sees the raw 160-degree lens. Both nodes must be given the
+            # same path, or neither.
+            #
+            # It is not a small correction for the policy either. Rendering the
+            # Gazebo pose set through the measured lens costs the 550k trunk a
+            # third of its lane response (steering swing 0.363 -> 0.232), and on
+            # the compound photometric+geometric arm — the deployed condition —
+            # the fine-tuned policy reads swing 0.030 raw against 0.081
+            # rectified. (The 19.08 note that rectification "changes almost
+            # nothing" was measured on the trunk's physical frames, where the
+            # photometric collapse had already taken the response to zero.)
+            #
+            # EMPTY BY DEFAULT: Gazebo renders the canonical camera already, so
+            # the sim path stays bit-identical and the physical path opts in
+            # explicitly, behind a preflight_deploy.py lanecheck.
+            self.declare_parameter("rectify_calibration", "")
 
             ckpt = str(self.get_parameter("checkpoint").value)
             if not ckpt:
@@ -154,6 +174,17 @@ def main(argv: Optional[List[str]] = None) -> None:
             if cls is None:
                 raise RuntimeError(f"rl_policy_node: unknown algorithm {algo!r}")
             self._grayscale = bool(self.get_parameter("grayscale").value)
+            # Built once at start-up so a bad calibration path fails here rather
+            # than on the first frame with the car already moving.
+            self._rectify_maps = None
+            _calib = str(self.get_parameter("rectify_calibration").value).strip()
+            if _calib:
+                from .camera_geometry import rectification_maps_from_calibration
+
+                self._rectify_maps = rectification_maps_from_calibration(_calib)
+                self.get_logger().info(
+                    f"rectifying camera frames into the canonical model using {_calib}"
+                )
             self._stacker = _FrameStacker(int(self.get_parameter("frame_stack").value))
             self._first = True
             self._throttle_map = str(self.get_parameter("throttle_map").value)
@@ -227,6 +258,17 @@ def main(argv: Optional[List[str]] = None) -> None:
             except ValueError as exc:  # a malformed frame must not crash the loop
                 self.get_logger().warn(f"dropped frame: {exc}")
                 return
+            if self._rectify_maps is not None:
+                import cv2
+
+                # BORDER_REPLICATE, not a black fill: the unmapped strip is the
+                # extreme near-field corner, and a black wedge there would read
+                # as a dark object rather than as more road. Same choice as
+                # cv_lane_estimator_node, so both consumers see one frame.
+                frame_bgr = cv2.remap(
+                    frame_bgr, self._rectify_maps[0], self._rectify_maps[1],
+                    cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE,
+                )
             obs_frame = to_observation(frame_bgr, grayscale=self._grayscale)
             obs = (self._stacker.reset(obs_frame) if self._first
                    else self._stacker.step(obs_frame))

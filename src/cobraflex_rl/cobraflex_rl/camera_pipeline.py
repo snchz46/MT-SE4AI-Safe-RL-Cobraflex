@@ -105,6 +105,40 @@ def to_observation(
     return np.ascontiguousarray(small, dtype=np.uint8)
 
 
+def mirror_frame(frame: np.ndarray) -> np.ndarray:
+    """Mirror a camera frame horizontally, for the training-side mirror
+    augmentation (sim-to-real, D-71 follow-up).
+
+    A plain ``frame[:, ::-1]``, and deliberately so after measuring the
+    alternative.
+
+    It is not perfectly centred on the optical axis: the flip maps column ``u``
+    to ``W-1-u``, so the mirrored optical centre lands at ``(W-1)/2 = 319.5``
+    while ``CameraModel.cx`` is ``W/2 = 320``. Measured over the 420-frame
+    Gazebo pose set, that one-pixel offset costs a **constant** 0.075 mm of
+    ``ey`` — the mean, the p95 and the max are all 0.0746, i.e. it is a pure
+    uniform translation with no outliers — which propagates to a bounded 0.0027
+    mean / 0.0032 max steering difference through the shipped CV controller.
+    That is 0.6 % of the estimator's own 13.2 mm re-placement repeatability
+    (M-7 §4) and ~2 % of the +0.13 handedness bias the augmentation exists to
+    remove.
+
+    THE OBVIOUS CORRECTION IS WORSE — DO NOT RE-APPLY IT. Shifting the flipped
+    frame one column right maps ``u -> W-u``, which is *exactly* antisymmetric
+    about ``cx``, and on 95 % of frames it is (residual 5e-5). But the vacated
+    left column has to be filled, and replicating the frame's rightmost column
+    there puts a two-pixel-wide copy of whatever touched the right border at the
+    extreme left edge — where the ground projection's lateral resolution is
+    largest. On the same 420 frames it tipped the estimator's greedy line
+    pairing on 10 of them, mean residual 0.71 mm, worst 223 mm, including one
+    frame whose mirrored ``ey`` came back with the *same* sign as the original.
+    Trading a uniform 0.075 mm bias for occasional sign inversions is a bad
+    trade: the policy can learn around a constant, and cannot learn around a
+    label that is sometimes backwards.
+    """
+    return np.ascontiguousarray(frame[:, ::-1])
+
+
 class CameraPipeline:
     """Per-cycle camera frame processing with a single degradation point.
 

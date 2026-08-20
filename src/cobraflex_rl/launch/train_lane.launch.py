@@ -65,6 +65,18 @@ def generate_launch_description():
         default_value="false",
         description="Launch Gazebo GUI (set true for debugging).",
     )
+    # RViz was previously not forwarded at all, so gazebo_mesh.launch.py's own
+    # default (true) applied and every training run rendered a visualiser nobody
+    # was watching. It costs wall-clock on a loop that is already real-time
+    # bound at sim_real_time_factor 1, and it is the process that throws on
+    # SIGINT at the end of a run. Default false for training; pass rviz:=true to
+    # watch one. It touches no RNG, no physics and no policy, so a run is
+    # unaffected either way.
+    rviz_arg = DeclareLaunchArgument(
+        "rviz",
+        default_value="false",
+        description="Launch RViz alongside training (set true for debugging).",
+    )
     # Training config YAML — selects observation type, hyperparameters AND the
     # algorithm (`algorithm: ppo|sac`); the default mirrors the trainer's own
     # fallback (the F3 state-vector config) so a bare launch is unchanged.
@@ -115,6 +127,7 @@ def generate_launch_description():
         launch_arguments={
             "world": LaunchConfiguration("world"),
             "gui": LaunchConfiguration("gui"),
+            "rviz": LaunchConfiguration("rviz"),
         }.items(),
     )
 
@@ -166,6 +179,7 @@ def generate_launch_description():
         road_centerline_arg,
         world_name_arg,
         gui_arg,
+        rviz_arg,
         train_config_arg,
         run_id_arg,
         model_path_arg,

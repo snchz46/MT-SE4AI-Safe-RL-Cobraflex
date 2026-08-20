@@ -785,6 +785,14 @@ Six scenarios span lateral / heading / compound stressors across two regimes: an
 
 ## SC-FRONT-07 — Mirrored-track generalization (geometry OOD)
 
+> **Scope note (20.08.2026, D-72).** This scenario's premise is that the Y-mirror of complex_b
+> presents *unseen* curve handedness. That premise holds for every policy scored to date,
+> GE4-V2 included, and its result there is unaffected. It does **not** hold for a policy trained
+> with the `mirror_augmentation` term introduced for the sim-to-real run: such a policy sees both
+> handednesses by construction, so for it SC-FRONT-07 is an **in-distribution regression test**,
+> not an OOD probe. Read the scenario accordingly per policy, and use a track the run never saw
+> (complex_d / complex_e) if a geometry-OOD probe is needed for one of those.
+
 > **Track 'E' (end-to-end front-camera), D-43; complex_b-native (added 2026-06-24,
 > Gazebo-validated 2026-06-25).** The OOD axis here is **geometry**, not lateral
 > start: the track is the Y-mirror of complex_b

@@ -107,6 +107,8 @@ consistent with the chapters.
 | D-68 | Heading-recovery band referenced to each run's own envelope | `docs/06`; `docs/05` | ACCEPTED |
 | D-69 | Verdict of record re-pointed to the 2-D PPO 550k campaign; SR-009/SR-010 TBDs closed; simulation programme declared complete | `docs/07`; `docs/02`–`docs/08` | ACCEPTED |
 | D-70 | First physical measurement of the platform: mass corrected to 3.5 kg, the yaw-rate transfer gap (0.4954) quantified, and the "measured" 0.53 m/s² acceleration limit refuted as a unit error | `docs/08` §8.1; `docs/09`; `docs/13`–`docs/14`; `docs/17` | ACCEPTED |
+| D-71 | First track run: the trunk camera policy does not transfer, the D-43 estimator does, and a stationary rig characterises a location rather than a track | `docs/17` §2/§5/§6d; `experiments/calibration/M7_track_perception.md` | ACCEPTED |
+| D-72 | The sim-to-real gap has three terms — handedness, photometry, camera geometry — and only the first is a property of the track | `src/cobraflex_rl/config/train_ppo_camera_2d_sim2real_v2.yaml`; `docs/CHANGELOG` 20.08 | ACCEPTED |
 
 > **Renumbering note (11.06.2026, pre-merge).** The E-track decisions above were
 > originally allocated **D-38 / D-39 / D-40** on the `e2e-camera` branch, while
@@ -3647,3 +3649,111 @@ Cites M-6 (the camera measurement whose propagation this corrects), M-7 (the ses
 D-43 (the estimator, vindicated at its shipped thresholds), D-57 (`heading_bias_rad`, the
 mechanism whose use here is withdrawn), D-66/D-69 (the trunk and the verdict of record, both
 unchanged), D-70 (the yaw characterisation this session re-measured on the track surface).
+
+---
+
+### D-72 — The sim-to-real gap has three terms, not one: handedness, photometry and camera geometry, and only the first is a property of the track
+
+| Field | Value |
+| --- | --- |
+| Section | `src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py`; `geometric_domain_randomization.py` (new); `camera_geometry.py`; `camera_pipeline.py`; `visual_domain_randomization.py`; `rl_policy_node.py`; `launch/deploy_cobraflex.launch.py`; `config/train_ppo_camera_2d_sim2real_v2.yaml` (new) |
+| Status | ACCEPTED — new training-side augmentations and one deployment parameter, **all inert by default**; no SR, cage rule, `cage.yaml` value, ODD parameter or verdict is re-valued. The simulation verdict of record remains the 550k trunk (D-67/D-69). |
+| Date | 20.08.2026 |
+
+**Context.** The 19.08 photometric fine-tune (`ppo_gz2d_sim2real_ft_2024`) ran 284,672 of its
+400,000 steps before being stopped and is the evidence this decision rests on. It was scored
+offline with `sim2real_probe`'s own scorer against the 420-frame Gazebo pose set pushed into the
+hall's photometry — the physical frames are not on the simulation host, so this is the surrogate
+arm and not the gate.
+
+**1. The photometric fine-tune worked, monotonically, and was not enough.** Swing retention at the
+measured hall point went **2 % (trunk) → 28 %** (best checkpoint, 800k) and right-turn share
+**1 % → 14 %**. The gate wants 50 % / 10 % / bias-swing ≤ 1.0; the best checkpoint met one of
+three. Its reward curve is a U — trough 421 at ~697k, 816 by 825k and still rising — so the run
+was stopped mid-recovery, but nothing in the trend suggests the remaining 115k would have closed
+a 28 → 50 gap.
+
+**2. The term that actually failed on the track is not photometric, and 285k steps did not touch
+it.** The lane-*independent* steering bias measured **+0.122 at the trunk and +0.124 after the
+fine-tune**; the ratio improved only because the lane-dependent swing grew 14× around a constant
+that never moved. The cause is the track: `scripts/generate_complex_track.py` states that
+complex_b, driven counter-clockwise, presents **~13 m of driven left arc against ~2 m right per
+lap** (6.5:1), and the fine-tune's own action log held mean raw steering at **+0.112…+0.120, flat
+across all 284,672 steps**. This is track handedness memorised as a steering prior. It is a
+property of the training distribution, not of the camera, and no amount of appearance
+randomisation addresses it.
+
+**3. The geometric term is real, and the 19.08 conclusion that it is negligible does not
+generalise.** That conclusion came from rectifying the trunk's *physical* frames (swing 0.097 →
+0.090) — a policy already at zero response from the photometric collapse, where nothing could
+move. Measured here on policies that still respond, rendering the Gazebo pose set through the
+measured M-6 lens costs the **550k trunk a third of its swing (0.363 → 0.232)**, and on the
+compound photometric+geometric arm — the deployed condition — the fine-tuned policy reads
+**swing 0.030 raw against 0.081 rectified**, the latter landing exactly on its photometric-only
+figure. So rectification is worth ~2.7× of lane response and, after it, photometry is again the
+only binding term.
+
+**4. The cage's estimator is not the weak link, and this was checked rather than assumed.** Under
+the photometric randomisation the D-43 estimator pairs on **100 % of frames from level 0.00 to
+1.00** and its confidence *rises* (0.637 → 0.786); under the full mount-pose range it also pairs
+on 100 %, including the corners. The C-02/C-03/C-05 activity that appeared during the fine-tune —
+absent from the trunk's own training, where the safety rules were latent throughout — was
+therefore **the policy driving worse, not the perception misreading**. The cage stays in
+enforcement for the next run on that basis.
+
+**Decision.**
+
+*Training.* A fresh 2.5M-step run rather than a third continuation, because a prior learned over
+835k steps is slower and less certain to unlearn than never to learn, and because the fine-tune
+also inherited a collapsed action std (0.054 → 0.024, monotone) and a spent LR. Four changes,
+each traced to one of the measurements above: **mirror augmentation** at p = 0.5 per episode;
+the photometric base draw **re-weighted** 75/25 onto the hall band; **geometric randomisation**
+of the mount pose with a 10 % raw-lens minority; and `ent_coef` 0.01 → 0.02 with an LR that
+anneals to a floor instead of to zero.
+
+*Deployment.* Rectify at the source and feed **both** consumers. `rl_policy_node` gains
+`rectify_calibration` — it did not have it, so a rectified deployment would have had the cage
+arbitrating a canonical world while the CNN saw the raw 160° lens — and the launch file exposes
+**one** argument wired to both nodes so they cannot be configured apart. Empty by default; the
+rectified estimator has still never run on hardware.
+
+**Why mirroring the loop rather than adding a mirrored world.** `lane_following_complex_b_flipV.world`
+exists, but the Gazebo trainer is single-circuit (`circuits=[...]` is wired only for the Isaac
+path) and a per-episode world reload is not free. Mirroring in the loop is exact and costs
+nothing: the flip is applied at the single point the policy observation and the cage's CV frame
+share, so the two cannot disagree, and the **D-43 estimator is antisymmetric under it to 0.075 mm
+in `ey` and 0.165° in `epsi` over 420 frames, pairing 420/420 either way** — three orders of
+magnitude under its own 13.2 mm re-placement repeatability. The reward already reads `abs(ey)`
+and `abs(steer delta)`, so only the actuated steering is negated back. End to end through the
+shipped CV controller, an episode and its mirror issue the same physical command to within
+0.0032.
+
+**A correction that was tried, measured and rejected.** The flip maps `u → W-1-u`, so the mirrored
+optical centre lands at 319.5 against `cx = 320` — a constant 0.075 mm `ey` offset (mean = p95 =
+max; a pure translation). Shifting the flipped frame one column right is exactly antisymmetric and
+is so on 95 % of frames, but the vacated column must be filled, and replicating the opposite edge
+puts a doubled column where the ground projection's lateral resolution is largest: it tipped the
+estimator's line pairing on 10 of 420 frames, worst 223 mm, one of them returning the mirrored
+`ey` with the *same* sign as the original. A policy can learn around a constant; it cannot learn
+around a label that is occasionally backwards. The naive flip ships, and
+`camera_pipeline.mirror_frame` records why so the "fix" is not re-applied.
+
+**Consequences.**
+
+* **SC-FRONT-07 changes meaning.** Its premise is "geometry OOD: the Y-mirror of complex_b
+  reverses curve handedness". A mirror-invariant policy handles that by construction, so for any
+  policy from this run the scenario is an **in-distribution regression test**, not an OOD probe.
+  Noted in `docs/05` and `docs/08`; GE4-V2's frozen result is unaffected, and a future OOD
+  geometry probe needs a different track (complex_d/e, or a shape the run never saw).
+* **This run changes four things at once**, deliberately — there is one multi-day slot and each of
+  the four is separately evidenced. Attribution therefore comes from the offline probe arms,
+  which cost no simulation time, and **not** from the run's own reward curve. A contract test
+  pins the config to exactly those four so a fifth cannot creep in.
+* **Checkpoint selection is not by reward.** D-66's lesson held twice (its reward peak was the
+  worst driving candidate), and the fine-tune added a second case: reward recovered monotonically
+  over its last 150k while the sampled steering swing kept shrinking.
+
+Cites D-43 (the estimator, whose antisymmetry makes the mirror exact), D-49/D-50 (the 2-D action
+and the multi-circuit machinery this deliberately does not use), D-60 (entropy collapse, the same
+failure now seen on PPO), D-66 (checkpoint selection by driving, not reward), D-67/D-69 (the trunk
+and the verdict of record, both unchanged), D-71 (the track run this answers).

@@ -21,14 +21,18 @@ import training_metrics as tm  # noqa: E402
 def test_cage_rules_and_schema():
     assert tm.CAGE_RULES == ("C-01", "C-02", "C-03", "C-04", "C-05", "C-06")
     cols = tm.LEARNING_CURVE_COLUMNS
-    # 3 timestep/episode + 6 PPO scalars + 2 aggregate cage + 6 per-rule = 17.
-    assert len(cols) == 17
+    # 3 timestep/episode + 6 PPO scalars + 2 aggregate cage + 6 per-rule
+    # + 1 mirror = 18.
+    assert len(cols) == 18
     assert cols[:4] == ("timestep", "ep_rew_mean", "ep_len_mean", "explained_variance")
     for scalar in ("value_loss", "entropy", "approx_kl", "clip_fraction", "std"):
         assert scalar in cols
     assert "intervention_rate" in cols and "emergency_rate" in cols
     for rule in tm.CAGE_RULES:
         assert f"int_rate_{rule}" in cols
+    # Appended last, so a reader that slices positionally up to the old schema
+    # is unaffected and every column is still addressable by name.
+    assert cols[-1] == "mirror_rate"
     assert len(set(cols)) == len(cols)  # no duplicate column names
 
 
@@ -111,3 +115,21 @@ def test_reset_clears():
     assert stats.total_steps == 0
     assert stats.rates()["intervention_rate"] == 0.0
     assert stats.rates()["int_rate_C-06"] == 0.0
+
+
+def test_mirror_rate_counts_only_mirrored_steps():
+    """The config asserts a 50/50 handedness balance; the curve is the run's own
+    evidence that it got one (sim-to-real, D-71 follow-up)."""
+    stats = tm.RolloutCageStats()
+    stats.update_many(
+        [{"mirrored": True}, {"mirrored": False}, {"mirrored": True}, {"mirrored": False}]
+    )
+    assert stats.rates()["mirror_rate"] == 0.5
+
+
+def test_mirror_rate_is_zero_when_the_augmentation_is_absent():
+    """Every run before the augmentation existed carries no such key, and must
+    report 0.0 rather than crash."""
+    stats = tm.RolloutCageStats()
+    stats.update_many([{"cage_interventions": ["C-06"]}, {}, {"cage_emergency": True}])
+    assert stats.rates()["mirror_rate"] == 0.0

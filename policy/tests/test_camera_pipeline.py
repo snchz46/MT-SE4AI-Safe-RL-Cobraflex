@@ -126,3 +126,40 @@ def test_injector_swap_per_episode():
     pipe.set_injector(None)
     consumer, _ = pipe.process(frame)
     np.testing.assert_array_equal(consumer, frame)
+
+
+# --- mirror_frame (training-side mirror augmentation, D-71 follow-up) --------
+
+
+def test_mirror_frame_is_a_horizontal_flip():
+    from cobraflex_rl.camera_pipeline import mirror_frame
+
+    img = np.arange(2 * 4 * 3, dtype=np.uint8).reshape(2, 4, 3)
+    out = mirror_frame(img)
+    assert np.array_equal(out, img[:, ::-1])
+    assert out.flags["C_CONTIGUOUS"]
+
+
+def test_mirror_frame_is_an_involution():
+    from cobraflex_rl.camera_pipeline import mirror_frame
+
+    img = np.random.default_rng(0).integers(0, 256, (16, 20, 3), dtype=np.uint8)
+    assert np.array_equal(mirror_frame(mirror_frame(img)), img)
+
+
+def test_mirror_frame_does_not_resample_or_replicate_a_border_column():
+    """Pins the decision recorded in mirror_frame's docstring. The 'obvious'
+    one-pixel correction fills the vacated column by replicating the frame's
+    opposite edge, which tipped the D-43 estimator's line pairing on 10 of 420
+    Gazebo frames (worst 223 mm, one with an inverted sign). This asserts the
+    shipped mirror is a pure permutation of the existing columns: every column
+    of the output appears exactly once, so no edge is duplicated."""
+    from cobraflex_rl.camera_pipeline import mirror_frame
+
+    img = np.random.default_rng(1).integers(0, 256, (8, 32, 3), dtype=np.uint8)
+    out = mirror_frame(img)
+    for column in range(img.shape[1]):
+        matches = [
+            j for j in range(out.shape[1]) if np.array_equal(out[:, j], img[:, column])
+        ]
+        assert len(matches) == 1, f"source column {column} appears {len(matches)} times"

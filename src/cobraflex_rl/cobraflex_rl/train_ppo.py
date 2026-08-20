@@ -183,11 +183,39 @@ def _linear_schedule(initial_value: float):
     return schedule
 
 
+def _linear_floor_schedule(initial_value: float, floor_fraction: float):
+    """Linear anneal that stops at ``floor_fraction * initial_value``.
+
+    ``linear`` reaches exactly zero at the last step, which is right for a run
+    sized to its own convergence and wrong for a long one: the sim-to-real
+    fine-tune spent its final 100k steps at an LR small enough to be inert while
+    its reward was still climbing (trough 421 at ~697k, 816 by 825k and rising).
+    On a long, heavily randomised run the tail is where the hard corners of the
+    randomisation distribution finally get visited, and a dead LR there just
+    burns wall-clock.
+
+    ``floor_fraction=0`` is exactly :func:`_linear_schedule`.
+    """
+    if not 0.0 <= floor_fraction <= 1.0:
+        raise ValueError("lr_floor_fraction must be in [0, 1]")
+
+    def schedule(progress_remaining: float) -> float:
+        span = 1.0 - floor_fraction
+        return float(initial_value) * (floor_fraction + span * float(progress_remaining))
+
+    return schedule
+
+
 def _resolve_learning_rate(train_cfg: Dict[str, Any]):
-    """Return the LR (float) or a linear-anneal schedule per ``lr_schedule``."""
+    """Return the LR (float) or an annealing schedule per ``lr_schedule``."""
     base_lr = float(train_cfg.get("learning_rate", 3.0e-4))
-    if str(train_cfg.get("lr_schedule", "constant")).lower() == "linear":
+    schedule = str(train_cfg.get("lr_schedule", "constant")).lower()
+    if schedule == "linear":
         return _linear_schedule(base_lr)
+    if schedule == "linear_floor":
+        return _linear_floor_schedule(
+            base_lr, float(train_cfg.get("lr_floor_fraction", 0.2))
+        )
     return base_lr
 
 
@@ -348,6 +376,13 @@ def _write_training_metadata(
         "campaign_contract": campaign_contract_fingerprint(train_cfg),
         "reward": dict(train_cfg.get("reward", {})),
         "domain_randomization": dict(train_cfg.get("domain_randomization", {})),
+        # The other two sim-to-real randomisation axes (D-71 follow-up). Recorded
+        # alongside the photometric one for the same reason: a run whose camera
+        # geometry and handedness balance live only in a config file that has
+        # since been edited cannot be reconstructed from its own evidence.
+        # ``{}`` = the config predates the block, i.e. nominal camera / no mirror.
+        "geometric_randomization": dict(train_cfg.get("geometric_randomization", {})),
+        "mirror_augmentation": dict(train_cfg.get("mirror_augmentation", {})),
         "status": status,
     }
     with (run_dir / "metadata.json").open("w", encoding="utf-8") as handle:

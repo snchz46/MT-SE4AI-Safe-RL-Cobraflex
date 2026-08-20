@@ -1,0 +1,274 @@
+# Sim-to-real 2-D PPO, trained from scratch against the measured physical track.
+#
+# WHY FROM SCRATCH, AND WHAT THIS RUN IS FOR
+# The 19.08 fine-tune (train_ppo_camera_2d_sim2real_ft.yaml) continued the 550k
+# trunk under a photometric DR term and was stopped at 834,672 of 950,000. It
+# worked, monotonically, and it did not finish the job. Scored offline with
+# sim2real_probe's own scorer on the 420-frame Gazebo pose set pushed into the
+# hall's photometry, swing retention went 2 % (trunk) -> 28 % (best checkpoint,
+# 800k) and right-turn share 1 % -> 14 %. The gate wants 50 % / 10 % / bias-swing
+# ratio <= 1.0; the best checkpoint met one of three.
+#
+# What it did NOT move at all is the term that actually drove the car off the
+# real lane: the lane-INDEPENDENT steering bias, +0.122 at the trunk and +0.124
+# after 285k steps of fine-tuning. The cause is not the camera. complex_b is
+# driven counter-clockwise and is 6.5:1 left-dominant — scripts/
+# generate_complex_track.py states it itself, "~13 m left vs ~2 m right EACH" —
+# and the fine-tune's own action log held mean raw steering at +0.112...+0.120,
+# flat across all 285k steps. That is track handedness memorised as a steering
+# prior, and 550k + 285k steps of it is a lot to unlearn. A fresh run never
+# learns it. That is the reason this is not another continuation, and it also
+# buys a policy that starts with an uncollapsed action std (the fine-tune
+# inherited 0.024, having decayed monotonically from 0.054) and no 150k-step
+# recovery trough to pay for.
+#
+# WHAT THIS RUN IS *NOT*
+# It is not a controlled ablation of any single term — it changes four things at
+# once, deliberately, because there is one multi-day slot and each of the four is
+# separately evidenced. Attribution comes from the offline probe arms, which can
+# be run per-checkpoint at no simulation cost, not from this run's reward curve.
+#
+# It also does not re-score anything. The simulation verdict of record stays the
+# 550k trunk and its 1890-run campaign (D-67/D-69); this is Phase 5, the same
+# posture as D-71.
+#
+# WHAT CHANGES vs train_ppo_camera_2d_cap022_1M.yaml (the trunk's own config)
+# Four blocks, each traced to a measurement:
+#
+#   1. mirror_augmentation  — the handedness prior above. Per-episode coin flip;
+#      the frame is flipped at the one point the policy and the cage's CV
+#      estimator share, and the actuated steering is negated back. Exact: the
+#      D-43 estimator is antisymmetric to 0.075 mm in ey and 0.165 deg in epsi
+#      over 420 frames, pairing 420/420 either way — three orders of magnitude
+#      under its own 13.2 mm re-placement repeatability. The reward already reads
+#      abs(ey) and abs(steer delta), so it needs no change. No second world is
+#      loaded and no episode pays a Gazebo reload.
+#
+#   2. domain_randomization.base_level_focus_range — the photometric term,
+#      re-weighted. The fine-tune drew the road-albedo axis uniformly over
+#      [0, 1] and spent half its episodes far from where the vehicle lives.
+#      75 % of the mass now lands in [0.55, 1.00], which brackets the measured
+#      hall (road grey 106 +/- 3 over 1521 frames), and the remaining 25 % in
+#      [0.00, 0.15] so the Gazebo render itself stays in distribution — every
+#      scored campaign still evaluates there.
+#
+#   3. geometric_randomization — the second sim-to-real term, and the one the
+#      19.08 work concluded was negligible. That conclusion does not survive
+#      contact with a policy that still responds. Rendering the Gazebo pose set
+#      through the measured M-6 lens costs the 550k trunk a third of its lane
+#      response (swing 0.363 -> 0.232), and on the compound photometric+geometric
+#      arm — the deployed condition — the fine-tuned policy reads swing 0.030 raw
+#      against 0.081 rectified. ("Rectification changes almost nothing", 0.097 ->
+#      0.090, was measured on the trunk's physical frames, where the photometric
+#      collapse had already taken the response to zero and nothing could move
+#      it.) So: deploy rectified, and randomise the residual rectification cannot
+#      remove — the mount pose, measured session-dependent at +8...+30 mm and
+#      13.2 mm re-placement. p_lens keeps a 10 % minority on the full raw lens as
+#      insurance, because rectification is still [provisional] on hardware.
+#
+#   4. ent_coef and lr_schedule — PPO health. Over the fine-tune the action std
+#      fell 0.054 -> 0.024 monotonically with no plateau, approx_kl exceeded
+#      target_kl on 13.7 % of updates and explained_variance was negative on
+#      23.5 % of log points. A 2.5M-step run under a much wider randomisation
+#      distribution needs to still be exploring in its last third, and needs an
+#      LR that is not already zero when it gets there.
+#
+# Everything else is copied verbatim from the trunk config, cage block included.
+# In particular the cage keeps joint_pair_quadratic/1.6: the 19.08 finding that
+# near_secant/1.0 is cleaner applies to the RECTIFIED PHYSICAL image, not to the
+# Gazebo render, and changing it here would add a variable to a run that already
+# has four.
+#
+# HOW TO PICK THE CHECKPOINT — not by reward. D-66's lesson held twice now (its
+# reward peak was the worst driving candidate) and the fine-tune added a second
+# case: reward recovered monotonically over its last 150k while the sampled
+# steering swing kept shrinking. Score with tools/sim2real_probe.py against the
+# recorded physical frames, which are the gate, and cross-check the driving with
+# an SC-NOM-01 nominal eval.
+
+total_timesteps: 2500000
+learning_rate: 0.0003
+# Anneals to 20 % of the initial rate instead of to zero. On a 2.5M-step run the
+# plain linear schedule is inert for its last few hundred thousand steps, which
+# is exactly where the far corners of the randomisation distribution get visited.
+lr_schedule: linear_floor
+lr_floor_fraction: 0.2
+target_kl: 0.5
+gamma: 0.99
+gae_lambda: 0.95
+n_steps: 1024
+batch_size: 64
+n_epochs: 10
+clip_range: 0.2
+# 0.01 -> 0.02. The trunk's value was fine for 1M steps on a single clean track;
+# under mirror + photometric + geometric randomisation the policy has far more
+# distribution to cover and the fine-tune showed the std collapsing steadily
+# under the old value. Deployment uses deterministic actions, so this is about
+# keeping exploration alive, not about the deployed action distribution.
+ent_coef: 0.02
+vf_coef: 0.5
+max_grad_norm: 0.5
+normalize_reward: true
+clip_range_vf: 0.2
+clip_reward: 10.0
+device: auto
+service_timeout_ms: 3500
+seed: 2024
+max_episode_steps: 2048
+control_dt: 0.1
+fixed_speed: 0.2
+progress_bounded_tracking: false
+# Off for a multi-day headless run: RViz markers and the Gazebo GUI cost
+# wall-clock for a run nobody will be watching at 03:00. Set true to debug.
+viz: false
+model_path: cobraflex_ppo_gz2d_sim2real_v2
+checkpoint_freq: 25000
+# Left at the trunk's value on purpose. `0` (as fast as possible) is the obvious
+# throughput lever — the fine-tune measured RTF ~0.88, i.e. it was wall-clock
+# bound, not CPU bound — but every camera-track run to date chose 1, and the
+# camera path is the one place where outrunning the renderer would show up as
+# stale observations rather than as an error. Change it only behind a measured
+# short run that compares frame staleness and reward against this setting.
+sim_real_time_factor: 1
+policy: CnnPolicy
+
+action:
+  type: steer_throttle
+  max_speed_mps: 0.22
+  throttle_deadband: 0.05
+
+observation:
+  type: camera
+  camera:
+    topic: /camera/image_raw_lane
+    width: 84
+    height: 84
+    grayscale: true
+    frame_stack: 4
+
+# --- 1. handedness ----------------------------------------------------------
+mirror_augmentation:
+  enabled: true
+  # 0.5 turns complex_b's 6.5:1 left dominance into an exactly balanced
+  # distribution. Not a curriculum and not phased: a phase-block schedule would
+  # let the second half catastrophically forget the first, which is the same
+  # failure the fine-tune's 150k-step recovery trough already demonstrated for a
+  # sudden distribution change. A per-episode draw is stationary.
+  p: 0.5
+
+# --- 2. photometry ----------------------------------------------------------
+domain_randomization:
+  enabled: true
+  # H-10 stressors: unchanged from the trunk, at the rate it trained with.
+  p_degrade: 0.5
+  level_range:
+  - 0.2
+  - 0.8
+  base_mode: low_contrast
+  p_base: 1.0
+  # The minority band: the Gazebo render itself, kept in distribution because
+  # every scored campaign still evaluates there.
+  base_level_range:
+  - 0.0
+  - 0.15
+  # The majority band: the measured hall. level 0.75 lands on road grey 99
+  # against the measured 106 +/- 3; 1.00 is headroom for a brighter floor. Both
+  # endpoints stay under the D-43 white gate, so the cage's estimator — which
+  # consumes this same frame — is stressed and not blinded. Verified: the
+  # estimator pairs on 100 % of frames from level 0.00 to 1.00 and its
+  # confidence rises (0.637 -> 0.786), which is also why the C-02/C-03/C-05
+  # activity seen during the fine-tune was the policy driving worse and not the
+  # perception misreading.
+  base_level_focus_range:
+  - 0.55
+  - 1.00
+  p_base_focus: 0.75
+
+# --- 3. camera geometry -----------------------------------------------------
+geometric_randomization:
+  enabled: true
+  p_pose: 1.0
+  # +/- 1.5 deg. Moves the horizon ~9 px (the model's own d(horizon)/d(pitch) is
+  # ~353 px/rad), several times the 4 px the 19.08 extrinsics correction was
+  # worth. Measured effect on the estimator's metric scale: almost none (ey ratio
+  # 0.983 / 1.006). It perturbs the look-ahead band and the horizon row, which is
+  # an appearance cue for the CNN, not a scale error for the cage.
+  pitch_delta_rad:
+  - -0.026
+  - 0.026
+  # +/- 10 %. This is the term that carries the metric residual: lateral ground
+  # resolution is linear in camera height, and measured over 140 warped frames
+  # the ey ratio moves 1.105 / 0.917 with lane width 297 / 243 mm. That brackets
+  # the +8...+30 mm session-dependent error surviving rectification (3-12 % on a
+  # 250 mm lane) and M-7's 13.2 mm mean re-placement, with margin.
+  height_scale:
+  - 0.90
+  - 1.10
+  # 10 % of episodes see the full measured barrel instead of a pose error.
+  # Insurance: the deployed chain is meant to rectify, so training mostly on
+  # distorted frames would put the policy out of distribution — but rectification
+  # has never run on the car, and if it is misconfigured the failure is total
+  # (the trunk reads swing 0.004 on the compound arm). This buys graceful
+  # degradation for a cost the rest of the distribution barely notices.
+  p_lens: 0.10
+  calibration_path: experiments/calibration/M6_results.json
+
+dynamics_randomization:
+  enabled: false
+  friction_range:
+  - 0.04
+  - 0.07
+  mass_scale_range:
+  - 0.85
+  - 1.15
+  yaw_scale_range:
+  - 0.8
+  - 1.2
+  latency_steps_range:
+  - 0
+  - 2
+
+scene_randomization:
+  enabled: false
+  dome_intensity_scale:
+  - 0.6
+  - 1.4
+  sun_intensity_scale:
+  - 0.5
+  - 1.5
+  light_tint: 0.1
+  asphalt_jitter: 0.08
+  line_jitter: 0.15
+  grass_jitter: 0.1
+
+reward:
+  lateral_error: 2.5
+  heading_error: 0.75
+  steer_delta: 0.2
+  throttle_delta: 0.1
+  forward_progress: 1.0
+  stall_penalty: 0.5
+  stall_progress_min: 0.25
+  termination: 25.0
+
+cage:
+  enabled: true
+  mode: enforcement
+  yaml_path: ''
+  lookahead_segments: 5
+  throttle_nominal: 0.5
+  yaw_gain: 0.8
+  min_speed_scale: 0.35
+  perception_heading_fit_mode: joint_pair_quadratic
+  perception_heading_gain: 1.6
+  perception_heading_temporal_window: 4
+  perception_heading_temporal_ey_track_m: 0.08
+  perception_heading_temporal_ey_drift_m: 0.03
+  perception_heading_temporal_kappa_gate: 0.3
+  perception_heading_temporal_cap_rad: 0.32
+
+spawn_perturbation:
+  enabled: true
+  heading_rad: 0.15
+  lateral_m: 0.05
+  random_start_s: true

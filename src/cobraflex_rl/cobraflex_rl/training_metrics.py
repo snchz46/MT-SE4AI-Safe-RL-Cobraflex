@@ -64,6 +64,10 @@ LEARNING_CURVE_COLUMNS: tuple[str, ...] = (
     + tuple(col for col, _key, _sign in SB3_SCALAR_COLUMNS)
     + ("intervention_rate", "emergency_rate")
     + tuple(f"int_rate_{rule}" for rule in CAGE_RULES)
+    # Share of steps spent in a mirrored episode (sim-to-real, D-71 follow-up).
+    # 0.0 on every run that does not use the augmentation, which is every run
+    # before it existed. Appended, and read by name, so old curves stay readable.
+    + ("mirror_rate",)
 )
 
 
@@ -87,6 +91,7 @@ class RolloutCageStats:
         self.emergency_steps = 0
         self.per_rule: Dict[str, int] = {rule: 0 for rule in CAGE_RULES}
         self.other_rule_steps = 0
+        self.mirrored_steps = 0
 
     def update(self, info: Mapping) -> None:
         """Tally one env step from its ``info`` mapping."""
@@ -101,6 +106,10 @@ class RolloutCageStats:
                 self.other_rule_steps += 1
         if info.get("cage_emergency"):
             self.emergency_steps += 1
+        # The config asserts a 50/50 handedness balance; this is the run's own
+        # evidence that it got one. Absent key = the augmentation is off.
+        if info.get("mirrored"):
+            self.mirrored_steps += 1
 
     def update_many(self, infos: Iterable) -> None:
         """Tally every Mapping in ``infos`` (SB3 passes one info dict per env)."""
@@ -117,4 +126,5 @@ class RolloutCageStats:
         }
         for rule in CAGE_RULES:
             out[f"int_rate_{rule}"] = self.per_rule[rule] / n
+        out["mirror_rate"] = self.mirrored_steps / n
         return out

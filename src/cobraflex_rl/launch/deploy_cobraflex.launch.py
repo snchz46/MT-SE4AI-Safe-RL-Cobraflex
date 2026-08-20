@@ -191,6 +191,21 @@ def generate_launch_description() -> LaunchDescription:
                               description="near_secant = frozen GE4; "
                                           "joint_pair_quadratic = the 2-D trunk."),
         DeclareLaunchArgument("heading_gain", default_value="1.6"),
+        # ONE argument, wired to BOTH the policy and the estimator on purpose.
+        # They consume the same camera topic and must agree about what the frame
+        # means: rectifying only the estimator would have the cage arbitrating a
+        # canonical world while the CNN sees the raw 160-degree lens. Empty by
+        # default — rectification is implemented and offline-validated (slope
+        # 0.998, lane width 249.9 +/- 1.5 mm against a 250 mm ruler) but has
+        # never run on the car, so it is opted into behind a
+        # preflight_deploy.py lanecheck rather than shipped on.
+        DeclareLaunchArgument(
+            "rectify_calibration", default_value="",
+            description="Path to experiments/calibration/M6_results.json to "
+                        "undistort camera frames into the canonical model "
+                        "before BOTH the policy and the CV estimator. Empty = "
+                        "off (every Gazebo path is already canonical).",
+        ),
         DeclareLaunchArgument("policy", default_value="true",
                               description="false = do not start rl_policy_node, "
                                           "leaving /raw_action free for another "
@@ -268,6 +283,7 @@ def generate_launch_description() -> LaunchDescription:
             # Contract items 1 and 3 of the module docstring.
             "control_rate_hz": LaunchConfiguration("control_rate_hz"),
             "throttle_map": "policy_2d",
+            "rectify_calibration": LaunchConfiguration("rectify_calibration"),
         }],
     )
     cv_estimator = Node(
@@ -283,6 +299,7 @@ def generate_launch_description() -> LaunchDescription:
             "white_sat_max": LaunchConfiguration("white_sat_max"),
             "white_val_min": LaunchConfiguration("white_val_min"),
             "heading_temporal_window": LaunchConfiguration("heading_temporal_window"),
+            "rectify_calibration": LaunchConfiguration("rectify_calibration"),
         }],
     )
     cage = Node(

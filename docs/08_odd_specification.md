@@ -282,7 +282,7 @@ ODD-4 introduces **no stressor beyond ODD-2** (TBD-Q12); its profiles are the cr
 | SC-PERT-11 (worn markings) | worn/gaps world variant | spawns `start_s = 2.0 m`, run traverses the worn zone + first scallop curve |
 | SC-PERT-12 (image degradation) | `glare_overexposure` runtime | same start, curve-extended 40 s horizon |
 | SC-PERT-13 (worn markings **+** glare, compounded) | worn variant + glare | the hardest camera case; **2nd adverse scenario for SR-013** (D-29) |
-| SC-FRONT-07 (mirrored geometry OOD) | clean markings | geometry OOD: the Y-mirror of complex_b (`…_flipV.world`) reverses curve handedness |
+| SC-FRONT-07 (mirrored geometry OOD) | clean markings | geometry OOD: the Y-mirror of complex_b (`…_flipV.world`) reverses curve handedness. **OOD only for a policy that has not seen both handednesses** — in-distribution for one trained with `mirror_augmentation` (D-72, 20.08.2026); GE4-V2's result is unaffected |
 
 These are analysed with the D-45 "a safe controlled stop = pass" criterion (adverse) or the paired enforcement-vs-monitoring contrast (frontier). GE4-V2 result: SC-PERT-11 enforcement 30/30 vs monitoring 0/30; SC-PERT-13 enforcement 40/40 vs monitoring 0/40 (the cleanest in-ODD measure of the cage's value under compound camera degradation); SC-FRONT-07 passes (generalises to the flipped straights, cage controlled-stops the flipped curve).
 

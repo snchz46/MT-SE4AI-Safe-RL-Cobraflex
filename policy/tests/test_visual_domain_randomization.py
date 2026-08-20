@@ -187,3 +187,98 @@ def test_base_mode_is_validated_against_the_trainable_set():
         DomainRandomizationConfig(base_mode="sepia")
     with pytest.raises(ValueError):
         DomainRandomizationConfig(base_mode="low_contrast", p_base=1.5)
+
+
+# --- second base band (sim-to-real re-weighting, D-71 follow-up) -------------
+
+
+def _sample_pre_focus_band(cfg, rng):
+    """Transcription of ``VisualDomainRandomizer.sample`` as it stood before the
+    focus band existed. The point of the tests below is that a config which does
+    not use the new field draws the identical numbers *and leaves the generator
+    in the identical state*, so every earlier run stays reproducible from its
+    seed — the same guarantee the base term itself was added under."""
+    base_mode = None
+    base_level = 0.0
+    if cfg.base_mode is not None and rng.random() < cfg.p_base:
+        base_mode = cfg.base_mode
+        lo, hi = cfg.base_level_range
+        base_level = float(rng.uniform(lo, hi))
+    if rng.random() >= cfg.p_degrade:
+        return DegradationSpec(
+            mode=None, level=0.0, base_mode=base_mode, base_level=base_level
+        )
+    mode = cfg.modes[int(rng.integers(0, len(cfg.modes)))]
+    lo, hi = cfg.level_range
+    level = float(rng.uniform(lo, hi))
+    return DegradationSpec(
+        mode=mode, level=level, base_mode=base_mode, base_level=base_level
+    )
+
+
+@pytest.mark.parametrize(
+    "cfg",
+    [
+        DomainRandomizationConfig(),
+        DomainRandomizationConfig(base_mode="low_contrast"),
+        DomainRandomizationConfig(
+            base_mode="low_contrast", p_base=0.6, base_level_range=(0.1, 0.9)
+        ),
+    ],
+)
+def test_without_the_focus_band_the_sampler_is_bit_identical_to_before(cfg):
+    r = VisualDomainRandomizer(cfg)
+    new_rng = np.random.default_rng(4242)
+    old_rng = np.random.default_rng(4242)
+    for _ in range(300):
+        assert r.sample(new_rng) == _sample_pre_focus_band(cfg, old_rng)
+    assert new_rng.bit_generator.state == old_rng.bit_generator.state
+
+
+def test_focus_band_takes_the_configured_share_of_the_mass():
+    cfg = DomainRandomizationConfig(
+        base_mode="low_contrast",
+        base_level_range=(0.0, 0.15),
+        base_level_focus_range=(0.55, 1.0),
+        p_base_focus=0.75,
+    )
+    r = VisualDomainRandomizer(cfg)
+    rng = np.random.default_rng(2024)
+    levels = np.array([r.sample(rng).base_level for _ in range(20000)])
+    assert np.isclose(np.mean(levels >= 0.55), 0.75, atol=0.02)
+    assert np.isclose(np.mean(levels <= 0.15), 0.25, atol=0.02)
+    # Both bands stay inside themselves — no draw lands between them.
+    assert not ((levels > 0.15) & (levels < 0.55)).any()
+
+
+def test_p_base_focus_endpoints_select_one_band_or_the_other():
+    for p, lo, hi in ((1.0, 0.55, 1.0), (0.0, 0.0, 0.15)):
+        r = VisualDomainRandomizer(
+            DomainRandomizationConfig(
+                base_mode="low_contrast",
+                base_level_range=(0.0, 0.15),
+                base_level_focus_range=(0.55, 1.0),
+                p_base_focus=p,
+            )
+        )
+        rng = np.random.default_rng(1)
+        levels = [r.sample(rng).base_level for _ in range(300)]
+        assert all(lo <= v <= hi for v in levels)
+
+
+def test_focus_band_without_a_base_mode_is_rejected():
+    with pytest.raises(ValueError, match="no base term"):
+        DomainRandomizationConfig(base_level_focus_range=(0.5, 0.9))
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"base_level_focus_range": (0.5, 1.2)},
+        {"base_level_focus_range": (0.9, 0.5)},
+        {"p_base_focus": 1.5},
+    ],
+)
+def test_invalid_focus_configuration_is_rejected(kwargs):
+    with pytest.raises(ValueError):
+        DomainRandomizationConfig(base_mode="low_contrast", **kwargs)

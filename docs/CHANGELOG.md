@@ -31,6 +31,116 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [20.08.2026] — The 19.08 fine-tune analysed: it worked and was not enough, the term that failed on the track is the track's own handedness, and the geometric term is not negligible after all
+
+**Document(s) affected:** `docs/DECISIONS.md` (D-72; D-71 index row, previously missing),
+`docs/05_scenario_library.md` (SC-FRONT-07 note), `docs/08_odd_specification.md` (SC-FRONT-07 row),
+`src/cobraflex_rl/cobraflex_rl/gazebo_lane_env.py`,
+`src/cobraflex_rl/cobraflex_rl/geometric_domain_randomization.py` (new),
+`src/cobraflex_rl/cobraflex_rl/camera_geometry.py`,
+`src/cobraflex_rl/cobraflex_rl/camera_pipeline.py`,
+`src/cobraflex_rl/cobraflex_rl/visual_domain_randomization.py`,
+`src/cobraflex_rl/cobraflex_rl/training_metrics.py`,
+`src/cobraflex_rl/cobraflex_rl/train_ppo.py`,
+`src/cobraflex_rl/cobraflex_rl/rl_policy_node.py`,
+`src/cobraflex_rl/launch/deploy_cobraflex.launch.py`,
+`src/cobraflex_rl/config/train_ppo_camera_2d_sim2real_v2.yaml` (new),
+`policy/tests/` (5 new files, 79 new tests)
+**Phase:** 5 (physical deployment)
+**Gate context:** after G4; no gate re-scored, no sim verdict touched
+**Author:** Samuel Sanchez
+
+### Change
+
+The 19.08 fine-tune ran **284,672 of its 400,000 steps** (stopped manually; `status` in its
+metadata reads `failed`, meaning interrupted). Everything below is its analysis and what follows
+from it. **Nothing here has been run on the car**, and the analysis arms are a *surrogate*: the
+1521 physical frames are not on the simulation host — only `labels.csv` survives under
+`experiments/physical/datasets/circuit_export/` — so the checkpoints were scored with
+`sim2real_probe`'s own scorer against the 420-frame Gazebo pose set pushed into the hall's
+photometry. `sim2real_probe` itself, the actual gate, has **not** been run on these checkpoints.
+
+1. **The fine-tune worked, monotonically, and did not finish the job.** Swing retention at the
+   measured hall point went **2 % (trunk) → 28 %** (best checkpoint, 800k), right-turn share
+   **1 % → 14 %**. The gate wants 50 % / 10 % / bias-swing ≤ 1.0 — one of three. Its reward is a U
+   (trough 421 at ~697k, 816 by 825k, still rising), so it was stopped mid-recovery.
+2. **What failed on the track is the track.** The lane-independent bias is **+0.122 at the trunk
+   and +0.124 after 285k steps**; only the swing around it grew. complex_b driven counter-clockwise
+   is **6.5:1 left-dominant** (`generate_complex_track.py`'s own figure: ~13 m of driven left arc
+   against ~2 m right per lap), and the fine-tune's action log held mean raw steering at
+   **+0.112…+0.120, flat throughout**. Appearance randomisation cannot reach this.
+3. **The geometric term is material, contradicting the 19.08 reading.** That reading (rectifying
+   changes 0.097 → 0.090) was taken on a policy already at zero response. On policies that still
+   respond, the measured M-6 lens costs the **trunk a third of its swing (0.363 → 0.232)**, and on
+   the compound photometric+geometric arm the fine-tuned policy reads **0.030 raw vs 0.081
+   rectified** — the latter exactly its photometric-only figure. Rectification is worth ~2.7×, and
+   after it photometry is again the only binding term.
+4. **The estimator is not the weak link.** Under the photometric range it pairs on **100 % of
+   frames at every level** with rising confidence (0.637 → 0.786); under the full mount-pose range
+   it also pairs on 100 %. So the C-02/C-03/C-05 activity during the fine-tune — absent from the
+   trunk's own training — was **the policy driving worse, not perception misreading**. The cage
+   stays in enforcement for the next run on that evidence.
+5. **New: mirror augmentation** (`mirror_augmentation` in the training YAML, inert by default).
+   Per-episode coin flip; the frame is flipped at the one point the policy observation and the
+   cage's CV frame share, and the actuated steering is negated back at the actuator. Exact: the
+   D-43 estimator is **antisymmetric to 0.075 mm in `ey` and 0.165° in `epsi` over 420 frames**
+   (420/420 pairing either way), and end to end through the shipped CV controller an episode and
+   its mirror issue the same physical command to within **0.0032**. The reward needs no change —
+   it already reads `abs(ey)` and `abs(steer delta)`. No second world is loaded: the flipV world
+   exists but the Gazebo trainer is single-circuit and a per-episode reload is not free.
+6. **New: `geometric_domain_randomization`** (inert by default) — mount pitch ±1.5° and height
+   ±10 %, plus an opt-in raw-lens minority. The split of labour was measured, not assumed:
+   **height** carries the metric residual (ey ratio 1.105 / 0.917, lane width 297 / 243 mm, which
+   brackets the +8…+30 mm session-dependent error surviving rectification) while **pitch** moves
+   the horizon and look-ahead band and barely touches scale (0.983 / 1.006). `camera_geometry`
+   gains `distortion_maps_to_calibration` (the stated inverse of the rectifier) and
+   `ground_plane_homography` (exact on the road plane, and only there).
+7. **The photometric base draw gains a second band.** 75 % of the mass now lands in [0.55, 1.00],
+   the measured hall, and 25 % in [0.00, 0.15] so the Gazebo render — where every scored campaign
+   still evaluates — stays in distribution. A config without the new field draws the identical
+   numbers and leaves the generator in the identical state, pinned by a test against a
+   transcription of the previous algorithm.
+8. **Deployment gap closed: `rl_policy_node` now rectifies.** Only the estimator did, so a
+   rectified deployment would have had the cage arbitrating a canonical world while the CNN saw
+   the raw 160° lens. The launch file exposes **one** `rectify_calibration` argument wired to both
+   nodes so they cannot be configured apart. Empty by default.
+9. **New config `train_ppo_camera_2d_sim2real_v2.yaml`** — from scratch, 2.5M steps, seed 2024. It
+   differs from the trunk config in exactly nine keys (the four changes above plus budget, `viz`
+   and `model_path`), which a contract test asserts. `ent_coef` 0.01 → 0.02 and a new
+   `linear_floor` LR schedule answer the fine-tune's PPO health: action std fell 0.054 → 0.024
+   monotonically, `approx_kl` exceeded `target_kl` on 13.7 % of updates, `explained_variance` was
+   negative on 23.5 % of log points.
+10. **Run evidence.** `metadata.json` now records the `geometric_randomization` and
+    `mirror_augmentation` blocks (it recorded only the photometric one), and `learning_curve.csv`
+    gains a `mirror_rate` column — the run's own evidence that it got the handedness balance its
+    config claims, rather than the config's assertion that it should.
+11. **A correction tried, measured and rejected.** The flip maps `u → W-1-u`, leaving the mirrored
+    optical centre at 319.5 against `cx = 320` — a *constant* 0.075 mm offset. The exact fix
+    (shift one column) is exact on 95 % of frames but must fill the vacated column, and replicating
+    the opposite edge tipped the estimator's line pairing on 10 of 420 frames, worst 223 mm, one
+    with an inverted sign. The naive flip ships and `camera_pipeline.mirror_frame` records why.
+12. **SC-FRONT-07 changes meaning.** Its premise is geometry OOD via reversed curve handedness; a
+    mirror-invariant policy handles that by construction, so for any policy from this run it is an
+    in-distribution regression test. GE4-V2's frozen result is unaffected.
+
+### Verification
+
+`pytest` **730 passed, 1 skipped** (79 new: 21 geometric DR, 12 mirror augmentation incl. an
+end-to-end loop-sign check through the real CV controller on 105 Gazebo frames, 10 v2 config
+contract, 9 LR schedule, 8 deploy-rectification contract, 9 photometric focus band, 3 `mirror_frame`,
+2 `mirror_rate`, plus schema updates).
+`python tools/check_traceability.py` — **All checks PASSED, 0 warnings**; no ID added or removed.
+**Run in Gazebo, not just typechecked:** `train_lane.launch.py` with the shipped v2 config
+(budget cut to 2048 steps) completed a full PPO update end to end, wrote its run directory, and
+recorded `mirror_rate` 0.56 / 0.35 across its two rollouts with both new blocks in `metadata.json`.
+
+Not verified, and stated as such: the 2.5M run has not been started; no checkpoint has been scored
+with `sim2real_probe` against the physical frames, which are not on this host; rectification has
+still never run on the car; and the four training changes are deliberately simultaneous, so this
+run cannot attribute an outcome to any one of them.
+
+---
+
 ## [19.08.2026 · later] — The sim camera had lost its pitch since 10.08; the measured extrinsics become the authority and all five URDF variants are unified
 
 **Document(s) affected:** `src/cobraflex/urdf/my_robot_gazebo_mesh.urdf`,

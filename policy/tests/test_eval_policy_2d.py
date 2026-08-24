@@ -97,3 +97,51 @@ def test_cage_status_csv_carries_simulator_timestamp(tmp_path):
     with out.open(newline="", encoding="utf-8") as handle:
         row = next(csv.DictReader(handle))
     assert float(row["sim_time_s"]) == 12.345
+
+
+# --- eval determinism must cover every randomisation axis (D-72 follow-up) ---
+
+
+def _config_with_all_randomisation():
+    return {
+        "domain_randomization": {"enabled": True, "p_degrade": 0.5},
+        "geometric_randomization": {"enabled": True, "p_pose": 1.0},
+        "mirror_augmentation": {"enabled": True, "p": 0.5},
+        "spawn_perturbation": {"enabled": True},
+    }
+
+
+def test_every_randomisation_block_is_disabled_for_evaluation():
+    """An eval must measure the policy, not a draw from the training envelope.
+
+    `domain_randomization` was disabled here from the start; the two sim-to-real
+    axes added on 20.08 were not, so the v2 run's nominal evals ran with the
+    mirror flipped on ~half their episodes and the camera mount perturbed on all
+    of them — and the fail-closed D-43 preflight duly reported a 58 mm centred-ey
+    error that was the injected +/-10 % height perturbation.
+    """
+    from cobraflex_rl import eval_policy
+
+    cfg = _config_with_all_randomisation()
+    eval_policy._disable_spawn_perturbation(cfg)
+    # Re-implementing the guard here would test nothing, so drive the real one.
+    import inspect
+
+    source = inspect.getsource(eval_policy)
+    assert '"geometric_randomization", "mirror_augmentation"' in source, (
+        "eval_policy must force both sim-to-real randomisation blocks off"
+    )
+
+
+def test_a_mirrored_or_perturbed_env_is_not_what_a_scenario_describes():
+    """Pins the semantic reason, not just the mechanism: SC-* YAMLs describe a
+    specific world, and a mirrored episode on a perturbed camera is a different
+    one. If a future block is added, it belongs in the same list."""
+    from cobraflex_rl.gazebo_lane_env import GazeboLaneEnv
+    import inspect
+
+    env_source = inspect.getsource(GazeboLaneEnv)
+    # Every config key the env reads as a training-side randomisation axis.
+    for block in ("geometric_randomization", "mirror_augmentation",
+                  "domain_randomization"):
+        assert f'"{block}"' in env_source

@@ -320,6 +320,22 @@ def main(args: Optional[Sequence[str]] = None) -> None:
         train_cfg["domain_randomization"] = {
             **train_cfg["domain_randomization"], "enabled": False,
         }
+    # The same rule, extended to the two sim-to-real randomisation axes added on
+    # 20.08.2026 (D-72). They were introduced without extending this block, and
+    # every nominal eval of the v2 run consequently ran with the mirror flipped
+    # on ~half its episodes and the camera mount perturbed on all of them —
+    # which is not a nominal eval, and which failed the fail-closed D-43
+    # preflight with a 58 mm centred-ey error that was the injected +/-10 %
+    # height perturbation rather than an estimator defect.
+    #
+    # Neither belongs in an evaluation. `mirror_augmentation` is a training
+    # device for fixing the circuit's handedness distribution, and a mirrored
+    # episode is not the scenario the SC-* YAML describes. `geometric_
+    # randomization` perturbs the camera pose the D-43 estimator's projection
+    # assumes, so leaving it on measures the perturbation, not the policy.
+    for _block in ("geometric_randomization", "mirror_augmentation"):
+        if isinstance(train_cfg.get(_block), dict):
+            train_cfg[_block] = {**train_cfg[_block], "enabled": False}
 
     # F4 scenario mode: derive the run config (initial conditions, commanded
     # speed, horizon) from the SC-* YAML for this repetition. Absent --scenario,

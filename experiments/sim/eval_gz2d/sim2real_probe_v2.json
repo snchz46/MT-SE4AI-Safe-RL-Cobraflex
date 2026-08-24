@@ -1,0 +1,69 @@
+{
+  "schema": "sim2real-probe/v1",
+  "checkpoint": "/home/admit/Samuel/thesis_repo/policy/checkpoints/ppo_gz2d_sim2real_v2_2024_r2_1650000_steps.zip",
+  "real_dataset": "/tmp/claude-1000/-home-admit-Samuel-thesis-repo/ca14ae27-200c-408c-a413-e108f5fc5306/scratchpad/surrogate_physical/frames",
+  "rectified": false,
+  "verdict": "BLOCKED",
+  "reasons": [
+    "lane response retains only 37% of the sim arm's swing (need 50%)"
+  ],
+  "swing_retention_vs_sim": 0.3712122803537821,
+  "arms": {
+    "real": {
+      "n": 417,
+      "ey_span_mm": 173.1104,
+      "slope_per_mm": -0.0005739892484773482,
+      "bias": -0.02623363416748709,
+      "swing": 0.09936350839961314,
+      "bias_over_swing": 0.26401678634355896,
+      "right_fraction": 0.6139088729016786,
+      "r_squared": 0.06384668481738427,
+      "steer_sd": 0.11269156750972892,
+      "sign_correct": true
+    },
+    "real_repeat_stacked": {
+      "n": 420,
+      "ey_span_mm": 173.0036,
+      "slope_per_mm": -0.001654543057533908,
+      "bias": 0.012412432385634806,
+      "swing": 0.28624190530837323,
+      "bias_over_swing": 0.04336343545597449,
+      "right_fraction": 0.4880952380952381,
+      "r_squared": 0.29549993001476427,
+      "steer_sd": 0.15046844030058962,
+      "sign_correct": true
+    },
+    "sim_control": {
+      "n": 140,
+      "ey_span_mm": 180.0,
+      "slope_per_mm": -0.0014870722773041407,
+      "bias": 0.009707223432404672,
+      "swing": 0.2676730099147453,
+      "bias_over_swing": 0.03626523060915426,
+      "right_fraction": 0.6571428571428571,
+      "r_squared": 0.3729190652048993,
+      "steer_sd": 0.16335447672937253,
+      "sign_correct": true
+    }
+  },
+  "observation_photometry": {
+    "real": {
+      "mean": 131.8407440185547,
+      "sd": 57.87548828125,
+      "frac_above_200": 0.2650233843537415,
+      "frac_below_60": 0.0
+    },
+    "sim": {
+      "mean": 88.23348236083984,
+      "sd": 94.61758422851562,
+      "frac_above_200": 0.2942913832199546,
+      "frac_below_60": 0.4928869047619048
+    }
+  },
+  "thresholds": {
+    "min_swing_retention": 0.5,
+    "max_bias_over_swing": 1.0,
+    "min_right_fraction": 0.1,
+    "provisional": true
+  }
+}

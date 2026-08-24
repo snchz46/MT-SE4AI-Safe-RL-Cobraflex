@@ -1,0 +1,109 @@
+{
+  "run_id": "ppo_gz2d_sim2real_v2_2024",
+  "scenario_id": "SC-NOM-01",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-08-21T06:03:13.608716+00:00",
+  "git_commit": "4dca3c12b114b925ffa834220676c51f37bf3053",
+  "train_config": "/home/admit/Samuel/thesis_repo/install/cobraflex_rl/share/cobraflex_rl/config/train_ppo_camera_2d_sim2real_v2.yaml",
+  "train_config_hash": "5952d83f2c9fe64c093d3dd082dd18826d50675e77a7ce5900c6279da482c046",
+  "cage_yaml": "/home/admit/Samuel/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "scenario_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "policy_checkpoint": "cobraflex_ppo_gz2d_sim2real_v2.zip",
+  "policy_checkpoint_hash": null,
+  "parent_policy_checkpoint": null,
+  "parent_policy_checkpoint_hash": null,
+  "parent_vecnormalize": null,
+  "parent_vecnormalize_hash": null,
+  "policy_vecnormalize": "cobraflex_ppo_gz2d_sim2real_v2.vecnormalize.pkl",
+  "policy_vecnormalize_hash": null,
+  "parent_replay_buffer": null,
+  "parent_replay_buffer_hash": null,
+  "policy_replay_buffer": null,
+  "policy_replay_buffer_hash": null,
+  "seed": 2024,
+  "platform": "sim",
+  "total_timesteps": 2500000,
+  "algorithm": "ppo",
+  "hyperparameters": {
+    "learning_rate": 0.0003,
+    "lr_schedule": "linear_floor",
+    "gamma": 0.99,
+    "batch_size": 64,
+    "normalize_reward": true,
+    "n_steps": 1024,
+    "n_epochs": 10,
+    "gae_lambda": 0.95,
+    "clip_range": 0.2,
+    "ent_coef": 0.02,
+    "vf_coef": 0.5,
+    "max_grad_norm": 0.5,
+    "target_kl": 0.5,
+    "clip_range_vf": 0.2
+  },
+  "policy": "CnnPolicy",
+  "observation": {
+    "type": "camera",
+    "camera": {
+      "topic": "/camera/image_raw_lane",
+      "width": 84,
+      "height": 84,
+      "grayscale": true,
+      "frame_stack": 4
+    }
+  },
+  "action": {
+    "type": "steer_throttle",
+    "max_speed_mps": 0.22,
+    "throttle_deadband": 0.05
+  },
+  "campaign_contract": null,
+  "reward": {
+    "lateral_error": 2.5,
+    "heading_error": 0.75,
+    "steer_delta": 0.2,
+    "throttle_delta": 0.1,
+    "forward_progress": 1.0,
+    "stall_penalty": 0.5,
+    "stall_progress_min": 0.25,
+    "termination": 25.0
+  },
+  "domain_randomization": {
+    "enabled": true,
+    "p_degrade": 0.5,
+    "level_range": [
+      0.2,
+      0.8
+    ],
+    "base_mode": "low_contrast",
+    "p_base": 1.0,
+    "base_level_range": [
+      0.0,
+      0.15
+    ],
+    "base_level_focus_range": [
+      0.55,
+      1.0
+    ],
+    "p_base_focus": 0.75
+  },
+  "geometric_randomization": {
+    "enabled": true,
+    "p_pose": 1.0,
+    "pitch_delta_rad": [
+      -0.026,
+      0.026
+    ],
+    "height_scale": [
+      0.9,
+      1.1
+    ],
+    "p_lens": 0.1,
+    "calibration_path": "experiments/calibration/M6_results.json"
+  },
+  "mirror_augmentation": {
+    "enabled": true,
+    "p": 0.5
+  },
+  "status": "failed"
+}

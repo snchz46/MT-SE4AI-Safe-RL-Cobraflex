@@ -102,6 +102,27 @@ experiments/**/*.zip
 !policy/checkpoints/.gitkeep
 !policy/checkpoints/checkpoint_registry.csv
 
+# THE DEPLOYED POLICY. Tracked deliberately, against the rule above, because it
+# is the artefact that goes on the car: a safety argument whose subject cannot be
+# rebuilt from the repository is not reproducible. 20 MB, and it is the only
+# checkpoint that gets this treatment — every other one stays out.
+#
+# ppo_gz2d_sim2real_v2_2024_r2_1650000_steps.zip — the sim-to-real v2 policy
+# (D-72). Chosen on transfer and cage-independence, not reward: best deployment-arm
+# statistics of its run (r^2 0.440, bias/swing 0.10, right-turn share 62.1 %) and it
+# intervenes on 3.0 % of nominal steps against the reward peak's 35.0 %, which
+# matters because D-69 named that C-06 coupling a physical-transfer risk (T2).
+# Authorised by a D-43 preflight PASS (max centred ey error 20.9 mm vs 50 mm).
+#
+# Its paired VecNormalize is NOT tracked and is NOT needed on the car: training
+# builds it with norm_obs=False, norm_reward=True, so it carries reward statistics
+# only. It is required to *resume training*, not to run the policy.
+#
+# NOT YET AUTHORISED FOR THE TRACK: sim2real_probe has never been run against real
+# circuit imagery, because those frames are absent from the simulation host. See
+# docs/17 §7.2.
+!policy/checkpoints/ppo_gz2d_sim2real_v2_2024_r2_1650000_steps.zip
+
 # Generated figures (regenerable from data)
 manuscript/figures/auto/
 

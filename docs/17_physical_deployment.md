@@ -818,3 +818,185 @@ whole chain runs. `policy:=false` brings the chain up without `rl_policy_node`, 
 20 Hz is **13.8 MB/s** to eMMC: the session ended in a Jetson crash, the bag lost its
 `metadata.yaml` (recovered with `ros2 bag reindex`) and one CSV lost its final block; treat
 rates measured while recording as I/O-limited, not as chain capability.
+
+
+## 7. Deploying the sim-to-real v2 policy (prepared 20.08.2026, D-72)
+
+This section is the runbook for the policy trained by
+`config/train_ppo_camera_2d_sim2real_v2.yaml`. It is written **before** that run
+finished, so everything below is a procedure, not a result. Nothing in it has
+been executed on the car.
+
+### 7.1 What is different about this policy
+
+The 550k trunk failed on 18.08 for three separable reasons (D-71, D-72). This
+policy was trained against all three, so the deployment differs in kind:
+
+| Term | Trunk | v2 policy |
+| --- | --- | --- |
+| Handedness | complex_b only, 6.5:1 left → a constant +0.13 steering prior | mirrored per episode, p = 0.5 → the prior has no training signal to form |
+| Photometry | Gazebo's black road (grey 27) only | 75 % of episodes in the measured hall band (road ≈ 99–123), 25 % at the Gazebo render |
+| Camera geometry | canonical pinhole only | mount pitch ±1.5° and height ±10 % every episode, plus 10 % of episodes on the full measured lens |
+
+The third one changes what the *car* must do, not only what the policy saw:
+**the deployment is meant to run rectified.** The mount-pose randomisation covers
+the residual rectification leaves behind (+8…+30 mm, session-dependent); it does
+not cover the whole `k1 = −0.339` barrel, which rectification is there to remove.
+
+### 7.2 Choosing the checkpoint — and the blocker that must be cleared first
+
+100 checkpoints, and **the reward does not order them**. Use
+`tools/select_sim2real_checkpoint.py`, which scores each one's lane response
+through four conditions and ranks on `hall+lens+rect`, the deployment arm:
+
+```bash
+python tools/select_sim2real_checkpoint.py \
+  --prefix ppo_gz2d_sim2real_v2_2024 \
+  --sim-frames experiments/sim/runs/cv_probe_weak_sections_20260713T084230Z/raw_logs/frames \
+  --real experiments/physical/datasets/circuit_export \
+  --output experiments/sim/eval_gz2d/select_v2.json
+```
+
+> **BLOCKER — `--real` cannot be satisfied on this host, and the search for a way
+> round it is finished.** The 18.08 circuit recording's **frames are gone**; only
+> `labels.csv` survives under `experiments/physical/datasets/circuit_export/`.
+> A filesystem-wide search on 23.08.2026 established there is no substitute:
+>
+> * no `.png` anywhere under `experiments/physical`;
+> * the only physical imagery on the machine is M-6's checkerboard calibration
+>   views (`experiments/calibration/M6_camera_hfov/board_views*`) — no lane, no
+>   `ey`, unusable;
+> * of every rosbag on the host, exactly one carries `/camera/image_raw_lane`
+>   (`~/handover_check`) and it also carries `/odom_truth`, i.e. it is a Gazebo
+>   recording, not the car;
+> * the `~/Warren/Cobra_Flex` bags carry no image topic at all.
+>
+> Without the frames `sim2real_probe` — the *gate* — cannot run against real
+> imagery, and the selector falls back to surrogate arms which share the training
+> run's own transform and therefore cannot establish transfer. **No checkpoint is
+> authorised for the track until this is resolved.** Recover the frames by either:
+>
+> * copying `frames/` back from the Jetson beside the existing `labels.csv`, or
+> * re-exporting from the 18.08 bag, or
+> * recording a fresh sweep on the car — **a deliberately weaving pass**, because
+>   the probe refuses a recording spanning under 60 mm of `ey`:
+>   `python tools/record_lane_dataset.py --out experiments/physical/datasets/<name> --rate 5 --seconds 120`
+>
+> Running the selector without `--real` is still worth doing — it narrows 100
+> candidates to a handful — but it **does not authorise driving one**. The tool
+> prints this itself and exits non-zero when nothing clears the floors.
+
+Then cross-check the shortlist by driving in simulation (`SC-NOM-01` nominal
+eval) before the track. A checkpoint that transfers but cannot drive complex_b
+is not a candidate.
+
+**Once the frames exist, the whole gate is one command:**
+
+```bash
+bash tools/run_deploy_gate.sh experiments/physical/datasets/<name>
+```
+
+It ranks every checkpoint against the real recording, then runs the gate on the
+chosen one raw and rectified. Verified end to end on 23.08.2026 against a
+surrogate dataset built in `record_lane_dataset`'s exact layout — all three
+stages, including the selector's `--real` path and the probe's PASS branch, which
+until then had only ever been exercised by unit test.
+
+**Two requirements on the recording, either of which will silently invalidate the
+result if missed.** The frames must be in **temporal order**: the gate scores the
+`k=4 history` arm, which stacks four *consecutive* frames the way
+`rl_policy_node` does, and an unordered set stacks four unrelated views and reads
+as noise. And the pass must **deliberately weave** — the probe refuses a
+recording spanning under 60 mm of `ey`, because a centred pass cannot show a lane
+response.
+
+### 7.3 Bring-up, with rectification on
+
+`rectify_calibration` is a **single launch argument feeding both**
+`rl_policy_node` and `cv_lane_estimator_node`. That is deliberate: the policy did
+not have the parameter before 20.08, so a rectified deployment would have had the
+cage arbitrating a canonical world while the CNN saw the raw 160° lens. Give both
+or neither — the launch makes that structural.
+
+```bash
+ros2 launch cobraflex_rl deploy_cobraflex.launch.py \
+  checkpoint:=<abs>/ppo_gz2d_sim2real_v2_2024_<steps>_steps.zip \
+  rectify_calibration:=<abs>/experiments/calibration/M6_results.json \
+  mode:=enforcement
+```
+
+Rectification is **[provisional] and has never run on hardware.** Offline on 3357
+real frames it restores the estimator to slope 0.998 and lane width 249.9 ± 1.5 mm
+against a 250 mm ruler, but that is offline. Enable it behind
+`preflight_deploy.py lanecheck` (§4), not blind: `lanecheck` compares the
+estimator's `ey` against a tape measure on the track, which is exactly the
+measurement that would catch a rectifier configured wrong.
+
+### 7.4 Sequence
+
+1. `select_sim2real_checkpoint.py` **with `--real`** → a shortlist that cleared the gate.
+2. `SC-NOM-01` nominal eval in Gazebo on the shortlist → confirms it still drives.
+3. `preflight_deploy.py stage0` → camera alone.
+4. `preflight_deploy.py stage1 --mode monitoring`, **wheels up** → chain flowing.
+5. `preflight_deploy.py stage2`, **wheels up** → actuation envelope.
+6. `preflight_deploy.py lanecheck --true-ey <tape>` **on the track**, rectification on →
+   this is where a bad rectifier is caught, and where M-7 §3b's outstanding
+   hands-off tape measurement finally gets taken.
+7. Drive in `enforcement`, tethered.
+
+### 7.5 What would falsify the whole exercise
+
+Stated in advance so the track session is a test and not a demonstration:
+
+* the lane-independent steering bias is still ≫ the lane-dependent swing (the
+  18.08 failure, unchanged) → the mirroring did not transfer, or the bias has a
+  second cause this work did not find;
+* the estimator's `ey` still reads 0.68–0.83 × true **with rectification on** →
+  the residual is not mount pose, and M-6's model is wrong somewhere else;
+* the policy drives but the cage intervenes constantly on C-06 → the
+  `delta_max_steering_per_cycle` coupling flagged as a physical-transfer risk in
+  D-69 (T2) has materialised, and the rate limiter, not the policy, is driving.
+
+### 7.6 Re-running the campaign on the new policy
+
+The 27-scenario × 2-mode × seed-2024 matrix is **1890 runs** and is what produced
+the D-69 verdict of record for the trunk. Re-running it on a v2 checkpoint is
+worthwhile — the training distribution changed enough that the trunk's numbers do
+not carry over — but it is **not a prerequisite for driving**, and it must not be
+started before two things are true:
+
+1. a checkpoint has been chosen by §7.2 (transfer), not by reward; and
+2. the **D-43 preflight passes on that checkpoint's nominal eval trace**. Every
+   scored 2-D campaign to date was authorised this way (`tools/d43_preflight.py`,
+   PASS 7/7 for the 550k trunk); it is what catches a cage acting on a CV estimate
+   that disagrees with ground truth on a centred vehicle.
+
+The invocation follows `experiments/sim/campaign_2d_ppo550k/resume_campaign.sh`,
+including its **`flock` guard** — that guard is not decoration. On 29.07 two
+campaign processes touched the same run directory and 222 runs had to be
+quarantined; the `ps`/`pgrep` check that was supposed to prevent it failed because
+the checking process matched its own command line.
+
+```bash
+exec 9>experiments/sim/campaign_v2/.campaign.lock
+flock -n 9 || { echo "ABORT: another campaign holds the lock"; exit 3; }
+
+python tools/run_campaign.py \
+  --scenario-dir scenarios_complex_b \
+  --model-path policy/checkpoints/ppo_gz2d_sim2real_v2_2024_<steps>_steps.zip \
+  --train-config src/cobraflex_rl/config/train_ppo_camera_2d_sim2real_v2.yaml \
+  --seeds 2024 --modes enforcement,monitoring \
+  --out experiments/sim/campaign_v2 --resume
+```
+
+Two things to expect, both consequences of D-72 rather than surprises:
+
+* **SC-FRONT-07 is no longer an OOD probe** for this policy (§7.1, and the note in
+  `docs/05`). Read its result as a regression test.
+* **The `--train-config` matters.** It carries the mirror and geometric blocks, so
+  the campaign's own evidence records what the policy was trained under. Passing
+  the trunk's config instead would silently mislabel the run.
+
+Do **not** re-score G4 with this. The simulation verdict of record is the 550k
+trunk's 1890-run campaign (D-67/D-69), and a v2 campaign is posterior evidence
+under Phase 5 — the same posture D-71 took.

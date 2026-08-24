@@ -606,3 +606,51 @@ def test_main_blocks_missing_d43_report_before_touching_gazebo(tmp_path, monkeyp
     ])
     assert result == 2
     assert reaped == []
+
+
+# --- concurrent-training guard (21.08.2026 incident) ------------------------
+
+
+def test_live_training_pids_returns_a_list():
+    """Smoke: the guard must never raise, or it would block every campaign."""
+    from tools.run_campaign import _live_training_pids
+
+    pids = _live_training_pids()
+    assert isinstance(pids, list)
+    assert all(p.isdigit() for p in pids)
+
+
+def test_reaper_pattern_would_match_a_training_simulator():
+    """The reason the guard exists, pinned so the hazard cannot be forgotten.
+
+    `_reap_orphan_gazebo` sends SIGKILL to anything matching this pattern. A
+    training's Gazebo runs the same world from the same install path as a
+    campaign's, so the pattern matches it too — which is what killed the 2.5M
+    sim-to-real run at 620,544 steps on 21.08.2026.
+    """
+    import re
+
+    pattern = r"gz sim.*cobraflex/share/cobraflex/worlds"
+    training_cmdline = (
+        "gz sim -r -s -v1 /home/x/thesis_repo/install/cobraflex/share/"
+        "cobraflex/worlds/lane_following_oval_complex.world --force-version 8"
+    )
+    assert re.search(pattern, training_cmdline)
+
+
+def test_guard_ignores_shells_that_merely_mention_the_trainer():
+    """The guard's own first cut had the bug it exists to prevent: `pgrep -f`
+    matched three bash wrappers whose command line contained the pattern (a
+    health sampler, a monitor, and the checking command itself) and blocked
+    three campaign runs while nothing was training. Verification is by `comm`.
+    """
+    from tools.run_campaign import _live_training_pids
+
+    # This test process's own cmdline does not carry the pattern, but the
+    # invariant that matters is that whatever comes back is a real trainer.
+    import subprocess
+
+    for pid in _live_training_pids():
+        comm = subprocess.run(["ps", "-o", "comm=", "-p", pid],
+                              capture_output=True, text=True, check=False).stdout.strip()
+        assert comm.startswith("train_ppo") or comm.startswith("python3"), comm

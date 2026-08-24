@@ -1,0 +1,69 @@
+{
+  "schema": "sim2real-probe/v1",
+  "checkpoint": "/home/admit/Samuel/thesis_repo/policy/checkpoints/ppo_gz2d_sim2real_v2_2024_r2_1650000_steps.zip",
+  "real_dataset": "/tmp/claude-1000/-home-admit-Samuel-thesis-repo/ca14ae27-200c-408c-a413-e108f5fc5306/scratchpad/surrogate_physical/frames",
+  "rectified": true,
+  "verdict": "BLOCKED",
+  "reasons": [
+    "lane response retains only 40% of the sim arm's swing (need 50%)"
+  ],
+  "swing_retention_vs_sim": 0.4024005938265217,
+  "arms": {
+    "real": {
+      "n": 417,
+      "ey_span_mm": 173.1104,
+      "slope_per_mm": -0.0006222143680623807,
+      "bias": -0.0400245688263689,
+      "swing": 0.10771177814102594,
+      "bias_over_swing": 0.371589528249781,
+      "right_fraction": 0.6402877697841727,
+      "r_squared": 0.0710045046962299,
+      "steer_sd": 0.11583876602886051,
+      "sign_correct": true
+    },
+    "real_repeat_stacked": {
+      "n": 420,
+      "ey_span_mm": 173.0036,
+      "slope_per_mm": -0.0018377080567970267,
+      "bias": -0.011461357991687002,
+      "swing": 0.3179301095748901,
+      "bias_over_swing": 0.03604992936029929,
+      "right_fraction": 0.5880952380952381,
+      "r_squared": 0.3067752060409031,
+      "steer_sd": 0.16402589944477017,
+      "sign_correct": true
+    },
+    "sim_control": {
+      "n": 140,
+      "ey_span_mm": 180.0,
+      "slope_per_mm": -0.0014870722773041407,
+      "bias": 0.009707223432404672,
+      "swing": 0.2676730099147453,
+      "bias_over_swing": 0.03626523060915426,
+      "right_fraction": 0.6571428571428571,
+      "r_squared": 0.3729190652048993,
+      "steer_sd": 0.16335447672937253,
+      "sign_correct": true
+    }
+  },
+  "observation_photometry": {
+    "real": {
+      "mean": 132.7089385986328,
+      "sd": 57.79908752441406,
+      "frac_above_200": 0.2623072562358277,
+      "frac_below_60": 0.0
+    },
+    "sim": {
+      "mean": 88.23348236083984,
+      "sd": 94.61758422851562,
+      "frac_above_200": 0.2942913832199546,
+      "frac_below_60": 0.4928869047619048
+    }
+  },
+  "thresholds": {
+    "min_swing_retention": 0.5,
+    "max_bias_over_swing": 1.0,
+    "min_right_fraction": 0.1,
+    "provisional": true
+  }
+}

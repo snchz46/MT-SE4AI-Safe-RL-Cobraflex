@@ -31,6 +31,178 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [23.08.2026] — The v2 run finished at 2.5M; the checkpoint is chosen on transfer and cage-independence, two more failures are documented, and the deployment gate is one command from ready
+
+**Document(s) affected:** `src/cobraflex_rl/cobraflex_rl/eval_policy.py`,
+`tools/run_deploy_gate.sh` (new), `policy/tests/test_eval_policy_2d.py`,
+`experiments/sim/eval_gz2d/d43_preflight_v2_*.json`,
+`experiments/sim/campaign_v2/run_campaign_v2.sh` (new),
+`experiments/sim/training/ppo_gz2d_sim2real_v2_2024/raw_logs/INCIDENTS.md` (I-7, I-8)
+**Phase:** 5 (physical deployment)
+**Gate context:** after G4; no gate re-scored, no sim verdict touched
+**Author:** Samuel Sanchez
+
+### Change
+
+1. **The run completed**: 2,500,544 steps, `status: completed`, 100 checkpoints across
+   both segments. Reward ended in its healthy band (~587) with the cage latent
+   (C-01/C-03/C-04 at zero, emergencies 0.0008) and `mirror_rate` **0.527** — the
+   handedness balance the run exists for, measured rather than assumed.
+2. **Checkpoint of record: 1,650,000**, chosen on transfer and cage-independence, not
+   reward. Best transfer statistics of the run on the deployment arm (r² **0.440**,
+   bias/swing 0.10, right-turn share 62.1 %) and it intervenes on **3.0 %** of nominal
+   steps against the reward peak's **35.0 %**. That second number is the decisive one:
+   D-69 named the C-06 coupling to `delta_max_steering_per_cycle` a physical-transfer
+   risk (T2), so the reward peak's tighter clean-sim tracking (9.6 mm against 19.1) is
+   bought with twelve times the cage dependence.
+3. **D-43 preflight PASSES** on 325k, 1650k and 2000k (max centred ey error 18–21 mm
+   against a 50 mm threshold), which is what authorises a campaign.
+4. **I-7 — a third orphaned Gazebo**, alive 2 d 14 h through `shutdown_on_train_exit`.
+   The mechanism reduces but does not eliminate the leak; anything starting Gazebo here
+   should check first.
+5. **I-8 — every nominal eval of this run measured the randomisation, not the policy.**
+   `eval_policy` forces `domain_randomization.enabled = False` for evaluation and always
+   has; the two blocks added on 20.08 were **not added to that rule**. So seven nominal
+   drives ran with the mirror flipped on ~half their episodes and the camera mount
+   perturbed on all of them, and the fail-closed D-43 preflight duly reported a **58 mm**
+   centred-ey error that was the injected ±10 % height perturbation. The |ey| figures
+   from those runs are **retracted**. Fixed, with the semantic reason recorded — a
+   mirrored episode on a perturbed camera is not the world an SC-* YAML describes — and
+   two tests.
+6. **The deployment gate now runs end to end**, which it never had: the repo noted
+   `sim2real_probe`'s PASS branch was "asserted by unit test, not by a driven car". A
+   surrogate dataset in `record_lane_dataset`'s exact on-disk layout (420 frames +
+   labels.csv) exercised all three stages of `tools/run_deploy_gate.sh`, including the
+   previously untested `--real` path through the selector, and **three checkpoints
+   returned PASS**.
+7. **On the gate's own criteria the v2 policy fixes two of the three that killed the
+   trunk.** Scored on the surrogate's `repeat-stacked` arm — the meaningful one for an
+   unordered pose set — the trunk fails all three (retention 15 %, bias/swing **4.03**,
+   right **1.9 %**) exactly as D-71 recorded, while 1650k reads 107 % / **0.04** /
+   **48.8 %**. The two structural criteria are robust to the stacking caveat below;
+   swing retention is the one still in question.
+8. **A caveat that bounds every surrogate number**: the gate scores the `k=4 history`
+   arm, which stacks four *consecutive* frames as `rl_policy_node` does. The surrogate
+   is an unordered pose set, so that arm stacks four unrelated views and reads as noise —
+   its BLOCKED verdicts are an artefact of the dataset, not a finding. The real 18.08
+   recording is temporally ordered and the arm will be valid there.
+9. **`tools/run_deploy_gate.sh`** reduces the outstanding work to one command once the
+   frames exist, and carries the three recovery routes plus the requirement that the
+   frames be in temporal order and the pass deliberately weaving.
+10. **The 27-scenario campaign is running** on 1650k (`experiments/sim/campaign_v2/`),
+    SC-PERT-03 excluded exactly as in `campaign_2d_ppo550k` (it needs a two-arm manifest;
+    D-64 closed it), behind the same `flock` guard.
+
+### Verification
+
+`pytest` **762 passed, 1 skipped**. `python tools/check_traceability.py` — All checks
+PASSED, 0 warnings. Training completion, the D-43 preflights, the nominal re-runs and
+the full gate script were all **executed**, not asserted.
+
+**Still blocked, and not resolvable from this host**: the 18.08 circuit frames are gone
+(a filesystem-wide search found only M-6 checkerboard views and a Gazebo bag), so the
+gate has not been run against real imagery and **no checkpoint is authorised for the
+track**. Rectification has still never run on the car.
+
+---
+
+## [21.08.2026] — The v2 run was killed at 620k by operator error, not by a fault; the hazard is guarded, the run is resumed, and the reward decline is the circuit's known shape
+
+**Document(s) affected:** `tools/run_campaign.py` (concurrency guard),
+`tools/select_sim2real_checkpoint.py` (ranking metric corrected),
+`src/cobraflex_rl/config/train_ppo_camera_2d_sim2real_v2_resume.yaml` (new),
+`policy/tests/test_run_campaign.py`, `tools/tests/test_select_sim2real_checkpoint.py`,
+`experiments/sim/training/ppo_gz2d_sim2real_v2_2024/raw_logs/INCIDENTS.md` (I-1…I-6)
+**Phase:** 5 (physical deployment)
+**Gate context:** after G4; no gate re-scored, no sim verdict touched
+**Author:** Samuel Sanchez
+
+### Change
+
+1. **The run was killed by the operator at 620,544 steps (24.8 %).** A single-scenario
+   `run_campaign.py` was started beside the running training to answer which checkpoint
+   drives. The campaign reaps orphaned Gazebo servers at start-up with
+   `pkill -9 -f "gz sim.*cobraflex/share/cobraflex/worlds"`, and a training's Gazebo runs
+   the same world from the same install path, so the pattern matched it: `gazebo` exit
+   **-9**, `train_ppo` exit **-2** with a traceback inside `env.step`. `GZ_PARTITION`
+   isolates topics, not processes. `_reap_orphan_gazebo`'s own docstring states the
+   assumption this violated. **Cost: ~20k steps**; all 24 checkpoints intact.
+2. **Guarded.** `run_campaign.py` refuses to start while a trainer is alive, verified by
+   `comm` and never by command line, with `--force-beside-training` as the explicit
+   escape. A test pins that the reaper's pattern *does* match a training cmdline, so the
+   hazard cannot be quietly forgotten.
+3. **A second, chained error, also fixed.** The first cut of that guard used `pgrep -f`,
+   which matches any shell whose command-line text contains the pattern — it found three
+   (a health sampler, a monitor, and the checking command itself) and blocked three runs
+   with nothing training. `reap_sim.sh` documents this trap and the 29.07 incident was
+   misdiagnosed by it. The same defect was in this run's health sampler and monitor,
+   which is why the monitor reported `ERROR SIGNATURE` instead of `TRAINER GONE`: it saw
+   itself. `health.csv` rows after 08:03 are annotated in-file as invalid.
+4. **Resumed** as `ppo_gz2d_sim2real_v2_2024_r2` from the 600k checkpoint and its paired
+   VecNormalize. `total_timesteps: 1_900_000` lands on the original 2.5M
+   (`reset_num_timesteps=False`). The learning rate **continues the parent schedule
+   rather than restarting it** — resuming at the parent's `3e-4` would restart the anneal
+   at full rate, in the direction I-3 identified as harmful. `2.424e-4` with a `0.2475`
+   floor over 1.9M reproduces the remaining segment exactly, slope included
+   (−9.6e-11 per step in both).
+5. **The reward decline is the circuit's known shape, not this run's defect.**
+   `ep_rew_mean` peaked **872 @ 330k** and fell to 124 by 620k. `ppo_newcam_complex_b_2024`
+   on the same circuit peaked **822.9 @ ~297k** and decayed to 114 by 662k — it was
+   stopped by hand and its **peak rescued**, which is how the 297k E-main exists. The
+   mechanisms differ (that run's `value_loss` was 0.007–0.012, "tiny all run"; this one
+   holds 0.055–0.088 with `explained_variance` rising to 0.68), so the shared shape is
+   more likely a property of complex_b than of either run's settings.
+6. **The probe metric moved the other way as the reward fell**, which is the point of the
+   run. On the deployment arm, `r²` — the share of steering variance the lane explains —
+   rose from 0.16 at the reward peak to **0.406** at its lowest, and the right-turn share
+   to **80.7 %**, while the canonical arm collapsed (0.160 → 0.044): the policy is
+   specialising into the hall photometry, 75 % of its episodes.
+7. **Headline, and it is structural rather than magnitude-based.** On the deployment arm
+   the run's checkpoints read `bias_over_swing` **0.07–1.10** and right-turn share
+   **29–72 %**, against **1.44–1.94** / **6–14 %** for every checkpoint of the 19.08
+   fine-tune and **12.9–19.2** / **0.8 %** for the trunk as deployed on 18.08. Those are
+   exactly the two statistics D-71 identified as the failure. **The handedness term is
+   fixed.**
+8. **`select_sim2real_checkpoint.py`'s ranking was wrong, found by running it.** Three of
+   its top five were ranked by "retention" of 304 %, 231 % and 184 % — impossible by the
+   metric's own definition — because retention divides by a canonical arm that had
+   collapsed. It now ranks by absolute swing on the deployment arm behind a
+   `MIN_CANONICAL_SWING` floor. The floor does not fix everything and the tool says so:
+   `r_squared` was tested as a discriminator and **does not separate** an untrained noisy
+   policy from a lane-responsive one (0.282 at 25k against 0.306 at 100k). The tool ranks
+   the *bias structure*, not the response *strength*.
+9. **Three candidates drove SC-NOM-01 with 0 emergencies**: 325k (|ey| 11.8 mm), **450k
+   (9.8 mm)**, 525k (13.3 mm). The I-5 hypothesis that late checkpoints "respond better
+   and drive worse" is **not supported** at that 30 s horizon; a 4400-step repeat is
+   outstanding and can only run once training finishes, which the new guard enforces.
+
+10. **The selector gained the filter its prose warning could not replace.** Fixing the
+    retention artefact (item 8) left the table still ranking the **25k** checkpoint
+    first — an almost untrained policy whose steering is noise, not lane response.
+    `r_squared` was tested as the discriminator and rejected on measurement: 0.282 at
+    25k against 0.306 at 100k and 0.350 at 875k, no separation. The discriminator is
+    not in the probe at all — it is whether the policy could finish an episode, which
+    the run's own `learning_curve.csv` already records. `--learning-curve` (repeatable,
+    since a resumed run writes one curve per segment) now excludes checkpoints from an
+    era whose `ep_len_mean` was under 300 steps, the SC-NOM-01 horizon. This is **not**
+    ranking by reward — the ordering still never reads it; it only excludes eras when
+    the policy was not driving. An absent datum is explicitly not a rejection.
+
+### Verification
+
+`pytest` **760 passed, 1 skipped** (15 new since 20.08: 3 campaign concurrency guard,
+5 selector ranking incl. the 304 % artefact and the resumed-series continuity, 7 for
+the training-ep_len driving filter).
+`python tools/check_traceability.py` — All checks PASSED, 0 warnings.
+The resume was **verified running**, not assumed: `Resumed PPO from …_600000_steps.zip at
+600000 steps`, one `gz` server, trainer RSS 2044 MB.
+
+Not verified: the run has not finished; no checkpoint has been scored with
+`sim2real_probe` against the physical frames, which are still **not on this host**; the
+4400-step nominal repeat has not been run; and rectification has still never run on the car.
+
+---
+
 ## [20.08.2026] — The 19.08 fine-tune analysed: it worked and was not enough, the term that failed on the track is the track's own handedness, and the geometric term is not negligible after all
 
 **Document(s) affected:** `docs/DECISIONS.md` (D-72; D-71 index row, previously missing),
@@ -122,20 +294,43 @@ photometry. `sim2real_probe` itself, the actual gate, has **not** been run on th
 12. **SC-FRONT-07 changes meaning.** Its premise is geometry OOD via reversed curve handedness; a
     mirror-invariant policy handles that by construction, so for any policy from this run it is an
     in-distribution regression test. GE4-V2's frozen result is unaffected.
+13. **New `tools/select_sim2real_checkpoint.py`** — the run leaves 100 checkpoints and the reward
+    does not order them (D-66's reward peak was its worst driving candidate; the fine-tune's reward
+    recovered monotonically across its last 150k while the sampled steering swing kept shrinking).
+    It scores each checkpoint's lane response through four conditions — `canonical`, `hall`,
+    `hall+lens`, `hall+lens+rect` — using `sim2real_probe`'s own scorer so the numbers cannot drift
+    from the gate, and ranks on the deployment arm. Validated against the 19.08 fine-tune's 11
+    checkpoints, where it reproduces the manual analysis exactly (800k best at 24 % retention,
+    **0 of 11 clearing the floors**) and exits 2. Without `--real` it prints, and this is the
+    point, that these are surrogate arms which cannot authorise a deployment.
+14. **`docs/17` §7 — the v2 deployment runbook**, written before the run finished and marked as
+    procedure rather than result. It records the **blocker**: the 18.08 circuit recording's frames
+    are gone from the simulation host (only `labels.csv` survives; `find experiments/physical -name
+    '*.png'` returns nothing), so `sim2real_probe` — the gate — cannot be run at all until they are
+    recovered from the Jetson, re-exported from the bag, or re-recorded as a deliberately weaving
+    pass. §7.5 states in advance what would falsify the exercise, so the track session is a test
+    and not a demonstration.
 
 ### Verification
 
-`pytest` **730 passed, 1 skipped** (79 new: 21 geometric DR, 12 mirror augmentation incl. an
-end-to-end loop-sign check through the real CV controller on 105 Gazebo frames, 10 v2 config
-contract, 9 LR schedule, 8 deploy-rectification contract, 9 photometric focus band, 3 `mirror_frame`,
-2 `mirror_rate`, plus schema updates).
+`pytest` **745 passed, 1 skipped** (94 new: 21 geometric DR, 12 mirror augmentation incl. an
+end-to-end loop-sign check through the real CV controller on 105 Gazebo frames, 15 checkpoint
+selector, 10 v2 config contract, 9 LR schedule, 8 deploy-rectification contract, 9 photometric
+focus band, 3 `mirror_frame`, 2 `mirror_rate`, plus schema updates).
 `python tools/check_traceability.py` — **All checks PASSED, 0 warnings**; no ID added or removed.
 **Run in Gazebo, not just typechecked:** `train_lane.launch.py` with the shipped v2 config
 (budget cut to 2048 steps) completed a full PPO update end to end, wrote its run directory, and
 recorded `mirror_rate` 0.56 / 0.35 across its two rollouts with both new blocks in `metadata.json`.
 
-Not verified, and stated as such: the 2.5M run has not been started; no checkpoint has been scored
-with `sim2real_probe` against the physical frames, which are not on this host; rectification has
+**The 2.5M run was launched at 11:46 on 20.08** (`experiments/sim/training/ppo_gz2d_sim2real_v2_2024/`),
+detached, with a 60 s health sampler writing `raw_logs/health.csv` — RSS, swap, GPU, orphan-Gazebo
+count and timestep. That sampler exists because the 19.08 fine-tune took the machine down after
+~8 h and the cause was never established (no root for dmesg/journal, no OOM trace, evidence gone by
+the time anyone looked); 2.5M steps is ~10× that exposure, so the data is collected up front rather
+than reconstructed afterwards.
+
+Not verified, and stated as such: the run has not finished; no checkpoint has been scored with
+`sim2real_probe` against the physical frames, which are **not on this host**; rectification has
 still never run on the car; and the four training changes are deliberately simultaneous, so this
 run cannot attribute an outcome to any one of them.
 

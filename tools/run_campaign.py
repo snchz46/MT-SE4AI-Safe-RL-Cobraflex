@@ -680,6 +680,50 @@ def _read_summary(output_root: Path, run_id: str) -> Optional[Dict[str, object]]
     return None
 
 
+def _live_training_pids() -> List[str]:
+    """PIDs of any `train_ppo` process currently running on this host.
+
+    Exists because `_reap_orphan_gazebo` below cannot tell a training's Gazebo
+    from an orphan: both match `gz sim .* cobraflex/share/cobraflex/worlds`, and
+    the reaper sends SIGKILL. On 21.08.2026 starting a single-scenario campaign
+    beside a running 2.5M-step training killed the training's simulator at
+    startup — `gazebo` exit -9, `train_ppo` exit -2 — and cost 20k steps back to
+    the last checkpoint.
+
+    The reaper's own docstring states its assumption ("after a run returns there
+    must be no gz server we still need"); it is sound, and holds whenever a
+    campaign owns the machine. This guard makes the assumption checkable instead
+    of leaving it to the operator's memory.
+    """
+    import subprocess
+
+    # Verified by `comm`, never by cmdline alone. `pgrep -f` also matches any
+    # shell whose command-line *text* contains the pattern — the wrapper that
+    # launched the trainer, a monitor watching for it, or the checking command
+    # itself. `reap_sim.sh` documents this, and the 29.07 concurrency incident
+    # was misdiagnosed for the same reason ("the matching process was the
+    # checker itself, because its own cmdline carried the search pattern").
+    # A first cut of this guard reproduced the bug and blocked three campaign
+    # runs with no training running at all.
+    proc = subprocess.run(
+        ["pgrep", "-f", r"lib/cobraflex_rl/train_ppo"],
+        capture_output=True, text=True, check=False,
+    )
+    live: List[str] = []
+    for pid in proc.stdout.split():
+        if not pid.strip():
+            continue
+        comm = subprocess.run(
+            ["ps", "-o", "comm=", "-p", pid],
+            capture_output=True, text=True, check=False,
+        ).stdout.strip()
+        # ps truncates comm to 15 chars; the trainer reports `train_ppo`, and a
+        # bare interpreter invocation would report `python3`.
+        if comm.startswith("train_ppo") or comm.startswith("python3"):
+            live.append(pid)
+    return live
+
+
 def _reap_orphan_gazebo() -> int:
     """Kill any lingering ``gz sim`` server for a cobraflex world.
 
@@ -1047,6 +1091,10 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     p.add_argument("--no-frontier-plots", dest="frontier_plots", action="store_false",
                    help="skip auto-rendering the frontier cage-efficacy figures after the run.")
     p.set_defaults(frontier_plots=True)
+    p.add_argument("--force-beside-training", action="store_true",
+                   help="run even though a train_ppo process is alive. The "
+                        "orphan-Gazebo reaper cannot distinguish a training's "
+                        "simulator from an orphan and will SIGKILL it.")
     p.add_argument("--dry-run", action="store_true",
                    help="build the matrix + D-29 feasibility and stop (no Gazebo).")
     # Track-'E' camera campaign knobs (F-track defaults preserved).
@@ -1250,6 +1298,20 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     runs_root = args.out / "runs"
     # Clear any gz servers a previously-crashed campaign left orphaned, so we
     # start from a clean memory baseline (each orphan is ~2 GB).
+    if not args.force_beside_training:
+        training = _live_training_pids()
+        if training:
+            print(
+                "\nERROR: a training process is running on this host (pid(s) "
+                + ", ".join(training) + ").\n"
+                "This campaign reaps orphaned Gazebo servers with "
+                "`pkill -9 -f 'gz sim.*cobraflex/share/cobraflex/worlds'`, which "
+                "matches a TRAINING's simulator as well as an orphan's, and would "
+                "kill it.\n"
+                "Wait for the training to finish, or pass --force-beside-training "
+                "if you have verified it is safe."
+            )
+            return 2
     _reap_orphan_gazebo()
     print(f"\nExecuting {len(matrix)} run(s) -> {runs_root}\n" + "=" * 56)
 

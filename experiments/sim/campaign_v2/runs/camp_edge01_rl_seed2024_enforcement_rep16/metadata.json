@@ -1,0 +1,31 @@
+{
+  "run_id": "camp_edge01_rl_seed2024_enforcement_rep16",
+  "scenario_id": "SC-EDGE-01",
+  "mode": "enforcement",
+  "timestamp_iso": "2026-08-23T20:55:40.570486+00:00",
+  "duration_s": 15.0,
+  "git_commit": "4dca3c12b114b925ffa834220676c51f37bf3053",
+  "train_config": "src/cobraflex_rl/config/train_ppo_camera_2d_sim2real_v2.yaml",
+  "train_config_hash": "5952d83f2c9fe64c093d3dd082dd18826d50675e77a7ce5900c6279da482c046",
+  "cage_yaml": "/home/admit/Samuel/thesis_repo/cage/cage.yaml",
+  "cage_yaml_hash": "4287fe711b662eb980fff82bb1491ba1e597112a38acdae276a104ae1cd8225c",
+  "policy_checkpoint": "policy/checkpoints/ppo_gz2d_sim2real_v2_2024_r2_1650000_steps.zip",
+  "policy_checkpoint_hash": "c67c3daf0e7be7c65c54bbfafd13adfb83ca5e2eec40a54b098f92e5a80dc0ec",
+  "centerline_yaml_hash": "f04a04e6e2c131ed91b9ad71205b76fa23f0d54300e4299e0f4bfd3bab9417bc",
+  "scenario_yaml": "scenarios_complex_b/edge/sc_edge_01.yaml",
+  "scenario_yaml_hash": "5d7fdcf0fe949beb31f456fa740464e17f4aa47723e98a2735920104c6151e18",
+  "criterion_arm": "",
+  "protocol_manifest": "",
+  "protocol_manifest_hash": null,
+  "rep": 16,
+  "seed": 2024,
+  "algorithm": "ppo",
+  "action": {
+    "type": "steer_throttle",
+    "max_speed_mps": 0.22,
+    "throttle_deadband": 0.05
+  },
+  "campaign_contract": null,
+  "platform": "sim",
+  "status": "completed"
+}

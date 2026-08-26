@@ -4,13 +4,17 @@
 #   bash tools/run_deploy_gate.sh <dataset-dir> [checkpoint.zip]
 #
 # <dataset-dir> must hold frames/*.png plus labels.csv, the layout
-# tools/record_lane_dataset.py writes. As of 23.08.2026 the 18.08 circuit
-# recording's frames are NOT on this host (only labels.csv survives under
-# experiments/physical/datasets/circuit_export/), so this cannot be run yet.
-# Recover them one of three ways:
-#   * copy frames/ back from the Jetson beside the existing labels.csv, or
-#   * re-export from the 18.08 bag, or
-#   * record a fresh pass:
+# tools/record_lane_dataset.py writes.
+#
+# The 23.08.2026 note here said the 18.08 circuit frames were lost. They were not:
+# they are on the JETSON at experiments/physical/datasets/circuit_export/frames
+# (1521 PNG, 439 MB), gitignored by experiments/physical/datasets/*/frames/, which
+# is why a search of the compute host found nothing. Run on 26.08.2026 against that
+# recording: PASS raw and PASS rectified (docs/17 §8.1).
+#
+# NOTE the Jetson holds only the deployed checkpoint, so stage 1 below (ranking all
+# ~100 candidates) needs the compute host; the Jetson can run stages 2-3, the gate
+# proper. To record a fresh dataset instead:
 #       python tools/record_lane_dataset.py --out experiments/physical/datasets/<name> \
 #         --rate 5 --seconds 120
 #     DELIBERATELY WEAVING — the probe refuses a recording spanning under 60 mm

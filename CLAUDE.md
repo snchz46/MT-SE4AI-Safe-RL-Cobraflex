@@ -155,19 +155,33 @@ script reports orphans on either side.
   randomisation, not the policy** (`eval_policy` disabled `domain_randomization` but not the two new blocks):
   those |ey| figures are **retracted**; fixed, with two tests. Runbook: docs/17 §7; incidents I-1…I-8 in the
   run's `raw_logs/INCIDENTS.md`.
-- **The deployment gate is one command — and the blocker on it is a host-topology artefact (verified
-  24.08.2026).** [`tools/run_deploy_gate.sh`](tools/run_deploy_gate.sh) ranks every checkpoint against real
-  imagery, then runs `sim2real_probe` raw and rectified; verified end to end on a surrogate dataset (the
-  selector's `--real` path and the probe's PASS branch had until then only ever been unit-tested). docs/17 §7.2
-  and CHANGELOG 23.08 record the 18.08 circuit **frames as lost** — that filesystem search covered the
-  **Ubuntu compute host**. The frames are on the **Windows host**:
-  `experiments/physical/datasets/circuit_export/frames`, **1521 PNG, 439 MB**, temporally ordered, ey span
-  **505 mm**, 95.3 % paired (plus `lane_00_firstpass` 1205 and `lane_A` 631) — gitignored by the
-  `experiments/physical/datasets/*/frames/` rule in `.gitignore`, which is exactly why they never crossed. They need an **out-of-band copy**
-  (rsync/scp) to `/home/admit/Samuel/thesis_repo`, where the other ~99 checkpoints live. **Until the gate runs
-  against real imagery no checkpoint is authorised for the track**, and a PASS is necessary, not sufficient:
-  docs/17 §7.4 still requires SC-NOM-01 in Gazebo, `preflight_deploy.py` stage0/1/2 wheels-up, and `lanecheck`
-  **on the track** with rectification on.
+- **The deployment gate PASSED on real imagery, and the car has been DRIVEN (26.08.2026, docs/17 §8).**
+  The frames were never lost — they are on the **Jetson** at
+  `experiments/physical/datasets/circuit_export/frames` (**1521 PNG, 439 MB**, temporally ordered, ey span
+  505 mm, 95.3 % paired; plus `lane_00_firstpass` 1205 and `lane_A` 631), gitignored by the
+  `experiments/physical/datasets/*/frames/` rule, which is why the compute host's search found nothing. The
+  23.08/24.08 "frames are lost" and "they are on the Windows host" notes are both **retracted**; this is the
+  mistake the three-machine note below warns about. [`run_deploy_gate.sh`](tools/run_deploy_gate.sh) probe
+  stages on that recording: **PASS raw** (retention 1.29, bias/swing 0.10) and **PASS rectified** (1.21, 0.17,
+  right-turn share 66.6 % vs the sim arm's 66.4 %). Note the Jetson holds only the deployed checkpoint, so the
+  selector's ~100-candidate ranking still needs the compute host. **`verdict_phys` remains open**: 19.28 m
+  covered is not a scored scenario.
+- **The v2 policy transfers — first physical drive that works (26.08.2026, docs/17 §8).** `19.28 m` on the
+  real circuit (one perimeter's worth) in `monitoring` + rectified + `near_secant`, `|ey|` median ≈ **9 mm**
+  while moving, **no safety rule fired at all** during driving (only C-06, 5–7 % vs the 3.0 % that chose the
+  checkpoint in sim → D-69's **T2 did not materialise**). But **not a clean lap**: six segments, **five
+  operator `/cage_reset` publications**, and a lane departure in the final curve. Four things stop the car and
+  **none is the policy** — (i) **C-05 has no operational story on hardware**: a 120 ms glitch the estimator
+  recovered from by itself stops the car permanently, since `require_explicit_reset` assumes an episode that
+  ends (open decision, candidate D-NN); (ii) **camera starvation**, upstream of (i) — 7.3 Hz against the
+  trained 10 Hz, worst gap 995 ms = 171 mm open-loop, cause is CPU (load 5.49/6 cores with layer 3 *not*
+  running; killing `rviz2` → 9.5 Hz) — **the next work item**; (iii) **ZED pose jumps, now measured**: 3621.8
+  mm in one frame → ekf `vx` −4.03 m/s, and an earlier spike to 5.479 m/s firing C-04→C-03→C-05; (iv) **C-04's
+  dead zone**: `v_max_curve_mps` 0.25 > deployed 0.22, so C-04 **can never fire** — D-69's finding (ii) is no
+  longer only a coverage gap, and that tightest curve is where it left the lane **twice**. Also settled on
+  hardware: **rectification is decisive** (perception-invalid 45 % → 5.5 %, C-01 fires 102 → 0) and
+  **`heading_fit_mode` decides whether it drives at all** (`joint_pair_quadratic` 1.08 m vs `near_secant`
+  14.45 m) while being **invisible at rest** — D-71 §3's method lesson again.
 - **`campaign_v2` — posterior evidence; it does NOT re-score G4.** The same 27 × 2 × seed-2024 matrix
   (1890 runs, SC-PERT-03 excluded per D-64) on the 1650k checkpoint, behind the `flock` guard;
   `experiments/sim/campaign_v2/` held **20 runs** at the 24.08 commit. Not a prerequisite for driving

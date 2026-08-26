@@ -1,7 +1,16 @@
 # 17 · Physical deployment (Phase 5) — bring-up plan for the real CobraFlex
 
-**Status: RUN ON THE CAR — bench only (2026-08-05 and 2026-08-17, `mode:=monitoring`,
-wheels off the ground, no track). The car has still NOT been driven.** Both §2
+**Status: DRIVEN ON THE TRACK (2026-08-26, §8). The sim-to-real v2 policy transfers.**
+It covered **19.28 m** — one circuit perimeter's worth — in `mode:=monitoring` with
+rectification on, holding `|ey|` median ≈ 9 mm and firing **no safety rule while
+moving**, but in six segments separated by **five operator `/cage_reset`
+publications**, and it left the lane in the final curve. **This is not a clean lap
+and no scenario has been scored on hardware**; `verdict_phys` stays open. The
+deployment gate now **PASSES on real imagery** (§8.1) — the 18.08 frames were never
+lost, only searched for on the wrong host (§7.2). Four things stop the car and none
+of them is the policy: C-05's non-recovering latch (§8.5), camera starvation
+(§8.6), ZED pose jumps (§8.7) and C-04's dead zone in the tightest curve (§8.8).
+Earlier bench sessions: 2026-08-05 and 2026-08-17, wheels off the ground. Both §2
 `[VERIFY]` items are now measured (M-6, 17.08.2026) and the HFOV one came back
 **wrong — 77.89°, not 90°**; its propagated `ey` under-read was CONFIRMED on
 18.08.2026 by hands-off tape measurement (M-7 §4/D-71: 0.68–0.83 × true − 10 mm), and
@@ -857,34 +866,27 @@ python tools/select_sim2real_checkpoint.py \
   --output experiments/sim/eval_gz2d/select_v2.json
 ```
 
-> **BLOCKER — `--real` cannot be satisfied on this host, and the search for a way
-> round it is finished.** The 18.08 circuit recording's **frames are gone**; only
-> `labels.csv` survives under `experiments/physical/datasets/circuit_export/`.
-> A filesystem-wide search on 23.08.2026 established there is no substitute:
+> **~~BLOCKER~~ — CLEARED 26.08.2026. The frames were never lost; the 23.08 search
+> ran on the wrong host.** `experiments/physical/datasets/circuit_export/frames`
+> holds the **1521 PNG (439 MB)** of the 18.08 circuit recording on the **Jetson**
+> (`admit14-cobraflex`), temporally ordered, `ey` span 505 mm, 95.3 % paired —
+> together with `lane_00_firstpass` (1205) and `lane_A` (631), 3357 frames in all.
+> They are invisible to `git` by the `experiments/physical/datasets/*/frames/`
+> rule in `.gitignore`, which is exactly why the compute host's filesystem search
+> found nothing and concluded they were gone. This is the failure mode CLAUDE.md's
+> host note warns about: **say which host you searched before writing "the data is
+> missing"**.
 >
-> * no `.png` anywhere under `experiments/physical`;
-> * the only physical imagery on the machine is M-6's checkerboard calibration
->   views (`experiments/calibration/M6_camera_hfov/board_views*`) — no lane, no
->   `ey`, unusable;
-> * of every rosbag on the host, exactly one carries `/camera/image_raw_lane`
->   (`~/handover_check`) and it also carries `/odom_truth`, i.e. it is a Gazebo
->   recording, not the car;
-> * the `~/Warren/Cobra_Flex` bags carry no image topic at all.
+> The gate has now been run against that recording (§8.1) and **PASSES on both
+> arms**. The paragraph below stands unchanged as the procedure; only its
+> precondition is satisfied.
 >
-> Without the frames `sim2real_probe` — the *gate* — cannot run against real
-> imagery, and the selector falls back to surrogate arms which share the training
-> run's own transform and therefore cannot establish transfer. **No checkpoint is
-> authorised for the track until this is resolved.** Recover the frames by either:
->
-> * copying `frames/` back from the Jetson beside the existing `labels.csv`, or
-> * re-exporting from the 18.08 bag, or
-> * recording a fresh sweep on the car — **a deliberately weaving pass**, because
->   the probe refuses a recording spanning under 60 mm of `ey`:
->   `python tools/record_lane_dataset.py --out experiments/physical/datasets/<name> --rate 5 --seconds 120`
->
-> Running the selector without `--real` is still worth doing — it narrows 100
-> candidates to a handful — but it **does not authorise driving one**. The tool
-> prints this itself and exits non-zero when nothing clears the floors.
+> Kept because it is still true: running the selector without `--real` narrows 100
+> candidates to a handful but **does not authorise driving one**. The tool prints
+> this itself and exits non-zero when nothing clears the floors. And the selector's
+> `--real` path needs the other ~99 checkpoints, which live on the compute host,
+> not on the Jetson — on the car only the chosen 1650k is present, so the Jetson
+> can run the **gate** but not the **ranking**.
 
 Then cross-check the shortlist by driving in simulation (`SC-NOM-01` nominal
 eval) before the track. A checkpoint that transfers but cannot drive complex_b
@@ -937,7 +939,9 @@ measurement that would catch a rectifier configured wrong.
 1. `select_sim2real_checkpoint.py` **with `--real`** → a shortlist that cleared the gate.
 2. `SC-NOM-01` nominal eval in Gazebo on the shortlist → confirms it still drives.
 3. `preflight_deploy.py stage0` → camera alone.
-4. `preflight_deploy.py stage1 --mode monitoring`, **wheels up** → chain flowing.
+4. `preflight_deploy.py stage1`, **wheels up**, with the launch in `mode:=monitoring`
+   → chain flowing. (`stage1` takes no `--mode`; the mode belongs to the launch.
+   Corrected 26.08.2026 — the old wording failed mid-bring-up.)
 5. `preflight_deploy.py stage2`, **wheels up** → actuation envelope.
 6. `preflight_deploy.py lanecheck --true-ey <tape>` **on the track**, rectification on →
    this is where a bad rectifier is caught, and where M-7 §3b's outstanding
@@ -1000,3 +1004,247 @@ Two things to expect, both consequences of D-72 rather than surprises:
 Do **not** re-score G4 with this. The simulation verdict of record is the 550k
 trunk's 1890-run campaign (D-67/D-69), and a v2 campaign is posterior evidence
 under Phase 5 — the same posture D-71 took.
+
+## 8. The 2026-08-26 track session: v2 transfers, and four things stop it
+
+**Status: the v2 policy DROVE the real circuit.** Across the session it covered
+**19.28 m** — one circuit perimeter's worth (complex_b in simulation is 19.22 m) —
+in six segments separated by five operator resets, plus two earlier drives of
+14.45 m and 5.12 m. While moving it held **`|ey|` median ≈ 9 mm** and fired **no
+safety rule at all**; the only cage rule it touched was C-06. This is the first
+physical evidence that a track-'E' policy transfers, and it is what D-71 said the
+550k trunk did not do.
+
+It is *not* a clean lap, and must not be reported as one. Everything below
+separates what was measured from what was inferred.
+
+Evidence: `experiments/physical/runs/preflight_20260826_*` (7 runs) and
+`track_v2_fulllap{,2,3}_20260826T*` (3 runs, the last two with an odometry rosbag).
+Provenance for every one of them: commit `7de600fe`, `cage.yaml` v0.6.1
+(`sha256 4287fe71…`), checkpoint `ppo_gz2d_sim2real_v2_2024_r2_1650000_steps.zip`
+(`sha256 c67c3daf…`, identical to the hash the compute host recorded in
+`d43_preflight_v2_1650000.json`), `M6_results.json` (`sha256 895b86cb…`), Jetson
+`admit14-cobraflex`, ROS 2 Humble.
+
+### 8.1 The deployment gate, run against real imagery — PASS both arms
+
+`tools/run_deploy_gate.sh`'s probe stages, on the 1521-frame 18.08 circuit
+recording (§7.2). Floors are retention ≥ 0.50, bias/swing ≤ 1.00, right ≥ 10 %:
+
+| arm | n | swing retention | bias/swing | right | r² | verdict |
+| --- | --- | --- | --- | --- | --- | --- |
+| sim control | 140 | — | 0.04 | 66.4 % | 0.373 | — |
+| **raw optics** | 1447 | **1.29** | **0.10** | 23.2 % | 0.546 | **PASS** |
+| **rectified** | 1447 | **1.21** | **0.17** | **66.6 %** | 0.539 | **PASS** |
+
+Reports: `experiments/sim/eval_gz2d/sim2real_probe_v2_circuit_{raw,rectified}.json`.
+
+Two readings. The **23.08 CHANGELOG's prediction is confirmed**: it recorded that
+the `k=4 history` arm's BLOCKED verdicts on the surrogate were "an artefact of the
+dataset, not a finding", and that "the real 18.08 recording is temporally ordered
+and the arm will be valid there" — it is, and it passes. And **rectification
+restores the turn distribution**: right-turn share goes 23.2 % → 66.6 %, against
+the sim control arm's 66.4 %. That is the geometric correction doing exactly what
+§7.3 predicted, and it is the first quantitative argument for deploying rectified
+rather than an offline one.
+
+> The committed `sim2real_probe_v2.json` / `_rectified.json` are **surrogate**
+> results from the compute host (`.../scratchpad/surrogate_physical/frames`, n=417,
+> both BLOCKED). They are the 23.08 end-to-end verification of the gate machinery,
+> not a transfer result, and are easy to misread as one. The `_circuit_*` files are
+> the real gate.
+
+### 8.2 Staged preflight on the car — all four stages pass
+
+`stage0` PASS (640×360 `bgr8`, camera stamp median 50.0 ms = 20.0 Hz, `fx` 320 as
+the IPM assumes). `stage1` PASS. `stage2` PASS in **both** modes; enforcement is
+the one that matters, because it closes the 2026-08-05 review's item 1 on
+hardware: **235 exact-zero `/cmd_vel` samples alongside 235 sub-deadband cage
+cycles**. Until now that invariant was asserted by unit test only.
+
+`lanecheck` PASS with the car parked and `policy:=false` — `sd_ey` **5.3 mm**
+(limit 10) and `sd_epsi` **0.80°** (limit 5) on `near_secant`; **5.7 mm / 0.25°**
+on `joint_pair_quadratic`.
+
+**`lanecheck` did NOT close M-7 §3b.** It was run without `--true-ey`, so only the
+automatable half — "is the parked estimate quiet" — was answered. The number that
+decides whether C-01 fires late still needs a tape measure and remains open.
+
+### 8.3 Rectification, demonstrated on hardware
+
+Two launches back to back, same mode, same fit mode, same 20 s window, car
+untouched — the only difference is `rectify_calibration`:
+
+| car stationary | raw | rectified |
+| --- | --- | --- |
+| perception-invalid cycles | 86/191 = **45 %** | 11/200 = **5.5 %** |
+| `ey` mean (full CSV) | **−97.7 mm** | **+7.7 mm** |
+| `ey` sd | 104.5 mm | **27.8 mm** |
+| C-01 fires | **102** | **0** |
+| `raw_steering` | +0.0116, sd 0.002 (frozen) | +0.103, sd 0.032, −0.137…+0.175 |
+
+Unrectified, the estimator reads a centred car as ~100 mm off and fires C-01 102
+times while stationary. `rectify_calibration` should stop being described as
+`[provisional]` on the strength of this: it is the difference between a usable
+and an unusable perception input. (It remains provisional as to *accuracy* — see
+8.2 on the missing tape measurement.)
+
+### 8.4 `heading_fit_mode` is decisive under motion and invisible at rest
+
+Also a controlled pair — same rectification, same mode, sequential, differing only
+in `heading_fit_mode` / `heading_gain`:
+
+* `joint_pair_quadratic` / 1.6 (the launch default, the trunk's contract): the
+  estimator flickers invalid, C-05 latches within seconds, the fail-safe stops the
+  car. **1.08 m travelled.**
+* `near_secant` / 1.0: 0 invalid cycles, 0 emergencies, only C-06. **14.45 m.**
+
+And yet **parked, both are quiet** (8.2: 0.25° vs 0.80° sd, if anything favouring
+the default). The failure is induced by motion and vibration, so a static bench
+test cannot see it. This is D-71 §3's method lesson recurring: match the
+measurement to the quantity — a single-pose check would have cleared a
+configuration that cannot drive.
+
+The launch default is still `joint_pair_quadratic`, deliberately, because it is
+the D-43 perception contract the trunk was scored under. **Changing it is an open
+decision**, not a bug fix: it would put the deployed cage on a different estimator
+from the one every scored campaign used.
+
+### 8.5 What stops the car — C-05 has no operational story on hardware
+
+Measured, in the rosbag, on `track_v2_fulllap2`:
+
+```
+t=18,15 s   cage + policy start, car pulls away
+            ── 20,5 s of clean driving, |ey| median 8,2 mm, zero safety rules ──
+t=38,65 s   /perception_invalid True for 120 ms
+t=38,68 s   C-05 latches  →  car stopped, and never recovers
+```
+
+C-05's exit is deliberately asymmetric (`require_explicit_reset`, STPA-informed
+against oscillation at the trigger boundary, `cage.yaml` §c05_emergency). That is
+correct in simulation, where a scenario ends anyway. **On a vehicle it means a
+120 ms glitch — one the estimator recovered from by itself — stops the car
+permanently, because nobody sends `/cage_reset`.** Confirmed live on the third
+run: `/emergency` **true** while `/perception_invalid` was already **false**.
+
+This is not a defect in the cage. It is a gap between an artefact validated
+against simulated episodes and a vehicle that has to keep operating, and it is
+the single most deployment-relevant finding of the session. **It needs a decision
+(D-NN), not a patch** — the candidates are a bounded auto-recovery on the
+perception trigger, an operator reset path, or removing the cause upstream (8.6).
+Nothing has been changed.
+
+Lap 3 was driven with the third option taken manually: **five `/cage_reset`
+publications by the operator**, each with perception already healthy, no C-01…C-04
+active and `v = 0`. Segments between resets: 29 s/+4.87 m, 29 s/+4.92 m,
+6 s/+0.89 m, 24 s/+4.15 m, 1 s/+0.17 m, then the terminal event of 8.8.
+
+### 8.6 The camera cannot feed the control loop
+
+101 `no camera frame for 1 control cycles — publishing no /raw_action` warnings in
+one run. It is what produces the ≥ 4 consecutive bad cycles the estimator's own
+debounce (`min_invalid_cycles=4`) needs before it declares perception invalid —
+i.e. **the starvation is upstream of 8.5**.
+
+Cadence, measured over a whole driving run: **7.3 Hz** average against the trained
+10 Hz, gaps median 111 ms / p90 207 / p99 579 / **max 995 ms**, 23.3 % of cycles
+over 150 ms. At 0.172 m/s a 995 ms gap is **171 mm travelled open-loop** — more
+than C-01's whole 160 mm threshold.
+
+Cause is CPU. Measured with **layer 3 not running**: load average 5.49 on 6 cores,
+`csi_camera_node` 53.7 %, `rviz2` 52.1 %, `zed_node` 51.1 %, `nvargus` 15.9 %,
+`anydesk` 11.9 %, `Xorg` 9.0 %. Killing `rviz2` alone took the loop from 7.3 Hz to
+**9.5 Hz** and lengthened every driving segment. `use_rviz:=false` is already the
+deploy default for Layer 1; **Layer 2's bring-up should not leave rviz running
+either.** Freeing further headroom is the next work item.
+
+### 8.7 ZED pose jumps, measured rather than inferred
+
+`cobraflex_sensors.launch.xml` has warned since 06.08 that a ZED loop-closure jump
+"enters the ekf as an absolute pose with ~1e-5 covariance and
+`odom0_differential:false`, so the filter follows it hard and emits a spurious
+velocity spike straight into the cage's speed". That is now measured:
+
+* a **3621.8 mm pose displacement in a single frame** (17.81 m/s implied), driving
+  `/odometry/filtered` `vx` to **−4.03 m/s**;
+* ten smaller jumps (7–76 mm/frame, 0.5–1.7 m/s implied) *during* driving;
+* on an earlier run a spike took the cage's speed to **5.479 m/s** — 25× the
+  0.22 m/s contract — one cycle after a healthy 0.156 m/s, firing C-04 → C-03 →
+  C-05 and braking to `safe_throttle −0.500`.
+
+`ekf_hw.yaml` fuses the ZED's **pose** (`odom0_config` x, y, yaw) and deliberately
+not its twist, so velocity is obtained by differentiating a signal that teleports.
+Restarting Layer 2 (fresh area memory) **delays but does not remove** the jumps:
+the first attempt spiked at 4.3 s, the attempt after a restart drove 20.5 s clean
+and its big jump came at 53 s. Partial support for the loop-closure hypothesis, not
+proof. Candidate fixes, none applied: `odom0_pose_rejection_threshold`
+(robot_localization's designed outlier gate), raising the pose covariance, or
+turning off the wrapper's `reset_odom_with_loop_closure`.
+
+In `monitoring` this is survivable only because the cage does not apply
+corrections — but `vehicle_control_node` is emergency-aware and zeroes `/cmd_vel`
+on `/emergency` **in either mode**, so a spike still ends the run. **In
+`enforcement` it would end a scored lap.**
+
+### 8.8 C-04's dead zone, and the last curve
+
+The session's terminal event, twice over: the car left the lane in the **first half
+of the final curve, the re-entry to the straight** — the same curve the very first
+drive of the day failed to complete. Unlike everything in 8.5, this was a **real
+safety intervention**: `ey −118.5 mm`, `epsi −25.60°` (just past C-02's 25°),
+**C-02 and C-03 firing together**, and then total loss of the lane —
+`/state_obs` stopped publishing and the cage ran on a frozen state.
+
+And the rule that exists to protect that case cannot act:
+
+```
+cage.yaml  c04_speed_ceiling.v_max_curve_mps = 0.25
+launch     max_speed_mps                     = 0.22
+```
+
+**0.22 < 0.25, so C-04 can never fire.** D-69's finding (ii) recorded this as a
+coverage gap — "C-04 never fires (0/1890) … the ODD-3 speed ceiling stays untested
+from above". It is no longer only a coverage gap: on the physical circuit the
+vehicle enters its tightest curve at full contract speed with no cage-side speed
+protection. That promotes the item from *rule without test coverage* to *rule that
+does not protect a real physical case*.
+
+Three candidate causes for the departure itself, none discriminated:
+
+1. curvature — the real re-entry curve may exceed anything in complex_b;
+2. loop starvation (8.6) — at 0.19 m/s a 995 ms gap is 180 mm of blind travel,
+   and a curve is where that hurts;
+3. M-7's measured **pairing collapse beyond ~±55 mm of `ey`**, which a tight curve
+   drives the car into.
+
+Lowering `max_speed_mps` would help *all three at once* and therefore **cannot
+discriminate between them**. Fix the starvation first (8.6), then vary speed.
+
+### 8.9 What this session did NOT establish
+
+* **No clean lap.** 19.28 m of distance with five operator resets and a lane
+  departure at the end. No scenario has been scored on hardware; `verdict_phys`
+  stays open, exactly as CLAUDE.md's TBD note says.
+* **No `--true-ey`**, so M-7 §3b is still open and the C-01-fires-late question is
+  unanswered (8.2).
+* **The failure locations are not localised.** Cross-referencing
+  `/perception_invalid` against the ZED pose gave seven events, two pairs of which
+  repeat within 5–6 cm — but the absolute coordinates are not comparable across the
+  run, because the frame that measures them is the one that jumps (8.7). One event
+  lands at the exact origin, which is a ZED odometry reset rather than a place. The
+  measurement that would settle it is **recording `/camera/image_raw_lane` in the
+  bag and looking at what the estimator saw**; do that next session.
+* **`cage_logger_node` writes no reproducibility metadata.** `metadata.json` carries
+  only `{mode, run_id, created_utc, cycles_logged}` — no commit, no cage-YAML hash,
+  no checkpoint hash, contrary to CLAUDE.md's rule for `experiments/physical/runs/`.
+  This is pre-existing (the 18.08 `track_first_drive` is identical), and it is why
+  the provenance for this session is recorded at the head of §8 by hand.
+* **Two contradictory D-43 preflights for the same checkpoint are committed side by
+  side** with nothing distinguishing them: `d43_preflight_v2_1650000.json` (PASS,
+  `nom_clean` trace) and `d43_preflight_v2_1650k.json` (BLOCKED, 35 centred-`ey`
+  error steps, `nom_final` trace, 5 minutes earlier). The BLOCKED one is a trace
+  **retracted by I-8** — it measured the randomisation, not the policy. It should be
+  marked or removed.
+* **docs/17 §7.4 step 4 names `preflight_deploy.py stage1 --mode monitoring`.**
+  `stage1` has no `--mode`; the mode belongs to the launch.

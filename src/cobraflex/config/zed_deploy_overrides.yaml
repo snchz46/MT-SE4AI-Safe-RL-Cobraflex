@@ -1,0 +1,45 @@
+# ZED Mini — parámetros para una corrida de despliegue de la cadena RL.
+#
+# Se pasa al wrapper por `ros_params_override_path` desde
+# cobraflex_sensors.launch.xml. NO se edita la config del wrapper de Stereolabs:
+# ese paquete no está versionado (D-32) y cualquier cambio ahí se pierde en la
+# siguiente reinstalación.
+#
+# La cadena de despliegue usa UNA sola salida de la ZED: `/zed/zed_node/odom`,
+# que el ekf convierte en `/odometry/filtered`, la única fuente de velocidad de
+# la cage. Ni las imágenes, ni la profundidad publicada, ni las nubes de puntos,
+# ni la detección de objetos tienen un solo suscriptor en esta cadena.
+---
+/**:
+    ros__parameters:
+
+        pos_tracking:
+            # EL ARREGLO DE docs/17 §8.7, no una optimización.
+            #
+            # `ekf_hw.yaml` fusiona la POSE de la ZED (odom0_config x, y, yaw) y
+            # deliberadamente no su twist, así que la velocidad sale de derivar
+            # la pose. Cuando la ZED cierra un bucle, reinicializa su odometría a
+            # la última pose válida y la pose SALTA; el ekf la persigue con
+            # covarianza ~1e-5 y odom0_differential:false, y emite un pico de
+            # velocidad que entra directo en la única entrada de velocidad de la
+            # cage. Medido el 26.08.2026: un salto de 3621,8 mm en un frame
+            # (17,81 m/s implícitos) llevó vx del ekf a −4,03 m/s, y otro puso la
+            # velocidad de la cage en 5,479 m/s — 25× el contrato de 0,22 —
+            # disparando C-04 → C-03 → C-05 y frenando el coche.
+            #
+            # Sin area memory la odometría deriva más a lo largo del tiempo. Eso
+            # es aceptable aquí y no lo era en un caso de navegación: la cage lee
+            # VELOCIDAD, no posición, y una deriva lenta no produce picos. Un
+            # salto sí.
+            area_memory: false
+            reset_odom_with_loop_closure: false
+
+        object_detection:
+            # Una red neuronal corriendo para nadie. Sin suscriptores en la cadena.
+            od_enabled: false
+
+        depth:
+            # Nubes de puntos a 10 Hz que nadie consume. La profundidad en sí NO
+            # se puede apagar: `depth_mode: NONE` desactiva también el tracking
+            # posicional, que es justo lo que necesitamos.
+            point_cloud_freq: 0.0

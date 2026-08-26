@@ -31,6 +31,112 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [26.08.2026] — The v2 policy drives the real circuit; the gate passes on real imagery; and four things stop the car, none of them the policy
+
+**Document(s) affected:** `docs/17_physical_deployment.md` (§8 new, §7.2 blocker
+cleared, §7.4 step 4 corrected, status header),
+`experiments/sim/eval_gz2d/sim2real_probe_v2_circuit_{raw,rectified}.json` (new),
+`experiments/physical/runs/preflight_20260826_*` (7 runs, new),
+`experiments/physical/runs/track_v2_fulllap{,2,3}_20260826T*` (3 runs + 2 rosbags, new),
+`tools/run_deploy_gate.sh` (header comment), `CLAUDE.md`
+**Phase:** 5 (physical deployment)
+**Gate context:** after G4; **no gate re-scored, no simulation verdict touched**
+**Author:** Samuel Sanchez
+
+### Change
+
+1. **The 18.08 circuit frames were never lost.** They are on the **Jetson** —
+   `experiments/physical/datasets/circuit_export/frames`, **1521 PNG, 439 MB**,
+   temporally ordered — hidden from `git` by the `.gitignore` rule on
+   `experiments/physical/datasets/*/frames/`. The 23.08 "frames are gone" note
+   searched the compute host. §7.2's BLOCKER is cleared.
+2. **The deployment gate PASSES against real imagery, both arms**: raw retention
+   **1.29**, bias/swing 0.10; rectified **1.21**, bias/swing 0.17; floors 0.50 and
+   1.00. Rectification restores right-turn share **23.2 % → 66.6 %** against the
+   sim control arm's 66.4 %. The 23.08 prediction that the `k=4 history` arm would
+   be valid on a temporally ordered recording is **confirmed**.
+3. **`preflight_deploy.py` stage0/1/2 + lanecheck all PASS on the car.** Stage 2 in
+   **enforcement** closes the 2026-08-05 review's item 1 on hardware: **235
+   exact-zero `/cmd_vel` samples alongside 235 sub-deadband cage cycles**, until now
+   asserted only by unit test.
+4. **THE RESULT — the v2 policy drove the real circuit.** **19.28 m** covered (one
+   perimeter's worth; complex_b is 19.22 m in simulation), `|ey|` median ≈ **9 mm**
+   while moving, and **no safety rule fired at all** during the driving segments —
+   only C-06, at 5–7 % of cycles against the 3.0 % that chose this checkpoint in
+   simulation. D-69's T2 transfer risk did **not** materialise. D-71's 550k trunk
+   did not transfer; this one does.
+5. **Rectification is demonstrated on hardware** by a controlled A/B (same mode, same
+   fit mode, sequential, car untouched): perception-invalid cycles **45 % → 5.5 %**,
+   `ey` mean **−97.7 → +7.7 mm**, `ey` sd 104.5 → 27.8 mm, C-01 fires **102 → 0**.
+6. **`heading_fit_mode` decides whether the car can drive at all** — and is invisible
+   at rest. `joint_pair_quadratic`/1.6 (the launch default and the trunk's D-43
+   contract): 1.08 m. `near_secant`/1.0: 14.45 m. Parked, both are quiet (`sd_epsi`
+   0.25° vs 0.80°). D-71 §3's method lesson recurring.
+7. **C-05 has no operational story on hardware.** A **120 ms** perception glitch, from
+   which the estimator recovered by itself, stops the car permanently: the
+   `require_explicit_reset` asymmetric exit is correct for a simulated episode but
+   there is nobody on a vehicle to send `/cage_reset`. Confirmed live — `/emergency`
+   true while `/perception_invalid` was already false. Lap 3 was driven with **five
+   operator resets**, each with perception healthy, no C-01…C-04 active and `v = 0`.
+8. **The camera cannot feed the loop, and it is upstream of (7).** 101 `no camera
+   frame` warnings in one run; loop at **7.3 Hz** against the trained 10 Hz, gaps p99
+   579 ms and **max 995 ms** = 171 mm travelled open-loop at 0.172 m/s, more than
+   C-01's whole threshold. Cause is CPU: load 5.49 on 6 cores **with layer 3 not
+   running** (`csi_camera_node` 54 %, `rviz2` 52 %, `zed_node` 51 %). Killing `rviz2`
+   took the loop to **9.5 Hz** and lengthened every segment.
+9. **The ZED pose-jump hazard is measured, not inferred.** A **3621.8 mm displacement
+   in one frame** (17.81 m/s implied) drove `/odometry/filtered` `vx` to **−4.03 m/s**;
+   an earlier spike put the cage's speed at **5.479 m/s**, 25× the contract, firing
+   C-04 → C-03 → C-05. `ekf_hw.yaml` fuses the ZED's pose and not its twist, so
+   velocity is a derivative of a signal that teleports — exactly what
+   `cobraflex_sensors.launch.xml` has warned since 06.08. Restarting Layer 2 delays
+   but does not remove it.
+10. **C-04's dead zone now has a physical consequence.** `v_max_curve_mps` 0.25 vs a
+    deployed `max_speed_mps` 0.22 means **C-04 can never fire**. D-69's finding (ii)
+    recorded this as untested coverage; on the real circuit the vehicle enters its
+    tightest curve at full contract speed with no cage-side speed protection — and
+    that curve, the re-entry to the straight, is where it left the lane **twice**,
+    with C-02 and C-03 firing together at `ey −118.5 mm` / `epsi −25.60°`. First
+    genuine safety intervention of the session.
+
+### Rationale
+
+§7.2 had declared the deployment un-authorisable for want of real imagery. Locating
+the frames on the correct host made the gate runnable, the gate passed, and the
+staged preflight then authorised driving. Everything after that is what the car
+itself reported.
+
+### Impact
+
+* **No gate is re-scored and no simulation verdict is touched.** The verdict of
+  record stays the 550k trunk's 1890-run campaign (D-67/D-69); this is Phase-5
+  posterior evidence, the same posture as D-71.
+* **`verdict_phys` stays open.** 19.28 m with five operator resets and a lane
+  departure is not a scored scenario, and must not be reported as a clean lap.
+* **Three open decisions, none acted on.** C-05's behaviour on hardware against a
+  transient recoverable glitch (candidate D-NN: bounded auto-recovery, an operator
+  reset path, or removing the cause upstream); whether the deployed
+  `heading_fit_mode` default moves off the scored D-43 contract; and whether
+  `v_max_curve_mps` drops below the deployed speed so C-04 can act.
+* **Next work item is CPU headroom** (item 8), because it is upstream of the
+  perception glitches and confounds the curve diagnosis: lowering `max_speed_mps`
+  would help curvature, starvation and M-7's pairing collapse simultaneously and so
+  cannot discriminate between them. Fix starvation first, then vary speed.
+* **Housekeeping surfaced, not fixed**: `cage_logger_node` writes no reproducibility
+  metadata (pre-existing, the 18.08 run is identical), and two contradictory D-43
+  preflights for the 1650k checkpoint sit side by side — the BLOCKED one is a trace
+  retracted by I-8.
+
+### Verification
+
+`pytest` **763 passed**. `python tools/check_traceability.py` — All checks PASSED,
+0 warnings. The gate, the four preflight stages and all three track runs were
+**executed on the car**, not asserted; provenance (commit, cage-YAML, checkpoint and
+calibration hashes) is recorded at the head of docs/17 §8, and the checkpoint hash
+matches the one the compute host recorded for the same file.
+
+---
+
 ## [23.08.2026] — The v2 run finished at 2.5M; the checkpoint is chosen on transfer and cage-independence, two more failures are documented, and the deployment gate is one command from ready
 
 **Document(s) affected:** `src/cobraflex_rl/cobraflex_rl/eval_policy.py`,

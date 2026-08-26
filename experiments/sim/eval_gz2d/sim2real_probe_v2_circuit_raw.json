@@ -1,0 +1,67 @@
+{
+  "schema": "sim2real-probe/v1",
+  "checkpoint": "/home/admit14/MT-SE4AI-Safe-RL-Cobraflex/policy/checkpoints/ppo_gz2d_sim2real_v2_2024_r2_1650000_steps.zip",
+  "real_dataset": "/home/admit14/MT-SE4AI-Safe-RL-Cobraflex/experiments/physical/datasets/circuit_export/frames",
+  "rectified": false,
+  "verdict": "PASS",
+  "reasons": [],
+  "swing_retention_vs_sim": 1.29296048022434,
+  "arms": {
+    "real": {
+      "n": 1447,
+      "ey_span_mm": 165.33839999999998,
+      "slope_per_mm": -0.002093235791841816,
+      "bias": -0.035322317611035194,
+      "swing": 0.34609225664585885,
+      "bias_over_swing": 0.10206040999980819,
+      "right_fraction": 0.2322045611610228,
+      "r_squared": 0.5464108968943177,
+      "steer_sd": 0.11405361639208503,
+      "sign_correct": true
+    },
+    "real_repeat_stacked": {
+      "n": 1450,
+      "ey_span_mm": 165.3246,
+      "slope_per_mm": -0.002198213350288767,
+      "bias": -0.038050529101504735,
+      "swing": 0.3634187428511503,
+      "bias_over_swing": 0.10470161445990567,
+      "right_fraction": 0.22344827586206897,
+      "r_squared": 0.5698575966609559,
+      "steer_sd": 0.11721391720025438,
+      "sign_correct": true
+    },
+    "sim_control": {
+      "n": 140,
+      "ey_span_mm": 180.0,
+      "slope_per_mm": -0.0014870792948057075,
+      "bias": 0.009710733546151996,
+      "swing": 0.26767427306502733,
+      "bias_over_swing": 0.036278172851497474,
+      "right_fraction": 0.6642857142857143,
+      "r_squared": 0.37292965076771434,
+      "steer_sd": 0.16335292917409358,
+      "sign_correct": true
+    }
+  },
+  "observation_photometry": {
+    "real": {
+      "mean": 113.32904815673828,
+      "sd": 35.60757827758789,
+      "frac_above_200": 0.025499574829931974,
+      "frac_below_60": 0.014795209750566893
+    },
+    "sim": {
+      "mean": 88.23343658447266,
+      "sd": 94.6175765991211,
+      "frac_above_200": 0.2942913832199546,
+      "frac_below_60": 0.4928869047619048
+    }
+  },
+  "thresholds": {
+    "min_swing_retention": 0.5,
+    "max_bias_over_swing": 1.0,
+    "min_right_fraction": 0.1,
+    "provisional": true
+  }
+}

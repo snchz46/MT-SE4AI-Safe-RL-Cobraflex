@@ -143,6 +143,47 @@ def gstreamer_pipeline(
     starts blocking inside the timer callback. Headroom matters here — the node
     measured 149 % of a core with the full RL chain attached (the 691 kB image
     messages to two subscribers are the other half).
+
+    THE SENSOR RATE IS A SEPARATE LEVER, and until 26.08.2026 an unused one.
+    ``throttle_fps`` sits *after* ``nvvidconv``, so every measurement above ran
+    the sensor at 60 fps and ``nvargus-daemon`` — which does the ISP work and is
+    a different process — never saw the saving. Measured on the car with two
+    subscribers attached (the real topology: rl_policy_node + cv_lane_estimator_node),
+    each figure the % of one core:
+
+        capture 60, read 20 : delivered 15.2 Hz · node 61.2 · nvargus 36.3 · total 134.3
+        capture 30, read 20 : delivered 19.0 Hz · node 48.7 · nvargus 20.2 · total  96.5
+        capture 30, read 15 : delivered 14.0 Hz · node 41.7 · nvargus 19.6 · total  86.1
+        capture 20, read 15 : delivered 15.0 Hz · node 32.6 · nvargus 12.8 · total  66.1
+
+    So capturing at 60 was not merely wasteful, it was *harmful*: it cost 38 % of
+    a core more than capturing at 30 and delivered a WORSE rate (15.2 vs 19.0 Hz),
+    because the sensor pipeline competed for CPU with the node reading it — and
+    two of every three converted frames were discarded anyway.
+
+    The deployment therefore captures at 30, which is the same 1.5x headroom rule
+    the auto-throttle already applies, moved one stage earlier: capture = 1.5 x
+    the 20 Hz read. The published stream is unchanged — still 640x360 at
+    ``rate_hz`` — so docs/17 §1b's sim/hardware symmetry is untouched.
+
+    It is set on the LAUNCH (``cobraflex_sensors.launch.xml``,
+    ``lane_camera_capture_fps``), NOT by changing ``DEFAULT_CAPTURE_FPS``, which
+    stays 60. ``test_gstreamer_pipeline_matches_the_proven_lane_keeper_pipeline``
+    asserts this builder is byte-identical to ``lane_keeper_node``'s for the same
+    arguments, so that the CNN cannot silently get a different capture path from
+    the one the camera was proven on. Moving the default here would have made the
+    two diverge and broken that guard for a reason that has nothing to do with the
+    classical controller.
+
+    Two caveats on that measurement, both open:
+      * ``capture_fps`` DOES change the auto-exposure regime, unlike the
+        downstream throttle. Checked on 40 frames per setting: grey mean
+        101.96 / 101.69 / 98.91 and grey sd 47.85 / 47.48 / 47.14 at 60/30/20 —
+        no photometric shift. Static sharpness (Laplacian variance) went
+        667 -> 762 -> 763, i.e. it improved.
+      * that check was run with the CAR STATIONARY, so it cannot see motion
+        blur, which is the one thing a longer exposure would actually cause.
+        Verify on a driving run before trusting 30 fps for the policy's input.
     """
     throttle = (
         f"videorate drop-only=true ! "

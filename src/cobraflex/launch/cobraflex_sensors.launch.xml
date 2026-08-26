@@ -23,6 +23,24 @@
     <arg name="lane_camera_sensor_id" default="0"/>
     <arg name="lane_camera_flip_method" default="0"/>
     <arg name="lane_camera_topic" default="camera/image_raw_lane"/>
+    <!-- Sensor framerate, 30 rather than csi_camera_node's own default of 60.
+         Measured on the car 26.08.2026 with the real two-subscriber topology
+         (docs/17 §8.6, and the table in csi_camera_node.gstreamer_pipeline):
+         capturing at 60 cost 38 % of a core MORE than capturing at 30 and
+         delivered a WORSE rate (15.2 vs 19.0 Hz) — the sensor pipeline competed
+         for CPU with the node reading it, and two of every three converted
+         frames were discarded anyway. nvargus-daemon alone went 36.3 % -> 20.2 %.
+         Nothing about the PUBLISHED stream changes (still 640x360 at rate_hz),
+         so §1b's sim/hardware symmetry is untouched.
+         Set here and not as the node default on purpose: csi_camera_node's
+         pipeline builder is asserted byte-identical to lane_keeper_node's, and
+         the RL deployment has no business moving the classical controller. -->
+    <arg name="lane_camera_capture_fps" default="30"/>
+    <!-- Override de parámetros de la ZED para una corrida de despliegue. Vacío
+         = config de fábrica del wrapper (con cierre de bucle y detección de
+         objetos activos). Ver el fichero para el porqué de cada línea. -->
+    <arg name="zed_overrides"
+         default="$(find-pkg-share cobraflex)/config/zed_deploy_overrides.yaml"/>
 
     <!-- ================= Lidar SLLIDAR A2M8 ================= -->
     <include file="$(find-pkg-share sllidar_ros2)/launch/sllidar_a2m8_launch.py">
@@ -61,6 +79,15 @@
              odom continuous and jumps confined to map. To actually change it, edit
              the wrapper YAML or pass ros_params_override_path. -->
         <arg name="reset_odom_with_loop_closure" value="true"/>
+
+        <!-- Lo anterior es un NO-OP (el wrapper no declara ese argumento). Lo
+             que SÍ tiene efecto es este fichero, que el wrapper aplica encima de
+             su propia config. Ahí se apaga el cierre de bucle — el mecanismo que
+             el comentario de arriba lleva señalando desde el 06.08 y que quedó
+             MEDIDO el 26.08 (docs/17 §8.7) — y de paso la detección de objetos y
+             las nubes de puntos, que no tienen suscriptores en esta cadena.
+             Pasar `zed_overrides:=''` lo desactiva y deja la config de fábrica. -->
+        <arg name="ros_params_override_path" value="$(var zed_overrides)"/>
     </include>
 
     <!-- ============ Lane camera (Jetson CSI, IMX219-160) ============
@@ -73,6 +100,7 @@
         <param name="image_topic" value="$(var lane_camera_topic)"/>
         <param name="sensor_id" value="$(var lane_camera_sensor_id)"/>
         <param name="flip_method" value="$(var lane_camera_flip_method)"/>
+        <param name="capture_fps" value="$(var lane_camera_capture_fps)"/>
     </node>
 
     <!-- ================= State estimation =================

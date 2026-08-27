@@ -374,8 +374,16 @@ frozen; the E re-runs of F-track scenarios are reported only as a contrast in §
 determinate, evidence-backed `verdict_sim`: eleven **Satisfied**, two **Satisfied on their own
 criterion** with the literal failure recorded and reconciled (SR-002/003, note ⁷ + D-47/D-68), and
 one **Not satisfied** reported as a limitation (SR-010, note ³). The `verdict_phys` column stays
-`tbd` throughout — Phase 5 has been scaffolded end-to-end but **not run on hardware** (docs/17), so
-a physical verdict would be fabricated, not deferred. The one open ODD parameter, `ODD-3.A_LAT_MAX`
+`tbd` throughout, and since 08.2026 for a narrower reason than "not run": Phase 5 **has driven on
+hardware** — 18.05 m of the real circuit in one uninterrupted segment with no safety rule fired
+(docs/17 §8.10) — but **no scenario has been executed under protocol**, in enforcement and on the
+D-43 perception contract every campaign was scored under. Driving is not scoring; a physical
+verdict read off out-of-protocol runs would be fabricated, exactly as an estimated one would be.
+Two rows are **qualified but not re-scored** by that hardware evidence: **SR-004** is satisfied via
+C-04, and in the deployed physical configuration C-04 **cannot fire at all** (`v_max_curve_mps`
+0.25 > the deployed 0.22 m/s), so the simulation coverage gap is a rule that does not protect a
+real physical case; and the policy this matrix scores (the 2-D 550k trunk) is **not** the policy
+that drives — it does not transfer (D-71), and what deploys is the v2 retrain (D-72). The one open ODD parameter, `ODD-3.A_LAT_MAX`
 (**TBD-Q10**, docs/08 §11), is likewise hardware-gated by construction (**D-33**): it is
 unmeasurable in simulation, so no simulation campaign — this one included — could have closed it.
 

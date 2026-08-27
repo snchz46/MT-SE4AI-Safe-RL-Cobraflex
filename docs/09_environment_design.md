@@ -52,9 +52,9 @@ The observation comes from the **dedicated front Lane Cam**, a Gazebo `camera` s
 
 | Sensor parameter | Value | Source / note |
 | --- | --- | --- |
-| Model mirrored | IMX219-160 (wide-angle) | HW capture 1280×720@60; only the **processed** stream matters |
+| Model mirrored | IMX219-160 (wide-angle) | HW capture 1280×720; only the **processed** stream matters. *(Capture rate was 60 fps until 26.08.2026, now **30** — `throttle_fps` sits after `nvvidconv`, so 60 cost 38 % of a core MORE than 30 and delivered a worse rate, 15.2 vs 19.0 Hz. The published stream is unchanged; docs/17 §8.10.)* |
 | Resolution (rendered) | **640×360** R8G8B8 | `robot.gazebo` Lane Cam sensor |
-| Horizontal FOV | **1.5707963 rad (90°)** | effective processed HFOV on HW |
+| Horizontal FOV | **1.5707963 rad (90°)** | the **rendered** value, and the one every scored campaign was trained and evaluated under. It was ALSO believed to be the effective processed HFOV on hardware; **M-6 (17.08.2026) refuted that — the real module measures 77.89°, `fx` 395.93 px, not 320.** The assumption was circular: the simulator mirrored a configuration default, so no simulation result could ever expose it. Deployment closes the gap by **rectifying** the real frame into this canonical model rather than by changing this number (docs/17 §8.3). |
 | Update rate | 20 Hz | sensor `<update_rate>` |
 | Clip near / far | 0.1 m / 15 m | frustum |
 | Sensor noise | Gaussian σ = 0.007 | rendered noise |

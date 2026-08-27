@@ -537,6 +537,29 @@ derived from HFOV and width (`fx = (W/2)/tan(HFOV/2)`, square pixels). The mount
 geometry is the same one `docs/11` §8 describes for the newcam retrain — the
 estimator and the policy share one camera.
 
+> **The 90° is the SIMULATOR's camera, and on hardware it is wrong.** M-6
+> (17.08.2026) measured the real IMX219-160 at an effective **77.89°** —
+> `fx = 395.93 px`, not the 320 this projection assumes — and the assumption was
+> circular, because the Gazebo sensor was configured from the same default. The
+> estimator is not re-parameterised to 77.89°: the deployment **undistorts the
+> real frame into this canonical model** instead, so that one projection serves
+> both the sim campaigns and the car. Measured on hardware by a controlled A/B
+> with the car parked (docs/17 §8.3): unrectified this estimator reads a centred
+> car as **−97.7 mm** off and fires C-01 **102** times without moving; rectified,
+> mean **+7.7 mm**, sd 104.5 → 27.8 mm, **0** C-01 activations.
+>
+> **What rectification does NOT fix, and what it costs.** M-7 (18.08.2026)
+> measured `ey` against a tape over ±100 mm: the estimator reads
+> **0.68–0.83 × true − 10 mm**, robust to every filtering — so C-01's 160 mm
+> `d_max` fires at a **true 207–241 mm**, leaving 14–48 mm to the road edge
+> instead of 95. Lane *width* is read correctly (252.9 mm against a 250 mm ruler,
+> 95.4 % of circuit frames paired) because a width is a *difference* straddling
+> the optical axis while `ey` is an *absolute* off-axis position, and the
+> unmodelled `k1 = −0.339` barrel term compresses only the second. Two further
+> defects sit in the same band where C-01/C-05 act: repeatability (mean 13.2 mm,
+> worst 29.4, against a ~2 mm tape) and **pairing collapse beyond ~±55 mm**. The
+> `--true-ey` half of that measurement is still open.
+
 ---
 
 ## 6. The shared-driver principle: node == scored eval

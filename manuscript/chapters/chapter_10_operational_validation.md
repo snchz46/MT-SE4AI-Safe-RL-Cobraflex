@@ -106,9 +106,26 @@ que se cerraron **en direcciones opuestas**: SR-009 hacia *Satisfecho* y SR-010 
 *No satisfecho*. Un TBD afirma que falta el instrumento; una vez que existe —la
 metrología del stall guionizado en un caso, el grid de co-activación cableado en el
 otro— mantenerlo habría sido cómodo, no honesto. La columna **Físico** sigue entera en
-`[TBD F5]` por la misma razón inversa: la cadena de despliegue está montada de extremo a
-extremo (docs/17) pero **no se ha ejecutado sobre hardware**, de modo que cualquier
-veredicto físico sería inventado, no diferido.
+`[TBD F5]`, y desde 08.2026 por una razón más estrecha y más precisa: la cadena de
+despliegue **sí se ha puesto en marcha sobre hardware** —el vehículo condujo
+18,05 m del circuito real en un único tramo sin activar ninguna regla de
+seguridad, cap. 9 §9.3.3c— pero eso es **bring-up, no campaña**: **ninguna
+corrida física se ha ejecutado bajo el protocolo de la biblioteca de
+escenarios**, en enforcement y con el contrato de percepción D-43
+bajo el que se puntuó toda campaña. Haber conducido no es haber puntuado: rellenar
+`verdict_phys` con medidas tomadas fuera de protocolo sería inventar el veredicto,
+igual que antes lo sería haberlo estimado. Las tres condiciones que separan la
+columna de ser poblable están identificadas en §9.3.4, §9.3.5 y D-74.
+
+Dos casillas de esta tabla quedan además **matizadas** por la Fase 5, sin
+re-puntuarse. **SR-004** se satisface mediante C-04, y en la configuración
+física desplegada C-04 **no puede activarse en absoluto** (`v_max_curve_mps`
+0.25 > 0.22 m/s desplegados): lo que en simulación era un hueco de cobertura es,
+en la curva más cerrada del circuito real, una regla que no protege un caso
+existente. Y **el objeto que sostiene esta declaración no es el objeto que
+conduce**: el trunk 2-D 550k no transfiere (D-71) y lo que se despliega es el
+reentrenamiento v2 (D-72). Ninguna de las dos observaciones toca un veredicto de
+simulación; ambas acotan su alcance, que es exactamente lo que §10.5 debe hacer.
 
 ## 10.5 Declaración de validación acotada  [BORRADOR POST-G4 — PROVISIONAL]
 

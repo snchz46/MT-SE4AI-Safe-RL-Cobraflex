@@ -289,6 +289,18 @@ co-adaptación causalmente exige una ablación (reentrenar con C-06 fuera del la
 que no se ha ejecutado, y que §12.5 recoge junto a la línea de transferencia
 física.
 
+> **Post-scriptum de Fase 5 (26.08.2026), PRELIMINAR — una corrida: la pareja
+> transfiere, y con la tasa prevista.** El riesgo T2 —que el actuador físico no implementa
+> `delta_max_steering_per_cycle` y que por tanto la pareja *(policy, C-06)*
+> podía no sobrevivir al hardware— se declaró antes de conducir y **se resolvió
+> midiendo**. Eligiendo el checkpoint por independencia de la cage en lugar de
+> por recompensa (D-72: 3,0 % de intervención nominal frente al 35,0 % del pico
+> de recompensa), C-06 interviene sobre el vehículo real en el **3,4 % de los
+> ciclos en movimiento contra el 3,0 % de simulación**. Con **N=1 y sin escenario
+> puntuado** esto no cierra T2 —la campaña física puede desmentirlo—, pero la
+> distancia no es marginal y la dirección es la contraria a la temida. Y el
+> **origen sigue inferido**, así que la ablación de §12.5 tampoco queda cerrada.
+
 ---
 
 ## 12.3 Respuesta a las preguntas de investigación  [BORRADOR POST-G4 — PROVISIONAL]
@@ -331,9 +343,13 @@ El desarrollo completo corresponde al Capítulo 11; aquí se enumeran las que
 acotan directamente lo afirmado arriba. (i) **N = 1 en plataforma y familia de
 geometrías**: un vehículo 1:14, circuitos planos interiores; la generalización
 es argumental, no empírica. (ii) **Veredictos solo-simulación**: todos los
-veredictos cierran en Gazebo; la Fase 5 decide cuánto sobrevive al hardware —
-incluida la diferencia cinemática real (skid-steer físico vs DiffDrive fiel en
-sim). (iii) **Percepción proxy en el brazo F**: el baseline de estado modela el
+veredictos cierran en Gazebo. La Fase 5 ha conducido sobre hardware pero **no ha
+puntuado ningún escenario**, de modo que la limitación se mantiene y ahora puede
+enunciarse con precisión: *la evidencia física existe y no está puntuada*. Lo que
+la Fase 5 sí ha decidido es que **el objeto validado no es el objeto que
+conduce** —el trunk 550k no transfiere (D-71)— y que la diferencia cinemática
+real está medida y compensada, no supuesta (D-70: guiñada 0,4954× de lo
+comandado). (iii) **Percepción proxy en el brazo F**: el baseline de estado modela el
 error de percepción como ruido paramétrico; solo el brazo de cámara ejercita
 percepción real. (iv) **Una campaña verdict-bearing por brazo, semilla principal
 2024**: el multi-seed N=5 caracteriza robustez sobre el eval nominal, no repite
@@ -382,23 +398,35 @@ de reglas de SR-010 (T4) y el over-read/under-read del estimador CV (T3); y
 **(iii)** trasladar el brazo a Isaac como réplica de backend, recordando que sus
 checkpoints no son compatibles con Gazebo y que nada de esto reabre G4.
 
-**T2 — Despliegue físico y caracterización del gap sim-to-real (Fase 5 /
-Capítulo 9)** *(pregunta subordinada; adaptación A5; Hallazgo 14).* Portar el
-subconjunto físico de la biblioteca (SC-NOM-01/02, SC-EDGE-01) a la plataforma
-CobraFlex con el sistema **tal como salió de Fase 4** (sin parcheo entre
-corridas), producir la tabla de gap por métrica (sim vs físico,
-absoluto/relativo) y emitir el veredicto de corrección funcional de la cage en
-hardware. **Riesgo identificado de antemano (Hallazgo 14):** la policy 2-D está
-acoplada al `delta_max_steering_per_cycle` de C-06 —satura el limitador en el
-77,5 % de los pasos y sin él abandona el carril cada ~3,2 vueltas—, y el actuador
-físico no implementa ese límite. Dos comprobaciones baratas antes de conducir:
-medir la respuesta de slew real del servo frente a la cota de la cage, y correr
-**un horizonte largo, no el nominal corto**, porque SC-NOM-01 a 300 pasos no
-detecta la dependencia. La ablación que cerraría el mecanismo —reentrenar con
-C-06 fuera del lazo de actuación y comparar el comando crudo— es barata en
-simulación y debería preceder al hardware. El componente con
-mejor pronóstico de transferencia es la cage misma, por estar especificada sobre
-el estado abstracto e independiente de la calidad de policy y percepción.
+**T2 — La campaña física: puntuar escenarios sobre hardware (Fase 5 /
+Capítulo 9)** *(pregunta subordinada; adaptación A5).* **Bring-up ejecutado;
+campaña pendiente — es el trabajo futuro más inmediato del proyecto.** El despliegue físico
+está hecho, el vehículo conduce (cap. 9 §9.3.3) y la tabla de gap tiene columna
+física; lo que falta es la mitad que produce veredicto: correr SC-NOM-01/02 y
+SC-EDGE-01 bajo protocolo, en enforcement, y emitir la corrección funcional de la
+cage en hardware. **Tres condiciones lo separan de ser ejecutable, las tres
+identificadas:** (a) una vía de rearme para C-05, de modo que una corrida
+puntuada no termine en el primer pulso de percepción —resuelta **fuera** de la
+cage (D-74), precisamente para no modificar el artefacto bajo verificación con un
+cambio cuyo efecto entero está en hardware y que la simulación no podría validar,
+porque allí el enclavamiento es casi inerte—; (b) el registro de procedencia por
+corrida, ya implementado; (c) la decisión de `heading_fit_mode` (§9.3.5), porque
+el ajuste con el que el coche **puede** conducir no es el contrato D-43 bajo el
+que se puntuaron las campañas.
+
+*El riesgo que este ítem declaraba de antemano tiene ya una primera medida, y
+es favorable.* La policy 2-D
+está acoplada al `delta_max_steering_per_cycle` de C-06 y el actuador físico no
+implementa ese límite; seleccionando el checkpoint por independencia de la cage
+(D-72), C-06 interviene en el **3,4 % de los ciclos sobre hardware contra el
+3,0 % en simulación**. También apunta en la dirección del pronóstico sobre qué componente
+transferiría mejor: **ninguna regla de seguridad se activó durante el
+recorrido**. Ambas observaciones son de **una sola corrida en `monitoring`**, y es
+la campaña la que las convierte en resultado. Lo que no se anticipó, y es el aporte propio del peldaño, es que la
+policy validada **no transferiría en absoluto** por haber memorizado la
+lateralidad 6,5:1 del circuito de entrenamiento como sesgo de mando (D-71), ni
+que la primera medida de cámara sobre hardware **refutaría una suposición que la
+simulación había heredado** y que estaba en el camino de C-01 (M-6/M-7, §9.3.2).
 
 **T3 — Robustez temporal del estimador CV frente a H-12** *(Hallazgo 6; D-43,
 D-48).* La lección de ruta-2b es que no hay corrección single-frame robusta para

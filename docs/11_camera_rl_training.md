@@ -1080,6 +1080,84 @@ see §9.1.
 > `visual_domain_randomization`, `cv_lane_estimator`, `polyline_tracker`) are
 > host-testable without ROS (`policy/tests/`).
 
+### 8.6 The sim-to-real v2 run — the training that answers a physical failure (D-72, 20–23.08.2026)
+
+Everything above §8.6 is training *for the simulation verdict*. This subsection is
+the first camera training in the repository whose objective is **transfer**, and it
+exists because the trunk policy failed on the real track.
+
+**What it answers.** On 18.08.2026 the 2-D PPO 550k trunk drove the physical
+circuit and did not transfer (D-71). Measured with the car pushed by hand across a
+332 mm span of `ey` while the chain ran without actuation
+(`experiments/physical/runs/policy_bias_probe/`, 5665 cycles):
+
+```
+steer = -0.000166 * ey_mm + 0.1155      r = -0.243   r^2 = 0.059
+```
+
+The sign is right — lane-following is not forgotten — but the **lane-dependent
+swing across the whole 332 mm is 0.055 against a constant left offset of
++0.1155**, i.e. 2.1× the entire swing, and only **29 of 5665 samples (0.5 %)
+command a right turn at all**. In closed loop the bias dominates and the car
+departs left regardless of position.
+
+**D-72 splits the gap into three terms, and only the first is a property of the
+track.**
+
+| Term | Diagnosis | Treatment in `train_ppo_camera_2d_sim2real_v2.yaml` |
+| --- | --- | --- |
+| **Handedness** | complex_b driven counter-clockwise is **6.5 : 1** left arc to right (~13 m vs ~2 m per lap); the fine-tune's action log held mean raw steering at **+0.112…+0.120, flat across all 284,672 steps**. Track handedness memorised as a steering prior. | Observation and action **mirrored per episode**; measured `mirror_rate` **0.527** |
+| **Photometry** | The 19.08 photometric fine-tune moved swing retention 2 % → 28 % against a gate floor of 50 %: monotonic, real, and not enough on its own | **75 %** of episodes in the measured hall band, 25 % at the Gazebo render |
+| **Camera geometry** | Rendering the Gazebo pose set through the measured M-6 lens costs the 550k trunk **a third of its lane response** (swing 0.363 → 0.232). The 19.08 "geometry is negligible" reading came from a policy already at zero response, where nothing could move | Mount pitch **±1.5°**, height **±10 %**, and **10 %** of episodes on the full measured lens |
+
+**The naive mirror is the right one, and that was checked.** Mirroring the *frame*
+alone would put a doubled column where the ground projection's lateral resolution
+is largest; it tipped the estimator's line pairing on 10 of 420 frames, worst
+223 mm, one returning the mirrored `ey` with the **same sign** as the original. A
+policy can learn around a constant; it cannot learn around a label that is
+occasionally backwards.
+
+**The run.** `ppo_gz2d_sim2real_v2_2024(_r2)`, **2,500,544 steps, completed**,
+resumed at 600k after incident I-1 — a campaign's orphan-Gazebo reaper matched the
+trainer, because `GZ_PARTITION` isolates topics, not processes. Guarded now, with a
+test pinning the hazard.
+
+**Checkpoint of record: 1,650,000 — chosen on transfer and cage independence, never
+on reward.** It has the best deployment-arm statistics of the run (r² **0.440**,
+bias/swing **0.10**, right-turn share **62.1 %**) and **3.0 %** nominal cage
+intervention against the reward peak's **35.0 %**. The second criterion is
+deliberate: D-69's transfer risk **T2** named the C-06
+`delta_max_steering_per_cycle` coupling as the concrete thing that might not
+survive contact with a real actuator, so a checkpoint that leans on the rate
+limiter is the wrong one to ship. D-66's lesson — the reward peak is not the best
+driver — held for the second time.
+
+**The handedness term is fixed.** Bias/swing **0.07–1.10** across the deployment
+arms, against **12.9–19.2** for the trunk as it was actually deployed on 18.08.
+D-43 preflight **PASS** on 325k, 1650k and 2000k.
+
+**I-8 — a retraction.** Every nominal evaluation of this run made before
+23.08.2026 measured the *randomisation*, not the policy: `eval_policy` disabled
+`domain_randomization` but not the two new blocks (`geometric_randomization`,
+`mirror_augmentation`). Those `|ey|` figures are **retracted**. Fixed, with two
+tests. The full incident list is in the run's `raw_logs/INCIDENTS.md`.
+
+**And it transfers.** On 26.08.2026 this checkpoint drove **18.05 m of the real
+circuit in one uninterrupted 101 s segment** — `|ey|` median 18.7 mm, no safety
+rule fired, C-06 at **3.4 % of moving cycles against the 3.0 % that selected it in
+simulation**. That is the closest sim-to-hardware agreement anywhere in Phase 5 and
+it is what **T2 not materialising** looks like. Detail: docs/17 §8.10.
+
+> **This run re-scores nothing.** It is posterior to G4 and to D-69's verdict of
+> record; `campaign_v2` (the same 27 × 2 × seed-2024 matrix on 1650k) is posterior
+> evidence and is not a prerequisite for driving. One scenario changes *meaning*
+> rather than value: **SC-FRONT-07**'s premise is "the Y-mirror of complex_b
+> reverses curve handedness", which a mirror-invariant policy handles by
+> construction — for any policy from this run it is an in-distribution
+> **regression test**, not an OOD probe. GE4-V2's frozen result is unaffected.
+
+---
+
 ### 9.1 RViz visualisation of the cage + agent (`cage_viz.py`)
 
 When `viz: true`, each control step the env publishes (via `CageViz`):
@@ -1234,6 +1312,15 @@ cage-dependent (666), 1/5 cage–CV conflict (23)).
 
 ## Version log
 
+- **v0.9 (2026-08-27):** adds **§8.6, the sim-to-real v2 run (D-72)** — the first camera
+  training in this document whose objective is transfer rather than the simulation verdict.
+  Records D-71's measured non-transfer of the 550k trunk, the three-term split of the gap
+  (handedness / photometry / camera geometry), the 2.5M-step run, the **1,650,000**
+  checkpoint chosen on transfer and cage independence rather than reward, the **I-8**
+  retraction of every pre-23.08 nominal eval of the run, and the 26.08 physical result
+  (18.05 m in one segment, C-06 3.4 % against 3.0 % in sim). Re-scores nothing: posterior
+  to G4 and to D-69's verdict of record. SC-FRONT-07 is noted as changing MEANING for a
+  mirror-invariant policy — regression test, no longer an OOD probe.
 - **v0.8 (2026-07-20):** implemented the next-step qualification surface without generating new run evidence: bounded fresh 75k SAC-entfix parent at 0.22 m/s, 150k replay covering the parent + fixed 50k continuation, final VecNormalize/replay capture, hash-bound D-43 preflight and preregistered/arm-wise SC-PERT-03 runner. The historical reference matrix remains aggregate `BLOCKED`; execution is pending.
 - **v0.7 (2026-07-20):** posterior Gazebo evidence consolidation. Header retargeted from
   PPO-only wording to the shared PPO/SAC trainer while preserving PPO 297k as the sole

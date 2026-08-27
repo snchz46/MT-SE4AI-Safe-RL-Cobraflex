@@ -704,9 +704,13 @@ hold the 300 s run. The dependence is measured; its origin — co-adaptation to 
 rate limiter inside the training loop — is **inferred**, and the ablation that
 would prove it has not been run. Say so before being asked.
 
-**Still open, deliberately:** `verdict_phys` (Phase 5 scaffolded, not run on
-hardware), **TBD-Q10** (`ODD-3.A_LAT_MAX`, unmeasurable in simulation by
-construction, D-33), and the Chapter 8 restructure that would let the camera track
+**Still open, deliberately:** `verdict_phys` — Phase 5 has now **driven** on
+hardware (18.05 m in one segment, no safety rule fired, docs/17 §8.10) but **no
+scenario has been scored under protocol**, so the column is open for a narrower
+reason than it was: *the physical evidence exists and is not scored*. Three named
+conditions separate it from being scorable (docs/17 §9.5 / D-74, §9.3.5 in Ch.9,
+and per-run provenance, now implemented) —, **TBD-Q10** (`ODD-3.A_LAT_MAX`,
+unmeasurable in simulation by construction, D-33), and the Chapter 8 restructure that would let the camera track
 lead rather than sit in §8.9 — the other item D-67 deferred, and an authoring
 decision rather than an evidence one.
 

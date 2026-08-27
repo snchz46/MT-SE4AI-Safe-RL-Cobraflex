@@ -92,8 +92,19 @@ en E2 dentro de la envolvente que `docs/09` §10 dejó abierta:
 
 La cámara fuente es la **Lane Cam dedicada** (espejo IMX219-160, 640×360,
 HFOV ≈ 90°) montada **5 cm más abajo en el frente del chasis**
-(`camera_geometry` h ≈ 0,077 m, pitch 0,25 rad), compartida por la CNN de
-la política y el estimador CV de la cage. Cada fotograma atraviesa el
+(`camera_geometry` h ≈ 0,077 m, pitch 0,30 rad), compartida por la CNN de
+la política y el estimador CV de la cage.
+
+> **Los 90° son el sensor de Gazebo, y sobre hardware son incorrectos.** M-6
+> (17.08.2026) midió el módulo real en un HFOV efectivo de **77,89°** (`fx`
+> 395,93 px, no 320), y la suposición era **circular**: el sensor simulado se
+> configuró desde el mismo valor por defecto, así que ningún resultado de
+> simulación podía exponerla. Todo lo entrenado y puntuado en este capítulo lo
+> fue bajo los 90° renderizados, que siguen siendo el modelo canónico; el
+> despliegue **rectifica** el fotograma real hacia él en lugar de
+> reparametrizar el estimador (cap. 9 §9.3.2). El pitch nominal 0,30 rad sí
+> resistió la medida: M-6 Parte B lo ajustó en **0,3113 rad (17,84°)**, un
+> error de montaje despreciable. Cada fotograma atraviesa el
 **pipeline compartido** (`camera_pipeline.CameraPipeline`): un único punto
 de degradación (estresor de escenario o *domain randomisation*) **antes de
 ambos consumidores** — la causa común que D-43 acepta y documenta. La

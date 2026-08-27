@@ -31,6 +31,137 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [27.08.2026 · later] — The manuscript and the specs catch up with Phase 5, as BRING-UP evidence: a falsified assumption, a policy that does not transfer, and the first measurement of a transfer risk declared before it was measured
+
+**Document(s) affected:** `manuscript/draft_v5/front/{10_abstract,15_preface}.md`,
+`manuscript/draft_v5/body/{09_gap_sim_to_real,10_validacion_operacional,12_conclusiones}.md`,
+`manuscript/chapters/{chapter_07_training_specification,chapter_09_sim_to_real_gap,
+chapter_10_operational_validation,chapter_12_conclusions_and_future_work}.md`,
+`docs/07_traceability_matrix.md`, `docs/08_odd_specification.md`,
+`docs/09_environment_design.md`, `docs/11_camera_rl_training.md` (§8.6 new),
+`docs/12_cv_lane_keeper.md`, `docs/16_defense_compendium.md`
+**Phase:** 5 (physical deployment)
+**Gate context:** after G4; **no gate re-scored, no simulation verdict touched, no
+hazard/SR/scenario/metric added or re-valued**
+**Author:** Samuel Sanchez
+
+### Change
+
+1. **Chapter 9 was not merely incomplete — it asserted five things Phase 5 had
+   falsified.** Audited and corrected: *"no se ha ejecutado sobre hardware"*;
+   *"este capítulo no reporta ningún resultado físico"*; the effective-HFOV
+   verification described as still pending; the 550k trunk described as *"la
+   política que efectivamente se despliega"*; and the rate-limiter coupling
+   described as *"el primer gap a vigilar"*. The same claims propagated to the
+   **abstract**, the **preface**, Ch. 10 §10.2/§10.4 and Ch. 12's subordinate
+   research question — all corrected.
+2. **§9.3 rewritten around what the hardware produced**, in four parts: the
+   blocking verification that ran and **failed** (M-6: 77.89°, not 90°; M-7: `ey`
+   read at 0.68–0.83 × true − 10 mm, so **C-01 fires at a true 207–241 mm**
+   instead of 160, leaving 14–48 mm to the edge instead of 95); the 550k trunk's
+   **non-transfer** (D-71) with its cause identified as complex_b's 6.5 : 1
+   handedness memorised as a steering prior; the **v2 retrain** (D-72) and its
+   checkpoint chosen on cage-independence rather than reward; and the 26.08
+   result — **18.05 m in one uninterrupted segment, no safety rule fired**.
+3. **The gap table has a physical column, with its premise corrected.** The
+   header now states that **the policy that deploys is not the policy that
+   produced the verdict**, so the columns are not a like-for-like contrast. The
+   2-D intervention figure is separated accordingly: **76.1 %** is the 550k
+   trunk's, **3.0 %** is the deployed checkpoint's — against **3.4 %** measured
+   on the car.
+4. **The Chapter 8 transfer risk (T2) now has a first measurement, and it is
+   favourable — not a closure.** It was declared before any hardware existed;
+   selecting the checkpoint on cage-independence rather than reward put the
+   two figures **four tenths of a percentage point** apart. **N = 1, in
+   `monitoring`, unscored**: the physical campaign can still contradict it,
+   and every place this appears says so. Recorded in Ch. 9 §9.4, in Ch. 12's
+   H12 as a post-scriptum, in T2 of both future-work sections, and in the
+   abstract.
+5. **Two findings added to Ch. 12 that only hardware could produce.** **H13** — an
+   assumption the simulator *inherited* is one the simulator cannot falsify, and
+   this one sat in the path of a safety rule. **H14** — a class of defect that
+   only appears with a vehicle in front of you: rules correct by specification
+   with no defined *operational* behaviour, thresholds that cannot fire in the
+   deployed configuration, and sensor failure modes that enter the cage's only
+   speed input directly.
+6. **`docs/11` §8.6 (new): the sim-to-real v2 run.** The first camera training in
+   that document whose objective is transfer rather than the simulation verdict —
+   the three-term split, the 2.5M-step run, the **1,650,000** checkpoint and its
+   two selection criteria, the **I-8** retraction of every pre-23.08 nominal eval
+   of the run, and SC-FRONT-07 changing *meaning* (regression test, no longer an
+   OOD probe) for a mirror-invariant policy.
+7. **Camera geometry reconciled across `docs/08`, `docs/09`, `docs/12` and
+   Ch. 7.** The 90° stays as the **rendered** value every campaign was scored
+   under; what is corrected is the claim that it was also the effective HFOV on
+   hardware. Deployment **rectifies the real frame into the canonical model**
+   rather than re-parameterising the estimator, and the A/B behind that is
+   quoted where the estimator is specified. `docs/09` also records the capture
+   rate 60 → 30. Ch. 7's mount pitch corrected 0.25 → 0.30 rad (M-6 Part B fitted
+   the real mount at 0.3113 rad — essentially right).
+8. **`verdict_phys` re-justified, not re-valued, in `docs/07` and `docs/16`.** It
+   stays `tbd`, now for a narrower and statable reason: **the physical evidence
+   exists and is not scored**. Two matrix rows are *qualified*: SR-004 is
+   satisfied via a C-04 that **cannot fire at all** in the deployed physical
+   configuration, and the policy the matrix scores is not the policy that drives.
+
+9. **A status pass, applied after the first draft of these edits, separates two
+   classes of physical evidence and labels them differently everywhere.**
+   *Calibration measurements and structural findings* — a metrology against a
+   pattern (M-6), a tape measurement (M-7), a regression over 5665 cycles
+   (D-71), two controlled A/B pairs (rectification, ZED loop closure) and an
+   arithmetic threshold comparison (C-04's dead zone) — **are results and do
+   not depend on any campaign**. *Driving figures* — `|ey|`, distance, the
+   C-06 rate, loop cadence, and the whole physical column of the gap table —
+   come from **one run, in `monitoring`, outside the scenario protocol**, are
+   labelled **PRELIMINAR / N=1**, and the physical campaign will supersede
+   them. §9.3 is retitled *bring-up*, §9.5 becomes a *first reading* of
+   divergences whose value is to direct the campaign, and §9.6 says the rung
+   is **in progress** rather than executed.
+
+### Rationale
+
+The manuscript's honesty discipline cuts both ways. A chapter that says "no
+physical evidence" when the car has driven is as wrong as one that reports
+estimates as measurements — and the specific sentence "the effective HFOV is the
+first thing to measure on hardware" was left standing in the submission draft
+*after* that measurement had been taken and had come back wrong. Leaving it there
+would have discarded the strongest argument the work has for why A5 makes the
+physical rung obligatory.
+
+The gap table needed the opposite correction: it claimed a like-for-like contrast
+it can no longer support, because the deployed policy changed. Presenting the
+columns side by side with the difference stated in the header is the honest form.
+
+### Impact
+
+* **No hazard, SR, cage rule, scenario, metric or verdict is added or re-valued.**
+  `tools/sync_hazard_register.py` and `sync_safety_requirements.py` re-run: **12
+  hazards, 14 SRs, no diff** in the generated CSVs.
+* **`cage.yaml` untouched**; no version bump.
+* **The D-67 reclassification is still repo-only** and was not written into the
+  manuscript. Every manuscript edit here is a correction of a claim that Phase-5
+  evidence falsified, or the population of a section the chapter itself marked as
+  pending.
+* **The page budget must be re-checked on the next DOCX build.** `draft_v5`'s body
+  grew by roughly 50 lines, concentrated in Ch. 9; `tools/thesis_page_budget.py`
+  has not been run (it needs Word COM).
+* **The physical campaign is the immediate next work item**, and the manuscript
+  now says so in Ch. 12's T2 rather than describing the physical rung as done.
+  Ch. 9 §9.2.3 (the Isaac column) remains a skeleton, the hardware/track
+  characterisation appendix is still owed, and the physical column of the gap
+  table is explicitly provisional.
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED, 0 warnings**, re-run
+after each document. Host-side suite unchanged at **720 passed** (the same 7
+environment failures on the Windows host: no `cv2`, no `pgrep`, no
+`ament_index_python`).
+
+**Not verified:** no figure was regenerated, and the DOCX was not rebuilt.
+
+---
+
 ## [27.08.2026] — The 26.08 afternoon runs analysed: both fixes work, the ZED hypothesis is discriminated, and the next lap is prepared to explain itself
 
 **Document(s) affected:** `docs/17_physical_deployment.md` (§8.10 new, §9 new,

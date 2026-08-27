@@ -210,6 +210,8 @@ script reports orphans on either side.
   velocity, so drift beats jumps; the price is that odometry can no longer say whether a lap closed) and
   **D-74** (C-05 unchanged, reset path outside the cage, `observe` by default; whether C-05 should ever gain a
   bounded recovery is **deferred** — sim cannot validate it, because the latch is nearly inert there).
+- **The manuscript now carries Phase 5, and carries it as BRING-UP (27.08).** `manuscript/` had gone stale in a way that mattered: Ch. 9 asserted *"no se ha ejecutado sobre hardware"* and named the
+  HFOV check as still pending **after** M-6 had run it and refuted it, and the gap table called the 550k *"la que se despliega"*. Corrected across draft_v5 (abstract, preface, 09/10/12) and chapters (07/09/10/12), plus docs/07/08/09/11/12/16 — `docs/11` §8.6 is new (the v2 run). **Two classes of physical evidence are labelled differently and must stay that way:** calibration + structural findings (M-6, M-7, D-71, the two A/B pairs, C-04's dead zone) are **results**; driving figures and the gap table's physical column are **PRELIMINAR, N=1, `monitoring`, unscored** and the campaign supersedes them. No hazard/SR/scenario/metric/verdict added or re-valued (CSVs re-run: 12/14, no diff); D-67's reclassification stayed repo-only. **Page budget not re-checked** (needs Word COM) and no figure regenerated.
 - **`campaign_v2` — posterior evidence; it does NOT re-score G4.** The same 27 × 2 × seed-2024 matrix
   (1890 runs, SC-PERT-03 excluded per D-64) on the 1650k checkpoint, behind the `flock` guard;
   `experiments/sim/campaign_v2/` held **20 runs** at the 24.08 commit. Not a prerequisite for driving

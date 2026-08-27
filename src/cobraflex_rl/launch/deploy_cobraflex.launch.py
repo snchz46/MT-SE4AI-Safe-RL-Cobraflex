@@ -119,8 +119,13 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import AnyLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import (
+    LaunchConfiguration,
+    PathJoinSubstitution,
+    PythonExpression,
+)
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -247,6 +252,36 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("use_rviz", default_value="false",
                               description="rviz in the included bring-up (default off for "
                                           "a deploy run; the platform default is true)."),
+        # ---- evidence completeness (27.08.2026) ------------------------------
+        # docs/17 §8.9 asked for the frames the estimator saw when it declared
+        # perception invalid, and two sessions have now gone without them. ON by
+        # default: the whole point is that it cannot be forgotten again, and its
+        # steady-state cost is one deque append per frame, no decode.
+        DeclareLaunchArgument("capture_frames", default_value="true",
+                              description="frame_capture_node: keep the lane frames "
+                                          "around each perception-invalid / emergency "
+                                          "event. A RAM ring buffer, NOT a bag — see "
+                                          "frame_capture_node's docstring for why "
+                                          "bagging the image topic is forbidden here."),
+        DeclareLaunchArgument("capture_pre_seconds", default_value="3.0"),
+        DeclareLaunchArgument("capture_post_seconds", default_value="2.0"),
+        DeclareLaunchArgument("capture_max_events", default_value="8",
+                              description="hard cap on dumps per run; a flickering "
+                                          "estimator extends one event rather than "
+                                          "opening several."),
+        # C-05's asymmetric exit has no operational story on hardware (§8.5) and
+        # that needs a DECISION, not a patch. Until it is taken, this proxy sits
+        # OUTSIDE the cage: `observe` logs what a reset path would have done and
+        # publishes nothing, `auto` actually publishes /cage_reset under guards,
+        # `off` does not start it. A run with `auto` is DIAGNOSTIC, never scored —
+        # part of the stopping behaviour is then the proxy's, not the cage's.
+        DeclareLaunchArgument("reset_proxy", default_value="observe",
+                              description="off | observe | auto."),
+        DeclareLaunchArgument("reset_proxy_max_resets", default_value="6"),
+        DeclareLaunchArgument("reset_proxy_healthy_seconds", default_value="1.0",
+                              description="perception healthy, no C-01..C-04 active "
+                                          "and the car stopped — continuously, for "
+                                          "this long, before a reset is issued."),
     ]
     checkpoint = LaunchConfiguration("checkpoint")
     algorithm = LaunchConfiguration("algorithm")
@@ -334,6 +369,72 @@ def generate_launch_description() -> LaunchDescription:
             "cage_mode": mode,
             "output_dir": LaunchConfiguration("evidence_dir"),
             "run_id": LaunchConfiguration("run_id"),
+            # Reproducibility provenance. Until 27.08.2026 a physical run's
+            # metadata.json carried four fields, so the provenance of the 18.08
+            # and 26.08 track sessions had to be hand-written into docs/17
+            # (§8's preamble; §8.9's last-but-two bullet). "physical" is what
+            # switches the full block on — the sim path keeps the old four.
+            "platform": "physical",
+            "cage_yaml": cage_yaml,
+            "policy_checkpoint": checkpoint,
+            "rectify_calibration": LaunchConfiguration("rectify_calibration"),
+            "contract.algorithm": algorithm,
+            "contract.max_speed_mps": max_speed,
+            "contract.throttle_deadband": LaunchConfiguration("throttle_deadband"),
+            "contract.control_rate_hz": LaunchConfiguration("control_rate_hz"),
+            "contract.steering_to_yaw_rate_gain": LaunchConfiguration(
+                "steering_to_yaw_rate_gain"),
+            "contract.heading_fit_mode": LaunchConfiguration("heading_fit_mode"),
+            "contract.heading_gain": LaunchConfiguration("heading_gain"),
+            "contract.heading_temporal_window": LaunchConfiguration(
+                "heading_temporal_window"),
+            "contract.white_sat_max": LaunchConfiguration("white_sat_max"),
+            "contract.white_val_min": LaunchConfiguration("white_val_min"),
+            "contract.camera_topic": camera_topic,
+            "contract.odom_topic": LaunchConfiguration("odom_topic"),
+            "contract.speed_map": "linear_2d",
+            "contract.throttle_map": "policy_2d",
+        }],
+    )
+    # The frames the estimator saw when it lost the lane — the measurement
+    # docs/17 §8.9 asked for and that two track sessions have gone without.
+    frame_capture = Node(
+        package="cobraflex_rl", executable="frame_capture_node", output="screen",
+        condition=IfCondition(LaunchConfiguration("capture_frames")),
+        parameters=[{
+            "image_topic": camera_topic,
+            "perception_invalid_topic": "/perception_invalid",
+            "emergency_topic": "/emergency",
+            "output_dir": LaunchConfiguration("evidence_dir"),
+            "run_id": LaunchConfiguration("run_id"),
+            "pre_seconds": ParameterValue(
+                LaunchConfiguration("capture_pre_seconds"), value_type=float),
+            "post_seconds": ParameterValue(
+                LaunchConfiguration("capture_post_seconds"), value_type=float),
+            "max_events": ParameterValue(
+                LaunchConfiguration("capture_max_events"), value_type=int),
+        }],
+    )
+    reset_proxy = Node(
+        package="cobraflex_rl", executable="cage_reset_proxy_node", output="screen",
+        condition=IfCondition(PythonExpression(
+            ['"', LaunchConfiguration("reset_proxy"), '" != "off"'])),
+        parameters=[{
+            "enabled": ParameterValue(
+                PythonExpression(
+                    ['"', LaunchConfiguration("reset_proxy"), '" == "auto"']),
+                value_type=bool),
+            "cage_status_topic": "/cage_status",
+            "perception_invalid_topic": "/perception_invalid",
+            "emergency_topic": "/emergency",
+            "reset_topic": "/cage_reset",
+            "state_obs_topic": "/state_obs",
+            "output_dir": LaunchConfiguration("evidence_dir"),
+            "run_id": LaunchConfiguration("run_id"),
+            "max_resets": ParameterValue(
+                LaunchConfiguration("reset_proxy_max_resets"), value_type=int),
+            "min_healthy_seconds": ParameterValue(
+                LaunchConfiguration("reset_proxy_healthy_seconds"), value_type=float),
         }],
     )
     # Layer 1 of the platform's own bring-up (robot_state_publisher +
@@ -364,5 +465,5 @@ def generate_launch_description() -> LaunchDescription:
 
     return LaunchDescription(args + [
         platform_bringup, csi_camera, rl_policy, cv_estimator, cage,
-        vehicle_control, cage_logger,
+        vehicle_control, cage_logger, frame_capture, reset_proxy,
     ])

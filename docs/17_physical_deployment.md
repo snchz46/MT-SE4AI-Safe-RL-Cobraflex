@@ -1,15 +1,23 @@
 # 17 · Physical deployment (Phase 5) — bring-up plan for the real CobraFlex
 
 **Status: DRIVEN ON THE TRACK (2026-08-26, §8). The sim-to-real v2 policy transfers.**
-It covered **19.28 m** — one circuit perimeter's worth — in `mode:=monitoring` with
-rectification on, holding `|ey|` median ≈ 9 mm and firing **no safety rule while
-moving**, but in six segments separated by **five operator `/cage_reset`
-publications**, and it left the lane in the final curve. **This is not a clean lap
-and no scenario has been scored on hardware**; `verdict_phys` stays open. The
+The morning runs covered **19.28 m** in `mode:=monitoring` with rectification on,
+holding `|ey|` median ≈ 9 mm and firing **no safety rule while moving**, but in six
+segments separated by **five operator `/cage_reset` publications**, and it left the
+lane in the final curve. That afternoon two fixes landed — camera capture rate and
+the ZED loop-closure overrides — and the last run of the day drove **18.05 m in one
+uninterrupted 101 s segment with no operator reset, no pose jumps and C-06 as the
+only rule touched** (§8.10). It still stopped **2.11 m short of the start**, on a
+single 400 ms perception glitch that latched C-05 with the car 27 mm from the lane
+centre. **This is not a clean lap and no scenario has been scored on hardware**;
+`verdict_phys` stays open. §9 is the prepared runbook for the next attempt. The
 deployment gate now **PASSES on real imagery** (§8.1) — the 18.08 frames were never
 lost, only searched for on the wrong host (§7.2). Four things stop the car and none
 of them is the policy: C-05's non-recovering latch (§8.5), camera starvation
 (§8.6), ZED pose jumps (§8.7) and C-04's dead zone in the tightest curve (§8.8).
+**Two of the four are now fixed and measured** (§8.10): the pose jumps go 116 → 0
+and the camera feeds the loop at 9.84 Hz. The other two are untouched, and C-05 is
+what ended the best run of the session.
 Earlier bench sessions: 2026-08-05 and 2026-08-17, wheels off the ground. Both §2
 `[VERIFY]` items are now measured (M-6, 17.08.2026) and the HFOV one came back
 **wrong — 77.89°, not 90°**; its propagated `ey` under-read was CONFIRMED on
@@ -1135,6 +1143,13 @@ the single most deployment-relevant finding of the session. **It needs a decisio
 perception trigger, an operator reset path, or removing the cause upstream (8.6).
 Nothing has been changed.
 
+> **Taken 27.08.2026 as D-74:** the second candidate, and outside the cage.
+> C-05 is unchanged — in simulation `require_explicit_reset` is nearly inert
+> because a scenario ends, so a bounded recovery inside the rule would be a
+> change to the verified artefact whose entire effect is on hardware, verified
+> by nothing. §9.5 is the operating posture; the recovery question itself is
+> deferred, not answered.
+
 Lap 3 was driven with the third option taken manually: **five `/cage_reset`
 publications by the operator**, each with perception already healthy, no C-01…C-04
 active and `v = 0`. Segments between resets: 29 s/+4.87 m, 29 s/+4.92 m,
@@ -1159,6 +1174,12 @@ Cause is CPU. Measured with **layer 3 not running**: load average 5.49 on 6 core
 deploy default for Layer 1; **Layer 2's bring-up should not leave rviz running
 either.** Freeing further headroom is the next work item.
 
+> **Done the same afternoon — see §8.10.** `lane_camera_capture_fps` 60 → 30 took
+> the delivered rate to 19.0 Hz at 96.5 % of a core (from 15.2 Hz at 134.3 %), and
+> `/state_obs` now holds 9.84 Hz with a worst gap of 295 ms. It was **not enough to
+> buy a lap on its own**: the run with the best loop rate of the session still died
+> in 16 s, on §8.7.
+
 ### 8.7 ZED pose jumps, measured rather than inferred
 
 `cobraflex_sensors.launch.xml` has warned since 06.08 that a ZED loop-closure jump
@@ -1181,6 +1202,14 @@ and its big jump came at 53 s. Partial support for the loop-closure hypothesis, 
 proof. Candidate fixes, none applied: `odom0_pose_rejection_threshold`
 (robot_localization's designed outlier gate), raising the pose covariance, or
 turning off the wrapper's `reset_odom_with_loop_closure`.
+
+> **The third one was applied the same afternoon, and it discriminates — §8.10.**
+> `config/zed_deploy_overrides.yaml` (`area_memory:false`,
+> `reset_odom_with_loop_closure:false`) against the run 13 minutes earlier without
+> it: single-frame pose steps over 50 mm go **116 → 0** in 509 s, and the ekf's
+> `vx` — the cage's only speed input — goes from 4.50 m/s to a maximum of 0.213
+> against a commanded 0.22. "Partial support, not proof" is now proof, at the cost
+> of unbounded slow drift (§9.4a). Recorded as **D-73**.
 
 In `monitoring` this is survivable only because the cage does not apply
 corrections — but `vehicle_control_node` is emergency-aware and zeroes `/cmd_vel`
@@ -1248,3 +1277,313 @@ discriminate between them**. Fix the starvation first (8.6), then vary speed.
   marked or removed.
 * **docs/17 §7.4 step 4 names `preflight_deploy.py stage1 --mode monitoring`.**
   `stage1` has no `--mode`; the mode belongs to the launch.
+
+### 8.10 The afternoon runs: both fixes applied, and the 18.05 m they bought
+
+Two runs, 13 minutes apart, committed in `624fba1d` alongside §8 but not
+described by it — so §8.6 still ends *"Freeing further headroom is the next work
+item"* and §8.7 still lists candidate fixes *"none applied"*, and both sentences
+were overtaken the same afternoon by the same commit. This closes that.
+
+**The camera fix.** `lane_camera_capture_fps` 60 → 30 on Layer 2. `throttle_fps`
+sits *after* `nvvidconv`, so every earlier measurement ran the sensor at 60 fps
+and `nvargus-daemon` — a different process, doing the ISP work — never saw the
+saving. Measured on the car with the real two-subscriber topology, as % of one
+core: capture 60/read 20 delivered **15.2 Hz** at 134.3 % total; capture 30/read
+20 delivered **19.0 Hz** at 96.5 %. Capturing at 60 was not merely wasteful but
+*harmful* — 38 % of a core more for a worse rate. Rationale in
+`csi_camera_node.gstreamer_pipeline`'s docstring.
+
+**The ZED fix** (**D-73**). `config/zed_deploy_overrides.yaml` (new), applied
+through the wrapper's `ros_params_override_path` from
+`cobraflex_sensors.launch.xml`:
+`area_memory: false` and `reset_odom_with_loop_closure: false`, plus object
+detection and point clouds off — neither has a subscriber in this chain. The
+trade is stated in the file: without area memory the odometry *drifts* more over
+time, which is acceptable **here and would not be in a navigation case**, because
+the cage reads velocity, not position, and a slow drift produces no spike. A jump
+does.
+
+| | `fulllap3` 08:37 (neither fix) | `cpufix` 09:51 (camera only) | `noloopclosure` 10:04 (both) |
+| --- | --- | --- | --- |
+| driving | 19.28 m, **6 segments, 5 resets** | died at t+16.2 s | **18.05 m, one segment, 0 resets** |
+| control tick (`/cage_status`) | 8.18 Hz, p90 205 ms, max 618 | **9.59 Hz**, p90 131, max 244 | 8.68 Hz, p90 189, max 598 |
+| `/state_obs` | 9.86 Hz, max 204 ms | 10.00 Hz, max 122 | 9.84 Hz, max 295 |
+| ekf steps > 50 mm / frame | 75 (max 5074 mm) | 116 (max 4061 mm) | **0** (max 29.8 mm) |
+| ekf `\|vx\|` max | 4.61 m/s | 4.50 m/s | **0.213 m/s** |
+| perception-invalid samples | 7.7 % | — | **0.2 %** (11 of 5027) |
+| rules while driving | C-02 ∧ C-03, C-04, lane departure | C-04 → C-03 → C-02 → C-01 | **C-06 only** |
+
+Read the two fixes separately, because the runs separate them. `cpufix` has the
+best loop rate of the session — 9.59 Hz, only 4.5 % of cycles over 150 ms — and
+still died in 16 s, on a ZED pose jump that fired C-04 → C-03 → C-05. **The
+camera fix alone does not buy a lap.** `noloopclosure` has a *worse* loop rate
+than `cpufix` and drove for 101 s, because the thing that was ending runs was
+never the loop rate.
+
+**§8.7's hypothesis is now discriminated.** The two runs are the controlled A/B
+the earlier evidence lacked — same checkpoint, same mode, same rectification, 13
+minutes apart, differing in the override file. Pose jumps go **116 → 0** over
+509 s, and the ekf's `vx`, the cage's only speed input, goes from 4.50 m/s to a
+maximum of **0.213** against a commanded 0.22. §8.7 recorded "partial support for
+the loop-closure hypothesis, not proof"; this is the missing arm.
+
+**The lap.** `track_v2_noloopclosure_20260826T100450Z`, `monitoring`, rectified,
+`near_secant`/1.0: **18.05 m in 101.1 s as a single uninterrupted segment**, no
+operator reset, `|ey|` median **18.7 mm** (p90 44.7, max 98.7 — C-01's threshold
+is 160), `|epsi|` median **6.54°** (max 18.91, C-02's is 25), speed ≤ 0.213 m/s,
+and **`cycles_since_last_state` never above 0** — unlike §8.8, the cage never ran
+on a frozen state. The only rule it touched was C-06, 30 times: **3.4 % of moving
+cycles, against the 3.0 % nominal intervention that chose this checkpoint in
+simulation** (D-72). That is the closest agreement between a sim and a hardware
+figure anywhere in Phase 5, and it is a second confirmation that D-69's T2
+transfer risk did not materialise.
+
+**It is still not a closed lap, and it did not end the way a lap ends.** At
+t+101.05 s `/perception_invalid` went true for **400 ms** — one event, the other
+six of the run's seven all inside the first 3.1 s, before the car moved. C-05
+latched on it, `require_explicit_reset` kept it latched, and the run was over:
+0.80 m in the remaining 396 s. When it latched the car was **27 mm from the lane
+centre**, heading error 10.3°, in the tightest curve on the circuit
+(`kappa_ahead` 0.75 1/m, radius 1.34 m) — the same curve §8.8's departures
+happened in. So the §8.5 finding is not merely unchanged, it is sharpened: one
+perception glitch per lap is now the *whole* difference between a completed
+circuit and a stopped car.
+
+**What this run does NOT establish.**
+
+* **Whether it closed the loop.** The odometry says it stopped **2.11 m** from
+  the start point having turned **314°** of 360°, and never came back closer.
+  But the fix that removed the jumps is the same one that removed the
+  loop-closure correction, so slow drift is now unbounded and 2.11 m over 101 s
+  is within what this odometry can invent. **This cannot be settled from
+  `/odometry/filtered` at all** — it needs a mark on the floor and a tape
+  measure (§9.4), which would simultaneously give the first measurement of what
+  the ZED override costs in drift.
+* **The capture-rate change under motion.** `csi_camera_node`'s own docstring
+  flags it: the photometric check behind 30 fps (grey mean 101.96 → 101.69,
+  Laplacian variance 667 → 762) was run with the **car stationary**, so it cannot
+  see motion blur, which is the one thing a longer exposure would cause. §8.4's
+  lesson exactly. Unverified.
+* **Anything about enforcement.** Every run of the session was `monitoring`.
+* **Why the estimator lost the lane.** §8.9's open item survives the session: no
+  frames were kept, so the 400 ms that cost the lap is still an unexplained
+  event. `frame_capture_node` (§9.2) exists to close it next time.
+* **The loop rate is still short of the contract**, and the bottleneck has
+  moved. `/state_obs` now holds 9.84 Hz with a worst gap of 295 ms, while
+  `/cage_status` runs at 8.68 Hz with p90 189 ms — i.e. **12 % of estimator
+  cycles never produce a control cycle**. `/cage_status` is published from
+  `cage_ros_node._on_raw_action`, so that rate *is* `rl_policy_node`'s 10 Hz
+  timer slipping. The camera starvation of §8.6 is fixed; CNN inference is what
+  is left.
+
+## 9. Next track session (prepared 27.08.2026): one complete monitoring lap
+
+**Goal, stated narrowly:** one uninterrupted circuit of the physical track in
+`mode:=monitoring`, with enough evidence recorded that whatever happens can be
+explained afterwards *from the run itself*. Not a scored run — see §9.7 for what
+it deliberately is not.
+
+The 26.08 session came within **2.11 m** of that (§8.10) and lost the lap to a
+single 400 ms perception event nobody can explain, because nothing kept the
+frames. Everything below is aimed at those two facts: finish the lap, and be able
+to say why if it does not.
+
+### 9.1 The four evidence gaps, and what now closes them
+
+| Gap, as found on 26.08 | Closed by |
+| --- | --- |
+| `metadata.json` carried `{mode, run_id, created_utc, cycles_logged}`, so §8's provenance is a hand-written paragraph (§8.9) | `cage_logger_node` `platform:=physical` — commit, `cage.yaml` hash, checkpoint hash, rectification hash and the deployed contract, written **at start-up** as well as on close |
+| Layer-2 settings (`capture_fps`, the ZED overrides) recoverable only from a run's *name* | `tools/run_physical_lap.sh` probes the **running** nodes with `ros2 param get` → `layer2.json` |
+| No frames from the perception events (§8.9, asked for after 18.08 and again after 26.08) | `frame_capture_node` — RAM ring buffer, dumps ±window around each event |
+| Bag and CSV covering different windows; `/cage_reset` and `/emergency` not recorded at all | one run id for CSV, bag, frames and reset log; both topics now in the list |
+
+None of this touches the cage. `cage.yaml` is unchanged and a test
+(`test_deploy_evidence_contract.py::test_c05_itself_is_untouched`) fails if
+`require_explicit_reset` is edited, so the §8.5 decision cannot be taken by
+accident.
+
+### 9.2 `frame_capture_node` — what it does and why it is not a bag
+
+Steady state it appends the incoming `sensor_msgs/Image` to a deque and does
+nothing else: no decode, no disk. On a rising edge of `/perception_invalid` or
+`/emergency` (or a manual `std_msgs/Empty` on `/frame_capture_trigger`) it writes
+the previous `pre_seconds` and the next `post_seconds` as PNG, on a **writer
+thread**, into `<run>/frames/` with `<run>/capture_events.csv` naming each frame's
+event, reason and stamp. The stamp is the join key to `/state_obs` in the bag.
+
+`ros2 bag record` on the image topic is what must not be done here: raw 640×360
+bgr8 at 20 Hz is 13.8 MB/s to eMMC, and running that alongside the deploy chain
+crashed the Jetson on 18.08 and cost `circuit_survey` its bag index and the tail
+of its CSV. At 26.08's event rate — one in-motion event in 101 s — the ring
+buffer costs about 100 frames, ~20 MB, against ~1.4 GB for the naive bag.
+
+Overlapping triggers **extend one event** rather than opening several: a
+flickering estimator is one failure, and the alternative spends `max_events` on
+the first second of the run. Defaults 3 s pre / 2 s post, 8 events, 4000 frames.
+
+### 9.3 Bring-up
+
+Same three layers as §3, with `use_rviz:=false` on Layer 1 **and rviz not left
+running from anywhere else** — killing it alone took the loop from 7.3 Hz to
+9.5 Hz on 26.08 (§8.6). Layer 2 must come up with the ZED overrides in force
+(they are the launch default since `624fba1d`; the script checks and asks).
+
+```bash
+source ~/MT-SE4AI-Safe-RL-Cobraflex/scripts/setup_deploy_env.sh   # every terminal
+
+# 1 · Layer 1
+ros2 launch cobraflex cobraflex_bringup.launch.xml use_rviz:=false
+# 2 · Layer 2 — without the lidar, which nothing in this chain reads
+ros2 launch cobraflex cobraflex_sensors.launch.xml use_lidar:=false
+# 3 · preflight, wheels OFF THE GROUND
+python3 tools/preflight_deploy.py stage0
+python3 tools/preflight_deploy.py stage1
+python3 tools/preflight_deploy.py stage2
+python3 tools/preflight_deploy.py lanecheck --true-ey 0.0     # see §9.4
+# 4 · the lap — one command, bag and chain bound to one run id
+tools/run_physical_lap.sh --label lap01 \
+    --checkpoint /abs/path/to/ppo_gz2d_sim2real_v2_2024_r2_1650000_steps.zip
+```
+
+The script defaults to `mode:=monitoring`, rectification on
+(`experiments/calibration/M6_results.json`), `near_secant`/1.0 and
+`reset_proxy:=observe`, and prints every one of those choices before it starts.
+Two of them are **departures from the launch defaults** and it says so on the
+console each time: rectification, settled on hardware by §8.3's A/B (C-01 fires
+102 → 0 with the car parked), and `heading_fit_mode`, which §8.4 records as an
+**open decision** — `joint_pair_quadratic`/1.6 is the D-43 contract every scored
+campaign used, `near_secant`/1.0 is the one that can drive this car (14.45 m
+against 1.08 m). A diagnostic lap needs the second. A scored run may not use it
+until that decision is taken.
+
+### 9.3b The CPU budget, and why there is no separate "RL sensors" launch
+
+The obvious move after §8.6 is a stripped Layer 2 that starts only what the RL
+chain consumes. It was considered and **rejected**, for three reasons.
+
+**Only one node in Layer 2 is unused, and it is one argument away.** The chain
+reads the CSI camera and `/odometry/filtered`; `ekf_hw.yaml` fuses
+`/zed/zed_node/odom` alone (its `imu0` block is commented out), and **no cage
+rule reads a `LaserScan`** — C-01…C-06 are lane, heading, TTLC, speed, emergency
+and rate. So the lidar is pure load in an RL run. It now has a `use_lidar`
+argument (default `true`, because `cobraflex_automatic.launch.xml` is a
+lidar-based Layer-3 controller). How much it saves is **not measured**: the A2M8
+does not appear in §8.6's load table, which lists everything above 9 % of a core,
+so it is somewhere below that.
+
+**A second launch would duplicate three load-bearing settings.** The ZED include
+carries `publish_urdf:=false`, `publish_tf:=false` (two publishers rooted at
+`odom` would make `zed_camera_link` reachable by two paths — the ekf is the
+single owner of that edge) and the documented NO-OP that explains why the loop
+closure has to be turned off through the override file. A copy is a second place
+for those to drift apart, and this repo already has one instance of that failure
+mode on record (§8.9's two contradictory D-43 preflight reports, committed side
+by side with nothing to distinguish them).
+
+**The CPU that matters is inside `zed_node`, not in the node list.** §8.6 measured
+it at **51.1 % of a core** with Layer 3 not even running, and the lever for it is
+`config/zed_deploy_overrides.yaml` — which already turns off object detection and
+point clouds, and now also drops three publications with no subscriber at all:
+`general.pub_frame_rate` 15 → 5 Hz (the chain reads no ZED image),
+`sensors.sensors_pub_rate` 100 → 30 Hz (the ekf's IMU input is commented out) and
+`pos_tracking.publish_3d_landmarks` → false.
+
+**The big lever is deliberately not pulled.** `depth.depth_mode` is
+`NEURAL_LIGHT` — a neural depth network per frame whose only consumer here is
+positional tracking — and `depth.depth_stabilization` is 30. Dropping to
+`PERFORMANCE` / 1 is the obvious saving and it is written into the override file
+**as a commented block, not as a change**, because both alter tracking quality
+and the tracking pose is the **cage's only source of speed**: C-03's TTLC,
+C-04's ceiling and C-05's high-energy trigger all read `/odometry/filtered`. A
+CPU saving that degrades that signal is not a saving. Decide it the way §8.10
+decided the loop closure — two runs back to back, one line different, comparing
+`zed_node`'s CPU **against** pose drift and per-frame steps.
+
+**And keep the expectation honest.** After the 26.08 camera fix the bottleneck is
+no longer Layer 2: `/state_obs` holds 9.84 Hz and `/cage_status` runs at 8.68 Hz,
+so what is missing a control cycle is `rl_policy_node`'s inference timer (§8.10).
+Freeing Layer-2 CPU gives that timer headroom; it is not the thing that puts the
+loop back at 10 Hz.
+
+`tools/run_physical_lap.sh` records all of it — `pub_frame_rate`, `depth_mode`
+and whether the lidar is running — into the run's `layer2.json`, so a future
+session can attribute a rate change to a configuration instead of guessing.
+
+### 9.4 The two measurements nothing automates
+
+**(a) Mark the start position.** Tape a cross on the floor, put the car on it,
+and after the run measure the distance from the cross to where it stopped. This
+answers two things at once that `/odometry/filtered` no longer can: whether the
+lap actually closed, and **what the ZED override costs in drift**. §8.10's 2.11 m
+end-to-start gap is not interpretable without it — with `area_memory:false` the
+odometry has no loop-closure correction, so slow drift is unbounded, and 2.11 m
+over 101 s is within what it can invent. Record it in the run directory.
+
+**(b) `lanecheck --true-ey`.** Still open from M-7 §3b, and it is the number that
+decides whether C-01 fires late: the estimator reads `ey` at 0.68–0.83 × true
+− 10 mm, so C-01's 160 mm threshold fires at a true 207–241 mm, leaving 14–48 mm
+to the road edge instead of 95. 26.08's `lanecheck` ran **without** `--true-ey`,
+so it answered only "is the parked estimate quiet" (5.3 mm sd — yes). Park the
+car at a measured offset, pass it, and the automated half of M-7 §3b closes.
+
+### 9.5 The reset policy for the day
+
+C-05 has no operational story on hardware and §8.5 says that needs a **decision,
+not a patch**. **D-74 is that decision**: C-05 is unchanged, and the reset path
+lives outside the cage in `cage_reset_proxy_node`, which offers three postures:
+
+* `reset_proxy:=observe` (**default**) — it watches, logs to
+  `<run>/reset_events.csv` what a reset path *would* have done and when it would
+  have withheld, and publishes nothing. The operator still resets by hand
+  (`ros2 topic pub --once /cage_reset std_msgs/msg/Empty {}`), and `/cage_reset`
+  is now in the bag, so hand resets are finally distinguishable from recoveries.
+* `reset_proxy:=auto` — it publishes, under the same three conditions the
+  operator applied by eye five times on 26.08 (perception healthy, no C-01…C-04
+  active, car stopped), held **continuously for 1 s**, rate-limited to one per
+  3 s, hard-capped at 6.
+* `reset_proxy:=off` — not started.
+
+**Start in `observe`.** Run the lap; if it dies on a single glitch again, the log
+will already say whether `auto` would have recovered it, and the second attempt
+can turn it on knowing the answer. A run with `auto` is a **diagnostic run and
+can never be a scored one** — part of the stopping behaviour is then the proxy's,
+not the cage's, and the node warns as much on start-up.
+
+The 1 s healthy hold is not arbitrary: C-05's asymmetric exit is STPA-informed
+against oscillation at the trigger boundary (`cage.yaml` §c05_emergency), and a
+hold requirement is that same argument expressed in time rather than in latching.
+D-74's last consequence lists what would have to exist before C-05 itself could
+be changed; none of it does yet.
+
+### 9.6 What counts as success, and what would falsify the preparation
+
+Success is **one continuous segment that returns to the marked start**, with the
+provenance block populated and `frames/` either empty (no event — best case) or
+holding the frames of whatever stopped it.
+
+Falsifiers, in the order they would matter:
+
+1. **`frames/` empty after a perception event.** Then the ring buffer or its
+   triggers are wrong and §8.9 is open for a third session.
+2. **The loop drops below ~8 Hz, or `/cage_status` falls further behind
+   `/state_obs` than 26.08's 12 %.** The remaining deficit is `rl_policy_node`'s
+   inference timer (§8.10), and PNG encoding on a dump is the one new CPU cost
+   in this session — it happens on a stopped car, but check it.
+3. **Pose jumps return.** `layer2.json` says whether the overrides were actually
+   in force; if they were and the jumps came back, §8.7's mechanism is not the
+   only one.
+4. **The car leaves the lane in the final curve again** (§8.8, twice). That
+   curve is `kappa ≈ 0.75 1/m` and the car enters it at the full 0.22 m/s with
+   C-04 unable to fire (`v_max_curve_mps` 0.25 > 0.22). Do **not** lower
+   `max_speed_mps` to fix it in the same run: §8.8's three candidate causes are
+   all helped by a lower speed, so it cannot discriminate between them.
+
+### 9.7 What this session cannot be
+
+It is `monitoring`, on `near_secant` rather than the scored D-43 contract, and
+possibly with an out-of-cage reset proxy. **None of that can produce
+`verdict_phys`**, and no result from it re-scores G4 or touches the D-69 verdict
+of record. It is Phase-5 posterior evidence, like everything else since 08.2026.
+What it *can* produce, and what nothing before it has, is a physical run that
+explains itself.

@@ -1,7 +1,7 @@
 # DECISIONS.md — Project decision log
 
 <!--
-Status: decisions through D-69. D-47..D-49 close/reconcile GE4; D-50..D-58 cover the Isaac posterior; D-59/D-60 cover Gazebo 2-D and PPO/SAC; D-61 reconciles the implemented Jazzy/Harmonic stack and supersedes D-13's preliminary Humble distribution choice; D-62..D-66 build and qualify the 2-D arm; D-67 makes it the research trunk (conditionally); D-68 audits the heading-recovery metric; D-69 closes the simulation programme — verdict of record re-pointed, SR-009/SR-010 TBDs closed.
+Status: decisions through D-74. D-47..D-49 close/reconcile GE4; D-50..D-58 cover the Isaac posterior; D-59/D-60 cover Gazebo 2-D and PPO/SAC; D-61 reconciles the implemented Jazzy/Harmonic stack and supersedes D-13's preliminary Humble distribution choice; D-62..D-66 build and qualify the 2-D arm; D-67 makes it the research trunk (conditionally); D-68 audits the heading-recovery metric; D-69 closes the simulation programme — verdict of record re-pointed, SR-009/SR-010 TBDs closed; D-70..D-74 are Phase-5 physical work, all deployment-side and none re-valuing a gate: D-73 and D-74 record the two things that ended the 26.08 track runs, one fixed and one deliberately left open outside the cage.
 Last update: 2026-07-31.
 -->
 
@@ -109,6 +109,8 @@ consistent with the chapters.
 | D-70 | First physical measurement of the platform: mass corrected to 3.5 kg, the yaw-rate transfer gap (0.4954) quantified, and the "measured" 0.53 m/s² acceleration limit refuted as a unit error | `docs/08` §8.1; `docs/09`; `docs/13`–`docs/14`; `docs/17` | ACCEPTED |
 | D-71 | First track run: the trunk camera policy does not transfer, the D-43 estimator does, and a stationary rig characterises a location rather than a track | `docs/17` §2/§5/§6d; `experiments/calibration/M7_track_perception.md` | ACCEPTED |
 | D-72 | The sim-to-real gap has three terms — handedness, photometry, camera geometry — and only the first is a property of the track | `src/cobraflex_rl/config/train_ppo_camera_2d_sim2real_v2.yaml`; `docs/CHANGELOG` 20.08 | ACCEPTED |
+| D-73 | The ZED's loop closure is off in deployment: the cage reads velocity, so an odometry that drifts is safer than one that jumps | `src/cobraflex/config/zed_deploy_overrides.yaml`; `docs/17` §8.7/§8.10 | ACCEPTED |
+| D-74 | C-05's asymmetric exit stays; the missing operational reset path lives OUTSIDE the cage, disabled by default | `src/cobraflex_rl/cobraflex_rl/cage_reset_proxy_node.py`; `docs/17` §8.5/§9.5 | ACCEPTED (the C-05 recovery question itself is DEFERRED) |
 
 > **Renumbering note (11.06.2026, pre-merge).** The E-track decisions above were
 > originally allocated **D-38 / D-39 / D-40** on the `e2e-camera` branch, while
@@ -3757,3 +3759,159 @@ Cites D-43 (the estimator, whose antisymmetry makes the mirror exact), D-49/D-50
 and the multi-circuit machinery this deliberately does not use), D-60 (entropy collapse, the same
 failure now seen on PPO), D-66 (checkpoint selection by driving, not reward), D-67/D-69 (the trunk
 and the verdict of record, both unchanged), D-71 (the track run this answers).
+
+---
+
+### D-73 — The ZED's loop closure is off in deployment: the cage reads velocity, so an odometry that drifts is safer than one that jumps
+
+| Field | Value |
+| --- | --- |
+| Section | `src/cobraflex/config/zed_deploy_overrides.yaml` (new); `src/cobraflex/launch/cobraflex_sensors.launch.xml`; `tools/run_physical_lap.sh`; `docs/17` §8.7/§8.10/§9.4 |
+| Status | ACCEPTED — one wrapper-override file and one launch argument, **deployment-side only**; no SR, cage rule, `cage.yaml` value, ODD parameter or verdict is re-valued. Every scored campaign is in Gazebo, where the ekf is `ekf_gazebo.yaml` and there is no ZED. |
+| Date | 27.08.2026 (the config itself landed 26.08.2026 in `624fba1d`; this records the reasoning and the discriminating measurement) |
+
+**Context.** `ekf_hw.yaml` fuses the ZED's **pose** (`odom0_config` x, y, yaw) and deliberately not
+its twist, so `/odometry/filtered`'s velocity is obtained by *differentiating* a signal the ZED
+re-initialises whenever it closes a loop. `cobraflex_sensors.launch.xml` has carried a comment
+warning about this since 06.08.2026. `/odometry/filtered` is the **only source of speed for the
+cage** on this platform — the chassis driver publishes `/cobraflex/wheel_speeds`, not an
+`Odometry` — so the jump enters C-03's TTLC, C-04's ceiling and C-05's high-energy trigger
+directly.
+
+**1. The hazard stopped being hypothetical on 26.08.** Measured (§8.7): a **3621.8 mm pose
+displacement in a single frame** (17.81 m/s implied) drove the ekf's `vx` to **−4.03 m/s**; ten
+smaller jumps (7–76 mm/frame) occurred *while driving*; and on an earlier run a spike put the
+cage's speed at **5.479 m/s** — 25× the 0.22 m/s contract — one cycle after a healthy 0.156 m/s,
+firing C-04 → C-03 → C-05 and braking to `safe_throttle −0.500`. Restarting Layer 2 with fresh
+area memory delayed the first jump (4.3 s → 53 s) but did not remove it.
+
+**2. It is now discriminated, not merely supported.** §8.7 could only claim "partial support for
+the loop-closure hypothesis, not proof". §8.10 supplies the missing arm: `cpufix` (09:51) and
+`noloopclosure` (10:04) are **13 minutes apart, same checkpoint, same mode, same rectification,
+same fit mode**, differing only in whether the override file was applied. Single-frame pose steps
+over 50 mm: **116 → 0** across 509 s (largest step 4060.7 mm → **29.8 mm**). Ekf `|vx|` maximum:
+**4.497 → 0.213 m/s**, against a commanded 0.22. That is the whole mechanism, removed.
+
+**3. Three candidate fixes were named; only one removes the mechanism.**
+`odom0_pose_rejection_threshold` and raising the pose covariance both *attenuate* a jump the
+filter still ingests, and both need a threshold nobody has data to set. Turning off
+`reset_odom_with_loop_closure` (with `area_memory:false`, since loop closure is what area memory
+exists to enable) means the jump is never generated. REP-105 also wants `odom` continuous with
+discontinuities confined to `map`; the wrapper's default violates that and the override restores
+it.
+
+**Decision.** Deployment brings Layer 2 up with `config/zed_deploy_overrides.yaml`, passed to the
+Stereolabs wrapper through `ros_params_override_path` — **not** by editing the wrapper's own
+config, which is untracked (D-32) and would be lost on the next reinstall. It sets
+`pos_tracking.area_memory: false`, `pos_tracking.reset_odom_with_loop_closure: false`, and — for
+CPU, and because neither has a single subscriber in this chain — `object_detection.od_enabled:
+false` and `depth.point_cloud_freq: 0.0`. `zed_overrides:=''` restores the factory configuration.
+
+**Why the trade is acceptable here and would not be in general.** Without area memory the visual
+odometry drifts more over time. That is tolerable *because the cage reads velocity, not position*:
+a slow drift produces no spike, and a spike is the only thing that reaches a safety rule. In a
+navigation case — anything that consumes the pose as a position — this decision would be wrong.
+
+**Consequences.**
+
+* **A measurement is lost, deliberately, and it is one that was needed.**
+  `/odometry/filtered` can no longer answer *"did the car return to where it started"*: drift is
+  now unbounded, so §8.10's 18.05 m lap ending **2.11 m from the start with 314° of 360° turned**
+  cannot be read as either a short lap or accumulated drift. The replacement is a mark on the
+  floor and a tape measure (`docs/17` §9.4a) — which will also produce the **first number for what
+  this decision costs in drift**, currently unquantified.
+* **The override is a launch default, not a guarantee.** Anyone bringing Layer 2 up by hand
+  without it gets the old behaviour and no error. `tools/run_physical_lap.sh` reads
+  `pos_tracking.area_memory` and `reset_odom_with_loop_closure` off the **running** node into the
+  run's `layer2.json` and refuses to start silently if either is on. Mitigation, not prevention.
+* **The real fix is not this one, and is recorded as future work.** Fusing the ZED's **twist**
+  instead of differentiating its pose would remove the failure class rather than its trigger. It
+  changes `/odometry/filtered` for every consumer, has never been tested on this platform, and is
+  out of scope for a diagnostic lap.
+* **No cage rule is re-valued.** C-03/C-04/C-05's high-energy trigger keep the same single speed
+  source; what changes is that source's noise character, not its existence.
+
+Cites D-32 (third-party drivers untracked, which is why this is an override file and not an edit),
+D-69 (the verdict of record, untouched — this is deployment-side), D-71/D-72 (the physical track
+work this belongs to), D-74 (the other thing that ended runs on 26.08).
+
+---
+
+### D-74 — C-05's asymmetric exit is correct and stays; what is missing is an operational reset path, and it belongs outside the cage
+
+| Field | Value |
+| --- | --- |
+| Section | `src/cobraflex_rl/cobraflex_rl/cage_reset_proxy.py` + `cage_reset_proxy_node.py` (new); `src/cobraflex_rl/launch/deploy_cobraflex.launch.py`; `policy/tests/test_cage_reset_proxy.py`; `docs/17` §8.5/§8.10/§9.5. **`cage/cage.yaml`: unchanged, deliberately.** |
+| Status | ACCEPTED — a new node **outside** the cage, disabled by default. No `cage.yaml` version bump, no `_ACCEPTED_SR_SPEC_VERSIONS` change, no SR, cage rule, ODD parameter or verdict re-valued. Whether C-05 should ever gain a bounded recovery is **deferred**, not answered — see the last consequence. |
+| Date | 27.08.2026 |
+
+**Context.** C-05's exit is asymmetric by design: `require_explicit_reset: true`, documented in
+`cage.yaml` §c05_emergency as *"STPA-informed asymmetric exit to prevent oscillation between modes
+near the trigger boundary"*. On 26.08 that cost the session twice. In the morning (§8.5) a
+**120 ms** `/perception_invalid` pulse — one the estimator recovered from by itself — stopped the
+car permanently, confirmed live with `/emergency` **true** while `/perception_invalid` was already
+**false**; lap 3 was driven with **five operator `/cage_reset` publications**, each issued with
+perception healthy, no C-01…C-04 active and `v = 0`. In the afternoon (§8.10) a **400 ms** pulse
+ended the best physical run to date — 18.05 m in one uninterrupted segment, **2.11 m short of the
+start** — with the car **27 mm from the lane centre**, heading error 10.3°, in the tightest curve
+on the circuit.
+
+**This is not a defect in the cage.** C-05 did exactly what it is specified to do. The gap is
+between an artefact validated against simulated *episodes*, which end, and a vehicle that has to
+keep operating. §8.5 recorded that it needs a decision, not a patch. This is that decision.
+
+**1. Why C-05 is not changed.** The obvious move — a bounded auto-recovery inside C-05 on the
+perception trigger — is rejected for now, and the reason is sharper than "don't touch the
+artefact under test". In simulation `require_explicit_reset` is **nearly inert**: a scenario ends
+and the cage is re-instantiated, so the latch's exit policy barely appears in any campaign
+number. That cuts both ways. It means changing it would move almost nothing in F4's 1260 runs,
+GE4-V2's 1970 or the 550k trunk's 1890 — and it means **simulation cannot validate the change
+either**. A bounded recovery in C-05 would be a modification to the verified artefact whose entire
+effect is on hardware, verified by nothing. That is not an acceptable way to change a safety cage.
+
+**2. Why not simply remove the cause upstream.** It is the right long-term answer and it is being
+pursued: the 26.08 camera fix took perception-invalid samples from **7.7 % to 0.2 %** of a run
+(D-73's companion change). But 0.2 % is still **one event per lap**, and C-05 converts one event
+into a terminated run. Upstream work changes the frequency; it does not give the latch an exit.
+
+**3. Why the guards are the operator's own.** The five manual resets of 26.08 were each issued
+under three conditions checked by eye — perception healthy, no C-01…C-04 active, car stopped.
+Those are the guards, plus two the operator could not enforce: a **1 s continuous healthy hold**
+and a rate limit. The hold is not arbitrary padding: it is C-05's own STPA argument — do not
+re-arm while the condition still flickers — expressed **in time** rather than in latching, and it
+is the reason a proxy is not simply a defeat of the rule.
+
+**Decision — three parts.**
+
+1. **C-05 is unchanged.** `require_explicit_reset: true` stays; `cage.yaml` is not bumped. Pinned
+   by `test_deploy_evidence_contract.py::test_c05_itself_is_untouched`, which fails if the key is
+   edited — so this decision cannot be reversed by accident while doing deployment work.
+2. **The reset path is a separate node**, `cage_reset_proxy_node`, subscribing to the same three
+   signals the operator eyeballed and publishing `/cage_reset`. Three postures:
+   `off`; **`observe` (default)** — logs every decision, and every *withheld* reason, to
+   `<run>/reset_events.csv` and publishes nothing; `auto` — publishes, under the guards above,
+   rate-limited to one per 3 s and hard-capped at 6 per run.
+3. **A run with the proxy in `auto` is diagnostic and can never be scored.** Part of the vehicle's
+   stopping behaviour is then the proxy's rather than the cage's; the node says so on start-up.
+
+**Consequences.**
+
+* **`verdict_phys` cannot be produced with the proxy actuating.** It stays open, as it already
+  was for three other reasons (`monitoring`, `near_secant`, no physical scenario protocol).
+* **The SRs C-05 implements are untouched** — SR-005, SR-007, SR-008 (controlled stop), SR-013 and
+  SR-014 (D-43 perception health and plausibility). Their sim verdicts and their traceability rows
+  are exactly as D-69 left them.
+* **`observe` is chosen as the default on purpose.** The next session runs it that way, so the log
+  will say whether `auto` *would* have recovered the lap before anyone lets it act. Deciding from
+  a recorded counterfactual is cheaper than deciding from an argument.
+* **What is deferred, explicitly.** Whether C-05 should gain a bounded recovery is **not answered
+  here**. Answering it needs three things that do not exist: (i) the frames from a perception
+  event, so a recovery is specified against a measured failure rather than a guessed one
+  (`frame_capture_node`, `docs/17` §9.2); (ii) a physical-scenario protocol, so a changed C-05
+  could be re-scored where the change actually has an effect; (iii) a Gazebo re-run demonstrating
+  the D-69 verdict is unchanged under the new exit. Until then the proxy is scaffolding around an
+  open question, not an answer to it.
+
+Cites D-43 (the estimator whose invalid flag is Trigger 8), D-69 (the verdict of record and its T2
+transfer risk, both untouched), D-71 (the first track run), D-72 (the deployed v2 policy), D-73
+(the other 26.08 stopper, fixed rather than deferred — the contrast is deliberate).

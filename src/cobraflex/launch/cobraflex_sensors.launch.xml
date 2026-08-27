@@ -8,6 +8,15 @@
              2. cobraflex_sensors.launch.xml   lidar + ZED + LANE CAMERA + ekf
              3. a Layer-3 controller (e.g. cobraflex_rl deploy_cobraflex.launch.py)
 
+         There is deliberately NO separate "RL-only sensors" launch. The ZED
+         include below carries three settings that are load-bearing for the TF
+         tree and for the cage's speed input, each with the reasoning attached;
+         a second copy of that block is a second place for them to drift, and
+         only ONE node here is unused by the RL chain — the lidar, which is one
+         argument away (`use_lidar:=false`). The CPU that matters is INSIDE
+         `zed_node` (51.1 % of a core, docs/17 §8.6) and the lever for it is
+         `config/zed_deploy_overrides.yaml`, not a different launch file.
+
          Consequences of owning the camera here, both load-bearing:
 
          * `deploy_cobraflex.launch.py` defaults `camera:=false` — it attaches to
@@ -41,11 +50,25 @@
          objetos activos). Ver el fichero para el porqué de cada línea. -->
     <arg name="zed_overrides"
          default="$(find-pkg-share cobraflex)/config/zed_deploy_overrides.yaml"/>
+    <!-- El lidar NO lo consume nadie en la cadena RL. Layer 3 usa la cámara CSI
+         y `/odometry/filtered`; ninguna regla de la cage (C-01..C-06) lee un
+         LaserScan, y `ekf_hw.yaml` fusiona solo `/zed/zed_node/odom`. Lo usa
+         `cobraflex_automatic.launch.xml` (evitación por lidar), que es otro
+         controlador de Layer 3 — de ahí que el default siga siendo `true` y
+         esto sea un argumento y no un borrado.
+         `use_lidar:=false` en una corrida RL para no pagar el driver serie ni
+         el TF de `lidar_link`. AHORRO NO MEDIDO: el A2M8 no aparece en la tabla
+         de carga de docs/17 §8.6 (que lista todo por encima del 9 % de un
+         núcleo), así que está por debajo de eso. Es headroom barato, no la
+         solución al bucle de control. -->
+    <arg name="use_lidar" default="true"/>
 
     <!-- ================= Lidar SLLIDAR A2M8 ================= -->
-    <include file="$(find-pkg-share sllidar_ros2)/launch/sllidar_a2m8_launch.py">
-        <arg name="frame_id" value="lidar_link"/>
-    </include>
+    <group if="$(var use_lidar)">
+        <include file="$(find-pkg-share sllidar_ros2)/launch/sllidar_a2m8_launch.py">
+            <arg name="frame_id" value="lidar_link"/>
+        </include>
+    </group>
 
     <!-- ================= ZED Camera (ZED Mini) ================= -->
     <include file="$(find-pkg-share zed_wrapper)/launch/zed_camera.launch.py">

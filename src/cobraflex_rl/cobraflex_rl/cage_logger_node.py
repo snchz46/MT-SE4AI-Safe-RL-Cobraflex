@@ -10,6 +10,11 @@ ROS2 runs.
 
 A run is started on first /cage_status message and closed on shutdown.
 Output directory is parameterised; one CSV file per run.
+
+On the physical platform (``platform:=physical``) the run also records its
+reproducibility provenance — git commit, cage YAML hash, policy checkpoint
+hash and the deployed launch contract — written at start-up as well as on
+close, so a run that dies still says what produced it.
 """
 
 from __future__ import annotations
@@ -47,6 +52,12 @@ from std_msgs.msg import Float64MultiArray  # noqa: E402
 from cage.logger import CageLogger  # noqa: E402
 from cobraflex_safety_msgs.msg import CageStatus  # noqa: E402
 
+from .run_io import (  # noqa: E402
+    CONTRACT_KEYS,
+    physical_run_metadata,
+    resolve_repo_path,
+)
+
 
 class CageLoggerNode(Node):
     """/cage_status → CSV adapter around the pure-Python CageLogger."""
@@ -64,6 +75,17 @@ class CageLoggerNode(Node):
         # safety_cage's `mode` parameter.
         self.declare_parameter("cage_mode", "enforcement")
 
+        # Reproducibility provenance (CLAUDE.md's rule for
+        # experiments/{sim,physical}/runs). Empty `platform` keeps the legacy
+        # four-field metadata.json, so the F2 sim pipeline is untouched; the
+        # Phase-5 deploy launch passes "physical" and the paths below.
+        self.declare_parameter("platform", "")
+        self.declare_parameter("cage_yaml", "")
+        self.declare_parameter("policy_checkpoint", "")
+        self.declare_parameter("rectify_calibration", "")
+        for key in CONTRACT_KEYS:
+            self.declare_parameter(f"contract.{key}", "")
+
         output_dir = (
             self.get_parameter("output_dir").get_parameter_value().string_value
             or "experiments/sim/runs"
@@ -78,8 +100,11 @@ class CageLoggerNode(Node):
             or "enforcement"
         )
         self._cage_logger: Optional[CageLogger] = CageLogger(
-            out_path, run_id=run_id, metadata={"mode": self._cage_mode}
+            out_path, run_id=run_id, metadata=self._build_metadata(run_id)
         )
+        # Written NOW, not only on close: the 18.08.2026 power-cycle left a run
+        # with a CSV and no metadata.json at all (circuit_survey/REPAIR_NOTE).
+        self._cage_logger.write_metadata()
         self.get_logger().info(
             f"Writing cage CSV to {self._cage_logger.cage_status_path} "
             f"(mode={self._cage_mode})."
@@ -109,6 +134,50 @@ class CageLoggerNode(Node):
         # also fires while Gazebo is paused or has died).
         self._cycle_count_at_last_tick = 0
         self.create_timer(5.0, self._on_watchdog_tick, clock=Clock())
+
+    def _build_metadata(self, run_id: str) -> dict:
+        """Run metadata: legacy four fields, or the full physical provenance."""
+        platform = self.get_parameter("platform").get_parameter_value().string_value
+        if platform != "physical":
+            return {"mode": self._cage_mode}
+
+        def _param(name: str) -> str:
+            return self.get_parameter(name).get_parameter_value().string_value
+
+        # An empty cage_yaml means the cage node resolved it by walking up to
+        # the repo's cage/cage.yaml; resolve it the same way so the hash is of
+        # the file actually loaded, not of nothing.
+        cage_yaml = _param("cage_yaml") or resolve_repo_path("cage/cage.yaml")
+        contract = {
+            key: value
+            for key in CONTRACT_KEYS
+            if (value := _param(f"contract.{key}"))
+        }
+        metadata = physical_run_metadata(
+            run_id,
+            self._cage_mode,
+            cage_yaml=cage_yaml,
+            policy_checkpoint=_param("policy_checkpoint") or None,
+            rectify_calibration=_param("rectify_calibration") or None,
+            contract=contract,
+            status="running",
+        )
+        self.get_logger().info(
+            "Run provenance: commit %s, cage.yaml %s, checkpoint %s."
+            % (
+                metadata["git_commit"][:8],
+                (metadata["cage_yaml_hash"] or "MISSING")[:8],
+                (metadata["policy_checkpoint_hash"] or "MISSING")[:8],
+            )
+        )
+        for field in ("cage_yaml_hash", "policy_checkpoint_hash"):
+            if metadata[field] is None:
+                self.get_logger().warning(
+                    "%s could not be computed — this run's evidence is NOT "
+                    "self-describing and cannot be cited without a hand-written "
+                    "provenance note." % field
+                )
+        return metadata
 
     def _on_state_obs(self, msg: Float64MultiArray) -> None:
         """Cache the latest state sample so each CSV row carries ey/epsi/speed."""
@@ -169,6 +238,7 @@ class CageLoggerNode(Node):
     def destroy_node(self) -> bool:
         """Flush and close the CSV before tearing the node down."""
         if self._cage_logger is not None:
+            self._cage_logger.write_metadata(status="completed")
             self._cage_logger.close()
             self.get_logger().info(
                 f"Closed cage_logger after {self._cage_logger.cycle_count} cycles."

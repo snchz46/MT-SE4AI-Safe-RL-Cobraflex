@@ -36,6 +36,13 @@ Verification and synchronisation utilities for the repository.
 - `capture_camera_frames.py` — grabs native camera frames from a running sim (calibration / estimator debugging).
 - `apply_calibration.py` — applies M-1/M-2 calibration results to config parameters.
 
+## Physical deployment (Phase 5, docs/17)
+
+- `preflight_deploy.py` — turns the staged bring-up of docs/17 §4 into a PASS/FAIL verdict: `stage0` (camera alone), `stage1` (chain flowing), `stage2` (actuation envelope, **wheels off the ground**), `lanecheck` (parked estimator quiet). Pass `--true-ey <metres>` to `lanecheck` to close the other half of M-7 §3b — whether C-01 fires late — which no run has done yet.
+- `run_deploy_gate.sh` — the D-72 sim-to-real gate: swing retention, bias/swing and right-turn share of a checkpoint against real imagery, raw and rectified arms.
+- `run_physical_lap.sh` — starts ONE physical run: the evidence bag and the Layer-3 RL chain bound to a single run id and stopped together, after probing the **running** Layer-2 nodes (`capture_fps`, the ZED loop-closure overrides) into the run's `layer2.json`. Warns on the two configurations that ended runs on 26.08 (loop closure on, rviz running). The lane image topic is deliberately *not* bagged — `frame_capture_node` keeps the frames around each perception event instead, from RAM. Example: `tools/run_physical_lap.sh --label lap01 --checkpoint /abs/path/to/ckpt.zip`.
+- `record_lane_dataset.py` — labelled real-lane dataset capture (PNG at 5 Hz, labels inline), without the I/O load that crashed the Jetson on 18.08.2026. Camera only; no deploy chain needed.
+
 ## Isaac Sim (posterior track, docs/13–14)
 
 - `build_isaac_urdf.py`, `isaac_import_check.py`, `isaac_scene.py`, `isaac_ros2_bringup.py` — URDF export, import validation, scene/bring-up.

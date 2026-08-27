@@ -14,7 +14,10 @@
     ros__parameters:
 
         pos_tracking:
-            # EL ARREGLO DE docs/17 §8.7, no una optimización.
+            # Nube de landmarks 3D del tracker publicada para nadie.
+            publish_3d_landmarks: false
+
+            # EL ARREGLO DE docs/17 §8.7 (decisión D-73), no una optimización.
             #
             # `ekf_hw.yaml` fusiona la POSE de la ZED (odom0_config x, y, yaw) y
             # deliberadamente no su twist, así que la velocidad sale de derivar
@@ -43,3 +46,43 @@
             # se puede apagar: `depth_mode: NONE` desactiva también el tracking
             # posicional, que es justo lo que necesitamos.
             point_cloud_freq: 0.0
+
+        general:
+            # Imágenes y mapa de profundidad publicados a 15 Hz para CERO
+            # suscriptores: la cadena de despliegue no lee ni una imagen de la
+            # ZED (docs/17 §3: "The ZED image itself is NOT in the loop — only
+            # its odometry, via the ekf"). Según el comentario del propio
+            # wrapper este parámetro gobierna la PUBLICACIÓN de imágenes y
+            # profundidad, no el `grab()` sobre el que corre el tracking — pero
+            # eso es documentación del proveedor, no una medida nuestra:
+            # confirmar en el coche que la pose sigue igual de sana antes de
+            # darlo por bueno.
+            pub_frame_rate: 5.0
+
+        sensors:
+            # La IMU de la ZED a 100 Hz para nadie: `ekf_hw.yaml` tiene su
+            # bloque `imu0` COMENTADO y ningún otro nodo se suscribe. No se
+            # apaga del todo porque el launch pide `publish_imu_tf:=true`.
+            sensors_pub_rate: 30.0
+
+# ---------------------------------------------------------------------------
+# NO APLICADO — la palanca grande, y por qué necesita una medida antes.
+#
+# `depth.depth_mode` está en 'NEURAL_LIGHT': una red neuronal de profundidad por
+# frame en la Jetson, cuyo único consumidor en esta cadena es el tracking
+# posicional. 'PERFORMANCE' es el modo no-NONE más barato y mantendría el
+# tracking vivo. Junto con `depth.depth_stabilization: 30` (filtrado temporal)
+# son los dos candidatos obvios para bajar del 51,1 % de un núcleo que
+# `zed_node` marcaba en docs/17 §8.6.
+#
+# NO se cambian aquí porque ambos alteran la calidad del tracking, y el tracking
+# es la ÚNICA fuente de velocidad de la cage: C-03 (TTLC), C-04 (techo) y el
+# disparador de alta energía de C-05 leen `/odometry/filtered`, que se deriva de
+# esta pose. Un ahorro de CPU que degrade esa señal no es un ahorro. La forma de
+# decidirlo es un A/B en el coche como el de docs/17 §8.10 — dos corridas
+# seguidas, misma configuración salvo esta línea, comparando %CPU de `zed_node`
+# CONTRA la deriva de la pose y los pasos por frame. Hasta entonces, hipótesis.
+#
+#            depth_mode: 'PERFORMANCE'
+#            depth_stabilization: 1
+# ---------------------------------------------------------------------------

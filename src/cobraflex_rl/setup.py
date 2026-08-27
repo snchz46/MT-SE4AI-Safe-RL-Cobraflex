@@ -41,6 +41,8 @@ setup(
             "vehicle_control_node = cobraflex_rl.vehicle_control_node:main",
             "pd_baseline_node = cobraflex_rl.pd_baseline_node:main",
             "cage_logger_node = cobraflex_rl.cage_logger_node:main",
+            "frame_capture_node = cobraflex_rl.frame_capture_node:main",
+            "cage_reset_proxy_node = cobraflex_rl.cage_reset_proxy_node:main",
         ],
     },
 )

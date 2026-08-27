@@ -31,6 +31,152 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [27.08.2026] — The 26.08 afternoon runs analysed: both fixes work, the ZED hypothesis is discriminated, and the next lap is prepared to explain itself
+
+**Document(s) affected:** `docs/17_physical_deployment.md` (§8.10 new, §9 new,
+status header, §8.5/§8.6/§8.7 forward pointers), `docs/DECISIONS.md` (**D-73**,
+**D-74** new; index table and status line), `docs/CHANGELOG.md`, `CLAUDE.md`,
+`cage/logger.py`, `src/cobraflex_rl/cobraflex_rl/{run_io,cage_logger_node}.py`,
+`src/cobraflex_rl/cobraflex_rl/{frame_capture,frame_capture_node}.py` (new),
+`src/cobraflex_rl/cobraflex_rl/{cage_reset_proxy,cage_reset_proxy_node}.py` (new),
+`src/cobraflex_rl/launch/deploy_cobraflex.launch.py`, `src/cobraflex_rl/setup.py`,
+`src/cobraflex/launch/cobraflex_sensors.launch.xml`,
+`src/cobraflex/config/zed_deploy_overrides.yaml`, `tools/run_physical_lap.sh` (new),
+`policy/tests/{test_frame_capture,test_cage_reset_proxy,test_deploy_evidence_contract}.py` (new)
+**Phase:** 5 (physical deployment)
+**Gate context:** after G4; **no gate re-scored, no simulation verdict touched**
+**Author:** Samuel Sanchez
+
+### Change
+
+1. **§8.10 — the two runs committed on 26.08 but never described.**
+   `track_v2_cpufix_20260826T095114Z` and `track_v2_noloopclosure_20260826T100450Z`
+   entered the repo in `624fba1d` alongside §8, which therefore still ended §8.6
+   with "the next work item" and §8.7 with "candidate fixes, none applied" —
+   both overtaken by the same commit. Now analysed:
+   * **the camera fix** (`lane_camera_capture_fps` 60 → 30) takes the delivered
+     rate to **19.0 Hz at 96.5 %** of a core from 15.2 Hz at 134.3 %, and
+     `/state_obs` to **9.84 Hz, worst gap 295 ms** (was 7.3 Hz, 995 ms);
+   * **the ZED fix** (`zed_deploy_overrides.yaml`) takes single-frame pose steps
+     over 50 mm from **116 to 0** in 509 s and the ekf's `vx` from 4.50 m/s to
+     **0.213** against a commanded 0.22.
+2. **§8.7's hypothesis is discriminated, not merely supported.** The two runs are
+   a controlled A/B — same checkpoint, mode, rectification, 13 minutes apart,
+   differing only in the override file.
+3. **THE RESULT — 18.05 m in one uninterrupted 101 s segment**, no operator reset,
+   `|ey|` median **18.7 mm** (max 98.7 against C-01's 160), `|epsi|` max 18.91°
+   (against C-02's 25), `cycles_since_last_state` never above 0, and **C-06 the
+   only rule touched: 3.4 % of moving cycles against the 3.0 % that chose this
+   checkpoint in simulation**. The closest sim-to-hardware agreement in Phase 5,
+   and a second confirmation that D-69's T2 did not materialise.
+4. **The camera fix alone does not buy a lap.** `cpufix` had the best loop rate of
+   the session (9.59 Hz, 4.5 % of cycles over 150 ms) and died in 16 s on a pose
+   jump. What was ending runs was never the loop rate.
+5. **It is still not a closed lap.** It stopped **2.11 m** from the start having
+   turned 314° of 360°, on a **single 400 ms** `/perception_invalid` pulse with
+   the car **27 mm** from the lane centre in the tightest curve
+   (`kappa_ahead` 0.75 1/m) — the curve §8.8's departures happened in. C-05
+   latched and `require_explicit_reset` kept it latched: 0.80 m in the remaining
+   396 s. One glitch per lap is now the whole difference between a completed
+   circuit and a stopped car.
+6. **The bottleneck moved.** `/state_obs` holds 9.84 Hz while `/cage_status` runs
+   at 8.68 Hz, i.e. **12 % of estimator cycles never produce a control cycle**.
+   `/cage_status` is published from `cage_ros_node._on_raw_action`, so that is
+   `rl_policy_node`'s 10 Hz timer slipping — CNN inference, not the camera.
+7. **§9 — the next session's runbook**, and the four code changes that close the
+   evidence gaps behind it:
+   * `cage_logger_node platform:=physical` writes commit, `cage.yaml` hash,
+     checkpoint hash, rectification hash and the deployed contract, **at start-up**
+     as well as on close (`CageLogger.write_metadata`, atomic). The 18.08
+     power-cycle left a run with a CSV and no metadata at all.
+   * `frame_capture_node` (new) keeps the lane frames around each
+     `/perception_invalid` or `/emergency` edge from a **RAM ring buffer** —
+     ~20 MB per run at 26.08's event rate, against ~1.4 GB for the bag that
+     crashed the Jetson on 18.08. This is §8.9's open item, asked for twice.
+   * `cage_reset_proxy_node` (new, **`observe` by default, outside the cage**)
+     logs or — with `auto` — issues the reset the operator made by hand five
+     times, under the same three conditions held for 1 s, rate-limited and
+     capped. `cage.yaml` is untouched and a test fails if
+     `require_explicit_reset` is edited.
+   * `tools/run_physical_lap.sh` (new) binds bag, CSV, frames and reset log to
+     one run id and probes the **running** Layer-2 nodes for `capture_fps`, the
+     ZED overrides, `pub_frame_rate`, `depth_mode` and whether the lidar is up,
+     into `layer2.json`.
+8. **Layer-2 CPU trimmed, and the big lever deliberately left alone (§9.3b).**
+   A separate "RL-only sensors" launch was considered and rejected: only the
+   **lidar** is unused by the RL chain — no cage rule reads a `LaserScan` and
+   `ekf_hw.yaml` fuses `/zed/zed_node/odom` alone — and it is now one argument
+   (`use_lidar`, default `true`, because `cobraflex_automatic` needs it). A
+   second launch would duplicate three load-bearing ZED settings, including the
+   `publish_tf:=false` that keeps the ekf the single owner of the `odom` edge.
+   The CPU that matters is *inside* `zed_node` (51.1 % of a core, §8.6), so
+   `zed_deploy_overrides.yaml` gains three publications with no subscriber:
+   `general.pub_frame_rate` 15 → 5, `sensors.sensors_pub_rate` 100 → 30
+   (`ekf_hw.yaml`'s `imu0` is commented out) and
+   `pos_tracking.publish_3d_landmarks` → false. **`depth.depth_mode`
+   `NEURAL_LIGHT` → `PERFORMANCE` and `depth_stabilization` 30 → 1 are written
+   in as a COMMENTED block, not applied**: both change tracking quality, and the
+   tracking pose is the cage's only source of speed (C-03/C-04/C-05). They need
+   the same kind of on-car A/B that settled the loop closure.
+
+### Rationale
+
+Two track sessions have now ended on `/perception_invalid` events that cannot be
+explained, because the frames were never kept and the provenance was never
+written. §8.10's lap is 2.11 m short of the first complete circuit and the reason
+it stopped is a 400 ms event with no evidence behind it. The next session is
+therefore prepared around one requirement — **a run that explains itself** —
+rather than around any new capability.
+
+The reset proxy deliberately sits outside the cage. In simulation
+`require_explicit_reset` is nearly inert — a scenario ends and the cage is
+re-instantiated — so a bounded recovery inside C-05 would be a change to the
+verified artefact whose entire effect is on hardware, validated by nothing. That
+argument is D-74; the recovery question itself stays deferred.
+
+### Impact
+
+* **No gate, scenario, metric or SR is affected.** `verdict_phys` stays open;
+  this is `monitoring`, on `near_secant` rather than the scored D-43 contract.
+* **Two decisions taken, both deployment-side, neither re-valuing a gate.**
+  **D-73** — the ZED loop closure is off in deployment: the cage reads velocity,
+  so a drifting odometry beats a jumping one, and the price is that
+  `/odometry/filtered` can no longer say whether a lap closed (which is exactly
+  why §8.10 cannot). **D-74** — C-05's asymmetric exit is correct and stays; the
+  missing operational reset path lives outside the cage, disabled by default, and
+  **whether C-05 should ever gain a bounded recovery is deferred**, because
+  simulation cannot validate such a change.
+* **`cage.yaml` unchanged** — no version bump, no `[provisional]` tag resolved.
+* Two items remain unverified by construction: the 30 fps capture rate under
+  **motion** (the photometric check was made with the car stationary, so it cannot
+  see motion blur), and C-04's dead zone, `v_max_curve_mps` 0.25 > the deployed
+  0.22.
+* **The Layer-2 savings are unquantified.** Every one of them is a publication
+  with no subscriber, so the direction is not in doubt, but no `%CPU` was
+  measured — and the bottleneck has moved anyway: `/state_obs` holds 9.84 Hz
+  while `/cage_status` runs at 8.68 Hz, so the missing cycles are
+  `rl_policy_node`'s inference timer, not Layer 2.
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED, 0 warnings**.
+
+Host-side suite on the Windows host: **720 passed**, including 42 new
+(`test_frame_capture` 9, `test_cage_reset_proxy` 9, `test_deploy_evidence_contract`
+24 — the last parametrised over every `CONTRACT_KEYS` entry). The 7 failures and 5 collection errors are pre-existing environment gaps on
+that host — no `cv2`, no `pgrep`, no `ament_index_python` — not regressions.
+
+**Not verified, and it must be before the session:** none of the three new ROS
+nodes has been launched. `frame_capture_node`, `cage_reset_proxy_node` and the
+new launch wiring typecheck and their pure logic is tested, but no ROS 2 runtime
+exists on the authoring host. Build and smoke-test them on the car —
+`colcon build --symlink-install`, then a 60 s Layer-3 launch with the wheels off
+the ground, checking that `frames/` and `capture_events.csv` appear on a
+deliberate `/frame_capture_trigger` and that `reset_events.csv` records a
+withheld reason.
+
+---
+
 ## [26.08.2026] — The v2 policy drives the real circuit; the gate passes on real imagery; and four things stop the car, none of them the policy
 
 **Document(s) affected:** `docs/17_physical_deployment.md` (§8 new, §7.2 blocker
@@ -114,8 +260,8 @@ itself reported.
 * **`verdict_phys` stays open.** 19.28 m with five operator resets and a lane
   departure is not a scored scenario, and must not be reported as a clean lap.
 * **Three open decisions, none acted on.** C-05's behaviour on hardware against a
-  transient recoverable glitch (candidate D-NN: bounded auto-recovery, an operator
-  reset path, or removing the cause upstream); whether the deployed
+  transient recoverable glitch (candidate D-NN — **taken 27.08.2026 as D-74**:
+  the operator reset path, implemented outside the cage); whether the deployed
   `heading_fit_mode` default moves off the scored D-43 contract; and whether
   `v_max_curve_mps` drops below the deployed speed so C-04 can act.
 * **Next work item is CPU headroom** (item 8), because it is upstream of the

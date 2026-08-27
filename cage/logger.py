@@ -117,14 +117,35 @@ class CageLogger:
         self._writer.writerow(row)
         self._cycle_count += 1
 
+    def write_metadata(self, **extra) -> None:
+        """Write ``metadata.json`` now, without closing the CSV.
+
+        ``close()`` used to be the only writer, which is why the 18.08.2026
+        Jetson power-cycle left `circuit_survey/` with a CSV and no metadata at
+        all (see its REPAIR_NOTE): a run that dies never records what produced
+        it. Callers that hold provenance — `cage_logger_node` on the car — call
+        this once at start-up with ``status="running"`` so the evidence is
+        self-describing from the first cycle, and again with the terminal
+        status on the way out.
+
+        ``extra`` is merged into the stored metadata, so later calls keep
+        earlier fields. The write is atomic (temp file + replace): a crash
+        during the write leaves the previous metadata.json intact rather than a
+        half-written one.
+        """
+        self._metadata.update(extra)
+        self._metadata["cycles_logged"] = self._cycle_count
+        tmp_path = self.metadata_path.with_name(self.metadata_path.name + ".tmp")
+        with tmp_path.open("w", encoding="utf-8") as f:
+            json.dump(self._metadata, f, indent=2)
+        tmp_path.replace(self.metadata_path)
+
     def close(self) -> None:
         """Close the CSV and write metadata.json (idempotent)."""
         if self._closed:
             return
         self._file.close()
-        self._metadata["cycles_logged"] = self._cycle_count
-        with self.metadata_path.open("w") as f:
-            json.dump(self._metadata, f, indent=2)
+        self.write_metadata()
         self._closed = True
 
     @property

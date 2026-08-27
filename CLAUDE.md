@@ -173,15 +173,43 @@ script reports orphans on either side.
   operator `/cage_reset` publications**, and a lane departure in the final curve. Four things stop the car and
   **none is the policy** — (i) **C-05 has no operational story on hardware**: a 120 ms glitch the estimator
   recovered from by itself stops the car permanently, since `require_explicit_reset` assumes an episode that
-  ends (open decision, candidate D-NN); (ii) **camera starvation**, upstream of (i) — 7.3 Hz against the
+  ends (**decided 27.08 as D-74: C-05 unchanged, reset path outside the cage**); (ii) **camera starvation**, upstream of (i) — 7.3 Hz against the
   trained 10 Hz, worst gap 995 ms = 171 mm open-loop, cause is CPU (load 5.49/6 cores with layer 3 *not*
-  running; killing `rviz2` → 9.5 Hz) — **the next work item**; (iii) **ZED pose jumps, now measured**: 3621.8
-  mm in one frame → ekf `vx` −4.03 m/s, and an earlier spike to 5.479 m/s firing C-04→C-03→C-05; (iv) **C-04's
-  dead zone**: `v_max_curve_mps` 0.25 > deployed 0.22, so C-04 **can never fire** — D-69's finding (ii) is no
+  running; killing `rviz2` → 9.5 Hz) — **fixed that afternoon, see the next bullet**; (iii) **ZED pose jumps,
+  now measured**: 3621.8 mm in one frame → ekf `vx` −4.03 m/s, and an earlier spike to 5.479 m/s firing
+  C-04→C-03→C-05 — **also fixed that afternoon**; (iv) **C-04's dead zone**: `v_max_curve_mps` 0.25 > deployed 0.22, so C-04 **can never fire** — D-69's finding (ii) is no
   longer only a coverage gap, and that tightest curve is where it left the lane **twice**. Also settled on
   hardware: **rectification is decisive** (perception-invalid 45 % → 5.5 %, C-01 fires 102 → 0) and
   **`heading_fit_mode` decides whether it drives at all** (`joint_pair_quadratic` 1.08 m vs `near_secant`
   14.45 m) while being **invisible at rest** — D-71 §3's method lesson again.
+- **THE BEST PHYSICAL RUN SO FAR — 18.05 m in ONE segment (26.08 afternoon, analysed 27.08, docs/17 §8.10).**
+  Two fixes landed in `624fba1d` *without* being written up, so §8 still said "next work item" / "none
+  applied": **camera capture 60 → 30 fps** (delivered 15.2 Hz @134 % of a core → **19.0 Hz @96.5 %**; 60 was
+  harmful, not just wasteful — `throttle_fps` sits after `nvvidconv` so `nvargus` never saw the saving) and
+  **`zed_deploy_overrides.yaml`** (`area_memory`/`reset_odom_with_loop_closure` false). The two runs are a
+  **controlled A/B 13 min apart**: pose steps >50 mm **116 → 0** in 509 s, ekf `|vx|` max 4.50 → **0.213** m/s
+  — §8.7's hypothesis *discriminated*, priced in unbounded slow drift. **The camera fix alone does not buy a
+  lap**: `cpufix` had the best loop rate of the day (9.59 Hz) and died in 16 s on a pose jump. The lap
+  (`track_v2_noloopclosure_20260826T100450Z`, monitoring + rectified + `near_secant`): **18.05 m / 101.1 s,
+  one segment, 0 resets, 0 jumps, C-06 the only rule (3.4 % of moving cycles vs 3.0 % in sim)**, `|ey|` median
+  18.7 / max 98.7 mm, `cycles_since_last_state` never > 0. **Ended 2.11 m short (314° of 360°) on ONE 400 ms
+  `/perception_invalid` pulse**, car 27 mm from centre in the tightest curve (`kappa` 0.75) → C-05 latched.
+  Whether it closed the loop **cannot be settled from odometry** (the same fix removed the loop-closure
+  correction) — needs a floor mark + tape, §9.4. Bottleneck **moved**: `/state_obs` 9.84 Hz vs `/cage_status`
+  8.68 Hz = 12 % of estimator cycles with no control cycle → `rl_policy_node`'s timer (CNN), not the camera.
+- **Next session prepared (27.08, docs/17 §9) — target: a complete monitoring lap that explains itself.** Four
+  evidence gaps closed in code, none touching the cage: `cage_logger_node platform:=physical` (commit +
+  cage/checkpoint/rectify hashes + contract, written at start-up too); **`frame_capture_node`** — lane frames
+  around each `/perception_invalid`//`emergency` edge from a RAM ring buffer, ~20 MB/run vs the 13.8 MB/s bag
+  that crashed the Jetson on 18.08 (§8.9's twice-asked item); **`cage_reset_proxy_node`** (`observe` default,
+  **outside** the cage, `cage.yaml` untouched and a test pins it); **`tools/run_physical_lap.sh`** (one run id
+  for bag+CSV+frames+resets, probes the *running* Layer 2 into `layer2.json`). **None of the three new ROS
+  nodes has been launched** — pure logic tested (42 new host-side tests), runtime unverified. Two hand
+  measurements nothing automates: floor mark + tape, and `lanecheck --true-ey` (M-7 §3b). Both pending
+  decisions are now **taken**: **D-73** (ZED loop closure off as deployment configuration — the cage reads
+  velocity, so drift beats jumps; the price is that odometry can no longer say whether a lap closed) and
+  **D-74** (C-05 unchanged, reset path outside the cage, `observe` by default; whether C-05 should ever gain a
+  bounded recovery is **deferred** — sim cannot validate it, because the latch is nearly inert there).
 - **`campaign_v2` — posterior evidence; it does NOT re-score G4.** The same 27 × 2 × seed-2024 matrix
   (1890 runs, SC-PERT-03 excluded per D-64) on the 1650k checkpoint, behind the `flock` guard;
   `experiments/sim/campaign_v2/` held **20 runs** at the 24.08 commit. Not a prerequisite for driving

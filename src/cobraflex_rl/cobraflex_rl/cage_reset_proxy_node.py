@@ -27,6 +27,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .cage_reset_proxy import BLOCKING_RULES as DEFAULT_BLOCKING_RULES
 from .cage_reset_proxy import ResetPolicy
 
 RESET_CSV_COLUMNS = ["timestamp", "action", "reason", "resets_issued"]
@@ -55,6 +56,37 @@ def main(args=None) -> None:
             self.declare_parameter("min_interval_seconds", 3.0)
             self.declare_parameter("max_resets", 6)
             self.declare_parameter("max_speed_mps", 0.02)
+            # Which cage rules block a reset. DEFAULT UNCHANGED — the C-01..C-04
+            # set encodes the guard "the cage is not asking for something else".
+            #
+            # It is exposed because that set has a DEADLOCK, measured on the car
+            # 31.08.2026 (lap04): a stop that happens with the vehicle OUTSIDE
+            # the lane leaves C-01 permanently active, so the guard can never
+            # clear and no further reset is ever issued — 24 of that run's
+            # 30-reset budget went unused while the car sat still for 250 s.
+            # That is precisely the state that needs recovery.
+            #
+            # The obvious narrowing — to ("C-03","C-04"), on the argument that on
+            # a stopped car C-03 (TTLC) is vacuous and C-04 trivially met while
+            # C-01/C-02 only describe the POSE it is stuck in — DOES NOT WORK,
+            # and the parameter exists partly to record why. Replaying lap04's
+            # own bag through both policies (14738 real messages, same order and
+            # timestamps the node saw live) gives:
+            #
+            #     C-01,C-02,C-03,C-04  ->  6 resets, last at t+223 s, budget spare
+            #     C-03,C-04            -> 30 resets, budget GONE by t+178 s
+            #
+            # The narrowed guard fires every 3 s — the rate limit — because the
+            # car is still off-lane, so the cage re-latches at once and the
+            # condition is satisfiable again. The deadlock becomes a LIVELOCK:
+            # thirty release-and-relatch lurches instead of one stuck car. Worse,
+            # not better. Anything set here must be replayed against a real bag
+            # before it goes near the vehicle.
+            #
+            # NOT the default, and no known good non-default value: releasing a
+            # car stopped off-lane is an operator judgement, and `auto` is
+            # already diagnostic-only (D-74).
+            self.declare_parameter("blocking_rules", list(DEFAULT_BLOCKING_RULES))
 
             self._enabled = bool(self.get_parameter("enabled").value)
             self._policy = ResetPolicy(
@@ -64,7 +96,21 @@ def main(args=None) -> None:
                     self.get_parameter("min_interval_seconds").value),
                 max_resets=int(self.get_parameter("max_resets").value),
                 max_speed_mps=float(self.get_parameter("max_speed_mps").value),
+                blocking_rules=tuple(
+                    str(r).strip()
+                    for r in (self.get_parameter("blocking_rules").value or ())
+                    if str(r).strip()
+                ),
             )
+            if set(self._policy.blocking_rules) != set(DEFAULT_BLOCKING_RULES):
+                self.get_logger().warning(
+                    "cage_reset_proxy blocking_rules is NOT the default: [%s] "
+                    "(default [%s]). A reset may now be issued while the cage "
+                    "still reports a pose rule — deliberately, to escape the "
+                    "lap04 deadlock. Diagnostic runs only."
+                    % (",".join(self._policy.blocking_rules) or "<none>",
+                       ",".join(DEFAULT_BLOCKING_RULES))
+                )
 
             output_dir = (
                 self.get_parameter("output_dir").get_parameter_value().string_value

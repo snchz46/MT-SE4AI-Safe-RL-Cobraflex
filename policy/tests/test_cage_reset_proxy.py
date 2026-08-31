@@ -96,3 +96,69 @@ def test_the_hold_timer_runs_before_the_decision_point():
         _tick(p, t, emergency=False)         # healthy, nothing latched yet
     d = _tick(p, 1.6)                        # latch observed here
     assert d.issue, d.reason
+
+
+# ------------------------------------------------- the lap04 deadlock (31.08.2026)
+# `lap04_20260831T102651Z` stopped with the car OUTSIDE the lane. C-01 was then
+# active on every subsequent cycle, so the C-01..C-04 guard could never clear and
+# the proxy issued nothing for 2287 cycles (~250 s) with 24 of its 30-reset budget
+# unused. The guard is correct as a default and stays the default; these tests pin
+# BOTH halves — that the deadlock is real, and that narrowing the set escapes it.
+
+
+def test_a_car_stopped_outside_the_lane_deadlocks_the_default_guard():
+    """The measured lap04 failure: C-01 latched active on a stationary car."""
+    p = ResetPolicy(min_healthy_seconds=1.0, min_interval_seconds=0.0, max_resets=30)
+    for t in range(0, 300):                       # 30 s at 10 Hz, car stopped
+        d = _tick(p, t * 0.1, active_rules=("C-01",), speed_mps=0.0)
+        assert not d.issue
+        assert "cage rules active: C-01" in d.reason
+    assert p.resets_issued == 0
+    assert not p.budget_exhausted                 # budget was never the constraint
+
+
+def test_narrowing_the_blocking_set_turns_the_deadlock_into_a_livelock():
+    """The obvious escape does NOT work, and this pins why.
+
+    Dropping C-01/C-02 (the "vacuous at v=0" argument) does let a reset through —
+    and then lets one through every `min_interval_seconds` for as long as the
+    budget lasts, because the car is still off-lane so the cage re-latches at
+    once. Replaying lap04's own bag through both policies (14738 real messages)
+    measured 6 resets for the default, budget spare, against 30 for the narrowed
+    set with the budget gone by t+178 s of a 555 s run: thirty release-and-
+    relatch lurches instead of one stuck car. Worse, not better.
+    """
+    p = ResetPolicy(min_healthy_seconds=1.0, min_interval_seconds=3.0,
+                    max_resets=30, blocking_rules=("C-03", "C-04"))
+    for i in range(1200):                      # 120 s at 10 Hz, pose never changes
+        _tick(p, i * 0.1, active_rules=("C-01",), speed_mps=0.0)
+    assert p.resets_issued >= 25, p.resets_issued
+    assert p.budget_exhausted
+
+    # ...whereas the default simply withholds, forever. One stuck car.
+    q = ResetPolicy(min_healthy_seconds=1.0, min_interval_seconds=3.0, max_resets=30)
+    for i in range(1200):
+        _tick(q, i * 0.1, active_rules=("C-01",), speed_mps=0.0)
+    assert q.resets_issued == 0
+
+
+def test_narrowing_does_not_disarm_the_other_guards():
+    """Escaping the deadlock must not become 'reset whenever latched'."""
+    p = ResetPolicy(min_healthy_seconds=1.0, min_interval_seconds=0.0,
+                    blocking_rules=("C-03", "C-04"))
+    # still moving → withheld even with no blocking rule active
+    assert not _tick(p, 0.0, speed_mps=0.5).issue
+    assert "still moving" in _tick(p, 0.5, speed_mps=0.5).reason
+    # a rule that IS in the narrowed set still blocks
+    assert "cage rules active: C-03" in _tick(
+        p, 1.0, active_rules=("C-03",), speed_mps=0.0).reason
+    # perception still invalid still blocks
+    assert "perception still invalid" in _tick(
+        p, 1.5, perception_invalid=True, speed_mps=0.0).reason
+
+
+def test_the_default_blocking_set_is_unchanged():
+    """A regression here silently changes what `auto` is allowed to release."""
+    from cobraflex_rl.cage_reset_proxy import BLOCKING_RULES
+    assert BLOCKING_RULES == ("C-01", "C-02", "C-03", "C-04")
+    assert ResetPolicy().blocking_rules == BLOCKING_RULES

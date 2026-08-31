@@ -282,6 +282,14 @@ def generate_launch_description() -> LaunchDescription:
                               description="perception healthy, no C-01..C-04 active "
                                           "and the car stopped — continuously, for "
                                           "this long, before a reset is issued."),
+        DeclareLaunchArgument(
+            "reset_proxy_blocking_rules", default_value="C-01,C-02,C-03,C-04",
+            description="comma-separated cage rules that block a proxy reset. "
+                        "The default is the D-74 guard. Narrow it (e.g. "
+                        "'C-03,C-04') ONLY to escape the lap04 deadlock, where a "
+                        "car stopped outside the lane holds C-01 active forever "
+                        "and no reset can ever be issued. Diagnostic runs only — "
+                        "it releases a car from a pose the cage is flagging."),
     ]
     checkpoint = LaunchConfiguration("checkpoint")
     algorithm = LaunchConfiguration("algorithm")
@@ -435,6 +443,11 @@ def generate_launch_description() -> LaunchDescription:
                 LaunchConfiguration("reset_proxy_max_resets"), value_type=int),
             "min_healthy_seconds": ParameterValue(
                 LaunchConfiguration("reset_proxy_healthy_seconds"), value_type=float),
+            "blocking_rules": ParameterValue(
+                PythonExpression(
+                    ['"', LaunchConfiguration("reset_proxy_blocking_rules"),
+                     '".replace(" ", "").split(",")']),
+                value_type=list),
         }],
     )
     # Layer 1 of the platform's own bring-up (robot_state_publisher +

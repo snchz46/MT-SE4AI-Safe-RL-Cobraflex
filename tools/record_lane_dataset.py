@@ -88,6 +88,13 @@ def main(argv=None) -> int:
     p.add_argument("--width-tol", type=float, default=0.040,
                    help="tolerance for the gate above, metres. The 18.08 capture had "
                         "only 44%% of frames inside +/-40 mm.")
+    p.add_argument("--rectify", default="",
+                   help="M-6 calibration JSON (experiments/calibration/"
+                        "M6_results.json). STRONGLY RECOMMENDED: the deployed "
+                        "estimator runs rectified, and §8.3's parked A/B measured "
+                        "perception-invalid 45%% -> 5.5%% and C-01 102 -> 0 firings "
+                        "from rectification alone. Capturing unrectified labels a "
+                        "dataset with an estimator that is NOT the one driving.")
     p.add_argument("--save-unpaired", action="store_true",
                    help="also save frames the estimator could not pair. Off by "
                         "default: those frames have no trustworthy label, and a "
@@ -128,6 +135,22 @@ def main(argv=None) -> int:
         cfg["white_sat_max"] = a.white_sat_max
     est = CvLaneEstimator(config=CvLaneEstimatorConfig(**cfg))
 
+    # Rectification, built once so a bad path fails here and not mid-sweep. The
+    # remap is the same call `cv_lane_estimator_node` makes, BORDER_REPLICATE
+    # included: a black wedge in the near-field corner reads as a dark object
+    # rather than as more road.
+    rect_maps = None
+    if a.rectify:
+        from cobraflex_rl.camera_geometry import (
+            CameraModel, rectification_maps_from_calibration,
+        )
+        rect_maps = rectification_maps_from_calibration(a.rectify, CameraModel())
+        print(f"rectifying with {a.rectify}")
+    else:
+        print("WARNING: capturing UNRECTIFIED. The deployed estimator rectifies, "
+              "so these labels come from a different estimator than the one that "
+              "drives. Pass --rectify experiments/calibration/M6_results.json.")
+
     rclpy.init(args=None)
     node = Node("record_lane_dataset")
     holder = {"msg": None}
@@ -162,6 +185,10 @@ def main(argv=None) -> int:
                                      msg.encoding, int(msg.step))
             except ValueError:
                 continue
+            if rect_maps is not None:
+                frame = cv2.remap(frame, rect_maps[0], rect_maps[1],
+                                  cv2.INTER_LINEAR,
+                                  borderMode=cv2.BORDER_REPLICATE)
             e = est.estimate(frame)
             paired = bool(e.ok and e.reason != "single_line" and e.n_lines >= 2)
             stamp = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9

@@ -44,6 +44,7 @@ def _bootstrap_cage_import() -> None:
 _bootstrap_cage_import()
 
 import rclpy  # noqa: E402
+from rcl_interfaces.msg import ParameterDescriptor  # noqa: E402
 from rclpy.clock import Clock  # noqa: E402
 from rclpy.node import Node  # noqa: E402
 from rclpy.qos import QoSPresetProfiles  # noqa: E402
@@ -83,8 +84,18 @@ class CageLoggerNode(Node):
         self.declare_parameter("cage_yaml", "")
         self.declare_parameter("policy_checkpoint", "")
         self.declare_parameter("rectify_calibration", "")
+        # Declared UNTYPED on purpose. `ros2 launch` serialises node parameters
+        # through a YAML file, and there a value that merely LOOKS numeric comes
+        # back typed: "0.22" as a DOUBLE, "4" as an INTEGER. Declaring these as
+        # strings killed the node on start-up the first time the deploy chain was
+        # ever launched with them (31.08.2026, wheels up) — and the half that would
+        # have survived is worse: `.string_value` on a DOUBLE returns "", so every
+        # numeric contract field (max_speed_mps, control_rate_hz, both gains) would
+        # have been dropped from metadata.json in silence. The logger's job is to
+        # stamp what it was handed, so it accepts any scalar and stringifies it.
+        contract_descriptor = ParameterDescriptor(dynamic_typing=True)
         for key in CONTRACT_KEYS:
-            self.declare_parameter(f"contract.{key}", "")
+            self.declare_parameter(f"contract.{key}", "", contract_descriptor)
 
         output_dir = (
             self.get_parameter("output_dir").get_parameter_value().string_value
@@ -148,10 +159,19 @@ class CageLoggerNode(Node):
         # the repo's cage/cage.yaml; resolve it the same way so the hash is of
         # the file actually loaded, not of nothing.
         cage_yaml = _param("cage_yaml") or resolve_repo_path("cage/cage.yaml")
+        def _contract(key: str) -> str:
+            """One contract field as the string the metadata schema promises."""
+            value = self.get_parameter(f"contract.{key}").value
+            if value is None:
+                return ""
+            if isinstance(value, bool):     # before int — bool is an int subclass
+                return "true" if value else "false"
+            return value if isinstance(value, str) else str(value)
+
         contract = {
             key: value
             for key in CONTRACT_KEYS
-            if (value := _param(f"contract.{key}"))
+            if (value := _contract(key))
         }
         metadata = physical_run_metadata(
             run_id,

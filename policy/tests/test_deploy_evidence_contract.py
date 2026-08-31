@@ -114,3 +114,65 @@ def test_c05_itself_is_untouched():
         "c05_emergency.require_explicit_reset changed: the operator-proxy work "
         "was allowed to leak into the artefact under test"
     )
+
+
+# ------------------------------------------------- launch parameter typing
+# The three tests above are source-text checks, and they all passed on
+# 27.08.2026 while the node they describe could not start at all. The first
+# time the deploy chain was launched with the provenance block (31.08.2026,
+# wheels up, Layers 1+2 running) `cage_logger_node` died in its constructor:
+#
+#   InvalidParameterTypeException: Trying to set parameter
+#   'contract.max_speed_mps' to '0.22' of type 'DOUBLE', expecting type 'STRING'
+#
+# `ros2 launch` serialises node parameters through a YAML file, so a value that
+# merely LOOKS numeric arrives typed. The crash was the visible half; the quiet
+# half is that `.string_value` on a DOUBLE returns "", which would have dropped
+# max_speed_mps, control_rate_hz and both gains from metadata.json while leaving
+# it looking complete — exactly the drift this module's docstring names.
+#
+# So this test drives the real node through the real type inference: `-p k:=v`
+# on the command line is typed by the same rcl YAML rules the launch file uses.
+
+
+def test_a_numeric_contract_value_reaches_metadata_as_a_string(tmp_path):
+    rclpy = pytest.importorskip("rclpy")
+    pytest.importorskip("cobraflex_safety_msgs.msg")
+    import json
+
+    from cobraflex_rl.cage_logger_node import CageLoggerNode
+
+    rclpy.init(args=[
+        "--ros-args",
+        "-p", f"output_dir:={tmp_path}",
+        "-p", "run_id:=typing_probe",
+        "-p", "platform:=physical",
+        "-p", "cage_mode:=monitoring",
+        # strings, doubles and integers, as deploy_cobraflex.launch.py emits them
+        "-p", "contract.algorithm:=ppo",
+        "-p", "contract.heading_fit_mode:=near_secant",
+        "-p", "contract.max_speed_mps:=0.22",
+        "-p", "contract.control_rate_hz:=10.0",
+        "-p", "contract.steering_to_yaw_rate_gain:=1.615",
+        "-p", "contract.heading_temporal_window:=4",
+        "-p", "contract.white_sat_max:=-1",
+    ])
+    try:
+        node = CageLoggerNode()          # must not raise
+        node.destroy_node()
+    finally:
+        rclpy.shutdown()
+
+    contract = json.loads(
+        (tmp_path / "typing_probe" / "metadata.json").read_text()
+    )["contract"]
+
+    # The numeric ones are the point: they are what silently vanished.
+    assert contract["max_speed_mps"] == "0.22"
+    assert contract["control_rate_hz"] == "10.0"
+    assert contract["steering_to_yaw_rate_gain"] == "1.615"
+    assert contract["heading_temporal_window"] == "4"
+    assert contract["white_sat_max"] == "-1"
+    # and the string ones still behave
+    assert contract["algorithm"] == "ppo"
+    assert contract["heading_fit_mode"] == "near_secant"

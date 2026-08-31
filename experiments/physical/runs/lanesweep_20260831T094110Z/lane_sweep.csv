@@ -1,0 +1,10 @@
+true_ey_mm,reported_ey_mm,sd_ey_mm,epsi_deg,sd_epsi_deg,invalid_cycles,total_cycles,support
+0,0.7,1.4,-3.68,0.92,0,86,ground
+0,-11.7,1.7,-0.68,1.08,0,71,wheels_up
+40,42.6,0.8,1.55,0.00,0,80,ground
+60,63.5,0.5,0.61,0.27,0,86,ground
+80,82.7,0.6,0.66,0.26,0,87,ground
+100,107.9,0.9,0.96,0.10,0,101,ground
+-60,-68.1,8.4,-2.91,0.39,0,81,ground
+-60,-68.6,6.9,-2.68,0.44,0,81,ground_repeat
+-100,-96.3,6.2,-1.71,0.29,0,100,ground

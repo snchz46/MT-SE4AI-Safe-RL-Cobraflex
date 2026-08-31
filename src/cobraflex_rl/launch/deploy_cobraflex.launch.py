@@ -113,6 +113,7 @@ KNOWN ITEMS TO VERIFY ON HARDWARE:
 """
 import os
 from pathlib import Path
+from typing import List
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -290,6 +291,16 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument("reset_proxy", default_value="observe",
                               description="off | observe | auto."),
         DeclareLaunchArgument("reset_proxy_max_resets", default_value="6"),
+        DeclareLaunchArgument(
+            "control_emergency_topic", default_value="/emergency",
+            description="Topic vehicle_control_node watches for the latched "
+                        "emergency stop. Point it at a topic nobody publishes "
+                        "(e.g. /emergency_ignored) to drive the BARE POLICY on "
+                        "hardware: the cage still evaluates, publishes and logs "
+                        "/emergency, but the actuation relay stops honouring it. "
+                        "This is the physical analogue of the simulated cage-off "
+                        "ablation (D-69 finding (i)). DIAGNOSTIC ONLY — with it "
+                        "set, nothing in software stops the car."),
         DeclareLaunchArgument("reset_proxy_healthy_seconds", default_value="1.0",
                               description="perception healthy, no C-01..C-04 active "
                                           "and the car stopped — continuously, for "
@@ -372,6 +383,13 @@ def generate_launch_description() -> LaunchDescription:
         package="cobraflex_rl", executable="vehicle_control_node", output="screen",
         parameters=[{
             "safe_action_topic": "/safe_action", "cmd_vel_topic": cmd_vel_topic,
+            # The actuation side of the emergency stop. vehicle_control_node zeroes
+            # /cmd_vel on a latched /emergency in BOTH modes by design (docs/17
+            # §10.4), which is why `mode:=monitoring` does NOT mean "the cage cannot
+            # stop the car". Pointing this at an unpublished topic detaches that one
+            # link and nothing else: the cage still evaluates every rule, still
+            # publishes /emergency, and the logger and the bag still record it.
+            "emergency_topic": LaunchConfiguration("control_emergency_topic"),
             # Contract item 2: the 2-D map, with fixed_speed_mps == max_speed_mps.
             "use_safe_throttle": True, "fixed_speed_mps": max_speed,
             "speed_map": "linear_2d",
@@ -460,7 +478,7 @@ def generate_launch_description() -> LaunchDescription:
                 PythonExpression(
                     ['"', LaunchConfiguration("reset_proxy_blocking_rules"),
                      '".replace(" ", "").split(",")']),
-                value_type=list),
+                value_type=List[str]),
         }],
     )
     # Layer 1 of the platform's own bring-up (robot_state_publisher +

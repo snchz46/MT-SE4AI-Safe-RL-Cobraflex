@@ -1,0 +1,993 @@
+timestamp,action,reason,resets_issued
+1788187810.708540,withheld,cage rules active: C-02,0
+1788187811.188254,withheld,still moving (0.160 m/s),0
+1788187811.289999,withheld,cage rules active: C-02,0
+1788187811.884284,withheld,still moving (0.056 m/s),0
+1788187811.982869,withheld,still moving (0.040 m/s),0
+1788187812.181400,withheld,cage rules active: C-02,0
+1788187812.492995,withheld,perception still invalid,0
+1788187812.688825,withheld,cage rules active: C-02,0
+1788187813.002706,withheld,perception still invalid,0
+1788187813.190141,withheld,cage rules active: C-02,0
+1788187813.904573,withheld,still moving (0.027 m/s),0
+1788187813.994507,withheld,cage rules active: C-02,0
+1788187814.185900,withheld,perception still invalid,0
+1788187814.315092,withheld,cage rules active: C-02,0
+1788187814.405413,withheld,still moving (0.030 m/s),0
+1788187814.490197,withheld,perception still invalid,0
+1788187815.189362,withheld,still moving (0.024 m/s),0
+1788187815.295128,withheld,still moving (0.022 m/s),0
+1788187815.697253,withheld,healthy for 0.00 s of 0.30,0
+1788187815.793046,withheld,perception still invalid,0
+1788187816.186810,withheld,cage rules active: C-02,0
+1788187816.483545,withheld,healthy for 0.00 s of 0.30,0
+1788187816.580232,withheld,healthy for 0.10 s of 0.30,0
+1788187816.690938,withheld,perception still invalid,0
+1788187817.295069,withheld,healthy for 0.00 s of 0.30,0
+1788187817.394759,withheld,cage rules active: C-02,0
+1788187818.204829,withheld,perception still invalid,0
+1788187818.287133,withheld,cage rules active: C-02,0
+1788187818.702737,withheld,healthy for 0.00 s of 0.30,0
+1788187818.806927,withheld,perception still invalid,0
+1788187818.977741,withheld,cage rules active: C-02,0
+1788187819.307307,withheld,perception still invalid,0
+1788187819.452016,withheld,cage rules active: C-02,0
+1788187819.609298,withheld,perception still invalid,0
+1788187819.684443,withheld,cage rules active: C-02,0
+1788187820.095108,withheld,healthy for 0.00 s of 0.30,0
+1788187820.267797,withheld,cage rules active: C-02,0
+1788187820.586637,withheld,perception still invalid,0
+1788187820.678050,withheld,cage rules active: C-02,0
+1788187821.494395,withheld,healthy for 0.00 s of 0.30,0
+1788187821.583369,withheld,perception still invalid,0
+1788187821.884823,withheld,cage rules active: C-02,0
+1788187825.107930,withheld,healthy for 0.00 s of 0.30,0
+1788187825.195454,withheld,perception still invalid,0
+1788187825.288381,withheld,cage rules active: C-02,0
+1788187826.669012,withheld,perception still invalid,0
+1788187826.791692,withheld,cage rules active: C-02,0
+1788187827.682569,withheld,perception still invalid,0
+1788187828.196941,withheld,cage rules active: C-02,0
+1788187829.093172,withheld,perception still invalid,0
+1788187829.185654,withheld,cage rules active: C-02,0
+1788187829.797009,withheld,perception still invalid,0
+1788187829.889224,withheld,cage rules active: C-02,0
+1788187830.293543,withheld,healthy for 0.00 s of 0.30,0
+1788187830.398558,withheld,healthy for 0.11 s of 0.30,0
+1788187830.496443,withheld,healthy for 0.20 s of 0.30,0
+1788187830.590488,withheld,perception still invalid,0
+1788187830.707607,withheld,healthy for 0.00 s of 0.30,0
+1788187830.794375,withheld,perception still invalid,0
+1788187831.487960,withheld,cage rules active: C-02,0
+1788187832.192150,withheld,perception still invalid,0
+1788187832.691242,withheld,cage rules active: C-02,0
+1788187832.796113,withheld,healthy for 0.00 s of 0.30,0
+1788187832.903562,withheld,healthy for 0.11 s of 0.30,0
+1788187832.984627,withheld,perception still invalid,0
+1788187833.789198,withheld,cage rules active: C-02,0
+1788187834.093643,withheld,perception still invalid,0
+1788187834.690072,withheld,cage rules active: C-02,0
+1788187834.983053,withheld,perception still invalid,0
+1788187835.696442,withheld,cage rules active: C-02,0
+1788187835.978312,withheld,perception still invalid,0
+1788187836.179087,withheld,cage rules active: C-02,0
+1788187836.790504,withheld,perception still invalid,0
+1788187836.884667,withheld,cage rules active: C-02,0
+1788187837.135360,withheld,perception still invalid,0
+1788187837.291138,withheld,cage rules active: C-02,0
+1788187837.592396,withheld,perception still invalid,0
+1788187837.704223,withheld,cage rules active: C-02,0
+1788187838.295273,withheld,perception still invalid,0
+1788187838.567178,withheld,cage rules active: C-02,0
+1788187839.986755,withheld,healthy for 0.00 s of 0.30,0
+1788187840.095292,withheld,perception still invalid,0
+1788187840.399519,withheld,cage rules active: C-02,0
+1788187840.715932,withheld,healthy for 0.00 s of 0.30,0
+1788187840.790525,withheld,perception still invalid,0
+1788187841.006961,withheld,cage rules active: C-02,0
+1788187841.295613,withheld,healthy for 0.00 s of 0.30,0
+1788187841.406551,withheld,perception still invalid,0
+1788187841.490499,withheld,cage rules active: C-02,0
+1788187841.882536,withheld,healthy for 0.00 s of 0.30,0
+1788187841.979067,withheld,healthy for 0.10 s of 0.30,0
+1788187842.090457,withheld,cage rules active: C-02,0
+1788187842.487231,withheld,healthy for 0.00 s of 0.30,0
+1788187842.580649,withheld,healthy for 0.09 s of 0.30,0
+1788187842.822372,reset,"healthy for 0.34 s, reset 1/30",1
+1788187843.287173,withheld,cage rules active: C-02,1
+1788187843.798412,withheld,still moving (0.055 m/s),1
+1788187843.886417,withheld,still moving (0.048 m/s),1
+1788187843.982099,withheld,still moving (0.033 m/s),1
+1788187844.193814,withheld,cage rules active: C-02,1
+1788187844.593230,withheld,healthy for 0.00 s of 0.30,1
+1788187844.699126,withheld,healthy for 0.11 s of 0.30,1
+1788187844.792291,withheld,healthy for 0.20 s of 0.30,1
+1788187844.885059,withheld,healthy for 0.29 s of 0.30,1
+1788187844.983920,withheld,rate limited (2.16 s since last reset),1
+1788187845.104894,withheld,rate limited (2.28 s since last reset),1
+1788187845.183314,withheld,rate limited (2.36 s since last reset),1
+1788187845.296627,withheld,rate limited (2.47 s since last reset),1
+1788187845.384406,withheld,rate limited (2.56 s since last reset),1
+1788187845.490687,withheld,rate limited (2.67 s since last reset),1
+1788187845.586705,withheld,rate limited (2.76 s since last reset),1
+1788187845.694007,withheld,cage rules active: C-02,1
+1788187846.589604,withheld,healthy for 0.00 s of 0.30,1
+1788187846.680864,withheld,healthy for 0.09 s of 0.30,1
+1788187846.977742,reset,"healthy for 0.39 s, reset 2/30",2
+1788187847.193160,withheld,perception still invalid,2
+1788187847.277066,withheld,cage rules active: C-02,2
+1788187847.810035,withheld,still moving (0.022 m/s),2
+1788187847.888248,withheld,healthy for 0.00 s of 0.30,2
+1788187847.992619,withheld,healthy for 0.10 s of 0.30,2
+1788187848.086944,withheld,cage rules active: C-02,2
+1788187848.294977,withheld,healthy for 0.00 s of 0.30,2
+1788187848.408117,withheld,healthy for 0.11 s of 0.30,2
+1788187848.478986,withheld,healthy for 0.18 s of 0.30,2
+1788187848.588965,withheld,healthy for 0.29 s of 0.30,2
+1788187848.719205,withheld,rate limited (1.74 s since last reset),2
+1788187848.827429,withheld,rate limited (1.85 s since last reset),2
+1788187848.888983,withheld,rate limited (1.91 s since last reset),2
+1788187848.969575,withheld,rate limited (1.99 s since last reset),2
+1788187849.082531,withheld,rate limited (2.10 s since last reset),2
+1788187849.189982,withheld,rate limited (2.21 s since last reset),2
+1788187849.289074,withheld,rate limited (2.31 s since last reset),2
+1788187849.388029,withheld,rate limited (2.41 s since last reset),2
+1788187849.486170,withheld,rate limited (2.51 s since last reset),2
+1788187849.585390,withheld,rate limited (2.61 s since last reset),2
+1788187849.726337,withheld,rate limited (2.75 s since last reset),2
+1788187849.814682,withheld,rate limited (2.84 s since last reset),2
+1788187849.890771,withheld,rate limited (2.91 s since last reset),2
+1788187849.984607,reset,"healthy for 1.69 s, reset 3/30",3
+1788187851.177260,withheld,cage rules active: C-02,3
+1788187851.383207,withheld,still moving (0.121 m/s),3
+1788187851.481685,withheld,still moving (0.139 m/s),3
+1788187851.582570,withheld,still moving (0.141 m/s),3
+1788187851.695442,withheld,still moving (0.149 m/s),3
+1788187851.836468,withheld,still moving (0.127 m/s),3
+1788187851.989748,withheld,still moving (0.101 m/s),3
+1788187852.181547,withheld,still moving (0.082 m/s),3
+1788187852.293162,withheld,still moving (0.074 m/s),3
+1788187852.395619,withheld,still moving (0.066 m/s),3
+1788187852.474787,withheld,still moving (0.061 m/s),3
+1788187852.591172,withheld,still moving (0.056 m/s),3
+1788187852.686169,withheld,still moving (0.047 m/s),3
+1788187852.854450,withheld,still moving (0.042 m/s),3
+1788187853.007794,withheld,still moving (0.035 m/s),3
+1788187853.107067,withheld,still moving (0.029 m/s),3
+1788187853.306753,withheld,still moving (0.022 m/s),3
+1788187853.398302,withheld,healthy for 0.00 s of 0.30,3
+1788187853.489498,withheld,healthy for 0.09 s of 0.30,3
+1788187853.604068,withheld,healthy for 0.21 s of 0.30,3
+1788187853.695583,withheld,healthy for 0.30 s of 0.30,3
+1788187853.796098,reset,"healthy for 0.40 s, reset 4/30",4
+1788187854.498130,withheld,cage rules active: C-02,4
+1788187854.682634,withheld,still moving (0.049 m/s),4
+1788187854.892285,withheld,still moving (0.063 m/s),4
+1788187855.094469,withheld,cage rules active: C-02,4
+1788187855.293772,withheld,still moving (0.058 m/s),4
+1788187855.409220,withheld,still moving (0.056 m/s),4
+1788187855.493929,withheld,still moving (0.046 m/s),4
+1788187855.584960,withheld,still moving (0.041 m/s),4
+1788187855.683398,withheld,still moving (0.037 m/s),4
+1788187855.791831,withheld,still moving (0.035 m/s),4
+1788187855.898944,withheld,still moving (0.031 m/s),4
+1788187855.993799,withheld,still moving (0.027 m/s),4
+1788187856.089352,withheld,still moving (0.021 m/s),4
+1788187856.289282,withheld,healthy for 0.00 s of 0.30,4
+1788187856.394040,withheld,healthy for 0.10 s of 0.30,4
+1788187856.489673,withheld,healthy for 0.20 s of 0.30,4
+1788187856.608544,withheld,rate limited (2.81 s since last reset),4
+1788187856.697879,withheld,rate limited (2.90 s since last reset),4
+1788187856.792215,withheld,rate limited (3.00 s since last reset),4
+1788187856.888026,reset,"healthy for 0.60 s, reset 5/30",5
+1788187858.414243,withheld,still moving (0.057 m/s),5
+1788187859.726846,withheld,still moving (0.074 m/s),5
+1788187859.891145,withheld,still moving (0.049 m/s),5
+1788187859.978065,withheld,still moving (0.043 m/s),5
+1788187860.108606,withheld,still moving (0.040 m/s),5
+1788187860.208914,withheld,still moving (0.036 m/s),5
+1788187860.291284,withheld,still moving (0.028 m/s),5
+1788187860.495372,withheld,still moving (0.020 m/s),5
+1788187860.595300,withheld,healthy for 0.00 s of 0.30,5
+1788187860.811719,withheld,healthy for 0.22 s of 0.30,5
+1788187860.886767,withheld,healthy for 0.29 s of 0.30,5
+1788187860.978339,reset,"healthy for 0.38 s, reset 6/30",6
+1788187861.101161,withheld,cage rules active: C-02,6
+1788187861.821536,withheld,perception still invalid,6
+1788187862.012529,withheld,cage rules active: C-02,6
+1788187863.282626,withheld,healthy for 0.00 s of 0.30,6
+1788187863.401368,withheld,cage rules active: C-02,6
+1788187863.684109,withheld,healthy for 0.00 s of 0.30,6
+1788187863.839688,withheld,healthy for 0.16 s of 0.30,6
+1788187863.894291,withheld,healthy for 0.21 s of 0.30,6
+1788187863.986247,withheld,cage rules active: C-02,6
+1788187864.287270,withheld,perception still invalid,6
+1788187864.384166,withheld,cage rules active: C-02,6
+1788187865.173066,withheld,healthy for 0.00 s of 0.30,6
+1788187865.287534,withheld,cage rules active: C-02,6
+1788187865.805621,withheld,healthy for 0.00 s of 0.30,6
+1788187865.902535,withheld,healthy for 0.10 s of 0.30,6
+1788187866.087357,withheld,cage rules active: C-02,6
+1788187866.378166,withheld,healthy for 0.00 s of 0.30,6
+1788187866.487989,withheld,cage rules active: C-02,6
+1788187866.689974,withheld,perception still invalid,6
+1788187866.807848,withheld,cage rules active: C-02,6
+1788187867.192997,withheld,healthy for 0.00 s of 0.30,6
+1788187867.299943,withheld,healthy for 0.11 s of 0.30,6
+1788187867.392993,withheld,perception still invalid,6
+1788187867.494475,withheld,cage rules active: C-02,6
+1788187867.895441,withheld,healthy for 0.00 s of 0.30,6
+1788187868.136056,withheld,perception still invalid,6
+1788187868.301953,withheld,cage rules active: C-02,6
+1788187870.481302,withheld,healthy for 0.00 s of 0.30,6
+1788187870.586877,withheld,cage rules active: C-02,6
+1788187871.099302,withheld,perception still invalid,6
+1788187871.195014,withheld,cage rules active: C-02,6
+1788187872.182243,withheld,perception still invalid,6
+1788187872.402254,withheld,cage rules active: C-02,6
+1788187872.982959,withheld,healthy for 0.00 s of 0.30,6
+1788187873.117420,withheld,healthy for 0.13 s of 0.30,6
+1788187873.181245,withheld,cage rules active: C-02,6
+1788187873.586850,withheld,perception still invalid,6
+1788187873.685082,withheld,cage rules active: C-02,6
+1788187874.488519,withheld,healthy for 0.00 s of 0.30,6
+1788187874.587930,withheld,healthy for 0.10 s of 0.30,6
+1788187874.705110,withheld,cage rules active: C-02,6
+1788187875.130417,withheld,perception still invalid,6
+1788187875.691998,withheld,cage rules active: C-02,6
+1788187875.795345,withheld,healthy for 0.00 s of 0.30,6
+1788187876.034259,withheld,cage rules active: C-02,6
+1788187876.189948,withheld,perception still invalid,6
+1788187876.281830,withheld,cage rules active: C-02,6
+1788187876.488785,withheld,healthy for 0.00 s of 0.30,6
+1788187876.592985,withheld,cage rules active: C-02,6
+1788187876.817364,withheld,perception still invalid,6
+1788187877.178856,withheld,cage rules active: C-02,6
+1788187877.294017,withheld,perception still invalid,6
+1788187877.798117,withheld,cage rules active: C-02,6
+1788187879.796155,withheld,perception still invalid,6
+1788187880.387204,withheld,cage rules active: C-02,6
+1788187880.479243,withheld,healthy for 0.00 s of 0.30,6
+1788187880.606971,withheld,healthy for 0.13 s of 0.30,6
+1788187880.697315,withheld,perception still invalid,6
+1788187880.905462,withheld,cage rules active: C-02,6
+1788187881.109750,withheld,healthy for 0.00 s of 0.30,6
+1788187881.401472,withheld,perception still invalid,6
+1788187881.595968,withheld,cage rules active: C-02,6
+1788187881.894614,withheld,healthy for 0.00 s of 0.30,6
+1788187881.984393,withheld,cage rules active: C-02,6
+1788187882.391068,withheld,perception still invalid,6
+1788187882.482252,withheld,cage rules active: C-02,6
+1788187882.703940,withheld,perception still invalid,6
+1788187885.400738,withheld,cage rules active: C-02,6
+1788187885.585452,withheld,perception still invalid,6
+1788187886.910650,withheld,cage rules active: C-02,6
+1788187887.107698,withheld,perception still invalid,6
+1788187887.227675,withheld,cage rules active: C-02,6
+1788187887.284414,withheld,healthy for 0.00 s of 0.30,6
+1788187887.375942,withheld,perception still invalid,6
+1788187888.893017,withheld,healthy for 0.00 s of 0.30,6
+1788187888.997299,withheld,healthy for 0.10 s of 0.30,6
+1788187889.117836,withheld,healthy for 0.22 s of 0.30,6
+1788187889.191038,withheld,perception still invalid,6
+1788187889.288117,withheld,healthy for 0.00 s of 0.30,6
+1788187889.392009,withheld,healthy for 0.10 s of 0.30,6
+1788187889.479261,withheld,perception still invalid,6
+1788187890.107697,withheld,healthy for 0.00 s of 0.30,6
+1788187890.175663,withheld,healthy for 0.07 s of 0.30,6
+1788187890.283953,withheld,healthy for 0.18 s of 0.30,6
+1788187890.388089,withheld,healthy for 0.28 s of 0.30,6
+1788187890.481388,reset,"healthy for 0.37 s, reset 7/30",7
+1788187890.687372,withheld,perception still invalid,7
+1788187890.804066,withheld,healthy for 0.00 s of 0.30,7
+1788187890.891303,withheld,healthy for 0.09 s of 0.30,7
+1788187890.983282,withheld,healthy for 0.18 s of 0.30,7
+1788187891.114085,withheld,perception still invalid,7
+1788187891.209675,withheld,cage rules active: C-02,7
+1788187891.803161,withheld,still moving (0.022 m/s),7
+1788187891.876466,withheld,still moving (0.023 m/s),7
+1788187891.989264,withheld,still moving (0.020 m/s),7
+1788187892.203909,withheld,healthy for 0.00 s of 0.30,7
+1788187892.583737,withheld,cage rules active: C-02,7
+1788187892.802814,withheld,healthy for 0.00 s of 0.30,7
+1788187892.992485,withheld,healthy for 0.19 s of 0.30,7
+1788187893.100299,withheld,healthy for 0.30 s of 0.30,7
+1788187893.185426,withheld,rate limited (2.70 s since last reset),7
+1788187893.289010,withheld,rate limited (2.81 s since last reset),7
+1788187893.378124,withheld,rate limited (2.90 s since last reset),7
+1788187893.499640,reset,"healthy for 0.70 s, reset 8/30",8
+1788187893.597795,withheld,cage rules active: C-02,8
+1788187894.706168,withheld,perception still invalid,8
+1788187894.885241,withheld,still moving (0.097 m/s),8
+1788187894.988505,withheld,cage rules active: C-02,8
+1788187895.997466,withheld,perception still invalid,8
+1788187896.988873,withheld,cage rules active: C-02,8
+1788187897.391708,withheld,perception still invalid,8
+1788187897.683296,withheld,cage rules active: C-02,8
+1788187898.107470,withheld,perception still invalid,8
+1788187898.189758,withheld,cage rules active: C-02,8
+1788187898.314337,withheld,healthy for 0.00 s of 0.30,8
+1788187898.392401,withheld,cage rules active: C-02,8
+1788187898.587156,withheld,healthy for 0.00 s of 0.30,8
+1788187898.693615,withheld,healthy for 0.11 s of 0.30,8
+1788187898.791396,withheld,healthy for 0.20 s of 0.30,8
+1788187898.877562,withheld,healthy for 0.29 s of 0.30,8
+1788187898.993055,withheld,perception still invalid,8
+1788187899.104433,withheld,cage rules active: C-02,8
+1788187899.584741,withheld,perception still invalid,8
+1788187899.695486,withheld,cage rules active: C-02,8
+1788187900.186689,withheld,perception still invalid,8
+1788187900.277186,withheld,cage rules active: C-02,8
+1788187900.483996,withheld,perception still invalid,8
+1788187900.583296,withheld,cage rules active: C-02,8
+1788187900.833041,withheld,perception still invalid,8
+1788187900.883595,withheld,cage rules active: C-02,8
+1788187901.141482,withheld,perception still invalid,8
+1788187901.379475,withheld,cage rules active: C-02,8
+1788187901.584444,withheld,healthy for 0.00 s of 0.30,8
+1788187901.689426,withheld,healthy for 0.10 s of 0.30,8
+1788187901.792498,withheld,healthy for 0.21 s of 0.30,8
+1788187901.985023,reset,"healthy for 0.40 s, reset 9/30",9
+1788187902.800098,withheld,perception still invalid,9
+1788187902.891865,withheld,cage rules active: C-02,9
+1788187903.097493,withheld,perception still invalid,9
+1788187903.189934,withheld,cage rules active: C-02,9
+1788187903.691775,withheld,perception still invalid,9
+1788187903.887241,withheld,cage rules active: C-02,9
+1788187904.205551,withheld,perception still invalid,9
+1788187904.381221,withheld,cage rules active: C-02,9
+1788187904.986844,withheld,perception still invalid,9
+1788187905.108797,withheld,cage rules active: C-02,9
+1788187905.304748,withheld,perception still invalid,9
+1788187905.487433,withheld,cage rules active: C-02,9
+1788187905.588604,withheld,healthy for 0.00 s of 0.30,9
+1788187905.692811,withheld,perception still invalid,9
+1788187905.881284,withheld,cage rules active: C-02,9
+1788187906.118391,withheld,healthy for 0.00 s of 0.30,9
+1788187906.196873,withheld,healthy for 0.08 s of 0.30,9
+1788187906.316030,withheld,cage rules active: C-02,9
+1788187906.488425,withheld,perception still invalid,9
+1788187906.819440,withheld,cage rules active: C-02,9
+1788187906.888409,withheld,healthy for 0.00 s of 0.30,9
+1788187906.990915,withheld,healthy for 0.10 s of 0.30,9
+1788187907.092854,withheld,cage rules active: C-02,9
+1788187907.309446,withheld,perception still invalid,9
+1788187907.388120,withheld,cage rules active: C-02,9
+1788187907.584677,withheld,perception still invalid,9
+1788187907.687114,withheld,cage rules active: C-02,9
+1788187907.779603,withheld,healthy for 0.00 s of 0.30,9
+1788187907.883441,withheld,healthy for 0.10 s of 0.30,9
+1788187907.992953,withheld,healthy for 0.21 s of 0.30,9
+1788187908.108936,reset,"healthy for 0.33 s, reset 10/30",10
+1788187908.181719,withheld,perception still invalid,10
+1788187909.583638,withheld,cage rules active: C-02,10
+1788187911.886034,withheld,perception still invalid,10
+1788187912.103212,withheld,cage rules active: C-02,10
+1788187917.092484,withheld,healthy for 0.00 s of 0.30,10
+1788187917.196359,withheld,cage rules active: C-02,10
+1788187917.989154,withheld,healthy for 0.00 s of 0.30,10
+1788187918.098811,withheld,cage rules active: C-02,10
+1788187918.586745,withheld,perception still invalid,10
+1788187918.805868,withheld,cage rules active: C-02,10
+1788187924.781150,withheld,perception still invalid,10
+1788187924.985348,withheld,cage rules active: C-02,10
+1788187926.693838,withheld,perception still invalid,10
+1788187926.789952,withheld,cage rules active: C-02,10
+1788187927.190790,withheld,perception still invalid,10
+1788187927.487296,withheld,cage rules active: C-02,10
+1788187927.889873,withheld,perception still invalid,10
+1788187927.987202,withheld,cage rules active: C-02,10
+1788187928.094785,withheld,healthy for 0.00 s of 0.30,10
+1788187928.180596,withheld,healthy for 0.09 s of 0.30,10
+1788187928.282293,withheld,cage rules active: C-02,10
+1788187928.588376,withheld,healthy for 0.00 s of 0.30,10
+1788187928.783921,withheld,healthy for 0.20 s of 0.30,10
+1788187928.896095,withheld,cage rules active: C-02,10
+1788187929.596393,withheld,perception still invalid,10
+1788187929.785361,withheld,cage rules active: C-02,10
+1788187929.885440,withheld,perception still invalid,10
+1788187932.323574,withheld,cage rules active: C-02,10
+1788187932.543167,withheld,healthy for 0.00 s of 0.30,10
+1788187932.650331,withheld,healthy for 0.11 s of 0.30,10
+1788187932.786732,withheld,healthy for 0.24 s of 0.30,10
+1788187932.884941,reset,"healthy for 0.34 s, reset 11/30",11
+1788187933.106931,withheld,cage rules active: C-02,11
+1788187933.276863,withheld,perception still invalid,11
+1788187933.483399,withheld,cage rules active: C-02,11
+1788187933.887089,withheld,healthy for 0.00 s of 0.30,11
+1788187933.995398,withheld,healthy for 0.11 s of 0.30,11
+1788187934.128807,withheld,healthy for 0.24 s of 0.30,11
+1788187934.183996,withheld,healthy for 0.30 s of 0.30,11
+1788187934.286511,withheld,rate limited (1.40 s since last reset),11
+1788187934.404763,withheld,rate limited (1.52 s since last reset),11
+1788187934.493346,withheld,rate limited (1.61 s since last reset),11
+1788187934.587768,withheld,perception still invalid,11
+1788187934.693571,withheld,healthy for 0.00 s of 0.30,11
+1788187934.785963,withheld,perception still invalid,11
+1788187935.278265,withheld,healthy for 0.00 s of 0.30,11
+1788187935.387938,withheld,healthy for 0.11 s of 0.30,11
+1788187935.496777,withheld,perception still invalid,11
+1788187935.586581,withheld,healthy for 0.00 s of 0.30,11
+1788187935.701767,withheld,cage rules active: C-02,11
+1788187935.879283,withheld,perception still invalid,11
+1788187936.105257,withheld,cage rules active: C-02,11
+1788187936.195156,withheld,perception still invalid,11
+1788187936.273407,withheld,cage rules active: C-02,11
+1788187936.377208,withheld,healthy for 0.00 s of 0.30,11
+1788187936.496497,withheld,healthy for 0.12 s of 0.30,11
+1788187936.595201,withheld,healthy for 0.22 s of 0.30,11
+1788187936.685850,reset,"healthy for 0.31 s, reset 12/30",12
+1788187937.289471,withheld,perception still invalid,12
+1788187937.390331,withheld,healthy for 0.00 s of 0.30,12
+1788187937.541641,withheld,perception still invalid,12
+1788187937.802203,withheld,still moving (0.092 m/s),12
+1788187937.884668,withheld,still moving (0.096 m/s),12
+1788187938.103587,withheld,perception still invalid,12
+1788187938.494021,withheld,still moving (0.037 m/s),12
+1788187938.685700,withheld,perception still invalid,12
+1788187938.792547,withheld,still moving (0.037 m/s),12
+1788187938.879811,withheld,still moving (0.030 m/s),12
+1788187939.199299,withheld,perception still invalid,12
+1788187939.384567,withheld,healthy for 0.00 s of 0.30,12
+1788187939.485682,withheld,healthy for 0.10 s of 0.30,12
+1788187939.691285,withheld,perception still invalid,12
+1788187939.789222,withheld,healthy for 0.00 s of 0.30,12
+1788187939.884585,withheld,healthy for 0.10 s of 0.30,12
+1788187939.984217,withheld,healthy for 0.19 s of 0.30,12
+1788187940.106285,withheld,perception still invalid,12
+1788187940.181823,withheld,healthy for 0.00 s of 0.30,12
+1788187940.278025,withheld,healthy for 0.10 s of 0.30,12
+1788187940.387312,withheld,perception still invalid,12
+1788187940.585131,withheld,healthy for 0.00 s of 0.30,12
+1788187940.684369,withheld,healthy for 0.10 s of 0.30,12
+1788187940.782835,withheld,healthy for 0.20 s of 0.30,12
+1788187940.883124,withheld,perception still invalid,12
+1788187940.983021,withheld,healthy for 0.00 s of 0.30,12
+1788187941.113579,withheld,healthy for 0.13 s of 0.30,12
+1788187941.187105,withheld,perception still invalid,12
+1788187941.685398,withheld,healthy for 0.00 s of 0.30,12
+1788187941.791529,withheld,healthy for 0.11 s of 0.30,12
+1788187941.886126,withheld,healthy for 0.20 s of 0.30,12
+1788187941.983610,withheld,healthy for 0.30 s of 0.30,12
+1788187942.095040,reset,"healthy for 0.41 s, reset 13/30",13
+1788187942.293201,withheld,perception still invalid,13
+1788187942.806105,withheld,still moving (0.029 m/s),13
+1788187942.978091,withheld,still moving (0.030 m/s),13
+1788187943.177827,withheld,perception still invalid,13
+1788187943.299485,withheld,healthy for 0.00 s of 0.30,13
+1788187943.384449,withheld,healthy for 0.08 s of 0.30,13
+1788187943.487338,withheld,healthy for 0.19 s of 0.30,13
+1788187943.586262,withheld,healthy for 0.29 s of 0.30,13
+1788187943.690115,withheld,rate limited (1.60 s since last reset),13
+1788187943.790110,withheld,perception still invalid,13
+1788187943.981015,withheld,healthy for 0.00 s of 0.30,13
+1788187944.095575,withheld,healthy for 0.11 s of 0.30,13
+1788187944.193419,withheld,healthy for 0.21 s of 0.30,13
+1788187944.282260,withheld,rate limited (2.19 s since last reset),13
+1788187944.392673,withheld,rate limited (2.30 s since last reset),13
+1788187944.485327,withheld,perception still invalid,13
+1788187944.678150,withheld,healthy for 0.00 s of 0.30,13
+1788187944.789644,withheld,healthy for 0.11 s of 0.30,13
+1788187944.887845,withheld,perception still invalid,13
+1788187944.984806,withheld,healthy for 0.00 s of 0.30,13
+1788187945.118747,withheld,healthy for 0.13 s of 0.30,13
+1788187945.187042,withheld,healthy for 0.20 s of 0.30,13
+1788187945.282018,withheld,healthy for 0.30 s of 0.30,13
+1788187945.391180,reset,"healthy for 0.41 s, reset 14/30",14
+1788187946.384331,withheld,perception still invalid,14
+1788187946.486347,withheld,still moving (0.092 m/s),14
+1788187946.578937,withheld,still moving (0.094 m/s),14
+1788187946.679420,withheld,still moving (0.098 m/s),14
+1788187946.787536,withheld,still moving (0.102 m/s),14
+1788187946.891339,withheld,still moving (0.118 m/s),14
+1788187947.126925,withheld,still moving (0.119 m/s),14
+1788187947.178639,withheld,still moving (0.122 m/s),14
+1788187947.285682,withheld,still moving (0.081 m/s),14
+1788187947.493579,withheld,still moving (0.068 m/s),14
+1788187947.588764,withheld,still moving (0.062 m/s),14
+1788187947.680542,withheld,still moving (0.058 m/s),14
+1788187947.784205,withheld,still moving (0.048 m/s),14
+1788187947.890567,withheld,still moving (0.042 m/s),14
+1788187947.984413,withheld,still moving (0.039 m/s),14
+1788187948.096045,withheld,still moving (0.034 m/s),14
+1788187948.373174,withheld,still moving (0.024 m/s),14
+1788187948.478518,withheld,healthy for 0.00 s of 0.30,14
+1788187948.595389,withheld,healthy for 0.12 s of 0.30,14
+1788187948.684218,withheld,healthy for 0.21 s of 0.30,14
+1788187948.805756,reset,"healthy for 0.33 s, reset 15/30",15
+1788187949.882267,withheld,perception still invalid,15
+1788187949.992190,withheld,cage rules active: C-02,15
+1788187950.180358,withheld,perception still invalid,15
+1788187950.386464,withheld,cage rules active: C-02,15
+1788187950.481006,withheld,still moving (0.119 m/s),15
+1788187950.580684,withheld,still moving (0.104 m/s),15
+1788187950.682550,withheld,still moving (0.106 m/s),15
+1788187950.782483,withheld,still moving (0.108 m/s),15
+1788187950.981968,withheld,still moving (0.064 m/s),15
+1788187951.178454,withheld,cage rules active: C-02,15
+1788187951.507163,withheld,still moving (0.038 m/s),15
+1788187951.584945,withheld,still moving (0.030 m/s),15
+1788187951.682262,withheld,cage rules active: C-02,15
+1788187951.884402,withheld,perception still invalid,15
+1788187951.983622,withheld,cage rules active: C-02,15
+1788187952.083428,withheld,healthy for 0.00 s of 0.30,15
+1788187952.207097,withheld,healthy for 0.12 s of 0.30,15
+1788187952.280951,withheld,healthy for 0.20 s of 0.30,15
+1788187952.406529,reset,"healthy for 0.32 s, reset 16/30",16
+1788187952.483493,withheld,perception still invalid,16
+1788187957.381595,withheld,cage rules active: C-02,16
+1788187959.088481,withheld,perception still invalid,16
+1788187959.192945,withheld,cage rules active: C-02,16
+1788187968.981449,withheld,perception still invalid,16
+1788187969.083159,withheld,cage rules active: C-02,16
+1788187969.419728,withheld,perception still invalid,16
+1788187969.484289,withheld,cage rules active: C-02,16
+1788187969.783514,withheld,still moving (0.026 m/s),16
+1788187969.886471,withheld,perception still invalid,16
+1788187970.703270,withheld,cage rules active: C-02,16
+1788187970.910071,withheld,perception still invalid,16
+1788187971.111320,withheld,cage rules active: C-02,16
+1788187971.895709,withheld,perception still invalid,16
+1788187972.106586,withheld,cage rules active: C-02,16
+1788187972.288740,withheld,healthy for 0.00 s of 0.30,16
+1788187972.388597,withheld,cage rules active: C-02,16
+1788187972.580568,withheld,healthy for 0.00 s of 0.30,16
+1788187972.689526,withheld,healthy for 0.11 s of 0.30,16
+1788187972.784941,withheld,perception still invalid,16
+1788187973.101612,withheld,healthy for 0.00 s of 0.30,16
+1788187973.173385,withheld,cage rules active: C-02,16
+1788187973.399981,withheld,healthy for 0.00 s of 0.30,16
+1788187973.486747,withheld,perception still invalid,16
+1788187973.782634,withheld,healthy for 0.00 s of 0.30,16
+1788187973.912523,withheld,cage rules active: C-02,16
+1788187974.210151,withheld,healthy for 0.00 s of 0.30,16
+1788187974.408457,withheld,healthy for 0.20 s of 0.30,16
+1788187974.683208,reset,"healthy for 0.47 s, reset 17/30",17
+1788187974.882543,withheld,cage rules active: C-02,17
+1788187975.205981,withheld,healthy for 0.00 s of 0.30,17
+1788187975.345423,withheld,healthy for 0.14 s of 0.30,17
+1788187975.395112,withheld,healthy for 0.19 s of 0.30,17
+1788187975.485950,withheld,healthy for 0.28 s of 0.30,17
+1788187975.708979,withheld,cage rules active: C-02,17
+1788187975.901603,withheld,healthy for 0.00 s of 0.30,17
+1788187975.972375,withheld,perception still invalid,17
+1788187976.090510,withheld,cage rules active: C-02,17
+1788187976.284344,withheld,perception still invalid,17
+1788187976.388732,withheld,cage rules active: C-02,17
+1788187976.509511,withheld,healthy for 0.00 s of 0.30,17
+1788187976.590677,withheld,cage rules active: C-02,17
+1788187977.092051,withheld,healthy for 0.00 s of 0.30,17
+1788187977.181505,withheld,healthy for 0.09 s of 0.30,17
+1788187977.309403,withheld,perception still invalid,17
+1788187977.511788,withheld,healthy for 0.00 s of 0.30,17
+1788187977.588247,withheld,healthy for 0.08 s of 0.30,17
+1788187977.692406,withheld,healthy for 0.18 s of 0.30,17
+1788187977.789732,withheld,healthy for 0.28 s of 0.30,17
+1788187977.887875,reset,"healthy for 0.38 s, reset 18/30",18
+1788187977.973821,withheld,cage rules active: C-02,18
+1788187979.270791,withheld,still moving (0.121 m/s),18
+1788187979.377803,withheld,still moving (0.130 m/s),18
+1788187979.494401,withheld,still moving (0.133 m/s),18
+1788187979.609362,withheld,still moving (0.135 m/s),18
+1788187979.681973,withheld,still moving (0.110 m/s),18
+1788187979.880112,withheld,perception still invalid,18
+1788187979.983633,withheld,still moving (0.114 m/s),18
+1788187980.189858,withheld,still moving (0.071 m/s),18
+1788187980.394439,withheld,perception still invalid,18
+1788187980.694386,withheld,still moving (0.038 m/s),18
+1788187980.791019,withheld,still moving (0.035 m/s),18
+1788187980.983271,withheld,perception still invalid,18
+1788187981.289704,withheld,healthy for 0.00 s of 0.30,18
+1788187981.396188,withheld,healthy for 0.11 s of 0.30,18
+1788187981.496903,withheld,cage rules active: C-02,18
+1788187981.690667,withheld,healthy for 0.00 s of 0.30,18
+1788187981.794729,withheld,healthy for 0.10 s of 0.30,18
+1788187981.883302,withheld,healthy for 0.19 s of 0.30,18
+1788187981.984195,withheld,perception still invalid,18
+1788187982.104643,withheld,healthy for 0.00 s of 0.30,18
+1788187982.207094,withheld,healthy for 0.10 s of 0.30,18
+1788187982.278692,withheld,healthy for 0.17 s of 0.30,18
+1788187982.387725,withheld,healthy for 0.28 s of 0.30,18
+1788187982.470866,reset,"healthy for 0.37 s, reset 19/30",19
+1788187982.881076,withheld,perception still invalid,19
+1788187983.210334,withheld,healthy for 0.00 s of 0.30,19
+1788187983.321485,withheld,still moving (0.043 m/s),19
+1788187983.415097,withheld,cage rules active: C-02,19
+1788187983.574227,withheld,still moving (0.038 m/s),19
+1788187983.689155,withheld,cage rules active: C-02,19
+1788187984.132887,withheld,still moving (0.020 m/s),19
+1788187984.181106,withheld,healthy for 0.00 s of 0.30,19
+1788187984.289391,withheld,healthy for 0.11 s of 0.30,19
+1788187984.385916,withheld,cage rules active: C-02,19
+1788187984.692648,withheld,perception still invalid,19
+1788187984.775184,withheld,cage rules active: C-02,19
+1788187985.185784,withheld,perception still invalid,19
+1788187985.280542,withheld,cage rules active: C-02,19
+1788187985.382274,withheld,healthy for 0.00 s of 0.30,19
+1788187985.604656,withheld,healthy for 0.22 s of 0.30,19
+1788187985.681090,withheld,healthy for 0.30 s of 0.30,19
+1788187985.777038,withheld,perception still invalid,19
+1788187985.887186,withheld,healthy for 0.00 s of 0.30,19
+1788187985.988990,withheld,healthy for 0.10 s of 0.30,19
+1788187986.098166,withheld,healthy for 0.21 s of 0.30,19
+1788187986.181845,withheld,healthy for 0.29 s of 0.30,19
+1788187986.298820,reset,"healthy for 0.41 s, reset 20/30",20
+1788187986.786036,withheld,perception still invalid,20
+1788187986.893259,withheld,healthy for 0.00 s of 0.30,20
+1788187986.981509,withheld,healthy for 0.09 s of 0.30,20
+1788187987.088929,withheld,perception still invalid,20
+1788187987.186984,withheld,still moving (0.054 m/s),20
+1788187987.273294,withheld,still moving (0.056 m/s),20
+1788187987.495375,withheld,perception still invalid,20
+1788187987.890012,withheld,still moving (0.045 m/s),20
+1788187988.011964,withheld,perception still invalid,20
+1788187988.083555,withheld,still moving (0.035 m/s),20
+1788187988.185474,withheld,still moving (0.031 m/s),20
+1788187988.386348,withheld,still moving (0.025 m/s),20
+1788187988.487654,withheld,still moving (0.022 m/s),20
+1788187988.602535,withheld,healthy for 0.00 s of 0.30,20
+1788187988.682518,withheld,healthy for 0.08 s of 0.30,20
+1788187988.888722,withheld,healthy for 0.29 s of 0.30,20
+1788187988.977066,withheld,rate limited (2.68 s since last reset),20
+1788187989.086770,withheld,rate limited (2.79 s since last reset),20
+1788187989.386569,reset,"healthy for 0.78 s, reset 21/30",21
+1788187989.900035,withheld,perception still invalid,21
+1788187990.283064,withheld,still moving (0.055 m/s),21
+1788187990.379184,withheld,still moving (0.057 m/s),21
+1788187990.595112,withheld,still moving (0.054 m/s),21
+1788187990.778424,withheld,still moving (0.057 m/s),21
+1788187990.871627,withheld,still moving (0.040 m/s),21
+1788187991.116952,withheld,perception still invalid,21
+1788187991.585294,withheld,healthy for 0.00 s of 0.30,21
+1788187991.685188,withheld,healthy for 0.10 s of 0.30,21
+1788187991.785815,withheld,healthy for 0.20 s of 0.30,21
+1788187991.876838,withheld,healthy for 0.29 s of 0.30,21
+1788187991.978060,withheld,rate limited (2.59 s since last reset),21
+1788187992.094770,withheld,rate limited (2.71 s since last reset),21
+1788187992.201673,withheld,rate limited (2.82 s since last reset),21
+1788187992.293242,withheld,rate limited (2.91 s since last reset),21
+1788187992.384361,withheld,rate limited (3.00 s since last reset),21
+1788187992.493947,reset,"healthy for 0.91 s, reset 22/30",22
+1788187993.488493,withheld,cage rules active: C-02,22
+1788187993.676471,withheld,still moving (0.070 m/s),22
+1788187993.794655,withheld,still moving (0.090 m/s),22
+1788187993.887282,withheld,still moving (0.113 m/s),22
+1788187993.981746,withheld,still moving (0.114 m/s),22
+1788187994.186238,withheld,perception still invalid,22
+1788187994.375244,withheld,still moving (0.077 m/s),22
+1788187994.588424,withheld,perception still invalid,22
+1788187994.777694,withheld,still moving (0.048 m/s),22
+1788187994.976878,withheld,perception still invalid,22
+1788187995.071047,withheld,still moving (0.037 m/s),22
+1788187995.282272,withheld,perception still invalid,22
+1788187995.403734,withheld,still moving (0.023 m/s),22
+1788187995.583442,withheld,perception still invalid,22
+1788187995.996005,withheld,healthy for 0.00 s of 0.30,22
+1788187996.076168,withheld,healthy for 0.08 s of 0.30,22
+1788187996.181818,withheld,perception still invalid,22
+1788187996.281391,withheld,healthy for 0.00 s of 0.30,22
+1788187996.385251,withheld,healthy for 0.10 s of 0.30,22
+1788187996.502601,withheld,healthy for 0.22 s of 0.30,22
+1788187996.597659,reset,"healthy for 0.32 s, reset 23/30",23
+1788187996.987848,withheld,perception still invalid,23
+1788187997.094021,withheld,healthy for 0.00 s of 0.30,23
+1788187997.187865,withheld,healthy for 0.09 s of 0.30,23
+1788187997.280769,withheld,perception still invalid,23
+1788187997.579820,withheld,still moving (0.049 m/s),23
+1788187997.681762,withheld,still moving (0.040 m/s),23
+1788187997.993749,withheld,still moving (0.028 m/s),23
+1788187998.093848,withheld,still moving (0.026 m/s),23
+1788187998.281627,withheld,still moving (0.021 m/s),23
+1788187998.383205,withheld,healthy for 0.00 s of 0.30,23
+1788187998.481562,withheld,healthy for 0.10 s of 0.30,23
+1788187998.581803,withheld,healthy for 0.20 s of 0.30,23
+1788187998.673803,withheld,healthy for 0.29 s of 0.30,23
+1788187998.801442,withheld,rate limited (2.20 s since last reset),23
+1788187998.882117,withheld,perception still invalid,23
+1788187998.979762,withheld,healthy for 0.00 s of 0.30,23
+1788187999.115896,withheld,healthy for 0.14 s of 0.30,23
+1788187999.185900,withheld,healthy for 0.21 s of 0.30,23
+1788187999.290720,withheld,rate limited (2.69 s since last reset),23
+1788187999.381872,withheld,rate limited (2.78 s since last reset),23
+1788187999.505651,withheld,rate limited (2.91 s since last reset),23
+1788187999.604389,reset,"healthy for 0.62 s, reset 24/30",24
+1788187999.687107,withheld,perception still invalid,24
+1788188001.085942,withheld,still moving (0.091 m/s),24
+1788188001.388055,withheld,still moving (0.096 m/s),24
+1788188001.482793,withheld,still moving (0.061 m/s),24
+1788188001.708275,withheld,still moving (0.050 m/s),24
+1788188001.778834,withheld,still moving (0.046 m/s),24
+1788188001.888695,withheld,still moving (0.039 m/s),24
+1788188002.191556,withheld,still moving (0.030 m/s),24
+1788188002.395337,withheld,still moving (0.021 m/s),24
+1788188002.606925,withheld,perception still invalid,24
+1788188002.781530,withheld,healthy for 0.00 s of 0.30,24
+1788188002.899964,withheld,healthy for 0.12 s of 0.30,24
+1788188002.995165,withheld,healthy for 0.21 s of 0.30,24
+1788188003.081307,withheld,perception still invalid,24
+1788188003.383003,withheld,healthy for 0.00 s of 0.30,24
+1788188003.496135,withheld,healthy for 0.11 s of 0.30,24
+1788188003.585966,withheld,healthy for 0.20 s of 0.30,24
+1788188003.693324,withheld,perception still invalid,24
+1788188003.787771,withheld,healthy for 0.00 s of 0.30,24
+1788188003.888454,withheld,healthy for 0.10 s of 0.30,24
+1788188003.985960,withheld,healthy for 0.20 s of 0.30,24
+1788188004.085532,withheld,healthy for 0.30 s of 0.30,24
+1788188004.181901,reset,"healthy for 0.39 s, reset 25/30",25
+1788188004.706951,withheld,cage rules active: C-02,25
+1788188005.087717,withheld,still moving (0.040 m/s),25
+1788188005.193840,withheld,cage rules active: C-02,25
+1788188005.691057,withheld,perception still invalid,25
+1788188005.788311,withheld,cage rules active: C-02,25
+1788188005.991158,withheld,still moving (0.023 m/s),25
+1788188006.093142,withheld,healthy for 0.00 s of 0.30,25
+1788188006.191166,withheld,healthy for 0.10 s of 0.30,25
+1788188006.284474,withheld,healthy for 0.19 s of 0.30,25
+1788188006.403507,withheld,rate limited (2.22 s since last reset),25
+1788188006.497839,withheld,rate limited (2.32 s since last reset),25
+1788188006.592990,withheld,rate limited (2.41 s since last reset),25
+1788188006.706613,withheld,rate limited (2.52 s since last reset),25
+1788188006.786881,withheld,rate limited (2.60 s since last reset),25
+1788188006.871352,withheld,rate limited (2.69 s since last reset),25
+1788188006.994518,withheld,rate limited (2.81 s since last reset),25
+1788188007.090720,withheld,rate limited (2.91 s since last reset),25
+1788188007.180795,withheld,rate limited (3.00 s since last reset),25
+1788188007.280416,reset,"healthy for 1.19 s, reset 26/30",26
+1788188008.606105,withheld,perception still invalid,26
+1788188008.679468,withheld,still moving (0.127 m/s),26
+1788188008.892372,withheld,cage rules active: C-02,26
+1788188009.088824,withheld,still moving (0.150 m/s),26
+1788188009.175528,withheld,still moving (0.154 m/s),26
+1788188009.286368,withheld,still moving (0.132 m/s),26
+1788188009.493127,withheld,perception still invalid,26
+1788188009.697263,withheld,still moving (0.132 m/s),26
+1788188009.973088,withheld,perception still invalid,26
+1788188010.904155,withheld,still moving (0.132 m/s),26
+1788188011.180720,withheld,perception still invalid,26
+1788188011.800466,withheld,still moving (0.132 m/s),26
+1788188012.104687,withheld,perception still invalid,26
+1788188013.193840,withheld,still moving (0.132 m/s),26
+1788188013.496633,withheld,perception still invalid,26
+1788188014.787895,withheld,still moving (0.132 m/s),26
+1788188015.493457,withheld,perception still invalid,26
+1788188016.892190,withheld,still moving (0.132 m/s),26
+1788188017.186006,withheld,perception still invalid,26
+1788188018.082816,withheld,still moving (0.132 m/s),26
+1788188018.390949,withheld,perception still invalid,26
+1788188021.689889,withheld,still moving (0.132 m/s),26
+1788188021.908148,withheld,perception still invalid,26
+1788188021.994334,withheld,still moving (0.132 m/s),26
+1788188022.297338,withheld,perception still invalid,26
+1788188024.885670,withheld,still moving (0.132 m/s),26
+1788188024.979153,withheld,perception still invalid,26
+1788188025.095351,withheld,still moving (0.132 m/s),26
+1788188025.385337,withheld,perception still invalid,26
+1788188027.878389,withheld,still moving (0.132 m/s),26
+1788188028.205054,withheld,perception still invalid,26
+1788188030.302988,withheld,still moving (0.132 m/s),26
+1788188030.595679,withheld,perception still invalid,26
+1788188032.288190,withheld,cage rules active: C-02,26
+1788188032.702574,withheld,perception still invalid,26
+1788188033.495628,withheld,cage rules active: C-02,26
+1788188033.578431,withheld,perception still invalid,26
+1788188034.487513,withheld,cage rules active: C-02,26
+1788188034.786699,withheld,perception still invalid,26
+1788188035.101071,withheld,cage rules active: C-02,26
+1788188035.287292,withheld,perception still invalid,26
+1788188035.385406,withheld,cage rules active: C-02,26
+1788188035.484351,withheld,healthy for 0.00 s of 0.30,26
+1788188035.586388,withheld,healthy for 0.10 s of 0.30,26
+1788188035.688236,withheld,healthy for 0.20 s of 0.30,26
+1788188035.794953,reset,"healthy for 0.31 s, reset 27/30",27
+1788188036.398063,withheld,perception still invalid,27
+1788188036.599563,withheld,still moving (0.028 m/s),27
+1788188036.709613,withheld,still moving (0.029 m/s),27
+1788188036.786955,withheld,still moving (0.054 m/s),27
+1788188037.127177,withheld,still moving (0.093 m/s),27
+1788188037.186295,withheld,still moving (0.072 m/s),27
+1788188037.277963,withheld,still moving (0.067 m/s),27
+1788188037.376599,withheld,still moving (0.068 m/s),27
+1788188037.471556,withheld,still moving (0.070 m/s),27
+1788188037.581199,withheld,still moving (0.044 m/s),27
+1788188037.685878,withheld,still moving (0.041 m/s),27
+1788188037.786388,withheld,still moving (0.037 m/s),27
+1788188037.904377,withheld,still moving (0.032 m/s),27
+1788188037.984904,withheld,still moving (0.029 m/s),27
+1788188038.094777,withheld,still moving (0.027 m/s),27
+1788188038.189692,withheld,still moving (0.025 m/s),27
+1788188038.281209,withheld,still moving (0.022 m/s),27
+1788188038.593272,withheld,healthy for 0.00 s of 0.30,27
+1788188038.688088,withheld,healthy for 0.09 s of 0.30,27
+1788188038.787318,withheld,healthy for 0.19 s of 0.30,27
+1788188038.870883,withheld,healthy for 0.28 s of 0.30,27
+1788188039.012584,reset,"healthy for 0.42 s, reset 28/30",28
+1788188040.488993,withheld,cage rules active: C-02,28
+1788188040.678984,withheld,still moving (0.132 m/s),28
+1788188040.782807,withheld,still moving (0.135 m/s),28
+1788188040.882679,withheld,still moving (0.137 m/s),28
+1788188041.088185,withheld,still moving (0.125 m/s),28
+1788188041.184562,withheld,still moving (0.128 m/s),28
+1788188041.380419,withheld,still moving (0.087 m/s),28
+1788188041.492404,withheld,still moving (0.080 m/s),28
+1788188041.596646,withheld,still moving (0.072 m/s),28
+1788188041.695874,withheld,still moving (0.066 m/s),28
+1788188041.787274,withheld,still moving (0.056 m/s),28
+1788188041.896907,withheld,still moving (0.054 m/s),28
+1788188042.097553,withheld,still moving (0.036 m/s),28
+1788188042.280651,withheld,still moving (0.028 m/s),28
+1788188042.375776,withheld,still moving (0.027 m/s),28
+1788188042.479981,withheld,still moving (0.022 m/s),28
+1788188042.587549,withheld,healthy for 0.00 s of 0.30,28
+1788188042.694073,withheld,healthy for 0.11 s of 0.30,28
+1788188042.779558,withheld,healthy for 0.19 s of 0.30,28
+1788188042.884292,withheld,healthy for 0.30 s of 0.30,28
+1788188042.991813,reset,"healthy for 0.40 s, reset 29/30",29
+1788188046.576278,withheld,cage rules active: C-02,29
+1788188046.885309,withheld,perception still invalid,29
+1788188046.982456,withheld,cage rules active: C-02,29
+1788188047.186907,withheld,perception still invalid,29
+1788188047.277893,withheld,cage rules active: C-02,29
+1788188047.982375,withheld,still moving (0.132 m/s),29
+1788188048.278043,withheld,perception still invalid,29
+1788188048.389852,withheld,still moving (0.082 m/s),29
+1788188048.692435,withheld,still moving (0.077 m/s),29
+1788188048.781576,withheld,still moving (0.076 m/s),29
+1788188048.890919,withheld,still moving (0.065 m/s),29
+1788188049.125535,withheld,still moving (0.047 m/s),29
+1788188049.198164,withheld,still moving (0.043 m/s),29
+1788188049.285739,withheld,still moving (0.033 m/s),29
+1788188049.379835,withheld,still moving (0.027 m/s),29
+1788188049.498655,withheld,still moving (0.023 m/s),29
+1788188049.599098,withheld,healthy for 0.00 s of 0.30,29
+1788188049.688341,withheld,healthy for 0.09 s of 0.30,29
+1788188049.796404,withheld,healthy for 0.20 s of 0.30,29
+1788188049.870733,withheld,healthy for 0.27 s of 0.30,29
+1788188049.977522,reset,"healthy for 0.38 s, reset 30/30",30
+1788188076.979447,withheld,perception still invalid,30
+1788188077.091144,withheld,still moving (0.182 m/s),30
+1788188077.291813,withheld,perception still invalid,30
+1788188078.293033,withheld,still moving (0.047 m/s),30
+1788188078.493453,withheld,perception still invalid,30
+1788188078.596241,withheld,healthy for 0.00 s of 0.30,30
+1788188078.697734,withheld,healthy for 0.10 s of 0.30,30
+1788188078.787179,withheld,perception still invalid,30
+1788188079.487734,withheld,still moving (0.021 m/s),30
+1788188079.693693,withheld,perception still invalid,30
+1788188079.788345,withheld,still moving (0.028 m/s),30
+1788188080.089707,withheld,perception still invalid,30
+1788188082.890224,withheld,healthy for 0.00 s of 0.30,30
+1788188082.996776,withheld,perception still invalid,30
+1788188083.405371,withheld,healthy for 0.00 s of 0.30,30
+1788188083.591837,withheld,perception still invalid,30
+1788188083.790452,withheld,healthy for 0.00 s of 0.30,30
+1788188083.884497,withheld,healthy for 0.09 s of 0.30,30
+1788188083.976381,withheld,perception still invalid,30
+1788188084.385235,withheld,healthy for 0.00 s of 0.30,30
+1788188084.488460,withheld,healthy for 0.10 s of 0.30,30
+1788188084.591443,withheld,perception still invalid,30
+1788188086.783185,withheld,healthy for 0.00 s of 0.30,30
+1788188086.885718,withheld,healthy for 0.10 s of 0.30,30
+1788188086.989603,withheld,perception still invalid,30
+1788188088.381353,withheld,healthy for 0.00 s of 0.30,30
+1788188088.483315,withheld,healthy for 0.10 s of 0.30,30
+1788188088.582031,withheld,perception still invalid,30
+1788188090.292058,withheld,healthy for 0.00 s of 0.30,30
+1788188090.391281,withheld,healthy for 0.10 s of 0.30,30
+1788188090.512982,withheld,perception still invalid,30
+1788188091.684575,withheld,healthy for 0.00 s of 0.30,30
+1788188091.785867,withheld,healthy for 0.10 s of 0.30,30
+1788188091.886290,withheld,healthy for 0.20 s of 0.30,30
+1788188091.997103,withheld,budget spent (30/30 resets),30
+1788188092.077664,withheld,perception still invalid,30
+1788188092.633325,withheld,healthy for 0.00 s of 0.30,30
+1788188092.685347,withheld,healthy for 0.05 s of 0.30,30
+1788188092.786153,withheld,perception still invalid,30
+1788188093.195876,withheld,healthy for 0.00 s of 0.30,30
+1788188093.290545,withheld,healthy for 0.09 s of 0.30,30
+1788188093.384354,withheld,perception still invalid,30
+1788188093.498811,withheld,healthy for 0.00 s of 0.30,30
+1788188093.592562,withheld,healthy for 0.09 s of 0.30,30
+1788188093.690056,withheld,perception still invalid,30
+1788188093.886119,withheld,healthy for 0.00 s of 0.30,30
+1788188093.992438,withheld,healthy for 0.11 s of 0.30,30
+1788188094.090530,withheld,perception still invalid,30
+1788188096.826103,withheld,healthy for 0.00 s of 0.30,30
+1788188096.873918,withheld,healthy for 0.05 s of 0.30,30
+1788188096.979502,withheld,perception still invalid,30
+1788188097.382618,withheld,healthy for 0.00 s of 0.30,30
+1788188097.483688,withheld,healthy for 0.10 s of 0.30,30
+1788188097.582753,withheld,perception still invalid,30
+1788188107.577768,withheld,healthy for 0.00 s of 0.30,30
+1788188107.683486,withheld,healthy for 0.11 s of 0.30,30
+1788188107.779284,withheld,healthy for 0.20 s of 0.30,30
+1788188107.885903,withheld,budget spent (30/30 resets),30
+1788188120.380828,withheld,perception still invalid,30
+1788188120.496843,withheld,healthy for 0.00 s of 0.30,30
+1788188120.596999,withheld,healthy for 0.10 s of 0.30,30
+1788188120.856670,withheld,budget spent (30/30 resets),30
+1788188169.471659,withheld,perception still invalid,30
+1788188169.683390,withheld,healthy for 0.00 s of 0.30,30
+1788188169.770875,withheld,healthy for 0.09 s of 0.30,30
+1788188169.874697,withheld,healthy for 0.19 s of 0.30,30
+1788188169.984846,withheld,budget spent (30/30 resets),30
+1788188216.493083,withheld,perception still invalid,30
+1788188216.781375,withheld,healthy for 0.00 s of 0.30,30
+1788188216.885792,withheld,healthy for 0.10 s of 0.30,30
+1788188216.989912,withheld,healthy for 0.21 s of 0.30,30
+1788188217.086687,withheld,budget spent (30/30 resets),30
+1788188217.199234,withheld,"cage rules active: C-03,C-04",30
+1788188217.294633,withheld,"cage rules active: C-02,C-03,C-04",30
+1788188217.572074,withheld,"cage rules active: C-03,C-04",30
+1788188217.784589,withheld,cage rules active: C-04,30
+1788188217.878581,withheld,"cage rules active: C-03,C-04",30
+1788188217.986684,withheld,cage rules active: C-04,30
+1788188218.385791,withheld,"cage rules active: C-01,C-03,C-04",30
+1788188218.494623,withheld,"cage rules active: C-01,C-04",30
+1788188218.586304,withheld,"cage rules active: C-03,C-04",30
+1788188218.885288,withheld,cage rules active: C-04,30
+1788188219.088580,withheld,"cage rules active: C-01,C-04",30
+1788188219.196767,withheld,"cage rules active: C-01,C-02,C-03,C-04",30
+1788188219.295347,withheld,"cage rules active: C-02,C-03,C-04",30
+1788188219.483809,withheld,"cage rules active: C-02,C-04",30
+1788188219.603908,withheld,cage rules active: C-04,30
+1788188219.685145,withheld,"cage rules active: C-02,C-03,C-04",30
+1788188220.987356,withheld,perception still invalid,30
+1788188221.196887,withheld,cage rules active: C-02,30
+1788188221.283866,withheld,still moving (0.343 m/s),30
+1788188221.585266,withheld,still moving (0.181 m/s),30
+1788188221.688369,withheld,still moving (0.110 m/s),30
+1788188221.781621,withheld,still moving (0.089 m/s),30
+1788188221.890756,withheld,still moving (0.069 m/s),30
+1788188221.995462,withheld,still moving (0.032 m/s),30
+1788188222.097117,withheld,still moving (0.026 m/s),30
+1788188222.172257,withheld,still moving (0.032 m/s),30
+1788188222.393445,withheld,still moving (0.061 m/s),30
+1788188222.499929,withheld,still moving (0.083 m/s),30
+1788188222.578852,withheld,still moving (0.091 m/s),30
+1788188222.689146,withheld,still moving (0.100 m/s),30
+1788188222.796135,withheld,still moving (0.108 m/s),30
+1788188222.897973,withheld,still moving (0.111 m/s),30
+1788188223.210037,withheld,still moving (0.120 m/s),30
+1788188223.291067,withheld,still moving (0.112 m/s),30
+1788188223.386526,withheld,still moving (0.131 m/s),30
+1788188223.492525,withheld,still moving (0.117 m/s),30
+1788188223.588039,withheld,still moving (0.135 m/s),30
+1788188223.694830,withheld,still moving (0.127 m/s),30
+1788188224.102952,withheld,still moving (0.123 m/s),30
+1788188224.183184,withheld,still moving (0.125 m/s),30
+1788188224.397376,withheld,still moving (0.116 m/s),30
+1788188224.495344,withheld,still moving (0.112 m/s),30
+1788188224.586922,withheld,still moving (0.110 m/s),30
+1788188224.684457,withheld,still moving (0.108 m/s),30
+1788188224.781607,withheld,still moving (0.111 m/s),30
+1788188224.878132,withheld,still moving (0.107 m/s),30
+1788188224.993468,withheld,still moving (0.100 m/s),30
+1788188225.098170,withheld,still moving (0.095 m/s),30
+1788188225.195568,withheld,still moving (0.090 m/s),30
+1788188225.390957,withheld,still moving (0.086 m/s),30
+1788188225.493319,withheld,still moving (0.085 m/s),30
+1788188225.585800,withheld,still moving (0.079 m/s),30
+1788188225.690175,withheld,still moving (0.080 m/s),30
+1788188225.787059,withheld,still moving (0.067 m/s),30
+1788188225.885464,withheld,still moving (0.064 m/s),30
+1788188225.984460,withheld,still moving (0.068 m/s),30
+1788188226.086969,withheld,still moving (0.063 m/s),30
+1788188226.189273,withheld,still moving (0.055 m/s),30
+1788188226.298358,withheld,still moving (0.052 m/s),30
+1788188226.500996,withheld,still moving (0.053 m/s),30
+1788188226.597714,withheld,still moving (0.047 m/s),30
+1788188226.695660,withheld,still moving (0.046 m/s),30
+1788188226.806229,withheld,still moving (0.040 m/s),30
+1788188226.882133,withheld,still moving (0.043 m/s),30
+1788188226.986487,withheld,still moving (0.036 m/s),30
+1788188227.195400,withheld,still moving (0.034 m/s),30
+1788188227.293659,withheld,still moving (0.032 m/s),30
+1788188227.387479,withheld,still moving (0.031 m/s),30
+1788188227.483661,withheld,still moving (0.030 m/s),30
+1788188227.591406,withheld,still moving (0.025 m/s),30
+1788188227.693892,withheld,still moving (0.024 m/s),30
+1788188227.883463,withheld,still moving (0.022 m/s),30
+1788188227.997796,withheld,still moving (0.021 m/s),30
+1788188228.086589,withheld,healthy for 0.00 s of 0.30,30
+1788188228.302693,withheld,healthy for 0.22 s of 0.30,30
+1788188228.389565,withheld,budget spent (30/30 resets),30

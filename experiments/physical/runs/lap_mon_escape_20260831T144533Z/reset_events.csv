@@ -1,0 +1,990 @@
+timestamp,action,reason,resets_issued
+1788187557.618269,withheld,healthy for 0.00 s of 0.30,0
+1788187557.712387,withheld,healthy for 0.09 s of 0.30,0
+1788187557.799539,withheld,healthy for 0.18 s of 0.30,0
+1788187557.954744,reset,"healthy for 0.34 s, reset 1/30",1
+1788187558.017585,withheld,perception still invalid,1
+1788187558.199441,withheld,still moving (0.023 m/s),1
+1788187558.298522,withheld,healthy for 0.00 s of 0.30,1
+1788187558.410254,withheld,healthy for 0.11 s of 0.30,1
+1788187558.499302,withheld,healthy for 0.20 s of 0.30,1
+1788187558.603398,withheld,rate limited (0.65 s since last reset),1
+1788187558.714515,withheld,rate limited (0.76 s since last reset),1
+1788187558.807986,withheld,rate limited (0.85 s since last reset),1
+1788187558.914493,withheld,rate limited (0.96 s since last reset),1
+1788187559.104962,withheld,rate limited (1.15 s since last reset),1
+1788187559.253891,withheld,rate limited (1.30 s since last reset),1
+1788187559.296083,withheld,rate limited (1.34 s since last reset),1
+1788187559.414346,withheld,rate limited (1.46 s since last reset),1
+1788187559.491746,withheld,rate limited (1.54 s since last reset),1
+1788187559.594765,withheld,rate limited (1.64 s since last reset),1
+1788187559.721648,withheld,rate limited (1.77 s since last reset),1
+1788187559.796008,withheld,rate limited (1.84 s since last reset),1
+1788187559.892641,withheld,rate limited (1.94 s since last reset),1
+1788187559.993412,withheld,rate limited (2.04 s since last reset),1
+1788187560.081784,withheld,rate limited (2.13 s since last reset),1
+1788187560.191670,withheld,rate limited (2.24 s since last reset),1
+1788187560.426780,withheld,rate limited (2.47 s since last reset),1
+1788187560.502446,withheld,rate limited (2.55 s since last reset),1
+1788187560.600408,withheld,rate limited (2.65 s since last reset),1
+1788187560.719537,withheld,rate limited (2.76 s since last reset),1
+1788187560.806376,withheld,rate limited (2.85 s since last reset),1
+1788187560.903228,withheld,rate limited (2.95 s since last reset),1
+1788187561.097667,reset,"healthy for 2.80 s, reset 2/30",2
+1788187561.205273,withheld,healthy for 0.00 s of 0.30,2
+1788187561.308300,withheld,healthy for 0.10 s of 0.30,2
+1788187561.399599,withheld,healthy for 0.19 s of 0.30,2
+1788187561.510046,withheld,rate limited (0.41 s since last reset),2
+1788187561.619938,withheld,rate limited (0.52 s since last reset),2
+1788187561.712524,withheld,rate limited (0.61 s since last reset),2
+1788187561.792398,withheld,rate limited (0.69 s since last reset),2
+1788187561.908417,withheld,rate limited (0.81 s since last reset),2
+1788187561.996771,withheld,rate limited (0.90 s since last reset),2
+1788187562.104549,withheld,rate limited (1.01 s since last reset),2
+1788187562.219577,withheld,rate limited (1.12 s since last reset),2
+1788187562.316566,withheld,rate limited (1.22 s since last reset),2
+1788187562.428925,withheld,rate limited (1.33 s since last reset),2
+1788187562.497227,withheld,rate limited (1.40 s since last reset),2
+1788187562.718316,withheld,rate limited (1.62 s since last reset),2
+1788187562.807979,withheld,rate limited (1.71 s since last reset),2
+1788187562.895973,withheld,rate limited (1.80 s since last reset),2
+1788187562.995360,withheld,rate limited (1.90 s since last reset),2
+1788187563.095051,withheld,rate limited (2.00 s since last reset),2
+1788187563.231390,withheld,rate limited (2.13 s since last reset),2
+1788187563.297172,withheld,rate limited (2.20 s since last reset),2
+1788187563.399770,withheld,rate limited (2.30 s since last reset),2
+1788187563.492097,withheld,perception still invalid,2
+1788187563.602160,withheld,healthy for 0.00 s of 0.30,2
+1788187563.714166,withheld,perception still invalid,2
+1788187563.899708,withheld,healthy for 0.00 s of 0.30,2
+1788187563.996558,withheld,healthy for 0.10 s of 0.30,2
+1788187564.110757,withheld,healthy for 0.21 s of 0.30,2
+1788187564.227223,reset,"healthy for 0.33 s, reset 3/30",3
+1788187564.304969,withheld,healthy for 0.00 s of 0.30,3
+1788187564.402930,withheld,perception still invalid,3
+1788187564.598685,withheld,healthy for 0.00 s of 0.30,3
+1788187564.706851,withheld,healthy for 0.11 s of 0.30,3
+1788187564.790807,withheld,healthy for 0.19 s of 0.30,3
+1788187564.981142,withheld,rate limited (0.75 s since last reset),3
+1788187565.218613,withheld,rate limited (0.99 s since last reset),3
+1788187565.315181,withheld,rate limited (1.09 s since last reset),3
+1788187565.416505,withheld,rate limited (1.19 s since last reset),3
+1788187565.514065,withheld,rate limited (1.29 s since last reset),3
+1788187565.831850,withheld,rate limited (1.60 s since last reset),3
+1788187565.909112,withheld,rate limited (1.68 s since last reset),3
+1788187565.992179,withheld,rate limited (1.76 s since last reset),3
+1788187566.089268,withheld,rate limited (1.86 s since last reset),3
+1788187566.212137,withheld,rate limited (1.98 s since last reset),3
+1788187566.286416,withheld,rate limited (2.06 s since last reset),3
+1788187566.378495,withheld,rate limited (2.15 s since last reset),3
+1788187566.502148,withheld,rate limited (2.27 s since last reset),3
+1788187566.608936,withheld,rate limited (2.38 s since last reset),3
+1788187566.711533,withheld,rate limited (2.48 s since last reset),3
+1788187566.792457,withheld,rate limited (2.57 s since last reset),3
+1788187566.886345,withheld,rate limited (2.66 s since last reset),3
+1788187566.999369,withheld,rate limited (2.77 s since last reset),3
+1788187567.120368,withheld,rate limited (2.89 s since last reset),3
+1788187567.203794,withheld,rate limited (2.98 s since last reset),3
+1788187567.297489,reset,"healthy for 2.70 s, reset 4/30",4
+1788187567.382546,withheld,healthy for 0.00 s of 0.30,4
+1788187567.495788,withheld,healthy for 0.11 s of 0.30,4
+1788187567.603422,withheld,healthy for 0.22 s of 0.30,4
+1788187567.707407,withheld,rate limited (0.41 s since last reset),4
+1788187567.792599,withheld,rate limited (0.50 s since last reset),4
+1788187567.925453,withheld,rate limited (0.63 s since last reset),4
+1788187568.017634,withheld,rate limited (0.72 s since last reset),4
+1788187568.117172,withheld,rate limited (0.82 s since last reset),4
+1788187568.213924,withheld,rate limited (0.92 s since last reset),4
+1788187568.291696,withheld,rate limited (0.99 s since last reset),4
+1788187568.413964,withheld,rate limited (1.12 s since last reset),4
+1788187568.495697,withheld,rate limited (1.20 s since last reset),4
+1788187568.626496,withheld,rate limited (1.33 s since last reset),4
+1788187568.699985,withheld,rate limited (1.40 s since last reset),4
+1788187568.809780,withheld,rate limited (1.51 s since last reset),4
+1788187568.917567,withheld,rate limited (1.62 s since last reset),4
+1788187569.004960,withheld,rate limited (1.71 s since last reset),4
+1788187569.106822,withheld,rate limited (1.81 s since last reset),4
+1788187569.190593,withheld,rate limited (1.89 s since last reset),4
+1788187569.276477,withheld,rate limited (1.98 s since last reset),4
+1788187569.385229,withheld,rate limited (2.09 s since last reset),4
+1788187569.478632,withheld,rate limited (2.18 s since last reset),4
+1788187569.584410,withheld,rate limited (2.29 s since last reset),4
+1788187569.687415,withheld,rate limited (2.39 s since last reset),4
+1788187569.805695,withheld,rate limited (2.51 s since last reset),4
+1788187569.912434,withheld,rate limited (2.61 s since last reset),4
+1788187570.034534,withheld,rate limited (2.74 s since last reset),4
+1788187570.092748,withheld,rate limited (2.80 s since last reset),4
+1788187570.209510,withheld,rate limited (2.91 s since last reset),4
+1788187570.299297,reset,"healthy for 2.92 s, reset 5/30",5
+1788187570.386086,withheld,healthy for 0.00 s of 0.30,5
+1788187570.511558,withheld,healthy for 0.13 s of 0.30,5
+1788187570.620419,withheld,healthy for 0.23 s of 0.30,5
+1788187570.716031,withheld,rate limited (0.42 s since last reset),5
+1788187570.819180,withheld,rate limited (0.52 s since last reset),5
+1788187570.928023,withheld,rate limited (0.63 s since last reset),5
+1788187571.011250,withheld,rate limited (0.71 s since last reset),5
+1788187571.195807,withheld,rate limited (0.90 s since last reset),5
+1788187571.296143,withheld,rate limited (1.00 s since last reset),5
+1788187571.398434,withheld,rate limited (1.10 s since last reset),5
+1788187571.505688,withheld,rate limited (1.21 s since last reset),5
+1788187571.615222,withheld,rate limited (1.32 s since last reset),5
+1788187571.710010,withheld,rate limited (1.41 s since last reset),5
+1788187571.802730,withheld,rate limited (1.50 s since last reset),5
+1788187571.881718,withheld,rate limited (1.58 s since last reset),5
+1788187571.998259,withheld,rate limited (1.70 s since last reset),5
+1788187572.110315,withheld,rate limited (1.81 s since last reset),5
+1788187572.206403,withheld,rate limited (1.91 s since last reset),5
+1788187572.283344,withheld,rate limited (1.98 s since last reset),5
+1788187572.385969,withheld,rate limited (2.09 s since last reset),5
+1788187572.501405,withheld,rate limited (2.20 s since last reset),5
+1788187572.605069,withheld,rate limited (2.31 s since last reset),5
+1788187572.715635,withheld,rate limited (2.42 s since last reset),5
+1788187572.807808,withheld,rate limited (2.51 s since last reset),5
+1788187572.907364,withheld,rate limited (2.61 s since last reset),5
+1788187572.987057,withheld,rate limited (2.69 s since last reset),5
+1788187573.074714,withheld,rate limited (2.78 s since last reset),5
+1788187573.207317,withheld,rate limited (2.91 s since last reset),5
+1788187573.292396,withheld,rate limited (2.99 s since last reset),5
+1788187573.481970,reset,"healthy for 3.10 s, reset 6/30",6
+1788187573.720840,withheld,healthy for 0.00 s of 0.30,6
+1788187573.811275,withheld,healthy for 0.09 s of 0.30,6
+1788187574.036168,withheld,rate limited (0.55 s since last reset),6
+1788187574.203375,withheld,rate limited (0.72 s since last reset),6
+1788187574.307118,withheld,rate limited (0.83 s since last reset),6
+1788187574.398462,withheld,rate limited (0.92 s since last reset),6
+1788187574.502519,withheld,rate limited (1.02 s since last reset),6
+1788187574.607812,withheld,rate limited (1.13 s since last reset),6
+1788187574.689164,withheld,rate limited (1.21 s since last reset),6
+1788187574.810536,withheld,rate limited (1.33 s since last reset),6
+1788187574.954880,withheld,rate limited (1.47 s since last reset),6
+1788187574.986225,withheld,rate limited (1.50 s since last reset),6
+1788187575.078561,withheld,rate limited (1.60 s since last reset),6
+1788187575.195786,withheld,rate limited (1.71 s since last reset),6
+1788187575.350002,withheld,perception still invalid,6
+1788187575.479996,withheld,healthy for 0.00 s of 0.30,6
+1788187575.620290,withheld,healthy for 0.14 s of 0.30,6
+1788187575.698773,withheld,healthy for 0.22 s of 0.30,6
+1788187575.801232,withheld,rate limited (2.32 s since last reset),6
+1788187575.995112,withheld,rate limited (2.51 s since last reset),6
+1788187576.121001,withheld,rate limited (2.64 s since last reset),6
+1788187576.316608,withheld,rate limited (2.83 s since last reset),6
+1788187576.391495,withheld,rate limited (2.91 s since last reset),6
+1788187576.488987,reset,"healthy for 1.01 s, reset 7/30",7
+1788187576.692800,withheld,healthy for 0.00 s of 0.30,7
+1788187576.810673,withheld,healthy for 0.12 s of 0.30,7
+1788187576.897313,withheld,healthy for 0.20 s of 0.30,7
+1788187577.003075,withheld,rate limited (0.51 s since last reset),7
+1788187577.095129,withheld,rate limited (0.61 s since last reset),7
+1788187577.235985,withheld,rate limited (0.75 s since last reset),7
+1788187577.295752,withheld,rate limited (0.81 s since last reset),7
+1788187577.404299,withheld,rate limited (0.92 s since last reset),7
+1788187577.524611,withheld,rate limited (1.04 s since last reset),7
+1788187577.603916,withheld,rate limited (1.11 s since last reset),7
+1788187577.717026,withheld,rate limited (1.23 s since last reset),7
+1788187577.807506,withheld,rate limited (1.32 s since last reset),7
+1788187577.903593,withheld,rate limited (1.41 s since last reset),7
+1788187578.111873,withheld,rate limited (1.62 s since last reset),7
+1788187578.228290,withheld,rate limited (1.74 s since last reset),7
+1788187578.316519,withheld,rate limited (1.83 s since last reset),7
+1788187578.406277,withheld,rate limited (1.92 s since last reset),7
+1788187578.483390,withheld,rate limited (1.99 s since last reset),7
+1788187578.598925,withheld,rate limited (2.11 s since last reset),7
+1788187578.816952,withheld,rate limited (2.33 s since last reset),7
+1788187578.904725,withheld,rate limited (2.42 s since last reset),7
+1788187578.990092,withheld,rate limited (2.50 s since last reset),7
+1788187579.122761,withheld,rate limited (2.63 s since last reset),7
+1788187579.232737,withheld,rate limited (2.74 s since last reset),7
+1788187579.293350,withheld,rate limited (2.80 s since last reset),7
+1788187579.406247,withheld,rate limited (2.92 s since last reset),7
+1788187579.495174,reset,"healthy for 2.80 s, reset 8/30",8
+1788187579.621035,withheld,healthy for 0.00 s of 0.30,8
+1788187579.696389,withheld,healthy for 0.08 s of 0.30,8
+1788187579.917027,withheld,healthy for 0.30 s of 0.30,8
+1788187580.023244,withheld,rate limited (0.53 s since last reset),8
+1788187580.093201,withheld,rate limited (0.60 s since last reset),8
+1788187580.215401,withheld,rate limited (0.72 s since last reset),8
+1788187580.307745,withheld,rate limited (0.81 s since last reset),8
+1788187580.385986,withheld,rate limited (0.89 s since last reset),8
+1788187580.494277,withheld,rate limited (1.00 s since last reset),8
+1788187580.594095,withheld,rate limited (1.10 s since last reset),8
+1788187580.710625,withheld,rate limited (1.22 s since last reset),8
+1788187580.817345,withheld,rate limited (1.32 s since last reset),8
+1788187580.879149,withheld,rate limited (1.38 s since last reset),8
+1788187581.014661,withheld,perception still invalid,8
+1788187581.118299,withheld,healthy for 0.00 s of 0.30,8
+1788187581.196782,withheld,healthy for 0.08 s of 0.30,8
+1788187581.292684,withheld,healthy for 0.17 s of 0.30,8
+1788187581.395131,withheld,healthy for 0.28 s of 0.30,8
+1788187581.591885,withheld,perception still invalid,8
+1788187581.696003,withheld,healthy for 0.00 s of 0.30,8
+1788187581.812175,withheld,healthy for 0.12 s of 0.30,8
+1788187581.908486,withheld,healthy for 0.21 s of 0.30,8
+1788187582.012829,withheld,rate limited (2.52 s since last reset),8
+1788187582.105372,withheld,rate limited (2.61 s since last reset),8
+1788187583.020836,withheld,perception still invalid,8
+1788187583.214110,withheld,healthy for 0.00 s of 0.30,8
+1788187583.301669,withheld,healthy for 0.09 s of 0.30,8
+1788187583.408613,withheld,healthy for 0.19 s of 0.30,8
+1788187583.508587,withheld,perception still invalid,8
+1788187583.698952,withheld,healthy for 0.00 s of 0.30,8
+1788187583.779832,withheld,healthy for 0.08 s of 0.30,8
+1788187583.878894,withheld,healthy for 0.18 s of 0.30,8
+1788187584.011571,withheld,perception still invalid,8
+1788187584.106291,withheld,healthy for 0.00 s of 0.30,8
+1788187584.202833,withheld,healthy for 0.10 s of 0.30,8
+1788187584.288135,withheld,healthy for 0.18 s of 0.30,8
+1788187584.425167,reset,"healthy for 0.32 s, reset 9/30",9
+1788187584.615482,withheld,healthy for 0.00 s of 0.30,9
+1788187584.725338,withheld,healthy for 0.11 s of 0.30,9
+1788187584.793865,withheld,healthy for 0.18 s of 0.30,9
+1788187584.925467,withheld,rate limited (0.50 s since last reset),9
+1788187584.993773,withheld,rate limited (0.57 s since last reset),9
+1788187585.101115,withheld,perception still invalid,9
+1788187585.201581,withheld,healthy for 0.00 s of 0.30,9
+1788187585.333622,withheld,healthy for 0.13 s of 0.30,9
+1788187585.420809,withheld,healthy for 0.22 s of 0.30,9
+1788187585.493306,withheld,healthy for 0.29 s of 0.30,9
+1788187585.593461,withheld,perception still invalid,9
+1788187585.715940,withheld,healthy for 0.00 s of 0.30,9
+1788187585.796867,withheld,healthy for 0.08 s of 0.30,9
+1788187585.893981,withheld,healthy for 0.18 s of 0.30,9
+1788187585.983371,withheld,healthy for 0.27 s of 0.30,9
+1788187586.111259,withheld,rate limited (1.69 s since last reset),9
+1788187586.218011,withheld,rate limited (1.79 s since last reset),9
+1788187586.291002,withheld,rate limited (1.87 s since last reset),9
+1788187586.406458,withheld,rate limited (1.98 s since last reset),9
+1788187586.491963,withheld,rate limited (2.07 s since last reset),9
+1788187586.590666,withheld,rate limited (2.17 s since last reset),9
+1788187586.709650,withheld,perception still invalid,9
+1788187586.810795,withheld,healthy for 0.00 s of 0.30,9
+1788187587.033032,withheld,healthy for 0.22 s of 0.30,9
+1788187587.088806,withheld,healthy for 0.28 s of 0.30,9
+1788187587.684550,reset,"healthy for 0.87 s, reset 10/30",10
+1788187587.724023,withheld,healthy for 0.00 s of 0.30,10
+1788187587.802849,withheld,healthy for 0.08 s of 0.30,10
+1788187587.914471,withheld,healthy for 0.19 s of 0.30,10
+1788187588.105356,withheld,rate limited (0.42 s since last reset),10
+1788187588.210758,withheld,rate limited (0.53 s since last reset),10
+1788187588.315240,withheld,rate limited (0.63 s since last reset),10
+1788187588.396953,withheld,rate limited (0.71 s since last reset),10
+1788187588.490394,withheld,rate limited (0.81 s since last reset),10
+1788187588.731325,withheld,rate limited (1.05 s since last reset),10
+1788187588.823816,withheld,rate limited (1.14 s since last reset),10
+1788187588.878936,withheld,rate limited (1.19 s since last reset),10
+1788187588.993512,withheld,rate limited (1.31 s since last reset),10
+1788187589.116162,withheld,rate limited (1.43 s since last reset),10
+1788187589.211077,withheld,rate limited (1.53 s since last reset),10
+1788187589.523444,withheld,rate limited (1.84 s since last reset),10
+1788187589.616813,withheld,rate limited (1.93 s since last reset),10
+1788187589.709829,withheld,rate limited (2.03 s since last reset),10
+1788187589.800918,withheld,rate limited (2.12 s since last reset),10
+1788187589.891711,withheld,rate limited (2.21 s since last reset),10
+1788187590.001257,withheld,rate limited (2.32 s since last reset),10
+1788187590.124009,withheld,perception still invalid,10
+1788187590.328283,withheld,healthy for 0.00 s of 0.30,10
+1788187590.406439,withheld,healthy for 0.08 s of 0.30,10
+1788187590.486749,withheld,healthy for 0.16 s of 0.30,10
+1788187590.907399,reset,"healthy for 0.58 s, reset 11/30",11
+1788187590.995777,withheld,healthy for 0.00 s of 0.30,11
+1788187591.096550,withheld,healthy for 0.10 s of 0.30,11
+1788187591.194795,withheld,healthy for 0.20 s of 0.30,11
+1788187591.306707,withheld,rate limited (0.40 s since last reset),11
+1788187591.518849,withheld,rate limited (0.61 s since last reset),11
+1788187591.592129,withheld,rate limited (0.68 s since last reset),11
+1788187591.695781,withheld,rate limited (0.79 s since last reset),11
+1788187591.803420,withheld,rate limited (0.90 s since last reset),11
+1788187591.891295,withheld,rate limited (0.98 s since last reset),11
+1788187592.119550,withheld,rate limited (1.21 s since last reset),11
+1788187592.197942,withheld,rate limited (1.29 s since last reset),11
+1788187592.316388,withheld,rate limited (1.41 s since last reset),11
+1788187592.409584,withheld,rate limited (1.50 s since last reset),11
+1788187592.476058,withheld,rate limited (1.57 s since last reset),11
+1788187592.599310,withheld,rate limited (1.69 s since last reset),11
+1788187592.700096,withheld,rate limited (1.79 s since last reset),11
+1788187592.785307,withheld,rate limited (1.88 s since last reset),11
+1788187592.899021,withheld,rate limited (1.99 s since last reset),11
+1788187593.002764,withheld,rate limited (2.10 s since last reset),11
+1788187593.111716,withheld,rate limited (2.20 s since last reset),11
+1788187593.203096,withheld,rate limited (2.30 s since last reset),11
+1788187593.297397,withheld,rate limited (2.39 s since last reset),11
+1788187593.391603,withheld,rate limited (2.48 s since last reset),11
+1788187593.507755,withheld,rate limited (2.60 s since last reset),11
+1788187593.578544,withheld,perception still invalid,11
+1788187593.795453,withheld,healthy for 0.00 s of 0.30,11
+1788187593.895684,withheld,healthy for 0.10 s of 0.30,11
+1788187594.001320,withheld,healthy for 0.21 s of 0.30,11
+1788187594.100008,reset,"healthy for 0.30 s, reset 12/30",12
+1788187594.208308,withheld,healthy for 0.00 s of 0.30,12
+1788187594.282230,withheld,healthy for 0.07 s of 0.30,12
+1788187594.404086,withheld,healthy for 0.20 s of 0.30,12
+1788187594.488864,withheld,healthy for 0.28 s of 0.30,12
+1788187594.585033,withheld,rate limited (0.49 s since last reset),12
+1788187594.797391,withheld,rate limited (0.70 s since last reset),12
+1788187594.898074,withheld,rate limited (0.80 s since last reset),12
+1788187595.039088,withheld,rate limited (0.94 s since last reset),12
+1788187595.109740,withheld,rate limited (1.01 s since last reset),12
+1788187595.318530,withheld,rate limited (1.22 s since last reset),12
+1788187595.417164,withheld,rate limited (1.32 s since last reset),12
+1788187595.492432,withheld,rate limited (1.39 s since last reset),12
+1788187595.578773,withheld,rate limited (1.48 s since last reset),12
+1788187595.701699,withheld,rate limited (1.60 s since last reset),12
+1788187595.795291,withheld,rate limited (1.70 s since last reset),12
+1788187595.900267,withheld,rate limited (1.80 s since last reset),12
+1788187596.008491,withheld,rate limited (1.91 s since last reset),12
+1788187596.104809,withheld,rate limited (2.00 s since last reset),12
+1788187596.201697,withheld,rate limited (2.10 s since last reset),12
+1788187596.302361,withheld,rate limited (2.20 s since last reset),12
+1788187596.399788,withheld,rate limited (2.30 s since last reset),12
+1788187596.492156,withheld,rate limited (2.39 s since last reset),12
+1788187596.600202,withheld,rate limited (2.50 s since last reset),12
+1788187596.693928,withheld,rate limited (2.59 s since last reset),12
+1788187596.779054,withheld,rate limited (2.68 s since last reset),12
+1788187596.892148,withheld,rate limited (2.79 s since last reset),12
+1788187596.998653,withheld,rate limited (2.90 s since last reset),12
+1788187597.081611,withheld,rate limited (2.98 s since last reset),12
+1788187597.283706,reset,"healthy for 3.08 s, reset 13/30",13
+1788187597.428086,withheld,healthy for 0.00 s of 0.30,13
+1788187597.604569,withheld,healthy for 0.18 s of 0.30,13
+1788187597.709096,withheld,healthy for 0.28 s of 0.30,13
+1788187597.779873,withheld,rate limited (0.50 s since last reset),13
+1788187597.916711,withheld,rate limited (0.63 s since last reset),13
+1788187598.015160,withheld,rate limited (0.73 s since last reset),13
+1788187598.106552,withheld,rate limited (0.82 s since last reset),13
+1788187598.203392,withheld,rate limited (0.92 s since last reset),13
+1788187598.300994,withheld,rate limited (1.02 s since last reset),13
+1788187598.407953,withheld,rate limited (1.12 s since last reset),13
+1788187598.508632,withheld,rate limited (1.22 s since last reset),13
+1788187598.579137,withheld,rate limited (1.30 s since last reset),13
+1788187598.702601,withheld,rate limited (1.42 s since last reset),13
+1788187598.808100,withheld,rate limited (1.52 s since last reset),13
+1788187598.901399,withheld,rate limited (1.62 s since last reset),13
+1788187598.994772,withheld,rate limited (1.71 s since last reset),13
+1788187599.113976,withheld,rate limited (1.83 s since last reset),13
+1788187599.220411,withheld,rate limited (1.94 s since last reset),13
+1788187599.295977,withheld,rate limited (2.01 s since last reset),13
+1788187599.391815,withheld,rate limited (2.11 s since last reset),13
+1788187599.485194,withheld,rate limited (2.20 s since last reset),13
+1788187599.585536,withheld,rate limited (2.30 s since last reset),13
+1788187599.717303,withheld,rate limited (2.43 s since last reset),13
+1788187599.814465,withheld,rate limited (2.53 s since last reset),13
+1788187599.902042,withheld,rate limited (2.62 s since last reset),13
+1788187599.993703,withheld,rate limited (2.71 s since last reset),13
+1788187600.093509,withheld,rate limited (2.81 s since last reset),13
+1788187600.205374,withheld,rate limited (2.92 s since last reset),13
+1788187600.298596,reset,"healthy for 2.87 s, reset 14/30",14
+1788187600.418086,withheld,healthy for 0.00 s of 0.30,14
+1788187600.494619,withheld,healthy for 0.08 s of 0.30,14
+1788187600.589143,withheld,healthy for 0.17 s of 0.30,14
+1788187600.702778,withheld,healthy for 0.28 s of 0.30,14
+1788187600.797019,withheld,rate limited (0.50 s since last reset),14
+1788187600.894327,withheld,rate limited (0.60 s since last reset),14
+1788187600.986632,withheld,rate limited (0.69 s since last reset),14
+1788187601.199023,withheld,rate limited (0.90 s since last reset),14
+1788187601.325215,withheld,rate limited (1.03 s since last reset),14
+1788187601.405659,withheld,rate limited (1.11 s since last reset),14
+1788187601.531305,withheld,rate limited (1.23 s since last reset),14
+1788187601.592520,withheld,rate limited (1.29 s since last reset),14
+1788187601.704692,withheld,rate limited (1.41 s since last reset),14
+1788187601.802834,withheld,rate limited (1.50 s since last reset),14
+1788187601.907356,withheld,rate limited (1.61 s since last reset),14
+1788187601.980929,withheld,rate limited (1.68 s since last reset),14
+1788187602.102077,withheld,rate limited (1.80 s since last reset),14
+1788187602.203397,withheld,rate limited (1.90 s since last reset),14
+1788187602.276727,withheld,rate limited (1.98 s since last reset),14
+1788187602.403614,withheld,rate limited (2.11 s since last reset),14
+1788187602.508934,withheld,rate limited (2.21 s since last reset),14
+1788187602.597785,withheld,rate limited (2.30 s since last reset),14
+1788187602.715732,withheld,rate limited (2.42 s since last reset),14
+1788187602.813269,withheld,rate limited (2.51 s since last reset),14
+1788187603.015936,withheld,perception still invalid,14
+1788187603.211085,withheld,healthy for 0.00 s of 0.30,14
+1788187603.304862,withheld,healthy for 0.09 s of 0.30,14
+1788187603.514378,reset,"healthy for 0.30 s, reset 15/30",15
+1788187603.707692,withheld,healthy for 0.00 s of 0.30,15
+1788187603.811878,withheld,healthy for 0.10 s of 0.30,15
+1788187603.896814,withheld,healthy for 0.19 s of 0.30,15
+1788187603.980770,withheld,healthy for 0.27 s of 0.30,15
+1788187604.087122,withheld,rate limited (0.57 s since last reset),15
+1788187604.186330,withheld,rate limited (0.67 s since last reset),15
+1788187604.313266,withheld,rate limited (0.80 s since last reset),15
+1788187604.429162,withheld,rate limited (0.91 s since last reset),15
+1788187604.518279,withheld,rate limited (1.00 s since last reset),15
+1788187604.607527,withheld,rate limited (1.09 s since last reset),15
+1788187604.702878,withheld,rate limited (1.19 s since last reset),15
+1788187604.797184,withheld,rate limited (1.28 s since last reset),15
+1788187604.899519,withheld,rate limited (1.39 s since last reset),15
+1788187605.040406,withheld,rate limited (1.53 s since last reset),15
+1788187605.092076,withheld,rate limited (1.58 s since last reset),15
+1788187605.172318,withheld,rate limited (1.66 s since last reset),15
+1788187605.294124,withheld,rate limited (1.78 s since last reset),15
+1788187605.412452,withheld,rate limited (1.90 s since last reset),15
+1788187605.541039,withheld,rate limited (2.03 s since last reset),15
+1788187605.628133,withheld,perception still invalid,15
+1788187605.799325,withheld,healthy for 0.00 s of 0.30,15
+1788187605.895620,withheld,healthy for 0.10 s of 0.30,15
+1788187606.021227,withheld,perception still invalid,15
+1788187606.191274,withheld,healthy for 0.00 s of 0.30,15
+1788187606.283990,withheld,healthy for 0.09 s of 0.30,15
+1788187606.422839,withheld,perception still invalid,15
+1788187606.593640,withheld,healthy for 0.00 s of 0.30,15
+1788187606.707455,withheld,healthy for 0.11 s of 0.30,15
+1788187606.798626,withheld,healthy for 0.20 s of 0.30,15
+1788187606.890455,withheld,healthy for 0.30 s of 0.30,15
+1788187606.997978,reset,"healthy for 0.40 s, reset 16/30",16
+1788187607.096601,withheld,perception still invalid,16
+1788187607.208334,withheld,healthy for 0.00 s of 0.30,16
+1788187607.284285,withheld,healthy for 0.08 s of 0.30,16
+1788187607.410992,withheld,healthy for 0.20 s of 0.30,16
+1788187607.496435,withheld,healthy for 0.29 s of 0.30,16
+1788187607.594648,withheld,rate limited (0.60 s since last reset),16
+1788187607.706954,withheld,rate limited (0.71 s since last reset),16
+1788187607.824077,withheld,rate limited (0.83 s since last reset),16
+1788187607.880549,withheld,rate limited (0.88 s since last reset),16
+1788187608.097345,withheld,rate limited (1.10 s since last reset),16
+1788187608.218467,withheld,rate limited (1.22 s since last reset),16
+1788187608.310838,withheld,rate limited (1.31 s since last reset),16
+1788187608.409679,withheld,rate limited (1.41 s since last reset),16
+1788187608.519237,withheld,rate limited (1.52 s since last reset),16
+1788187608.594368,withheld,rate limited (1.60 s since last reset),16
+1788187608.780457,withheld,rate limited (1.78 s since last reset),16
+1788187608.977821,withheld,rate limited (1.98 s since last reset),16
+1788187609.122400,withheld,rate limited (2.12 s since last reset),16
+1788187609.204612,withheld,rate limited (2.21 s since last reset),16
+1788187609.307504,withheld,rate limited (2.31 s since last reset),16
+1788187609.410733,withheld,rate limited (2.41 s since last reset),16
+1788187609.503513,withheld,rate limited (2.51 s since last reset),16
+1788187609.629114,withheld,rate limited (2.63 s since last reset),16
+1788187609.709396,withheld,rate limited (2.71 s since last reset),16
+1788187609.814042,withheld,rate limited (2.82 s since last reset),16
+1788187609.903402,withheld,rate limited (2.91 s since last reset),16
+1788187610.016394,reset,"healthy for 2.81 s, reset 17/30",17
+1788187610.104120,withheld,healthy for 0.00 s of 0.30,17
+1788187610.182389,withheld,healthy for 0.08 s of 0.30,17
+1788187610.293592,withheld,healthy for 0.19 s of 0.30,17
+1788187610.415428,withheld,rate limited (0.40 s since last reset),17
+1788187610.508854,withheld,rate limited (0.49 s since last reset),17
+1788187610.599239,withheld,rate limited (0.58 s since last reset),17
+1788187610.719328,withheld,rate limited (0.70 s since last reset),17
+1788187610.792267,withheld,rate limited (0.78 s since last reset),17
+1788187610.891116,withheld,rate limited (0.87 s since last reset),17
+1788187610.992771,withheld,rate limited (0.98 s since last reset),17
+1788187611.091239,withheld,rate limited (1.07 s since last reset),17
+1788187611.218895,withheld,rate limited (1.20 s since last reset),17
+1788187611.280205,withheld,rate limited (1.26 s since last reset),17
+1788187611.400299,withheld,rate limited (1.38 s since last reset),17
+1788187611.483468,withheld,rate limited (1.47 s since last reset),17
+1788187611.596728,withheld,rate limited (1.58 s since last reset),17
+1788187611.690733,withheld,rate limited (1.67 s since last reset),17
+1788187611.795149,withheld,rate limited (1.78 s since last reset),17
+1788187611.897049,withheld,rate limited (1.88 s since last reset),17
+1788187611.986084,withheld,rate limited (1.97 s since last reset),17
+1788187612.114109,withheld,rate limited (2.10 s since last reset),17
+1788187612.217285,withheld,rate limited (2.20 s since last reset),17
+1788187612.322676,withheld,rate limited (2.31 s since last reset),17
+1788187612.409214,withheld,rate limited (2.39 s since last reset),17
+1788187612.488410,withheld,rate limited (2.47 s since last reset),17
+1788187612.604645,withheld,rate limited (2.59 s since last reset),17
+1788187612.724760,withheld,rate limited (2.71 s since last reset),17
+1788187612.823269,withheld,rate limited (2.81 s since last reset),17
+1788187612.892733,withheld,rate limited (2.88 s since last reset),17
+1788187612.983937,withheld,rate limited (2.97 s since last reset),17
+1788187613.094707,reset,"healthy for 2.99 s, reset 18/30",18
+1788187614.026854,withheld,healthy for 0.00 s of 0.30,18
+1788187614.127578,withheld,healthy for 0.10 s of 0.30,18
+1788187614.210493,withheld,healthy for 0.18 s of 0.30,18
+1788187614.308732,withheld,healthy for 0.28 s of 0.30,18
+1788187614.417739,withheld,rate limited (1.32 s since last reset),18
+1788187614.506656,withheld,rate limited (1.41 s since last reset),18
+1788187614.597147,withheld,rate limited (1.50 s since last reset),18
+1788187614.718962,withheld,rate limited (1.62 s since last reset),18
+1788187614.797750,withheld,rate limited (1.70 s since last reset),18
+1788187615.301244,withheld,rate limited (2.21 s since last reset),18
+1788187615.401504,withheld,perception still invalid,18
+1788187615.512570,withheld,healthy for 0.00 s of 0.30,18
+1788187615.602385,withheld,healthy for 0.09 s of 0.30,18
+1788187615.712331,withheld,healthy for 0.20 s of 0.30,18
+1788187615.778404,withheld,healthy for 0.27 s of 0.30,18
+1788187615.878924,withheld,rate limited (2.78 s since last reset),18
+1788187616.002059,withheld,perception still invalid,18
+1788187616.117184,withheld,healthy for 0.00 s of 0.30,18
+1788187616.235410,withheld,perception still invalid,18
+1788187616.416695,withheld,healthy for 0.00 s of 0.30,18
+1788187616.506490,withheld,healthy for 0.09 s of 0.30,18
+1788187616.608089,withheld,healthy for 0.19 s of 0.30,18
+1788187616.719469,reset,"healthy for 0.30 s, reset 19/30",19
+1788187616.817594,withheld,healthy for 0.00 s of 0.30,19
+1788187617.198254,withheld,rate limited (0.48 s since last reset),19
+1788187617.316387,withheld,rate limited (0.60 s since last reset),19
+1788187617.422281,withheld,rate limited (0.70 s since last reset),19
+1788187617.494015,withheld,rate limited (0.77 s since last reset),19
+1788187617.599378,withheld,rate limited (0.88 s since last reset),19
+1788187617.701180,withheld,rate limited (0.98 s since last reset),19
+1788187617.813906,withheld,rate limited (1.09 s since last reset),19
+1788187617.912848,withheld,rate limited (1.19 s since last reset),19
+1788187618.022262,withheld,rate limited (1.30 s since last reset),19
+1788187618.135187,withheld,rate limited (1.42 s since last reset),19
+1788187618.306460,withheld,rate limited (1.59 s since last reset),19
+1788187618.415667,withheld,rate limited (1.70 s since last reset),19
+1788187618.630125,withheld,rate limited (1.91 s since last reset),19
+1788187618.726295,withheld,rate limited (2.01 s since last reset),19
+1788187618.805125,withheld,rate limited (2.09 s since last reset),19
+1788187618.896296,withheld,perception still invalid,19
+1788187619.001728,withheld,healthy for 0.00 s of 0.30,19
+1788187619.093475,withheld,healthy for 0.09 s of 0.30,19
+1788187619.216181,withheld,healthy for 0.21 s of 0.30,19
+1788187619.293715,withheld,healthy for 0.29 s of 0.30,19
+1788187619.405340,withheld,rate limited (2.69 s since last reset),19
+1788187619.526202,withheld,rate limited (2.81 s since last reset),19
+1788187619.613240,withheld,rate limited (2.89 s since last reset),19
+1788187619.708334,withheld,rate limited (2.99 s since last reset),19
+1788187619.804632,reset,"healthy for 0.80 s, reset 20/30",20
+1788187619.907951,withheld,healthy for 0.00 s of 0.30,20
+1788187620.006556,withheld,healthy for 0.10 s of 0.30,20
+1788187620.219260,withheld,rate limited (0.41 s since last reset),20
+1788187620.295177,withheld,rate limited (0.49 s since last reset),20
+1788187620.415744,withheld,perception still invalid,20
+1788187620.503446,withheld,healthy for 0.00 s of 0.30,20
+1788187620.600087,withheld,healthy for 0.10 s of 0.30,20
+1788187620.680409,withheld,healthy for 0.18 s of 0.30,20
+1788187620.782233,withheld,healthy for 0.28 s of 0.30,20
+1788187620.891781,withheld,rate limited (1.09 s since last reset),20
+1788187620.990902,withheld,rate limited (1.19 s since last reset),20
+1788187621.116890,withheld,rate limited (1.31 s since last reset),20
+1788187621.215316,withheld,rate limited (1.41 s since last reset),20
+1788187621.304305,withheld,rate limited (1.50 s since last reset),20
+1788187621.416459,withheld,perception still invalid,20
+1788187621.588226,withheld,healthy for 0.00 s of 0.30,20
+1788187621.703892,withheld,healthy for 0.12 s of 0.30,20
+1788187621.805747,withheld,perception still invalid,20
+1788187621.907688,withheld,healthy for 0.00 s of 0.30,20
+1788187622.006982,withheld,healthy for 0.10 s of 0.30,20
+1788187622.109050,withheld,healthy for 0.20 s of 0.30,20
+1788187622.219698,withheld,rate limited (2.42 s since last reset),20
+1788187622.296415,withheld,rate limited (2.49 s since last reset),20
+1788187622.436083,withheld,rate limited (2.63 s since last reset),20
+1788187622.491028,withheld,rate limited (2.69 s since last reset),20
+1788187622.610277,withheld,rate limited (2.81 s since last reset),20
+1788187622.687106,withheld,rate limited (2.88 s since last reset),20
+1788187622.779640,withheld,rate limited (2.98 s since last reset),20
+1788187622.904582,reset,"healthy for 1.00 s, reset 21/30",21
+1788187623.014790,withheld,healthy for 0.00 s of 0.30,21
+1788187623.109859,withheld,healthy for 0.10 s of 0.30,21
+1788187623.206104,withheld,healthy for 0.19 s of 0.30,21
+1788187623.436163,withheld,rate limited (0.53 s since last reset),21
+1788187623.525768,withheld,rate limited (0.62 s since last reset),21
+1788187623.596740,withheld,rate limited (0.69 s since last reset),21
+1788187623.791120,withheld,perception still invalid,21
+1788187623.898004,withheld,healthy for 0.00 s of 0.30,21
+1788187624.123302,withheld,healthy for 0.23 s of 0.30,21
+1788187624.208905,withheld,rate limited (1.30 s since last reset),21
+1788187624.320129,withheld,rate limited (1.42 s since last reset),21
+1788187624.405412,withheld,rate limited (1.50 s since last reset),21
+1788187624.516124,withheld,rate limited (1.61 s since last reset),21
+1788187624.584688,withheld,rate limited (1.68 s since last reset),21
+1788187624.705099,withheld,rate limited (1.80 s since last reset),21
+1788187624.814088,withheld,rate limited (1.91 s since last reset),21
+1788187624.924217,withheld,rate limited (2.02 s since last reset),21
+1788187624.985718,withheld,rate limited (2.08 s since last reset),21
+1788187625.089809,withheld,rate limited (2.19 s since last reset),21
+1788187625.187325,withheld,rate limited (2.28 s since last reset),21
+1788187625.321561,withheld,rate limited (2.42 s since last reset),21
+1788187625.417269,withheld,rate limited (2.51 s since last reset),21
+1788187625.493556,withheld,rate limited (2.59 s since last reset),21
+1788187625.594759,withheld,rate limited (2.69 s since last reset),21
+1788187625.682338,withheld,rate limited (2.78 s since last reset),21
+1788187625.800537,withheld,rate limited (2.90 s since last reset),21
+1788187625.915251,reset,"healthy for 2.02 s, reset 22/30",22
+1788187625.983464,withheld,healthy for 0.00 s of 0.30,22
+1788187626.089844,withheld,healthy for 0.11 s of 0.30,22
+1788187626.218269,withheld,healthy for 0.23 s of 0.30,22
+1788187626.317669,withheld,rate limited (0.40 s since last reset),22
+1788187626.425242,withheld,rate limited (0.51 s since last reset),22
+1788187626.505892,withheld,rate limited (0.59 s since last reset),22
+1788187626.602339,withheld,rate limited (0.69 s since last reset),22
+1788187626.695740,withheld,rate limited (0.78 s since last reset),22
+1788187626.796057,withheld,rate limited (0.88 s since last reset),22
+1788187626.908940,withheld,rate limited (0.99 s since last reset),22
+1788187626.994245,withheld,rate limited (1.08 s since last reset),22
+1788187627.123455,withheld,rate limited (1.21 s since last reset),22
+1788187627.178650,withheld,rate limited (1.26 s since last reset),22
+1788187627.317131,withheld,rate limited (1.40 s since last reset),22
+1788187627.390737,withheld,rate limited (1.48 s since last reset),22
+1788187627.490248,withheld,rate limited (1.57 s since last reset),22
+1788187627.612246,withheld,rate limited (1.70 s since last reset),22
+1788187627.800712,withheld,rate limited (1.89 s since last reset),22
+1788187627.883399,withheld,rate limited (1.97 s since last reset),22
+1788187627.982584,withheld,rate limited (2.07 s since last reset),22
+1788187628.097387,withheld,rate limited (2.18 s since last reset),22
+1788187628.213913,withheld,rate limited (2.30 s since last reset),22
+1788187628.315991,withheld,rate limited (2.40 s since last reset),22
+1788187628.415674,withheld,rate limited (2.50 s since last reset),22
+1788187628.627456,withheld,rate limited (2.71 s since last reset),22
+1788187628.678488,withheld,rate limited (2.76 s since last reset),22
+1788187628.800068,withheld,rate limited (2.88 s since last reset),22
+1788187628.901287,withheld,rate limited (2.99 s since last reset),22
+1788187628.992052,reset,"healthy for 3.01 s, reset 23/30",23
+1788187629.102257,withheld,healthy for 0.00 s of 0.30,23
+1788187629.209862,withheld,healthy for 0.11 s of 0.30,23
+1788187629.297605,withheld,healthy for 0.20 s of 0.30,23
+1788187629.424202,withheld,rate limited (0.43 s since last reset),23
+1788187629.503507,withheld,rate limited (0.51 s since last reset),23
+1788187629.617025,withheld,rate limited (0.62 s since last reset),23
+1788187629.728155,withheld,rate limited (0.74 s since last reset),23
+1788187629.803519,withheld,rate limited (0.81 s since last reset),23
+1788187629.889722,withheld,rate limited (0.90 s since last reset),23
+1788187630.016644,withheld,rate limited (1.02 s since last reset),23
+1788187630.104721,withheld,rate limited (1.11 s since last reset),23
+1788187630.213721,withheld,rate limited (1.22 s since last reset),23
+1788187630.313324,withheld,rate limited (1.32 s since last reset),23
+1788187630.430575,withheld,rate limited (1.44 s since last reset),23
+1788187630.491948,withheld,rate limited (1.50 s since last reset),23
+1788187630.601466,withheld,rate limited (1.61 s since last reset),23
+1788187630.692066,withheld,rate limited (1.70 s since last reset),23
+1788187630.797818,withheld,rate limited (1.81 s since last reset),23
+1788187630.915271,withheld,rate limited (1.92 s since last reset),23
+1788187630.975417,withheld,rate limited (1.98 s since last reset),23
+1788187631.098664,withheld,rate limited (2.11 s since last reset),23
+1788187631.185360,withheld,perception still invalid,23
+1788187631.321344,withheld,healthy for 0.00 s of 0.30,23
+1788187631.416485,withheld,healthy for 0.10 s of 0.30,23
+1788187631.503466,withheld,healthy for 0.18 s of 0.30,23
+1788187631.612939,withheld,healthy for 0.29 s of 0.30,23
+1788187631.685122,withheld,rate limited (2.69 s since last reset),23
+1788187631.814135,withheld,rate limited (2.82 s since last reset),23
+1788187631.881596,withheld,rate limited (2.89 s since last reset),23
+1788187632.015877,reset,"healthy for 0.69 s, reset 24/30",24
+1788187632.110037,withheld,healthy for 0.00 s of 0.30,24
+1788187632.221913,withheld,healthy for 0.11 s of 0.30,24
+1788187632.314782,withheld,healthy for 0.20 s of 0.30,24
+1788187632.420817,withheld,rate limited (0.40 s since last reset),24
+1788187632.618576,withheld,rate limited (0.60 s since last reset),24
+1788187632.731316,withheld,rate limited (0.72 s since last reset),24
+1788187632.890749,withheld,rate limited (0.87 s since last reset),24
+1788187633.000013,withheld,rate limited (0.98 s since last reset),24
+1788187633.101682,withheld,rate limited (1.09 s since last reset),24
+1788187633.230523,withheld,perception still invalid,24
+1788187633.309076,withheld,healthy for 0.00 s of 0.30,24
+1788187633.415153,withheld,healthy for 0.11 s of 0.30,24
+1788187633.515404,withheld,healthy for 0.21 s of 0.30,24
+1788187633.597360,withheld,healthy for 0.29 s of 0.30,24
+1788187633.703020,withheld,rate limited (1.69 s since last reset),24
+1788187633.801710,withheld,rate limited (1.79 s since last reset),24
+1788187633.903773,withheld,rate limited (1.89 s since last reset),24
+1788187634.002730,withheld,rate limited (1.99 s since last reset),24
+1788187634.107326,withheld,rate limited (2.09 s since last reset),24
+1788187634.211217,withheld,rate limited (2.20 s since last reset),24
+1788187634.300695,withheld,rate limited (2.28 s since last reset),24
+1788187634.394304,withheld,rate limited (2.38 s since last reset),24
+1788187634.487955,withheld,rate limited (2.47 s since last reset),24
+1788187634.594419,withheld,rate limited (2.58 s since last reset),24
+1788187634.687638,withheld,rate limited (2.67 s since last reset),24
+1788187634.796794,withheld,rate limited (2.78 s since last reset),24
+1788187634.878703,withheld,rate limited (2.86 s since last reset),24
+1788187634.990429,withheld,rate limited (2.97 s since last reset),24
+1788187635.116876,reset,"healthy for 1.81 s, reset 25/30",25
+1788187635.196333,withheld,healthy for 0.00 s of 0.30,25
+1788187635.293215,withheld,healthy for 0.10 s of 0.30,25
+1788187635.423627,withheld,healthy for 0.23 s of 0.30,25
+1788187635.513114,withheld,rate limited (0.40 s since last reset),25
+1788187635.608436,withheld,rate limited (0.49 s since last reset),25
+1788187635.719971,withheld,rate limited (0.60 s since last reset),25
+1788187635.916422,withheld,rate limited (0.80 s since last reset),25
+1788187636.094544,withheld,rate limited (0.98 s since last reset),25
+1788187636.404747,withheld,rate limited (1.29 s since last reset),25
+1788187636.512350,withheld,rate limited (1.40 s since last reset),25
+1788187636.598266,withheld,rate limited (1.48 s since last reset),25
+1788187636.723724,withheld,rate limited (1.61 s since last reset),25
+1788187636.814446,withheld,rate limited (1.70 s since last reset),25
+1788187636.904041,withheld,rate limited (1.79 s since last reset),25
+1788187637.008466,withheld,rate limited (1.89 s since last reset),25
+1788187637.097737,withheld,rate limited (1.98 s since last reset),25
+1788187637.179520,withheld,rate limited (2.06 s since last reset),25
+1788187637.310088,withheld,rate limited (2.19 s since last reset),25
+1788187637.404233,withheld,rate limited (2.29 s since last reset),25
+1788187637.496427,withheld,rate limited (2.38 s since last reset),25
+1788187637.604150,withheld,perception still invalid,25
+1788187637.800202,withheld,healthy for 0.00 s of 0.30,25
+1788187637.908673,withheld,healthy for 0.11 s of 0.30,25
+1788187638.020429,withheld,healthy for 0.22 s of 0.30,25
+1788187638.313674,reset,"healthy for 0.51 s, reset 26/30",26
+1788187638.418064,withheld,healthy for 0.00 s of 0.30,26
+1788187638.513412,withheld,healthy for 0.10 s of 0.30,26
+1788187638.582063,withheld,healthy for 0.16 s of 0.30,26
+1788187638.689045,withheld,healthy for 0.27 s of 0.30,26
+1788187638.793519,withheld,rate limited (0.48 s since last reset),26
+1788187638.886788,withheld,rate limited (0.57 s since last reset),26
+1788187639.006175,withheld,rate limited (0.69 s since last reset),26
+1788187639.091759,withheld,rate limited (0.78 s since last reset),26
+1788187639.202279,withheld,rate limited (0.89 s since last reset),26
+1788187639.315727,withheld,rate limited (1.00 s since last reset),26
+1788187639.395059,withheld,rate limited (1.08 s since last reset),26
+1788187639.511763,withheld,rate limited (1.20 s since last reset),26
+1788187639.604318,withheld,rate limited (1.29 s since last reset),26
+1788187639.708057,withheld,rate limited (1.39 s since last reset),26
+1788187639.791296,withheld,rate limited (1.48 s since last reset),26
+1788187639.894391,withheld,rate limited (1.58 s since last reset),26
+1788187640.026060,withheld,rate limited (1.71 s since last reset),26
+1788187640.089139,withheld,rate limited (1.78 s since last reset),26
+1788187640.189696,withheld,rate limited (1.88 s since last reset),26
+1788187640.305913,withheld,rate limited (1.99 s since last reset),26
+1788187640.406881,withheld,rate limited (2.09 s since last reset),26
+1788187640.503067,withheld,rate limited (2.19 s since last reset),26
+1788187640.715524,withheld,rate limited (2.40 s since last reset),26
+1788187640.820574,withheld,rate limited (2.51 s since last reset),26
+1788187640.903158,withheld,rate limited (2.59 s since last reset),26
+1788187641.004240,withheld,rate limited (2.69 s since last reset),26
+1788187641.199586,withheld,rate limited (2.89 s since last reset),26
+1788187641.313782,reset,"healthy for 2.90 s, reset 27/30",27
+1788187641.410375,withheld,healthy for 0.00 s of 0.30,27
+1788187641.517204,withheld,healthy for 0.11 s of 0.30,27
+1788187641.603341,withheld,healthy for 0.19 s of 0.30,27
+1788187641.704022,withheld,healthy for 0.29 s of 0.30,27
+1788187641.819919,withheld,rate limited (0.51 s since last reset),27
+1788187641.926764,withheld,rate limited (0.61 s since last reset),27
+1788187642.101647,withheld,rate limited (0.79 s since last reset),27
+1788187642.200414,withheld,rate limited (0.89 s since last reset),27
+1788187642.309221,withheld,rate limited (1.00 s since last reset),27
+1788187642.401184,withheld,rate limited (1.09 s since last reset),27
+1788187642.517256,withheld,rate limited (1.20 s since last reset),27
+1788187642.594961,withheld,rate limited (1.28 s since last reset),27
+1788187642.703708,withheld,rate limited (1.39 s since last reset),27
+1788187642.810080,withheld,rate limited (1.50 s since last reset),27
+1788187642.909619,withheld,rate limited (1.60 s since last reset),27
+1788187643.011818,withheld,rate limited (1.70 s since last reset),27
+1788187643.096747,withheld,rate limited (1.78 s since last reset),27
+1788187643.195136,withheld,rate limited (1.88 s since last reset),27
+1788187643.323885,withheld,rate limited (2.01 s since last reset),27
+1788187643.406307,withheld,rate limited (2.09 s since last reset),27
+1788187643.514111,withheld,rate limited (2.20 s since last reset),27
+1788187643.606608,withheld,rate limited (2.29 s since last reset),27
+1788187643.736813,withheld,rate limited (2.42 s since last reset),27
+1788187643.813429,withheld,rate limited (2.50 s since last reset),27
+1788187643.924247,withheld,rate limited (2.61 s since last reset),27
+1788187644.005613,withheld,rate limited (2.69 s since last reset),27
+1788187644.092330,withheld,rate limited (2.78 s since last reset),27
+1788187644.209635,withheld,rate limited (2.90 s since last reset),27
+1788187644.325011,reset,"healthy for 2.91 s, reset 28/30",28
+1788187644.413018,withheld,healthy for 0.00 s of 0.30,28
+1788187644.499577,withheld,healthy for 0.09 s of 0.30,28
+1788187644.617007,withheld,healthy for 0.20 s of 0.30,28
+1788187644.722999,withheld,rate limited (0.40 s since last reset),28
+1788187644.817159,withheld,rate limited (0.49 s since last reset),28
+1788187644.891815,withheld,rate limited (0.57 s since last reset),28
+1788187645.023547,withheld,rate limited (0.70 s since last reset),28
+1788187645.102134,withheld,rate limited (0.78 s since last reset),28
+1788187645.207996,withheld,perception still invalid,28
+1788187645.313797,withheld,healthy for 0.00 s of 0.30,28
+1788187645.403557,withheld,healthy for 0.09 s of 0.30,28
+1788187645.499016,withheld,healthy for 0.19 s of 0.30,28
+1788187645.606941,withheld,healthy for 0.29 s of 0.30,28
+1788187645.715733,withheld,rate limited (1.39 s since last reset),28
+1788187645.820797,withheld,rate limited (1.50 s since last reset),28
+1788187645.902329,withheld,rate limited (1.58 s since last reset),28
+1788187646.122419,withheld,rate limited (1.80 s since last reset),28
+1788187646.194854,withheld,rate limited (1.87 s since last reset),28
+1788187646.296085,withheld,rate limited (1.97 s since last reset),28
+1788187646.419417,withheld,rate limited (2.09 s since last reset),28
+1788187646.520273,withheld,rate limited (2.20 s since last reset),28
+1788187646.608911,withheld,rate limited (2.28 s since last reset),28
+1788187646.824297,withheld,rate limited (2.50 s since last reset),28
+1788187646.921198,withheld,rate limited (2.60 s since last reset),28
+1788187647.006566,withheld,rate limited (2.68 s since last reset),28
+1788187647.191607,withheld,rate limited (2.87 s since last reset),28
+1788187647.324987,withheld,rate limited (3.00 s since last reset),28
+1788187647.393507,reset,"healthy for 2.08 s, reset 29/30",29
+1788187647.499556,withheld,healthy for 0.00 s of 0.30,29
+1788187647.811397,withheld,rate limited (0.42 s since last reset),29
+1788187647.921509,withheld,rate limited (0.53 s since last reset),29
+1788187648.017647,withheld,rate limited (0.62 s since last reset),29
+1788187648.106842,withheld,rate limited (0.71 s since last reset),29
+1788187648.203550,withheld,rate limited (0.81 s since last reset),29
+1788187648.305331,withheld,rate limited (0.91 s since last reset),29
+1788187648.495540,withheld,rate limited (1.10 s since last reset),29
+1788187648.612834,withheld,rate limited (1.22 s since last reset),29
+1788187648.821825,withheld,rate limited (1.43 s since last reset),29
+1788187648.912150,withheld,rate limited (1.52 s since last reset),29
+1788187649.007512,withheld,rate limited (1.61 s since last reset),29
+1788187649.099900,withheld,rate limited (1.71 s since last reset),29
+1788187649.194210,withheld,rate limited (1.80 s since last reset),29
+1788187649.305576,withheld,rate limited (1.91 s since last reset),29
+1788187649.377916,withheld,rate limited (1.98 s since last reset),29
+1788187649.498536,withheld,rate limited (2.11 s since last reset),29
+1788187649.624463,withheld,rate limited (2.23 s since last reset),29
+1788187649.713976,withheld,rate limited (2.32 s since last reset),29
+1788187649.801815,withheld,rate limited (2.41 s since last reset),29
+1788187649.895572,withheld,rate limited (2.50 s since last reset),29
+1788187650.009130,withheld,rate limited (2.62 s since last reset),29
+1788187650.118746,withheld,rate limited (2.73 s since last reset),29
+1788187650.314569,withheld,rate limited (2.92 s since last reset),29
+1788187650.413881,reset,"healthy for 2.91 s, reset 30/30",30
+1788187650.622660,withheld,healthy for 0.00 s of 0.30,30
+1788187650.712641,withheld,healthy for 0.09 s of 0.30,30
+1788187650.789326,withheld,healthy for 0.17 s of 0.30,30
+1788187650.913310,withheld,healthy for 0.29 s of 0.30,30
+1788187651.014900,withheld,budget spent (30/30 resets),30
+1788187651.826636,withheld,perception still invalid,30
+1788187651.899996,withheld,healthy for 0.00 s of 0.30,30
+1788187652.010891,withheld,healthy for 0.11 s of 0.30,30
+1788187652.114947,withheld,healthy for 0.21 s of 0.30,30
+1788187652.209216,withheld,budget spent (30/30 resets),30
+1788187656.812341,withheld,perception still invalid,30
+1788187656.986263,withheld,healthy for 0.00 s of 0.30,30
+1788187657.110762,withheld,healthy for 0.12 s of 0.30,30
+1788187657.229131,withheld,healthy for 0.24 s of 0.30,30
+1788187657.292449,withheld,budget spent (30/30 resets),30
+1788187658.313886,withheld,perception still invalid,30
+1788187658.418929,withheld,healthy for 0.00 s of 0.30,30
+1788187658.509252,withheld,healthy for 0.09 s of 0.30,30
+1788187658.618001,withheld,healthy for 0.20 s of 0.30,30
+1788187658.718143,withheld,healthy for 0.30 s of 0.30,30
+1788187658.797200,withheld,budget spent (30/30 resets),30
+1788187660.505920,withheld,perception still invalid,30
+1788187660.597848,withheld,healthy for 0.00 s of 0.30,30
+1788187660.716930,withheld,healthy for 0.12 s of 0.30,30
+1788187660.801923,withheld,healthy for 0.20 s of 0.30,30
+1788187660.908523,withheld,budget spent (30/30 resets),30
+1788187664.405387,withheld,perception still invalid,30
+1788187664.507113,withheld,healthy for 0.00 s of 0.30,30
+1788187664.614420,withheld,healthy for 0.11 s of 0.30,30
+1788187664.686027,withheld,healthy for 0.18 s of 0.30,30
+1788187664.820267,withheld,budget spent (30/30 resets),30
+1788187671.331408,withheld,perception still invalid,30
+1788187671.403651,withheld,healthy for 0.00 s of 0.30,30
+1788187671.507591,withheld,healthy for 0.10 s of 0.30,30
+1788187671.601623,withheld,healthy for 0.20 s of 0.30,30
+1788187671.707442,withheld,budget spent (30/30 resets),30
+1788187674.418751,withheld,perception still invalid,30
+1788187674.681432,withheld,healthy for 0.00 s of 0.30,30
+1788187674.800613,withheld,healthy for 0.12 s of 0.30,30
+1788187674.919676,withheld,healthy for 0.24 s of 0.30,30
+1788187675.013652,withheld,budget spent (30/30 resets),30
+1788187675.517276,withheld,perception still invalid,30
+1788187675.699526,withheld,healthy for 0.00 s of 0.30,30
+1788187675.788163,withheld,healthy for 0.09 s of 0.30,30
+1788187675.893858,withheld,healthy for 0.19 s of 0.30,30
+1788187676.099371,withheld,budget spent (30/30 resets),30
+1788187682.219627,withheld,perception still invalid,30
+1788187682.425641,withheld,healthy for 0.00 s of 0.30,30
+1788187682.501874,withheld,healthy for 0.08 s of 0.30,30
+1788187682.616736,withheld,healthy for 0.19 s of 0.30,30
+1788187682.711692,withheld,healthy for 0.29 s of 0.30,30
+1788187682.806838,withheld,budget spent (30/30 resets),30
+1788187683.519572,withheld,perception still invalid,30
+1788187683.611442,withheld,healthy for 0.00 s of 0.30,30
+1788187683.702885,withheld,healthy for 0.09 s of 0.30,30
+1788187683.813872,withheld,healthy for 0.20 s of 0.30,30
+1788187683.905343,withheld,healthy for 0.29 s of 0.30,30
+1788187684.006994,withheld,budget spent (30/30 resets),30
+1788187685.814646,withheld,perception still invalid,30
+1788187685.915687,withheld,healthy for 0.00 s of 0.30,30
+1788187686.020601,withheld,healthy for 0.10 s of 0.30,30
+1788187686.095156,withheld,healthy for 0.18 s of 0.30,30
+1788187686.196514,withheld,healthy for 0.28 s of 0.30,30
+1788187686.322598,withheld,budget spent (30/30 resets),30
+1788187703.527787,withheld,perception still invalid,30
+1788187703.717974,withheld,healthy for 0.00 s of 0.30,30
+1788187703.808171,withheld,perception still invalid,30
+1788187703.906077,withheld,healthy for 0.00 s of 0.30,30
+1788187703.991380,withheld,healthy for 0.09 s of 0.30,30
+1788187704.118921,withheld,healthy for 0.21 s of 0.30,30
+1788187704.291497,withheld,budget spent (30/30 resets),30
+1788187704.394670,withheld,perception still invalid,30
+1788187704.593630,withheld,"cage rules active: C-03,C-04",30
+1788187704.824048,withheld,cage rules active: C-04,30
+1788187705.012568,withheld,"cage rules active: C-03,C-04",30
+1788187705.408620,withheld,cage rules active: C-04,30
+1788187705.513638,withheld,"cage rules active: C-03,C-04",30
+1788187705.697910,withheld,cage rules active: C-04,30
+1788187705.808431,withheld,"cage rules active: C-03,C-04",30
+1788187706.811894,withheld,cage rules active: C-04,30
+1788187707.520080,withheld,"cage rules active: C-03,C-04",30
+1788187707.608972,withheld,cage rules active: C-04,30
+1788187707.814830,withheld,"cage rules active: C-03,C-04",30
+1788187708.204302,withheld,perception still invalid,30
+1788187708.710580,withheld,cage rules active: C-04,30
+1788187718.807874,withheld,still moving (0.157 m/s),30
+1788187719.000123,withheld,still moving (0.156 m/s),30
+1788187719.097723,withheld,still moving (0.155 m/s),30
+1788187719.203192,withheld,still moving (0.158 m/s),30
+1788187719.301790,withheld,still moving (0.149 m/s),30
+1788187719.413823,withheld,still moving (0.115 m/s),30
+1788187719.597522,withheld,still moving (0.113 m/s),30
+1788187719.697948,withheld,still moving (0.085 m/s),30
+1788187719.816475,withheld,still moving (0.065 m/s),30
+1788187720.306539,withheld,still moving (0.030 m/s),30
+1788187720.399841,withheld,healthy for 0.00 s of 0.30,30
+1788187720.483266,withheld,healthy for 0.08 s of 0.30,30
+1788187720.588955,withheld,healthy for 0.19 s of 0.30,30
+1788187720.725121,withheld,budget spent (30/30 resets),30
+1788187721.515157,withheld,still moving (0.025 m/s),30
+1788187721.793852,withheld,still moving (0.026 m/s),30
+1788187721.906267,withheld,still moving (0.029 m/s),30
+1788187722.305550,withheld,still moving (0.030 m/s),30
+1788187722.607624,withheld,still moving (0.029 m/s),30
+1788187722.703208,withheld,still moving (0.030 m/s),30
+1788187722.909855,withheld,still moving (0.027 m/s),30
+1788187723.223050,withheld,still moving (0.026 m/s),30
+1788187723.391479,withheld,still moving (0.025 m/s),30
+1788187723.506714,withheld,still moving (0.024 m/s),30
+1788187723.596845,withheld,still moving (0.023 m/s),30
+1788187723.892256,withheld,still moving (0.022 m/s),30
+1788187724.020682,withheld,healthy for 0.00 s of 0.30,30
+1788187724.091366,withheld,healthy for 0.07 s of 0.30,30
+1788187724.197749,withheld,healthy for 0.18 s of 0.30,30
+1788187724.317157,withheld,healthy for 0.30 s of 0.30,30
+1788187724.382169,withheld,budget spent (30/30 resets),30
+1788187742.914393,withheld,perception still invalid,30
+1788187743.107990,withheld,still moving (0.085 m/s),30
+1788187743.318912,withheld,still moving (0.124 m/s),30
+1788187743.623293,withheld,still moving (0.186 m/s),30
+1788187743.697142,withheld,still moving (0.205 m/s),30
+1788187744.097151,withheld,"cage rules active: C-03,C-04",30
+1788187745.900062,withheld,perception still invalid,30
+1788187746.095288,withheld,still moving (0.319 m/s),30
+1788187746.191404,withheld,still moving (0.270 m/s),30
+1788187746.290036,withheld,still moving (0.237 m/s),30
+1788187746.380320,withheld,still moving (0.212 m/s),30
+1788187746.511698,withheld,still moving (0.141 m/s),30
+1788187746.616750,withheld,still moving (0.111 m/s),30
+1788187746.727689,withheld,still moving (0.087 m/s),30
+1788187746.805662,withheld,still moving (0.072 m/s),30
+1788187746.912622,withheld,still moving (0.052 m/s),30
+1788187747.030951,withheld,still moving (0.042 m/s),30
+1788187747.294065,withheld,healthy for 0.00 s of 0.30,30
+1788187747.405258,withheld,healthy for 0.11 s of 0.30,30
+1788187747.506361,withheld,healthy for 0.21 s of 0.30,30
+1788187747.609112,withheld,budget spent (30/30 resets),30
+1788187747.718582,withheld,still moving (0.035 m/s),30
+1788187747.909084,withheld,still moving (0.040 m/s),30
+1788187748.019754,withheld,still moving (0.049 m/s),30
+1788187748.127867,withheld,still moving (0.054 m/s),30
+1788187748.315793,withheld,still moving (0.060 m/s),30
+1788187748.418674,withheld,still moving (0.059 m/s),30
+1788187748.539497,withheld,still moving (0.060 m/s),30
+1788187748.605753,withheld,still moving (0.056 m/s),30
+1788187748.710563,withheld,still moving (0.065 m/s),30
+1788187748.821235,withheld,still moving (0.062 m/s),30
+1788187748.899975,withheld,still moving (0.064 m/s),30
+1788187749.327259,withheld,still moving (0.063 m/s),30
+1788187749.418674,withheld,still moving (0.059 m/s),30
+1788187749.581696,withheld,still moving (0.054 m/s),30
+1788187749.687861,withheld,still moving (0.059 m/s),30
+1788187749.897815,withheld,still moving (0.057 m/s),30
+1788187750.031389,withheld,still moving (0.050 m/s),30
+1788187750.202841,withheld,still moving (0.049 m/s),30
+1788187750.406333,withheld,still moving (0.044 m/s),30
+1788187750.704068,withheld,still moving (0.038 m/s),30
+1788187750.827247,withheld,still moving (0.039 m/s),30
+1788187751.001886,withheld,still moving (0.034 m/s),30
+1788187751.204758,withheld,still moving (0.031 m/s),30
+1788187751.316200,withheld,still moving (0.030 m/s),30
+1788187751.406807,withheld,still moving (0.029 m/s),30
+1788187751.592061,withheld,still moving (0.028 m/s),30
+1788187751.698628,withheld,still moving (0.026 m/s),30
+1788187751.800830,withheld,still moving (0.024 m/s),30
+1788187751.993796,withheld,still moving (0.022 m/s),30
+1788187752.111518,withheld,still moving (0.020 m/s),30
+1788187752.321910,withheld,healthy for 0.00 s of 0.30,30
+1788187752.400356,withheld,healthy for 0.08 s of 0.30,30
+1788187752.505809,withheld,healthy for 0.18 s of 0.30,30
+1788187752.625778,withheld,budget spent (30/30 resets),30

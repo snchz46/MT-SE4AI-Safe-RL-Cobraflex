@@ -4063,6 +4063,10 @@ does not admit that confound: **no amount of off-centre driving lets a 19.28 m c
   run at −60 and −100 mm, which is now the point of running it.
 * No hazard, SR, cage rule, scenario, metric or verdict is added or re-valued; `verdict_phys` stays
   open. This is Phase-5 posterior evidence.
+* **Amended by D-79 (31.08.2026).** The order of work stands; the *target* moves. The capture session
+  measured the failure as a property of **location**, with the defect in **candidate generation**
+  rather than pair selection — so the widening must act on line extraction, and a temporal continuity
+  prior over the selected pair is rejected as the first fix.
 
 Cites D-43 (the estimator and its H-12 residual), D-71 (§3's method lesson: match the measurement to
 the quantity), D-74 (the C-05 latch these degradations trip), D-75 (the closed-loop test and C-04's
@@ -4227,3 +4231,167 @@ Cites D-43 (the estimator under test), D-71 (§3's method lesson — match the m
 quantity, which is the whole reason this session exists), D-73 (why arc length must not come from
 odometry), D-75 (the closed-loop precondition), D-76 (the accuracy question), D-77 (the replay this
 makes reproducible).
+
+---
+
+### D-79 — The capture session lands: the D-43 estimator's failure is a property of WHERE the car is, not of what it is doing, and the defect is candidate generation rather than pair selection
+
+| Field | Value |
+| --- | --- |
+| Section | `experiments/physical/datasets/{truepos_*,parked_seg*}/`; `experiments/physical/datasets/CAPTURE_NOTE_20260831.md` (new); `docs/17` §12 |
+| Status | ACCEPTED — findings. **D-78's acceptance criterion FAILS**, so D-75 stays blocked and C-04 stays un-armable. No `cage.yaml`, code, SR, cage rule, ODD parameter or verdict touched; `verdict_phys` stays open. Posterior evidence. |
+| Date | 31.08.2026 |
+
+**Context.** D-78 built the capture and fixed its acceptance band **in advance**: `∫|κ|ds / (laps·2π)`
+in 0.75–1.35, scored per station segment with the worst segment named and no circuit mean. It was
+executed the same afternoon, camera only, rectified, with arc length from four tape-measured floor
+stations and true offset held by a chassis pointer against the painted lines (no chalk was available —
+one transfer error *fewer*, since a chalk line would have been measured off the same paint). Four
+measurement laps and four parked probes, ~11 500 frames.
+
+**Finding 1 — the criterion fails, and the failure now owes nothing to odometry.** Four laps score
+**1.97, 2.01, 2.25 and 2.37**; restricting the integral to right-pair frames gives **1.78–2.22**. D-75
+estimated ~3× from driving logs; with the odometry, the policy, the cage and (in the `ctrl` laps) the
+operator all out of the chain the figure is **~2×**. Same defect, smaller, and measured against a
+tape. **C-04 stays un-armable.** D-76's offset suspicion is confirmed in the one direction tested:
+0 → −65 mm takes paired frames 68.2 → 46.6 % and the ratio 2.01 → 2.25.
+
+**Finding 2 — the operator's shadow was a real confound worth a third of the effect.** The first lap
+was pushed with the operator walking alongside at 0.13 m/s; the two `ctrl` laps from outside the lane.
+Paired 55.4 → 69.1 %, `single_line` 44.1 → 30.1 %, `|ey|` error 54.6 → 31.9 mm, its p95 213 → 91 mm.
+The capture protocol becomes *push from outside the lane*, and the 18.08 `circuit_export` dataset
+(95.3 % paired, also hand-swept) is no longer above suspicion — not refuted, not comparable directly
+(unrectified, different hour), simply no longer clean.
+
+**Finding 3 — it is the place, not the motion. This is the decision's core.** Each lap's fifth segment
+sits at the start of the straight — where the 31.08 sweep and every `lanecheck` were taken — and it is
+excellent (92.7 % paired / 15.9 mm at `ey` = 0; 96.7 % / **7.2 mm** at −65 mm) while the moving
+segments are not (37.9–60.2 % paired, 49.7–63.4 mm). Motion and location were confounded, so the car
+was **parked inside the bad stretches** at true 0 and held still 20 s: `parked_seg23_b` **0.0 %
+paired** (blind), `parked_seg23_a` 17.3 % with a 711 mm span, `parked_seg34_a` 99.4 % paired but
+**+43.7 mm** wrong, `parked_seg34_b` 100 % paired and **−39.7 mm wrong with sd 3.1 mm**. Parked in the
+bad places is as bad as driving through them, or worse.
+
+Consequence, stated plainly: **the location every earlier single-pose conclusion was drawn from is the
+estimator's best point by a wide margin.** Their *content* stands; their *generalisation to the
+circuit* is retracted. `SWEEP_NOTE.md` declared exactly this limitation about itself, and it is now
+measured rather than suspected. D-71 §3's method lesson — match the measurement to the quantity —
+claims a fifth scalp.
+
+**Finding 4 — the mechanism is candidate GENERATION, and it inverts the obvious fix.** `line_c0_m`
+(the column D-78 added) makes every detected line's intercept readable, and for a car at true 0 the
+right pair is ≈ ±125 mm. `parked_seg23_b` sees **exactly one line** in 273/273 frames — a *detection*
+failure, nothing to select from. `parked_seg23_a` sees three at ≈ −200 / −150 / +250 mm: the first two
+are 50 mm apart, i.e. **the two edges of one painted stripe**, and no pair has a plausible separation,
+so the estimator correctly refuses (`single_line`, 306/370). `parked_seg34_a` pairs ≈ (−200, +100) →
+width 300.6 mm, midpoint +50; `parked_seg34_b` pairs ≈ (−100, +200) → width 279.2 mm, midpoint −50.
+At these places the candidate set is not the two stripe centres but stripe *edges*, adjacent markings,
+or one stripe; the surviving pair carries a plausible 279–301 mm width with a midpoint displaced
+40–50 mm.
+
+**Decision.** D-76's order of work — widen the estimator before narrowing the policy — **stands, and
+its target moves**: the widening must act on **line extraction** (stripe edge versus stripe centre,
+threshold behaviour at the failing locations), not on pair selection. A temporal continuity prior over
+the selected pair, the first thing D-76 would naturally have reached for, is **rejected as the first
+fix**: `parked_seg34_b` proves the wrong pair is stable to **3.1 mm**, so a continuity prior would
+track it happily and convert a detectable flip into an undetectable bias.
+
+**Consequences.**
+
+* **No dispersion statistic can gate this.** `parked_seg34_b` is 39.7 mm wrong with sd 3.1 mm and span
+  13.3 mm: the old `sd_ey ≤ 10 mm` gate passes it comfortably, the 31.08 span gate (`≤ 12 mm`) fails it
+  by 1.3 mm — a coin flip. Only `lanecheck --true-ey` catches a bias, and it must be run **at more than
+  one location**; "lanecheck at −60 and −100 mm" is necessary but not sufficient, because at the start
+  of the straight it will keep passing.
+* **`kappa_ahead` over-reads with the car stationary** (`parked_seg34_a`, mean |κ| 0.88 m⁻¹). D-76's
+  instruction to re-derive every physical analysis binned on `κ` is unchanged, and the reason is now
+  geometric rather than statistical: the fitted lane is built from the wrong candidate lines.
+* **The per-segment map does not reproduce and must not be cited as one.** Across three offset-0 laps
+  only the 2→3 stretch repeats as poor (paired 50.2 / 51.4 / 46.7 %) and the start straight as good;
+  3→4 swings 75.4 / 98.6 / 70.7 %. An early reading of the first lap called 3→4 a located defect —
+  three laps do not support it.
+* **Still owed:** the `+60`, `−100` and `+100` laps of D-78's matrix, and an inspection of what is
+  physically different at the four probed spots (stripe width, a mat join, the adjacent red carriageway
+  entering frame, local lighting). The latter is cheap and is the highest-value next measurement.
+* No hazard, SR, cage rule, scenario, metric or verdict is added or re-valued. The policy never ran.
+
+Cites D-43 (the estimator under test and its H-12 residual), D-71 (§3's method lesson), D-75 (the
+closed-loop precondition, still unmet), D-76 (the work order this amends), D-77 (the relocation
+statistic reproduced here at 4.5–5.1 % on shadow-free laps), D-78 (the protocol and the acceptance
+band it fixed in advance), D-69 (the verdict of record, untouched).
+
+---
+
+### D-80 — The bare-policy arm settles what Phase 5 has been arguing: the binding constraint is the measurement, not the control. D-74's reset parameters do not survive contact with motion
+
+| Field | Value |
+| --- | --- |
+| Section | `src/cobraflex_rl/launch/deploy_cobraflex.launch.py` (`control_emergency_topic`, new; `value_type` fix); `experiments/physical/runs/lap_{mon,mon_escape,mon_hold03,bare}_20260831*/`; `docs/17` §13 |
+| Status | ACCEPTED — findings + one diagnostic launch argument. No `cage.yaml`, cage rule, SR, ODD parameter or verdict touched; `verdict_phys` stays open. Posterior evidence. |
+| Date | 31.08.2026 |
+
+**Context.** §12's capture located the D-43 estimator's failures and named the mechanism, but every
+inference about *what stops the car on the track* was still indirect: D-76 argued the estimator must
+be widened before the policy is narrowed **because the policy does not consume the estimator**, and
+that argument had no positive control. Six Layer-3 launches on the evening of 31.08 supply one.
+
+**Finding 1 — three distinct blockers, in three configurations, none of them the policy.**
+
+1. **D-74's 1 s healthy hold is not satisfiable in motion.** 9 resets issued against **453
+   withholds**, of which **197** are the hold itself failing to complete (121 `still moving`, 83
+   `perception still invalid`, 51 `cage rules active: C-02`). The threshold came from an STPA argument
+   against oscillation at the trigger boundary and had never been exercised while driving.
+2. **Removing C-01 from `reset_proxy_blocking_rules` does not escape the lap04 deadlock.** The
+   launch's own note offers `C-03,C-04` for it; tried, the proxy burned **30 of 30 resets in about a
+   minute**, each re-latching at once, with the car stable at `ey` = −296 mm and
+   `perception_invalid` at 6 %. A withheld reset becomes a wasted reset. **The default
+   `blocking_rules` stays; the escape is recorded as tested and rejected.**
+3. **With the hold at 0.3 s, C-02 becomes the blocker and fires on noise.** Car at `ey` = −32 mm —
+   well inside the lane — with `epsi` swinging −25.3°…+18.2°, **sd 17.2°** against C-02's 25°. M-6
+   measured the same configuration at **sd 5.3 °, 0.8 %** past C-02 — at the start of the straight,
+   which D-79 established is the estimator's best point. The heading channel degrades off that spot
+   like the other two: **a fourth independent confirmation of D-79, and the first in heading while
+   driving.**
+
+**Finding 2 — the bare-policy arm, and the inversion it forces.** With `vehicle_control_node`'s
+emergency subscription detached and everything else identical, **the cage was latched 99 % of cycles
+while the car drove 97 % of them**, and the policy circulated the track essentially uninterrupted in
+**both directions**, with two reproducible departures (about half of the last curve, always to the
+right; more mildly entering the middle of the first curve). So the three blockers above are not a
+policy that cannot drive: they are **C-05 firing on a measurement that fails where D-79 said it
+fails**. D-76's ordering is no longer an argument from architecture — it has a positive control.
+
+**Finding 3 — the policy never asks for more than half its steering range.** `max |steer| = 0.481`
+over 5694 cycles, peaking at **0.29–0.32** in the departures, i.e. *less* than it uses elsewhere. It
+is not saturating and losing; it is not asking. At `steering_to_yaw_rate_gain` 1.615 that is ≈ 0.48
+rad/s commanded against ≈ 0.22 rad/s needed in the tightest curve at 0.22 m/s, so the open question
+is whether the chassis delivers the command — D-70 measured it at about half. **Owed:** commanded
+`/cmd_vel.angular.z` against achieved yaw from `/odometry/filtered`, moving cycles only.
+
+**Decision — `control_emergency_topic`.** `vehicle_control_node` zeroes `/cmd_vel` on a latched
+`/emergency` in **both** modes by design (docs/17 §10.4) and did not expose `emergency_topic`, so the
+bare-policy arm required either a code edit or killing a node by hand. The second leaves **no trace in
+the run's evidence**, which a traceability-first repo cannot accept. The argument defaults to
+`/emergency`; pointed at an unpublished topic it detaches that one link while the cage keeps
+evaluating, publishing and logging every rule. It carries its own warning: *DIAGNOSTIC ONLY — with it
+set, nothing in software stops the car.*
+
+**Consequences.**
+
+* **This arm can never be `verdict_phys`** — no safety function is active while it runs. N = 1,
+  `near_secant` rather than the D-43 contract (§8.4), and the operator repositioned the car by hand
+  after each departure, so the run's `ey` statistics and any automated departure count are
+  contaminated **by design**. The steering population and the latched-versus-commanding ratio are not.
+* **Two launch defects found by launching, not by testing.** `value_type=list` in D-74's
+  `blocking_rules` guard (fixed to `List[str]`) and a missing `setup_deploy_env.sh`. Both are the
+  repo's own rule — *pytest is not evidence a node runs* — collecting for the third time today.
+* **D-74 is amended in its parameters, not in its architecture:** the reset path stays outside the
+  cage, C-05 stays unchanged, and `observe` stays the default. What this measures is that the 1 s hold
+  and the C-01 block, as set, do not produce a lap on this track; whether they should change is
+  deferred, and it is downstream of the estimator work D-76/D-79 ordered.
+* The `κ`-binned caveat of D-75/D-79 applies unchanged to everything here.
+
+Cites D-43 (the estimator), D-69 (the simulated cage-off ablation this mirrors), D-70 (the chassis
+delivering about half the commanded yaw), D-72 (the v2 policy under test), D-74 (the reset posture
+these three runs exercise), D-76 (the ordering this supplies a positive control for), D-79 (the
+locations these failures land in).

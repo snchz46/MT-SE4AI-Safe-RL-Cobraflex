@@ -256,6 +256,58 @@ script reports orphans on either side.
   0.228 m/s; `cage.yaml` untouched, re-arming blocked on the capture session) and **D-76** (widen the
   estimator before narrowing the policy; the policy does not consume the estimator, so the stops are
   produced by the *measurement* in a region the policy legitimately visits).
+- **31.08.2026 true-position capture (D-78 executed → D-79, docs/17 §12, `CAPTURE_NOTE_20260831.md`)
+  — D-78's acceptance criterion FAILS at ~2×, and the failure is a property of PLACE, not of motion.**
+  Camera only (19.38 Hz, 45.5 % of a core), no policy/cage/ZED/launch, rectified; arc length from four
+  tape-measured floor stations, offset held by a **chassis pointer against the painted line** (no chalk —
+  one transfer error fewer). Four laps + four parked probes, ~11 500 frames, ~1.4 MB (`--no-frames`).
+  **(i)** `∫|κ|ds/(laps·2π)` = **1.97 / 2.01 / 2.25 / 2.37** against a band of 0.75–1.35 fixed in
+  advance (1.78–2.22 on right-pair frames only) — the first `κ` measurement owing nothing to odometry,
+  policy or cage; D-75's ~3× becomes **~2×** and **C-04 stays un-armable**. Offset dependence
+  confirmed: 0 → −65 mm takes paired frames 68.2 → 46.6 %. **(ii)** The **operator's shadow** was worth
+  a third of it (pushed alongside vs from outside the lane: paired 55.4 → 69.1 %, |ey| error 54.6 →
+  31.9 mm) → protocol is now *push from outside the lane*, and 18.08's `circuit_export` 95.3 % is no
+  longer clean. **(iii) THE CORE FINDING:** each lap's 5th segment is the **start of the straight** —
+  where the 31.08 sweep and every `lanecheck` were taken — and it is excellent (96.7 % paired, **7.2 mm**
+  error at −65) while moving segments run 37.9–60.2 %. **Parked inside the bad stretches** at true 0:
+  `seg23_b` **0.0 % paired** (273/273 frames see one line), `seg23_a` 17.3 % / 711 mm span, `seg34_a`
+  99.4 % paired but **+43.7 mm** wrong, `seg34_b` 100 % paired and **−39.7 mm wrong with sd 3.1 mm**.
+  So the location every earlier single-pose conclusion came from is the estimator's **best point** —
+  their content stands, their generalisation to the circuit is **retracted**. **(iv)** Mechanism is
+  **candidate generation, not pair selection**: at the failing spots the candidates are stripe *edges*
+  (two lines 50 mm apart = one stripe), adjacent markings, or one stripe, and the surviving pair carries
+  a plausible 279–301 mm width with its midpoint displaced 40–50 mm. **D-76's order stands, its target
+  moves to line extraction**; a temporal continuity prior over the selected pair is **rejected** — the
+  wrong pair is stable to 3.1 mm. **(v)** No dispersion gate can catch a bias (`seg34_b` passes
+  `sd_ey ≤ 10 mm`, fails the new span gate by 1.3 mm) → `lanecheck --true-ey` at **several** locations.
+  Per-segment map **does not reproduce** (only 2→3 poor and the start straight good repeat across three
+  laps; 3→4 swings 75.4/98.6/70.7 %). Posterior evidence: nothing re-scored, `verdict_phys` open, the
+  `+60`/`±100` laps and an inspection of the four spots still owed.
+- **31.08.2026 evening driving session (D-80, docs/17 §13) — THE BARE-POLICY ARM INVERTS PHASE 5's
+  READING: the cage was latched 99 % of cycles while the car drove 97 % of them.** Six Layer-3
+  launches, four with data, all `monitoring` + rectified + `near_secant` on the v2 1650k checkpoint,
+  Layer 2 without lidar (loop **9.6 Hz** vs 26.08's 8.68; the venv is **torch 2.13.0+cpu**, which
+  explains §8.10's bottleneck). **Three blockers, none of them the policy:** (i) D-74's **1 s healthy
+  hold is not satisfiable in motion** — 9 resets against **453 withholds**, 197 of them the hold
+  failing to complete; the STPA-argued threshold had never been exercised while driving; (ii)
+  **removing C-01 from `reset_proxy_blocking_rules` does not escape the lap04 deadlock** — the
+  documented escape burned **30/30 resets in a minute**, each re-latching, car stable at `ey`
+  = −296 mm with `perception_invalid` 6 % → tested and **rejected**, default stays; (iii) at a 0.3 s
+  hold **C-02 fires on noise** — car at `ey` = −32 mm, well inside the lane, `epsi` swinging
+  −25.3°…+18.2° (**sd 17.2°** vs M-6's **5.3°** for the same config at the start of the straight) →
+  the heading channel degrades off that spot like offset and curvature, a **fourth** confirmation of
+  D-79 and the first in heading while driving. **Then the bare arm:** detach only
+  `vehicle_control_node`'s `/emergency` subscription (new `control_emergency_topic` launch arg,
+  DIAGNOSTIC ONLY) and the policy **circulates the track essentially uninterrupted in both
+  directions**, with two reproducible departures (≈ half of the last curve, always **right**; milder
+  entering the first). So the blockers are **C-05 firing on a measurement that fails where D-79 said
+  it fails** — D-76's ordering now has a **positive control**, not an architectural argument. Also:
+  the policy **never asks more than `|steer|` 0.481** in 5694 cycles and only **0.29–0.32** in the
+  departures — not saturating and losing, *not asking*; owed is commanded `/cmd_vel.angular.z` vs
+  achieved yaw (D-70 measured the chassis at ~half). **Limits:** no safety function active → can
+  never be `verdict_phys`; N=1; `near_secant` not the D-43 contract; and the operator repositioned by
+  hand after each departure, so `ey` stats and automated departure counts are contaminated **by
+  design** (the steering population and the latched-vs-commanding ratio are not).
 - **`campaign_v2` — posterior evidence; it does NOT re-score G4.** The same 27 × 2 × seed-2024 matrix
   (1890 runs, SC-PERT-03 excluded per D-64) on the 1650k checkpoint, behind the `flock` guard;
   `experiments/sim/campaign_v2/` held **20 runs** at the 24.08 commit. Not a prerequisite for driving
@@ -266,46 +318,41 @@ script reports orphans on either side.
 **Decided today — cite, don't re-litigate:** **D-75** (C-04 stays un-armable; `cage.yaml`
 untouched), **D-76** (widen the estimator *before* narrowing the policy; the policy is the
 documented fallback, as an argued ODD restriction), **D-77** (SR-014's inter-frame gate tightened
-to 0.05 m on the physical path only; sim keeps 0.10 so the D-69 path is bit-identical). Reasoning,
-measurements and limits are in `docs/DECISIONS.md`; docs/17 §10 is the narrative.
+to 0.05 m on the physical path only; sim keeps 0.10 so the D-69 path is bit-identical), **D-78** (the
+capture protocol and its acceptance band) and **D-79** (that capture's findings: place not motion,
+candidate generation not pair selection, and D-76's target moved to line extraction). Reasoning,
+measurements and limits are in `docs/DECISIONS.md`; docs/17 §10 and §12 are the narrative.
 
 What is actually left, ordered by what unblocks the most:
 
-1. **A CAPTURE session with TRUE POSITION — still the blocker, now narrower.** D-77 unblocked the
-   *consistency* half offline (`labels.csv`'s `line_c0_m` replays the pairing exactly, 1450/1450),
-   so what this session still owes is **accuracy**: which line pair is the true one at each point
-   of the track. Two acceptance tests already exist — the closed-loop `∮κ·ds ≈ 2π` per lap (D-75),
-   and the offset sweep repeated **around** the circuit rather than at one location. **Not another
-   driving session:** eight single-component hypotheses died against driving data (docs/17 §10.3)
-   and three more against the offline replay (§10.7).
+1. **The capture session is DONE (31.08, D-79) — what it left owed is small and named.** It settled
+   the blocker: accuracy around the circuit is measured, the `κ` over-read is confirmed at ~2× with
+   floor-truth arc length, and the failure is located (docs/17 §12). Still owed: the **`+60` / `−100` /
+   `+100` laps** of D-78's matrix (offset dependence is established in one direction only), and — the
+   highest-value cheap measurement — **an inspection of what is physically different at the four
+   probed spots** (stripe width, a mat join, the adjacent red carriageway in frame, local lighting).
+   Protocol amendments to carry forward: **push from outside the lane** (the shadow is worth a third
+   of the pairing failures) and **press ENTER at station 1 before pushing** (`station = 0` rows are
+   excluded from accuracy and carry no arc length).
 
-   **PREPARED — D-78, runbook in docs/17 §11.** Camera only, policy off, rectified. Floor: 4–8
-   numbered stations with tape-measured centreline arc-lengths + chalk guides at 0/±60/±100 mm (the
-   31.08 sweep's offsets, so results compare directly). One lap per offset:
-   `record_lane_dataset.py --true-ey <m> --station-arc 0,4.8,9.6,14.4 --rate 20 --no-frames
-   --rectify .../M6_results.json`, pressing ENTER at each station; then
-   `score_lane_capture.py <dir>`. Three points that are easy to get wrong: **20 Hz** (at the 5 Hz
-   default the relocation test degenerates to ">200 mm" and goes blind), **`--no-frames`** (the whole
-   score is in the CSV — 400 kB/lap instead of 600 MB, the 18.08 eMMC lesson), and **`--true-ey`
-   keeps unpaired/bad-width frames on purpose** (they *are* the failures; dropping them rebuilds the
-   bias that made the event frames useless). **Arc length comes from the floor, never odometry** —
-   D-73 turned loop closure off because odometry could not be trusted. Acceptance fixed in advance,
-   per station segment with the worst named and **no circuit mean**: `∫|κ|ds/(laps·2π)` in
-   **0.75–1.35**, else `κ` still over-reads and C-04 stays un-armable. **Nothing captured yet.**
-2. **Launch what has never been launched, and watch one number.** Five things are host-tested only:
-   `frame_capture_node`, `cage_reset_proxy_node`, `cage_logger_node platform:=physical`,
-   `rl_policy_node`'s `/cage_reset` re-seed, and the `perception_jump_tol_m` path. The repo's own
-   rule says pytest is not evidence a node runs. **First number to read: D-77's C-05 reject
-   count** — a latch ends a segment on hardware (D-74), so if 0.05 proves too tight in motion the
-   fallback is 0.06.
-3. **`lanecheck` at −60 and −100 mm**, not only at centre. The new span gate is *expected* to FAIL
-   there — that is the point; a PASS at centre certifies one pose only.
+2. **DONE 31.08 evening (D-80) — and it cost two launch defects.** All five were launched;
+   `value_type=list` in D-74's `blocking_rules` guard and a missing `setup_deploy_env.sh` both died on
+   first contact, neither visible to pytest. What is now owed instead: **commanded
+   `/cmd_vel.angular.z` against achieved yaw from `/odometry/filtered`, moving cycles only** — the
+   analysis that says whether the two departures are a gain problem (D-70: the chassis delivers about
+   half the commanded yaw) or a learned-trajectory one. It is immune to the hand repositioning, so the
+   bag already on disk is enough.
+3. **`lanecheck --true-ey` at −60 and −100 mm AND at more than one place on the track.** D-79 makes
+   the location half load-bearing: no dispersion gate can catch a bias (`parked_seg34_b` is 39.7 mm
+   wrong with sd 3.1 mm), and at the start of the straight the gate will keep passing whatever the
+   offset. A PASS there certifies one pose at one place.
 4. **Floor mark + tape** (docs/17 §9.4). Since D-73 turned loop closure off, odometry can no longer
    say whether a lap closed — this is the only way to settle it. Still outstanding.
 5. **Re-derive every physical analysis binned on `κ`.** D-75 established that `kappa_ahead`
-   over-reads by ~3×, so docs/17 §8.8's "tightest curve" attribution and the 31.08 "|ey| grows
+   over-reads by ~3× and D-79 measured ~2× independently of odometry (and 0.88 m⁻¹ on a *stationary*
+   car), so docs/17 §8.8's "tightest curve" attribution and the 31.08 "|ey| grows
    monotonically with curvature" (26 → 32 → 33 → 43 → 63 mm) are binned on a corrupted signal.
-   Flagged in place; cheap once 1 exists.
+   Flagged in place; **no longer blocked** — the capture of item 1 is done.
 
 Not blocking, but true: `verdict_phys` is still open (no scenario scored on hardware), and **this
 file is at ~500 lines against its own <250 budget** — the split into `CLAUDE_*.md` is overdue and

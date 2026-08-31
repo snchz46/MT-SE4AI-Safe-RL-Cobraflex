@@ -1,0 +1,12 @@
+{
+  "run_id": "lap_mon_20260831T141134Z",
+  "probed_utc": "2026-08-31T14:11:50Z",
+  "source": "ros2 param get, against the nodes running at start of run",
+  "csi_camera_node.capture_fps": "30",
+  "csi_camera_node.rate_hz": "20.0",
+  "zed_node.pos_tracking.area_memory": "False",
+  "zed_node.pos_tracking.reset_odom_with_loop_closure": "False",
+  "zed_node.general.pub_frame_rate": "5.0",
+  "zed_node.depth.depth_mode": "NEURAL_LIGHT",
+  "sllidar": "absent"
+}

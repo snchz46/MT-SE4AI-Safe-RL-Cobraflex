@@ -278,6 +278,20 @@ What is actually left, ordered by what unblocks the most:
    and the offset sweep repeated **around** the circuit rather than at one location. **Not another
    driving session:** eight single-component hypotheses died against driving data (docs/17 §10.3)
    and three more against the offline replay (§10.7).
+
+   **PREPARED — D-78, runbook in docs/17 §11.** Camera only, policy off, rectified. Floor: 4–8
+   numbered stations with tape-measured centreline arc-lengths + chalk guides at 0/±60/±100 mm (the
+   31.08 sweep's offsets, so results compare directly). One lap per offset:
+   `record_lane_dataset.py --true-ey <m> --station-arc 0,4.8,9.6,14.4 --rate 20 --no-frames
+   --rectify .../M6_results.json`, pressing ENTER at each station; then
+   `score_lane_capture.py <dir>`. Three points that are easy to get wrong: **20 Hz** (at the 5 Hz
+   default the relocation test degenerates to ">200 mm" and goes blind), **`--no-frames`** (the whole
+   score is in the CSV — 400 kB/lap instead of 600 MB, the 18.08 eMMC lesson), and **`--true-ey`
+   keeps unpaired/bad-width frames on purpose** (they *are* the failures; dropping them rebuilds the
+   bias that made the event frames useless). **Arc length comes from the floor, never odometry** —
+   D-73 turned loop closure off because odometry could not be trusted. Acceptance fixed in advance,
+   per station segment with the worst named and **no circuit mean**: `∫|κ|ds/(laps·2π)` in
+   **0.75–1.35**, else `κ` still over-reads and C-04 stays un-armable. **Nothing captured yet.**
 2. **Launch what has never been launched, and watch one number.** Five things are host-tested only:
    `frame_capture_node`, `cage_reset_proxy_node`, `cage_logger_node platform:=physical`,
    `rl_policy_node`'s `/cage_reset` re-seed, and the `perception_jump_tol_m` path. The repo's own
@@ -446,6 +460,7 @@ Full loop: `ros2 launch cobraflex lane_keeper_gazebo.launch.py`. The ROS2 nodes 
 | Physical deployment / Phase-5 bring-up (camera + driver + layering) | [docs/17_physical_deployment.md](docs/17_physical_deployment.md) |
 | Sim-to-real v2 runbook + deployment gate (D-72) | [docs/17 §7](docs/17_physical_deployment.md) + [tools/run_deploy_gate.sh](tools/run_deploy_gate.sh) |
 | Physical track sessions (what drove, what stopped it, what was refuted) | [docs/17 §8](docs/17_physical_deployment.md) (26.08) + [§10](docs/17_physical_deployment.md) (31.08) |
+| True-position capture runbook + scorer (D-78) | [docs/17 §11](docs/17_physical_deployment.md) + [tools/score_lane_capture.py](tools/score_lane_capture.py) |
 | Lane-estimator calibration — **read the §4 superseded banner first** | [M-7](experiments/calibration/M7_track_perception.md) + [31.08 sweep](experiments/physical/runs/lanesweep_20260831T094110Z/SWEEP_NOTE.md) |
 | Decisions (D-NN) | [docs/DECISIONS.md](docs/DECISIONS.md) |
 | What changed when | [docs/CHANGELOG.md](docs/CHANGELOG.md) |

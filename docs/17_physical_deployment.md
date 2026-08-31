@@ -1766,3 +1766,98 @@ bound on the physical term — the most permissive assumption. `labels.csv` has 
 since a C-05 latch ends a segment on hardware (D-74), **the next session should watch the reject count
 first**, with 0.06 as the fallback. **Nothing here has been launched** — host logic and tests only.
 
+---
+
+## 11. The true-position capture session (prepared 31.08.2026, D-78)
+
+**Goal, stated narrowly:** answer the one question 31.08 left open — **which line pair is the
+true one at each point of the track** — and score D-75's closed-loop curvature test. This is a
+**capture** session, not a driving one. The policy does not run. Nothing here can produce
+`verdict_phys`.
+
+### 11.1 Why this shape, and not another driving session
+
+Eleven single-component hypotheses have now been refuted against data: eight against driving logs
+(§10.3) and three against the offline replay (§10.7). What has never existed is a measurement of the
+estimator's **accuracy** around the circuit — every physical `ey` label so far was produced by the
+estimator being tested, and the one clean tape measurement (31.08) covered **one location**. A
+circuit average cannot substitute: the estimator paired 95.4 % of circuit frames while being unusable
+right-of-centre at that one spot.
+
+### 11.2 What to prepare on the floor
+
+1. **Numbered stations.** Mark 4–8 points around the circuit and tape-measure their arc-length along
+   the lane **centreline** from station 1 (e.g. `0, 4.8, 9.6, 14.4` on the 19.28 m circuit). These
+   are the ground truth for arc length, and they are what makes D-75's `∮κ·ds` computable **with no
+   odometry at all** — which matters, because D-73 turned loop closure off precisely because the
+   odometry could not be trusted.
+2. **Offset guide lines.** Chalk lines parallel to the lane centreline at **0, ±60, ±100 mm**. Same
+   offsets as the 31.08 sweep, so the results are directly comparable to `SWEEP_NOTE.md`. Push the
+   car with a fixed chassis reference mark tracking the guide line; the offset is then constant by
+   construction rather than by hand-eye.
+
+**Sign convention, as everywhere else:** `+` = the car is **LEFT** of the lane centreline.
+
+### 11.3 The runs
+
+Camera only — no deploy launch, no policy, no cage. **Rectified**, because that is the deployed
+configuration since 26.08 (§8.3) and because unrectified numbers are the ones M-7 §4 measured and
+31.08 superseded.
+
+```bash
+# one measurement lap per offset; ENTER as the car passes each station
+python3 tools/record_lane_dataset.py \
+    --out experiments/physical/datasets/truepos_<offset> \
+    --true-ey 0.060 --station-arc 0,4.8,9.6,14.4 \
+    --rate 20 --no-frames \
+    --rectify experiments/calibration/M6_results.json
+```
+
+* **`--rate 20`, not the 5 Hz default.** The relocation test compares consecutive frames; at 5 Hz a
+  dt of 200 ms makes the 1.0 m/s criterion mean "> 200 mm", which is blind to most of what §10.7
+  measured. `circuit_export` was 20 Hz and that is the rate the figures are calibrated on.
+* **`--no-frames`.** Every statistic comes from the CSV, so a lap costs ~400 kB instead of ~600 MB.
+  This is the 18.08 eMMC lesson applied: record the measurement, not the imagery. Take **one**
+  separate lap with frames at 5 Hz only if the appearance-gap work wants imagery.
+* **`--true-ey` switches the tool into measurement mode**, which keeps *every* frame — including
+  unpaired and bad-width ones. Those are the failures being counted; dropping them would rebuild the
+  selection bias that made the event frames unusable (§10.6).
+* **Heading fit.** The estimator's own defaults are `near_secant` / gain 1.0, which is the deployed
+  pair — nothing to pass. **Caution:** `deploy_cobraflex.launch.py` still declares
+  `heading_fit_mode` default `joint_pair_quadratic`, while every run that actually drove used
+  `near_secant` (§8.4: 14.45 m against 1.08 m). That launch default is misleading and should be
+  revisited separately; it does not affect this session, which does not use that launch.
+
+### 11.4 Scoring — and the acceptance criteria, fixed in advance
+
+```bash
+python3 tools/score_lane_capture.py experiments/physical/datasets/truepos_<offset>
+```
+
+Three blocks, and every statistic is reported **per station segment** with the **worst** segment
+named — never a circuit mean, for the reason in §11.1.
+
+| test | criterion | what a failure means |
+| --- | --- | --- |
+| **Accuracy** (D-76) | mean \|ey error\| and "right pair" share per segment | a segment where the right-pair share collapses is a **location**, not a global defect — that is the actionable output |
+| **Consistency** (D-77) | unphysical relocations, and whether they move **away** from the tape | still-high count ⇒ the *selection* is wrong, which D-77 declared but did not fix |
+| **Closed loop** (D-75) | `∫\|κ\|ds / (laps·2π)` within **0.75–1.35** | FAIL ⇒ `κ` still over-reads, D-75 stays blocked and **C-04 stays un-armable** |
+
+The closed-loop criterion is the one that unblocks something concrete: it is the precondition D-75
+named for ever revisiting `v_max_curve_mps`.
+
+### 11.5 What this session cannot do
+
+It cannot produce `verdict_phys`, re-score G4 or touch D-69 — the policy does not even run. It cannot
+settle whether a lap closes (that is §9.4's floor mark and tape, still outstanding). And it does not
+fix anything: it is the measurement that tells you **where** to fix, which is what every previous
+session has been guessing at.
+
+### 11.6 Provenance note, and a gap this closed
+
+`circuit_export/labels.csv` carries a `line_c0_m` column that **no tracked tool wrote** — the column
+D-77's entire offline replay depends on. It came from an untracked variant on another host. The
+replay is still trustworthy (it reproduces the recorded `ey` on 1450/1450 frames, which is strong
+internal validation), but it was **not reproducible from the repo**. `record_lane_dataset.py` now
+writes `line_c0_m`, `curvature_1pm`, `true_ey_m`, `station` and `s_m`, so the next capture is.
+

@@ -42,6 +42,7 @@ from __future__ import annotations
 import argparse
 import csv
 import math
+import select
 import sys
 import time
 from pathlib import Path
@@ -100,7 +101,37 @@ def main(argv=None) -> int:
                         "default: those frames have no trustworthy label, and a "
                         "training set is worth less with wrong labels than with "
                         "fewer. They are still counted in the summary.")
+    # --- true-position capture (D-78) -------------------------------------
+    # The accuracy question D-76 left open — WHICH line pair is the true one at
+    # each point of the track — cannot be answered by a label the estimator
+    # produced itself. These three arguments make the recording self-scoring:
+    # the operator declares the offset the car is being pushed at, and marks
+    # arc-length anchors as it passes numbered floor stations. Both are omitted
+    # by default, so the appearance-gap use of this tool is unchanged.
+    p.add_argument("--no-frames", action="store_true",
+                   help="write labels.csv only, no PNGs. THE RIGHT CHOICE FOR A "
+                        "MEASUREMENT LAP: every statistic score_lane_capture.py "
+                        "computes comes from the CSV, so 20 Hz costs ~400 kB per "
+                        "lap instead of ~600 MB — and the eMMC pressure that "
+                        "crashed the Jetson on 18.08 does not recur. Use frames "
+                        "only for the appearance-gap datasets, which need them.")
+    p.add_argument("--true-ey", type=float, default=None,
+                   help="TRUE lateral offset (m, + = car LEFT of centre) the car "
+                        "is being pushed at for this run, tape-measured. Recorded "
+                        "per frame as ground truth. Push a CONSTANT offset per run "
+                        "and repeat the lap at 0, +/-0.06, +/-0.10 m.")
+    p.add_argument("--station-arc", default="",
+                   help="comma-separated arc-lengths (m) of the numbered floor "
+                        "stations, in pass order, e.g. '0,4.8,9.6,14.4'. Press "
+                        "ENTER as the car's reference point passes each one; the "
+                        "CSV then carries a true arc-length per frame, which is "
+                        "what makes the closed-loop integral of D-75 computable "
+                        "without any odometry.")
+    p.add_argument("--perimeter", type=float, default=19.28,
+                   help="circuit perimeter (m) for the closed-loop check; "
+                        "19.28 measured on the physical track (docs/17 8)")
     a = p.parse_args(argv)
+    station_arc = [float(x) for x in a.station_arc.split(",") if x.strip()]
 
     import rclpy
     import cv2
@@ -117,8 +148,16 @@ def main(argv=None) -> int:
     fh = open(csv_path, "a", newline="")
     wr = csv.writer(fh)
     if new:
+        # line_c0_m: the ground-frame intercept of EVERY detected line, not just
+        # the selected pair. It is the input to the pair-selection decision, and
+        # recording it is what lets the pairing be replayed and scored offline on
+        # a host with no frames and no Jetson (D-77). It was absent from this
+        # tool while `circuit_export/labels.csv` carried it, so that column came
+        # from an untracked variant — the provenance gap this closes.
+        # curvature_1pm + s_m + true_ey_m: the D-75/D-76 acceptance tests.
         wr.writerow(["frame", "stamp_s", "ey_m", "epsi_rad", "lane_width_m",
-                     "paired", "n_lines", "confidence", "reason"])
+                     "paired", "n_lines", "confidence", "reason", "line_c0_m",
+                     "curvature_1pm", "true_ey_m", "station", "s_m"])
         fh.flush()
 
     rej_path = out / "rejects.csv"
@@ -160,6 +199,28 @@ def main(argv=None) -> int:
 
     counts = {(lo, hi, side): 0 for lo, hi in BANDS for side in ("L", "R")}
     n_saved = n_unpaired = n_badwidth = 0
+    station = 0
+    # A TRUE-POSITION run is a MEASUREMENT, not a training set, and the two want
+    # opposite things from the reject filters. The appearance-gap use drops
+    # unpaired and bad-width frames because a wrong label poisons training. An
+    # accuracy measurement needs exactly those frames: they ARE the pairing
+    # failures being quantified, and dropping them reproduces the selection bias
+    # that made the 31.08 event frames unusable (docs/17 10.6). So --true-ey
+    # forces the complete population through.
+    measuring = a.true_ey is not None
+    if measuring:
+        print(f"\nTRUE-POSITION RUN: true_ey = {a.true_ey*1000:+.1f} mm")
+        print("  every frame is kept, INCLUDING unpaired and bad-width ones —")
+        print("  they are the failures being measured. This dataset is evidence,")
+        print("  NOT a training set; do not feed it to the appearance-gap work.")
+        if not a.no_frames:
+            print("  NOTE: --no-frames is usually what you want here — the whole")
+            print("  score comes from the CSV, and 20 Hz with PNGs is ~600 MB/lap.")
+        if station_arc:
+            print(f"  {len(station_arc)} stations declared; press ENTER at each.")
+        else:
+            print("  no --station-arc given: arc length will be unavailable, so the")
+            print("  D-75 closed-loop integral cannot be scored from this run.")
     last_reject = None
     idx = len(list((out / "frames").glob("*.png")))
     period = 1.0 / max(0.1, a.rate)
@@ -173,6 +234,20 @@ def main(argv=None) -> int:
     try:
         while rclpy.ok() and time.time() < t_stop:
             rclpy.spin_once(node, timeout_sec=0.02)
+            # Station marking: ENTER on stdin advances the arc-length anchor.
+            # Non-blocking, so a run with no stations behaves exactly as before.
+            # The operator presses as the car's reference point passes each
+            # numbered floor mark; no odometry, no extra terminal, no hardware.
+            if station_arc and sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+                sys.stdin.readline()
+                if station < len(station_arc):
+                    station += 1
+                    print(f"  ** STATION {station}/{len(station_arc)} at "
+                          f"s = {station_arc[station-1]:.2f} m")
+                    if station == len(station_arc):
+                        print("     (last station — lap closed; Ctrl-C when done)")
+                else:
+                    print("  ** all stations already marked; press ignored")
             now = time.time()
             if now < t_next:
                 continue
@@ -197,7 +272,7 @@ def main(argv=None) -> int:
                 rwr.writerow([f"{stamp:.3f}", "unpaired", f"{e.ey:.5f}",
                               f"{e.epsi:.5f}", f"{e.lane_width:.5f}", e.n_lines,
                               f"{e.confidence:.3f}", e.reason]); rfh.flush()
-                if not a.save_unpaired:
+                if not (a.save_unpaired or measuring):
                     continue
             elif abs(e.lane_width - a.true_width) > a.width_tol:
                 # Confidently wrong, not merely uncertain: the pair is not the two
@@ -207,12 +282,19 @@ def main(argv=None) -> int:
                               f"{e.epsi:.5f}", f"{e.lane_width:.5f}", e.n_lines,
                               f"{e.confidence:.3f}", e.reason]); rfh.flush()
                 last_reject = (e.ey * 1000.0, e.lane_width * 1000.0, e.n_lines)
-                continue
+                if not measuring:
+                    continue
             name = f"{idx:06d}.png"
-            cv2.imwrite(str(out / "frames" / name), frame)
+            if not a.no_frames:
+                cv2.imwrite(str(out / "frames" / name), frame)
             wr.writerow([name, f"{stamp:.3f}", f"{e.ey:.5f}", f"{e.epsi:.5f}",
                          f"{e.lane_width:.5f}", int(paired), e.n_lines,
-                         f"{e.confidence:.3f}", e.reason])
+                         f"{e.confidence:.3f}", e.reason,
+                         ";".join(f"{c0:.5f}" for c0, _ in e.line_fits),
+                         f"{e.curvature:.5f}",
+                         "" if a.true_ey is None else f"{a.true_ey:.5f}",
+                         station,
+                         "" if not station else f"{station_arc[station-1]:.3f}"])
             fh.flush()
             idx += 1
             n_saved += 1

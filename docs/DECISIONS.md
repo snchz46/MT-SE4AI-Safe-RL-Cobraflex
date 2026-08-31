@@ -4154,3 +4154,76 @@ wrong estimate is self-consistent and therefore invisible.
 Cites D-43 (the estimator), D-48 (the reverted selection patch, now explained), D-69 (the verdict path
 left bit-identical), D-71/D-76 (the diagnosis this acts on), D-74 (why an added reject is expensive on
 hardware), D-75 (the `∮κ·ds` test that established the over-read).
+
+---
+
+### D-78 — The true-position capture is made executable and self-scoring, and the arc length comes from floor stations rather than from any odometry
+
+| Field | Value |
+| --- | --- |
+| Section | `tools/record_lane_dataset.py` (true-position mode); `tools/score_lane_capture.py` (new); `tools/tests/test_score_lane_capture.py` (new); `docs/17` §11 |
+| Status | ACCEPTED — tooling and protocol. **Nothing has been captured yet**; this is the preparation, and it runs on the car, not here. No `cage.yaml`, SR, cage rule, ODD parameter or verdict touched. |
+| Date | 31.08.2026 |
+
+**Context.** D-76 left *accuracy* owed and D-75 named a precondition — `∮κ·ds ≈ 2π` over a lap —
+before `v_max_curve_mps` may ever be revisited. Eleven single-component hypotheses have now been
+refuted against data (eight against driving logs, docs/17 §10.3; three against the offline replay,
+§10.7). What has never existed is a measurement of the estimator's accuracy **around** the circuit:
+every physical `ey` label so far was produced by the estimator under test, and the one clean tape
+measurement covered **one location** while the estimator paired 95.4 % of circuit frames overall.
+
+**Decision — four parts.**
+
+1. **Arc length comes from numbered floor stations, not from odometry.** The operator marks 4–8
+   points around the circuit with tape-measured centreline arc-lengths and presses ENTER as the car
+   passes each; the recorder writes `station` and `s_m`, and the scorer interpolates **linearly in
+   time between consecutive anchors and never past one**. This is deliberate: D-73 turned the ZED's
+   loop closure off *because* the odometry could not be trusted, so an odometry-derived arc length
+   would import the exact defect the test is meant to be independent of. It also makes D-75's
+   integral computable with no sensor beyond the camera.
+2. **True position is declared, not inferred.** `--true-ey` records the tape-measured offset the car
+   is being pushed at, with chalk guide lines at 0, ±60, ±100 mm — the 31.08 sweep's offsets, so the
+   results are directly comparable to `SWEEP_NOTE.md`.
+3. **`--true-ey` switches the recorder into MEASUREMENT mode, which keeps every frame** — including
+   the unpaired and bad-width ones the appearance-gap mode drops. Those frames *are* the pairing
+   failures being counted; discarding them would rebuild the selection bias that made the 31.08 event
+   frames unusable (§10.6). The two uses of one tool want opposite things from the same filter, and
+   the flag is what separates them.
+4. **`--no-frames`, and 20 Hz.** Every statistic the scorer computes comes from the CSV, so a
+   measurement lap costs ~400 kB instead of ~600 MB — the 18.08 eMMC lesson applied rather than
+   restated. And the rate must be **20 Hz, not the 5 Hz default**: the relocation criterion compares
+   consecutive frames, and at 200 ms of dt the 1.0 m/s threshold degenerates into "> 200 mm", blind to
+   most of what §10.7 measured. `circuit_export` was 20 Hz and the figures are calibrated there.
+
+**Acceptance criteria, fixed before the session rather than after it.** Per station segment, with the
+**worst** segment named and no circuit mean reported — the 31.08 sweep's stated limitation was "one
+location", and a global average is how that failure hid in the first place. `∫|κ|ds / (laps·2π)` must
+land in **0.75–1.35**; a FAIL means `κ` still over-reads, D-75 stays blocked and **C-04 stays
+un-armable**.
+
+**A provenance gap found and closed on the way.** `circuit_export/labels.csv` carries `line_c0_m` —
+the column D-77's entire offline replay rests on — and **no tracked tool wrote it**. It came from an
+untracked variant on another host. D-77's analysis stands (the replay reproduces the recorded `ey` on
+**1450/1450** frames, which is strong internal validation), but it was **not reproducible from the
+repo**, and that is a real defect in a thesis whose defining commitment is traceability.
+`record_lane_dataset.py` now writes `line_c0_m`, `curvature_1pm`, `true_ey_m`, `station` and `s_m`.
+
+**Consequences.**
+
+* The scorer degrades gracefully and says which column is missing, so an old capture still yields the
+  consistency block. Run against the tracked `circuit_export` it reproduces D-77's figures exactly —
+  1401 transitions, **42** unphysical relocations, worst 364.4 mm at 7.15 m/s apparent (32× the car's
+  top speed) — and that equality is pinned by a test.
+* Four host-side tests pin the two load-bearing behaviours: arc length is never extrapolated past an
+  anchor, a single station yields **no** arc length at all (rather than a confident number from
+  nothing), and an unpaired frame breaks the relocation chain instead of bridging it.
+* **Noted, not changed:** `deploy_cobraflex.launch.py` still declares `heading_fit_mode` default
+  `joint_pair_quadratic`, while every run that actually drove used `near_secant` (§8.4, 14.45 m
+  against 1.08 m). That default is misleading and wants a separate decision; it does not affect this
+  session, which uses no launch.
+* **Nothing has been captured or launched.** Host logic, CLI parsing and tests only.
+
+Cites D-43 (the estimator under test), D-71 (§3's method lesson — match the measurement to the
+quantity, which is the whole reason this session exists), D-73 (why arc length must not come from
+odometry), D-75 (the closed-loop precondition), D-76 (the accuracy question), D-77 (the replay this
+makes reproducible).

@@ -111,6 +111,87 @@ obvious narrowing livelocks.
 
 ---
 
+## [31.08.2026 · D-78] — The true-position capture becomes executable and self-scoring: arc length from floor stations instead of odometry, and a provenance gap closed on the way
+
+**Document(s) affected:** `docs/DECISIONS.md` (D-78 — new), `docs/17_physical_deployment.md` §11,
+`tools/record_lane_dataset.py`, `tools/score_lane_capture.py` (new),
+`tools/tests/test_score_lane_capture.py` (new), `CLAUDE.md`
+**Phase:** 5 (physical deployment)
+**Gate context:** after G4. Preparation only — **nothing captured, nothing launched.** No `cage.yaml`, SR, cage rule, ODD parameter or verdict touched.
+**Author:** Samuel Sanchez
+
+### Change
+
+Next-step 1 — the capture session with true position — is now a runbook plus two tools, not an
+intention.
+
+**`record_lane_dataset.py` gains a true-position mode.** `--true-ey` records the tape-measured offset
+the car is pushed at; `--station-arc` takes the tape-measured centreline arc-lengths of numbered floor
+stations, and ENTER on stdin advances the anchor as the car passes each. New CSV columns:
+`line_c0_m`, `curvature_1pm`, `true_ey_m`, `station`, `s_m`. Two behaviours matter as much as the
+columns:
+
+* **`--true-ey` switches the tool into MEASUREMENT mode, which keeps every frame** — including the
+  unpaired and bad-width ones the appearance-gap mode deliberately drops. Those frames *are* the
+  pairing failures being counted; dropping them rebuilds the selection bias that made the 31.08 event
+  frames unusable (docs/17 §10.6). One tool, two uses, opposite demands on the same filter.
+* **`--no-frames`, and 20 Hz.** Every statistic comes from the CSV, so a measurement lap costs
+  ~400 kB instead of ~600 MB — the 18.08 eMMC lesson applied rather than restated. The rate must be
+  **20 Hz, not the 5 Hz default**: the relocation criterion compares consecutive frames, and at 200 ms
+  of dt the 1.0 m/s threshold degenerates into "> 200 mm", blind to most of what §10.7 measured.
+
+**`tools/score_lane_capture.py` (new)** scores a capture in three blocks — accuracy vs the tape
+(D-76), unphysical relocations and whether they move *away* from truth (D-77), and D-75's closed-loop
+`∮κ·ds` — with **acceptance criteria fixed in advance** and every statistic reported **per station
+segment, worst segment named, no circuit mean**. That last rule is not stylistic: the 31.08 sweep's
+own stated limitation was "one location", and a circuit average is exactly how a local failure hid
+while the estimator paired 95.4 % of frames overall.
+
+**Arc length comes from floor stations, never from odometry.** D-73 turned the ZED's loop closure off
+*because* the odometry could not be trusted, so deriving arc length from it would import the very
+defect the test must be independent of. The scorer interpolates linearly in time **between**
+consecutive anchors and **never past one**.
+
+### Rationale
+
+Eleven single-component hypotheses have now been refuted against data — eight against driving logs
+(§10.3), three against the offline replay (§10.7). What has never existed is a measurement of the
+estimator's accuracy **around** the circuit: every physical `ey` label so far was produced by the
+estimator under test, and the one clean tape measurement covered one location. D-75 also named
+`∮κ·ds ≈ 2π` as the precondition before `v_max_curve_mps` may ever be revisited, and that integral is
+computable from floor stations with no sensor beyond the camera.
+
+### Impact
+
+**A provenance gap was found and closed.** `circuit_export/labels.csv` carries `line_c0_m` — the
+column D-77's entire offline replay rests on — and **no tracked tool wrote it**; it came from an
+untracked variant on another host. D-77's analysis stands (the replay reproduces the recorded `ey` on
+**1450/1450** frames, strong internal validation), but it was **not reproducible from the repo**,
+which is a real defect in a thesis whose defining commitment is traceability. The recorder now writes
+it.
+
+**Noted, not changed:** `deploy_cobraflex.launch.py` still declares `heading_fit_mode` default
+`joint_pair_quadratic` while every run that actually drove used `near_secant` (§8.4: 14.45 m against
+1.08 m). That default is misleading and wants its own decision; it does not affect this session, which
+uses no launch.
+
+No hazard, SR, cage rule, scenario, metric or verdict added or re-valued. `verdict_phys` stays open —
+this session cannot produce it, the policy does not run. It also does not fix anything: it is the
+measurement that says **where** to fix, which is what every previous session was guessing at.
+
+### Verification
+
+`pytest` → **818 passed, 2 skipped** (up from 814: four new tests pin that arc length is never
+extrapolated past an anchor, that a single station yields **no** arc length rather than a confident
+number from nothing, that an unpaired frame breaks the relocation chain instead of bridging it, and
+that the detector reproduces D-77's figures on the tracked `circuit_export` — 1401 transitions, 42
+relocations). `python3 tools/check_traceability.py` → **All checks PASSED, 0 warnings.** The scorer was
+run end-to-end against `circuit_export`, degraded correctly on the three missing columns, and returned
+42 relocations / worst 364.4 mm at 7.15 m/s apparent — matching the independent D-77 replay. Both CLIs
+parse. **Nothing was run on the car.**
+
+---
+
 ## [31.08.2026 · D-77] — The estimator is widened where it could be: SR-014's inter-frame gate was nine times the physical motion, and a tracked CSV column turned out to be a full-circuit test bench
 
 **Document(s) affected:** `docs/DECISIONS.md` (D-77 — new), `docs/17_physical_deployment.md` §10.7,

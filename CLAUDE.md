@@ -263,67 +263,39 @@ script reports orphans on either side.
 
 ### Next steps (as of 31.08.2026 — Phase 5, posterior evidence; none of this re-scores a gate)
 
-Ordered by what unblocks the most. **1 is the only one that changes the diagnosis; 2–4 are
-cheap and were already prescribed; 5–6 were decisions and are now TAKEN (D-75, D-76) — both
-resolve to "not yet, and here is the precondition", and that precondition is 1.**
+**Decided today — cite, don't re-litigate:** **D-75** (C-04 stays un-armable; `cage.yaml`
+untouched), **D-76** (widen the estimator *before* narrowing the policy; the policy is the
+documented fallback, as an argued ODD restriction), **D-77** (SR-014's inter-frame gate tightened
+to 0.05 m on the physical path only; sim keeps 0.10 so the D-69 path is bit-identical). Reasoning,
+measurements and limits are in `docs/DECISIONS.md`; docs/17 §10 is the narrative.
 
-1. **A CAPTURE session, not a driving one — the blocker.** A full-circuit recording with
-   **true position** (the M-7 §3 method), to see which line pair the estimator picks at each
-   point of the track. Eight single-component hypotheses have already died against driving
-   data (docs/17 §10.3), and event frames structurally cannot answer it: they are failure
-   *neighbourhoods* whose median lane width reads 193 mm against the same estimator's
-   252.9 mm over a circuit. **Do not spend another session guessing.** It now has two
-   **acceptance tests** rather than a hope (D-75/D-76): the closed-loop `∮κ·ds ≈ 2π` per lap,
-   and the offset sweep repeated at points **around** the circuit instead of at one location.
-   D-75 is blocked on it; D-76's *consistency* half was unblocked offline by D-77, so what this
-   session still owes is **accuracy** — which line pair is the true one at each point of the track.
-2. **Re-run `lanecheck` at −60 and −100 mm**, not only at centre. The new span gate is
-   *expected* to FAIL there — that is the point; a PASS at centre certifies one pose only.
-3. **Floor mark + tape** (docs/17 §9.4). Since D-73 turned loop closure off, odometry can no
-   longer say whether a lap closed — this is the only way to settle it. Still outstanding.
-4. **Launch the three nodes touched on the compute host** (`frame_capture_node`,
-   `rl_policy_node`, `preflight_deploy.py lanecheck`). Logic and host tests only —
-   runtime-unverified, and the repo's own rule says that is not evidence they work.
-5. **C-04 — DECIDED, D-75: stays un-armable, `cage.yaml` untouched.** The ceiling is
-   `max(0.25, 0.5 − 0.3|κ|)`, so 0.25 is a floor no curvature can lower; measured over 2484
-   moving cycles the car peaks at **0.228 m/s** and **zero** cycles reach 0.25. Lowering the
-   threshold would arm the rule on **phantom curvature** (see 6). Re-arming is blocked on 1,
-   and any change then needs the full `[provisional]` workflow — bump + a campaign that does
-   **not** run on this host, and that would make the deployed cage differ from D-69's.
-6. **The envelope mismatch — DECIDED as an ORDERING, D-76: widen the estimator before
-   narrowing the policy.** The mechanism is now measured: off-centre, the estimator misreads
-   offset, heading **and curvature** at once, reporting none of it invalid (H-12). Curvature is
-   the new one — `∮κ·ds` over a closed circuit over-reads by **~3×** (lap02 3.04, lap04 2.92),
-   and the share of cycles reading `|κ| > ODD-3.KAPPA_MAX` climbs 8.4 % → 53.9 % with offset.
-   The policy does **not** consume the estimator (CNN reads the image, the estimator feeds the
-   **cage**), so this is not a loop through the policy: the stops are produced by the
-   *measurement*, in a region the policy legitimately visits. Narrowing the policy stays the
-   **documented fallback** if the estimator cannot be made reliable — as an ODD restriction
-   argued as such, never a silent tuning. **Caveat:** `|ey|` and true curvature are correlated
-   by driving, so only the closed-loop integral is confound-free.
+What is actually left, ordered by what unblocks the most:
 
-   **Fallout:** any physical analysis binned on `κ` is binned on a corrupted signal — docs/17
-   §8.8's "tightest curve" and the 31.08 "|ey| grows with curvature" both need re-deriving.
+1. **A CAPTURE session with TRUE POSITION — still the blocker, now narrower.** D-77 unblocked the
+   *consistency* half offline (`labels.csv`'s `line_c0_m` replays the pairing exactly, 1450/1450),
+   so what this session still owes is **accuracy**: which line pair is the true one at each point
+   of the track. Two acceptance tests already exist — the closed-loop `∮κ·ds ≈ 2π` per lap (D-75),
+   and the offset sweep repeated **around** the circuit rather than at one location. **Not another
+   driving session:** eight single-component hypotheses died against driving data (docs/17 §10.3)
+   and three more against the offline replay (§10.7).
+2. **Launch what has never been launched, and watch one number.** Five things are host-tested only:
+   `frame_capture_node`, `cage_reset_proxy_node`, `cage_logger_node platform:=physical`,
+   `rl_policy_node`'s `/cage_reset` re-seed, and the `perception_jump_tol_m` path. The repo's own
+   rule says pytest is not evidence a node runs. **First number to read: D-77's C-05 reject
+   count** — a latch ends a segment on hardware (D-74), so if 0.05 proves too tight in motion the
+   fallback is 0.06.
+3. **`lanecheck` at −60 and −100 mm**, not only at centre. The new span gate is *expected* to FAIL
+   there — that is the point; a PASS at centre certifies one pose only.
+4. **Floor mark + tape** (docs/17 §9.4). Since D-73 turned loop closure off, odometry can no longer
+   say whether a lap closed — this is the only way to settle it. Still outstanding.
+5. **Re-derive every physical analysis binned on `κ`.** D-75 established that `kappa_ahead`
+   over-reads by ~3×, so docs/17 §8.8's "tightest curve" attribution and the 31.08 "|ey| grows
+   monotonically with curvature" (26 → 32 → 33 → 43 → 63 mm) are binned on a corrupted signal.
+   Flagged in place; cheap once 1 exists.
 
-   **PARTIALLY DONE — D-77 (docs/17 §10.7).** D-76's "blocked on the capture session" was half
-   wrong: `datasets/circuit_export/labels.csv` is **tracked** and its `line_c0_m` column is the
-   pair-selection input, so a replay reproduces the recorded `ey` on **1450/1450** frames — a
-   full-circuit test bench on this host, no frames, no Jetson. Only *accuracy* still needs true
-   position. On it, three fixes were **refuted** (continuity selection — 90 % of relocations have
-   only ONE candidate pair, so nothing to choose; tightening `lane_width_tol_m` — 41→483 frames
-   left with no pair; tightening SR-014's width alone — forbidden, re-creates the E2 dead zone),
-   and the real defect found: **SR-014's gate is mis-scaled, not missing.** `allowed_dey =
-   |v|·dt + jump_tol_m` is 11 mm of motion + **100 mm** of tolerance, so it admits a 111 mm
-   relocation. At **0.05** it catches **30 of 42** relocations (vs 10) for 0.57 % of good frames
-   suppressed. `perception_jump_tol_m` is now a node parameter, **physical default 0.05, sim keeps
-   0.10** so the D-69 path is bit-identical. **It does NOT make the estimator read better
-   off-centre** — it turns a silent wrong answer into a *declared unavailability* (suppresses
-   `/state_obs`, does **not** raise `/emergency`). Watch the **reject count** next session (a C-05
-   latch ends a segment, D-74); fallback 0.06. **Not launched.**
-
-Not blocking, but true: `verdict_phys` is still open (no scenario scored on hardware), and
-**this file is at ~490 lines against its own <250 budget** — the split into `CLAUDE_*.md` is
-overdue and is an authoring decision.
+Not blocking, but true: `verdict_phys` is still open (no scenario scored on hardware), and **this
+file is at ~500 lines against its own <250 budget** — the split into `CLAUDE_*.md` is overdue and
+is an authoring decision.
 
 ### Earlier phase evidence
 

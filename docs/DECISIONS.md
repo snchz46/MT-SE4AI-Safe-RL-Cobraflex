@@ -4365,8 +4365,22 @@ fails**. D-76's ordering is no longer an argument from architecture — it has a
 over 5694 cycles, peaking at **0.29–0.32** in the departures, i.e. *less* than it uses elsewhere. It
 is not saturating and losing; it is not asking. At `steering_to_yaw_rate_gain` 1.615 that is ≈ 0.48
 rad/s commanded against ≈ 0.22 rad/s needed in the tightest curve at 0.22 m/s, so the open question
-is whether the chassis delivers the command — D-70 measured it at about half. **Owed:** commanded
-`/cmd_vel.angular.z` against achieved yaw from `/odometry/filtered`, moving cycles only.
+is whether the chassis delivers the command — D-70 measured it at about half. **Measured the same
+night** (§13.4), off `lap_bare`'s own bag, 5327 paired cycles with `vel_x` > 0.05 m/s so the hand
+repositioning cannot enter it: **the achieved yaw rate plateaus at ≈ 0.10 rad/s and does not rise with
+the command** (ratio 0.85 at |cmd| < 0.1 rad/s, collapsing to 0.18 above 0.5; overall gain 0.226,
+0.191 in hard turns). The near-unity band at small commands is the measurement validating itself — a
+sensor under-reading yaw would be low everywhere. At 0.22 m/s a 0.10 rad/s ceiling is a **minimum
+radius of 2.2 m** against ODD-3's `R_min` ≈ 1.0 m on the driven lane: **the platform cannot negotiate
+the tightest curve of its own ODD at its deployed speed, by about a factor of two.** That is the whole
+explanation of the two departures — the car runs wide because it cannot turn — and neither the policy
+nor the estimator appears in it. **The rule specified for exactly this is C-04**, which D-75 found
+un-armable (`v_max_curve_mps` 0.25 > deployed 0.22): the one failure mode reproducibly observed on
+hardware is the one C-04 exists to prevent and currently cannot. D-75 is unchanged — re-arming stays
+blocked on a trustworthy `κ` — but its dead zone now has a demonstrated cost. **Still owed:** *why*
+the plateau sits there (driver clamp/scale, mechanical throw, or slip), and the discriminator is a
+**static bench measurement** — command a large `angular.z` with the car off the ground and read the
+front-wheel angle with a protractor.
 
 **Decision — `control_emergency_topic`.** `vehicle_control_node` zeroes `/cmd_vel` on a latched
 `/emergency` in **both** modes by design (docs/17 §10.4) and did not expose `emergency_topic`, so the

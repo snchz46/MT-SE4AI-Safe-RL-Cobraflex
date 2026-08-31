@@ -164,6 +164,15 @@ experiments/calibration/M6_camera_hfov/**/view_*_corners.png
 # derived measurements live in experiments/calibration/M7_track_perception.md.
 experiments/physical/bags/
 
+# The per-run bags run_physical_lap.sh writes beside each run directory. The rules
+# above miss them: a ROS 2 bag is a *_bag/ DIRECTORY of .db3, not a *.bag file, and
+# it lives under runs/ rather than bags/. 181 MB had accumulated by 31.08.2026,
+# unignored — the same gap as runs/*/frames/, found the same day. What travels
+# instead is tools/export_bag_topics.py's CSV, which is tracked: evidence does not
+# flow between this project's three machines by git, so the reduction happens on
+# the machine that holds the bag (docs/17 §13.4).
+experiments/physical/runs/*_bag/
+
 # Lane-dataset frames: PNG imagery for closing the appearance gap, ~500 MB per
 # few sessions. The labels beside them (labels.csv / rejects.csv) ARE tracked —
 # they carry every measurement M-7 §3b cites.

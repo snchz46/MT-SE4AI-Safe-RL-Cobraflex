@@ -2086,3 +2086,51 @@ evidence**, which is not acceptable in a repo whose defining commitment is trace
 defaults to `/emergency` — pointed at a topic nobody publishes, it detaches that one link and nothing
 else. It carries its own warning in the launch description: *DIAGNOSTIC ONLY — with it set, nothing in
 software stops the car.*
+
+### 13.4 The two departures are a kinematic limit: the car cannot turn tightly enough at the deployed speed
+
+The analysis §13.2 left owed, run the same night off `lap_bare`'s own bag (exported by
+[`tools/export_bag_topics.py`](../tools/export_bag_topics.py) so it survives leaving the car):
+commanded `/cmd_vel.angular.z` against achieved yaw rate from `/odometry/filtered`, **5327 paired
+cycles with `vel_x` > 0.05 m/s**, so the operator's hand repositioning cannot enter it.
+
+| \|yaw commanded\| (rad/s) | n | \|yaw achieved\|, median | ratio |
+| --- | --- | --- | --- |
+| 0.0–0.1 | 1564 | 0.044 | **0.85** |
+| 0.1–0.2 | 1525 | 0.068 | 0.46 |
+| 0.2–0.3 | 1117 | 0.086 | 0.35 |
+| 0.3–0.4 | 743 | 0.091 | 0.27 |
+| 0.4–0.5 | 278 | 0.093 | 0.21 |
+| 0.5–0.9 | 100 | 0.098 | **0.18** |
+
+**The achieved yaw rate plateaus at ≈ 0.10 rad/s and does not rise with the command.** Overall
+least-squares gain through the origin 0.226; restricted to hard turns (|cmd| > 0.3 rad/s), **0.191**.
+
+**The plateau is the plant, not the sensor.** If the odometry under-read yaw the ratio would be low
+everywhere; instead it is **0.85 at small commands** and collapses only as the command grows. That
+near-unity band is the measurement validating itself.
+
+The consequence is arithmetic. At the run's mean moving speed of 0.168 m/s, a 0.10 rad/s ceiling is a
+**minimum radius of 1.68 m**; at the deployed 0.22 m/s it is **2.2 m**. ODD-3 puts the circuit's
+tightest curve at `R_min` ≈ 0.876 m on the centreline and ≈ 1.0 m on the driven lane. **The platform
+cannot negotiate the tightest curve of its own ODD at its deployed speed, by a factor of about two.**
+
+That is the whole explanation of the two departures, and neither the policy nor the estimator is in
+it: the car runs wide because it cannot turn, which is also why it leaves to the outside every time,
+and why §13.2's steering statistic looked odd — a policy asking 0.29–0.32 was never going to be the
+binding term when 0.48 rad/s commanded yields 0.09 achieved.
+
+**And the rule that exists for exactly this is C-04**, which D-75 established **can never fire**
+because `v_max_curve_mps` 0.25 exceeds the deployed 0.22 m/s. The one failure mode reproducibly
+observed on hardware is the one C-04 was specified to prevent and is currently un-armable. D-75's
+decision is unchanged — re-arming it is still blocked on a trustworthy `κ`, and D-79 measured that
+`κ` over-reads by ~2× — but the dead zone now has a *demonstrated* cost rather than a hypothetical one.
+
+**What this does not yet identify** is *why* the plateau sits there. A 0.10 rad/s ceiling at 0.168 m/s
+implies an effective steering angle of roughly 9–11° on a chassis whose geometry should give
+appreciably more. Three candidates, none yet measured: a clamp or scale error in
+`cobraflex_ros_driver`'s `/cmd_vel` → JSON conversion, a mechanical steering throw smaller than the
+URDF's, or understeer/slip on this surface. **The cheap discriminator is static**: command a large
+`angular.z` with the car held off the ground and measure the front-wheel angle with a protractor. That
+is a bench measurement, and it is now the highest-value item in Phase 5 — ahead of any further
+driving, because until it is answered every lap attempt runs into the same wall in the same curve.

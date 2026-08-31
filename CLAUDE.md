@@ -339,9 +339,16 @@ What is actually left, ordered by what unblocks the most:
    `value_type=list` in D-74's `blocking_rules` guard and a missing `setup_deploy_env.sh` both died on
    first contact, neither visible to pytest. What is now owed instead: **commanded
    `/cmd_vel.angular.z` against achieved yaw from `/odometry/filtered`, moving cycles only** — the
-   analysis that says whether the two departures are a gain problem (D-70: the chassis delivers about
-   half the commanded yaw) or a learned-trajectory one. It is immune to the hand repositioning, so the
-   bag already on disk is enough.
+   analysis that says whether the two departures are a gain problem or a learned-trajectory one —
+   **DONE the same night (§13.4): neither.** The achieved yaw **plateaus at ≈ 0.10 rad/s** regardless
+   of command (ratio 0.85 below 0.1 rad/s, 0.18 above 0.5; 5327 moving cycles), so at 0.22 m/s the
+   minimum radius is **2.2 m** against ODD-3's `R_min` ≈ 1.0 m on the driven lane — **the platform
+   cannot negotiate the tightest curve of its own ODD at its deployed speed**, and that is the whole
+   explanation of the two departures. C-04 is the rule specified for exactly this and D-75 found it
+   un-armable. **Now owed: a static bench measurement of the front-wheel angle** (command a large
+   `angular.z` with the car off the ground, read it with a protractor) to say whether the ceiling is
+   a driver clamp/scale error, a mechanical throw smaller than the URDF's, or slip. That is the
+   highest-value item in Phase 5 — ahead of any further driving.
 3. **`lanecheck --true-ey` at −60 and −100 mm AND at more than one place on the track.** D-79 makes
    the location half load-bearing: no dispersion gate can catch a bias (`parked_seg34_b` is 39.7 mm
    wrong with sd 3.1 mm), and at the start of the straight the gate will keep passing whatever the

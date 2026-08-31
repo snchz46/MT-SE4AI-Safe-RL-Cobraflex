@@ -139,7 +139,10 @@ def main(args=None) -> None:
             self.declare_parameter("pre_seconds", 3.0)
             self.declare_parameter("post_seconds", 2.0)
             self.declare_parameter("max_events", 8)
-            self.declare_parameter("max_frames", 4000)
+            # 600 frames ~ 185 MB at the measured 301 KB per 640x360 PNG. The
+            # old 4000 was ~1.2 GB per run; see frame_capture.py's module
+            # docstring for why that assumption broke on 31.08.2026.
+            self.declare_parameter("max_frames", 600)
             self.declare_parameter("image_format", "png")
 
             output_dir = (
@@ -250,6 +253,19 @@ def main(args=None) -> None:
                 "frame_capture closed: %d events, %d frames written."
                 % (len(self._capture.events), self._writer.written)
             )
+            # A saturated budget is a property of the EVIDENCE, not just of the
+            # node, so it is said out loud rather than left to be inferred from
+            # a frame count: every driving run of 31.08.2026 hit the 8-event cap,
+            # which means the triggers after the last one went unrecorded and any
+            # statistic taken over these frames is truncated as well as biased.
+            if self._capture.budget_exhausted:
+                self.get_logger().warning(
+                    "frame_capture BUDGET SATURATED (%d/%d events, %d/%d frames): "
+                    "later events were NOT captured — treat these frames as a "
+                    "truncated sample of the run, not as its failure population."
+                    % (len(self._capture.events), self._capture.max_events,
+                       self._capture.frames_written, self._capture.max_frames)
+                )
             return super().destroy_node()
 
     rclpy.init(args=args)

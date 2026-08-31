@@ -1379,6 +1379,12 @@ circuit and a stopped car.
 
 ## 9. Next track session (prepared 27.08.2026): one complete monitoring lap
 
+> **THAT SESSION HAS HAPPENED — it ran on 31.08.2026 and §10 is its record.** Read §9
+> as the preparation it was, not as pending work. Its goal was **not** achieved (best
+> 14.56 m, against the 18.05 m of 26.08), and §9.6's falsification criteria are scored
+> in §10.1. The three nodes prepared here were all launched for the first time; two of
+> them needed fixes on the spot (§10.4).
+
 **Goal, stated narrowly:** one uninterrupted circuit of the physical track in
 `mode:=monitoring`, with enough evidence recorded that whatever happens can be
 explained afterwards *from the run itself*. Not a scored run — see §9.7 for what
@@ -1587,3 +1593,176 @@ possibly with an out-of-cage reset proxy. **None of that can produce
 of record. It is Phase-5 posterior evidence, like everything else since 08.2026.
 What it *can* produce, and what nothing before it has, is a physical run that
 explains itself.
+
+---
+
+## 10. The 2026-08-31 track session: the goal is not met, and eight hypotheses die
+
+Second driving session, first use of the §9 instrumentation. **Goal — one complete
+monitoring lap — NOT achieved.** Full record:
+`experiments/physical/runs/SESSION_20260831.md`; CHANGELOG `[31.08.2026]`.
+
+### 10.1 The runs
+
+| run | start | distance | \|ey\| med/max moving | C-02 moving | resets | ended by |
+| --- | --- | --- | --- | --- | --- | --- |
+| lap01 | mark | 3.11 m | 8.8 / 58.8 mm | 1.4 % | 0 (observe) | one-cycle −37° spike latched C-05 |
+| lap02 | mid-curve | **14.56 m** | 42.0 / 150.3 | 6.8 % | 4 | left the lane, final curve |
+| lap03 | mark | 5.47 m | 29.4 / 181.9 | 11.6 % | 6, exhausted | budget gone |
+| lap04 | mark | 10.92 m | **0.8** / 119.7 | — | 6 of 30, **deadlock** | proxy deadlock, 250 s stopped |
+
+lap01's excellent numbers are the **straight only** (`|kappa|` p90 0.21 against 1.81 and
+1.18) and are not a comparable baseline. Against §9.6: the lap was not completed, and the
+run *did* explain itself — which was the second half of the goal and is the half that held.
+
+### 10.2 The offset sweep — M-7 §4 does not survive rectification
+
+The clean test M-7 §3b asked for, run at last: car on the ground, hands off, tape-measured,
+**rectified**, `near_secant`/1.0, `policy:=false`, 10 s per point, nine points.
+
+* **Scale 1.058 (car left, r² 0.999) / 0.991 (car right, r² 0.977)** against M-6's propagated
+  0.72 and M-7's measured 0.68–0.83. The ≈ −10 mm intercept also disappears. **C-01 fires at
+  a true 151/158 mm with ~100 mm of margin**, not at 207–241 mm with 14–48 mm. M-7 §4 now
+  carries a superseded banner: it characterised the **raw** path, and its own prescription —
+  *undistort, do not just re-parameterise* — is what this measurement vindicates.
+* **The ±55 mm pairing collapse does not reproduce**: 0/440 invalid cycles out to ±100 mm.
+* **A different defect, in the same band.** Right of centre the estimator is unstable:
+  **43.3 mm of swing on a stationary car** at −60 mm, sd 6.2–8.4 mm against 0.5–0.9 mm
+  mirrored, the point ratio swinging 0.963–1.143, reproducible across two consecutive runs
+  with the car untouched — the signature of a pairing flipping between candidate line pairs.
+  `/perception_invalid` stayed False for **all 705 cycles**: the estimator does not fail
+  here, it is **confidently wrong** (H-12 / D-43). That measurement **predicted lap01's stop
+  before it happened** — −58.8 mm was the run's max |ey|, and the spike fired there.
+* **Limit:** one location (start of the straight), where the scene is asymmetric. Whether the
+  right-side instability generalises around the circuit is **not** established.
+
+`experiments/physical/runs/lanesweep_20260831T094110Z/SWEEP_NOTE.md`.
+
+### 10.3 Eight hypotheses, eight refuted by measurement
+
+Starting position (lap03 made 5.47 m from the mark); heading error scaling with curvature
+(r = 0.045 over 1208 moving cycles); a degenerate frame stack after reset (0.0 % vs 21.8 %
+between runs); `white_sat_max` mis-set for the hall (M-7's own sweep: 30 wins every column);
+a heading-rate plausibility gate (catches 12 of 102 C-02 — **99 % of C-02 cycles are
+sustained**, in episodes of ≥ 2, one of them 45 cycles); a tighter `lane_width_tol_m` (width
+error 59.5 vs 56.0 mm — does not separate); a narrowed reset-proxy guard (bag replay: 6 → 30
+resets, deadlock becomes **livelock**); a better `heading_fit_mode`/gain (M-7 §4b:
+`near_secant`/1.0 is already the best of four).
+
+**The diagnosis that survives.** M-7 measured 0.8 % of frames past C-02 in this exact
+configuration, on a circuit recording of a car **pushed by hand** near the centre. Driving
+itself, the same configuration gives **6.8–11.6 %**. The policy runs wide in curves; the
+estimator is trustworthy near the centre. **The estimator's reliable envelope and the
+policy's driving envelope do not overlap well enough.** Neither component is individually
+defective — which is why eight single-component hypotheses all failed.
+
+### 10.4 Two more things settled, and two fixed on the spot
+
+* **C-04's dead zone is TOTAL, and measured (D-75).** The ceiling is
+  `max(0.25, 0.5 − 0.3·|κ|)`, so **0.25 m/s is a floor no curvature can push it below**, against a
+  deployed cap of 0.22. Over the day's **2484 moving cycles** the speed was median 0.166, p99 0.209,
+  **max 0.228 m/s**, and cycles reaching 0.25: **zero**. C-04 fired 0/1890 in the D-69 campaign and
+  has now never arbitrated on hardware either. **It stays that way on purpose** — see §10.4b for why
+  its input cannot yet be trusted to arm it.
+* **§10.4b — `kappa_ahead` over-reads by ~3×, which is why C-04 is not simply re-tuned (D-75/D-76).**
+  On a closed circuit `∮κ·ds = 2π` per lap. Integrating the logged `|κ|` (an *upper* bound — `|κ|`
+  cannot cancel) over the logged distance gives ratios of **3.04** (lap02, 14.46 m) and **2.92**
+  (lap04, 10.64 m) against geometry; lap03 is 1.05 and lap01, almost all straight, 0.33. Pooled `|κ|`
+  reads median 0.89, p90 1.52, **max 2.88 m⁻¹** against `ODD-3.KAPPA_MAX` 1.14 (centre) / 1.00
+  (driven) and the ≈ 0.75 of §8.8 — and the circuit was built to the complex_b perimeter (19.28 m vs
+  19.22 m), so geometry does not explain it. The over-read's tail grows with offset: the share of
+  cycles reading `|κ| > 1.14` goes **8.4 % → 28.0 % → 38.9 % → 38.0 % → 53.9 %** across `|ey|` bins of
+  0–20/20–40/40–60/60–80/80–120 mm. **Consequence for this document:** any physical analysis binned on
+  `κ` is binned on a corrupted signal — including §8.8's "tightest curve" attribution and the session
+  note's "|ey| grows monotonically with curvature" (26 → 32 → 33 → 43 → 63 mm). Both should be
+  re-derived after the capture session of §10.6.
+* **`monitoring` does not mean the cage cannot stop the car.** `vehicle_control_node` forces
+  `/cmd_vel.linear.x = 0` on a latched `/emergency` in **both** modes, by design. A lap
+  "without stops" would require disabling that fail-safe — which would void the lap, since
+  the cage is what the thesis evaluates. §9.6's success criterion was, in that sense,
+  partly ill-posed.
+* `cage_logger_node` **died in its constructor** on `platform:=physical`, the first time the
+  §9.1 provenance block was ever launched: `ros2 launch` types numeric-looking parameters,
+  and `.string_value` on a DOUBLE returns `""`, so the numeric contract fields would have
+  vanished from `metadata.json` **in silence**. Fixed, with a regression test verified to
+  fail against the previous HEAD.
+* `cage_reset_proxy_node` gained `blocking_rules` as a parameter, **default unchanged**,
+  documenting both the measured deadlock and the fact that the obvious narrowing livelocks.
+
+### 10.5 What was closed afterwards on the compute host
+
+Four items the Jetson could not do, all in CHANGELOG `[31.08.2026 · later]`, none touching
+`cage.yaml`: 962 MB of event PNGs untracked (`.gitignore` covered
+`datasets/*/frames/` but not `runs/*/frames/`); `frame_capture`'s budget repriced from
+4000 frames (~1.2 GB at the measured 301 KB/PNG) to 600 (~185 MB), with budget saturation
+now reported at shutdown — **all four driving runs saturated the 8-event cap**, which makes
+the frames a *truncated* sample as well as a biased one; `preflight_deploy.py lanecheck`
+given a span check (`≤ 12 mm`) and a retightened `sd_ey ≤ 3 mm`, because **`sd` alone
+returned PASS on the 43.3 mm swing** of §10.2 — replayed offline the new gate fails all three
+unstable points and passes all five healthy ones, and **it also fails the 5.3 mm reading
+§8.2 records as a PASS**, which should now be read as a probable false negative; and
+`rl_policy_node` re-seeding its k=4 frame stack on `/cage_reset`, closing a contract
+deviation the session had already refuted as a cause.
+
+**None of those three ROS nodes has been launched since.** Logic only — runtime unverified.
+
+### 10.6 What would actually unblock a lap
+
+**A capture session, not a driving one.** Event frames cannot answer §10.3:
+`frame_capture_node` dumps ±3 s around events, so its 2513 frames are failure
+*neighbourhoods*, and their statistics do not generalise — their median lane width reads
+193 mm against the same estimator's 252.9 mm over a full circuit. What is needed is a
+**full-circuit recording with true position**, of the kind M-7 §3 used, to see which pair the
+estimator picks at each point of the track. The two hand measurements of §9.4 remain
+outstanding, and `lanecheck --true-ey` should now be run at −60 and −100 mm, not only at centre.
+
+`verdict_phys` remains open: no scenario has been scored on hardware.
+
+### 10.7 Widening the estimator, and the offline harness that made it possible (D-77)
+
+**D-76's blocker was half wrong.** `experiments/physical/datasets/circuit_export/labels.csv` is
+**tracked**, and its `line_c0_m` column carries the per-frame lateral intercepts of every detected
+line — the exact input to the pair-selection decision. Replaying the pairing from that column alone
+**reproduces the recorded `ey` on 1450/1450 paired frames** (max deviation 0.01 mm). So the
+*consistency* question can be answered offline, on a full circuit, on the compute host, with no frames
+and no Jetson. Only the *accuracy* question still needs true position.
+
+**The recording contains 42 unphysical relocations** in 1401 transitions — the selected pair's centre
+moving > 60 mm at > 1.0 m/s apparent lateral rate — the worst a **364 mm jump in one frame, 47× the
+car's top speed**.
+
+**Three fixes tried and refuted first.** (i) *Temporal continuity in the selection* — nearest to the
+previous centre instead of nearest to the vehicle: **no effect at all**, because **90 % of the
+relocations had only ONE plausible pair**. Nothing to choose between; the candidate line *set* changed.
+This is also why D-48's `ruta-2b` was reverted as unnecessary — now with a mechanism. (ii) *Tightening
+`lane_width_tol_m`*: actively harmful, frames left with no pair go **41 → 110 → 231 → 483** as it goes
+0.08 → 0.04, since that parameter gates pair *acceptance*. (iii) *Tightening SR-014's width window
+alone*: forbidden — the supervisor derives it from the estimator's pair window precisely to avoid the
+**E2 dead zone** that deadlocked the cage.
+
+**What was actually wrong: SR-014's gate is mis-scaled, not missing.** It is already rate-based —
+`allowed_dey = |v|·dt + jump_tol_m` — but at 0.22 m/s and a 50 ms cycle the physical term is **11 mm**
+against a `jump_tol_m` of **100 mm**: the tolerance is **nine times** the motion it bounds, admitting a
+111 mm relocation as "temporally consistent".
+
+| `jump_tol_m` | relocations caught | good frames suppressed | no pair | added C-05 rejects |
+| --- | --- | --- | --- | --- |
+| 0.10 (frozen, sim) | 10 / 42 | 0.00 % | 0 | 0 |
+| **0.05 (physical default)** | **30 / 42** | 0.57 % | 0 | 5 |
+
+`perception_jump_tol_m` is now a node parameter (`< 0` keeps the default, the
+`perception_min_invalid_cycles` precedent) and the physical launch defaults to **0.05**. Simulation
+keeps 0.10, so the D-69 verdict path is bit-identical.
+
+**This does not make the estimator read correctly off-centre.** The pairing is unchanged and §10.2's
+diagnosis stands. It converts a **silent wrong answer into a declared unavailability**: a caught frame
+suppresses `/state_obs` via the cage's missing-state path **without** raising `/emergency` (C-05 still
+needs `min_implausible_cycles`). That is the right direction for H-12, whose difficulty is precisely
+that a wrong estimate is self-consistent.
+
+**Limits.** `circuit_export` was pushed by hand, so the replay assumes `speed_mps = 0.22` as an upper
+bound on the physical term — the most permissive assumption. `labels.csv` has no curvature, so
+`curvature_max` is untested here. The availability numbers come from that recording, not a driving run;
+since a C-05 latch ends a segment on hardware (D-74), **the next session should watch the reject count
+first**, with 0.06 as the fallback. **Nothing here has been launched** — host logic and tests only.
+

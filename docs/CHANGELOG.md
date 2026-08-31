@@ -31,6 +31,345 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [31.08.2026] — Four laps, a tape sweep, eight hypotheses and eight refutations: the M-7 `ey` under-read does not survive rectification, and the failure is a mismatch between two envelopes rather than a defect in either
+
+**Document(s) affected:** `experiments/physical/runs/SESSION_20260831.md`,
+`experiments/physical/runs/{lanesweep,lap01..lap04,preflight}_20260831*/`,
+`src/cobraflex_rl/cobraflex_rl/{cage_logger_node,cage_reset_proxy_node}.py`,
+`policy/tests/{test_cage_reset_proxy,test_deploy_evidence_contract}.py`
+**Phase:** 5 (physical deployment)
+**Gate context:** after G4. **Posterior evidence — re-scores nothing.** `monitoring` only, N=1 per run, no scenario scored.
+**Author:** Samuel Sanchez
+
+### Change
+
+Second driving session on the real circuit, using the instrumentation prepared on
+27.08 (`cage_logger_node platform:=physical`, `frame_capture_node`,
+`cage_reset_proxy_node`, `tools/run_physical_lap.sh`) — the first time any of those
+three nodes was launched. **Goal — one complete lap without stops — NOT achieved.**
+Best distance **14.56 m** (lap02, 4 resets) against 26.08's 18.05 m one-segment run.
+
+Two fixes were made and committed from the car: `cage_logger_node` died in its
+constructor on `platform:=physical` the first time the provenance block was ever
+launched (`ros2 launch` types numeric-looking parameters, and `.string_value` on a
+DOUBLE returns `""`, so the numeric contract fields would have vanished from
+`metadata.json` in silence); and `cage_reset_proxy_node` gained `blocking_rules` as a
+parameter, **default unchanged**, documenting the measured deadlock.
+
+### Rationale — what the day established
+
+* **The M-6/M-7 `ey` under-read does not exist rectified.** Nine-point tape sweep,
+  hands-off, on the ground: scale **1.058** (left) / **0.991** (right), against 0.72
+  propagated by M-6 and 0.68-0.83 measured by M-7. C-01 fires at a true **151 mm** with
+  ~100 mm of margin to the road edge, not at 207-241 mm with 14-48 mm. The M-7 §4
+  finding is superseded for the rectified configuration, which is the deployed one.
+* **The estimator is unstable right-of-centre and confident while wrong.** 43.3 mm of
+  swing on a STATIONARY car at -60 mm (sd 8.4 vs 0.5 mm mirrored), reproducible across
+  two consecutive runs, `/perception_invalid` False for all 705 cycles — H-12 / D-43.
+  The measurement **predicted lap01's stop before it happened**: -58.8 mm was that
+  run's max |ey| and the spike fired there.
+* **C-02 failures are SUSTAINED, not transient** — 99 % of C-02 cycles sit in episodes
+  of >= 2, one of 45 cycles; only 1 of 15 episodes is a single cycle. This is why a
+  heading-rate plausibility gate would catch just 12 of 102.
+* **C-04's dead zone, again, and now with a cost.** `v_max_curve_mps` 0.25 > deployed
+  0.22 means C-04 cannot fire, while |ey| grows monotonically with curvature
+  (26 -> 32 -> 33 -> 43 -> **63 mm**). D-69's finding (ii) is no longer only a coverage gap.
+* **`monitoring` does not mean the cage cannot stop the car.** `vehicle_control_node`
+  forces `/cmd_vel.linear.x = 0` on a latched `/emergency` in BOTH modes, by design. A
+  lap "without stops" would require disabling that fail-safe — which would void the lap,
+  since the cage is what the thesis evaluates.
+* **Eight single-component hypotheses, all refuted by measurement** (starting position;
+  heading error scaling with curvature, r = 0.045 over 1208 moving cycles; a degenerate
+  frame stack after reset; `white_sat_max` mis-set for the hall; a heading-rate gate; a
+  tighter `lane_width_tol_m`; a narrowed reset-proxy guard, which turns deadlock into
+  livelock; a different `heading_fit_mode`/gain).
+* **The diagnosis that survives.** M-7 measured 0.8 % of frames past C-02 in this exact
+  configuration, on a circuit recording of a car **pushed by hand** near the centre.
+  Driving itself, the same configuration gives **6.8-11.6 %**. The policy runs wide in
+  curves; the estimator is trustworthy near the centre. **The estimator's reliable
+  envelope and the policy's driving envelope do not overlap well enough** — which is
+  why every single-component hypothesis failed.
+
+### Impact
+
+No hazard, SR, cage rule, scenario, metric or verdict is added or re-valued.
+D-69 and GE4-V2 stand; **`verdict_phys` remains open** — no scenario has been scored on
+hardware. Driving figures here are **PRELIMINAR, N=1, `monitoring`, unscored**; the
+sweep results (scale, right-side instability) are **calibration results** and carry the
+same standing as M-6 and M-7. What would unblock a lap is a **full-circuit recording
+with true position**, as in M-7 §3 — event frames cannot answer it, being failure
+neighbourhoods whose statistics do not generalise. Four items were left for the compute
+host and are closed in the `· later` entry above.
+
+### Verification
+
+`python3 tools/check_traceability.py` → All checks PASSED, 0 warnings. `pytest` → 808
+passed, 2 skipped at the time of the session commit (`7c496ff5`); the
+`cage_logger_node` regression test was verified to FAIL against the previous HEAD
+before the fix, and four tests pin both the reset-proxy deadlock and the fact that the
+obvious narrowing livelocks.
+
+---
+
+## [31.08.2026 · D-77] — The estimator is widened where it could be: SR-014's inter-frame gate was nine times the physical motion, and a tracked CSV column turned out to be a full-circuit test bench
+
+**Document(s) affected:** `docs/DECISIONS.md` (D-77 — new), `docs/17_physical_deployment.md` §10.7,
+`src/cobraflex_rl/cobraflex_rl/{cage_perception,cv_lane_estimator_node}.py`,
+`src/cobraflex_rl/launch/deploy_cobraflex.launch.py`, `policy/tests/test_cage_perception.py`,
+`CLAUDE.md`
+**Phase:** 5 (physical deployment)
+**Gate context:** after G4. **Physical path only — simulation defaults unchanged, D-69 verdict path bit-identical. `cage/cage.yaml` untouched.**
+**Author:** Samuel Sanchez
+
+### Change
+
+**D-76's blocker was half wrong, and that is the enabling find.**
+`experiments/physical/datasets/circuit_export/labels.csv` is **tracked**, and its `line_c0_m` column
+carries the per-frame lateral intercepts of every detected line — the exact input to the pair-selection
+decision. A pure-Python replay from that column **reproduces the recorded `ey` on 1450/1450 paired
+frames** (max deviation 0.01 mm, CSV rounding). The *consistency* question is therefore answerable
+offline, on a full circuit, on this host, with no frames and no Jetson; only *accuracy* still needs true
+position.
+
+Defining an unphysical relocation as the selected pair's centre moving > 60 mm at > 1.0 m/s apparent
+lateral rate (60 mm clears the estimator's own 43 mm off-centre noise span; the car cannot move sideways
+faster than 0.22 m/s), the recording holds **42 in 1401 transitions**, worst **364 mm in one frame — 47×
+the car's top speed**.
+
+**Three fixes tried and refuted before the one that worked.** (i) Temporal continuity in the pair
+selection: **no effect at all** — **90 % of the relocations had only ONE plausible pair**, so there was
+nothing to choose between; the candidate line *set* changed. This also explains why D-48's `ruta-2b` was
+reverted as unnecessary. (ii) Tightening `lane_width_tol_m`: actively harmful — frames with no plausible
+pair go **41 → 110 → 231 → 483** across 0.08 → 0.04, confirming the 31.08 refutation of hypothesis 6
+from a second direction. (iii) Tightening SR-014's `lane_width_range` alone: forbidden by an invariant
+already in the code — the supervisor derives that window from the estimator's pair-acceptance window to
+avoid the **E2 dead zone** that deadlocked the cage.
+
+**The finding: SR-014's gate is mis-scaled, not missing.** It is already rate-based —
+`allowed_dey = |v|·dt + jump_tol_m` — but at 0.22 m/s and 50 ms the physical term is **11 mm** against a
+`jump_tol_m` of **100 mm**: **nine times** the motion it bounds, admitting a 111 mm relocation as
+"temporally consistent".
+
+| `jump_tol_m` | relocations caught | good frames suppressed | no pair | added C-05 rejects |
+| --- | --- | --- | --- | --- |
+| 0.10 (frozen, simulation) | 10 / 42 | 0.00 % | 0 | 0 |
+| **0.05 (new physical default)** | **30 / 42** | 0.57 % | 0 | 5 |
+
+`jump_tol_m` is now an optional supervisor argument (`None` = the frozen 0.10) exposed as
+`perception_jump_tol_m` on `cv_lane_estimator_node`, following the `perception_min_invalid_cycles`
+precedent (`< 0` keeps the default). The physical launch defaults to **0.05**.
+
+### Rationale
+
+The 31.08 sweep observed `/perception_invalid` staying False through a 43 mm swing and concluded the
+estimator was "confidently wrong". It is — but the plausibility check meant to catch that is not absent,
+it is scaled so loosely that the physical term it is added to is irrelevant. 0.05 is the smallest value
+above the measured 43 mm noise span and well below a half-lane relocation; it is a bound, not a fitted
+optimum.
+
+### Impact
+
+**This does not make the estimator read correctly off-centre** — the pairing is unchanged and D-76's
+diagnosis stands. It converts a **silent wrong answer into a declared unavailability**: a caught frame
+sets `plausible=False`, suppressing `/state_obs` via the cage's missing-state path **without** raising
+`/emergency` (C-05 still requires `min_implausible_cycles`). That is the right direction for H-12, whose
+difficulty is that a wrong estimate is self-consistent and therefore invisible. No hazard, SR, cage
+rule, scenario, metric or verdict added or re-valued; `verdict_phys` stays open. **An early sweep of mine
+used the checker's generic 0.20–0.80 width default as the baseline; that is not the deployed window
+(`nominal ± tol` = 0.145–0.345) and those numbers are withdrawn.**
+
+**Watch item for the next session:** a C-05 latch ends a segment on hardware (D-74), so the **reject
+count** is the first thing to read; **0.06** is the fallback if 0.05 proves too tight in motion.
+**Nothing here has been launched** — host logic and tests only.
+
+### Verification
+
+`pytest` → **814 passed, 2 skipped** (up from 810: four new tests pin that the default stays 0.10 so the
+verdict path is untouched, that the override reaches the checker, that the E2 lane-width invariant
+survives the override, and that a 90 mm relocation passes the frozen gate, is caught by the tightened
+one, and suppresses state **without** raising C-05). `python3 tools/check_traceability.py` → **All checks
+PASSED, 0 warnings.** The replay figures are reproducible from the tracked
+`experiments/physical/datasets/circuit_export/labels.csv`; nothing was run on the car.
+
+---
+
+## [31.08.2026 · D-75/D-76] — The two open Phase-5 decisions are taken, and both resolve to "not yet": C-04 is un-armable by measurement, and the curvature its threshold would key on over-reads by ~3×
+
+**Document(s) affected:** `docs/DECISIONS.md` (D-75, D-76 — new),
+`docs/04_cage_specification.md` §C-04, `docs/17_physical_deployment.md` §10.4/§10.4b,
+`CLAUDE.md`, `docs/CHANGELOG.md`
+**Phase:** 5 (physical deployment)
+**Gate context:** after G4. Posterior evidence. **`cage/cage.yaml` UNCHANGED — deliberately, in both decisions.**
+**Author:** Samuel Sanchez
+
+### Change
+
+The two items the 31.08 next-steps list carried as decisions rather than tasks are now taken as
+ADRs. Neither changes `cage.yaml`, an SR, a cage rule, an ODD parameter or a verdict.
+
+**D-75 — C-04's dead zone is total, and stays open on purpose.** The ceiling is
+`max(v_max_curve, v_max_straight − k_kappa·|κ|)` = `max(0.25, 0.5 − 0.3·|κ|)`, so **0.25 m/s is a
+floor no curvature can push it below**, while the deployed policy is capped at 0.22. Measured over
+the **2484 moving cycles** of the day: speed median 0.166, p90 0.191, p99 0.209, **max 0.228 m/s**,
+and cycles reaching the 0.25 floor: **zero**. C-04 fired 0/1890 in the D-69 campaign and has now
+never arbitrated on hardware either. `v_max_curve_mps` stays at 0.25; the non-coverage is recorded
+in `docs/04` §C-04 as a stated limitation of the validation.
+
+**The new measurement that decides it — `kappa_ahead` over-reads by ~3×.** On a closed circuit
+`∮κ·ds = 2π` per lap. Integrating the logged `|κ|` (an **upper** bound, since `|κ|` cannot cancel)
+over the logged distance:
+
+| run | distance | laps of 19.28 m | turning implied by geometry | measured `∫\|κ\|ds` | ratio |
+| --- | --- | --- | --- | --- | --- |
+| lap01 | 3.05 m | 0.16 | 0.99 rad | 0.32 | 0.33 |
+| lap02 | 14.46 m | 0.75 | 4.71 rad | 14.31 | **3.04** |
+| lap03 | 5.28 m | 0.27 | 1.72 rad | 1.81 | 1.05 |
+| lap04 | 10.64 m | 0.55 | 3.47 rad | 10.11 | **2.92** |
+
+Pooled `|κ|` reads median 0.89, p90 1.52, **max 2.88 m⁻¹** against `ODD-3.KAPPA_MAX` 1.14 (centre) /
+1.00 (driven) and the ≈ 0.75 that docs/17 §8.8 gives for the tightest curve. The physical circuit was
+built to the complex_b perimeter (19.28 m against 19.22 m), so its geometry is not the explanation.
+
+**D-76 — the "envelope mismatch" has a mechanism, and it sets the order of work.** Binned by lateral
+offset, the share of cycles reading `|κ| > 1.14` climbs **8.4 % → 28.0 % → 38.9 % → 38.0 % → 53.9 %**
+across `|ey|` of 0–20/20–40/40–60/60–80/80–120 mm. With the stationary sweep's 43.3 mm `ey` swing and
+the sustained C-02 episodes, that is **one failure expressed in three channels**: off-centre, the
+estimator misreads offset, heading **and curvature** at once and reports none of it invalid (H-12).
+Decision: **widen the estimator before narrowing the policy.** The policy does *not* consume the
+estimator — the CNN reads the image, the estimator feeds the **cage** — so the chain is: policy runs
+wide → estimator degrades in a region it was never characterised in → **the cage arbitrates on
+corrupted state** and latches C-05. Narrowing the policy stays the documented fallback, to be argued
+as an ODD restriction rather than applied as a silent tuning.
+
+### Rationale
+
+Both decisions resolve to "not yet", for the same reason: the obvious action on each — lower C-04's
+threshold; pick a side of the envelope mismatch — keys on `kappa_ahead`, and that signal is not
+trustworthy enough to act on. Arming C-04 now would cut throttle on curvature that is not there,
+concentrated exactly where the car is already off-centre and already in trouble. The prerequisite is
+therefore named and is **not more driving**: the full-circuit capture with true position (docs/17
+§10.6), which now carries two acceptance tests — the closed-loop `∮κ·ds ≈ 2π`, and the offset sweep
+repeated **around** the circuit rather than at one location.
+
+### Impact
+
+No hazard, SR, cage rule, scenario, metric or verdict added or re-valued; D-69 and GE4-V2 stand;
+`verdict_phys` stays open. **A correction propagates, though:** any physical analysis binned on `κ` is
+binned on a corrupted signal — docs/17 §8.8's "tightest curve" attribution and the 31.08 session
+note's "|ey| grows monotonically with curvature" (26 → 32 → 33 → 43 → 63 mm) both need re-deriving
+after the capture session, and are flagged in place. C-04 remains untested from above in simulation
+*and* unexercised on hardware; that is now a stated limitation belonging in the defense narrative
+next to D-69's finding (ii), and a real answer to "which of your six rules has never fired".
+**Caveat carried in D-76:** `|ey|` and true curvature are correlated by driving, so only the
+closed-loop integral is free of that confound — the over-read is established, its exact dependence on
+offset is not.
+
+### Verification
+
+`python3 tools/check_traceability.py` → **All checks PASSED, 0 warnings**. `pytest` → **810 passed,
+2 skipped** (unchanged — no executable logic was touched; `cage.yaml` and `cage/rules/` are
+untouched by both ADRs). The curvature figures were computed from the tracked
+`experiments/physical/runs/lap0*/cage_status.csv` and are reproducible from them; nothing was run on
+the car.
+
+---
+
+## [31.08.2026 · later] — The track session's four open items closed on the compute host: the frame dump is priced in bytes, the preflight gate learns the statistic that caught the estimator, and 962 MB of PNG leaves the index
+
+**Document(s) affected:** `.gitignore`, `tools/preflight_deploy.py`,
+`src/cobraflex_rl/cobraflex_rl/{frame_capture,frame_capture_node,rl_policy_node}.py`,
+`policy/tests/test_frame_capture.py`, `docs/CHANGELOG.md`
+**Phase:** 5 (physical deployment)
+**Gate context:** after G4 (closed 02.07.2026). Nothing here re-scores a gate; `verdict_phys` stays open.
+**Author:** Samuel Sanchez
+
+### Change
+
+The 31.08 track session (`experiments/physical/runs/SESSION_20260831.md`, committed
+from the car in `7c496ff5`) closed with four items it could not do on the Jetson.
+All four are done here, on the compute host. `cage.yaml` is untouched and no
+hazard, SR, cage rule, scenario or metric changed.
+
+1. **962 MB of PNG untracked.** `frame_capture_node`'s event dumps landed in the
+   index because `.gitignore` covered `experiments/physical/datasets/*/frames/` but
+   not `experiments/physical/runs/*/frames/` — 3248 blobs across five runs, 4.4x the
+   "218 MB in `preflight_20260831T092505Z`" the session note recorded. Rule added and
+   the frames `git rm --cached`'d. **Fix-forward, by decision: the history is NOT
+   rewritten.** `7c496ff5` is already pushed and the session notes cite it, so the
+   blobs stay reachable there and a fresh clone still costs them; the files remain on
+   disk on this host. The tracked `capture_events.csv` beside each dump carries the
+   event index, reason, trigger time and filename of every frame, so the evidence
+   chain survives the untracking — the same split the lane datasets already use.
+
+2. **The capture budget is priced.** `max_frames` was 4000 with a docstring promising
+   "roughly 20 MB of PNG for the whole run", an estimate built on the 26.08 lap's ONE
+   in-motion event. Measured: 301 KB per 640x360 PNG over the day's 3248 frames, so
+   the old cap was **~1.2 GB per run** on the eMMC that the 18.08 bag recording had
+   already crashed. Default is now 600 frames (~185 MB); the docstring records the
+   falsified assumption instead of the estimate. `budget_exhausted` is now reported at
+   shutdown, because **all four driving runs saturated the 8-event cap** — which makes
+   the frames on disk a *truncated* sample on top of the *biased* one the session note
+   already identified (their median lane width reads 193 mm against the same
+   estimator's 252.9 mm over a full circuit).
+
+3. **`preflight_deploy.py lanecheck` gains the statistic that catches a pair-flip.**
+   The gate returned PASS while the estimator swung **43.3 mm peak-to-peak on a
+   stationary car** at a true -60 mm, because `sd_ey <= 10 mm` is the wrong statistic
+   for a bimodal excursion: the flip sits ~31 mm off the mode and moves the span far
+   more than the sd (8.4 mm, inside the old limit). Replaced by a span check
+   (`<= 12 mm`) plus a retightened `sd_ey <= 3 mm`, both set from the sweep's measured
+   healthy band (sd 0.5-1.4 mm over a 2.4 mm span). Replayed against
+   `lanesweep_20260831T094110Z/lane_sweep.csv`, the new gate PASSES all five
+   centred/left points and FAILS all three unstable right-side points; the old gate
+   passed all eight. **It also fails the `sd_ey` 5.3 mm reading that docs/17 §8.2
+   records as a PASS on 26.08** — that PASS should now be read as a probable false
+   negative of the same mechanism, not as evidence the estimator was sound.
+   A `COVERAGE` line was added stating what no threshold can fix: the stage samples
+   **one** pose, and the sweep found the estimator quiet at centre and to the left and
+   unstable from -60 mm rightward with `/perception_invalid` never firing (H-12 /
+   D-43), so a car parked near centre passes every check while the region the policy
+   drives through in curves is broken.
+
+4. **`rl_policy_node` re-seeds its frame stack on `/cage_reset`.** `_first` was set
+   once in the constructor and never again, so after a latched C-05 was cleared the
+   k=4 stack straddled the stop and the new segment's first observations concatenated
+   frames from either side of a gap of arbitrary wall-clock length — 250 s in lap04's
+   proxy deadlock — which never occurs in training. This closes a **contract**
+   deviation only: the session refuted it as the cause of the stops (hypothesis 3,
+   degenerate stack 0.0 % vs 21.8 % between runs).
+
+### Rationale
+
+Items 1 and 2 are the same defect measured twice: a capture path whose cost nobody
+had multiplied out, on a platform with a standing history of disk-pressure failure.
+Item 3 is the more serious one — a *preflight gate that returns PASS on the exact
+condition it exists to detect* is worse than no gate, and this one did so on the
+morning of a session whose lap01 was then stopped at -58.8 mm, the run's max |ey|,
+in the band the sweep had just shown to be unstable. Item 4 is bookkeeping against
+the trained contract, recorded as such.
+
+### Impact
+
+No re-runs required and no verdict moves: D-69 stands, GE4-V2 stands, `verdict_phys`
+stays open. The next track session inherits a stricter preflight, and **it should be
+expected to FAIL `lanecheck` where 26.08 passed** — that is the intended behaviour
+change, not a regression. The estimator's right-of-centre instability is diagnosed but
+NOT fixed; the session note's conclusion stands unchanged — what unblocks a lap is a
+full-circuit recording with true position, not another single-component hypothesis.
+**None of the three ROS nodes touched here has been launched.** Per the repo's own
+rule, typecheck and pytest are not evidence that a node runs: items 2, 3 and 4 are
+verified as logic only and remain runtime-unverified until the next session on the car.
+
+### Verification
+
+`python3 tools/check_traceability.py` → **All checks PASSED, 0 warnings** (12 hazards,
+14 SRs, 6 cage rules, all constraints OK). `pytest` → **810 passed, 2 skipped** (up
+from 808: two new tests pin the byte-priced budget default and the observability of a
+saturated one). The `lanecheck` change was replayed offline against the sweep CSV, as
+tabulated in item 3; it was not run on the car.
+
+---
+
 ## [27.08.2026 · later] — The manuscript and the specs catch up with Phase 5, as BRING-UP evidence: a falsified assumption, a policy that does not transfer, and the first measurement of a transfer risk declared before it was measured
 
 **Document(s) affected:** `manuscript/draft_v5/front/{10_abstract,15_preface}.md`,

@@ -14,8 +14,19 @@ header, `experiments/physical/runs/circuit_survey/REPAIR_NOTE.md`).
 
 So frames are held in RAM and written only around an event. On the 26.08
 `noloopclosure` lap there was exactly ONE in-motion perception event in 101 s,
-so a 3 s pre / 2 s post window costs about 100 frames — roughly 20 MB of PNG
+so a 3 s pre / 2 s post window costs about 100 frames — roughly 30 MB of PNG
 for the whole run instead of 1.4 GB of bag.
+
+THAT ONE-EVENT ASSUMPTION DID NOT SURVIVE CONTACT (31.08.2026). Four driving
+runs each saturated the 8-event budget, and lap04 alone wrote 1144 frames; the
+five runs of the day cost 1002 MB, at a measured 301 KB per 640x360 PNG. The
+old `max_frames` of 4000 was therefore a 1.2 GB cap on a Jetson whose eMMC had
+already been crashed once by exactly this class of write (18.08). The budget is
+now set from that measured per-frame cost — see `max_frames` below — and
+`budget_exhausted` is reported at shutdown, because a saturated budget means
+the frames on disk are a TRUNCATED sample of the run's failures on top of being
+a biased one (they are failure NEIGHBOURHOODS: their median lane width reads
+193 mm against the 252.9 mm the same estimator reports over a full circuit).
 
 The buffer stores opaque payloads, never ROS message types, so the whole
 policy is testable on a host with no ROS installed.
@@ -63,7 +74,11 @@ class FrameCapture:
     pre_seconds: float = 3.0
     post_seconds: float = 2.0
     max_events: int = 8
-    max_frames: int = 4000
+    #: 640x360 PNG measured at 301 KB/frame over the 3248 frames of 31.08.2026,
+    #: so 600 frames is ~185 MB per run. The previous 4000 was ~1.2 GB, which is
+    #: not a budget on a Jetson. Raise it deliberately, per run, if a session
+    #: needs deeper capture — do not raise it as a default.
+    max_frames: int = 600
 
     _buffer: Deque[Tuple[float, Any]] = field(default_factory=deque, repr=False)
     _events: List[CaptureEvent] = field(default_factory=list)

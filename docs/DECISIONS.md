@@ -3915,3 +3915,242 @@ is the reason a proxy is not simply a defeat of the rule.
 Cites D-43 (the estimator whose invalid flag is Trigger 8), D-69 (the verdict of record and its T2
 transfer risk, both untouched), D-71 (the first track run), D-72 (the deployed v2 policy), D-73
 (the other 26.08 stopper, fixed rather than deferred — the contrast is deliberate).
+
+---
+
+### D-75 — C-04's dead zone is total and stays open on purpose: the rule is un-armable at the deployed speed, and its curvature input is not yet trustworthy enough to re-arm it
+
+| Field | Value |
+| --- | --- |
+| Section | `cage/cage.yaml` §`c04_speed_ceiling` (`v_max_curve_mps`); `cage/rules/c04_speed_ceiling.py`; `docs/04` §C-04; `docs/08` §ODD-3; `docs/17` §8.8/§10.4 |
+| Status | ACCEPTED — **`cage/cage.yaml` unchanged, deliberately.** No version bump, no SR, cage rule, ODD parameter or verdict re-valued. The non-coverage is recorded as a known gap, not closed. |
+| Date | 31.08.2026 |
+
+**Context — the dead zone is total, not marginal.** C-04's ceiling is
+`max(v_max_curve, v_max_straight − k_kappa·|κ|)` = `max(0.25, 0.5 − 0.3·|κ|)`, so **0.25 m/s is a
+floor the ceiling can never go below, at any curvature**. The deployed policy is capped at
+0.22 m/s. Measured over the four driving runs of 31.08 — **2484 moving cycles** — the achieved
+speed is median 0.166, p90 0.191, p99 0.209, **max 0.228 m/s**, and the number of cycles reaching
+the 0.25 floor is **zero**. C-04 has therefore never arbitrated on hardware and, at this speed
+cap, provably cannot. D-69 named this as a coverage gap in simulation (finding (ii): C-04 fired
+0/1890); two track sessions have now made it a gap in the deployed system as well, and §8.8 places
+the car's two lane departures in the tightest curve, which is exactly where a speed ceiling would
+be expected to earn its place.
+
+**The obvious fix is to lower `v_max_curve_mps` below 0.22. It loses, for now, on its input.**
+C-04 consumes `state.curvature_ahead`, which on hardware is the D-43 estimator's `kappa_ahead`, and
+that signal is **demonstrably over-read**. On a closed circuit the turning must satisfy
+`∮κ·ds = 2π` per lap; integrating the logged `|κ|` over the logged distance — an **upper** bound,
+since `|κ|` cannot cancel — gives:
+
+| run | distance | laps of the 19.28 m circuit | turning implied by geometry | measured `∫|κ|ds` | ratio |
+| --- | --- | --- | --- | --- | --- |
+| lap01 | 3.05 m | 0.16 | 0.99 rad | 0.32 | 0.33 |
+| lap02 | 14.46 m | 0.75 | 4.71 rad | 14.31 | **3.04** |
+| lap03 | 5.28 m | 0.27 | 1.72 rad | 1.81 | 1.05 |
+| lap04 | 10.64 m | 0.55 | 3.47 rad | 10.11 | **2.92** |
+
+The two longest runs report **~3× more turning than the circuit can contain**. Pooled, `|κ|` reads
+median 0.89, p90 1.52, max 2.88 m⁻¹ against `ODD-3.KAPPA_MAX = 1.14` (centre) / 1.00 (driven) and
+the ≈ 0.75 m⁻¹ that §8.8 gives for the tightest curve — and the physical circuit was built to the
+complex_b perimeter (19.28 m against 19.22 m), so its geometry is not the explanation.
+
+**Decision.**
+
+1. **`v_max_curve_mps` stays at 0.25 and `cage.yaml` is not touched.** Arming C-04 now would arm it
+   on phantom curvature: the over-read concentrates exactly where the car is already in trouble
+   (see D-76 — the share of cycles reading `|κ| > 1.14` climbs from 8.4 % near the centre to 53.9 %
+   beyond 80 mm of offset). A rule that cuts throttle on a curvature that is not there, near the
+   lane edge, is not self-evidently safer than one that does nothing; and it would confound the very
+   diagnosis the next session exists to make.
+2. **The non-coverage is recorded rather than quietly carried.** `[provisional, M-4 + ODD TBD-Q9]`
+   already marks the parameter as awaiting calibration; what was missing is the statement that at
+   the deployed cap the rule is **un-armable**, which is now in `docs/04` §C-04 and `docs/17` §10.4.
+3. **The precondition for revisiting is named, and it is not "more driving".** `kappa_ahead` must
+   first satisfy the closed-loop test above — ratio ≈ 1 over a full lap — on the capture session of
+   D-76. Only then is a threshold change measuring the road rather than the estimator.
+
+**Why not simply raise the speed instead**, so that 0.25 becomes reachable: the deployed 0.22 cap is
+not free. It is the trained action scale of the v2 policy (D-72) and the operating point at which
+the 1650k checkpoint was chosen on transfer and cage-independence; raising it changes the plant the
+checkpoint was selected against, and D-69's **T2** already flags the C-06 `delta_max_steering_per_cycle`
+coupling as a transfer risk. Raising speed to make a latent rule fire is the wrong direction.
+
+**Consequences.**
+
+* C-04 remains **untested from above** in simulation *and* unexercised on hardware. This is now a
+  stated limitation of the validation, not an oversight — it belongs in the defense narrative
+  (docs/16) alongside D-69's finding (ii), and it is a genuine answer to "which of your six rules
+  has never fired".
+* Any future change to `v_max_curve_mps` follows the `[provisional]` workflow in full: update
+  `cage.yaml` → bump `cage.version` → `pytest` → **re-run the affected scenarios**. That last step is
+  a campaign and does not run on the compute host, so this is not a change to make casually — and it
+  would make the deployed cage differ from the one the D-69 verdict of record was scored with.
+* No hazard, SR, cage rule, scenario, metric or verdict is re-valued. `verdict_phys` stays open.
+
+Cites D-69 (finding (ii), and T2 on the speed cap), D-71 and D-43 (the estimator supplying `κ`),
+D-72 (the deployed cap), D-76 (the over-read's mechanism and the capture session that must precede
+any re-arming).
+
+---
+
+### D-76 — The "envelope mismatch" has a mechanism: off-centre, the D-43 estimator degrades in three correlated channels at once, so the estimator is widened before the policy is narrowed
+
+| Field | Value |
+| --- | --- |
+| Section | `src/cobraflex/.../cv_lane_estimator_node`; `docs/12` §4.4 (H-12); `docs/17` §10.2/§10.3/§10.6; `experiments/physical/runs/lanesweep_20260831T094110Z/` |
+| Status | ACCEPTED **as an ordering decision** — the estimator's off-centre behaviour is fixed before the policy's driving envelope is narrowed. The concrete estimator change is **not** chosen here, and is blocked on the capture session below. No `cage.yaml` change, no re-valued artefact. |
+| Date | 31.08.2026 |
+
+**Context.** docs/17 §10.3 closed the 31.08 session with a diagnosis rather than a cause: *the
+estimator's reliable envelope and the policy's driving envelope do not overlap well enough*, neither
+component individually defective, which is why eight single-component hypotheses died. That framing
+is correct but symmetric, and symmetry is not actionable — it licenses fixing either side.
+
+**What the data adds: the degradation is not one channel, it is three, and they move together.**
+Binned by lateral offset over the 2484 moving cycles of the day:
+
+| \|ey\| | n | `\|κ\|` p90 | share reading `\|κ\| > 1.14` | C-02 firing |
+| --- | --- | --- | --- | --- |
+| 0–20 mm | 1113 | 1.10 | 8.4 % | 2.9 % |
+| 20–40 | 599 | 1.52 | 28.0 % | 4.3 % |
+| 40–60 | 342 | 2.00 | 38.9 % | 4.1 % |
+| 60–80 | 284 | 1.85 | 38.0 % | **18.7 %** |
+| 80–120 | 141 | 2.22 | **53.9 %** | 4.3 % |
+
+Together with the stationary sweep (§10.2: **43.3 mm** of `ey` swing at a true −60 mm, sd 6.2–8.4
+against 0.5–0.9 mirrored, `/perception_invalid` **never** firing) and the sustained C-02 episodes
+(99 % of C-02 cycles in episodes of ≥ 2, one of 45), the picture is one failure expressed three ways:
+**off-centre, the estimator misreads offset, heading and curvature simultaneously, and reports none
+of it as invalid.** That is H-12's confident-under-read, now measured in a third channel.
+
+**Caveat, stated because it bounds the claim.** `|ey|` and true curvature are correlated by driving —
+the car is more off-centre *in* curves — so the table alone cannot separate "off-centre degrades the
+estimate" from "curves are where the car is off-centre". The closed-loop integral of D-75 is what
+does not admit that confound: **no amount of off-centre driving lets a 19.28 m circuit contain
+14.31 rad of turning.** The over-read is established; its exact dependence on offset is not.
+
+**Decision — the ordering, not the fix.**
+
+1. **The estimator is widened before the policy is narrowed.** The policy does **not** consume the
+   estimator — `rl_policy_node` feeds the CNN the camera image, while the D-43 estimator feeds the
+   **cage** — so this is not a feedback loop through the policy. The causal chain is: the policy runs
+   wide (its own limitation) → the estimator degrades in a region it was never characterised in →
+   **the cage arbitrates on corrupted state** and latches C-05. The stops are therefore produced by
+   the *measurement*, in a region the policy legitimately visits. Narrowing the policy's envelope
+   would reduce exposure to the defect without removing it, and would do so by making the car drive
+   a smaller part of its own ODD — hiding the finding rather than closing it.
+2. **The blocking prerequisite is the capture session of docs/17 §10.6**, not another driving
+   session: a full-circuit recording with **true position** (the M-7 §3 method), scored against two
+   acceptance tests that already exist — the closed-loop `∮κ·ds ≈ 2π` of D-75, and the offset sweep
+   repeated at points around the circuit rather than at one location. Eight single-component
+   hypotheses have already been refuted against driving data; a ninth is not the way.
+3. **Narrowing the policy stays on the table as the fallback**, explicitly. If the estimator cannot
+   be made reliable across the offsets the policy visits, then restricting the operating envelope
+   (lower speed, or a policy retrained to hold the centre more tightly) becomes the honest engineering
+   answer — but it is then a *documented ODD restriction*, argued as such, not a silent tuning.
+
+**Consequences.**
+
+* The 31.08 conclusion is **sharpened, not overturned**: docs/17 §10.3 stands, and this entry supplies
+  the mechanism and the resulting order of work.
+* **`kappa_ahead` joins `ey` and `epsi` as a quantity that must not be read off a single hardware
+  frame** without the closed-loop check. Any physical analysis binned on `κ` — including §8.8's
+  "tightest curve" attribution and the session note's "\|ey\| grows monotonically with curvature" — is
+  binned on a signal that over-reads by ~3× and should be re-derived after the capture session.
+* C-04 stays un-armable until this is resolved (D-75), and the `preflight_deploy.py lanecheck`
+  tightened on 31.08 is the first gate that would catch the off-centre case — provided it is actually
+  run at −60 and −100 mm, which is now the point of running it.
+* No hazard, SR, cage rule, scenario, metric or verdict is added or re-valued; `verdict_phys` stays
+  open. This is Phase-5 posterior evidence.
+
+Cites D-43 (the estimator and its H-12 residual), D-71 (§3's method lesson: match the measurement to
+the quantity), D-74 (the C-05 latch these degradations trip), D-75 (the closed-loop test and C-04's
+dead zone), D-69 (the verdict of record, untouched).
+
+---
+
+### D-77 — Widening the estimator: SR-014's inter-frame gate is nine times the physical motion, so the estimator's silent relocations are made *declared* rather than corrected
+
+| Field | Value |
+| --- | --- |
+| Section | `src/cobraflex_rl/cobraflex_rl/cage_perception.py` (`jump_tol_m` override); `cv_lane_estimator_node.py` (`perception_jump_tol_m`); `src/cobraflex_rl/launch/deploy_cobraflex.launch.py`; `policy/tests/test_cage_perception.py`; `docs/17` §10.7 |
+| Status | ACCEPTED — **physical path only.** Defaults unchanged, so the Gazebo path and the D-69 verdict scored on it stay bit-identical. `cage/cage.yaml` untouched; no SR, cage rule, ODD parameter or verdict re-valued. |
+| Date | 31.08.2026 |
+
+**Context — and a correction to D-76.** D-76 declared the concrete estimator change blocked on a
+capture session with true position. That was **half right**. True position is still required for the
+*accuracy* question (does the estimator read the right `ey`), but it is **not** required for the
+*consistency* question, because `experiments/physical/datasets/circuit_export/labels.csv` is
+**tracked** and carries `line_c0_m` — the per-frame lateral intercepts of every detected line, i.e.
+the exact input to the pair-selection decision. A pure-Python replay of the pairing from that column
+alone **reproduces the recorded `ey` on 1450/1450 paired frames** (max deviation 0.01 mm, CSV
+rounding), so the selection logic can be developed and scored offline on this host, on a full
+circuit, with no frames and no Jetson. The frames themselves are on the car; they were not needed.
+
+**What the replay establishes.** Taking an *unphysical relocation* to be the selected pair's centre
+moving > 60 mm at > 1.0 m/s apparent lateral rate (the car cannot move sideways faster than it moves
+at all — 0.22 m/s is a hard bound; 60 mm clears the estimator's own 43 mm off-centre noise span,
+docs/17 §10.2), the recording contains **42 of them in 1401 transitions**, the worst a **364 mm jump
+in one frame — 47× the car's top speed**.
+
+**Three hypotheses tested and refuted, before the one that worked.**
+
+1. **Temporal continuity in the pair selection** — prefer the pair nearest the previous centre
+   instead of nearest the vehicle. **No effect whatsoever** (42 relocations before and after, max
+   jump 364 mm both ways). Reason: **38 of the 42 relocations (90 %) had only ONE plausible pair.**
+   There was nothing to choose between; the *candidate line set* changed and the single surviving
+   pair sat elsewhere. No selection policy can fix these — which is also why D-48's `ruta-2b`
+   selection patch was reverted as unnecessary, now with a mechanism rather than an observation.
+2. **Tightening `lane_width_tol_m`** (0.10 → 0.08/0.06/0.05/0.04). Actively harmful: frames left with
+   no plausible pair at all go **41 → 110 → 231 → 483**, because that parameter gates pair
+   *acceptance*. It confirms the 31.08 refutation of hypothesis 6 from a second direction.
+3. **Tightening SR-014's `lane_width_range` on its own.** Forbidden by an invariant already in the
+   code: `CagePerceptionSupervisor` derives that window from the estimator's pair-acceptance window
+   precisely because decoupling them re-creates the **E2 dead zone** that deadlocked the cage into its
+   no-state path. (An early sweep of mine used the checker's generic 0.20–0.80 default as the
+   baseline; that is **not** the deployed window, which is `nominal ± tol` = 0.145–0.345. The numbers
+   from that sweep are withdrawn.)
+
+**The finding.** SR-014's temporal gate is already rate-based and physically shaped:
+`allowed_dey = |v|·dt + jump_tol_m`. At the deployed 0.22 m/s and a 50 ms cycle the physical term is
+**11 mm** and `jump_tol_m` is **100 mm** — the tolerance is **nine times** the motion it is meant to
+bound, and it therefore admits a 111 mm relocation as "temporally consistent". Measured on the
+replay, the deployed setting catches **10 of the 42** relocations; the rest reach the cage as valid
+state. This is the missing plausibility check the 31.08 sweep pointed at when it observed
+`/perception_invalid` staying False through a 43 mm swing — except the check is not missing, it is
+**mis-scaled**.
+
+| `jump_tol_m` | relocations caught | good frames suppressed | frames with no pair | added C-05 rejects |
+| --- | --- | --- | --- | --- |
+| **0.10 (frozen)** | 10 / 42 | 0.00 % | 0 | 0 |
+| **0.05 (deployed)** | **30 / 42** | 0.57 % | 0 | 5 |
+
+**Decision.** `jump_tol_m` becomes configurable on the supervisor (`None` = the frozen 0.10) and is
+exposed as `perception_jump_tol_m` on `cv_lane_estimator_node`, following the existing
+`perception_min_invalid_cycles` precedent (`< 0` keeps the default). **The physical launch defaults to
+0.05**; simulation keeps 0.10, so nothing owed to D-69 is disturbed. 0.05 is chosen as the smallest
+value above the estimator's measured 43 mm off-centre noise span and well below a half-lane
+relocation — not as a fitted optimum.
+
+**What this does, and what it explicitly does NOT do.** It does **not** make the estimator read
+correctly off-centre; the pairing is unchanged and D-76's diagnosis stands. It converts a **silent
+wrong answer into a declared unavailability**: a caught frame sets `plausible=False`, which suppresses
+`/state_obs` (the cage's missing-state path) **without** raising `/emergency` — C-05 still requires
+`min_implausible_cycles`. That is the correct direction for H-12, whose whole difficulty is that a
+wrong estimate is self-consistent and therefore invisible.
+
+**Limits, stated because they bound the claim.**
+
+* `circuit_export` was recorded with the car **pushed by hand**, so the replay assumes `speed_mps =
+  0.22` (the deployed cap) as an upper bound on the physical term — the most permissive assumption,
+  which understates rather than overstates the gate's benefit.
+* `labels.csv` carries no curvature, so `curvature_max` is untested by this replay.
+* The availability figures (0.57 %, 5 rejects) are from that recording, not from a driving run. On
+  hardware a C-05 latch ends the segment (D-74), so **the next session should watch the reject count
+  first**; 0.06 is the fallback if 0.05 proves too tight in motion.
+* **Nothing here has been launched.** Host logic and tests only.
+
+Cites D-43 (the estimator), D-48 (the reverted selection patch, now explained), D-69 (the verdict path
+left bit-identical), D-71/D-76 (the diagnosis this acts on), D-74 (why an added reject is expensive on
+hardware), D-75 (the `∮κ·ds` test that established the over-read).

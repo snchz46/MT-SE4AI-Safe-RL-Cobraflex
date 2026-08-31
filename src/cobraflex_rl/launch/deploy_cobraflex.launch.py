@@ -192,6 +192,18 @@ def generate_launch_description() -> LaunchDescription:
                                           "Surface-dependent — re-check on the real "
                                           "track; pass 0.8 for the sim value."),
         # D-43 perception contract of the deployed trunk (training config `cage:`).
+        # SR-014's inter-frame lateral gate (D-77). The checker's own default,
+        # 0.10 m, is nine times one cycle's physical lateral motion at the
+        # deployed 0.22 m/s, so it admits a 111 mm relocation as "temporally
+        # consistent"; replayed on the 1450 paired frames of `circuit_export` it
+        # catches 10 of 42 unphysical relocations, against 30 at 0.05 m for
+        # 0.57 % of good frames suppressed. 0.05 is above the estimator's own
+        # 43 mm off-centre noise span (docs/17 §10.2) and below a half-lane
+        # relocation. THE PHYSICAL DEFAULT IS THE TIGHTENED ONE; pass -1.0 to
+        # restore the frozen sim/verdict behaviour.
+        DeclareLaunchArgument("perception_jump_tol_m", default_value="0.05",
+                              description="SR-014 inter-frame lateral tolerance "
+                                          "(m); <0 keeps the 0.10 default"),
         DeclareLaunchArgument("heading_fit_mode", default_value="joint_pair_quadratic",
                               description="near_secant = frozen GE4; "
                                           "joint_pair_quadratic = the 2-D trunk."),
@@ -343,6 +355,7 @@ def generate_launch_description() -> LaunchDescription:
             "white_val_min": LaunchConfiguration("white_val_min"),
             "heading_temporal_window": LaunchConfiguration("heading_temporal_window"),
             "rectify_calibration": LaunchConfiguration("rectify_calibration"),
+            "perception_jump_tol_m": LaunchConfiguration("perception_jump_tol_m"),
         }],
     )
     cage = Node(

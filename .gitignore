@@ -169,3 +169,12 @@ experiments/physical/bags/
 # they carry every measurement M-7 §3b cites.
 experiments/physical/datasets/*/frames/
 experiments/calibration/M7_offset_response_frames/
+
+# frame_capture_node event dumps: the +-3 s PNG neighbourhoods around each
+# /perception_invalid or /emergency edge. Same rule as the lane datasets above —
+# the imagery stays on the car, the CSV beside it (capture_events.csv) IS tracked
+# and carries the event index, reason, trigger time and filename of every frame.
+# 31.08.2026 committed 962 MB of these before this rule existed (5 runs, 3248
+# PNGs); they are untracked from 01.09 forward and remain retrievable from
+# commit 7c496ff5. See docs/CHANGELOG.md [31.08.2026].
+experiments/physical/runs/*/frames/

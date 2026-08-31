@@ -107,6 +107,15 @@ class CvLaneEstimatorNode(Node):
         # Supervisor invalid-persistence budget; <0 keeps CagePerceptionSupervisor's
         # own live-tuned default (min_invalid_cycles=4 at the 10 Hz control rate).
         self.declare_parameter("perception_min_invalid_cycles", -1)
+        # SR-014 inter-frame lateral gate: |d ey| > |v|*dt + jump_tol_m marks the
+        # estimate implausible (state suppressed; C-05 only after
+        # min_implausible_cycles). <0 keeps LanePlausibilityCheck's own 0.10 m,
+        # which is 9x one cycle's physical lateral motion and lets 32 of 42
+        # measured unphysical relocations through. Set 0.05 on the physical path
+        # (D-77): above the estimator's own 43 mm off-centre noise span (docs/17
+        # §10.2), below a half-lane relocation. Sim keeps the default so the D-69
+        # verdict path stays bit-identical.
+        self.declare_parameter("perception_jump_tol_m", -1.0)
         # --- physical-camera rectification (M-6/M-7, D-71) --------------------
         # The IPM above assumes an ideal pinhole with the axis at the image
         # centre; the real camera is a 160-degree lens read through a crop, and
@@ -182,6 +191,13 @@ class CvLaneEstimatorNode(Node):
 
             sup_kwargs["health"] = PerceptionHealthMonitor(
                 min_confidence=0.10, min_invalid_cycles=_min_invalid
+            )
+        _jump_tol = float(self.get_parameter("perception_jump_tol_m").value)
+        if _jump_tol >= 0.0:
+            sup_kwargs["jump_tol_m"] = _jump_tol
+            self.get_logger().info(
+                f"SR-014 inter-frame lateral gate: jump_tol_m={_jump_tol:.3f} m "
+                f"(default 0.100)"
             )
         self._supervisor = CagePerceptionSupervisor(**sup_kwargs)
         self._image_msg: Optional[Image] = None

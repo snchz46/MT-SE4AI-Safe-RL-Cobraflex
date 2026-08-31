@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 > Keep lean (<250 lines). Move detail into linked docs rather than inflating this file.
-> Last reviewed: 2026-08-24.
+> Last reviewed: 2026-08-31.
 
 ## What this repo is
 
@@ -129,8 +129,10 @@ script reports orphans on either side.
   207–241 mm**, leaving 14–48 mm to the road edge instead of 95 (width is a *difference* straddling the
   optical axis, `ey` an *absolute* off-axis position, and the unmodelled `k1 = −0.339` barrel compresses
   only the second). Two further defects in the same band where C-01/C-05 act: **repeatability** (mean
-  13.2 mm, worst 29.4, against a ~2 mm tape) and **pairing collapse beyond ~±55 mm**. **M-6's `ey`
-  under-read of 0.72 is CONFIRMED**; its conclusion — **undistort, do not just re-parameterise** — stands,
+  13.2 mm, worst 29.4, against a ~2 mm tape) and **pairing collapse beyond ~±55 mm**. **All three of
+  those offset defects were measured UNRECTIFIED and are SUPERSEDED for the deployed path (31.08, see
+  below) — do not tune C-01/C-05 from them.** M-6's 0.72 read as CONFIRMED here; its *conclusion* —
+  **undistort, do not just re-parameterise** — is what 31.08 vindicated, and that stands,
   and its real cost is heading **noise** (`joint_pair_quadratic`/1.6 sd 14.3°, 7.8 % past C-02's 25°, vs
   `near_secant`/1.0's 5.3° / 0.8 %). §5 yaw resolved: the plant is compressive (0.48→0.34), 0.4954
   confirmed while moving, compensated by `steering_to_yaw_rate_gain 1.615`. **Method lesson (D-71 §3):
@@ -197,25 +199,131 @@ script reports orphans on either side.
   Whether it closed the loop **cannot be settled from odometry** (the same fix removed the loop-closure
   correction) — needs a floor mark + tape, §9.4. Bottleneck **moved**: `/state_obs` 9.84 Hz vs `/cage_status`
   8.68 Hz = 12 % of estimator cycles with no control cycle → `rl_policy_node`'s timer (CNN), not the camera.
-- **Next session prepared (27.08, docs/17 §9) — target: a complete monitoring lap that explains itself.** Four
-  evidence gaps closed in code, none touching the cage: `cage_logger_node platform:=physical` (commit +
-  cage/checkpoint/rectify hashes + contract, written at start-up too); **`frame_capture_node`** — lane frames
-  around each `/perception_invalid`//`emergency` edge from a RAM ring buffer, ~20 MB/run vs the 13.8 MB/s bag
-  that crashed the Jetson on 18.08 (§8.9's twice-asked item); **`cage_reset_proxy_node`** (`observe` default,
-  **outside** the cage, `cage.yaml` untouched and a test pins it); **`tools/run_physical_lap.sh`** (one run id
-  for bag+CSV+frames+resets, probes the *running* Layer 2 into `layer2.json`). **None of the three new ROS
-  nodes has been launched** — pure logic tested (42 new host-side tests), runtime unverified. Two hand
-  measurements nothing automates: floor mark + tape, and `lanecheck --true-ey` (M-7 §3b). Both pending
-  decisions are now **taken**: **D-73** (ZED loop closure off as deployment configuration — the cage reads
-  velocity, so drift beats jumps; the price is that odometry can no longer say whether a lap closed) and
-  **D-74** (C-05 unchanged, reset path outside the cage, `observe` by default; whether C-05 should ever gain a
-  bounded recovery is **deferred** — sim cannot validate it, because the latch is nearly inert there).
+- **Session instrumentation prepared 27.08 (docs/17 §9) — EXECUTED 31.08; the bullet below is its
+  outcome.** Four evidence gaps closed in code, none touching the cage: `cage_logger_node
+  platform:=physical` (commit + cage/checkpoint/rectify hashes + contract, written at start-up too);
+  **`frame_capture_node`** — lane frames around each `/perception_invalid`//`emergency` edge from a RAM
+  ring buffer, instead of the 13.8 MB/s bag that crashed the Jetson on 18.08 (§8.9's twice-asked item);
+  **`cage_reset_proxy_node`** (`observe` default, **outside** the cage, `cage.yaml` untouched and a test
+  pins it); **`tools/run_physical_lap.sh`** (one run id for bag+CSV+frames+resets, probes the *running*
+  Layer 2 into `layer2.json`). **All three nodes were launched for the first time on 31.08 and two needed
+  fixes on the spot** (`cage_logger_node` died in its constructor; `cage_reset_proxy_node` deadlocked) —
+  the 27.08 note that none had been launched, and its **"~20 MB/run" estimate for `frame_capture_node`,
+  are both superseded**: the measured cost is 301 KB/PNG and the day wrote 1002 MB. Of the two hand
+  measurements nothing automates, `lanecheck --true-ey` (M-7 §3b) **was done** — it is the 31.08 offset
+  sweep — and **floor mark + tape is still outstanding**. Both pending decisions were **taken**: **D-73**
+  (ZED loop closure off as deployment configuration — the cage reads velocity, so drift beats jumps; the
+  price is that odometry can no longer say whether a lap closed) and **D-74** (C-05 unchanged, reset path
+  outside the cage, `observe` by default; whether C-05 should ever gain a bounded recovery is **deferred**
+  — sim cannot validate it, because the latch is nearly inert there).
 - **The manuscript now carries Phase 5, and carries it as BRING-UP (27.08).** `manuscript/` had gone stale in a way that mattered: Ch. 9 asserted *"no se ha ejecutado sobre hardware"* and named the
   HFOV check as still pending **after** M-6 had run it and refuted it, and the gap table called the 550k *"la que se despliega"*. Corrected across draft_v5 (abstract, preface, 09/10/12) and chapters (07/09/10/12), plus docs/07/08/09/11/12/16 — `docs/11` §8.6 is new (the v2 run). **Two classes of physical evidence are labelled differently and must stay that way:** calibration + structural findings (M-6, M-7, D-71, the two A/B pairs, C-04's dead zone) are **results**; driving figures and the gap table's physical column are **PRELIMINAR, N=1, `monitoring`, unscored** and the campaign supersedes them. No hazard/SR/scenario/metric/verdict added or re-valued (CSVs re-run: 12/14, no diff); D-67's reclassification stayed repo-only. **Page budget not re-checked** (needs Word COM) and no figure regenerated.
+- **31.08.2026 track session (docs/17 §10) — the goal was NOT met, and the failure is now located
+  between two components rather than in one.** Second driving session, first launch of the §9
+  instrumentation. Best **14.56 m** (lap02, 4 resets) against 26.08's 18.05 m; four laps, one sweep.
+  **(i) The M-7 §4 `ey` under-read DOES NOT SURVIVE RECTIFICATION** — nine-point tape sweep, hands-off,
+  on the ground, rectified: scale **1.058** left / **0.991** right, intercept gone, so **C-01 fires at a
+  true 151/158 mm with ~100 mm of margin**, not 207–241 mm with 14–48. M-7 §4 now carries a superseded
+  banner; it characterised the *raw* path and its prescription (*undistort*) is what this vindicates.
+  **(ii) A different defect in the same band:** right of centre the estimator swings **43.3 mm on a
+  STATIONARY car** (sd 6.2–8.4 vs 0.5–0.9 mirrored, reproducible) with `/perception_invalid` **never
+  firing** — confidently wrong (H-12/D-43); it predicted lap01's stop before it happened. **(iii) Eight
+  single-component hypotheses, all refuted by measurement.** The surviving diagnosis: M-7 saw 0.8 % of
+  frames past C-02 with a car *pushed by hand* near the centre; *driving itself*, the same configuration
+  gives **6.8–11.6 %** — **the estimator's reliable envelope and the policy's driving envelope do not
+  overlap well enough**, neither component individually defective. **(iv)** C-02 failures are **sustained**
+  (99 % in episodes ≥ 2, one of 45 cycles), C-04 still cannot fire (0.25 > 0.22) while |ey| grows
+  monotonically with curvature to 63 mm, and **`monitoring` does not mean the cage cannot stop the car**
+  (`vehicle_control_node` zeroes `/cmd_vel` on latched `/emergency` in both modes, by design). What
+  unblocks a lap is a **full-circuit recording with true position**, not another single-component fix —
+  event frames are failure *neighbourhoods* and their statistics do not generalise. Posterior evidence:
+  re-scores nothing, `verdict_phys` still open. Four follow-ups closed on the compute host the same day
+  (CHANGELOG `[31.08.2026 · later]`): 962 MB of event PNGs untracked (`.gitignore` covered
+  `datasets/*/frames/` but not `runs/*/frames/`); `frame_capture` repriced 4000 → 600 frames (~1.2 GB →
+  ~185 MB at a measured 301 KB/PNG) with saturation now reported — **all four driving runs saturated the
+  8-event cap**, so those frames are *truncated* as well as biased; **`preflight_deploy.py lanecheck`
+  given a span check** because `sd_ey ≤ 10 mm` returned **PASS on the 43.3 mm swing** (the new gate also
+  fails the 5.3 mm reading docs/17 §8.2 records as a PASS — probable false negative); and
+  `rl_policy_node` re-seeding its k=4 stack on `/cage_reset`. **None of those nodes has been launched
+  since — logic only.** **(v) Analysed further on the compute host, and it changes the reading:
+  `kappa_ahead` OVER-READS BY ~3×** — on a closed circuit `∮κ·ds = 2π` per lap, and the logged `|κ|`
+  integrates to **3.04×** (lap02) and **2.92×** (lap04) the turning the 19.28 m circuit can contain,
+  with the over-read's tail growing with offset (8.4 % → 53.9 % of cycles above `ODD-3.KAPPA_MAX`).
+  So the estimator misreads **offset, heading AND curvature** off-centre — one failure in three
+  channels — and **any physical analysis binned on `κ` is binned on a corrupted signal**, including
+  docs/17 §8.8's "tightest curve" and this session's "|ey| grows with curvature". That settles both
+  open decisions: **D-75** (C-04 un-armable — 0 of 2484 moving cycles reach the 0.25 floor, max
+  0.228 m/s; `cage.yaml` untouched, re-arming blocked on the capture session) and **D-76** (widen the
+  estimator before narrowing the policy; the policy does not consume the estimator, so the stops are
+  produced by the *measurement* in a region the policy legitimately visits).
 - **`campaign_v2` — posterior evidence; it does NOT re-score G4.** The same 27 × 2 × seed-2024 matrix
   (1890 runs, SC-PERT-03 excluded per D-64) on the 1650k checkpoint, behind the `flock` guard;
   `experiments/sim/campaign_v2/` held **20 runs** at the 24.08 commit. Not a prerequisite for driving
   (docs/17 §7.6). SC-FRONT-07 is **no longer an OOD probe** for this policy — read it as a regression test.
+
+### Next steps (as of 31.08.2026 — Phase 5, posterior evidence; none of this re-scores a gate)
+
+Ordered by what unblocks the most. **1 is the only one that changes the diagnosis; 2–4 are
+cheap and were already prescribed; 5–6 were decisions and are now TAKEN (D-75, D-76) — both
+resolve to "not yet, and here is the precondition", and that precondition is 1.**
+
+1. **A CAPTURE session, not a driving one — the blocker.** A full-circuit recording with
+   **true position** (the M-7 §3 method), to see which line pair the estimator picks at each
+   point of the track. Eight single-component hypotheses have already died against driving
+   data (docs/17 §10.3), and event frames structurally cannot answer it: they are failure
+   *neighbourhoods* whose median lane width reads 193 mm against the same estimator's
+   252.9 mm over a circuit. **Do not spend another session guessing.** It now has two
+   **acceptance tests** rather than a hope (D-75/D-76): the closed-loop `∮κ·ds ≈ 2π` per lap,
+   and the offset sweep repeated at points **around** the circuit instead of at one location.
+   D-75 is blocked on it; D-76's *consistency* half was unblocked offline by D-77, so what this
+   session still owes is **accuracy** — which line pair is the true one at each point of the track.
+2. **Re-run `lanecheck` at −60 and −100 mm**, not only at centre. The new span gate is
+   *expected* to FAIL there — that is the point; a PASS at centre certifies one pose only.
+3. **Floor mark + tape** (docs/17 §9.4). Since D-73 turned loop closure off, odometry can no
+   longer say whether a lap closed — this is the only way to settle it. Still outstanding.
+4. **Launch the three nodes touched on the compute host** (`frame_capture_node`,
+   `rl_policy_node`, `preflight_deploy.py lanecheck`). Logic and host tests only —
+   runtime-unverified, and the repo's own rule says that is not evidence they work.
+5. **C-04 — DECIDED, D-75: stays un-armable, `cage.yaml` untouched.** The ceiling is
+   `max(0.25, 0.5 − 0.3|κ|)`, so 0.25 is a floor no curvature can lower; measured over 2484
+   moving cycles the car peaks at **0.228 m/s** and **zero** cycles reach 0.25. Lowering the
+   threshold would arm the rule on **phantom curvature** (see 6). Re-arming is blocked on 1,
+   and any change then needs the full `[provisional]` workflow — bump + a campaign that does
+   **not** run on this host, and that would make the deployed cage differ from D-69's.
+6. **The envelope mismatch — DECIDED as an ORDERING, D-76: widen the estimator before
+   narrowing the policy.** The mechanism is now measured: off-centre, the estimator misreads
+   offset, heading **and curvature** at once, reporting none of it invalid (H-12). Curvature is
+   the new one — `∮κ·ds` over a closed circuit over-reads by **~3×** (lap02 3.04, lap04 2.92),
+   and the share of cycles reading `|κ| > ODD-3.KAPPA_MAX` climbs 8.4 % → 53.9 % with offset.
+   The policy does **not** consume the estimator (CNN reads the image, the estimator feeds the
+   **cage**), so this is not a loop through the policy: the stops are produced by the
+   *measurement*, in a region the policy legitimately visits. Narrowing the policy stays the
+   **documented fallback** if the estimator cannot be made reliable — as an ODD restriction
+   argued as such, never a silent tuning. **Caveat:** `|ey|` and true curvature are correlated
+   by driving, so only the closed-loop integral is confound-free.
+
+   **Fallout:** any physical analysis binned on `κ` is binned on a corrupted signal — docs/17
+   §8.8's "tightest curve" and the 31.08 "|ey| grows with curvature" both need re-deriving.
+
+   **PARTIALLY DONE — D-77 (docs/17 §10.7).** D-76's "blocked on the capture session" was half
+   wrong: `datasets/circuit_export/labels.csv` is **tracked** and its `line_c0_m` column is the
+   pair-selection input, so a replay reproduces the recorded `ey` on **1450/1450** frames — a
+   full-circuit test bench on this host, no frames, no Jetson. Only *accuracy* still needs true
+   position. On it, three fixes were **refuted** (continuity selection — 90 % of relocations have
+   only ONE candidate pair, so nothing to choose; tightening `lane_width_tol_m` — 41→483 frames
+   left with no pair; tightening SR-014's width alone — forbidden, re-creates the E2 dead zone),
+   and the real defect found: **SR-014's gate is mis-scaled, not missing.** `allowed_dey =
+   |v|·dt + jump_tol_m` is 11 mm of motion + **100 mm** of tolerance, so it admits a 111 mm
+   relocation. At **0.05** it catches **30 of 42** relocations (vs 10) for 0.57 % of good frames
+   suppressed. `perception_jump_tol_m` is now a node parameter, **physical default 0.05, sim keeps
+   0.10** so the D-69 path is bit-identical. **It does NOT make the estimator read better
+   off-centre** — it turns a silent wrong answer into a *declared unavailability* (suppresses
+   `/state_obs`, does **not** raise `/emergency`). Watch the **reject count** next session (a C-05
+   latch ends a segment, D-74); fallback 0.06. **Not launched.**
+
+Not blocking, but true: `verdict_phys` is still open (no scenario scored on hardware), and
+**this file is at ~490 lines against its own <250 budget** — the split into `CLAUDE_*.md` is
+overdue and is an authoring decision.
 
 ### Earlier phase evidence
 
@@ -365,6 +473,8 @@ Full loop: `ros2 launch cobraflex lane_keeper_gazebo.launch.py`. The ROS2 nodes 
 | Defense compendium (deep dives, threshold provenance, **what counts as a result vs a finding**) | [docs/16_defense_compendium.md](docs/16_defense_compendium.md) |
 | Physical deployment / Phase-5 bring-up (camera + driver + layering) | [docs/17_physical_deployment.md](docs/17_physical_deployment.md) |
 | Sim-to-real v2 runbook + deployment gate (D-72) | [docs/17 §7](docs/17_physical_deployment.md) + [tools/run_deploy_gate.sh](tools/run_deploy_gate.sh) |
+| Physical track sessions (what drove, what stopped it, what was refuted) | [docs/17 §8](docs/17_physical_deployment.md) (26.08) + [§10](docs/17_physical_deployment.md) (31.08) |
+| Lane-estimator calibration — **read the §4 superseded banner first** | [M-7](experiments/calibration/M7_track_perception.md) + [31.08 sweep](experiments/physical/runs/lanesweep_20260831T094110Z/SWEEP_NOTE.md) |
 | Decisions (D-NN) | [docs/DECISIONS.md](docs/DECISIONS.md) |
 | What changed when | [docs/CHANGELOG.md](docs/CHANGELOG.md) |
 | Manuscript-to-CSV generation | [TRACEABILITY.md](TRACEABILITY.md) |

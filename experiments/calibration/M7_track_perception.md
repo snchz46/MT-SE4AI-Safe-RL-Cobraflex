@@ -25,6 +25,12 @@ than 160, and its pairing additionally collapses beyond roughly ±55 mm of offse
 defects sit inside the band where C-01 and C-05 act. The trunk camera policy does not transfer.
 The cage contained it anyway, and separately rejected a real odometry fault.**
 
+> **Both offset defects in that headline are measured on the UNRECTIFIED path and do NOT
+> reproduce once rectified (31.08.2026) — see the banner at §4 before using any number
+> from this document to tune the cage.** The lane-*width* result, the heading-noise
+> comparison between fit modes, the §5 yaw calibration and the §3 method lesson are
+> unaffected and stand.**
+
 **Second headline, methodological:** three conclusions drawn from a stationary rig at one spot
 were all overturned by two minutes of recorded circuit — see §2 before reading anything else.
 
@@ -139,6 +145,32 @@ handling. Until it is run, treat the ±55 mm figure as indicative rather than es
 §2 lesson applies to this measurement too.
 
 ## 4. The `ey` transfer function, measured hands-off — M-6's under-read is REINSTATED
+
+> **SUPERSEDED FOR THE DEPLOYED CONFIGURATION (31.08.2026). Do not re-tune C-01 or C-05
+> from the numbers in this section.** Everything below was measured on the **unrectified**
+> path — rectification was only demonstrated on hardware eight days later (docs/17 §8.3)
+> and has been the deployed configuration since. The clean test this section asks for in
+> §3b was run on 31.08: car on the ground, hands off, tape-measured, rectified,
+> `near_secant`/1.0, `policy:=false`. **Rectified, the under-read is not there**: scale
+> **1.058** (car left, r² 0.999) / **0.991** (car right, r² 0.977), and the ≈ −10 mm
+> intercept disappears too (−11.7 mm with the wheels in the air, +0.7 mm on the ground).
+> C-01 fires at a true **151 / 158 mm** with ~100 mm of margin to the road edge — not at
+> the 207–241 mm with 14–48 mm computed below. The ±55 mm pairing collapse does not
+> reproduce either (0/440 invalid cycles out to ±100 mm), which confirms this section's
+> own suspicion that the hand sweep produced it.
+>
+> **This section is not withdrawn, and its operative conclusion was right.** It said
+> "correcting `fx` alone is not enough, the estimator has to undistort"; the 31.08 sweep
+> is the measurement showing that undistorting did exactly what was asked of it. Read §4
+> as the characterisation of the **raw** path and as the reason the deployment is
+> rectified — not as a live description of what the cage sees today.
+>
+> What the sweep found instead is a **different** defect in the same band: right of
+> centre the estimate is unstable — 43.3 mm of swing on a stationary car at −60 mm,
+> sd 6.2–8.4 mm against 0.5–0.9 mm mirrored, reproducible — with `/perception_invalid`
+> False for all 705 cycles, i.e. confidently wrong (H-12 / D-43). Sweep:
+> `experiments/physical/runs/lanesweep_20260831T094110Z/SWEEP_NOTE.md`; session:
+> `experiments/physical/runs/SESSION_20260831.md`; CHANGELOG `[31.08.2026]`.
 
 This section was written twice. The first version concluded from the lane-width measurement that
 "the IPM reads lateral distance correctly" and retracted M-6's propagated `ey` scale. **That

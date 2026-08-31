@@ -116,3 +116,33 @@ def test_filename_groups_by_event_and_keeps_the_join_key():
     assert name.startswith("e03_")
     assert "1787738804.712935" in name
     assert name.endswith(".png")
+
+
+def test_default_frame_budget_is_bounded_in_BYTES_not_just_in_frames():
+    """The 31.08.2026 regression: the cap was a frame count nobody had priced.
+
+    Five runs wrote 3248 PNGs / 1002 MB, i.e. 301 KB per 640x360 frame, so the
+    then-default ``max_frames`` of 4000 was a ~1.2 GB per-run cap on the same
+    eMMC that the 18.08 bag recording had already crashed. The default must stay
+    priced in bytes; raise it per run, never as a default.
+    """
+    kb_per_frame = 301
+    budget_mb = FrameCapture().max_frames * kb_per_frame / 1024
+    assert budget_mb < 200, f"default capture budget is {budget_mb:.0f} MB per run"
+
+
+def test_saturated_budget_is_observable_so_the_sample_can_be_called_truncated():
+    """Every driving run of 31.08 hit the event cap, which makes the frames on
+    disk a truncated sample: triggers after the last event were never recorded.
+    ``budget_exhausted`` is what lets the node say so at shutdown."""
+    cap = FrameCapture(pre_seconds=0.1, post_seconds=0.0, max_events=2)
+    assert not cap.budget_exhausted
+
+    for i, t in enumerate((10.0, 20.0)):
+        _fill(cap, t, 2)
+        cap.trigger(t + 0.2, TRIGGER_PERCEPTION_INVALID)
+    assert cap.budget_exhausted
+
+    _fill(cap, 30.0, 2)
+    assert cap.trigger(30.2, TRIGGER_EMERGENCY) == []
+    assert len(cap.events) == 2

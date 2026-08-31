@@ -68,6 +68,7 @@ class CagePerceptionSupervisor:
         estimator: Optional[CvLaneEstimator] = None,
         health: Optional[PerceptionHealthMonitor] = None,
         plausibility: Optional[LanePlausibilityCheck] = None,
+        jump_tol_m: Optional[float] = None,
     ) -> None:
         self.estimator = estimator or CvLaneEstimator()
         if health is None:
@@ -102,6 +103,20 @@ class CagePerceptionSupervisor:
                 # live at E2). 3.0 still rejects absurd geometry while
                 # admitting KAPPA_MAX plus the measured estimator noise.
                 curvature_max=3.0,
+                # SR-014's inter-frame gate is `|d ey| > |v|*dt + jump_tol_m`.
+                # The default 0.10 m is NINE TIMES the physical lateral motion
+                # of one cycle (0.22 m/s * 0.05 s = 11 mm), so it dominates the
+                # physical term and admits a relocation of up to 111 mm as
+                # "temporally consistent". Replayed against the 1450 paired
+                # frames of `circuit_export`, the deployed setting catches only
+                # 10 of 42 unphysical lane relocations (a selected-pair centre
+                # moving >60 mm at >1.0 m/s apparent — up to 364 mm in one
+                # frame, 47x the car's top speed); at 0.05 m it catches 30,
+                # for 0.57 % of good frames suppressed and 5 added C-05
+                # rejects. `None` keeps the checker's own default so the
+                # Gazebo path — and the D-69 verdict scored on it — stays
+                # bit-identical; the physical launch opts in. (D-77)
+                **({} if jump_tol_m is None else {"jump_tol_m": float(jump_tol_m)}),
             )
         self.plausibility = plausibility
 

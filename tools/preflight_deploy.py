@@ -405,8 +405,26 @@ def lanecheck(args) -> int:
             f"mean {math.degrees(mean_ep):+.2f} deg, sd {math.degrees(sd_ep):.2f} deg")
     # A parked car must produce a quiet estimate. Jitter here is jitter the
     # policy sees at every cycle, and it enters C-01/C-03 unfiltered.
-    r.check(sd_ey <= 0.010, "the parked estimate is quiet (sd_ey <= 10 mm)",
-            f"sd {sd_ey*1000:.1f} mm — anything larger is noise the cage acts on")
+    #
+    # sd ALONE IS THE WRONG STATISTIC, and the 31.08.2026 sweep proved it: at a
+    # true -60 mm the estimate swung 43.3 mm peak-to-peak on a STATIONARY car
+    # while this check returned PASS, because the swing is a pairing that flips
+    # between two candidate line pairs — a bimodal excursion ~31 mm off the mode,
+    # which moves the SPAN far more than it moves sd (sd 8.4 mm, inside the old
+    # 10 mm limit). The same sweep bounds the healthy case: every centred and
+    # left-side point read sd 0.5-1.4 mm over a 2.4 mm span. So span is the
+    # discriminator and sd is retightened onto the measured healthy band.
+    # (experiments/physical/runs/lanesweep_20260831T094110Z/SWEEP_NOTE.md)
+    span_ey = max(ey) - min(ey)
+    med_ey = statistics.median(ey)
+    excursion = max(abs(v - med_ey) for v in ey)
+    r.check(span_ey <= 0.012, "the parked estimate is steady (span_ey <= 12 mm)",
+            f"span {span_ey*1000:.1f} mm, worst excursion {excursion*1000:.1f} mm off "
+            f"the median — healthy is a 2.4 mm span; the 43.3 mm pair-flip of the "
+            f"31.08 sweep is exactly what the old sd-only check let through")
+    r.check(sd_ey <= 0.003, "the parked estimate is quiet (sd_ey <= 3 mm)",
+            f"sd {sd_ey*1000:.1f} mm — healthy is 0.5-1.4 mm; the unstable right-side "
+            f"points of the 31.08 sweep read 6.2-8.4 mm and passed the old 10 mm limit")
     # C-02's threshold is 25 deg and the whole 550k verdict campaign never saw a
     # heading error above 14.2 deg. A PARKED car whose epsi jitters by more than
     # that is not a measurement problem — it is the policy's obs[1] and C-02's
@@ -415,6 +433,18 @@ def lanecheck(args) -> int:
             "the parked heading estimate is quiet (sd_epsi <= 5 deg)",
             f"sd {math.degrees(sd_ep):.2f} deg vs C-02's 25 deg limit and the "
             f"14.2 deg worst case of the entire 550k campaign")
+
+    # The thresholds above are necessary, not sufficient, and no threshold can
+    # make them sufficient: this stage samples ONE pose, the one the operator
+    # parked at. The 31.08.2026 sweep found the estimator quiet at centre and to
+    # the LEFT and unstable from -60 mm rightward — with /perception_invalid
+    # False for all 705 cycles, i.e. confidently wrong (H-12 / D-43). A car
+    # parked near centre therefore passes every check here while the region the
+    # policy actually drives through in curves is broken.
+    r.check(None, "COVERAGE — this certifies the pose you parked at, and no other",
+            "the 31.08 sweep saw sd 0.5-1.4 mm at 0/+40/+60/+80/+100 mm and "
+            "6.2-8.4 mm at -60/-100 mm. Repeat this stage at -60 and -100 mm "
+            "before reading a PASS as 'the estimator is sound'")
 
     if args.true_ey is not None:
         t = args.true_ey

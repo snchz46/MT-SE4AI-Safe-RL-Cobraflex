@@ -127,6 +127,7 @@ def main(argv: Optional[List[str]] = None) -> None:
     from rclpy.qos import qos_profile_sensor_data
     from geometry_msgs.msg import Twist
     from sensor_msgs.msg import Image
+    from std_msgs.msg import Empty
     from stable_baselines3 import PPO, SAC
 
     class RlPolicyNode(Node):
@@ -139,6 +140,9 @@ def main(argv: Optional[List[str]] = None) -> None:
             self.declare_parameter("image_topic", "camera/image_raw_lane")
             self.declare_parameter("raw_action_topic", "/raw_action")
             self.declare_parameter("frame_stack", 4)
+            # The stack must be re-seeded when the run restarts. See the
+            # subscription below for why.
+            self.declare_parameter("reset_topic", "/cage_reset")
             self.declare_parameter("grayscale", True)
             self.declare_parameter("device", "cpu")
             # The trained control rate (config control_dt 0.1 s). See contract 2.
@@ -205,6 +209,21 @@ def main(argv: Optional[List[str]] = None) -> None:
                 Image, str(self.get_parameter("image_topic").value),
                 self._on_image, qos_profile_sensor_data,
             )
+            # RE-SEED THE STACK ON /cage_reset. `_first` used to be set once, in
+            # this constructor, and never again: after a latched C-05 was cleared
+            # the k=4 stack still straddled the stop, so the first observations of
+            # the new segment concatenated frames from before and after it — a
+            # 0.4 s window that spans an arbitrary wall-clock gap (250 s in
+            # lap04's proxy deadlock, 31.08.2026) and therefore never occurred in
+            # training. `reset()` seeds all k slots from one frame, which is what
+            # VecFrameStack does at episode start and what the trained contract
+            # assumes. Measured NOT to be the driver of the 31.08 stops
+            # (hypothesis 3: degenerate stack 0.0 % vs 21.8 % between runs), so
+            # this closes a contract deviation, not that session's failure.
+            self.create_subscription(
+                Empty, str(self.get_parameter("reset_topic").value),
+                self._on_reset, 10,
+            )
 
             # Latest frame only, consumed by the control timer — the hardware
             # equivalent of GazeboLaneEnv.step reading the newest camera sample
@@ -227,6 +246,13 @@ def main(argv: Optional[List[str]] = None) -> None:
                     "then cycles at the camera rate, not the trained 10 Hz "
                     "(C-06's per-cycle slew budget is applied twice as often)."
                 )
+
+        def _on_reset(self, _msg: Empty) -> None:
+            self._first = True
+            self.get_logger().info(
+                "/cage_reset — re-seeding the k=%d frame stack at the next frame"
+                % self._stacker.k
+            )
 
         def _on_image(self, msg: Image) -> None:
             if float(self.get_parameter("control_rate_hz").value) > 0.0:

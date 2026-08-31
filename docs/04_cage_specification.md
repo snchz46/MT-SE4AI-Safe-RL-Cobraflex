@@ -192,6 +192,17 @@ The function `compute_ttlc` projects the trajectory under the assumption of zero
 
 ### C-04 Speed ceiling
 
+> **UN-ARMABLE AT THE DEPLOYED SPEED CAP — a stated limitation of the validation, not an
+> oversight (D-75, 31.08.2026).** The ceiling is `max(v_max_curve, v_max_straight − k_kappa·|κ|)`,
+> so **0.25 m/s is a floor no curvature can push it below**, while the deployed policy is capped at
+> 0.22 m/s. Over the 2484 moving cycles of the 31.08 track session the achieved speed was median
+> 0.166, p99 0.209, **max 0.228 m/s**, and the count of cycles reaching 0.25 was **zero**. C-04
+> fired **0/1890** in the D-69 verdict campaign (finding (ii)) and has **never arbitrated on
+> hardware**. It is deliberately left that way: its curvature input over-reads by ~3× on the closed
+> circuit (D-75's `∮κ·ds` test), so lowering the threshold would arm the rule on phantom curvature,
+> concentrated exactly where the car is already off-centre (D-76). Re-arming is blocked on the
+> capture session of docs/17 §10.6, not on more driving.
+
 **Implements.** SR-004.
 **Mitigates.** H-03.
 **Type.** Reactive (direct safety, parameterised).

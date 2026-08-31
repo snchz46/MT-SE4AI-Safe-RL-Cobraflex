@@ -122,3 +122,57 @@ def test_reset_clears_counters():
     results = run_cycles(sup, [blank_frame()], t0=1.0)
     # One bad cycle after reset: not yet persistent → no trigger.
     assert not results[0].perception_invalid
+
+
+# --------------------------------------------------------------------------
+# D-77 — SR-014's inter-frame lateral gate is configurable, and the deployed
+# default is deliberately NOT the frozen one.
+# --------------------------------------------------------------------------
+
+def test_jump_tol_defaults_to_the_frozen_value_so_the_verdict_path_is_unchanged():
+    """The D-69 verdict was scored with LanePlausibilityCheck's own 0.10 m.
+    Omitting the override must leave it exactly there — the Gazebo path stays
+    bit-identical and no re-run is owed."""
+    sup = CagePerceptionSupervisor()
+    assert sup.plausibility.jump_tol_m == pytest.approx(0.10)
+
+
+def test_jump_tol_override_reaches_the_checker():
+    sup = CagePerceptionSupervisor(jump_tol_m=0.05)
+    assert sup.plausibility.jump_tol_m == pytest.approx(0.05)
+
+
+def test_overriding_jump_tol_preserves_the_E2_lane_width_INVARIANT():
+    """The SR-014 width window must stay equal to the estimator's own pair
+    acceptance window; decoupling them re-creates the E2 dead zone that
+    deadlocked the cage into its no-state path."""
+    sup = CagePerceptionSupervisor(jump_tol_m=0.05)
+    cfg = sup.estimator.config
+    assert sup.plausibility.lane_width_lo == pytest.approx(
+        cfg.lane_width_nominal_m - cfg.lane_width_tol_m)
+    assert sup.plausibility.lane_width_hi == pytest.approx(
+        cfg.lane_width_nominal_m + cfg.lane_width_tol_m)
+
+
+def test_a_relocation_the_frozen_gate_admits_is_caught_by_the_tightened_one():
+    """The measured failure: at 0.22 m/s and a 50 ms cycle the physical lateral
+    motion is 11 mm, so the frozen 0.10 m tolerance admits a 111 mm jump as
+    temporally consistent. 90 mm is such a relocation — inside the frozen gate,
+    outside the tightened one. Suppression, not emergency: one bad frame must
+    not raise C-05 (that needs min_implausible_cycles)."""
+    from cobraflex_rl.lane_plausibility import LaneEstimate, LanePlausibilityCheck
+
+    def probe(tol):
+        chk = LanePlausibilityCheck(lane_width_range=(0.145, 0.345),
+                                    curvature_max=3.0, jump_tol_m=tol)
+        good = LaneEstimate(ey=0.0, heading=0.0, lane_width=0.245,
+                            curvature=0.0, timestamp_s=100.0)
+        chk.update(good, speed_mps=0.22, now_s=100.0)
+        jumped = LaneEstimate(ey=0.090, heading=0.0, lane_width=0.245,
+                              curvature=0.0, timestamp_s=100.05)
+        return chk.update(jumped, speed_mps=0.22, now_s=100.05)
+
+    frozen, tightened = probe(0.10), probe(0.05)
+    assert frozen.plausible, "the frozen gate admits the 90 mm relocation"
+    assert not tightened.plausible, "the tightened gate must catch it"
+    assert not tightened.reject, "one frame suppresses state; it must not raise C-05"

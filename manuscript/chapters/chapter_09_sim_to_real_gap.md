@@ -199,6 +199,19 @@ no modelado `k1 = −0.339` comprime solo la segunda. Dos defectos más en la mi
 banda donde actúan C-01/C-05: repetibilidad (media 13.2 mm, peor 29.4, contra una
 cinta de ~2 mm) y **colapso del emparejamiento más allá de ~±55 mm**.
 
+> **RETRACTADO PARA LA RUTA DESPLEGADA (31.08.2026, docs/17 §10.2).** Los tres
+> defectos de offset de M-7 §4 se midieron **sin rectificar** y **no sobreviven a
+> la rectificación**. La mitad `--true-ey` de M-7 §3b —la medida pendiente que el
+> propio §9.5 señalaba como la de mayor valor por coste— se ejecutó: barrido de
+> nueve puntos, coche en el suelo, sin tocar, rectificado, y da escala **1.058
+> izquierda / 0.991 derecha con el término independiente desaparecido**. Es decir
+> **C-01 dispara a un `ey` verdadero de 151/158 mm, con ~100 mm de margen al
+> borde**, no a 207–241 mm con 14–48. Las cifras de arriba caracterizan la ruta
+> **cruda** y se conservan porque son la evidencia que motivó la decisión de
+> rectificar; **ninguna regla de la cage debe ajustarse a partir de ellas**. Lo
+> que sí sobrevive intacto es la prescripción de M-7 —*rectificar, no
+> reparametrizar*—, que es exactamente lo que esta medida vindica.
+
 La corrección adoptada **no es reparametrizar el estimador a 77.89° sino
 rectificar** el fotograma real hacia el modelo canónico, de modo que una sola
 proyección sirva a las campañas y al coche. Su efecto está medido sobre hardware
@@ -308,6 +321,42 @@ abierta (docs/17 §8.4).
 
 ---
 
+### 9.3.6 Las dos medidas del 31.08: el lugar, y los tres bloqueos de la cage
+
+Tres sesiones del 31.08 cierran el bring-up y reordenan su lectura. Ninguna
+re-puntúa nada; todas son evidencia posterior (docs/17 §10, §12, §13; D-75…D-80).
+
+**(a) La exactitud del estimador es una propiedad del lugar, no del movimiento
+(D-79).** Captura de posición verdadera con estaciones de cinta en el suelo,
+cámara sola, cuatro vueltas y cuatro sondas paradas (~11 500 fotogramas). El
+criterio se fijó *antes*: en circuito cerrado `∮|κ|ds` vale 2π por vuelta. Falla
+por ~2× (**1.97 / 2.01 / 2.25 / 2.37** contra banda 0.75–1.35) — la primera
+medida del canal de curvatura que no debe nada a odometría, policy ni cage. Y el
+resultado que reordena: el inicio de la recta empareja **96.7 %** con **7.2 mm**
+de error, los tramos en movimiento **37.9–60.2 %**, y **paradas** sobre dos
+puntos malos a `ey` verdadero 0 dan **0.0 % emparejado** (273 fotogramas) y
+**−39.7 mm con sd 3.1 mm** — *confiadamente equivocado*, invisible a cualquier
+puerta de dispersión. El inicio de la recta, donde se tomaron M-6, M-7 y todos los
+`lanecheck`, **es el mejor punto del circuito**: el contenido de esas medidas se
+mantiene, su generalización al trazado se retira. El mecanismo es **generación de
+candidatas**, no selección del par (bordes de una misma franja, marcas
+adyacentes), lo que invierte el arreglo obvio: un prior de continuidad temporal no
+sirve, porque el par equivocado es estable a 3.1 mm.
+
+**(b) Los tres bloqueos de la cage (D-80).** Tres corridas consecutivas en
+`monitoring`, variando solo los parámetros de la vía de rearme, ninguna capaz de
+mantener el coche en marcha, y las tres fallan por la **medida**: el hold de 1 s
+de D-74 **no es satisfacible conduciendo** (48 % de 623 withholds son la espera
+sin completarse); el escape documentado —quitar C-01 de `blocking_rules`— quema
+**30 de 30 resets en un minuto**, cada uno reenclavando, con el coche parado a
+`ey` = −296 mm; y al acortar el hold aparece C-02 disparando con el coche a
+**20 mm del centro** y sd(`epsi`) **19.1°** contra los 5.3° que M-6 midió en el
+buen punto. Esa última comparación es la **cuarta confirmación independiente de
+D-79 y la primera en el canal de rumbo conduciendo**. D-76 ordenó ensanchar el
+estimador antes de restringir la policy; esto es la medida que lo sostiene.
+
+---
+
 ## 9.4 La tabla de gap  [COLUMNA FÍSICA PRELIMINAR — N=1, sin puntuar]
 
 La primera lectura de la tabla no es una fila sino un encabezado: **la policy que
@@ -327,7 +376,7 @@ impedir.
 | M-S3 — paros de emergencia | 0 (nominal) | **0** (nominal) | [TBD] | **1**, por C-05 sobre percepción, con el coche en carril |
 | M-I1 — tasa de intervención | 43.5 % (C-06) | **3.0 %** en el checkpoint desplegado (76.1 % en el 550k) | [TBD] | **3.4 %** (C-06 únicamente) |
 | Velocidad de operación | 0.200 m/s fija | ≈0.216 m/s bajo cap 0.22 | [TBD] | ≤ **0.213 m/s** bajo el mismo cap |
-| Cadencia del lazo de control | 10 Hz nominal | 10 Hz nominal | [TBD] | **8.68 Hz** medidos (`/state_obs` 9.84) |
+| Cadencia del lazo de control | 10 Hz nominal | 10 Hz nominal | [TBD] | **8.68 Hz** medidos (`/state_obs` 9.84); 9.6 Hz sin lidar en capa 2 |
 
 Tres lecturas.
 
@@ -341,10 +390,14 @@ cambia de valor por esta razón: **76.1 %** es la tasa del trunk 550k, y **3.0 %
 la del checkpoint que efectivamente se despliega.
 
 **El error lateral se duplica, y era esperable.** 18.7 mm contra 8.6 mm, con un
-estimador que sub-lee la magnitud que mide (§9.3.2) y un lazo a 8.68 Hz en vez de
-los 10 Hz de entrenamiento. Sigue holgadamente dentro de `d_max`; la cifra a
-vigilar es el máximo de 98.7 mm, no la mediana — y con la sub-lectura de M-7 ese
-máximo corresponde a un valor real notablemente mayor.
+estimador cuya exactitud depende del punto del circuito (§9.3.6a) y un lazo a
+8.68 Hz en vez de los 10 Hz de entrenamiento. Sigue holgadamente dentro de
+`d_max`; la cifra a vigilar es el máximo de 98.7 mm, no la mediana. **Lo que no
+puede decirse ya** es que ese máximo corresponda a un valor real notablemente
+mayor por la sub-lectura de M-7: sobre la ruta rectificada la escala es ~1.0
+(§9.3.2, banner). El sesgo que sí queda es el **dependiente del lugar**, que puede
+ir en cualquiera de los dos sentidos (+43.7 mm en un punto, −39.7 en otro) y que
+sin captura de posición verdadera no puede aplicarse fila a fila.
 
 **Y las tres lecturas son provisionales.** Salen de una corrida. La campaña
 física —SC-NOM-01/02 y SC-EDGE-01, en los dos modos, con repeticiones— es la que
@@ -363,16 +416,25 @@ Lo que sigue clasifica lo observado durante el bring-up. Es una **hipótesis de 
 
 **Percepción — la divergencia dominante, y la única que invalidaba una
 suposición.** El HFOV heredado (§9.3.2) es la única discrepancia medida que
-**afectaba a un umbral de seguridad**: `ey` sub-leído 0.68–0.83× hace que C-01
-dispare 47–81 mm más tarde de lo especificado. Se mitiga por rectificación, no
-por reparametrización, y su residuo —la mitad `--true-ey` de M-7 §3b— es la
-medida pendiente de mayor valor por coste.
+**afectaba a un umbral de seguridad**. Se mitiga por rectificación y no por
+reparametrización, y el residuo que §9.5 señalaba —la mitad `--true-ey` de M-7
+§3b— **se midió el 31.08 y cerró en la dirección favorable**: sobre la ruta
+rectificada la escala es 1.058/0.991 sin offset. Lo que quedó en su lugar es una
+divergencia distinta y peor caracterizada: la exactitud del estimador **depende
+del punto del circuito** (§9.3.6a), con sesgos de ±40 mm *confiadamente*
+reportados y colapsos de emparejamiento al 0 % en puntos concretos, y ese es el
+residuo de percepción que la campaña debe acotar.
 
-**Actuación — anticipada por el peldaño Isaac, y confirmada.** §9.2.2 predijo
-«autoridad de actuación» como primera categoría donde buscar; D-70 la encontró en
-la forma más limpia posible: **0.4954× de guiñada comandada**, un déficit lineal
-sin offset. Se compensa en despliegue con una ganancia; no se ha reejecutado nada
-en simulación por ello.
+**Actuación — anticipada por el peldaño Isaac, confirmada, y de forma no lineal.**
+§9.2.2 predijo «autoridad de actuación» como primera categoría donde buscar; D-70
+la encontró en la forma más limpia posible —**0.4954× de guiñada comandada**— y el
+despliegue la compensa con `steering_to_yaw_rate_gain` 1.615. **M-7 §5 midió
+además que la planta es compresiva**: la razón cae de 0.482 (cmd 0.2) a 0.436
+(0.4) y 0.341 (0.8), de modo que ninguna ganancia constante la corrige — una
+ganancia calibrada a demanda moderada sub-entrega exactamente donde C-01/C-02
+corrigen. **Lo que NO está medido** es dónde termina esa compresión: si es una
+compresión suave o una saturación dura, y con ella cuál es el `R_min` realmente
+alcanzable. Esa medida está pendiente y su discriminador es de banco.
 
 **Distribución de entrenamiento — la divergencia no anticipada.** Ninguna de las
 categorías que §9.2.2 sugería (dinámica, percepción, latencia, superficie) cubre

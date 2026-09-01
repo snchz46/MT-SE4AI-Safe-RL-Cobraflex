@@ -4330,6 +4330,20 @@ band it fixed in advance), D-69 (the verdict of record, untouched).
 | Status | ACCEPTED — findings + one diagnostic launch argument. No `cage.yaml`, cage rule, SR, ODD parameter or verdict touched; `verdict_phys` stays open. Posterior evidence. |
 | Date | 31.08.2026 |
 
+> **PARTIALLY WITHDRAWN 01.09.2026 — Findings 2 and 3 are void.** The bare-policy run
+> `lap_bare_20260831T150050Z` was driven with the operator **repositioning the car by hand
+> throughout**, placing it at other points of the circuit precisely because nothing was stopping it.
+> The author's instruction is that nothing from that run is usable. **Void:** Finding 2 in full (the
+> 99 %-latched / 97 %-driving inversion, the circulation in both directions, and with it the
+> *positive control* this decision claimed for D-76's ordering), Finding 3 in full (the ≈ 0.10 rad/s
+> yaw plateau, the 5327-cycle table, and the `R_min` = 2.2 m consequence), and the amendment items
+> below that derive from that run (the single latch, the ≈ 109 m, C-04's 85 cycles, and the
+> `cycles_since_last_state` observation). **Standing:** Finding 1 in full — the three caged runs are
+> not affected — the `control_emergency_topic` decision, and the two launch defects. D-76 returns to
+> an argument from architecture supported by D-79. The yaw question returns to what M-7 §5 measured
+> on 18.08: the plant is compressive (0.482 → 0.436 → 0.341), and where that compression ends is
+> unmeasured. See docs/17 §13.2, §13.4, §13.6.
+
 **Context.** §12's capture located the D-43 estimator's failures and named the mechanism, but every
 inference about *what stops the car on the track* was still indirect: D-76 argued the estimator must
 be widened before the policy is narrowed **because the policy does not consume the estimator**, and
@@ -4353,7 +4367,8 @@ that argument had no positive control. Six Layer-3 launches on the evening of 31
    like the other two: **a fourth independent confirmation of D-79, and the first in heading while
    driving.**
 
-**Finding 2 — the bare-policy arm, and the inversion it forces.** With `vehicle_control_node`'s
+**Finding 2 — the bare-policy arm, and the inversion it forces.** **[VOID 01.09.2026 — see the
+withdrawal notice at the head of this decision. Retained as a record of what was retracted.]** With `vehicle_control_node`'s
 emergency subscription detached and everything else identical, **the cage was latched 99 % of cycles
 while the car drove 97 % of them**, and the policy circulated the track essentially uninterrupted in
 **both directions**, with two reproducible departures (about half of the last curve, always to the
@@ -4361,7 +4376,8 @@ right; more mildly entering the middle of the first curve). So the three blocker
 policy that cannot drive: they are **C-05 firing on a measurement that fails where D-79 said it
 fails**. D-76's ordering is no longer an argument from architecture — it has a positive control.
 
-**Finding 3 — the policy never asks for more than half its steering range.** `max |steer| = 0.481`
+**Finding 3 — the policy never asks for more than half its steering range.** **[VOID 01.09.2026 —
+see the withdrawal notice at the head of this decision.]** `max |steer| = 0.481`
 over 5694 cycles, peaking at **0.29–0.32** in the departures, i.e. *less* than it uses elsewhere. It
 is not saturating and losing; it is not asking. At `steering_to_yaw_rate_gain` 1.615 that is ≈ 0.48
 rad/s commanded against ≈ 0.22 rad/s needed in the tightest curve at 0.22 m/s, so the open question
@@ -4378,9 +4394,13 @@ nor the estimator appears in it. **The rule specified for exactly this is C-04**
 un-armable (`v_max_curve_mps` 0.25 > deployed 0.22): the one failure mode reproducibly observed on
 hardware is the one C-04 exists to prevent and currently cannot. D-75 is unchanged — re-arming stays
 blocked on a trustworthy `κ` — but its dead zone now has a demonstrated cost. **Still owed:** *why*
-the plateau sits there (driver clamp/scale, mechanical throw, or slip), and the discriminator is a
-**static bench measurement** — command a large `angular.z` with the car off the ground and read the
-front-wheel angle with a protractor.
+the plateau sits there — a driver/firmware clamp, or slip. The discriminator is a **bench sweep of
+the left/right wheel-odometer differential** against the command, on blocks and then on the floor
+(`tools/measure_yaw_authority.py`): a differential that saturates puts the ceiling in the driver, a
+differential that stays linear while the achieved yaw saturates puts it in the contact patch.
+*(Amended 01.09.2026 — the original wording proposed reading a front-wheel angle with a protractor,
+which does not apply: this chassis is skid-steer, four `continuous` wheel joints under a DiffDrive
+plugin, with no steering angle to read.)*
 
 **Decision — `control_emergency_topic`.** `vehicle_control_node` zeroes `/cmd_vel` on a latched
 `/emergency` in **both** modes by design (docs/17 §10.4) and did not expose `emergency_topic`, so the
@@ -4404,6 +4424,51 @@ set, nothing in software stops the car.*
   and the C-01 block, as set, do not produce a lap on this track; whether they should change is
   deferred, and it is downstream of the estimator work D-76/D-79 ordered.
 * The `κ`-binned caveat of D-75/D-79 applies unchanged to everything here.
+
+**Amended 01.09.2026 — audit against the committed CSVs before the manuscript was allowed to cite
+this session (docs/17 §13.5); parts of it voided the same day by the withdrawal notice at the head
+of this decision.** For the three caged runs the core replicates exactly: cycles, durations,
+`emergency` percentages, `max |steer|` and every rule count. *(§13.4 also reproduced to the digit —
+5327 paired cycles, all six bins, ratios 0.85 → 0.18, the gains being the signed least squares — but
+that section's run was withdrawn hours later, so the reproduction establishes only that the
+arithmetic was right about a contaminated input.)* Four numbers in
+Finding 1 and one framing in Finding 2 are corrected, and four findings are added:
+
+* **The withhold population is 623, not 453.** The published breakdown (197 / 121 / 83 / 51) is a
+  *prefix* of the log — at the 197th `healthy` withhold the running totals are exactly
+  197 / 121 / 82 / 51 — read from a console scrollback rather than from `reset_events.csv`. The full
+  population is **302** `healthy for X s of 1.00`, **134** `perception still invalid`, **123**
+  `still moving`, **51** `cage rules active: C-02`, 12 `rate limited`, 1 `C-03`. The finding moves in
+  its own direction: the hold is **48 %** of all withholds, not 43 %.
+* **The escape run is not a controlled comparison.** `lap_mon_escape` also carried
+  `healthy_seconds:=0.3` (its log reads `healthy for X s of 0.30`), so it is not run 1 plus a
+  `blocking_rules` change; it is where the shortened hold was introduced, and run 3 kept 0.3 s while
+  restoring the default blocking set. Two variables moved. The conclusion survives — 30 resets in a
+  minute is a budget failure, not a hold failure — but the pair must not be read as controlled.
+* **Run 3's numbers are one window of a worse population.** Over all **1066** C-02 cycles: mean
+  `ey` −20 mm, `epsi` **sd 19.1°** across −45.2°…+42.8°. The quoted window (−32 mm, sd 17.2°) is the
+  mild end of it.
+* **The session was ten launches, not six** — six produced data, four wrote a header only.
+* **NEW — C-04 fires, and always spuriously.** *(58 and 40 cycles in the two caged runs that stand;
+  the 85 from the withdrawn run are void.)* In **100 %** of them the logged
+  speed is 0.25–1.66 m/s, which the platform cannot produce under power. D-75's decision and its cost
+  argument stand — C-04 never fires on commanded motion — but *"it can never fire"* is literally
+  false, and the operational consequence is new: in `lap_mon_escape` those spurious firings **enter
+  the reset-withhold path** (`cage rules active: C-03,C-04` ×7, `C-04` ×6). A velocity artefact does
+  not merely raise a rule, it blocks the recovery from the rule it raised.
+* **[VOID 01.09.2026]** ~~NEW — the bare arm's 99 % is a single latch.~~ `/emergency` raises at **t + 6.4 s** and never
+  clears: one latch, 635 s. Stated the other way round, **under the deployed configuration that run
+  would have ended after 6.3 seconds**, and with one subscription detached it covered **≈ 109 m,
+  about 5.7 perimeters** (odometry path 122.1 m less 12.9 m of hand-repositioning steps; speed
+  integration agrees at 107.9 m). That distance belongs beside 26.08's 18.05 m, with every limit of
+  this arm attached.
+* **NEW — `frame_capture_node` saturated its 600-frame budget in all six runs** (and the 8-event cap
+  in five). The 31.08 repricing fixed the disk cost, not the sampling bias.
+* **NEW — two launches ran concurrently** (`…T140749Z` and `…T141134Z`, same window, 2197 shared
+  timestamps, 36 % of inter-arrivals under 20 ms against 0.1 % in the clean runs; both `metadata.json`
+  left at `status: running`). Car stationary, nothing unsafe, both correctly excluded from the table —
+  but the two CSVs interleave two cage instances and are unanalysable, and this is the third instance
+  of "a second stack launched over a live one" after I-1 and the 29.07 campaign incident.
 
 Cites D-43 (the estimator), D-69 (the simulated cage-off ablation this mirrors), D-70 (the chassis
 delivering about half the commanded yaw), D-72 (the v2 policy under test), D-74 (the reset posture

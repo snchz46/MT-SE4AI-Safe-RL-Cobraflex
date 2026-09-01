@@ -282,6 +282,23 @@ def generate_launch_description() -> LaunchDescription:
                               description="hard cap on dumps per run; a flickering "
                                           "estimator extends one event rather than "
                                           "opening several."),
+        # Both caps bound the SAME budget and the frame cap is the one that binds:
+        # all six runs of 31.08 wrote exactly 600 frames, five of them also hitting
+        # the 8-event cap, and every one of them spent the budget in the first two
+        # minutes on perception flicker while the lane departures went unphotographed
+        # (docs/17 §13.5). Raising the frame cap costs ~301 KB/frame on the Jetson.
+        DeclareLaunchArgument("capture_max_frames", default_value="600",
+                              description="hard cap on PNGs per run; measured cost is "
+                                          "~301 KB/frame. 600 saturated in every run of "
+                                          "31.08 (docs/17 §13.5)."),
+        # Point this at a topic nobody publishes to spend the whole budget on the
+        # MANUAL trigger (std_msgs/Empty on /frame_capture_trigger) instead — i.e. on
+        # the events an operator can see and a perception-validity edge cannot.
+        DeclareLaunchArgument("capture_perception_invalid_topic",
+                              default_value="/perception_invalid",
+                              description="frame_capture's perception trigger. Set to an "
+                                          "unpublished topic to disarm it and keep the "
+                                          "budget for /frame_capture_trigger."),
         # C-05's asymmetric exit has no operational story on hardware (§8.5) and
         # that needs a DECISION, not a patch. Until it is taken, this proxy sits
         # OUTSIDE the cage: `observe` logs what a reset path would have done and
@@ -442,7 +459,8 @@ def generate_launch_description() -> LaunchDescription:
         condition=IfCondition(LaunchConfiguration("capture_frames")),
         parameters=[{
             "image_topic": camera_topic,
-            "perception_invalid_topic": "/perception_invalid",
+            "perception_invalid_topic": LaunchConfiguration(
+                "capture_perception_invalid_topic"),
             "emergency_topic": "/emergency",
             "output_dir": LaunchConfiguration("evidence_dir"),
             "run_id": LaunchConfiguration("run_id"),
@@ -452,6 +470,8 @@ def generate_launch_description() -> LaunchDescription:
                 LaunchConfiguration("capture_post_seconds"), value_type=float),
             "max_events": ParameterValue(
                 LaunchConfiguration("capture_max_events"), value_type=int),
+            "max_frames": ParameterValue(
+                LaunchConfiguration("capture_max_frames"), value_type=int),
         }],
     )
     reset_proxy = Node(

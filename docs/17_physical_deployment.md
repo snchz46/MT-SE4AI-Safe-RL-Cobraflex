@@ -521,6 +521,11 @@ afterwards). The gitignored 87 MB `rplidar-a2m4-r1.stl` was moved into the repo'
 
 ## 5. Known gaps / sim-to-real (Ch.9, honest list)
 
+> **This list is a-priori, and it is kept unedited on purpose.** It was written before the platform
+> was ever driven; what it anticipated and what it missed is itself a result, scored in §14.1. The
+> **measured** ledger — every gap term Phase 5 quantified, with magnitude, evidence and status — is
+> **§14**. Read that one for the current state; read this one for what was foreseeable in advance.
+
 - **Appearance gap** (CNN + CV estimator): the real camera image differs from the
   Gazebo render → both the policy and the D-43 estimator may degrade. Mitigations:
   H-10 domain randomisation (training-side), the D-57 calibration precedent.
@@ -1989,19 +1994,27 @@ start of the straight it will keep passing.
 
 ## 13. The 2026-08-31 driving session: three ways the cage stops the car, and the bare-policy arm that explains all of them
 
-The session §12's capture was meant to inform, run the same evening. **Six Layer-3 launches**, of
-which four produced data. All are `monitoring` + rectified + `near_secant`/1.0, on the v2 1650k
+The session §12's capture was meant to inform, run the same evening. **Ten Layer-3 launches**, of
+which six produced data and four wrote a CSV header and nothing else. Three of the six are the
+experiment and are analysed below; a fourth — the bare-policy run — is **withdrawn** (see the notice
+in §13.2), and the other two are a concurrency incident, recorded in §13.5 with the rest of the
+01.09 audit. All are `monitoring` + rectified + `near_secant`/1.0, on the v2 1650k
 checkpoint (`ppo_gz2d_sim2real_v2_2024_r2`), behind `run_physical_lap.sh`. Layer 2 was brought up
 with `use_lidar:=false`; the loop ran at **9.6 Hz** against 8.68 Hz on 26.08 (§8.10), and the
 inference venv is **torch 2.13.0+cpu**, so §8.10's "the bottleneck moved to `rl_policy_node`'s timer"
 is now explained rather than merely located.
 
-| run | proxy | cycles | s | emergency | commanding motion | max \|steer\| | dominant rules |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `lap_mon_…T143913Z` | `auto`, defaults | 3051 | 333 | 80 % | 31 % | 0.381 | C-05 2448, C-02 573 |
-| `lap_mon_escape_…T144533Z` | `auto`, `blocking_rules:=C-03,C-04` | 1927 | 210 | 95 % | 16 % | 0.264 | **C-01 1341**, C-05 1831 |
-| `lap_mon_hold03_…T144938Z` | `auto`, `healthy_seconds:=0.3` | 4512 | 479 | 87 % | 32 % | 0.456 | **C-02 1066**, C-05 3938 |
-| `lap_bare_…T150050Z` | **off, emergency detached** | 5694 | 641 | **99 %** | **97 %** | 0.481 | C-05 5634, C-02 748 |
+| run | proxy | cycles | s | emergency | commanding motion¹ | distance² | max \|steer\| | dominant rules |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `lap_mon_…T143913Z` | `auto`, defaults (hold 1.0 s) | 3051 | 333 | 80 % | 31 % | 12.5 m | 0.381 | C-05 2448, C-02 573 |
+| `lap_mon_escape_…T144533Z` | `auto`, `blocking_rules:=C-03,C-04` **and** `healthy_seconds:=0.3` | 1927 | 210 | 95 % | 16 % | 7.9 m | 0.264 | **C-01 1341**, C-05 1831 |
+| `lap_mon_hold03_…T144938Z` | `auto`, `healthy_seconds:=0.3`, default `blocking_rules` | 4512 | 479 | 87 % | 32 % | 19.1 m | 0.456 | **C-02 1066**, C-05 3938 |
+| ~~`lap_bare_…T150050Z`~~ | ~~off, emergency detached~~ | — | — | — | — | — | — | **WITHDRAWN 01.09 — §13.2** |
+
+¹ `|speed| > 0.01 m/s`, a deliberately low bar because what the column asks is *whether the throttle
+reached the wheels at all*. At a 0.05 m/s threshold the same column reads 22 / 10 / 21 / **97 %**:
+the bare arm does not move, the three caged runs halve. ² `Σ speed·dt` over the run, `dt` clipped at
+0.5 s; for `lap_bare` this agrees with the odometry path length to about 1 % (§13.5).
 
 Two launches produced nothing and both are worth recording, because both are the repo's own rule —
 *pytest is not evidence a node runs* — collecting again. The first died on
@@ -2014,12 +2027,20 @@ D-74's `blocking_rules` guard, written on 31.08 and **never launched**. The seco
 
 **Run 1 — the 1 s healthy hold is not satisfiable in motion.** D-74/§9.5 requires perception healthy,
 no C-01…C-04 active and the car stopped, held **continuously for 1 s**, before the proxy publishes a
-reset. Against **9 resets issued** the log records **453 withholds**: 197 `healthy for X s of 1.00`,
-121 `still moving`, 83 `perception still invalid`, 51 `cage rules active: C-02`. The dominant cause is
-the hold itself — the estimator's health flickers faster than a second. That threshold was fixed by
-STPA argument against oscillation at the trigger boundary and had **never been exercised in motion**;
-this is the first measurement, and it says the argument's number is unreachable on this track. Best
-window: 3.99 m in 30 s.
+reset. Against **9 resets issued** the log records **623 withholds**: 302 `healthy for X s of 1.00`,
+134 `perception still invalid`, 123 `still moving`, 51 `cage rules active: C-02`, 12 `rate limited`
+and 1 `cage rules active: C-03`. The dominant cause is the hold itself — **48 % of every withhold** —
+because the estimator's health flickers faster than a second. That threshold was fixed by STPA
+argument against oscillation at the trigger boundary and had **never been exercised in motion**; this
+is the first measurement, and it says the argument's number is unreachable on this track. Longest
+stretch with the cage unlatched: **4.7 m in 28 s**, one of ten such stretches totalling 9.9 m of the
+run's 12.5 m.
+
+> The first write-up of this run reported **453** withholds broken down as 197 / 121 / 83 / 51. That
+> is a **prefix** of the log — at the 197th `healthy` withhold the running totals are exactly
+> 197 / 121 / 82 / 51 — read from a console scrollback rather than from the CSV. The numbers above are
+> the full population from `reset_events.csv` and they move the conclusion in its own direction: the
+> hold is 48 % of withholds, not 43 %. Corrected 01.09.2026 (§13.5).
 
 **Run 2 — removing C-01 from `blocking_rules` does not escape the deadlock, it wastes the budget.**
 The launch's own note offers `C-03,C-04` to escape the lap04 case where "a car stopped outside the
@@ -2029,53 +2050,49 @@ still present. The car sat reading **`ey` = −296 mm**, stable, with C-01 activ
 `perception_invalid` at 6 % — the estimator seeing clearly and reporting the car at nearly twice
 C-01's 160 mm. The escape converts a withheld reset into a wasted one; it is not an escape.
 
-**Run 3 — with the hold at 0.3 s, C-02 becomes the blocker, and it fires on noise.** The car sat at
-**`ey` = −32 mm**, comfortably inside the lane, while `epsi` swung **−25.3° to +18.2°, sd 17.2°**
-against C-02's 25° threshold — C-02 active in 1066 cycles, blocking resets, car crawling at 0.02 m/s.
+**Two variables moved here, not one.** This run also carried `healthy_seconds:=0.3` — its withhold
+log reads `healthy for X s of 0.30` — so it is *not* run 1 plus a `blocking_rules` change; it is the
+run in which the shortened hold was introduced, and run 3 kept 0.3 s while restoring the default
+blocking set. The conclusion survives, because burning 30 resets in a minute is a budget failure and
+not a hold failure, but **(run 1, run 2) is not a controlled pair** and must not be read as one.
+
+**Run 3 — with the hold still at 0.3 s and the default blocking set restored, C-02 becomes the
+blocker, and it fires on noise.** Over the whole population of **1066 C-02 cycles** the car sits at a
+mean **`ey` = −20 mm**, comfortably inside the lane, while `epsi` carries **sd 19.1°** across a range
+of **−45.2°…+42.8°** against C-02's 25° threshold — blocking resets, car crawling at 0.035 m/s. The
+window quoted in the first write-up (`ey` −32 mm, `epsi` −25.3°…+18.2°, sd 17.2°) is one stretch of
+that population and is, if anything, its mild end.
 M-6 measured `near_secant`/1.0 at **sd 5.3°, 0.8 % of frames past C-02**; the same configuration on
 the same car gives **17.2°** here. The difference is *where*: M-6 measured at the start of the
 straight, which §12.3 established is the estimator's best point. **The heading channel degrades off
 that spot exactly as the offset and curvature channels do** — a fourth independent confirmation of
 D-79, and the first in the heading channel while driving.
 
-### 13.2 The bare-policy arm, and what it inverts
+### 13.2 The bare-policy arm — WITHDRAWN
 
-Detaching **one link** — `vehicle_control_node`'s subscription to `/emergency`, via the new
-`control_emergency_topic` launch argument (§13.3) — while the cage keeps evaluating, publishing and
-logging every rule, gives the physical counterpart of the simulated cage-off ablation (D-69 finding
-(i)). The result:
+> **WITHDRAWN 01.09.2026 — the run this section rests on is disowned by its author.**
+> `lap_bare_20260831T150050Z` (641 s, the 31.08 evening run with `/emergency` detached) was driven
+> with the operator **repositioning the car by hand throughout**, placing it at other points on the
+> circuit precisely because nothing was stopping it. The run therefore has no interval whose start
+> conditions the operator did not set, and the author's instruction is that **nothing from it is
+> usable**. The text below is kept struck rather than deleted, because the repo records what it
+> retracted; **do not cite any figure from it.**
 
-> **The cage was latched for 99 % of cycles while the car drove for 97 % of them, and the policy
-> circulated the track essentially uninterrupted.**
+**What fell with it.** The inversion this section reported — *the cage latched for 99 % of cycles
+while the car drove for 97 % of them*, the ≈ 109 m covered, the single latch at t + 6.4 s, and the
+claim that the policy circulated the circuit in both directions — all rest on that run and are
+withdrawn. So does the **positive control** the section supplied for D-76's ordering: widening the
+estimator before narrowing the policy is again an argument from architecture, as it was before
+31.08, and it keeps the support D-79 gives it (the estimator's accuracy is a property of place) and
+loses the support this arm gave it.
 
-The operator's account, which is the measurement here (see the limits below): clean around the whole
-layout, in **both directions** of travel, with **two reproducible departures** — at about half of the
-last curve, always to the **right**, and more mildly entering the middle of the first curve.
-
-So the reading of the entire session inverts. The three blockers above are not a policy that cannot
-drive; they are **C-05 firing on a measurement that fails where §12 said it fails**. D-76 ordered the
-estimator widened before the policy is narrowed on the argument that *the policy does not consume the
-estimator*; this run is the positive control for that argument, and it is the strongest evidence in
-Phase 5 that the binding constraint is perception, not control.
-
-One statistic survives the operator's interventions, because it is a property of the whole population
-of commands rather than of any stretch: **the policy never asks for more than `|steer| = 0.481` in
-5694 cycles**, and in the two departures it peaked at **0.29–0.32** — *less* than it uses elsewhere.
-It is not saturating and failing to get round; it is not asking. With `steering_to_yaw_rate_gain`
-1.615 that is ≈ 0.48 rad/s commanded against the ≈ 0.22 rad/s the tightest curve needs at 0.22 m/s, so
-the open question is whether the chassis delivers what is commanded — D-70 measured the real chassis
-at about half the commanded yaw. **Not yet measured:** commanded `/cmd_vel.angular.z` against the
-achieved yaw rate of `/odometry/filtered`, restricted to moving cycles. That analysis is immune to the
-hand interventions and is the next thing to run on the bag.
-
-**Limits, and they are not small.** `monitoring` with the emergency detached means **no safety
-function was active**: this is a diagnostic arm and can never be `verdict_phys`. N = 1. The heading
-fit is `near_secant`, not the D-43 contract the campaigns were scored under (§8.4). And the operator
-**repositioned the car by hand several times**, a few cm back after each departure, to see whether it
-would correct — so the run's `ey` statistics and any automatic detection of departures are
-**contaminated by design**, and the two departures are the operator's observation, not a measured
-event count. What is *not* contaminated: the steering population above, and the ratio of latched
-cycles to commanding cycles.
+**What does not fall.** The three caged runs of §13.1 are untouched — the 1 s hold unsatisfiable in
+motion, the reset budget burned by the documented escape, and C-02 firing at `ey` = −20 mm with
+sd(`epsi`) 19.1° are all measured on runs the author has not disowned, and the last of them remains
+the fourth independent confirmation of D-79 and the first in the heading channel while driving.
+`control_emergency_topic` (§13.3) also stays: it is a launch argument in the tree, and the reason it
+exists — that killing a node by hand leaves no trace in the evidence — is unaffected by the quality
+of the one run that used it.
 
 ### 13.3 `control_emergency_topic`, and why it is a launch argument
 
@@ -2087,50 +2104,200 @@ defaults to `/emergency` — pointed at a topic nobody publishes, it detaches th
 else. It carries its own warning in the launch description: *DIAGNOSTIC ONLY — with it set, nothing in
 software stops the car.*
 
-### 13.4 The two departures are a kinematic limit: the car cannot turn tightly enough at the deployed speed
+### 13.4 The yaw-rate ceiling — WITHDRAWN, and the question reopened
 
-The analysis §13.2 left owed, run the same night off `lap_bare`'s own bag (exported by
-[`tools/export_bag_topics.py`](../tools/export_bag_topics.py) so it survives leaving the car):
-commanded `/cmd_vel.angular.z` against achieved yaw rate from `/odometry/filtered`, **5327 paired
-cycles with `vel_x` > 0.05 m/s**, so the operator's hand repositioning cannot enter it.
+> **WITHDRAWN 01.09.2026 — the run this section rests on is disowned by its author.**
+> `lap_bare_20260831T150050Z` (641 s, the 31.08 evening run with `/emergency` detached) was driven
+> with the operator **repositioning the car by hand throughout**, placing it at other points on the
+> circuit precisely because nothing was stopping it. The run therefore has no interval whose start
+> conditions the operator did not set, and the author's instruction is that **nothing from it is
+> usable**. The text below is kept struck rather than deleted, because the repo records what it
+> retracted; **do not cite any figure from it.**
 
-| \|yaw commanded\| (rad/s) | n | \|yaw achieved\|, median | ratio |
-| --- | --- | --- | --- |
-| 0.0–0.1 | 1564 | 0.044 | **0.85** |
-| 0.1–0.2 | 1525 | 0.068 | 0.46 |
-| 0.2–0.3 | 1117 | 0.086 | 0.35 |
-| 0.3–0.4 | 743 | 0.091 | 0.27 |
-| 0.4–0.5 | 278 | 0.093 | 0.21 |
-| 0.5–0.9 | 100 | 0.098 | **0.18** |
+**What fell.** The whole of it: the 5327-cycle commanded-versus-achieved table, the plateau at
+≈ 0.10 rad/s, the ratio collapsing 0.85 → 0.18, the least-squares gains 0.226 / 0.191, and the
+arithmetic that turned them into `R_min` = 2.2 m against ODD-3's ≈ 1.0 m. The conclusion that **the
+platform cannot negotiate the tightest curve of its own ODD** was the strongest claim Phase 5 had
+produced and it is **withdrawn in full** — it reached the manuscript as a numbered finding and an
+abstract clause, and both were removed the same day.
 
-**The achieved yaw rate plateaus at ≈ 0.10 rad/s and does not rise with the command.** Overall
-least-squares gain through the origin 0.226; restricted to hard turns (|cmd| > 0.3 rad/s), **0.191**.
+**What survives, and it is not nothing.** The *shape* of the actuation deficit was measured on
+18.08 by M-7 §5, on a different day and a different protocol: the ratio of achieved to commanded yaw
+falls **0.482 → 0.436 → 0.341** as the command grows from 0.2 to 0.8 rad/s. So the plant being
+**compressive** — no single linear gain fitting the channel — stands on M-7 and does not depend on
+the withdrawn run. What is now unknown again is **where that compression ends**: whether it is a soft
+compression or a hard saturation, and therefore what `R_min` the platform can actually achieve.
 
-**The plateau is the plant, not the sensor.** If the odometry under-read yaw the ratio would be low
-everywhere; instead it is **0.85 at small commands** and collapses only as the command grows. That
-near-unity band is the measurement validating itself.
+**The discriminator is cheap, and it no longer needs the track.** The chassis is **skid-steer** (four
+`continuous` wheel joints under a DiffDrive plugin, no steering angle), so yaw comes from a
+left/right wheel-speed differential.
+[`tools/measure_yaw_authority.py`](../tools/measure_yaw_authority.py) sweeps the command and reports
+that differential beside the achieved yaw — on blocks, where the operator cannot contaminate
+anything, and then on the floor. A differential that saturates puts the ceiling in the driver or the
+firmware; one that stays linear while the achieved yaw saturates puts it in the contact patch. Either
+answer re-earns the finding legitimately; neither needs a driven lap.
 
-The consequence is arithmetic. At the run's mean moving speed of 0.168 m/s, a 0.10 rad/s ceiling is a
-**minimum radius of 1.68 m**; at the deployed 0.22 m/s it is **2.2 m**. ODD-3 puts the circuit's
-tightest curve at `R_min` ≈ 0.876 m on the centreline and ≈ 1.0 m on the driven lane. **The platform
-cannot negotiate the tightest curve of its own ODD at its deployed speed, by a factor of about two.**
+### 13.5 The 01.09 audit of this session, and four things it found that the write-up did not
 
-That is the whole explanation of the two departures, and neither the policy nor the estimator is in
-it: the car runs wide because it cannot turn, which is also why it leaves to the outside every time,
-and why §13.2's steering statistic looked odd — a policy asking 0.29–0.32 was never going to be the
-binding term when 0.48 rad/s commanded yields 0.09 achieved.
+Every number in §13 was re-derived from the committed evidence — `cage_status.csv`,
+`reset_events.csv`, `capture_events.csv` and `lap_bare`'s `bag_export.csv` — before this session was
+allowed to feed the manuscript. For the three caged runs **the core replicates**: cycles, durations,
+`emergency` percentages, `max |steer|` and every rule count in the table are exact. (The audit also
+reproduced §13.4 to the digit — but that section's run was withdrawn hours later, so the
+reproduction establishes only that the arithmetic was right about a contaminated input, which is
+worth exactly nothing.) Four corrections are folded into the text above (§13.1's withhold population,
+run 2's second variable, run 3's window, the run inventory). Two further findings survive the
+withdrawal.
 
-**And the rule that exists for exactly this is C-04**, which D-75 established **can never fire**
-because `v_max_curve_mps` 0.25 exceeds the deployed 0.22 m/s. The one failure mode reproducibly
-observed on hardware is the one C-04 was specified to prevent and is currently un-armable. D-75's
-decision is unchanged — re-arming it is still blocked on a trustworthy `κ`, and D-79 measured that
-`κ` over-reads by ~2× — but the dead zone now has a *demonstrated* cost rather than a hypothetical one.
+**1. C-04 does fire — 58 and 40 cycles in the two caged runs that survive — and every one of them is
+an artefact.** D-75 established C-04 as un-armable because `v_max_curve_mps` 0.25 exceeds the
+deployed 0.22 m/s, on morning laps where **0 of 2484 moving cycles** reached the floor. In
+`lap_mon_escape` and `lap_mon_hold03` C-04 appears in `rules_fired`, and in **100 % of those cycles
+the logged speed is between 0.25 and 1.30 m/s** — speeds the platform cannot produce under its own power (median 0.5–1.05 m/s, in
+1–5 s episodes, consistent with the operator carrying the car and with residual pose noise; these
+logs cannot separate the two). D-75's decision is unchanged and so is its cost argument — C-04 never
+fires on commanded motion — but the literal claim *"it can never fire"* is false, and the consequence
+is operational: **in `lap_mon_escape` the spurious firings enter the reset-withhold path**
+(`cage rules active: C-03,C-04` ×7, `cage rules active: C-04` ×6). A velocity artefact does not merely
+raise a rule; it **blocks the recovery from the rule it raised**. That is a concrete mechanism joining
+§8.7's velocity channel to §13.1's deadlock, and it stayed invisible while C-04 was discussed only as
+a coverage gap.
 
-**What this does not yet identify** is *why* the plateau sits there. A 0.10 rad/s ceiling at 0.168 m/s
-implies an effective steering angle of roughly 9–11° on a chassis whose geometry should give
-appreciably more. Three candidates, none yet measured: a clamp or scale error in
-`cobraflex_ros_driver`'s `/cmd_vel` → JSON conversion, a mechanical steering throw smaller than the
-URDF's, or understeer/slip on this surface. **The cheap discriminator is static**: command a large
-`angular.z` with the car held off the ground and measure the front-wheel angle with a protractor. That
-is a bench measurement, and it is now the highest-value item in Phase 5 — ahead of any further
-driving, because until it is answered every lap attempt runs into the same wall in the same curve.
+**2. `frame_capture_node` saturated its budget in all six runs.** Every run wrote exactly **600
+frames** — the cap the 31.08 repricing set (4000 → 600, CHANGELOG `[31.08.2026 · later]`) — and five
+of the six also hit the 8-event cap. The repricing fixed the disk cost and **did not fix the sampling
+problem**: the evening frames are as truncated and as biased towards failure neighbourhoods as the
+morning's, and `hold03` is the extreme case, spending its whole budget on three events (224 / 356 /
+20 frames). Any future session meant to *characterise* rather than *illustrate* needs §12's
+full-circuit recording, not event frames. The PNGs are on the Jetson — `runs/*/frames/` is gitignored
+— so this host holds only `capture_events.csv`.
+
+**3. Two of the ten launches were alive at the same time.** `lap_mon_…T140749Z` and
+`lap_mon_…T141134Z` cover the **same wall-clock window** (14:12:07 → 14:15:26), share 2197 message
+timestamps, and carry a bimodal inter-arrival distribution — **36 % of gaps below 20 ms** against a
+median of 87 ms, where the clean runs later that evening give 0.1 % and 101 ms. That is two Layer-3
+stacks publishing `/cage_status` concurrently, with two loggers each recording the union; both
+`metadata.json` files confirm it from the other end (`status: running`, `cycles_logged: 0` — neither
+logger ever reached its clean shutdown). The car was stationary throughout (max 0.023 m/s), so nothing
+unsafe happened and the §13 table is right to exclude both — but **the two CSVs interleave two cage
+instances and cannot be analysed**, and the incident joins I-1 and the 29.07 campaign incident as a
+third instance of one failure: nothing in the tooling stops a second stack being launched over a live
+one. `run_physical_lap.sh` could refuse to start while `/cage_status` already has a publisher; it does
+not.
+
+**4. What did *not* regress.** Across the three caged runs `cycles_since_last_state` never exceeds
+**0** and the loop holds 9.2–9.4 Hz: the camera starvation that dominated 26.08 (§8.6) did not
+reappear, and the CPU work of §8.10 plus a lidar-less Layer 2 is why.
+
+### 13.6 The anatomy of the latch and the frozen-estimate signature — WITHDRAWN
+
+> **WITHDRAWN 01.09.2026 — the run this section rests on is disowned by its author.**
+> `lap_bare_20260831T150050Z` (641 s, the 31.08 evening run with `/emergency` detached) was driven
+> with the operator **repositioning the car by hand throughout**, placing it at other points on the
+> circuit precisely because nothing was stopping it. The run therefore has no interval whose start
+> conditions the operator did not set, and the author's instruction is that **nothing from it is
+> usable**. The text below is kept struck rather than deleted, because the repo records what it
+> retracted; **do not cite any figure from it.**
+
+**What fell.** Everything measured on the run: the latch at t + 6.39 s with the car 27 mm off centre
+and no C-01…C-04 firing; the frozen-estimate signature (17.4 % baseline against 35–75 % in the four
+seconds before each of ten operator interventions); the C-01-at-0 % observation; and the estimate of
+what enforcement would do, which was built from those same windows. The *question* it asked — does
+the lane leave the image, or only the estimator's candidate set? — is untouched and unanswered.
+
+**Two things in it did not depend on the run, and stand.**
+
+**(i) The cage has never modified an action on hardware.** In `monitoring` the node returns
+`final_action = raw_action`, and the three surviving caged runs show **0 modified cycles each**, with
+C-06 flagged and never applied. That is measured on runs nobody has disowned.
+
+**(ii) "Enforcement with the emergency detached" is not a configuration that exists.** In
+`enforcement` the node returns `current_action`, and C-05's correction *is* a controlled stop
+travelling on **`/safe_action`**; `control_emergency_topic` detaches only the `/emergency` topic. The
+configuration that isolates the question is `c05_emergency.perception_trigger_enabled: false` — C-05's
+Trigger 8 — in a **copy** of `cage.yaml` passed through the launch's `cage_yaml` argument, so the
+artefact under verification is untouched and the run's `cage_yaml_hash` records what ran. That is a
+property of the code, not of any run.
+
+## 14. The sim-to-real gap, as measured (consolidated ledger, 01.09.2026)
+
+§5 is the gap list as it stood **before** the platform was driven — an a-priori list, kept unedited
+because what it did and did not anticipate is itself a result. This section is the **posterior**
+ledger: every gap term Phase 5 actually measured, in one place, with its magnitude, its evidence and
+its status. It re-scores nothing — `verdict_phys` is open, no scenario has been scored on hardware —
+and it is the source the manuscript's gap chapter draws on.
+
+Terms are ordered by what they cost, not by when they were found.
+
+| # | Gap term | What simulation assumed | What hardware measured | Status |
+| --- | --- | --- | --- | --- |
+| 1 | **Turning authority** | Commanded yaw is achieved; a single linear gain corrects any deficit | Achieved/commanded falls **0.482 → 0.436 → 0.341** as the command grows (M-7 §5, 18.08): the plant is **compressive**, so no constant gain fits it | **OPEN.** Where the compression ends — soft or hard — and therefore the achievable `R_min` is **unmeasured**: the run that claimed to measure it is withdrawn (§13.4). Discriminator is a bench sweep of the wheel differential |
+| 2 | **Lane-estimator accuracy is place-dependent** | One estimator quality everywhere the lane is visible | Start of the straight: 96.7 % paired, **7.2 mm** error. Elsewhere: 37.9–60.2 % paired; parked probes give **0.0 % paired**, **+43.7 mm**, and **−39.7 mm at sd 3.1 mm** | **OPEN — binding.** D-76 / D-79; the target is line extraction |
+| 3 | **Heading channel under motion** | `epsi` noise as measured at rest (**sd 5.3°**, 0.8 % of frames past C-02) | Driving off the good spot: **sd 17.2–19.1°**, **6.8–11.6 %** of cycles past C-02's 25° | **OPEN.** Same defect as #2 in a third channel (§13.1 run 3) |
+| 4 | **Curvature channel** | `kappa_ahead` usable; C-04 and every κ-binned analysis rest on it | Integrated turning comes to **~2×** what a lap can contain (floor-truth), **~3×** odometry-binned; 0.88 m⁻¹ on a *stationary* car | **OPEN.** D-75 / D-79; every κ-binned physical analysis is corrupted |
+| 5 | **Training-distribution handedness** | Track layout is a scenario property, not a policy property | complex_b is **6.5:1 left** → a constant **+0.13** steering prior; the trunk policy shows bias/swing **12.9–19.2** and turns right in 0.5 % of samples | **CLOSED** by per-episode mirroring: v2 gives **0.07–1.10**, `mirror_rate` 0.527 (D-72) |
+| 6 | **Camera intrinsics** | HFOV 90° — a default the simulator *inherited*, so no simulation could falsify it | Effective HFOV **77.89°**, plus an unmodelled `k1 = −0.339` | **CLOSED** by rectifying towards the canonical model: perception-invalid **45 % → 5.5 %**, C-01 **102 → 0** firings at rest (M-6, §8.3) |
+| 7 | **Control cadence** | 10 Hz, the rate the policy was trained at | 7.3 Hz (26.08 first run) → 8.68 Hz (best caged lap) → **9.6 Hz** (31.08, lidar-less Layer 2, torch CPU). The bottleneck is `rl_policy_node`'s CNN timer, not the camera | **OPEN, narrowing.** §8.6, §8.10, §13 |
+| 8 | **State-estimation velocity** | Velocity is trustworthy; it is the cage's only speed input | ZED pose jumps of **3.62 m in one frame** → ekf `vx` −4.03 m/s, and a spike to 5.5 m/s against a 0.22 m/s contract | **MITIGATED** by disabling loop closure (D-73): steps > 50 mm **116 → 0** in a controlled A/B. Residual artefacts still fire C-04 (§13.5); the price is unbounded slow drift |
+| 9 | **Rule operational semantics** | Rules are validated against episodes, and episodes end | C-05's explicit-reset latch has no operational story on a vehicle that must keep going — it latches on the estimator's **validity signal**, once, with the car 27 mm off centre and no other rule firing (§13.6); D-74's **1 s healthy hold is unsatisfiable in motion** (48 % of 623 withholds); C-04's 0.25 m/s threshold sits **above** the 0.22 m/s operating point | **OPEN by decision.** D-74 (reset path outside the cage), D-75 (C-04 un-armable, `cage.yaml` untouched) |
+| 10 | **Policy–rate-limiter coupling (T2)** | Named in advance as the top transfer risk: the pair *(policy, C-06)* may not survive hardware | C-06 fires **3.4 %** of moving cycles on hardware against **3.0 %** in simulation at the same checkpoint | **DID NOT MATERIALISE.** N = 1, monitoring (§8.10) |
+| 11 | **Appearance / photometry** | Gazebo render, with H-10 randomisation as the mitigation | Deployment gate on real circuit imagery: **PASS raw** (retention 1.29, bias/swing 0.10) and **PASS rectified** (1.21, 0.17); right-turn share **66.6 %** against the sim arm's 66.4 % | **CLOSED for the deployed policy** (§8.1) |
+| 12 | **Heading-fit contract** | `joint_pair_quadratic`, the D-43 contract the campaigns were scored under | Under motion it manages **1.08 m** before stopping; `near_secant` manages **14.45 m** — and the difference is **invisible at rest** | **OPEN — a contract conflict.** Everything that has driven used `near_secant`, so no physical run is yet under the scored contract (§8.4) |
+| 13 | **Evidence capture** | Not considered | A full bag crashes the Jetson (13.8 MB/s); the event-frame replacement **saturates its 600-frame budget in every run**; frames live only on the Jetson | **OPEN.** §13.5 — characterisation needs §12's full-circuit recording, not event frames |
+
+### 14.1 What the a-priori list got right, and what it missed
+
+§5 anticipated four terms and was right about all four in kind: appearance (#11), the provisional
+thresholds, compute cadence (#7) and the yaw-gain channel (#1). On the last of them it was right
+about the channel and **wrong about the shape**: §5 framed yaw as a *constant* 3.9 % offset between
+the firmware's `TRACK_WIDTH` 0.159 and the tape's 0.153, and M-7 §5 measured a **compressive** plant
+instead — 0.482 → 0.436 → 0.341 as the command grows, which no constant corrects. A parameter error
+was anticipated; a non-linearity was not. Where that compression ends is still unmeasured (#1).
+
+Everything that actually stopped the vehicle is absent from §5: the handedness of the training track
+(#5), an intrinsics error the simulator had inherited and therefore could never expose (#6), an
+estimator whose accuracy depends on **where the car is** rather than on what it is doing (#2–#4), the
+missing operational story for a correctly-specified latch (#9), and a velocity sensor whose failure
+mode enters the cage's only speed input (#8). **Three of those five live in the measurement chain**
+— the camera's intrinsics, the lane estimator and the velocity sensor — one is a property of the
+training distribution and one is a rule's operational semantics. **None of the five is the control
+policy.**
+
+That asymmetry is the ledger's methodological result, and it is stronger than any single row:
+**the gap terms a simulation-trained team can enumerate in advance are the ones simulation can model
+— appearance, timing, gains. The terms that stopped this vehicle are the ones simulation had no
+representation of at all**, either because it had inherited the same wrong assumption (#6), because
+the quantity has no simulated counterpart (#2's place-dependence, #9's unbounded episode), or because
+the simulated plant was better than the real one (#1). A5's demand — characterise the gap rather than
+only reduce it — is what turned each of these into a measurement instead of a surprise during a
+scored run.
+
+### 14.2 The one-line summary, and what it is not
+
+**The v2 policy transfers, and what stops it is the measurement.** The evidence for the first half is
+26.08's 18.05 m in a single uninterrupted segment with no safety rule firing (§8.10). The evidence
+for the second half is D-79 — the estimator's accuracy is a property of **where the car is**, with
+parked probes at a true offset of zero giving 0 % paired at one spot and −39.7 mm at sd 3.1 mm at
+another — together with §13.1's three blockers, each of which is the reset path or a rule acting on
+that measurement rather than on the vehicle's actual state.
+
+**That claim was briefly stronger and is no longer.** The 31.08 bare-policy arm appeared to supply a
+positive control — the policy circulating freely while the cage sat latched — and it is **withdrawn**
+(§13.2): the operator repositioned the car by hand throughout. D-76's ordering is back to an argument
+from architecture supported by D-79, which is where it stood before that evening.
+
+Nothing here is a safety result. No physical run has used the scored perception contract, none has
+been executed under the scenario protocol, and **the cage has never modified an action on hardware at
+all** — `monitoring` returns the raw action, and the surviving runs show 0 modified cycles each. So
+Phase 5 measures what the cage *would have said*, plus what C-05's latch costs in availability. It
+cannot be `verdict_phys`, and neither can anything else Phase 5 has produced so far.
+
+**And one scope limit outranks all the others, because it applies to every physical run without
+exception: the cage has never enforced on hardware.** Every session to date ran `monitoring`, in
+which `SafetyCageNode` returns `final_action = raw_action` — measured, not assumed: **0 modified
+cycles** in each of the three surviving caged runs of 31.08, with C-06 flagged and applied zero. So nothing in Phase 5 measures what the cage *does to a vehicle*; it measures what the
+cage *would have said*, plus what C-05's latch does to availability. The rate limiter the policy was
+trained alongside — the D-69 finding-(i) dependency, the T2 transfer risk — has **never been in the
+physical loop**. That is the largest single gap between what the simulation campaigns scored and what
+the hardware has shown, and closing it needs an enforcement run, which needs the estimator work of
+D-76 first (§13.6).

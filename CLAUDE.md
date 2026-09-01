@@ -283,87 +283,99 @@ script reports orphans on either side.
   Per-segment map **does not reproduce** (only 2→3 poor and the start straight good repeat across three
   laps; 3→4 swings 75.4/98.6/70.7 %). Posterior evidence: nothing re-scored, `verdict_phys` open, the
   `+60`/`±100` laps and an inspection of the four spots still owed.
-- **31.08.2026 evening driving session (D-80, docs/17 §13) — THE BARE-POLICY ARM INVERTS PHASE 5's
-  READING: the cage was latched 99 % of cycles while the car drove 97 % of them.** Six Layer-3
-  launches, four with data, all `monitoring` + rectified + `near_secant` on the v2 1650k checkpoint,
-  Layer 2 without lidar (loop **9.6 Hz** vs 26.08's 8.68; the venv is **torch 2.13.0+cpu**, which
-  explains §8.10's bottleneck). **Three blockers, none of them the policy:** (i) D-74's **1 s healthy
-  hold is not satisfiable in motion** — 9 resets against **453 withholds**, 197 of them the hold
-  failing to complete; the STPA-argued threshold had never been exercised while driving; (ii)
-  **removing C-01 from `reset_proxy_blocking_rules` does not escape the lap04 deadlock** — the
-  documented escape burned **30/30 resets in a minute**, each re-latching, car stable at `ey`
-  = −296 mm with `perception_invalid` 6 % → tested and **rejected**, default stays; (iii) at a 0.3 s
-  hold **C-02 fires on noise** — car at `ey` = −32 mm, well inside the lane, `epsi` swinging
-  −25.3°…+18.2° (**sd 17.2°** vs M-6's **5.3°** for the same config at the start of the straight) →
-  the heading channel degrades off that spot like offset and curvature, a **fourth** confirmation of
-  D-79 and the first in heading while driving. **Then the bare arm:** detach only
-  `vehicle_control_node`'s `/emergency` subscription (new `control_emergency_topic` launch arg,
-  DIAGNOSTIC ONLY) and the policy **circulates the track essentially uninterrupted in both
-  directions**, with two reproducible departures (≈ half of the last curve, always **right**; milder
-  entering the first). So the blockers are **C-05 firing on a measurement that fails where D-79 said
-  it fails** — D-76's ordering now has a **positive control**, not an architectural argument. Also:
-  the policy **never asks more than `|steer|` 0.481** in 5694 cycles and only **0.29–0.32** in the
-  departures — not saturating and losing, *not asking*; owed is commanded `/cmd_vel.angular.z` vs
-  achieved yaw (D-70 measured the chassis at ~half). **Limits:** no safety function active → can
-  never be `verdict_phys`; N=1; `near_secant` not the D-43 contract; and the operator repositioned by
-  hand after each departure, so `ey` stats and automated departure counts are contaminated **by
-  design** (the steering population and the latched-vs-commanding ratio are not).
+- **31.08.2026 evening driving session (D-80, docs/17 §13) — three ways the cage stops the car, all
+  of them the measurement. THE BARE-POLICY ARM IS WITHDRAWN (01.09, author's call).** Six Layer-3
+  launches produced data (ten were started); **three caged runs stand** and are the content: all
+  `monitoring` + rectified + `near_secant` on the v2 1650k checkpoint, Layer 2 without lidar (loop
+  **9.2–9.4 Hz**; the venv is **torch 2.13.0+cpu**, which explains §8.10's bottleneck). **Three
+  blockers, none of them the policy:** (i) D-74's **1 s healthy hold is not satisfiable in motion** —
+  9 resets against **623 withholds**, 48 % of them the hold failing to complete; the STPA-argued
+  threshold had never been exercised while driving; (ii) **removing C-01 from
+  `reset_proxy_blocking_rules` does not escape the lap04 deadlock** — the documented escape burned
+  **30/30 resets in a minute**, each re-latching, car stable at `ey` = −296 mm → tested and
+  **rejected**, default stays (note it also carried `healthy_seconds:=0.3`, so it is **not** a
+  controlled pair with run 1); (iii) at a 0.3 s hold **C-02 fires on noise** — over its 1066 active
+  cycles the car sits at a mean `ey` = **−20 mm**, well inside the lane, with sd(`epsi`) **19.1°**
+  against M-6's **5.3°** for the same config at the start of the straight → the heading channel
+  degrades off that spot like offset and curvature, a **fourth** confirmation of D-79 and the first
+  in heading while driving. **WITHDRAWN with the bare arm** (`lap_bare_20260831T150050Z`, 641 s, the
+  operator repositioned the car by hand throughout): the 99 %-latched/97 %-driving inversion, the
+  ≈109 m, the single latch at t+6.4 s, the **yaw plateau at 0.10 rad/s** with `R_min` = 2.2 m, the
+  frozen-estimate signature, and D-76's **positive control** — D-76 is again an argument from
+  architecture supported by D-79. `control_emergency_topic` stands as a launch argument.
+  **What replaces the yaw claim:** M-7 §5 (18.08) measured achieved/commanded falling
+  **0.482 → 0.436 → 0.341**, so the plant is **compressive**; where that compression ends is
+  **unmeasured**, and `tools/measure_yaw_authority.py` (bench, on blocks) is how to settle it.
+- **01.09.2026 — the evidence is CLOSED and the project is in WRITE-UP. Two artefacts: an audit of
+  D-80, and the consolidated gap ledger (docs/17 §14).** No further debugging is planned; submission
+  is ~15.09.2026. **The audit** re-derived every §13 number from the committed CSVs before the
+  manuscript was allowed to cite them. For the three caged runs the core replicates exactly. (§13.4 also
+  reproduced to the digit — and its run was withdrawn hours later, so that reproduction establishes
+  only that the arithmetic was right about a contaminated input.) Corrected in place: the withhold population is **623, not 453** (the published
+  197/121/83/51 is a *prefix* — the hold is 48 % of withholds, so the finding strengthens);
+  `lap_mon_escape` **also carried `healthy_seconds:=0.3`**, so it is not a controlled pair with run 1;
+  run 3's window is the mild end of 1066 C-02 cycles (sd `epsi` **19.1°**); the session was **ten**
+  launches, not six. **New findings (as they stand after the 01.09 withdrawal):** (i) **C-04 does
+  fire — 58 and 40 cycles in the two surviving caged runs, 100 % of them at 0.25–1.30 m/s**,
+  impossible under power, and in `lap_mon_escape` they **enter the reset-withhold path** — a velocity
+  artefact blocking recovery from the rule it raised (D-75's decision stands, its literal "can never
+  fire" does not); (ii) `frame_capture_node` **saturated its 600-frame budget in all six runs** — the
+  repricing fixed disk cost, not sampling bias; (iv) **two launches ran concurrently**
+  (`…T140749Z`/`…T141134Z`, same window, 36 % of inter-arrivals < 20 ms), third instance after I-1 and
+  29.07, both CSVs unanalysable. **The ledger** (docs/17 §14) puts all **13 measured gap terms** in
+  one table ordered by cost, and §14.1 scores the a-priori list of §5 against them: it got the terms
+  simulation can model (appearance, timing, gains) and **missed every term that stopped the vehicle**
+  — handedness, an inherited intrinsics error, place-dependent estimator accuracy, the missing
+  operational story for a correct latch, a velocity sensor feeding the cage. Four of six are
+  perception; none is the policy. §5 is kept unedited and points at §14.
+- **The manuscript now carries all of it, and one falsified claim is retracted (01.09).** M-7 §4's
+  under-read (`0.68–0.83× − 10 mm` → C-01 at a true 207–241 mm) was asserted in the **abstract**, in
+  **H13 of the conclusions** and in **both chapter 9s**; it characterises the *unrectified* path and
+  is superseded by the 31.08 rectified sweep (scale 1.058/0.991, no intercept → C-01 at a true
+  151/158 mm, ~100 mm margin). Retracted in all four places with the finding kept — the raw figure is
+  preserved as the evidence that motivated rectifying. Added: draft_v5 ch.9 §§9.3.6–9.3.8 (place not
+  motion; the bare arm; the yaw ceiling + Tabla 9.2), the `R_min` row in the gap table, the a-priori
+  vs measured result in §9.5, **H15** in the conclusions (*the ODD can be declared without the
+  platform being able to reach it*), T2 widened to five conditions, and the stale *"ausencia total de
+  evidencia física"* in ch.11 fixed. `chapters/ch09` mirrored, including that D-70's "0.4954× linear
+  deficit" is superseded by the saturation. DOCX builds clean (33 captions, 16 figures);
+  `check_traceability.py` PASS.
 - **`campaign_v2` — posterior evidence; it does NOT re-score G4.** The same 27 × 2 × seed-2024 matrix
   (1890 runs, SC-PERT-03 excluded per D-64) on the 1650k checkpoint, behind the `flock` guard;
   `experiments/sim/campaign_v2/` held **20 runs** at the 24.08 commit. Not a prerequisite for driving
   (docs/17 §7.6). SC-FRONT-07 is **no longer an OOD probe** for this policy — read it as a regression test.
 
-### Next steps (as of 31.08.2026 — Phase 5, posterior evidence; none of this re-scores a gate)
+### Next steps (as of 01.09.2026 — WRITE-UP ONLY; submission ~15.09.2026)
 
-**Decided today — cite, don't re-litigate:** **D-75** (C-04 stays un-armable; `cage.yaml`
-untouched), **D-76** (widen the estimator *before* narrowing the policy; the policy is the
-documented fallback, as an argued ODD restriction), **D-77** (SR-014's inter-frame gate tightened
-to 0.05 m on the physical path only; sim keeps 0.10 so the D-69 path is bit-identical), **D-78** (the
-capture protocol and its acceptance band) and **D-79** (that capture's findings: place not motion,
-candidate generation not pair selection, and D-76's target moved to line extraction). Reasoning,
-measurements and limits are in `docs/DECISIONS.md`; docs/17 §10 and §12 are the narrative.
+**Physical work is CLOSED and the evidence base is final.** No further track or bench measurement
+will be taken. A session was prepared on 01.09 and **never executed**; its runbook has been deleted
+by the author, and the tests it described survive where they belong — as the manuscript's named
+future-work items with their discriminators (ch.12 T2/T3, docs/17 §13.4). Do not propose another
+run, do not reopen a decision — **cite D-71…D-80 and docs/17 §14, don't re-litigate**. Everything
+below is authoring work.
 
-What is actually left, ordered by what unblocks the most:
-
-1. **The capture session is DONE (31.08, D-79) — what it left owed is small and named.** It settled
-   the blocker: accuracy around the circuit is measured, the `κ` over-read is confirmed at ~2× with
-   floor-truth arc length, and the failure is located (docs/17 §12). Still owed: the **`+60` / `−100` /
-   `+100` laps** of D-78's matrix (offset dependence is established in one direction only), and — the
-   highest-value cheap measurement — **an inspection of what is physically different at the four
-   probed spots** (stripe width, a mat join, the adjacent red carriageway in frame, local lighting).
-   Protocol amendments to carry forward: **push from outside the lane** (the shadow is worth a third
-   of the pairing failures) and **press ENTER at station 1 before pushing** (`station = 0` rows are
-   excluded from accuracy and carry no arc length).
-
-2. **DONE 31.08 evening (D-80) — and it cost two launch defects.** All five were launched;
-   `value_type=list` in D-74's `blocking_rules` guard and a missing `setup_deploy_env.sh` both died on
-   first contact, neither visible to pytest. What is now owed instead: **commanded
-   `/cmd_vel.angular.z` against achieved yaw from `/odometry/filtered`, moving cycles only** — the
-   analysis that says whether the two departures are a gain problem or a learned-trajectory one —
-   **DONE the same night (§13.4): neither.** The achieved yaw **plateaus at ≈ 0.10 rad/s** regardless
-   of command (ratio 0.85 below 0.1 rad/s, 0.18 above 0.5; 5327 moving cycles), so at 0.22 m/s the
-   minimum radius is **2.2 m** against ODD-3's `R_min` ≈ 1.0 m on the driven lane — **the platform
-   cannot negotiate the tightest curve of its own ODD at its deployed speed**, and that is the whole
-   explanation of the two departures. C-04 is the rule specified for exactly this and D-75 found it
-   un-armable. **Now owed: a static bench measurement of the front-wheel angle** (command a large
-   `angular.z` with the car off the ground, read it with a protractor) to say whether the ceiling is
-   a driver clamp/scale error, a mechanical throw smaller than the URDF's, or slip. That is the
-   highest-value item in Phase 5 — ahead of any further driving.
-3. **`lanecheck --true-ey` at −60 and −100 mm AND at more than one place on the track.** D-79 makes
-   the location half load-bearing: no dispersion gate can catch a bias (`parked_seg34_b` is 39.7 mm
-   wrong with sd 3.1 mm), and at the start of the straight the gate will keep passing whatever the
-   offset. A PASS there certifies one pose at one place.
-4. **Floor mark + tape** (docs/17 §9.4). Since D-73 turned loop closure off, odometry can no longer
-   say whether a lap closed — this is the only way to settle it. Still outstanding.
-5. **Re-derive every physical analysis binned on `κ`.** D-75 established that `kappa_ahead`
-   over-reads by ~3× and D-79 measured ~2× independently of odometry (and 0.88 m⁻¹ on a *stationary*
-   car), so docs/17 §8.8's "tightest curve" attribution and the 31.08 "|ey| grows
-   monotonically with curvature" (26 → 32 → 33 → 43 → 63 mm) are binned on a corrupted signal.
-   Flagged in place; **no longer blocked** — the capture of item 1 is done.
-
-Not blocking, but true: `verdict_phys` is still open (no scenario scored on hardware), and **this
-file is at ~500 lines against its own <250 budget** — the split into `CLAUDE_*.md` is overdue and
-is an authoring decision.
+1. **Page budget — the one blocking unknown.** `tools/build_thesis_docx.py` was retyped by the
+   author to **Arial 11 pt / 1.15 / 1.0" left margin** (uncommitted), far denser than the
+   guidelines' 12 pt TNR / 1.5 against which the 80–100 page budget was set; ch.9 grew and then
+   shrank again on 01.09. `tools/thesis_page_budget.py` needs **Word COM (pywin32), NOT installed on
+   this host** — run it on a host with Word before trimming or adding anything.
+2. **Front matter still says 29.08.2026** on the cover and the declaration (`front/00_cover.md`,
+   `front/05_declaration.md`, uncommitted). Both need the real submission date.
+3. **The Chapter 8 restructure** — camera track leads instead of sitting in §8.9 — remains open and
+   is an authoring decision. Largest optional item; skip it if the budget is tight.
+4. **The physical evidence is smaller than it was on 31.08, deliberately, and the withdrawals are
+   recorded.** Three landed on 01.09: M-7 §4's `ey` under-read (superseded by the rectified sweep,
+   docs/17 §10.2), the D-67 reclassification (repo-only, unchanged), and — the large one —
+   **`lap_bare_20260831T150050Z` in full**, because the operator repositioned the car by hand
+   throughout it (docs/17 §13.2/§13.4/§13.6; D-80 partially void). Anything citing the 99 %/97 %
+   inversion, the ≈109 m, the 0.10 rad/s yaw plateau or `R_min` = 2.2 m is retracted and must not
+   return. The actuation deficit now rests on **M-7 §5** alone: compressive, 0.482 → 0.436 → 0.341,
+   with its endpoint unmeasured. `tools/measure_yaw_authority.py` (untracked, selftest 8/8, ROS path
+   never run) is kept as the discriminator that was written but not used.
+5. **Standing:** `verdict_phys` is open by design; every physical figure is labelled PRELIMINAR /
+   N=1 / `monitoring` / unscored; the cage has **never modified an action on hardware**. Nothing in
+   Phase 5 re-scores a gate. This file is ~590 lines against its own <250 budget; the split into
+   `CLAUDE_*.md` is overdue and is itself an authoring decision.
 
 ### Earlier phase evidence
 

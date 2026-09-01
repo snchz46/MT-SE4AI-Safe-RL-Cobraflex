@@ -31,6 +31,120 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [01.09.2026 · withdrawal] — The 31.08 bare-policy run is disowned by its author, and everything that rested on it is retracted from the manuscript and struck in the docs
+
+**Document(s) affected:** `docs/17_physical_deployment.md` (§13 table, §13.2, §13.4, §13.5, §13.6,
+§14 term 1, §14.2), `docs/DECISIONS.md` (D-80 partially withdrawn), `CLAUDE.md`,
+`manuscript/draft_v5/{front/10_abstract.md, body/09,11,12}`,
+`manuscript/chapters/chapter_09_sim_to_real_gap.md`
+**Phase:** 5 (physical deployment)
+**Gate context:** after Gate G4 — posterior evidence, re-scores nothing
+**Author:** Samuel Sanchez
+
+### Change
+
+`lap_bare_20260831T150050Z` (641 s, `/emergency` detached) is withdrawn on the author's instruction:
+the operator **repositioned the car by hand throughout the run**, placing it at other points of the
+circuit precisely because nothing was stopping it, so the run has no interval whose start conditions
+the operator did not set. Everything derived from it is retracted. Sections are struck in `docs/`
+with the reason recorded, and **removed outright** from the manuscript.
+
+### Rationale
+
+The withdrawal is large because that single run had become load-bearing within a day of being
+recorded. Void: the **inversion** (cage latched 99 % of cycles while the car drove 97 %), the ≈ 109 m
+covered, the single latch at t + 6.4 s, the **yaw-rate plateau** at ≈ 0.10 rad/s with its 5327-cycle
+regression and the `R_min` = 2.2 m consequence, the frozen-estimate signature before the ten operator
+interventions, and the C-01-at-0 % observation. In the manuscript that removed **H15** from the
+conclusions (*the ODD can be declared without the platform being able to reach it*), the abstract
+clause built on it, chapter 9's §9.3.7 and §9.3.8 with Tabla 9.2, the `R_min` row of the gap table
+and its reading, and one clause in the discussion. D-76's ordering loses the **positive control** it
+had gained and returns to an argument from architecture supported by D-79.
+
+**What survives is stated as carefully as what falls.** The three caged runs of §13.1 are untouched,
+so the 1 s healthy hold being unsatisfiable in motion (48 % of 623 withholds), the documented escape
+burning 30 of 30 resets, and C-02 firing at `ey` = −20 mm with sd(`epsi`) 19.1° all stand — and the
+last remains the fourth independent confirmation of D-79 and the first in the heading channel while
+driving. C-04's spurious firings stand at 58 + 40 cycles rather than 183. **The cage has never
+modified an action on hardware** stands on the three surviving runs (0 modified cycles each). The
+actuation deficit stands on **M-7 §5** (18.08): achieved/commanded falls 0.482 → 0.436 → 0.341, so
+the plant is compressive; what is unmeasured again is where that compression ends.
+
+### Impact
+
+No hazard, SR, cage rule, scenario, metric, ODD parameter, `cage.yaml` or verdict is touched;
+`verdict_phys` stays open. The manuscript's physical evidence is now smaller and every remaining
+claim traces to a run nobody has disowned. `tools/measure_yaw_authority.py` becomes the way to
+re-earn the actuation finding legitimately — on blocks, where an operator cannot contaminate it.
+
+### Verification
+
+`python tools/check_traceability.py` — PASS. DOCX rebuilds clean (32 captions, 16 figures, 654
+paragraphs). Manuscript swept for `5694`, `5327`, `2.2 m`, `0.10 rad/s`, `109 m`, `R_min`,
+`brazo sin cage` — no residue.
+
+---
+
+## [01.09.2026 · audit + gap ledger] — The 31.08 evening session is audited against its own CSVs, four numbers are corrected and four findings added, and every measured sim-to-real gap term is consolidated into one ledger (docs/17 §14)
+
+**Document(s) affected:** `docs/17_physical_deployment.md` (§5 pointer, §13 corrections, new §13.5,
+new §14), `docs/DECISIONS.md` (D-80 amended 01.09), `CLAUDE.md`, `manuscript/draft_v5/body/09_gap_sim_to_real.md`
+**Phase:** 5 (physical deployment)
+**Gate context:** after Gate G4 (closed 02.07.2026) — **posterior evidence, re-scores nothing**
+**Author:** Samuel Sanchez
+
+### Change
+
+Two things, in order. **(1) An audit** of the 31.08 evening session (D-80) against the committed
+evidence — `cage_status.csv`, `reset_events.csv`, `capture_events.csv` and `lap_bare`'s
+`bag_export.csv` — before any of it was allowed to feed the manuscript. The core replicates exactly,
+including the whole of §13.4; four numbers are corrected in place and four findings are added, as
+docs/17 §13.5 and the D-80 amendment. **(2) A consolidated ledger**, docs/17 §14: thirteen measured
+sim-to-real gap terms with magnitude, evidence and status, plus §14.1 scoring the a-priori list of §5
+against what was actually found. §5 is kept unedited and now carries a pointer to §14.
+
+### Rationale
+
+**The audit.** Phase 5 is about to stop producing evidence and start being written up; every number
+that reaches the manuscript should have been re-derived from the artefact rather than from a session
+write-up. It found: the withhold population of §13.1 is **623, not 453** — the published breakdown is
+a *prefix* of the log, read from a console scrollback (the hold is 48 % of withholds, not 43 %, so
+the finding strengthens); `lap_mon_escape` also carried `healthy_seconds:=0.3` and so is **not a
+controlled comparison** against run 1; run 3's quoted window is the mild end of a worse population
+(1066 C-02 cycles, `epsi` sd 19.1°); and the session was **ten launches, not six**. New: **C-04 fires
+58 / 40 / 85 times and every firing is an artefact** (100 % at 0.25–1.66 m/s, impossible under power)
+which in `lap_mon_escape` **enters the reset-withhold path** — a velocity artefact blocking the
+recovery from the rule it raised; the bare arm's 99 % is **one latch at t + 6.4 s**, so under the
+deployed configuration that run would have ended after 6.3 s, while detached it covered **≈ 109 m ≈
+5.7 perimeters**; `frame_capture_node` **saturated its 600-frame budget in all six runs**; and two
+launches **ran concurrently** (`…T140749Z` / `…T141134Z`), the third instance of one stack being
+started over a live one after I-1 and 29.07.
+
+**The ledger.** The gap findings were spread across §5, §6d, §8, §10, §12, §13 and D-71…D-80, which
+is unusable both for the defence and for Ch. 9. §14 puts all thirteen in one table ordered by cost,
+and §14.1 states the methodological result the spread was hiding: **the a-priori list of §5 got the
+terms simulation can model (appearance, timing, gains) and missed every term that actually stopped
+the vehicle** — training-track handedness, an intrinsics error the simulator had inherited, an
+estimator whose accuracy is a function of *place*, the missing operational story for a
+correctly-specified latch, and a velocity sensor whose failure mode enters the cage's only speed
+input. Four of those are perception; none is the control policy.
+
+### Impact
+
+No hazard, SR, cage rule, scenario, metric, ODD parameter, `cage.yaml` or verdict is touched.
+`verdict_phys` stays open. D-75's decision (C-04 un-armable) and D-79's findings are unchanged; D-75's
+literal wording "can never fire" is qualified — it never fires on *commanded* motion. The corrected
+numbers supersede those in the `[31.08.2026 · D-80 / driving]` entry below. Ch. 9 of the manuscript
+is updated from §14 in the same pass.
+
+### Verification
+
+`python tools/check_traceability.py` — PASS (no ID added or removed). Numbers re-derived from the
+run artefacts under `experiments/physical/runs/lap_*_20260831*/`; §13.4 reproduced independently at
+n = 5327 with identical bins and gains.
+
+---
+
 ## [31.08.2026 · D-80 / driving] — The bare-policy arm inverts the session: the cage was latched 99 % of cycles while the car drove 97 % of them, and D-74's reset parameters do not survive motion
 
 **Document(s) affected:** `src/cobraflex_rl/launch/deploy_cobraflex.launch.py`,
@@ -54,7 +168,8 @@ Three exercise D-74's reset proxy in `auto` under different parameters; the four
 
 **1. Three blockers, none of them the policy.** (i) D-74's **1 s healthy hold is not satisfiable in
 motion** — 9 resets against **453 withholds**, 197 of them the hold failing to complete; the threshold
-came from an STPA argument and had never been exercised while driving. (ii) **Removing C-01 from
+came from an STPA argument and had never been exercised while driving. *[Superseded 01.09.2026: the
+population is 623 withholds, 302 of them the hold — see the entry above and docs/17 §13.5.]* (ii) **Removing C-01 from
 `reset_proxy_blocking_rules` does not escape the lap04 deadlock** — the documented escape burned
 **30/30 resets in about a minute**, each re-latching, car stable at `ey` = −296 mm with
 `perception_invalid` at 6 %. Tested and rejected; the default stays. (iii) With the hold at 0.3 s,

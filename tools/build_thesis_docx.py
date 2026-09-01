@@ -4,7 +4,7 @@
 Renders `manuscript/draft_v5/` (front matter + condensed body + appendices) into a
 single .docx laid out to the HS Esslingen *Thesis Writing Guidelines*:
 
-    A4 · 12 pt · 1.5 line spacing · justified · first-line indent
+    A4 · 11 pt Arial · 1.15 line spacing · justified · first-line indent
     margins  left 1.5"  right 1"  top/bottom 1.25"
     preliminary pages  lower-case roman, centred at the bottom
     body                arabic, upper right
@@ -40,8 +40,14 @@ FIGURES = REPO / "manuscript" / "figures"
 
 # --- guideline constants -------------------------------------------------------
 BODY_PT = 12
-LINE_SPACING = 1.5
-MARGIN_LEFT = Inches(1.5)
+# Typography, set by the author and deliberately NOT the guidelines' 12 pt Times
+# New Roman at 1.5: Arial throughout -- body text, headings and captions alike --
+# at 11 pt with 1.15 line spacing. Roman numerals stay confined to the
+# preliminary pages (cover, abstract, indices); the body is arabic from 1.
+BODY_FONT = "Arial"
+BODY_SIZE_PT = 11
+LINE_SPACING = 1.15
+MARGIN_LEFT = Inches(1.0)
 MARGIN_RIGHT = Inches(1.0)
 MARGIN_TOPBOT = Inches(1.25)
 FIRST_LINE_INDENT = Inches(0.25)  # "indent paragraphs five spaces"
@@ -126,14 +132,36 @@ def clear(container) -> None:
 # ==============================================================================
 def configure_styles(doc: Document) -> None:
     normal = doc.styles["Normal"]
-    normal.font.name = "Times New Roman"
-    normal.font.size = Pt(BODY_PT)
-    normal.element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
+    normal.font.name = BODY_FONT
+    normal.font.size = Pt(BODY_SIZE_PT)
+    normal.element.rPr.rFonts.set(qn("w:eastAsia"), BODY_FONT)
     pf = normal.paragraph_format
     pf.line_spacing = LINE_SPACING
     pf.space_after = Pt(0)
     pf.space_before = Pt(0)
     pf.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+
+    # Make BODY_FONT the document-wide default as well, so anything that never
+    # names a font -- page numbers, TOC and index entries, table cells -- resolves
+    # to it instead of falling back to the theme font (which Word renders as its
+    # own default and LibreOffice substitutes with a serif).
+    docdefaults = doc.styles.element.find(qn("w:docDefaults"))
+    if docdefaults is not None:
+        rpr_default = docdefaults.find(qn("w:rPrDefault"))
+        if rpr_default is not None:
+            rpr = rpr_default.find(qn("w:rPr"))
+            if rpr is None:
+                rpr = OxmlElement("w:rPr")
+                rpr_default.insert(0, rpr)
+            rfonts = rpr.find(qn("w:rFonts"))
+            if rfonts is None:
+                rfonts = OxmlElement("w:rFonts")
+                rpr.insert(0, rfonts)
+            for attr in ("asciiTheme", "hAnsiTheme", "eastAsiaTheme", "cstheme"):
+                if rfonts.get(qn("w:" + attr)) is not None:
+                    del rfonts.attrib[qn("w:" + attr)]
+            for attr in ("ascii", "hAnsi", "eastAsia", "cs"):
+                rfonts.set(qn("w:" + attr), BODY_FONT)
 
     # Subheadings: flush left, same family, distinguished only by weight/size.
     # "three or four blank lines before, two after" -> rendered as space_before/after.
@@ -144,20 +172,20 @@ def configure_styles(doc: Document) -> None:
         ("Heading 4", 12, 14, 8, False, False),
     ):
         st = doc.styles[name]
-        st.font.name = "Times New Roman"
+        st.font.name = BODY_FONT
         st.font.size = Pt(size)
         st.font.bold = bold
         st.font.all_caps = caps
         st.font.color.rgb = RGBColor(0, 0, 0)
         st.font.italic = False
         # python-docx's heading styles point at the theme's *major* font, which wins
-        # over w:ascii; drop the theme references so the serif family actually applies.
+        # over w:ascii; drop the theme references so BODY_FONT actually applies.
         rfonts = st.element.rPr.rFonts
         for attr in ("asciiTheme", "hAnsiTheme", "eastAsiaTheme", "cstheme"):
             if rfonts.get(qn("w:" + attr)) is not None:
                 del rfonts.attrib[qn("w:" + attr)]
         for attr in ("ascii", "hAnsi", "eastAsia", "cs"):
-            rfonts.set(qn("w:" + attr), "Times New Roman")
+            rfonts.set(qn("w:" + attr), BODY_FONT)
         p = st.paragraph_format
         p.alignment = WD_ALIGN_PARAGRAPH.LEFT
         p.space_before = Pt(before)
@@ -169,7 +197,23 @@ def configure_styles(doc: Document) -> None:
     for name in ("Caption", "Quote", "List Bullet", "List Number"):
         if name in [s.name for s in doc.styles]:
             st = doc.styles[name]
-            st.font.name = "Times New Roman"
+            st.font.name = BODY_FONT
+
+
+def force_theme_font(doc: Document, font: str) -> None:
+    """Point the theme's major/minor latin fonts at `font`.
+
+    Styles that python-docx's default template leaves on `majorHAnsi`/`minorHAnsi`
+    -- table styles, TOC and index entries, headers and footers -- resolve through
+    the theme, which ships Calibri/Cambria. Without this the document is Arial
+    everywhere except a handful of places that quietly come out serif.
+    """
+    for part in doc.part.package.iter_parts():
+        if not str(part.partname).endswith("theme1.xml"):
+            continue
+        xml = part.blob.decode("utf-8")
+        xml = re.sub(r'(<a:latin typeface=")[^"]*(")', rf"\1{font}\2", xml)
+        part._blob = xml.encode("utf-8")
 
 
 def set_margins(section) -> None:
@@ -534,6 +578,7 @@ def read(path: Path) -> str:
 def build(out_path: Path) -> None:
     doc = Document()
     configure_styles(doc)
+    force_theme_font(doc, BODY_FONT)
 
     front_sec = doc.sections[0]
     set_margins(front_sec)

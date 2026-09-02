@@ -49,7 +49,8 @@ straight well and the curves badly.
 | 1.75+ | 91 | **63.0 mm** |
 
 The car runs progressively wider as the curve tightens, while C-04 — the rule whose
-job that is — cannot fire at all (`v_max_curve_mps` 0.25 > the deployed 0.22).
+job that is — cannot fire on commanded motion (`v_max_curve_mps` 0.25 > the deployed 0.22).
+[AMENDED 01.09: it does fire on ZED velocity artefacts - docs/17 SS13.5.]
 
 C-02 fires on isolated spikes rather than on a sustained heading error, which is
 the wrong-pair signature `lap01` showed in a single cycle and which the morning's

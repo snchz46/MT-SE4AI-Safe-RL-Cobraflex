@@ -1,33 +1,45 @@
 # 17 · Physical deployment (Phase 5) — bring-up plan for the real CobraFlex
 
-**Status: DRIVEN ON THE TRACK (2026-08-26, §8). The sim-to-real v2 policy transfers.**
-The morning runs covered **19.28 m** in `mode:=monitoring` with rectification on,
-holding `|ey|` median ≈ 9 mm and firing **no safety rule while moving**, but in six
-segments separated by **five operator `/cage_reset` publications**, and it left the
-lane in the final curve. That afternoon two fixes landed — camera capture rate and
-the ZED loop-closure overrides — and the last run of the day drove **18.05 m in one
-uninterrupted 101 s segment with no operator reset, no pose jumps and C-06 as the
-only rule touched** (§8.10). It still stopped **2.11 m short of the start**, on a
-single 400 ms perception glitch that latched C-05 with the car 27 mm from the lane
-centre. **This is not a clean lap and no scenario has been scored on hardware**;
-`verdict_phys` stays open. §9 is the prepared runbook for the next attempt. The
-deployment gate now **PASSES on real imagery** (§8.1) — the 18.08 frames were never
-lost, only searched for on the wrong host (§7.2). Four things stop the car and none
-of them is the policy: C-05's non-recovering latch (§8.5), camera starvation
-(§8.6), ZED pose jumps (§8.7) and C-04's dead zone in the tightest curve (§8.8).
-**Two of the four are now fixed and measured** (§8.10): the pose jumps go 116 → 0
-and the camera feeds the loop at 9.84 Hz. The other two are untouched, and C-05 is
-what ended the best run of the session.
-Earlier bench sessions: 2026-08-05 and 2026-08-17, wheels off the ground. Both §2
-`[VERIFY]` items are now measured (M-6, 17.08.2026) and the HFOV one came back
-**wrong — 77.89°, not 90°**; its propagated `ey` under-read was CONFIRMED on
-18.08.2026 by hands-off tape measurement (M-7 §4/D-71: 0.68–0.83 × true − 10 mm), and
-the heading channel is separately noisy; the resulting decision is open and nothing has been
-changed in code. The 2026-08-17 session (§6c) verified the perception-loss
-fail-safe and the actuation sign convention on hardware.** This document is the bring-up checklist for taking
-the verdict-bearing RL camera policy + safety cage from Gazebo to the physical
-1:14 CobraFlex. Every sim-side component it reuses is validated; the hardware I/O
-and the items flagged **[VERIFY]** are not, by construction — they need the car.
+**Status: PHASE 5 IS CLOSED (2026-09-01). The evidence base is final; no further
+track or bench measurement will be taken, and the project is in write-up.**
+The sim-to-real v2 policy **transfers**, and what stops the vehicle is the
+**measurement**, not the control. `verdict_phys` remains **open by design**: no
+scenario has ever been scored on hardware, every physical figure is
+`monitoring` / N = 1 / out-of-protocol, and **the cage has never modified an
+action on hardware**. Nothing in Phase 5 re-scores a gate; all of it is posterior
+evidence to the D-69 simulation verdict of record.
+
+**Read §14 first** — the consolidated ledger of all thirteen measured gap terms,
+and §14.1's scoring of the a-priori list of §5 against them. Everything above it
+is the chronological record that produced those rows.
+
+| Session | What it established | Where |
+| --- | --- | --- |
+| 2026-08-05 / 08-17 bench | Five silent defects fixed; the perception-loss fail-safe and the actuation sign convention verified on hardware | §6b, §6c |
+| 2026-08-17 **M-6** | The "90° HFOV" was a default the simulator had **inherited** — the real optic is **77.89°**, plus an unmodelled `k1 = −0.339` | §2, M-6 |
+| 2026-08-18 **M-7 / D-71** | First drive: the D-43 estimator transfers, **the 550k trunk policy does not**, and three single-pose conclusions are overturned by a recorded circuit | §6d |
+| 2026-08-26 | **The v2 policy drives.** 18.05 m in one uninterrupted 101 s segment, 0 resets, C-06 the only rule (3.4 % vs 3.0 % in sim → T2 did not materialise). Ended 2.11 m short on one 400 ms perception pulse | §8, §8.10 |
+| 2026-08-31 driving | Goal not met (best 14.56 m). **Eight single-component hypotheses refuted.** The M-7 §4 `ey` under-read **does not survive rectification** | §10 |
+| 2026-08-31 capture | **D-79** — the estimator's accuracy is a property of **place**, not of motion; the mechanism is candidate generation. The one spot every earlier calibration used is the circuit's **best** point | §12 |
+| 2026-08-31 evening | **D-80** — three ways the cage stops the car, all of them the measurement. D-74's 1 s hold is unsatisfiable in motion | §13 |
+| 2026-09-01 | Audit of §13 against its own CSVs (four numbers corrected), the **bare-policy arm withdrawn**, and the gap ledger consolidated | §13.2, §13.5, §14 |
+
+**Two classes of physical evidence, and they must stay labelled apart.**
+Calibration and structural findings (M-6, M-7, D-71, the two controlled A/B pairs,
+C-04's dead zone, D-79's place-dependence) are **results**. Driving figures and the
+gap table's physical column are **PRELIMINAR, N = 1, `monitoring`, unscored**, and
+a physical campaign would supersede them.
+
+**Sections that are runbooks, not records.** §9 and §11 were written before their
+sessions; both have executed (§10 and §12 are their records) and both carry a
+banner saying so. §5 is the **a-priori** gap list, deliberately left unedited so
+that what it did and did not anticipate can be scored — §14.1 does that.
+
+This document is the bring-up record for taking the verdict-bearing RL camera
+policy + safety cage from Gazebo to the physical 1:14 CobraFlex. Every sim-side
+component it reuses is validated; the hardware I/O and the items originally
+flagged **[VERIFY]** were not, by construction — they needed the car, and §2
+records what happened when they got it.
 
 > **2026-08-05 bench review — five defects found and fixed, all silent.** The
 > chain as scaffolded would have started, logged, and driven *wrongly* rather than
@@ -158,14 +170,22 @@ the RL chain reads it. To see exactly what the policy sees, point rviz at
      reaches C-01** — see the next bullet, which supersedes it. **The sim results
      stand** either way: Gazebo's sensor really was 90° and the IPM really assumed
      90°, so in sim C-01 fired at exactly 0.16 m. Only the *transfer* is broken.
-   * **The cage fires LATE — CONFIRMED 18.08.2026 by hands-off measurement
-     against a tape (M-7 §4, D-71).** The `ey` transfer, with the car parked on
-     the ground at tape-measured offsets over ±100 mm, is
+   * **The cage fires LATE on the UNRECTIFIED path — CONFIRMED 18.08.2026 by
+     hands-off measurement against a tape (M-7 §4, D-71), and SUPERSEDED for the
+     deployed path on 31.08.2026 (§10.2).** The `ey` transfer, with the car
+     parked on the ground at tape-measured offsets over ±100 mm, is
      **reported = 0.68…0.83 × true − 10 mm**, robust to every filtering of the 15
      points (r up to 0.99). M-6 predicted 0.72 and the measurement brackets it.
-     **C-01's 160 mm therefore fires at a true 207–241 mm** and C-05's 120 mm at a
-     true 172–212 mm, against a road half-width of 255 mm — 14–48 mm of margin
-     where 95 mm was designed.
+     On that path **C-01's 160 mm fires at a true 207–241 mm** and C-05's 120 mm
+     at a true 172–212 mm, against a road half-width of 255 mm — 14–48 mm of
+     margin where 95 mm was designed.
+     **This is why the deployment rectifies**, and the prescription worked: the
+     same nine-point sweep repeated on the ground on the rectified path gives
+     scale **1.058** left / **0.991** right with **no intercept**, so C-01 fires
+     at a true **151/158 mm** with ~100 mm of margin (§10.2). **Do not tune
+     C-01/C-05 from the figures in this bullet** — they characterise a path that
+     is no longer deployed. What replaces them is not a gain error but
+     **place-dependence** (D-79, §12).
      *A retraction of this bullet, made earlier the same day on the strength of a
      lane-width measurement (252.9 mm against a ruler 250), is itself withdrawn:
      `lane_width` is a **difference** straddling the optical axis while `ey` is an
@@ -176,6 +196,9 @@ the RL chain reads it. To see exactly what the policy sees, point rviz at
      at the same tape offset elsewhere along the track moves the reading by a mean
      of 13.2 mm and up to 29.4 mm (tape precision ~2 mm). The reading is not a
      function of lateral offset alone, and no scale correction removes this.
+     *Also measured unrectified; but unlike the gain, this one did not go away —
+     it is the first sighting of what D-79 later isolated as **place-dependence**
+     (§12.3), and it is the defect that survived rectification.*
    * **Where the error does bite is the HEADING** — as **noise, not bias**. The
      slope is fitted across the scan band out to 1 m, where `X` is compressed and
      `Y` is not, so the cancellation above does not apply. Over the same 1521
@@ -188,7 +211,13 @@ the RL chain reads it. To see exactly what the policy sees, point rviz at
      apparent bias; the circuit says that was local, and a `heading_bias_rad`
      (D-57) correction is therefore **withdrawn** — there is no general bias to
      subtract. Undecided: `near_secant`/1.0 is markedly cleaner but rescales the
-     observation the trunk trained with.
+     observation the trunk trained with. *Resolved in practice, never as a
+     contract: everything that has driven since 26.08 used `near_secant` (§8.4),
+     which is why no physical run is under the scored D-43 contract — ledger term
+     12, §14. And `near_secant`'s 5.31° is itself a **start-of-the-straight**
+     figure: driving off that spot the same configuration gives sd 17.2–19.1°
+     and 6.8–11.6 % of cycles past C-02 (§13.1), the heading-channel face of
+     D-79.*
    * `cx` = 305.39 px (14.61 px off centre) adds a **lateral bias**, not just a
      gain, and measured barrel distortion is k1 = −0.339 against the IPM's
      assumed zero. Combining all of it with the measured pitch, the running IPM
@@ -963,16 +992,29 @@ measurement that would catch a rectifier configured wrong.
 
 ### 7.5 What would falsify the whole exercise
 
-Stated in advance so the track session is a test and not a demonstration:
+Stated in advance so the track session is a test and not a demonstration.
+**All three were scored, and none fired** — appended after the fact, kept in the
+order they were written:
 
 * the lane-independent steering bias is still ≫ the lane-dependent swing (the
   18.08 failure, unchanged) → the mirroring did not transfer, or the bias has a
-  second cause this work did not find;
+  second cause this work did not find.
+  **Not falsified:** bias/swing **0.07–1.10** for v2 against **12.9–19.2** for
+  the trunk as deployed on 18.08 (D-72), and the car drove (§8).
 * the estimator's `ey` still reads 0.68–0.83 × true **with rectification on** →
-  the residual is not mount pose, and M-6's model is wrong somewhere else;
+  the residual is not mount pose, and M-6's model is wrong somewhere else.
+  **Not falsified:** the rectified nine-point tape sweep of 31.08 gives scale
+  **1.058 / 0.991** with no intercept (§10.2). M-6's model was right and
+  rectification is what realises it. *What the criterion did not anticipate is
+  the defect that actually bites — the error is not a gain at all, it is
+  **place-dependent** (D-79, §12), which no single-location sweep could have
+  seen.*
 * the policy drives but the cage intervenes constantly on C-06 → the
   `delta_max_steering_per_cycle` coupling flagged as a physical-transfer risk in
   D-69 (T2) has materialised, and the rate limiter, not the policy, is driving.
+  **Not falsified:** C-06 fires **3.4 %** of moving cycles on hardware against
+  **3.0 %** in simulation at the same checkpoint (§8.10, ledger term 10). N = 1,
+  monitoring.
 
 ### 7.6 Re-running the campaign on the new policy
 
@@ -1237,12 +1279,22 @@ cage.yaml  c04_speed_ceiling.v_max_curve_mps = 0.25
 launch     max_speed_mps                     = 0.22
 ```
 
-**0.22 < 0.25, so C-04 can never fire.** D-69's finding (ii) recorded this as a
-coverage gap — "C-04 never fires (0/1890) … the ODD-3 speed ceiling stays untested
-from above". It is no longer only a coverage gap: on the physical circuit the
-vehicle enters its tightest curve at full contract speed with no cage-side speed
-protection. That promotes the item from *rule without test coverage* to *rule that
-does not protect a real physical case*.
+**0.22 < 0.25, so C-04 cannot fire on commanded motion.** D-69's finding (ii)
+recorded this as a coverage gap — "C-04 never fires (0/1890) … the ODD-3 speed
+ceiling stays untested from above". It is no longer only a coverage gap: on the
+physical circuit the vehicle enters its tightest curve at full contract speed
+with no cage-side speed protection. That promotes the item from *rule without
+test coverage* to *rule that does not protect a real physical case*.
+
+> **Amended 01.09.2026 — the literal "can never fire" is false (§13.5).** C-04
+> **did** fire on hardware: 58 and 40 cycles in the two surviving caged runs of
+> 31.08, **100 % of them at a reported 0.25–1.30 m/s**, which is impossible under
+> power at a 0.22 m/s cap. Those are ZED velocity artefacts (ledger term 8)
+> entering the cage's only speed input, and in one run they enter the
+> reset-withhold path — a sensor artefact blocking recovery from the rule it
+> raised. The *argument* of this section stands unchanged; what changes is that
+> the rule's dead zone is not the only thing wrong with it. D-75's decision
+> (leave `cage.yaml` untouched; re-arming blocked on a capture session) stands.
 
 Three candidate causes for the departure itself, none discriminated:
 
@@ -1523,6 +1575,13 @@ session can attribute a rate change to a configuration instead of guessing.
 
 ### 9.4 The two measurements nothing automates
 
+> **Outcome (01.09.2026): (b) was done, (a) was not.** (b) is the 31.08 offset
+> sweep (§10.2) — and it **overturned** the figures this item was written to
+> check. (a) — floor mark plus tape — was never taken, and it is the reason
+> whether 26.08's best run closed its loop **cannot be settled**: D-73 removed
+> the loop-closure correction, so odometry cannot answer it. Physical work is
+> closed; (a) stays as a named future-work item, not as a pending action.
+
 **(a) Mark the start position.** Tape a cross on the floor, put the car on it,
 and after the run measure the distance from the cross to where it stopped. This
 answers two things at once that `/odometry/filtered` no longer can: whether the
@@ -1530,13 +1589,21 @@ lap actually closed, and **what the ZED override costs in drift**. §8.10's 2.11
 end-to-start gap is not interpretable without it — with `area_memory:false` the
 odometry has no loop-closure correction, so slow drift is unbounded, and 2.11 m
 over 101 s is within what it can invent. Record it in the run directory.
+**Not done.**
 
-**(b) `lanecheck --true-ey`.** Still open from M-7 §3b, and it is the number that
-decides whether C-01 fires late: the estimator reads `ey` at 0.68–0.83 × true
-− 10 mm, so C-01's 160 mm threshold fires at a true 207–241 mm, leaving 14–48 mm
-to the road edge instead of 95. 26.08's `lanecheck` ran **without** `--true-ey`,
-so it answered only "is the parked estimate quiet" (5.3 mm sd — yes). Park the
-car at a measured offset, pass it, and the automated half of M-7 §3b closes.
+**(b) `lanecheck --true-ey`.** Open from M-7 §3b when this was written, and the
+number that was thought to decide whether C-01 fires late: on the **unrectified**
+path the estimator read `ey` at 0.68–0.83 × true − 10 mm, putting C-01's 160 mm
+threshold at a true 207–241 mm. 26.08's `lanecheck` ran **without** `--true-ey`,
+so it answered only "is the parked estimate quiet" (5.3 mm sd — yes).
+**Done on 31.08** as a nine-point hands-off tape sweep on the ground, rectified:
+scale **1.058 / 0.991**, **no intercept**, C-01 at a true **151/158 mm** with
+~100 mm of margin (§10.2). Two corollaries this item did not foresee: the 5.3 mm
+sd it treats as a PASS is probably a **false negative** — a dispersion gate
+cannot see a stable bias, and `preflight_deploy.py lanecheck` was given a span
+check afterwards (§10.5) — and the sweep, like every `lanecheck`, was taken at
+the **start of the straight**, which D-79 later established is the estimator's
+best point (§12.3). One location cannot close a circuit-wide property.
 
 ### 9.5 The reset policy for the day
 

@@ -1,7 +1,7 @@
 # Traceability Matrix
 
 **Status:** Living document — Phase 0 baseline, refined through every phase, closed at G6
-**Last update:** 31.07.2026 (**verdict of record re-pointed to the 2-D PPO 550k campaign, and the last two sim-side TBDs closed — D-69.** The pre-deployment campaign `campaign_2d_ppo550k` finished: 1890 runs, 0 errors, 27 complex_b scenarios × {enf, mon}, seed 2024, on the 2-D PPO camera policy at cap 0.22, checkpoint 550k (D-66/D-67). Global `NOT SATISFIED` (literal), blocking SR-CL-A **SR-002/003 only**, again *only* through SC-EDGE-01's recovery-time clause — D-47 applies verbatim, and D-68 shows the failure is a real performance property, not a measurement artefact. **0 in-ODD road-edge contacts in enforcement** against 60 committed by the bare policy. **SR-009 and SR-010 are no longer TBD**: SR-009 closes out-of-band on the D-64 scripted-stall metrology (notes ²), SR-010 closes as a determinate, twice-measured **CL-B finding — Not satisfied, non-vetoing** (notes ³). **Gate G4 remains closed on its own frozen record** — F-track F4 (global `SATISFIED`) + track-'E' **GE4-V2** (28.06.2026, 1970 runs), which stays the *gate* evidence and is **not** re-scored; the re-pointing is a post-verdict edit deferred by D-67 and taken now that a verdict exists. Isaac remains a separate sim-to-real posterior track (docs/13–14, D-44/D-49). See the E5 note below + `experiments/sim/campaign_2d_ppo550k/CAMPAIGN_2D_PPO550K_ANALYSIS.md`. V1 (campaign_e_297k) + the 139k block are historical.)
+**Last update:** 01.09.2026 (**Phase 5 closed.** The `verdict_phys` column is now closed *as open*: no scenario was ever executed under protocol, every physical run was in `monitoring`, and the cage has never modified an action on hardware — see the note below §, and docs/17 §14 for the thirteen measured sim-to-real gap terms. Two rows are **qualified but not re-scored**: SR-004's C-04 cannot fire on commanded motion at the deployed cap yet **does** fire on velocity artefacts (D-75 + docs/17 §13.5), and the policy this matrix scores is not the policy that drives (D-71/D-72). No SR, hazard, rule, scenario, metric or verdict changed. Previous substantive update 31.07.2026: **verdict of record re-pointed to the 2-D PPO 550k campaign, and the last two sim-side TBDs closed — D-69.** The pre-deployment campaign `campaign_2d_ppo550k` finished: 1890 runs, 0 errors, 27 complex_b scenarios × {enf, mon}, seed 2024, on the 2-D PPO camera policy at cap 0.22, checkpoint 550k (D-66/D-67). Global `NOT SATISFIED` (literal), blocking SR-CL-A **SR-002/003 only**, again *only* through SC-EDGE-01's recovery-time clause — D-47 applies verbatim, and D-68 shows the failure is a real performance property, not a measurement artefact. **0 in-ODD road-edge contacts in enforcement** against 60 committed by the bare policy. **SR-009 and SR-010 are no longer TBD**: SR-009 closes out-of-band on the D-64 scripted-stall metrology (notes ²), SR-010 closes as a determinate, twice-measured **CL-B finding — Not satisfied, non-vetoing** (notes ³). **Gate G4 remains closed on its own frozen record** — F-track F4 (global `SATISFIED`) + track-'E' **GE4-V2** (28.06.2026, 1970 runs), which stays the *gate* evidence and is **not** re-scored; the re-pointing is a post-verdict edit deferred by D-67 and taken now that a verdict exists. Isaac remains a separate sim-to-real posterior track (docs/13–14, D-44/D-49). See the E5 note below + `experiments/sim/campaign_2d_ppo550k/CAMPAIGN_2D_PPO550K_ANALYSIS.md`. V1 (campaign_e_297k) + the 139k block are historical.)
 **Approved at Gate:** every Gate (incrementally)
 
 ## Purpose
@@ -228,7 +228,8 @@ audit trail of *why* each verdict took the shape it did:
 > gate closes on this evidence base:
 > **(i) F-track F4** (ground-truth state, frozen 10.06.2026): 1260 runs, global **`SATISFIED`** —
 > all 7 SR-CL-A pass, cage latent in-ODD, protective value shown out-of-ODD (D-35 frontier).
-> **(ii) Track-'E' GE4-V2** (camera, verdict of record 28.06.2026): 1970 runs, global
+> **(ii) Track-'E' GE4-V2** (camera, **the frozen gate record**, 28.06.2026; superseded as *verdict
+> of record* by the 2-D PPO 550k campaign on 31.07.2026 per D-69, and **not** re-scored): 1970 runs, global
 > **`NOT SATISFIED` (literal)** blocking SR-002/003 only — both Satisfied on their own criterion
 > (D-47), so **no SR-CL-A safety predicate is breached on either arm**; SR-001 and the three
 > camera SRs (SR-012/013/014) are Satisfied.
@@ -374,15 +375,22 @@ frozen; the E re-runs of F-track scenarios are reported only as a contrast in §
 determinate, evidence-backed `verdict_sim`: eleven **Satisfied**, two **Satisfied on their own
 criterion** with the literal failure recorded and reconciled (SR-002/003, note ⁷ + D-47/D-68), and
 one **Not satisfied** reported as a limitation (SR-010, note ³). The `verdict_phys` column stays
-`tbd` throughout, and since 08.2026 for a narrower reason than "not run": Phase 5 **has driven on
-hardware** — 18.05 m of the real circuit in one uninterrupted segment with no safety rule fired
+`tbd` throughout — and **is now closed that way** (Phase 5 ended 01.09.2026 with no further
+measurement planned), for a narrower and more precise reason than "not run": Phase 5 **has driven
+on hardware** — 18.05 m of the real circuit in one uninterrupted segment with no safety rule fired
 (docs/17 §8.10) — but **no scenario has been executed under protocol**, in enforcement and on the
-D-43 perception contract every campaign was scored under. Driving is not scoring; a physical
+D-43 perception contract every campaign was scored under. Every physical run was in `monitoring`,
+and **the cage has never modified an action on hardware**. Driving is not scoring; a physical
 verdict read off out-of-protocol runs would be fabricated, exactly as an estimated one would be.
+The full posterior evidence base — thirteen measured sim-to-real gap terms, none of them the
+control policy — is consolidated in **docs/17 §14**; it re-scores nothing here.
 Two rows are **qualified but not re-scored** by that hardware evidence: **SR-004** is satisfied via
-C-04, and in the deployed physical configuration C-04 **cannot fire at all** (`v_max_curve_mps`
-0.25 > the deployed 0.22 m/s), so the simulation coverage gap is a rule that does not protect a
-real physical case; and the policy this matrix scores (the 2-D 550k trunk) is **not** the policy
+C-04, and in the deployed physical configuration C-04 **cannot fire on commanded motion**
+(`v_max_curve_mps` 0.25 > the deployed 0.22 m/s), so the simulation coverage gap is a rule that
+does not protect a real physical case (D-75) — while, worse, it *does* fire on **velocity
+artefacts**: 58 and 40 cycles across the two surviving 31.08 caged runs, all at a reported
+0.25–1.30 m/s, i.e. a ZED fault entering the cage's only speed input (docs/17 §13.5); and the
+policy this matrix scores (the 2-D 550k trunk) is **not** the policy
 that drives — it does not transfer (D-71), and what deploys is the v2 retrain (D-72). The one open ODD parameter, `ODD-3.A_LAT_MAX`
 (**TBD-Q10**, docs/08 §11), is likewise hardware-gated by construction (**D-33**): it is
 unmeasurable in simulation, so no simulation campaign — this one included — could have closed it.

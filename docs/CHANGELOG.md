@@ -31,6 +31,122 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [02.09.2026 · consistency pass] — Repo-wide audit before submission: every retracted claim traced to every place it still stood, the `chapters/` tree brought level with `draft_v5/`, and two stale duplicates collapsed
+
+**Document(s) affected:** `docs/04`, `docs/05`, `docs/07`, `docs/08`, `docs/12`, `docs/14`,
+`docs/16`, `docs/17`, `docs/DECISIONS.md` (header, D-71, D-80); `manuscript/README.md`,
+`manuscript/chapters/{09,10,11,12}`, `manuscript/draft_v5/body/09`,
+`manuscript/draft_v5/back/D_anexo_odd.md`, `manuscript/figures/DESIGN_PROMPTS.md`;
+`README.md`, `AGENTS.md`, `CLAUDE.md`, `experiments/README.md`, `tools/README.md`,
+`scenarios_complex_b/README.md`, `experiments/calibration/README.md`,
+`experiments/calibration/M7_track_perception.md`, three `experiments/physical/runs/*` notes.
+**Phase:** 6 (write-up) — no phase artefact, no evidence, no code touched
+**Gate context:** after Gate G4; nothing here re-scores a gate or a verdict
+**Author:** Samuel Sanchez
+
+### Change
+
+A single sweep of the whole repository against the closed evidence base, prompted by the
+observation that the 01.09 withdrawals had been applied where they were *written* but not
+everywhere they were *repeated*. Five classes of defect were found and fixed.
+
+**(1) Retracted claims still asserted as current.** M-7 §4's `ey` under-read
+(`0.68–0.83 × true − 10 mm` → C-01 at a true 207–241 mm) still stood without a supersession
+marker in `docs/12` §5, `docs/17` §2 and §9.4(b), `docs/DECISIONS.md` D-71, the calibration
+README's M-7 row and M-7's own headline. All now carry the rectified result (scale 1.058/0.991,
+no intercept, C-01 at a true 151/158 mm) and a *do not tune C-01/C-05 from these figures*
+instruction. `docs/17` §9.4(b) additionally claimed `lanecheck --true-ey` was still open; it was
+executed on 31.08 and is what overturned the figures the item was written to check.
+
+**(2) A literal that the 01.09 audit had falsified.** *"C-04 can never fire"* survived in
+`docs/04`, `docs/07`, `docs/08`, `docs/17` §8.8, `CLAUDE.md`, three run notes and both chapter 9
+and chapter 10. C-04 fired **58 and 40 cycles** on hardware, 100 % of them at a reported
+0.25–1.30 m/s — ZED velocity artefacts entering the cage's only speed input, in one run blocking
+recovery from the rule they had raised. The dead-zone argument (D-75) is unchanged; the word
+*never* is gone.
+
+**(3) D-80 was never amended by its own audit.** The 01.09 audit corrected four numbers in
+`docs/17` §13.5 but not in the decision itself. Folded in: the withhold population is **623, not
+453** (the published 197/121/83/51 is a *prefix*, and the hold is 48 % of the total, so the
+finding strengthens); run 3's window is the mild end of 1066 C-02 cycles, whose population figure
+is sd(`epsi`) **19.1°**, not the published 17.2°; `lap_mon_escape` also carried
+`healthy_seconds:=0.3`, so it is **not** a controlled pair with run 1; the session was **ten**
+launches, not six. The two audit findings the write-up did not have (C-04 firing on artefacts;
+`frame_capture_node` saturating in all six runs) and the concurrency incident are added.
+
+**(4) Stale status, everywhere it mattered for a reader arriving cold.** `experiments/README.md`,
+`tools/README.md` and `scenarios_complex_b/README.md` still called **GE4-V2** the verdict of
+record — superseded by D-69 on 31.07.2026; `experiments/README.md` additionally described
+`physical/` as "pending" and `physical/runs/` as empty when it holds 41 run directories. The
+0.4954 yaw gain was presented as a *linear* least-squares fit in `docs/08` and `docs/14` where
+M-7 §5 had measured the plant **compressive** (0.482 → 0.436 → 0.341, no constant gain fits it,
+endpoint unmeasured). `docs/DECISIONS.md`'s own header said "decisions through D-74, last update
+2026-07-31" over a file containing D-80. `docs/16` Q12 — *what would break first on the physical
+car?* — still read as an agenda when §14.1 had scored it; it is now the a-priori list kept
+verbatim with the measured ledger set against it, which is one of the stronger results in the
+work. `docs/08` gains **v0.9.4**: TBD-Q10 is closed *as open* (M-4 was never taken and is not
+planned), so the spec stays below v1.0 **by design**, exactly as D-33 predicted.
+
+**(5) Duplicates.** `AGENTS.md` was a parallel copy of `CLAUDE.md` frozen at 2026-07-20, i.e.
+predating D-67, D-69 and the whole of Phase 5; it is collapsed to a pointer rather than
+re-synchronised, because two status files is one more than this repo can keep honest.
+`manuscript/figures/DESIGN_PROMPTS.md` (explicitly working material) gains a currency warning.
+
+**The `chapters/` tree had drifted behind `draft_v5/`, reversing the documented flow.**
+`manuscript/README.md` says the research record is updated first and the submission source
+derived from it; on 01.09 the opposite happened. `chapters/ch11` was the worst case — still
+"a falta de la evidencia física de Fase 5", still citing *55 decisions through D-61*, with no
+Phase-5 content in its criteria, lessons, limitations or residual risks. It now carries the
+hardware test of criterion (3), the two Phase-5 lessons, H3 answered in both halves, and four
+Phase-5 residual risks. `ch09` declares the Isaac campaign **not executed** rather than leaving a
+skeleton with `[TBD]` cells; `ch10`'s physical column reads **No ejecutado** rather than
+`[TBD F5]`, matching `draft_v5` §10.4's own caption; `ch12`'s T2 lists **five measured**
+conditions instead of three assumed ones. Decision counts corrected to **74 entries numbered
+through D-80** in the three places that quoted them.
+
+**Housekeeping.** `tools/README.md` documented 14 fewer scripts than the directory contains;
+the missing ones are added under two new sections (*Manuscript build*, *Analysis & figures*),
+including the note that `build_thesis_docx.py`'s layout constants are the authority and that
+`thesis_page_budget.py` needs Word COM. `experiments/calibration/README.md` relabels M-1..M-5
+from "stub ready" to **not executed**, which is what they are.
+
+### Rationale
+
+Retractions were applied at their source but propagated by hand, and the propagation was
+incomplete — the failure mode this repository exists to prevent. Before the manuscript is built
+for submission, every place a reader could pick up a withdrawn number had to be found
+mechanically rather than from memory. The sweep is also the last chance to catch the asymmetry
+that had opened between the two manuscript trees.
+
+### Impact
+
+**No hazard, SR, cage rule, scenario, metric, ODD parameter, verdict or `cage.yaml` value is
+added, removed or re-valued.** `verdict_phys` stays open by design, the D-69 verdict of record
+is untouched, GE4-V2 stays the frozen G4 gate record, and Phase 5 remains posterior evidence
+throughout. Three items are explicitly **left to the author** and are authoring decisions, not
+evidence ones: the page budget (needs a Word host — the last measured 96 pages predates both the
+typography change and the chapter 9–12 rewrites, and must not be quoted), the Chapter 8
+restructure, and the two front-matter blanks that remain (the cover's matriculation number,
+`[por completar]`, and the preface's personal acknowledgements).
+
+**Two items settled by the author during the pass.** The **submission date is set to
+15.09.2026** on both the cover and the declaration of authenticity, replacing the 29.08.2026
+placeholder that had passed; the two files are copied through verbatim by the DOCX build, so a
+future change must touch both. And `git worktree prune` removed **two dead worktree
+registrations** pointing at Windows `B:`/`E:` paths. The 1.1 GB stale worktree directory at
+`.claude/worktrees/reverent-feistel-49fec5` — a 01.06.2026 snapshot of the whole repo, hidden
+from `git status` by `.git/info/exclude` — is **deliberately left in place**; it is reported in
+`CLAUDE.md` as an outstanding hygiene item.
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED, 0 warnings**
+(12 hazards, 14 SRs, 6 cage rules, 28 scenarios, 19 metrics).
+`sync_hazard_register.py` + `sync_safety_requirements.py` re-run → **no diff** in
+`docs/data/*.csv`. Markdown relative-link check across 197 files → **0 broken links**.
+
+---
+
 ## [01.09.2026 · withdrawal] — The 31.08 bare-policy run is disowned by its author, and everything that rested on it is retracted from the manuscript and struck in the docs
 
 **Document(s) affected:** `docs/17_physical_deployment.md` (§13 table, §13.2, §13.4, §13.5, §13.6,

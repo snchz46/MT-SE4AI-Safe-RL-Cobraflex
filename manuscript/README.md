@@ -34,22 +34,34 @@ idempotent and the page budget is the acceptance check.
 
 ## Guideline compliance
 
-The layout implements the *Thesis Writing Guidelines* directly, and the choices live in one
-place (`tools/build_thesis_docx.py`, top of file):
+The layout choices live in one place — `tools/build_thesis_docx.py`, top of file — and **that
+file is the authority; this section describes it**:
 
-- A4, 12 pt, **1.5 line spacing**, justified, paragraphs indented.
-- Margins: left 1.5", right 1", top and bottom 1.25".
+- A4, justified, paragraphs indented; margins top and bottom 1.25".
 - Preliminary pages in **lower-case roman, centred at the bottom**; the title page carries no
   number. Body in **arabic, upper right**, restarting at 1, with no header or ornamentation.
 - Cover with the required fields (thesis type, title, both examiners, author) and the
   **certification of authenticity** as a preliminary page.
 - Abstract single-spaced and within two pages.
-- **Body of the text: 80-100 pages** — currently **96**, excluding bibliography and appendices.
+- **Body of the text: 80–100 pages**, excluding bibliography and appendices.
 
-Two guideline items are deliberately deviated from, and the reason is recorded here: the
-recommendation of "three or four blank lines before subheadings" is implemented as paragraph
-spacing rather than literal blank lines (visually equivalent, cheaper in pages), and citations
-are parenthetical author-year rather than footnotes, which the guidelines permit.
+**Three guideline items are deliberately deviated from**, and the reasons are recorded here.
+**(a) Typography.** The guidelines specify 12 pt Times New Roman at 1.5 line spacing with a
+1.5" left margin; the build sets **Arial 11 pt at 1.15 line spacing with 1.0" left and right
+margins**, throughout — body text, headings and captions alike. This was the author's choice.
+It is materially denser than the guideline layout **against which the 80–100 page budget was
+set**, so the resulting page count is not comparable to a budget computed under the guideline
+typography and must be re-measured rather than assumed. **(b)** The recommendation of "three or
+four blank lines before subheadings" is implemented as paragraph spacing rather than literal
+blank lines (visually equivalent, cheaper in pages). **(c)** Citations are parenthetical
+author-year rather than footnotes, which the guidelines permit.
+
+> **Open item — the page budget is unverified.** `tools/thesis_page_budget.py` drives Word and
+> needs **Word COM (pywin32)**, so it runs only on a Windows host with Word installed — not on
+> the Ubuntu compute host. It has not been run since the typography change above, nor since
+> chapters 9–12 were rewritten with the Phase-5 evidence. **Run it before trimming or adding
+> anything.** The last measured figure, 96 pages, dates from the 31.07.2026 build under
+> different settings and should not be quoted.
 
 **Open item:** the guidelines ask for standard English; the manuscript is in Spanish. Confirm
 with the supervisor before final submission.
@@ -60,12 +72,36 @@ Every chapter cross-references identifiers from the living documents under `docs
 that all identifiers used are defined is part of the pre-gate procedure
 (`tools/check_traceability.py`).
 
-## Status
+## Status (2026-09-02)
 
 - `chapters/` — twelve chapters drafted and synced to the verdict of record (2-D PPO 550k
-  campaign, 31.07.2026) and to the D-69 closure of the last two SR-level TBDs.
-- `draft_v5/` — complete: front matter, condensed body (96 pp), bibliography and appendices A-I.
+  campaign, 31.07.2026, D-69), to the D-69 closure of the last two SR-level TBDs, **and to the
+  close of Phase 5** (01.09.2026, D-70…D-80): chapter 9 carries the measured sim-to-real gap
+  and declares the Isaac campaign not executed, chapter 10 declares the physical verdict column
+  **not executed**, chapter 11 evaluates the framework against the hardware evidence, and
+  chapter 12's T2 lists the five *measured* conditions that separate the physical campaign from
+  being executable.
+- `draft_v5/` — complete: front matter, condensed body, bibliography and appendices A–I.
   Appendices A, B, D, E, F, G, H and I are extracted or generated from the living documents and
   campaign artefacts, so they stay re-derivable.
-- Pending: physical results (Chapter 9 gap table, physical column of Chapter 10) and the
-  language decision above.
+- **Two classes of physical evidence, kept labelled apart.** Calibration and structural
+  findings (M-6, M-7, D-71, the controlled A/B pairs, C-04's dead zone, D-79's place-dependence)
+  are reported as **results**; driving figures and the physical column of the chapter 9 gap
+  table are **PRELIMINAR, N=1, monitoring, unscored**. Nothing in Phase 5 re-scores a gate, and
+  the cage has never modified an action on hardware.
+- **Withdrawn, and must not return** (01.09.2026): M-7 §4's `ey` under-read
+  (`0.68–0.83× − 10 mm`, C-01 at a true 207–241 mm) — superseded by the rectified sweep, which
+  gives scale 1.058/0.991 with no intercept and C-01 at a true 151/158 mm; and the whole of the
+  `lap_bare_20260831T150050Z` run, because the operator repositioned the car by hand throughout
+  it — with it the 99 %/97 % inversion, the ≈109 m, the 0.10 rad/s yaw plateau, `R_min` = 2.2 m,
+  and finding H15 of the conclusions.
+- **Open, and each is an authoring decision rather than an evidence one:** the matriculation
+  number and personal acknowledgements in the front matter (below); the page budget (above); the Chapter 8 restructure that would
+  let the camera track lead instead of sitting in §8.9; and the language decision above.
+
+> **Front matter: submission date set to 15.09.2026** (2026-09-02, author's instruction), on
+> both the cover and the declaration of authenticity. If the date moves, change it in **both**
+> files — `tools/build_thesis_docx.py` copies them through verbatim, so nothing downstream
+> catches a mismatch. **Still outstanding:** the matriculation number on the cover reads
+> `[por completar]`, and the preface ends with `[Espacio reservado para agradecimientos
+> personales del autor.]`.

@@ -1,7 +1,12 @@
 # Prompts para Claude Design — figuras visuales de la tesis
 
 > **Material de trabajo** (no es artefacto de la tesis; bórralo o déjalo fuera del
-> commit si no lo quieres versionado). Cada prompt es autocontenido: lleva los
+> commit si no lo quieres versionado). **Aviso de vigencia (02.09.2026):** los datos
+> embebidos en estos prompts se verificaron contra `docs/` en su momento y **no se han
+> re-verificado** desde entonces. En particular, el *verdict of record* dejó de ser
+> GE4-V2 el 31.07.2026 (pasó a la campaña 2-D PPO 550k, D-69) y toda la Fase 5 es
+> posterior a estos prompts. Re-verifica antes de generar cualquier figura a partir de
+> aquí. Cada prompt es autocontenido: lleva los
 > datos reales verificados contra `docs/` y la paleta de la casa, así que se puede
 > copiar y pegar tal cual. Etiquetas de figura en inglés (convención del repo);
 > los pies de figura en el manuscrito van en español.

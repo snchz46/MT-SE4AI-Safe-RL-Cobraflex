@@ -3,13 +3,13 @@
 | Field | Value |
 | --- | --- |
 | Artifact | The logical (non-learned) camera lane-keeper: deployment node + shared control law + CV estimator |
-| Version | **0.7** (2026-07-24 — §4.10: the **T3 temporal heading-consistency gate** (D-62) resolves the §4.4 confident curve over-read: caps `|epsi|` only while the estimator's own `ey` confirms lane-following, so a genuine fault (which drifts `ey`) is never masked. Nominal D-43 preflight for margin022 flips BLOCKED → **PASS** in closed loop; held-out faults still 6/6. Opt-in, default off) — prior 0.6 (2026-07-13 — §4.4: both estimator limitations **measured in-situ** by the 420-pose weak-section oracle probe: the H-12 flip quantified (≈ −1 lane width at ey ≈ +0.12, everywhere) + confident heading over-read in tight curves (−0.2…−0.45 rad on a centred car → crosses the 25° envelope); mechanisms of the E5 multi-seed / 2-D enforcement stops) |
+| Version | **0.8** (2026-09-01 — §5: the hardware behaviour of this estimator is reconciled with the Phase-5 evidence. Rectification towards the canonical model is the deployed configuration and it **removes** the M-7 §4 `ey` under-read (rectified sweep 31.08: scale 1.058/0.991, no intercept → C-01 at a true 151/158 mm); the residual is **place-dependence** (D-79) in all three channels — offset, heading and curvature — with candidate generation as the mechanism. Nothing in the estimator's code or defaults changed; no sim result is affected) — prior **0.7** (2026-07-24 — §4.10: the **T3 temporal heading-consistency gate** (D-62) resolves the §4.4 confident curve over-read: caps `|epsi|` only while the estimator's own `ey` confirms lane-following, so a genuine fault (which drifts `ey`) is never masked. Nominal D-43 preflight for margin022 flips BLOCKED → **PASS** in closed loop; held-out faults still 6/6. Opt-in, default off) — prior 0.6 (2026-07-13 — §4.4: both estimator limitations **measured in-situ** by the 420-pose weak-section oracle probe: the H-12 flip quantified (≈ −1 lane width at ey ≈ +0.12, everywhere) + confident heading over-read in tight curves (−0.2…−0.45 rad on a centred car → crosses the 25° envelope); mechanisms of the E5 multi-seed / 2-D enforcement stops) |
 | Phase / Gate | Track 'E' (camera) — the fair baseline for the RL camera agent (GE4 eval) |
 | Author | Samuel Sanchez |
-| Date | 2026-06-19 |
+| Date | 2026-09-01 (v0.8; v0.7 = 2026-07-24, original 2026-06-19) |
 | Status | CONFIRMED — implemented in `cobraflex/lane_keeper_gazebo_node.py`, `cobraflex_rl/cv_lane_controller.py`, `cobraflex_rl/cv_lane_estimator.py`, `cobraflex_rl/camera_geometry.py` |
 | Normative spec | Training Specification Ch.7 §7.7 (track 'E'); ODD-1 lane geometry (`docs/08`) |
-| Decisions cited | D-43 (cage/baseline read a dedicated deterministic CV estimator), D-41 (end-to-end camera architecture) |
+| Decisions cited | D-43 (cage/baseline read a dedicated deterministic CV estimator), D-41 (end-to-end camera architecture), D-62 (T3 temporal heading gate), D-71/D-79 (hardware behaviour: rectification, place-dependence), D-77 (SR-014 inter-frame gate widened) |
 | Sibling documents | `docs/11_camera_rl_training.md` (the RL agent this is compared against), `docs/04_cage_specification.md` (the cage that reuses the same CV estimator), `docs/08_odd_specification.md` (lane geometry) |
 
 > Purpose: document *how* the classical, hand-coded camera lane-keeper works — the
@@ -548,17 +548,37 @@ estimator and the policy share one camera.
 > car as **−97.7 mm** off and fires C-01 **102** times without moving; rectified,
 > mean **+7.7 mm**, sd 104.5 → 27.8 mm, **0** C-01 activations.
 >
-> **What rectification does NOT fix, and what it costs.** M-7 (18.08.2026)
-> measured `ey` against a tape over ±100 mm: the estimator reads
-> **0.68–0.83 × true − 10 mm**, robust to every filtering — so C-01's 160 mm
-> `d_max` fires at a **true 207–241 mm**, leaving 14–48 mm to the road edge
-> instead of 95. Lane *width* is read correctly (252.9 mm against a 250 mm ruler,
-> 95.4 % of circuit frames paired) because a width is a *difference* straddling
-> the optical axis while `ey` is an *absolute* off-axis position, and the
-> unmodelled `k1 = −0.339` barrel term compresses only the second. Two further
-> defects sit in the same band where C-01/C-05 act: repeatability (mean 13.2 mm,
-> worst 29.4, against a ~2 mm tape) and **pairing collapse beyond ~±55 mm**. The
-> `--true-ey` half of that measurement is still open.
+> **What rectification DOES fix — and the residual it leaves.** On the
+> **unrectified** path M-7 (18.08.2026) measured `ey` against a tape over
+> ±100 mm at **0.68–0.83 × true − 10 mm**, robust to every filtering, which put
+> C-01's 160 mm `d_max` at a **true 207–241 mm**. That measurement is what
+> motivated undistorting rather than re-parameterising, and **it does not
+> survive rectification**: the same nine-point tape sweep repeated on the ground
+> on the deployed rectified path (31.08.2026) gives scale **1.058** left /
+> **0.991** right with **no intercept**, so C-01 fires at a true **151/158 mm**
+> with ~100 mm of margin. M-7 §4 carries a superseded banner; do **not** tune
+> C-01 or C-05 from its figures. The `--true-ey` half of M-7 §3b is closed by
+> that sweep. Lane *width* was read correctly on both paths (252.9 mm against a
+> 250 mm ruler) because a width is a *difference* straddling the optical axis
+> while `ey` is an *absolute* off-axis position, and the unmodelled
+> `k1 = −0.339` barrel term compressed only the second.
+>
+> **The residual is place-dependence, not gain (D-79, 31.08.2026).** A
+> true-position capture over the whole circuit — camera only, arc length from
+> tape-measured floor stations — shows the estimator's accuracy is a property of
+> **where the car is**: 96.7 % of frames paired with **7.2 mm** error at the
+> start of the straight (which is where M-6, M-7 and every `lanecheck` were
+> taken, i.e. the circuit's *best* point), against 37.9–60.2 % while moving
+> elsewhere, and parked probes at a true offset of 0 giving **0.0 % paired** at
+> one spot and **−39.7 mm at sd 3.1 mm** at another — confidently wrong, and
+> invisible to any dispersion gate. The mechanism is **candidate generation**,
+> not pair selection (stripe edges and adjacent markings enter the candidate
+> set; the surviving pair carries a plausible 279–301 mm width whose midpoint is
+> displaced 40–50 mm), so a temporal-continuity prior over the selected pair
+> does not help. The same degradation appears off that spot in the heading
+> channel (sd `epsi` 5.3° there vs 17.2–19.1° driving, D-80) and in curvature
+> (`∮|κ|ds` integrating to ~2× what a lap can contain, D-75/D-79). Detail:
+> docs/17 §10.2, §12; M-7 §4 banner.
 
 ---
 

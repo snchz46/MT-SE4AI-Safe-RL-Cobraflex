@@ -1,13 +1,16 @@
 # Capítulo 9 — Caracterización del Gap Sim-to-Real
 
-Convención: las secciones marcadas [BORRADOR POST-G4] contienen prosa provisional
-redactada tras el cierre de G4 (02.07.2026); la evidencia posterior incorporada
-se extiende hasta el 31.07.2026 (estudio de algoritmos SAC en Gazebo §7.5.5, la
-calibración D-43→C-02 del readout de rumbo en Gazebo, y el brazo de acción 2-D
-de Gazebo hasta la campaña de la policy PPO 550k, cerrada el 31.07.2026 — cap. 8
-§8.9.7–§8.9.9). Las secciones marcadas [ESQUELETO — F5] son encabezados a
-poblar cuando exista la evidencia correspondiente (campaña Isaac cerrada /
-corridas físicas de Fase 5).
+Convención: las secciones marcadas [BORRADOR POST-G4] se redactaron tras el
+cierre de G4 (02.07.2026). La evidencia posterior incorporada llega hasta el
+**01.09.2026**: el estudio de algoritmos SAC en Gazebo (§7.5.5), la calibración
+D-43→C-02 del readout de rumbo, el brazo de acción 2-D hasta la campaña de la
+policy PPO 550k (cap. 8 §8.9.7–§8.9.9, cerrada el 31.07.2026) y **la Fase 5
+completa** —reentrenamiento orientado a transferencia, despliegue físico y las
+tres sesiones del 31.08— cerrada el 01.09.2026 (D-70…D-80, docs/17).
+**Toda la evidencia de Fase 5 es posterior: no re-puntúa ninguna puerta ni toca
+el veredicto de récord D-69.** La única sección que permanece en esqueleto es
+§9.2.3 (campaña Isaac), y permanece así **por decisión**: esa campaña no se
+ejecutó y no se ejecutará dentro del alcance de este trabajo.
 Este capítulo materializa la adaptación **A5** del V-Model (L1' reformulada como
 Operational Validation con caracterización del gap): el testing en simulación no
 equivale a validación operacional, y la diferencia se **mide**, no se asume.
@@ -38,10 +41,13 @@ realización. El contrato de transferencia es explícito:
   es un **re-entrenamiento y una nueva línea base**, nunca una repetición del
   E-main de 297k; nada en este capítulo reabre G4 (D-49).
 
-El veredicto de la tesis reposa hoy sobre Gazebo y se reporta como **evidencia
-principal provisional**; si la campaña de Isaac madura como resultado más
-fuerte, el veredicto se re-enuncia con esas cifras como finales (decisión
-registrada en ch.1 §1.7 y ch.8 §8.8.2).
+El veredicto de la tesis reposa sobre Gazebo, y **así queda**. La opción
+registrada en ch.1 §1.7 y ch.8 §8.8.2 —re-enunciar el veredicto con cifras de
+Isaac si esa campaña maduraba como resultado más fuerte— **no se ejerció**: la
+campaña Isaac no llegó a producir un eval nominal citable dentro del alcance del
+trabajo (§9.2.3), de modo que el peldaño Isaac se reporta por lo que sí produjo,
+que es un resultado metodológico negativo y útil (§9.6). El veredicto de récord es
+y sigue siendo el de la campaña 2-D PPO 550k en Gazebo (D-69).
 
 ---
 
@@ -114,24 +120,30 @@ GT-vs-CV y separación de distribuciones seguro/fallo de la calibración D-43
 (`epsi_gt_vs_cv_validation.png`, `epsi_abs_distribution_validation.png`)— como
 ilustración compacta de "la discrepancia es medible y calibrable".]**
 
-### 9.2.3 Resultados de la campaña Isaac  [ESQUELETO — pendiente]
+### 9.2.3 Resultados de la campaña Isaac — NO EJECUTADA
 
-*(A poblar cuando exista un run 2-D de Isaac con eval nominal aceptable y, en su
-caso, una campaña de escenarios. Contenido previsto: curva de entrenamiento del
-run final, eval nominal multi-modo y activación real del arbitraje C-04/C-06 a
-0.5 m/s; contraste de métricas contra el peldaño Gazebo. Nota: la verificación
-bien-puesta de SR-009 ya **no** depende de este peldaño —se cerró sobre la acción
-2-D de Gazebo (cap. 8 §8.9.7, D-63/D-64)—, de modo que Isaac aportaría aquí una
-réplica de backend, no la primera medición.)*
+**Esta sección se declara no ejecutada, no pendiente.** El puente Isaac no llegó a
+producir un run 2-D con eval nominal citable dentro del alcance temporal del
+trabajo, y el esfuerzo se reasignó al peldaño físico —que era el objetivo de la
+escalera— cuando quedó claro que Isaac no era el cuello de botella. Lo previsto
+era: curva de entrenamiento del run final, eval nominal multi-modo con activación
+real del arbitraje C-04/C-06 a 0.5 m/s, y contraste de métricas contra el peldaño
+Gazebo.
 
-- Entrenamiento final y selección de checkpoint — [TBD]
-- Eval nominal (enforcement + monitoring) — [TBD]
-- SR-009 bien-puesto: resultado del brazo de stall — [TBD]
-- Contraste Gazebo↔Isaac por métrica — [TBD]
+Nada depende de ello. La verificación bien-puesta de **SR-009** ya **no** requiere
+este peldaño —se cerró sobre la acción 2-D de Gazebo (cap. 8 §8.9.7, D-63/D-64)—,
+de modo que Isaac habría aportado aquí una réplica de backend y no una primera
+medición. Lo que el peldaño sí produjo, y es lo que este capítulo reporta, es el
+resultado de §9.2.2: **las discrepancias entre entornos son medibles,
+raíz-causables y calibrables, pero no son silenciosas**, y los checkpoints no
+transfieren entre simuladores (D-49/D-54/D-55/D-57). Ese resultado negativo es el
+que calibró la expectativa sobre el salto a hardware, y el hardware lo confirmó
+(§9.3.3a). La continuación figura como trabajo futuro T6 (cap. 12), no como un
+hueco de este capítulo.
 
 ---
 
-## 9.3 Peldaño 2 — despliegue físico (Fase 5)  [BRING-UP EJECUTADO 08.2026 — **campaña de resultados PENDIENTE**]
+## 9.3 Peldaño 2 — despliegue físico (Fase 5)  [BRING-UP EJECUTADO 08.2026 · FASE CERRADA 01.09.2026 — **campaña de resultados NO EJECUTADA**]
 
 > **Estatus de esta sección, y hay que leerlo antes que sus cifras.** Lo que
 > sigue es el **bring-up** del peldaño físico, no su campaña de resultados. Se
@@ -285,13 +297,19 @@ nunca** en la configuración desplegada (`v_max_curve_mps` 0.25 > 0.22): lo que
 D-69 registró como hueco de cobertura es, en la curva más cerrada del circuito
 real, **una regla que no protege un caso físico existente**.
 
-### 9.3.4 Diseño experimental físico  [PENDIENTE]
+### 9.3.4 Diseño experimental físico  [NO EJECUTADO — la Fase 5 cerró antes]
 
-El presupuesto de corridas físicas sigue siendo deliberadamente pequeño (orden de
-30) y la pregunta que gobierna cada afirmación no cambia: *¿qué pueden afirmar
+El presupuesto de corridas físicas era deliberadamente pequeño (orden de
+30) y la pregunta que gobernaba cada afirmación no cambia: *¿qué pueden afirmar
 honestamente treinta corridas físicas?* El subconjunto exportado (docs/05
 §"Subset for physical deployment"): **SC-NOM-01** (obligatorio), **SC-NOM-02** y
-**SC-EDGE-01**. **Ninguno se ha ejecutado bajo protocolo.**
+**SC-EDGE-01**. **Ninguno se ha ejecutado bajo protocolo, y ninguno se ejecutará
+dentro del alcance de este trabajo**: la Fase 5 se cerró el 01.09.2026 con la
+base de evidencia física completa y sin campaña. La columna `verdict_phys` no
+está *pendiente de medición*; está **declarada no ejecutada**, que es una
+afirmación más fuerte y más honesta. Las condiciones que la separan de ser
+poblable están medidas, no supuestas, y se enumeran en docs/17 §14 (términos 2,
+9 y 12) y en §9.3.5 y §9.3.6b de este capítulo.
 
 La disciplina anti-parcheo original —«el sistema se ejecuta tal como salió de
 Fase 4, sin ajustar ganancias, umbrales ni filtros entre corridas»— **se
@@ -368,15 +386,15 @@ sigue siendo informativa, y separadas en el encabezado porque tratarlas como una
 diferencia limpia sería la afirmación sin evidencia que el marco existe para
 impedir.
 
-| Métrica | Sim 1-D (Gazebo, E-main 297k) | Sim 2-D (Gazebo, 550k — **la del veredicto**) | Isaac | **Físico** *(PRELIMINAR: v2 1650k, `monitoring`, **una corrida**, sin puntuar)* |
+| Métrica | Sim 1-D (Gazebo, E-main 297k) | Sim 2-D (Gazebo, 550k — **la del veredicto**) | Isaac *(no ejecutada, §9.2.3)* | **Físico** *(PRELIMINAR: v2 1650k, `monitoring`, **una corrida**, sin puntuar)* |
 | --- | --- | --- | --- | --- |
-| M-P1 — \|ey\| mediano | 10.9 mm | **8.6 mm** (máx. 27.3 mm) | [TBD] | **18.7 mm** (p90 44.7; máx. 98.7) |
-| M-P2 — recorrido continuo | 4.88 vueltas (4k4) | **5.32 vueltas** | [TBD] | **18.05 m en un tramo** (≈0.94 del perímetro) |
-| M-S1 — desviación lateral máx. | < `d_max` in-ODD | < `d_max` in-ODD; **0 contactos de borde in-ODD** | [TBD] | 0 contactos; máx. 98.7 mm contra `d_max` 160 |
-| M-S3 — paros de emergencia | 0 (nominal) | **0** (nominal) | [TBD] | **1**, por C-05 sobre percepción, con el coche en carril |
-| M-I1 — tasa de intervención | 43.5 % (C-06) | **3.0 %** en el checkpoint desplegado (76.1 % en el 550k) | [TBD] | **3.4 %** (C-06 únicamente) |
-| Velocidad de operación | 0.200 m/s fija | ≈0.216 m/s bajo cap 0.22 | [TBD] | ≤ **0.213 m/s** bajo el mismo cap |
-| Cadencia del lazo de control | 10 Hz nominal | 10 Hz nominal | [TBD] | **8.68 Hz** medidos (`/state_obs` 9.84); 9.6 Hz sin lidar en capa 2 |
+| M-P1 — \|ey\| mediano | 10.9 mm | **8.6 mm** (máx. 27.3 mm) | — | **18.7 mm** (p90 44.7; máx. 98.7) |
+| M-P2 — recorrido continuo | 4.88 vueltas (4k4) | **5.32 vueltas** | — | **18.05 m en un tramo** (≈0.94 del perímetro) |
+| M-S1 — desviación lateral máx. | < `d_max` in-ODD | < `d_max` in-ODD; **0 contactos de borde in-ODD** | — | 0 contactos; máx. 98.7 mm contra `d_max` 160 |
+| M-S3 — paros de emergencia | 0 (nominal) | **0** (nominal) | — | **1**, por C-05 sobre percepción, con el coche en carril |
+| M-I1 — tasa de intervención | 43.5 % (C-06) | **3.0 %** en el checkpoint desplegado (76.1 % en el 550k) | — | **3.4 %** (C-06 únicamente) |
+| Velocidad de operación | 0.200 m/s fija | ≈0.216 m/s bajo cap 0.22 | — | ≤ **0.213 m/s** bajo el mismo cap |
+| Cadencia del lazo de control | 10 Hz nominal | 10 Hz nominal | — | **8.68 Hz** medidos (`/state_obs` 9.84); 9.6 Hz sin lidar en capa 2 |
 
 Tres lecturas.
 
@@ -451,8 +469,15 @@ podría hacerlo esta evidencia, que no es de campaña. Nada de la
 Fase 5 toca la campaña de veredicto: D-69 sigue siendo el veredicto de récord y
 GE4-V2 el registro congelado de G4. Lo que la Fase 5 **matiza** son dos
 declaraciones del Capítulo 10: SR-004 se satisface con una regla, C-04, que en la
-configuración física **no puede activarse en absoluto**; y el objeto validado por
-esa declaración (la policy 550k) **no es el objeto que conduce**.
+configuración física **no puede activarse sobre movimiento comandado** —el techo
+de curva son 0.25 m/s y el cap desplegado 0.22 (D-75)— y que, sin embargo, **sí
+se activó sobre artefactos de velocidad del ZED**: 58 y 40 ciclos en las dos
+corridas enjauladas que sobreviven al 31.08, el 100 % de ellos a una velocidad
+reportada de 0.25–1.30 m/s, imposible bajo su propia potencia, y en un caso
+bloqueando la vía de rearme de la regla que él mismo había levantado. Una regla
+que no protege el caso real que existe y que arbitra sobre uno que no existe es
+un hallazgo más incómodo que un simple hueco de cobertura. Y el objeto validado
+por esa declaración (la policy 550k) **no es el objeto que conduce**.
 
 ---
 
@@ -461,10 +486,10 @@ esa declaración (la policy 550k) **no es el objeto que conduce**.
 El peldaño Gazebo está completo y congelado. El peldaño Isaac dejó un resultado
 metodológico: **las discrepancias entre entornos son medibles, raíz-causables y
 calibrables, pero no son silenciosas** — cada una hubo que descubrirla con sondas
-dedicadas (D-54/D-55/D-57). El peldaño físico **está en curso**: su bring-up está ejecutado y su campaña de
-resultados pendiente. Aun así el bring-up ya ha producido cuatro cosas que la
-simulación no podía producir, y tres de ellas no dependen de que la campaña se
-corra: una **suposición falsada** que
+dedicadas (D-54/D-55/D-57). El peldaño físico **está cerrado sin campaña** (01.09.2026): su bring-up se
+ejecutó, su campaña de resultados no, y no se planifica más medición. Aun así el
+bring-up produjo cuatro cosas que la simulación no podía producir, y tres de ellas
+no dependen de que la campaña se corra: una **suposición falsada** que
 estaba en el camino de una regla de seguridad (§9.3.2); un **resultado negativo**
 sobre la policy validada, con causa identificada en la distribución de
 entrenamiento (§9.3.3a); un **resultado positivo** sobre su reemplazo, que
@@ -474,33 +499,48 @@ especificación sin comportamiento operacional definido, umbrales inactivables y
 modos de fallo de sensor que entran directos en la única entrada de velocidad de
 la cage (§9.3.3d).
 
-Lo que **no** produce es ni un veredicto por escenario ni la tabla de gap que
-este capítulo debe. La columna `verdict_phys` del Capítulo 10 sigue vacía, y
-ahora por una razón enunciable con precisión: **la evidencia física existe, es
-de bring-up y no está puntuada**, con tres condiciones
-identificadas que la separan de estarlo (§9.3.4, §9.3.5, y la vía de rearme de
-D-74). El Capítulo 10 consolida los veredictos por SR con esa acotación
-explícita.
+Lo que **no** produce es ni un veredicto por escenario ni la tabla de gap por
+escenario que este capítulo idealmente debería. La columna `verdict_phys` del
+Capítulo 10 queda vacía, y por una razón enunciable con precisión: **la evidencia
+física existe, es de bring-up y no está puntuada**, con tres condiciones
+*medidas* que la separan de estarlo (§9.3.4, §9.3.5, y la vía de rearme de D-74;
+docs/17 §14 términos 12, 2 y 9). El Capítulo 10 consolida los veredictos por SR
+con esa acotación explícita.
+
+Hay, en su lugar, un producto que la escalera sí entregó completo y que ningún
+veredicto por escenario habría dado: **el balance del gap medido contra el gap
+anticipado** (§9.5, docs/17 §14.1). Escribir la lista de gaps *antes* de tocar
+hardware y conservarla sin editar convierte su fallo en un resultado — y el fallo
+es sistemático, no aleatorio: la lista acertó los términos que un simulador sabe
+representar y no contiene ninguno de los que efectivamente detuvieron al vehículo.
 
 ---
 
 <!--
 APÉNDICE INTERNO — TRABAJO PENDIENTE EN ESTE CAPÍTULO
 
-Estado: 27.08.2026. §9.3 (todo), §9.4 (columna física) y §9.5 POBLADOS con la
-evidencia de Fase 5. Sigue en esqueleto solo §9.2.3 (columna Isaac).
+Estado: 02.09.2026. FASE 5 CERRADA (01.09.2026) — la base de evidencia física es
+final y no se planifica más medición. §9.3 (todo), §9.4 (columna física), §9.5 y
+§9.6 poblados y reconciliados con docs/17 §14. §9.2.3 se declara NO EJECUTADA en
+lugar de quedar en esqueleto.
 
-  [ ] Poblar §9.2.3 cuando el run 2-D Isaac (v6+ / SAC tuned, T6 del cap. 12)
-       produzca un eval nominal citable; decidir si la campaña Isaac se eleva a
-       evidencia de veredicto (re-enunciado) o queda como puente interno.
-  [x] F5: §9.3.3, §9.4 (columna física) y §9.5 poblados (27.08.2026).
-  [ ] F5: caracterización hardware + pista como apéndice propio (fotografía,
-       medidas de pista, tabla de calibraciones M-1..M-7) — sigue pendiente.
-  [ ] Cerrar §9.3.5: decidir el heading_fit_mode desplegado. Bloquea verdict_phys.
-  [ ] Cuando se puntúe un escenario físico, re-enunciar §10.5 sobre §9.4.
-  [ ] Verificar los valores sim de la tabla §9.4 contra
+  [x] §9.2.3: resuelto declarándola no ejecutada (02.09.2026). La campaña Isaac no
+       se corrió y no se eleva a evidencia de veredicto; el peldaño se reporta por
+       su resultado metodológico. Continuación en cap. 12 T6.
+  [x] F5: §9.3.3, §9.4 (columna física) y §9.5 poblados (27.08.2026); §9.3.6
+       (sesiones del 31.08) añadido y auditado (01.09.2026).
+  [x] §9.3.5: la decisión de `heading_fit_mode` NO se cerró, y eso es el resultado
+       — término 12 del ledger (docs/17 §14): todo lo que ha conducido usó
+       `near_secant`, luego ninguna corrida física está bajo el contrato puntuado.
+       Ya no bloquea nada porque `verdict_phys` se declara no ejecutado.
+  [ ] OPCIONAL, autoría: caracterización hardware + pista como apéndice propio
+       (fotografía, medidas de pista, tabla de calibraciones M-1..M-7).
+  [ ] OPCIONAL, autoría: verificar los valores sim de la tabla §9.4 contra
        experiments/sim/runs/rl_newcam_eval_2024_cb297k_4k4/ al pulir.
-  [ ] Decidir dónde vive el detalle Isaac que hoy está en docs/13 (¿anexo?).
-  [ ] Figura candidata: la escalera de fidelidad (reutilizar/adaptar Fig. 8.2,
-       sim2real_roadmap.mmd).
+  [ ] OPCIONAL, autoría: decidir dónde vive el detalle Isaac que hoy está en
+       docs/13 (¿anexo?).
+  [ ] OPCIONAL, autoría: figura candidata, la escalera de fidelidad
+       (reutilizar/adaptar Fig. 8.2, sim2real_roadmap.mmd).
+  — RETIRADO: «cuando se puntúe un escenario físico, re-enunciar §10.5 sobre
+       §9.4». No se puntuará ningún escenario físico en este trabajo.
 -->

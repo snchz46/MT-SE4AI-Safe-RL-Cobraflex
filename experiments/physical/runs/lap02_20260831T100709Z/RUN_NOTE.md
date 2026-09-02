@@ -31,7 +31,9 @@ grows monotonically 74 -> 116 -> **150.3 mm** over 12 cycles / 1.2 s at a steady
 0.19 m/s, in a curve of `kappa` -1.2 -> -2.03. C-03 and C-01 both fire at the peak,
 10 mm short of C-01's 160 mm threshold. This is the car genuinely running wide.
 
-**C-04 never fired, and cannot.** Speed held 0.19-0.199 m/s through a `kappa` 2.0
+**C-04 never fired, and cannot on commanded motion.** [AMENDED 01.09: it *did* fire in the
+evening session, 58 and 40 cycles, all on ZED velocity artefacts at a reported 0.25-1.30 m/s
+- docs/17 SS13.5. The dead-zone argument stands; the word "cannot" does not.] Speed held 0.19-0.199 m/s through a `kappa` 2.0
 curve because `v_max_curve_mps` 0.25 > the deployed 0.22 (D-69 finding (ii),
 docs/17 section 8.8). Third observation of that dead zone; first one with a
 measured `ey` excursion attached to it.

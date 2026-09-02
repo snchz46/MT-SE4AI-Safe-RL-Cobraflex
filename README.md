@@ -149,6 +149,8 @@ The project follows a V-model **adapted for an AI component**: the classical lef
 
 The work advances through gated phases. Each Gate is blocked until traceability passes with no orphans.
 
+> **Where the work stands (2026-09-02).** All simulation verdicts are closed and frozen. The **verdict of record** is the 2-D PPO 550k pre-deployment campaign (1890 runs, 31.07.2026, D-69); **GE4-V2** (1970 runs, 28.06.2026) remains the frozen G4 gate record and is not re-scored. **Phase 5 ran and is closed**: the sim-to-real v2 policy **transfers** — 18.05 m of the real circuit in one uninterrupted segment with no safety rule fired — and what stops the vehicle is the **measurement**, not the control, across thirteen measured gap terms of which **none is the control policy** (`docs/17` §14). The physical verdict column is **not executed and will not be**: no scenario was ever run under the scenario protocol, every physical run was in `monitoring`, and **the cage has never modified an action on hardware**. Nothing in Phase 5 re-scores a gate.
+
 | Phase | Focus | Gate | Status |
 | --- | --- | :---: | --- |
 | **F0** | Foundation & workspace | G0 | complete |
@@ -156,8 +158,8 @@ The work advances through gated phases. Each Gate is blocked until traceability 
 | **F2** | Safety cage (`C-01…C-06`) + ROS 2 pipeline | G2 | complete |
 | **F3** | PPO & SAC training & policy comparison | G3 | complete |
 | **F4** | Simulation-based scenario evaluation | G4 | complete |
-| F5 | Physical CobraFlex platform deployment | G5 | ongoing |
-| F6 | Closure & defence | G6 | planned |
+| **F5** | Physical CobraFlex platform deployment | G5 | **evidence closed 01.09.2026** — the vehicle drives; `verdict_phys` deliberately **not executed** |
+| F6 | Closure & defence | G6 | in progress (write-up) |
 
 ---
 

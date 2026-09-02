@@ -2,10 +2,15 @@
 
 Verification and synchronisation utilities for the repository.
 
-> **Status (2026-07).** The campaign tooling below served two evaluation arms:
-> the **track-'E' camera campaign** (`campaign_e_v2/`, GE4-V2 — the verdict of
-> record) and the **F-track baseline** (`campaign/`, frozen). The `isaac_*`
-> scripts belong to the posterior sim-to-real track (docs/13–14).
+> **Status (2026-09-01).** The campaign tooling below served three evaluation arms:
+> the **2-D PPO 550k campaign** (`campaign_2d_ppo550k/` — **the verdict of record**,
+> D-69), the **track-'E' camera campaign** (`campaign_e_v2/`, GE4-V2 — the frozen G4
+> gate record) and the **F-track baseline** (`campaign/`, frozen). The `isaac_*`
+> scripts belong to the posterior sim-to-real track (docs/13–14); the deployment
+> scripts — `run_deploy_gate.sh`, `run_physical_lap.sh`, `preflight_deploy.py`,
+> `score_lane_capture.py`, `sim2real_probe.py`, `select_sim2real_checkpoint.py`,
+> `measure_yaw_authority.py` — belong to **Phase 5**, which closed 01.09.2026
+> (docs/17). Phase-5 tooling produced posterior evidence only: it re-scores no gate.
 
 ## Traceability & registers
 
@@ -38,15 +43,37 @@ Verification and synchronisation utilities for the repository.
 
 ## Physical deployment (Phase 5, docs/17)
 
-- `preflight_deploy.py` — turns the staged bring-up of docs/17 §4 into a PASS/FAIL verdict: `stage0` (camera alone), `stage1` (chain flowing), `stage2` (actuation envelope, **wheels off the ground**), `lanecheck` (parked estimator quiet). Pass `--true-ey <metres>` to `lanecheck` to close the other half of M-7 §3b — whether C-01 fires late — which no run has done yet.
+- `preflight_deploy.py` — turns the staged bring-up of docs/17 §4 into a PASS/FAIL verdict: `stage0` (camera alone), `stage1` (chain flowing), `stage2` (actuation envelope, **wheels off the ground**), `lanecheck` (parked estimator quiet, with a **span** check as well as a dispersion one). `--true-ey <metres>` closes the other half of M-7 §3b — whether C-01 fires late — and **was run on 31.08.2026**: rectified, C-01 fires at a true 151/158 mm, so M-7 §4's under-read does not survive rectification (docs/17 §10.2). Two caveats from D-79: `sd_ey ≤ 10 mm` alone returned PASS on a 43.3 mm swing, which is why the span gate was added; and no dispersion **or** span gate can catch a stable bias, so `--true-ey` must be run at **several** locations — one spot characterises one spot.
 - `run_deploy_gate.sh` — the D-72 sim-to-real gate: swing retention, bias/swing and right-turn share of a checkpoint against real imagery, raw and rectified arms.
 - `run_physical_lap.sh` — starts ONE physical run: the evidence bag and the Layer-3 RL chain bound to a single run id and stopped together, after probing the **running** Layer-2 nodes (`capture_fps`, the ZED loop-closure overrides) into the run's `layer2.json`. Warns on the two configurations that ended runs on 26.08 (loop closure on, rviz running). The lane image topic is deliberately *not* bagged — `frame_capture_node` keeps the frames around each perception event instead, from RAM. Example: `tools/run_physical_lap.sh --label lap01 --checkpoint /abs/path/to/ckpt.zip`.
 - `record_lane_dataset.py` — labelled real-lane dataset capture (PNG at 5 Hz, labels inline), without the I/O load that crashed the Jetson on 18.08.2026. Camera only; no deploy chain needed.
+- `score_lane_capture.py` — scores a true-position capture (D-78): arc length from tape-measured floor stations rather than any odometry, per-segment pairing rate and `ey` error against the operator's held offset, and the closed-loop `∮|κ|ds / (laps·2π)` test whose acceptance band was fixed in advance. It is what produced D-79.
+- `select_sim2real_checkpoint.py` — ranks training checkpoints for **transfer and cage-independence**, never reward: the criterion that chose the deployed v2 1650k over its reward peak (3.0 % nominal intervention against 35.0 %).
+- `sim2real_probe.py` — see *Campaign & evaluation* above; the offline gate `run_deploy_gate.sh` drives.
+- `measure_yaw_authority.py` — bench sweep of the wheel differential, the discriminator for where the plant's yaw compression ends (M-7 §5: achieved/commanded falls 0.482 → 0.436 → 0.341, so no constant gain fits it). Self-test passes 8/8; **the ROS path was never run** — Phase 5 closed first, and it is kept as the named discriminator for future work (ch.12 T2).
+- `measure_yaw_gain.py`, `measure_offset_response.py` — earlier single-quantity bench probes for the same channel and for the lateral response.
+- `calibrate_camera_hfov.py` — the M-6 measurement: effective HFOV and distortion of the physical lane camera against a printed target. It is what refuted the inherited 90°.
+- `export_bag_topics.py` — flattens a physical run's rosbag into per-topic CSV for offline analysis.
+- `lane_probe.py`, `cv_controller_node.py` — offline/ROS helpers for inspecting the D-43 estimator on recorded or live frames.
+- `cam_evidence_session.sh` — wraps a camera-only evidence session (no policy, no cage).
 
 ## Isaac Sim (posterior track, docs/13–14)
 
 - `build_isaac_urdf.py`, `isaac_import_check.py`, `isaac_scene.py`, `isaac_ros2_bringup.py` — URDF export, import validation, scene/bring-up.
 - `isaac_train.py`, `isaac_eval.py`, `isaac_dr.py` — in-process RL training (defaults to the 2-D action config, D-50), evaluation and domain randomisation.
+
+## Manuscript build
+
+- `build_thesis_docx.py` — renders `manuscript/draft_v5/` (front matter + condensed body + appendices A–I) to a submission `.docx`. **The layout constants at the top of the file are the authority**, and they are deliberately *not* the guidelines' 12 pt Times New Roman at 1.5: the author set **Arial 11 pt, 1.15 line spacing, 1.0" left/right margins**. Changing them changes the page count, so re-run the budget below after any edit. Run: `python tools/build_thesis_docx.py --out <path>.docx`.
+- `thesis_page_budget.py` — drives Word to repaginate the built DOCX, exports a PDF and reports where each chapter starts and **how many pages the body occupies** (the 80–100 page acceptance check). Requires **Word COM (pywin32)** and therefore a Windows host — it cannot run on the Ubuntu compute host.
+
+## Analysis & figures
+
+- `plot_campaign_contrast.py` — enforcement-vs-monitoring contrast figures from a campaign report.
+- `rescore_recovery_clause.py` — re-scores SC-EDGE-01's heading-recovery clause under the D-68 correction (band referenced to each run's own steady-state envelope). The 2.0 s bound itself is unchanged; this is the audit that showed the clause measured ripple rather than recovery.
+- `sync_checkpoint_registry.py` — keeps the checkpoint registry in step with the training runs on disk (checkpoints themselves are gitignored, so the registry is how a run is identified by hash rather than by path).
+- `reap_sim.sh` — kills orphaned Gazebo/`gz sim` processes left by an interrupted run. **`GZ_PARTITION` isolates topics, not processes**, so an unguarded reaper will also kill a concurrent trainer — that is incident I-1 (docs/17 §7), and the guard is now pinned by a test.
+- `update_traceability.sh` — convenience wrapper: regenerates both registers' CSVs and runs `check_traceability.py`.
 
 ## CI integration
 

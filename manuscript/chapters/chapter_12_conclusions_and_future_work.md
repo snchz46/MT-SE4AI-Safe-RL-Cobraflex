@@ -1,13 +1,16 @@
 # Capítulo 12 — Conclusiones y Trabajo Futuro
 
 Convención: las secciones marcadas [BORRADOR POST-G4] se redactaron tras el cierre
-de Gate 4 (02.07.2026) y se actualizaron con la evidencia posterior disponible a
-20.07.2026. Los capítulos 9 (sim-to-real / físico), 10 (validación operacional) y
-11 (discusión) ya existen como borradores tempranos, pero sus resultados Isaac y
-físicos siguen incompletos; las conclusiones que dependen de ellos se marcan
-explícitamente como **provisionales** y este capítulo se re-cierra en Fase 6. Los
-solapes deliberados con los capítulos 10 y 11 (veredictos, limitaciones) se
-redistribuyen en esa consolidación — ver el apéndice interno al final.
+de Gate 4 (02.07.2026) y se han actualizado con toda la evidencia posterior, que
+termina el **01.09.2026** con el cierre de la Fase 5. Los capítulos 9 (sim-to-real
+/ físico), 10 (validación operacional) y 11 (discusión) están poblados con esa
+evidencia. Dos resultados quedan deliberadamente sin producirse y así se declaran,
+no como carencias: la **campaña Isaac no se ejecutó** (cap. 9 §9.2.3) y la
+**campaña física tampoco** —existe evidencia física, es de bring-up y no está
+puntuada—, de modo que `verdict_phys` se declara **no ejecutado**. Toda la
+evidencia de Fase 5 es **posterior**: no re-puntúa ninguna puerta. Los solapes
+deliberados con los capítulos 10 y 11 (veredictos, limitaciones) se redistribuyen
+en el pulido final — ver el apéndice interno.
 
 ---
 
@@ -38,9 +41,12 @@ cerró la verificación de SR-009 (cap. 8 §8.9.7) y **dos campañas completas**
 de margin022 (§8.9.8) y la de la policy competente de 550k (§8.9.9, 1890 runs,
 cerrada el 31.07.2026), cuyo resultado concuerda con los veredictos congelados
 —invariante in-ODD intacta, literal reconciliable por la misma cláusula
-heredada— sin entrar en la cadena de gate. El despliegue físico y la
-caracterización del gap sim-to-real (Capítulo 9) no han comenzado; el puente de
-fidelidad Isaac Sim (D-44) está en curso como trabajo posterior que no reabre G4.
+heredada— sin entrar en la cadena de gate. El **despliegue físico se ejecutó y se
+cerró** (Fase 5, 01.09.2026): el vehículo conduce, el gap sim-to-real está
+caracterizado con trece términos medidos (Capítulo 9), y ningún escenario se
+puntuó sobre hardware, de modo que `verdict_phys` se declara **no ejecutado**. El
+puente de alta fidelidad Isaac Sim (D-44) queda como trabajo posterior **sin
+campaña ejecutada** (cap. 9 §9.2.3); ni él ni la Fase 5 reabren G4.
 
 ---
 
@@ -56,9 +62,9 @@ ejecutado como restricción dura en cada gate (cero huérfanos en G1–G4), y
 veredictos por SR respaldados por runs reproducibles con metadatos completos
 (commit, hashes de cage/checkpoint/escenario, semilla). Las cinco adaptaciones
 del V-Model (A1–A5, Capítulo 3) produjeron cada una los artefactos que
-prometían. El coste de adopción quedó registrado en **55 decisiones** hasta
-D-61 (con los huecos históricos D-20..D-24 y D-40) — evidencia directa para la
-hipótesis H2.
+prometían. El coste de adopción quedó registrado en **74 decisiones**, numeradas
+hasta D-80 (con los huecos históricos D-20..D-24, reservas nunca usadas, y D-40,
+renumerado) — evidencia directa para la hipótesis H2.
 
 **Hallazgo 2 — El veredicto literal y el criterio propio divergen, y la
 disciplina de reportar ambos es en sí misma un resultado.** El global
@@ -321,13 +327,18 @@ de decisión, no fuera de él.
 el caso concreto, incluida una caracterización honesta del gap sim-to-real?):
 respondida a medias. La mitad de evidencia trazable está cerrada con dos brazos
 y ~3200 runs de campaña verdict-bearing; la caracterización del gap sim-to-real
-es exactamente la mitad pendiente (Fase 5 / Capítulo 9), con el puente Isaac
-como primer peldaño ya en curso y aportando la anticipación del Hallazgo 12.
+es la mitad que este trabajo **caracteriza pero no puntúa** (Fase 5 / Capítulo 9):
+el peldaño Isaac aportó la anticipación del Hallazgo 12 sin llegar a campaña, y el
+peldaño físico entregó trece términos de gap medidos —cuatro de los cinco que
+detuvieron al vehículo viven en la cadena de medida y **ninguno es la policy**—
+pero ningún veredicto por escenario. La caracterización honesta del gap, que es lo
+que la pregunta exige, sí está entregada; la extensión del veredicto a hardware,
+que la pregunta no exige, no.
 
 Sobre las hipótesis: **H1** (conjunto pequeño y enumerable de adaptaciones)
 queda soportada por construcción — cinco adaptaciones bastaron sin romper la
 estructura del estándar. **H2** (esfuerzo proporcional) queda soportada por el
-registro: 55 decisiones registradas hasta D-61, documentos vivos mantenidos al día de los
+registro: **74 decisiones registradas, numeradas hasta D-80**, documentos vivos mantenidos al día de los
 resultados, y gates superados con validación automática, todo dentro del
 presupuesto de una tesis de máster de una persona. **H3** (veredicto fundamentado
 con límites de validez) queda soportada en su mitad de simulación por los dos
@@ -399,20 +410,35 @@ de reglas de SR-010 (T4) y el over-read/under-read del estimador CV (T3); y
 checkpoints no son compatibles con Gazebo y que nada de esto reabre G4.
 
 **T2 — La campaña física: puntuar escenarios sobre hardware (Fase 5 /
-Capítulo 9)** *(pregunta subordinada; adaptación A5).* **Bring-up ejecutado;
-campaña pendiente — es el trabajo futuro más inmediato del proyecto.** El despliegue físico
-está hecho, el vehículo conduce (cap. 9 §9.3.3) y la tabla de gap tiene columna
-física; lo que falta es la mitad que produce veredicto: correr SC-NOM-01/02 y
-SC-EDGE-01 bajo protocolo, en enforcement, y emitir la corrección funcional de la
-cage en hardware. **Tres condiciones lo separan de ser ejecutable, las tres
-identificadas:** (a) una vía de rearme para C-05, de modo que una corrida
-puntuada no termine en el primer pulso de percepción —resuelta **fuera** de la
-cage (D-74), precisamente para no modificar el artefacto bajo verificación con un
-cambio cuyo efecto entero está en hardware y que la simulación no podría validar,
-porque allí el enclavamiento es casi inerte—; (b) el registro de procedencia por
-corrida, ya implementado; (c) la decisión de `heading_fit_mode` (§9.3.5), porque
-el ajuste con el que el coche **puede** conducir no es el contrato D-43 bajo el
-que se puntuaron las campañas.
+Capítulo 9)** *(pregunta subordinada; adaptación A5).* **Bring-up ejecutado, fase
+cerrada sin campaña (01.09.2026) — es el trabajo futuro más inmediato del
+proyecto y el único que produciría `verdict_phys`.** El despliegue físico está
+hecho, el vehículo conduce (cap. 9 §9.3.3) y la tabla de gap tiene columna física;
+lo que falta es la mitad que produce veredicto: correr SC-NOM-01/02 y SC-EDGE-01
+bajo protocolo, en enforcement, y ejercer la corrección funcional de la cage sobre
+hardware —que **nunca ha ocurrido**: todas las corridas fueron en `monitoring` y
+la acción segura fue idéntica a la cruda en la totalidad de los ciclos
+registrados—.
+
+**Cinco condiciones lo separan de ser ejecutable, y la Fase 5 las midió en lugar
+de suponerlas** (docs/17 §14): (a) una vía de rearme para C-05, de modo que una
+corrida puntuada no termine en el primer pulso de percepción —resuelta **fuera**
+de la cage (D-74), precisamente para no modificar el artefacto bajo verificación
+con un cambio cuyo efecto entero está en hardware y que la simulación no podría
+validar, porque allí el enclavamiento es casi inerte—, **cuya espera de 1 s
+resultó no satisfacible conduciendo** (48 % de 623 retenciones, D-80), de modo que
+la vía existe pero sus parámetros no están calibrados para movimiento; (b) el
+registro de procedencia por corrida, ya implementado; (c) la decisión de
+`heading_fit_mode` (§9.3.5), porque el ajuste con el que el coche **puede**
+conducir no es el contrato D-43 bajo el que se puntuaron las campañas — y **todo
+lo que ha conducido usó el ajuste que no es el contrato**, de modo que ninguna
+corrida física está bajo el contrato puntuado; (d) el estimador de carril
+ensanchado antes que la policy restringida (D-76), porque su exactitud es una
+**propiedad del lugar** y no del movimiento (D-79); y (e) la envolvente de
+guiñada realmente alcanzable, hoy desconocida: la planta es **compresiva**
+(0,482 → 0,436 → 0,341, M-7 §5) y dónde termina esa compresión no está medido. El
+discriminador de (e) es de banco y está escrito
+(`tools/measure_yaw_authority.py`), pero su vía ROS no llegó a ejecutarse.
 
 *El riesgo que este ítem declaraba de antemano tiene ya una primera medida, y
 es favorable.* La policy 2-D
@@ -529,14 +555,18 @@ el sitio exacto (A5, Capítulo 9) donde su respuesta debe encajar.
 <!--
 APÉNDICE INTERNO — TRABAJO PENDIENTE EN ESTE CAPÍTULO
 
-Estado: BORRADOR POST-G4 (actualizado 31.07.2026), pre-Fase 5. Redactado con la
-evidencia de G4 + posterior E5 (multi-seed, brazo de acción 2-D en Gazebo y
-estudio SAC largo).
+Estado: ACTUALIZADO 02.09.2026 con la Fase 5 cerrada (01.09.2026). Redactado con
+la evidencia de G4 + posterior E5 (multi-seed, brazo de acción 2-D en Gazebo,
+estudio SAC largo) + Fase 5 completa (D-70…D-80). La campaña física y la campaña
+Isaac se declaran **no ejecutadas**, no pendientes.
 
   [ ] Ítems específicos del autor pendientes de incorporar (solicitados tras
        este borrador).
-  [ ] Re-cerrar §12.3/§12.6 tras Fase 5 (gap sim-to-real) y tras los caps. 10-11
-       (evaluación formal de H1-H3 vive en el 11; aquí solo la síntesis).
+  [x] T2 reescrito (02.09.2026): la campaña física pasa de «pendiente, tres
+       condiciones» a «no ejecutada, cinco condiciones medidas» (docs/17 §14).
+  [ ] Re-cerrar §12.3/§12.6 en el pulido final contra los caps. 10-11 ya
+       actualizados (la evaluación formal de H1-H3 vive en el 11; aquí solo la
+       síntesis).
   [ ] Redistribuir solapes en Fase 6: los veredictos detallados → cap. 10; el
        desarrollo de limitaciones → cap. 11; aquí queda síntesis + futuro.
   [x] Hallazgo 11 elevado de piloto a estudio posterior: runs SAC largos 1-D/2-D,

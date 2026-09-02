@@ -5,14 +5,24 @@ circuit. The E-main policy `cobraflex_ppo_newcam_complex_b_2024_297k_peak.zip` w
 trained on complex_b and must be evaluated there. The oval set in `../scenarios/`
 is **frozen F4 / 139k-campaign evidence and is left untouched**.
 
-> **GE4-V2 campaign = the verdict of record (2026-06-28).** 1970 runs, seed 2024, 28
-> scenarios × {enf, mon}, 0 errors → `experiments/sim/campaign_e_v2/`. **Global
-> `NOT SATISFIED` (literal), blocking SR-002/003 only** (the SC-EDGE-01 oval-legacy 2.0 s
-> recovery-time clause; Satisfied on own criterion, D-47) — no safety predicate breached.
-> **SR-001 Satisfied** (ruta-1: SC-EDGE-02 IC clipped to the ODD `[0.10, 0.1225]` → 28/30);
-> SR-012/013/014 Satisfied; SC-EDGE-05 grid split 30/85 in-ODD (SR-010, genuine CL-B);
-> SC-FRONT-07 flip PASS. **G4 closed 02.07.2026.** V1 (`campaign_e_297k/`, 1940 runs,
-> 2026-06-27, blocked SR-001/002/003) is historical. Full verdict: docs/11 §8.4, docs/07.
+> **VERDICT OF RECORD = the 2-D PPO 550k pre-deployment campaign (31.07.2026, D-69).**
+> `experiments/sim/campaign_2d_ppo550k/`: **1890 runs**, seed 2024, **27** of these 28
+> scenarios × {enf, mon}, 0 errors (SC-PERT-03 excluded by protocol — closed metrologically
+> at D-64). Global **`NOT SATISFIED` (literal), blocking SR-002/003 only**, again *only*
+> through SC-EDGE-01's oval-legacy 2.0 s recovery clause (Satisfied on their own criterion,
+> **D-47** verbatim). **0 in-ODD road-edge contacts in enforcement** against 60 committed by
+> the bare policy; out-of-ODD 56. SR-010 is the one reported negative — 16/85 in-ODD on the
+> SC-EDGE-05 grid, halved from the 1-D 30/85 but unchanged in kind (CL-B, non-vetoing).
+>
+> **GE4-V2 (2026-06-28) remains the frozen G4 gate record and is NOT re-scored.** 1970 runs,
+> seed 2024, 28 scenarios × {enf, mon}, 0 errors → `experiments/sim/campaign_e_v2/`; same
+> literal verdict through the same clause; SR-001 Satisfied (ruta-1: SC-EDGE-02 IC clipped to
+> the ODD `[0.10, 0.1225]` → 28/30); SR-012/013/014 Satisfied; SC-EDGE-05 grid split 30/85
+> in-ODD; SC-FRONT-07 flip PASS. **G4 closed 02.07.2026.** V1 (`campaign_e_297k/`, 1940 runs,
+> 2026-06-27, blocked SR-001/002/003) is historical.
+>
+> Full verdict: docs/07, docs/11 §8.4–8.5, and
+> `experiments/sim/campaign_2d_ppo550k/CAMPAIGN_2D_PPO550K_ANALYSIS.md`.
 > The "STILL OPEN" items below are now resolved/historical.
 
 ## What is done (mechanical, correct)

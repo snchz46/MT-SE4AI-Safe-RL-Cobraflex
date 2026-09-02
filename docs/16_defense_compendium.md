@@ -3,8 +3,8 @@
 | Field | Value |
 | --- | --- |
 | Artifact | Cross-cutting defense-preparation compendium |
-| Version | v1.3 |
-| Date | 2026-07-31 |
+| Version | v1.4 |
+| Date | 2026-09-01 |
 | Author | Samuel Sanchez |
 | Status | LIVING |
 | Sibling document | [docs/15_implementation_inventory.md](15_implementation_inventory.md) (module/script/test map) |
@@ -555,15 +555,43 @@ this regime is a power tool inside a certified process — the same argument
 the industry uses for any generated code (compilers, code generators) under
 ISO 26262 tool-qualification thinking.
 
-**Q12. What would break first if this went to the physical car?** Honest
-list, and it is the declared Phase-5/posterior agenda: (1) the sim-to-real
-appearance gap for both CNN and CV estimator (mitigations: H-10 DR, Isaac
-scene/dynamics DR, the D-57 calibration precedent shows the workflow); (2)
-actuation latency and friction differences (dynamics DR ranges already
-parameterised); (3) the `[provisional]` thresholds calibrated on sim noise
-(M-1..M-5 campaign exists for exactly this); (4) compute cadence (the 10 vs
-20 Hz question). None of these invalidate the framework claim — they are the
-framework's *next iterations*, pre-traced in docs/13–14.
+**Q12. What would break first if this went to the physical car?** This was
+written **before** the car was driven, and it is now one of the strongest results
+in the thesis — **because it was wrong in a specific and instructive way**. Keep
+the a-priori answer intact, then give the measured one.
+
+*A priori (as written, pre-Phase-5):* (1) the sim-to-real appearance gap for both
+CNN and CV estimator (mitigations: H-10 DR, Isaac scene/dynamics DR, the D-57
+calibration precedent shows the workflow); (2) actuation latency and friction
+differences (dynamics DR ranges already parameterised); (3) the `[provisional]`
+thresholds calibrated on sim noise (M-1..M-5 campaign exists for exactly this);
+(4) compute cadence (the 10 vs 20 Hz question).
+
+*Measured (Phase 5, docs/17 §14 — thirteen gap terms):* all four were right **in
+kind**, and one was wrong in shape — the yaw channel is **compressive**
+(0.482 → 0.436 → 0.341 as the command grows, M-7 §5), not the constant 3.9 %
+offset that had been anticipated, and no constant gain corrects it. But
+**everything that actually stopped the vehicle is absent from the list above**:
+the **handedness** of the training circuit memorised as a steering bias (6.5:1
+left → a constant +0.13 prior); an **intrinsics error the simulator had
+inherited** and therefore could never expose (77.89° against an assumed 90°); an
+estimator whose accuracy is a property of **where the car is** rather than of
+what it is doing (D-79); the **missing operational story** for a correctly
+specified latch (C-05); and a **velocity sensor whose failure mode enters the
+cage's only speed input** (ZED pose jumps → C-04 firing at a reported
+0.25–1.30 m/s). Four of those five sit in the measurement chain, one is a
+property of the training distribution, and **none of the five is the control
+policy**.
+
+*The answer to give the committee:* **the gap terms a simulation-trained team can
+enumerate in advance are exactly the ones simulation can model — appearance,
+timing, gains. The terms that stopped this vehicle are the ones simulation had no
+representation of at all**, either because it had inherited the same wrong
+assumption, because the quantity has no simulated counterpart, or because the
+simulated plant was better than the real one. None of this invalidates the
+framework claim; A5's demand — *characterise* the gap rather than only reduce it
+— is what turned each of them into a measurement instead of a surprise during a
+scored run. Detail: docs/17 §14.1, Ch.9 §9.5.
 
 **Q13. Did SAC make the cage unnecessary?** No. SAC changed which policy basin
 was reached and improved sample efficiency; it did not change a single cage
@@ -704,15 +732,32 @@ hold the 300 s run. The dependence is measured; its origin — co-adaptation to 
 rate limiter inside the training loop — is **inferred**, and the ablation that
 would prove it has not been run. Say so before being asked.
 
-**Still open, deliberately:** `verdict_phys` — Phase 5 has now **driven** on
-hardware (18.05 m in one segment, no safety rule fired, docs/17 §8.10) but **no
-scenario has been scored under protocol**, so the column is open for a narrower
-reason than it was: *the physical evidence exists and is not scored*. Three named
-conditions separate it from being scorable (docs/17 §9.5 / D-74, §9.3.5 in Ch.9,
-and per-run provenance, now implemented) —, **TBD-Q10** (`ODD-3.A_LAT_MAX`,
-unmeasurable in simulation by construction, D-33), and the Chapter 8 restructure that would let the camera track
-lead rather than sit in §8.9 — the other item D-67 deferred, and an authoring
-decision rather than an evidence one.
+**Still open, deliberately — and now closed *as* open (Phase 5 ended 01.09.2026).**
+`verdict_phys`: Phase 5 **drove** on hardware (18.05 m in one uninterrupted
+segment, no safety rule fired, docs/17 §8.10) but **no scenario was ever scored
+under protocol**, every physical run was in `monitoring`, and **the cage has never
+modified an action on hardware**. So the column is open for a narrower and final
+reason: *the physical evidence exists, is bring-up, and is not scored*. It is not
+"pending" — no further physical measurement is planned. Say it that way; a
+`verdict_phys` read off out-of-protocol runs would be fabricated.
+
+Also open by construction: **TBD-Q10** (`ODD-3.A_LAT_MAX`, unmeasurable in
+simulation, D-33 — a hardware dependency, not an outstanding action), and the
+Chapter 8 restructure that would let the camera track lead rather than sit in
+§8.9 — the other item D-67 deferred, and an authoring decision rather than an
+evidence one.
+
+**If asked what would make `verdict_phys` scorable**, name the three conditions
+Phase 5 measured rather than assumed, all in docs/17 §14: (1) **term 12** — every
+run that has driven used `near_secant`, not the `joint_pair_quadratic` D-43
+contract the campaigns were scored under, so no physical run is yet under the
+scored contract; (2) **term 2/9** — the reset path: D-74 put it outside the cage,
+and its 1 s healthy hold turned out to be **unsatisfiable in motion** (48 % of 623
+withholds, D-80); (3) **term 2** — the estimator's accuracy is **place-dependent**
+(D-79), so a scored run needs the estimator widened first (D-76's ordering), not
+the policy narrowed. The strongest single sentence to close on: **the v2 policy
+transfers, and what stops it is the measurement — four of the six terms that
+mattered are perception, and none of them is the policy.**
 
 ## 9. Reference shelf
 
@@ -798,3 +843,14 @@ importing into the manuscript bibliography):
   tested rather than waived, SR-010 is a reported `Not satisfied`, and the C-06
   dependence is measured but its co-adaptation origin is inferred. Also fixes the
   stale `Version` field, which still read v1.1 after the v1.2 entry landed.
+- **v1.4 (2026-09-01):** brings the compendium up to the close of **Phase 5**. Q12
+  ("what would break first on the physical car?") becomes a **scored prediction**
+  rather than an agenda: the a-priori list is kept verbatim and the measured ledger
+  (docs/17 §14, thirteen terms) is set against it — right in kind on all four,
+  wrong in *shape* on the yaw channel (compressive, not a constant offset), and
+  missing every term that actually stopped the vehicle, four of which are
+  perception and none of which is the policy. §8.5's "still open" note is restated
+  as **closed-as-open**: `verdict_phys` is not pending, no further physical
+  measurement is planned, and the three conditions that would make it scorable are
+  named against the ledger's terms rather than against a future session. No
+  question, threshold, verdict or reference changed; nothing here re-scores a gate.

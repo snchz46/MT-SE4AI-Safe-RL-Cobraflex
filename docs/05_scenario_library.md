@@ -1,7 +1,7 @@
 # Scenario Library
 
 **Status:** Living document — Phase 2 deliverable, closed at G2; updated through G3 and G4; Frontier (FRONT) family added in F4  
-**Last update:** 31.07.2026 (the 2-D PPO 550k pre-deployment campaign is the **verdict of record**, D-69: 27 of the 28 complex_b scenarios × {enf, mon} = 1890 runs. SC-PERT-03 was **excluded from it by protocol** — the stall meta-test is policy-independent and was closed metrologically at D-64 — and SC-EDGE-01's recovery-time *metric* was audited and corrected at **D-68** (band referenced to each run's own steady-state envelope; the 2.0 s **bound** is unchanged). GE4/G4 scenario verdicts remain frozen and are **not** re-scored.)
+**Last update:** 01.09.2026 (Phase 5 closed; **no scenario has ever been executed on hardware**, so the library's physical subset — SC-NOM-01/02 + SC-EDGE-01, §"Subset for physical deployment" — remains unexecuted and `verdict_phys` is open by design. No scenario added, removed or re-valued. Previous substantive update 31.07.2026: the 2-D PPO 550k pre-deployment campaign is the **verdict of record**, D-69: 27 of the 28 complex_b scenarios × {enf, mon} = 1890 runs. SC-PERT-03 was **excluded from it by protocol** — the stall meta-test is policy-independent and was closed metrologically at D-64 — and SC-EDGE-01's recovery-time *metric* was audited and corrected at **D-68** (band referenced to each run's own steady-state envelope; the 2.0 s **bound** is unchanged). GE4/G4 scenario verdicts remain frozen and are **not** re-scored.)
 **Approved at Gate:** G2 (initial), G4 (final)
 
 ## Purpose

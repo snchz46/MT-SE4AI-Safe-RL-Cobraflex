@@ -40,13 +40,13 @@ distributed across simulator and platform.
 
 | Measurement | Status     | Executed on | Result file                               |
 | ----------- | ---------- | ----------- | ----------------------------------------- |
-| M-1         | stub ready | —           | `M1_results.json` (scaffold, fill in)     |
-| M-2         | stub ready | —           | `M2_results.json` (scaffold, fill in)     |
-| M-3         | stub ready | —           | `M3_results.json` (scaffold, fill in)     |
-| M-4         | stub ready | —           | `M4_results.json` (scaffold, fill in)     |
-| M-5         | stub ready | —           | `M5_results.json` (scaffold, fill in)     |
+| M-1         | not executed | —           | `M1_results.json` (scaffold, fill in)     |
+| M-2         | not executed | —           | `M2_results.json` (scaffold, fill in)     |
+| M-3         | not executed | —           | `M3_results.json` (scaffold, fill in)     |
+| M-4         | **not executed** | —           | `M4_results.json` (scaffold). Phase 5 closed 01.09.2026 without it, so **TBD-Q10** (`ODD-3.A_LAT_MAX`) stays open — a hardware dependency by construction (D-33), not an outstanding action. `docs/08` therefore stays below v1.0 by design |
+| M-5         | not executed | —           | `M5_results.json` (scaffold, fill in)     |
 | M-6         | **executed — both parts** | 17.08.2026 | `M6_results.json` + `M6_pitch_results.json` — HFOV **77.89°** vs 90° assumed (verdict **Blocking**); pitch **17.84°** vs 17.19° (confirmed). Not applied in code |
-| M-7         | **executed** | 18.08.2026 | Hands-off tape measurement of the `ey` transfer: **0.68–0.83 × true − 10 mm**, robust to every filtering (r ≤ 0.99) → **C-01's 160 mm fires at a true 207–241 mm** (road half-width 255). M-6's under-read **confirmed**; the intra-session retraction from lane width is withdrawn (width is a difference straddling the axis, `ey` an absolute off-axis position; `k1 = −0.339` unmodelled). Also: repeatability spread 13.2 mm mean / 29.4 worst, pairing collapse beyond ~±55 mm, heading noise sd 14.3°, and the trunk policy **does not transfer**. See D-71 |
+| M-7         | **executed — §4 SUPERSEDED** | 18.08.2026 | Hands-off tape measurement of the `ey` transfer on the **unrectified** path: **0.68–0.83 × true − 10 mm** (r ≤ 0.99) → C-01's 160 mm firing at a true 207–241 mm, confirming M-6's propagated under-read. **That is the raw path, and it does not survive rectification**: the same sweep repeated rectified on 31.08.2026 gives scale **1.058 / 0.991 with no intercept** → C-01 at a true **151/158 mm**, ~100 mm of margin (D-79, docs/17 §10.2). **Do not tune C-01/C-05 from the 18.08 figures** — read §4's banner first. What **stands** from M-7: the lane-*width* result (252.9 mm vs a 250 ruler), the heading-noise comparison between fit modes, the §5 yaw calibration (the plant is **compressive**, 0.482 → 0.436 → 0.341 — no constant gain fits it), the §3 method lesson, and that the trunk policy **does not transfer**. Repeatability (13.2 mm mean / 29.4 worst) also stands, and is the first sighting of D-79's place-dependence. See D-71, D-79 |
 
 Each result file follows the schema declared at the bottom of its
 protocol document. The stub files already exist in this directory;

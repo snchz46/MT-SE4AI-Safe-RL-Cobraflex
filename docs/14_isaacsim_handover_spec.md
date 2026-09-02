@@ -274,6 +274,21 @@ over the same 10 s tracks at ~0.99 (1.998/2.000, 3.964/4.000, 5.207/5.300), so t
 deficit is **purely rotational** — the four fixed wheels scrub. Implied effective
 track `T/k = 0.309 m`, ≈ 2.02× the physical 0.153 m.
 
+> **The single-gain model is superseded WHILE MOVING (M-7 §5, 18.08.2026; docs/17 §6d).**
+> The table above is an **in-place** bench rotation. Measured on the lane circuit *while
+> driving forward at 0.20 m/s*, the achieved/commanded ratio is **not constant**: it falls
+> **0.482 → 0.436 → 0.341** as the command grows 0.2 → 0.4 → 0.8 rad/s. The plant is
+> **compressive**, so no constant `k` fits it — a gain calibrated at moderate demand
+> under-delivers exactly where C-01/C-02 correct. 0.4954 brackets the moving figures and
+> remains the right deployment default (`steering_to_yaw_rate_gain = 1.615`), so nothing
+> below changes; but read every `0.4954`-derived number here as **an optimistic bound at high
+> demand**, not as an exact transfer. Two further caveats: scrub is **surface-dependent** (the
+> same in-place test on the lane-circuit floor gives 0.150, far below the bench 0.4954), and
+> **where the compression ends — soft compression or hard saturation — is unmeasured**, so the
+> `R_min` the platform can actually achieve is unknown. The bench discriminator is written
+> (`tools/measure_yaw_authority.py`) and was not run before Phase 5 closed; it is future-work
+> item T2 of Ch. 12.
+
 This brackets the two simulators from opposite sides, and it is the single most
 consequential number this handover carries:
 

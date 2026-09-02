@@ -18,18 +18,27 @@ M-7 is that check, plus the first end-to-end run of the deployed chain on the tr
 with the wheels on the ground, on the real circuit, with the 2-D PPO 550k trunk checkpoint
 (`ppo_gz2d_cap022_1M_2024_550000_steps.zip`, hash `0d4492461b24efce…`).
 
-**Headline: the D-43 estimator reads lane *width* correctly (within 3 mm of a ruler) but
-under-reads lateral *offset* by a factor of 0.68–0.83 with a ~10 mm bias — measured hands-off
-against a tape, robust to every filtering (§4). C-01 therefore fires at a true 207–241 mm rather
-than 160, and its pairing additionally collapses beyond roughly ±55 mm of offset (§3b). Both
-defects sit inside the band where C-01 and C-05 act. The trunk camera policy does not transfer.
-The cage contained it anyway, and separately rejected a real odometry fault.**
+**Headline, as measured on 18.08 (read the banner below before using any of it): the D-43
+estimator reads lane *width* correctly (within 3 mm of a ruler) but under-reads lateral
+*offset* by a factor of 0.68–0.83 with a ~10 mm bias — measured hands-off against a tape,
+robust to every filtering (§4). C-01 therefore fires at a true 207–241 mm rather than 160, and
+its pairing additionally collapses beyond roughly ±55 mm of offset (§3b). Both defects sit
+inside the band where C-01 and C-05 act. The trunk camera policy does not transfer. The cage
+contained it anyway, and separately rejected a real odometry fault.**
 
 > **Both offset defects in that headline are measured on the UNRECTIFIED path and do NOT
 > reproduce once rectified (31.08.2026) — see the banner at §4 before using any number
-> from this document to tune the cage.** The lane-*width* result, the heading-noise
-> comparison between fit modes, the §5 yaw calibration and the §3 method lesson are
-> unaffected and stand.**
+> from this document to tune the cage.** Rectified, the same nine-point sweep gives scale
+> **1.058 / 0.991 with no intercept**, so C-01 fires at a true **151/158 mm** with ~100 mm
+> of margin. The prescription this document made — *undistort, do not re-parameterise* — is
+> exactly what that vindicates, so the finding stands even though its numbers do not.
+>
+> **What stands unchanged:** the lane-*width* result, the heading-noise comparison between fit
+> modes, the **§5 yaw calibration** and the **§3 method lesson**. Two further caveats added
+> later: the repeatability spread of §4 did **not** go away — it is the first sighting of what
+> D-79 isolated as **place-dependence** (docs/17 §12) — and every measurement in this document
+> was taken at the **start of the straight**, which D-79 established is the estimator's *best*
+> point on the circuit. Their content stands; their generalisation to the whole track does not.
 
 **Second headline, methodological:** three conclusions drawn from a stationary rig at one spot
 were all overturned by two minutes of recorded circuit — see §2 before reading anything else.

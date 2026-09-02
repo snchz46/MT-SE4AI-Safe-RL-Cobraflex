@@ -1,8 +1,9 @@
 # DECISIONS.md — Project decision log
 
 <!--
-Status: decisions through D-74. D-47..D-49 close/reconcile GE4; D-50..D-58 cover the Isaac posterior; D-59/D-60 cover Gazebo 2-D and PPO/SAC; D-61 reconciles the implemented Jazzy/Harmonic stack and supersedes D-13's preliminary Humble distribution choice; D-62..D-66 build and qualify the 2-D arm; D-67 makes it the research trunk (conditionally); D-68 audits the heading-recovery metric; D-69 closes the simulation programme — verdict of record re-pointed, SR-009/SR-010 TBDs closed; D-70..D-74 are Phase-5 physical work, all deployment-side and none re-valuing a gate: D-73 and D-74 record the two things that ended the 26.08 track runs, one fixed and one deliberately left open outside the cage.
-Last update: 2026-07-31.
+Status: decisions through D-80. D-47..D-49 close/reconcile GE4; D-50..D-58 cover the Isaac posterior; D-59/D-60 cover Gazebo 2-D and PPO/SAC; D-61 reconciles the implemented Jazzy/Harmonic stack and supersedes D-13's preliminary Humble distribution choice; D-62..D-66 build and qualify the 2-D arm; D-67 makes it the research trunk (conditionally); D-68 audits the heading-recovery metric; D-69 closes the simulation programme — verdict of record re-pointed, SR-009/SR-010 TBDs closed; D-70..D-80 are Phase-5 physical work, all deployment-side and **none re-valuing a gate**: D-70..D-72 measure the platform and answer the transfer failure; D-73/D-74 record the two things that ended the 26.08 track runs, one fixed and one deliberately left open outside the cage; D-75..D-80 come from the 31.08 sessions — C-04 un-armable and its curvature input untrustworthy, the estimator widened before the policy is narrowed, the true-position capture, and the three ways the cage stops the car. **D-80 is PARTIALLY WITHDRAWN (01.09.2026)**: its bare-policy arm was disowned by the author, so Findings 2 and 3 are void — see the banner on that entry before citing it.
+Phase 5 closed 01.09.2026; `verdict_phys` is open by design and no further physical measurement is planned. The consolidated posterior evidence is docs/17 §14.
+Last update: 2026-09-01.
 -->
 
 ## Purpose of this file
@@ -3546,6 +3547,23 @@ hardware dependency), D-69 (the frozen verdict of record the mass change post-da
 | Status | ACCEPTED — three new launch/node parameters, all inert by default; no SR, cage rule, `cage.yaml` value, ODD parameter or verdict is re-valued |
 | Date | 18.08.2026 |
 
+> **PARTIALLY SUPERSEDED 31.08.2026 — every offset number in point 2 characterises the
+> UNRECTIFIED path, and the deployment runs rectified.** The `ey` under-read below
+> (slope 0.68–0.83, intercept ≈ −10 mm → C-01 firing at a true 207–241 mm) **does not reproduce
+> once the frame is undistorted**: the same nine-point hands-off tape sweep, repeated on the
+> ground on the deployed rectified path, gives scale **1.058** left / **0.991** right with **no
+> intercept**, so C-01 fires at a true **151/158 mm** with ~100 mm of margin (docs/17 §10.2;
+> `experiments/physical/runs/lanesweep_20260831T094110Z/`). **Do not tune C-01 or C-05 from the
+> figures below.** The decision's own prescription — *undistort, do not re-parameterise* — is
+> precisely what that result vindicates, so the finding stands even though its numbers do not.
+>
+> **What stands unchanged:** point 1 (the trunk policy does not transfer), the lane-*width*
+> result, the heading-noise comparison between fit modes, the §5 yaw calibration, and point 3's
+> method lesson — which D-79 later confirmed in the strongest possible form, by showing that the
+> one spot all of these measurements were taken at is the estimator's **best point on the
+> circuit**. The **repeatability** defect below also stands and did not go away with
+> rectification: it is the first sighting of D-79's place-dependence. See D-79, docs/17 §12.
+
 **Context.** The car was placed on the physical lane circuit and the deployed Phase-5 chain was
 run end to end with the 2-D PPO 550k trunk checkpoint for the first time.
 
@@ -4347,25 +4365,49 @@ band it fixed in advance), D-69 (the verdict of record, untouched).
 **Context.** §12's capture located the D-43 estimator's failures and named the mechanism, but every
 inference about *what stops the car on the track* was still indirect: D-76 argued the estimator must
 be widened before the policy is narrowed **because the policy does not consume the estimator**, and
-that argument had no positive control. Six Layer-3 launches on the evening of 31.08 supply one.
+that argument had no positive control. ~~Six~~ **Ten** Layer-3 launches on the evening of 31.08, six
+of which produced data, were meant to supply one.
+
+> **AUDITED 01.09.2026 (docs/17 §13.5) — four numbers in Finding 1 are corrected in place below,
+> and the corrections strengthen it.** Every figure was re-derived from the committed CSVs before
+> the manuscript was allowed to cite it; for the three caged runs the core replicates exactly.
 
 **Finding 1 — three distinct blockers, in three configurations, none of them the policy.**
 
-1. **D-74's 1 s healthy hold is not satisfiable in motion.** 9 resets issued against **453
-   withholds**, of which **197** are the hold itself failing to complete (121 `still moving`, 83
-   `perception still invalid`, 51 `cage rules active: C-02`). The threshold came from an STPA argument
-   against oscillation at the trigger boundary and had never been exercised while driving.
+1. **D-74's 1 s healthy hold is not satisfiable in motion.** 9 resets issued against **623
+   withholds** — ~~453~~, corrected by the audit — of which **48 %** are the hold itself failing to
+   complete. (The originally published breakdown 197 / 121 `still moving` / 83 `perception still
+   invalid` / 51 `cage rules active: C-02` is a **prefix** of that population, not its total.) The
+   threshold came from an STPA argument against oscillation at the trigger boundary and had never
+   been exercised while driving.
 2. **Removing C-01 from `reset_proxy_blocking_rules` does not escape the lap04 deadlock.** The
    launch's own note offers `C-03,C-04` for it; tried, the proxy burned **30 of 30 resets in about a
    minute**, each re-latching at once, with the car stable at `ey` = −296 mm and
    `perception_invalid` at 6 %. A withheld reset becomes a wasted reset. **The default
    `blocking_rules` stays; the escape is recorded as tested and rejected.**
+   *Audit caveat: that run (`lap_mon_escape`) **also** carried `healthy_seconds:=0.3`, so it changes
+   two variables against run 1 and is **not** a controlled pair with it. The rejection stands on its
+   own terms — 30/30 resets burned — but no clean single-variable attribution to `blocking_rules`
+   can be drawn from it.*
 3. **With the hold at 0.3 s, C-02 becomes the blocker and fires on noise.** Car at `ey` = −32 mm —
-   well inside the lane — with `epsi` swinging −25.3°…+18.2°, **sd 17.2°** against C-02's 25°. M-6
+   well inside the lane — with `epsi` swinging −25.3°…+18.2°, **sd 17.2°** against C-02's 25°.
+   *The audit places that window at the **mild end** of the run's 1066 C-02-active cycles: over the
+   full population the car sits at a mean `ey` = **−20 mm** with **sd(`epsi`) 19.1°**, so the
+   published window understates the effect.* M-6
    measured the same configuration at **sd 5.3 °, 0.8 %** past C-02 — at the start of the straight,
    which D-79 established is the estimator's best point. The heading channel degrades off that spot
    like the other two: **a fourth independent confirmation of D-79, and the first in heading while
    driving.**
+
+**Two findings the write-up did not have, added by the 01.09 audit** (full statement in docs/17
+§13.5): (a) **C-04 does fire on hardware** — 58 and 40 cycles in the two surviving caged runs, 100 %
+of them at a reported 0.25–1.30 m/s, i.e. ZED velocity artefacts, and in `lap_mon_escape` they enter
+the **reset-withhold path**, so an artefact blocks recovery from the rule it raised. D-75's decision
+stands; its literal *"C-04 can never fire"* does not. (b) `frame_capture_node` **saturated its
+600-frame budget in all six runs** — the repricing fixed disk cost, not sampling bias. A third audit
+finding, that **two launches ran concurrently** (`…T140749Z` / `…T141134Z`, 36 % of inter-arrivals
+below 20 ms), makes both those CSVs unanalysable; the car was stationary throughout, and §13's table
+was already right to exclude them.
 
 **Finding 2 — the bare-policy arm, and the inversion it forces.** **[VOID 01.09.2026 — see the
 withdrawal notice at the head of this decision. Retained as a record of what was retracted.]** With `vehicle_control_node`'s

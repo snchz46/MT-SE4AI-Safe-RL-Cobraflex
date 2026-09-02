@@ -1,7 +1,7 @@
 # Cage Specification
 
 **Status:** Living document — Phase 2 deliverable (G2 approved; **verified at G4, 02.07.2026**)  
-**Last update:** 31.07.2026 (verdict of record re-pointed to the 2-D PPO 550k pre-deployment campaign, D-69; two C-06 findings added to the framing note. Cage YAML unchanged at **0.6.1** — no rule, threshold or parameter changed on this evidence)  
+**Last update:** 01.09.2026 (Phase-5 hardware qualifications folded into the C-04 note: the rule is **un-armable on commanded motion** at the deployed 0.22 m/s cap (D-75), its curvature input over-reads by **~2×** against tape-surveyed floor stations (D-79, superseding the ~3× odometry-binned estimate), and it nevertheless **fires on ZED velocity artefacts** — 58 and 40 cycles at a reported 0.25–1.30 m/s — one of which blocked recovery from the rule it raised. Earlier: 31.07.2026, verdict of record re-pointed to the 2-D PPO 550k pre-deployment campaign, D-69, and two C-06 findings added to the framing note. **Cage YAML unchanged at 0.6.1 throughout — no rule, threshold or parameter has changed on any of this evidence, and the cage has never modified an action on hardware**)  
 **Approved at Gate:** G2 (approved)  
 **Cage YAML version:** **0.6.1** (`cage/cage.yaml`).
 
@@ -198,10 +198,20 @@ The function `compute_ttlc` projects the trajectory under the assumption of zero
 > 0.22 m/s. Over the 2484 moving cycles of the 31.08 track session the achieved speed was median
 > 0.166, p99 0.209, **max 0.228 m/s**, and the count of cycles reaching 0.25 was **zero**. C-04
 > fired **0/1890** in the D-69 verdict campaign (finding (ii)) and has **never arbitrated on
-> hardware**. It is deliberately left that way: its curvature input over-reads by ~3× on the closed
-> circuit (D-75's `∮κ·ds` test), so lowering the threshold would arm the rule on phantom curvature,
-> concentrated exactly where the car is already off-centre (D-76). Re-arming is blocked on the
-> capture session of docs/17 §10.6, not on more driving.
+> commanded motion**. It is deliberately left that way: its curvature input over-reads on the
+> closed circuit — `∮|κ|ds` integrates to **~2×** what a lap can contain when measured against
+> tape-surveyed floor stations (D-79, 31.08; the earlier odometry-binned estimate was ~3×, D-75) —
+> so lowering the threshold would arm the rule on phantom curvature, concentrated exactly where
+> the car is already off-centre (D-76/D-79). Re-arming is blocked on a capture session, not on
+> more driving; Phase 5 closed before one was run, so the item carries forward as future work.
+>
+> **The rule is not, however, inert on hardware (01.09.2026, docs/17 §13.5).** C-04 fired **58**
+> and **40** cycles in the two surviving caged runs of 31.08, **100 % of them at a reported
+> 0.25–1.30 m/s** — impossible under power at the 0.22 m/s deployed cap. These are **ZED velocity
+> artefacts** reaching the cage's only speed input, and in one run they entered the reset-withhold
+> path, so a sensor artefact blocked recovery from the rule it had raised. The dead-zone argument
+> is unaffected; the literal claim *"C-04 can never fire"* is not true and must not be repeated.
+> `cage.yaml` is untouched by either finding.
 
 **Implements.** SR-004.
 **Mitigates.** H-03.

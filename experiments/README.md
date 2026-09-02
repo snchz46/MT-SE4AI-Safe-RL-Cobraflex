@@ -2,14 +2,22 @@
 
 Experimental data and analysis scripts.
 
-> **Status (2026-07-20).** The evidence of record is the **track-'E' end-to-end camera
-> campaign** `sim/campaign_e_v2/` (GE4-V2, 1970 runs, 28.06.2026; G4 closed
-> 02.07.2026). The F-track state-vector campaigns (`sim/campaign/`,
-> `sim/campaign_frontier/`) are **frozen as the ground-truth baseline** — the
-> control arm for "what does camera perception cost" — and are not re-run.
-> Post-G4 evidence now also covers Gazebo PPO/SAC camera policies in 1-D and 2-D,
-> plus the separate Isaac 2-D retrains. These are posterior studies and do **not**
-> replace or reopen GE4.
+> **Status (2026-09-01 — the evidence base is final).** The **verdict of record** is
+> `sim/campaign_2d_ppo550k/` — the 2-D PPO camera policy at cap 0.22, checkpoint 550k
+> (1890 runs, 31.07.2026, **D-69**), the last simulation campaign before physical
+> deployment. **`sim/campaign_e_v2/` (GE4-V2, 1970 runs, 28.06.2026) remains the frozen
+> G4 gate record** — G4 closed 02.07.2026 — and is **not** re-scored; D-69 re-pointed the
+> verdict of record on top of it (D-67 reclassifies everything earlier as development
+> history). The F-track state-vector campaigns (`sim/campaign/`, `sim/campaign_frontier/`)
+> are **frozen as the ground-truth baseline** — the control arm for "what does camera
+> perception cost" — and are not re-run. Post-G4 evidence also covers Gazebo PPO/SAC camera
+> policies in 1-D and 2-D and the separate Isaac 2-D retrains; these are posterior studies
+> and do **not** replace or reopen GE4.
+>
+> **Phase 5 (`physical/`) is closed and is posterior evidence throughout.** It re-scores no
+> gate and does not touch the D-69 verdict. `verdict_phys` is open by design: no scenario
+> has ever been scored on hardware, every physical run was in `monitoring`, and the cage has
+> never modified an action on hardware. Consolidated ledger: **docs/17 §14**.
 
 ## Organisation
 
@@ -31,10 +39,23 @@ Experimental data and analysis scripts.
   `d43_underread_ge4v2_edge02.json` quantifies 3573 under-read cycles in 27/60
   GE4-V2 SC-EDGE-02 runs, but is `INVALID` as a new-campaign authorisation
   because the reconstructed E-main metadata lacks `train_config_hash`.
-- `sim/campaign_e_v2/` — **GE4-V2, the verdict of record** (track 'E', complex_b
-  297k E-main): `campaign_report.json` (per-scenario/per-SR/global roll-up),
-  `campaign_runs.csv`, `failure_mode_breakdown.json` (failure classes + pass-mode
-  split: emergency-stop pass vs overcame-the-perturbation pass) and figures.
+- `sim/campaign_2d_ppo550k/` — **the VERDICT OF RECORD** (D-69, 31.07.2026): the 2-D
+  PPO camera policy at cap 0.22, checkpoint 550k, **1890 runs** (27 complex_b scenarios
+  × {enf, mon}, seed 2024, 0 errors; SC-PERT-03 excluded by protocol, D-64). Global
+  `NOT SATISFIED` *literal*, blocking SR-002/003 only through SC-EDGE-01's recovery
+  clause (D-47 verbatim); **0 in-ODD road-edge contacts in enforcement** against 60 by
+  the bare policy, 56 out-of-ODD. Narrative: `CAMPAIGN_2D_PPO550K_ANALYSIS.md`.
+- `sim/campaign_e_v2/` — **GE4-V2, the frozen G4 gate record** (track 'E', complex_b
+  297k E-main; 1970 runs, 28.06.2026). Superseded as *verdict of record* by the 2-D
+  campaign above and **not re-scored**. `campaign_report.json` (per-scenario/per-SR/global
+  roll-up), `campaign_runs.csv`, `failure_mode_breakdown.json` (failure classes +
+  pass-mode split: emergency-stop pass vs overcame-the-perturbation pass) and figures.
+- `sim/campaign_2d_margin022/` — the first full 2-D verdict campaign (SAC 75k, D-65):
+  `NOT SATISFIED` literal, 0 in-ODD road-edge contacts against the bare policy's 98.
+  A finding-with-fix, not a verdict — it is what motivated D-66.
+- `sim/campaign_v2/` — the same 27 × 2 × seed-2024 matrix re-run on the v2 1650k
+  deployment checkpoint. **Posterior; it does not re-score G4** and was not a
+  prerequisite for driving (docs/17 §7.6).
 - `sim/campaign_e_297k/` — GE4-V1 (superseded by V2: ruta-1 IC clip, D-45 scoring).
 - `sim/campaign_e/` — historical 139k camera campaign (availability-cost reading).
 - `sim/campaign/` — **F4 verdict campaign, frozen baseline** (1260 runs, seed 2024,
@@ -46,7 +67,15 @@ Experimental data and analysis scripts.
   versus monitoring 68/100, not a replacement verdict campaign.
 - `sim/tracks/` — track sources (complex_b centerlines etc.).
 - `sim/eval_isaac/` — Isaac Sim posterior-track evals (D-44/D-50; not GE4 evidence).
-- `physical/` — physical CobraFlex experiments (F5, pending).
+- `physical/` — **Phase-5 physical CobraFlex experiments (closed 01.09.2026)**.
+  `physical/runs/` holds 41 run directories: the 26.08 preflight/lap set, the 31.08
+  driving laps (`lap0*`), the offset sweep (`lanesweep_*`) and the 31.08 evening
+  session (`lap_mon*`). `physical/datasets/` holds the recorded lane imagery and the
+  true-position capture (`truepos_*`, `parked_seg*`, `CAPTURE_NOTE_20260831.md`) —
+  note that `datasets/*/frames/` and `runs/*/frames/` are **gitignored and live on the
+  Jetson**, so a search on this host finds the notes, not the PNGs. All of it is
+  **posterior evidence**: `verdict_phys` is open, no scenario was scored on hardware.
+  Consolidated ledger: docs/17 §14.
 - `calibration/`, `odd_inspection/` — M-1/M-2 calibration data, ODD TBD closures.
 - `analysis/` — metric/figure scripts and notebooks.
 
@@ -119,12 +148,18 @@ example the 200k-buffer config under
   training (seed 2024 main, multi-seed N=5) and the F4 verdict campaign
   (`sim/campaign/`, global `SATISFIED`, 2026-06-10). Not re-run; serves as the
   control arm.
-- **Track 'E' (closed, verdict of record):** camera training on complex_b
+- **Track 'E' (closed, frozen G4 gate record):** camera training on complex_b
   (`ppo_newcam_complex_b_2024_1M`, 297k peak) and the GE4-V2 campaign
   (`sim/campaign_e_v2/`, 1970 runs, 0 errors). Global `NOT SATISFIED` *literal*
   — blocking SR-002/003 on the oval-legacy recovery-time clause only, Satisfied
   on their own criterion (D-47); no SR-CL-A safety predicate breached. G4 closed
   02.07.2026. See `docs/11` §8 and `docs/07`.
+- **2-D PPO trunk (closed, THE VERDICT OF RECORD):** the research trunk since D-67
+  (30.07.2026) and the verdict of record since D-69 (31.07.2026) —
+  `sim/campaign_2d_ppo550k/`, 1890 runs, 0 errors, the last simulation campaign before
+  physical deployment. Same literal verdict through the same clause; **0 in-ODD
+  road-edge contacts in enforcement**. Everything earlier is development history
+  (D-67), and GE4-V2 above stays the frozen gate record.
 - **Gazebo posterior (17–20.07.2026):** PPO/SAC camera comparisons in 1-D and
   2-D. Evidence-bearing 2-D configs cap speed at **0.25 m/s**; a **0.22 m/s**
   eval-only probe removed one zero-margin speed conflict but not the D-43 CV heading
@@ -140,7 +175,15 @@ example the 200k-buffer config under
   training/evaluation and independent 2-D retrains (D-49/D-50), under a separate
   **0.5 m/s** full-authority contract. Gazebo checkpoints do not transfer; this
   does not reopen G4.
-- **F5 (planned):** physical CobraFlex experiments; `physical/runs/` empty.
+- **F5 / Phase 5 (executed and CLOSED, 01.09.2026):** sim-to-real retrain (v2,
+  checkpoint 1650k, D-72) and physical deployment on the real lane circuit. The v2 policy
+  **transfers** — 18.05 m in one uninterrupted segment with no safety rule fired (26.08) —
+  and what stops the vehicle is the **measurement**, not the control: thirteen gap terms
+  measured, four of the six that mattered in the perception chain, **none of them the
+  policy** (docs/17 §14). `verdict_phys` stays open **by design**: no scenario was executed
+  under protocol, every run was `monitoring`, and the cage has never modified an action on
+  hardware. Nothing in Phase 5 re-scores a gate. Decisions D-70…D-80; runbook and record
+  in `docs/17`.
 
 ## Running a campaign (Ubuntu + Jazzy host)
 

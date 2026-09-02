@@ -179,7 +179,7 @@ script reports orphans on either side.
   trained 10 Hz, worst gap 995 ms = 171 mm open-loop, cause is CPU (load 5.49/6 cores with layer 3 *not*
   running; killing `rviz2` → 9.5 Hz) — **fixed that afternoon, see the next bullet**; (iii) **ZED pose jumps,
   now measured**: 3621.8 mm in one frame → ekf `vx` −4.03 m/s, and an earlier spike to 5.479 m/s firing
-  C-04→C-03→C-05 — **also fixed that afternoon**; (iv) **C-04's dead zone**: `v_max_curve_mps` 0.25 > deployed 0.22, so C-04 **can never fire** — D-69's finding (ii) is no
+  C-04→C-03→C-05 — **also fixed that afternoon**; (iv) **C-04's dead zone**: `v_max_curve_mps` 0.25 > deployed 0.22, so C-04 **cannot fire on commanded motion** (the 01.09 audit later found it firing on ZED **velocity artefacts** — 58/40 cycles at a reported 0.25–1.30 m/s — so the literal "never" is false) — D-69's finding (ii) is no
   longer only a coverage gap, and that tightest curve is where it left the lane **twice**. Also settled on
   hardware: **rectification is decisive** (perception-invalid 45 % → 5.5 %, C-01 fires 102 → 0) and
   **`heading_fit_mode` decides whether it drives at all** (`joint_pair_quadratic` 1.08 m vs `near_secant`
@@ -232,7 +232,7 @@ script reports orphans on either side.
   frames past C-02 with a car *pushed by hand* near the centre; *driving itself*, the same configuration
   gives **6.8–11.6 %** — **the estimator's reliable envelope and the policy's driving envelope do not
   overlap well enough**, neither component individually defective. **(iv)** C-02 failures are **sustained**
-  (99 % in episodes ≥ 2, one of 45 cycles), C-04 still cannot fire (0.25 > 0.22) while |ey| grows
+  (99 % in episodes ≥ 2, one of 45 cycles), C-04 still cannot fire *on commanded motion* (0.25 > 0.22; the 01.09 audit found it firing 58/40 cycles on ZED **velocity artefacts**, so the literal "can never fire" is false) while |ey| grows
   monotonically with curvature to 63 mm, and **`monitoring` does not mean the cage cannot stop the car**
   (`vehicle_control_node` zeroes `/cmd_vel` on latched `/emergency` in both modes, by design). What
   unblocks a lap is a **full-circuit recording with true position**, not another single-component fix —
@@ -355,12 +355,16 @@ run, do not reopen a decision — **cite D-71…D-80 and docs/17 §14, don't re-
 below is authoring work.
 
 1. **Page budget — the one blocking unknown.** `tools/build_thesis_docx.py` was retyped by the
-   author to **Arial 11 pt / 1.15 / 1.0" left margin** (uncommitted), far denser than the
-   guidelines' 12 pt TNR / 1.5 against which the 80–100 page budget was set; ch.9 grew and then
-   shrank again on 01.09. `tools/thesis_page_budget.py` needs **Word COM (pywin32), NOT installed on
-   this host** — run it on a host with Word before trimming or adding anything.
-2. **Front matter still says 29.08.2026** on the cover and the declaration (`front/00_cover.md`,
-   `front/05_declaration.md`, uncommitted). Both need the real submission date.
+   author to **Arial 11 pt / 1.15 / 1.0" left margin** (now committed, `accfe642`), far denser than
+   the guidelines' 12 pt TNR / 1.5 against which the 80–100 page budget was set; ch.9 grew and then
+   shrank again on 01.09, and chapters 9–12 were rewritten again on 02.09. `tools/thesis_page_budget.py`
+   needs **Word COM (pywin32), NOT installed on this host** — run it on a host with Word before
+   trimming or adding anything. The last measured 96 pages is from the 31.07 build under the old
+   settings and must not be quoted (`manuscript/README.md` now says so).
+2. **Front matter — submission date SET to 15.09.2026** on 02.09.2026 (author's instruction), in
+   both `front/00_cover.md` and `front/05_declaration.md`. If it moves, change **both**: the DOCX
+   build copies them through verbatim and nothing catches a mismatch. **Still blank:** the cover's
+   matriculation number (`[por completar]`) and the preface's personal acknowledgements.
 3. **The Chapter 8 restructure** — camera track leads instead of sitting in §8.9 — remains open and
    is an authoring decision. Largest optional item; skip it if the budget is tight.
 4. **The physical evidence is smaller than it was on 31.08, deliberately, and the withdrawals are
@@ -370,12 +374,28 @@ below is authoring work.
    throughout it (docs/17 §13.2/§13.4/§13.6; D-80 partially void). Anything citing the 99 %/97 %
    inversion, the ≈109 m, the 0.10 rad/s yaw plateau or `R_min` = 2.2 m is retracted and must not
    return. The actuation deficit now rests on **M-7 §5** alone: compressive, 0.482 → 0.436 → 0.341,
-   with its endpoint unmeasured. `tools/measure_yaw_authority.py` (untracked, selftest 8/8, ROS path
-   never run) is kept as the discriminator that was written but not used.
+   with its endpoint unmeasured. `tools/measure_yaw_authority.py` (**tracked**, selftest 8/8, ROS path
+   never run) is kept as the discriminator that was written but not used. **H15 of the conclusions
+   went with it** — the earlier note in this file recording H15 as *added* is superseded by the
+   withdrawal; draft_v5 ch.12 carries R1–R14 and no R15/H15.
 5. **Standing:** `verdict_phys` is open by design; every physical figure is labelled PRELIMINAR /
    N=1 / `monitoring` / unscored; the cage has **never modified an action on hardware**. Nothing in
-   Phase 5 re-scores a gate. This file is ~590 lines against its own <250 budget; the split into
+   Phase 5 re-scores a gate. This file is ~600 lines against its own <250 budget; the split into
    `CLAUDE_*.md` is overdue and is itself an authoring decision.
+6. **Repo-wide consistency pass done 02.09.2026** (CHANGELOG `[02.09.2026]`). Docs and manuscript
+   were swept for retracted claims, stale status and duplicates. Fixed: the M-7 §4 under-read still
+   asserted as current in `docs/12` §5, `docs/17` §2/§9.4 and the calibration README; C-04's literal
+   *"can never fire"* in `docs/04`, `docs/07`, `docs/17` §8.8 and both chapter 9s and 10s; D-80's
+   Finding 1 never amended by its own 01.09 audit (453→**623** withholds, sd 17.2→**19.1°**,
+   `lap_mon_escape` not a controlled pair, six→**ten** launches); the 0.4954 yaw gain presented as
+   linear in `docs/08`/`docs/14` where M-7 §5 measured it compressive; "verdict of record" still
+   pointing at GE4-V2 in `experiments/`, `tools/` and `scenarios_complex_b/` READMEs; `chapters/ch11`
+   six weeks behind `draft_v5/11`; and `AGENTS.md`, a stale duplicate of this file, collapsed to a
+   pointer. Also settled that day: the submission date (item 2) and `git worktree prune`, which
+   removed two dead registrations pointing at Windows `B:`/`E:` paths. **Left in place on purpose:**
+   the **1.1 GB stale worktree directory** at `.claude/worktrees/reverent-feistel-49fec5` — a
+   01.06.2026 snapshot of the whole repo, hidden from `git status` by `.git/info/exclude`. Its
+   content is all in git history; deleting it is a one-line `rm -rf` whenever the space is wanted.
 
 ### Earlier phase evidence
 
@@ -391,7 +411,7 @@ below is authoring work.
 
 | Path | Role |
 | --- | --- |
-| `docs/` | Living engineering documents (00–10 + CHANGELOG, DECISIONS) |
+| `docs/` | Living engineering documents (00–17 + CHANGELOG, DECISIONS) |
 | `cage/` | Pure-Python safety cage (rules C-01..C-06, cage_node, logger, YAML config). Importable without ROS2. |
 | `cage/ros2/` | ROS2 helper scripts (M-1/M-2 calibration loggers). Not in colcon workspace yet. |
 | `policy/` | RL policy: PD baseline, PPO training, checkpoints (gitignored binaries) |

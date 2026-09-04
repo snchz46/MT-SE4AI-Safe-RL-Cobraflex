@@ -59,7 +59,7 @@ La aportación principal es **metodológica**, no técnica. El sistema de seguim
 - **A1 — Marco metodológico unificado.** Un V-Model adaptado con cinco modificaciones explícitas: desdoblamiento del diseño de módulo en *Cage Specification* y *Training Specification*; desdoblamiento del test unitario en *Cage Unit Tests* y *Policy Behavioral Evaluation*; introducción de un nivel de monitorización en operación como validación continua; trazabilidad bidireccional como restricción dura; y reformulación de la validación operacional con caracterización explícita del gap sim-to-real.
 - **A2 — Operacionalización ejecutable.** Cada modificación se acompaña de los artefactos que la materializan, con plantillas reutilizables y validadores automáticos —en particular el verificador de trazabilidad que la convierte en una restricción mecánica de puerta.
 - **A3 — Caso de estudio completo y reproducible.** Aplicación del marco a un sistema implementado desde cero, en dos instanciaciones cuyo contraste aísla el coste de la percepción por cámara, con artefactos versionados, scripts de entrenamiento y evaluación y datos de ejecución publicados.
-- **A4 — Caracterización empírica del gap sim-to-real** en peldaños de fidelidad creciente: Gazebo (campaña de referencia) → Isaac Sim (PhysX + RTX) → plataforma física.
+- **A4 — Caracterización empírica del gap sim-to-real** en peldaños de fidelidad creciente: Gazebo (campaña de referencia) → plataforma física.
 - **A5 — Auto-evaluación del marco:** coste de adopción, puntos donde funcionó como se esperaba y puntos donde reveló limitaciones, como evidencia para refinamientos posteriores por terceros.
 
 ## 1.6 Alcance y limitaciones

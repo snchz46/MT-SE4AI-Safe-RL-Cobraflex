@@ -1,0 +1,231 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Master's Thesis -- Hochschule Esslingen, Automotive Systems (M.Sc.)
+%
+%   "An adapted V-Model for the safe development of autonomous
+%    driving systems with reinforcement learning"
+%
+%   Samuel Sanchez Moreno
+%   Supervisor: Prof. Dr.-Ing. Ralf Schueler
+%
+% Typeset with the PSIThesis template (University of Bamberg,
+% Dominik Herrmann), which is itself based on MastersDoctoralThesis.cls.
+% Template licence: CC BY-SA 4.0 (guide) / LPPL v1.3c (class file).
+% Upstream: https://github.com/UBA-PSI/psi-thesis-guide
+%
+% BUILD: LuaLaTeX only (fontspec + TTF/OTF fonts + microtype \textls).
+%        pdfLaTeX will NOT work.
+%
+%   lualatex -shell-escape main.tex && biber main && \
+%   lualatex -shell-escape main.tex && lualatex -shell-escape main.tex
+%
+% or simply:  make
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\PassOptionsToPackage{english,ngerman}{babel}
+\documentclass[
+11pt,
+english,
+singlespacing,
+parskip,
+nohyperref,
+consistentlayout,
+]{PSIThesis}
+
+% ---------------------------------------------------------------------------
+% Repository provenance. These are printed on the title page so that any
+% printed copy states which commit of the research repository it was built
+% from -- the same reproducibility discipline the thesis argues for.
+% ---------------------------------------------------------------------------
+\def\treporurl{https://github.com/} % TODO: fill in if the repo is published
+\def\tbuildnote{built from manuscript/draft\_v5\_en}
+
+\input{misc/setup.tex}
+\input{misc/commands.tex}
+\input{misc/thesis-commands.tex} % project-specific macros (IDs, verdicts, figures)
+
+\addbibresource{literature.bib}
+
+%----------------------------------------------------------------------------------------
+%	THESIS INFORMATION
+%----------------------------------------------------------------------------------------
+
+\newcommand{\thesistype}{Master}
+
+\thesistitle{An Adapted V-Model for the Safe Development of Autonomous Driving Systems with Reinforcement Learning}
+
+% Subtitle -- not part of the stock template, printed by our titlepage.tex
+\newcommand{\thesissubtitle}{Runtime safety cage and traceable validation on a lane-following case study (SE4AI)}
+
+\def\tdate{\monthyeardate\today}
+\newcommand{\submissiondate}{15 September 2026}
+
+\author{Samuel S\'anchez Moreno}
+\newcommand{\matriculation}{[to be completed]}
+
+\supervisor{Prof.\ Dr.-Ing.\ Ralf Sch\"uler}
+\newcommand{\secondexaminer}{Prof.\ Dr.\ Markus Enzweiler}
+
+\university{\href{https://www.hs-esslingen.de/en/}{Hochschule Esslingen}}
+\group{Faculty of Mobility and Technology}
+\department{Automotive Systems (M.Sc.)}
+\faculty{Master of Science in Automotive Systems\\ \href{https://www.hs-esslingen.de/en/}{Hochschule Esslingen --- University of Applied Sciences}}
+\addresses{Esslingen am Neckar, Germany}
+\subject{Systems Engineering for Artificial Intelligence}
+\keywords{reinforcement learning; autonomous driving; lane following; safety cage; functional safety; ISO 26262; SOTIF; SE4AI; scenario-based validation; traceability; sim-to-real gap; PPO; ROS2; Gazebo; CobraFlex}
+
+%----------------------------------------------------------------------------------------
+%	END OF THESIS INFORMATION
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+\selectlanguage{english}
+\frenchspacing
+
+\frontmatter
+
+\hypersetup{urlcolor=black}
+\include{misc/titlepage}
+\hypersetup{urlcolor=ubblue80}
+
+%----------------------------------------------------------------------------------------
+%	CERTIFICATION OF AUTHENTICITY (required as a preliminary page by the
+%	HS Esslingen Thesis Writing Guidelines)
+%----------------------------------------------------------------------------------------
+
+\input{front/declaration.tex}
+
+%----------------------------------------------------------------------------------------
+%	ABSTRACT
+%----------------------------------------------------------------------------------------
+
+\begin{abstract}
+\input{front/abstract.tex}
+\end{abstract}
+
+%----------------------------------------------------------------------------------------
+%	PREFACE
+%----------------------------------------------------------------------------------------
+
+\begin{acknowledgements}
+\input{front/preface.tex}
+\end{acknowledgements}
+
+%----------------------------------------------------------------------------------------
+%	TABLE OF CONTENTS
+%----------------------------------------------------------------------------------------
+
+\cleardoublepage
+
+% Table of Contents uses a wider layout than the main content
+\newgeometry{
+		head=13.6pt,
+		top=27.4mm,
+		bottom=27.4mm,
+		inner=24.8mm,
+		outer=24.8mm,
+		marginparsep=0mm,
+		marginparwidth=0mm,
+}
+{
+\hypersetup{linkcolor=black}
+\tableofcontents
+\cleardoublepage
+\listoffigures
+\listoftables
+}
+\restoregeometry
+
+%----------------------------------------------------------------------------------------
+%	ABBREVIATIONS AND SYMBOLS
+%----------------------------------------------------------------------------------------
+
+\input{front/abbreviations.tex}
+
+%----------------------------------------------------------------------------------------
+%	THESIS CONTENT -- CHAPTERS
+%----------------------------------------------------------------------------------------
+\mainmatter
+\pagestyle{thesis}
+
+% NOTE: \keyword, \tabhead, \code, \file and \option are defined here in the
+% stock template. They have been moved to misc/thesis-commands.tex so that the
+% front matter (abstract, preface, abbreviations) can use them too.
+
+% Figures live in the shared manuscript figure pool, one level up. The
+% template's \image macro prepends "../figures/", so the first graphicspath
+% entry resolves ../figures/../figures/<name> -> ../figures/<name>.
+% Plain \includegraphics{<name>} resolves through the second and third entries.
+\graphicspath{{../figures/}{../figures/auto/}{./figures/}}
+
+\input{chapters/chapter01.tex}
+\input{chapters/chapter02.tex}
+\input{chapters/chapter03.tex}
+\input{chapters/chapter04.tex}
+\input{chapters/chapter05.tex}
+\input{chapters/chapter06.tex}
+\input{chapters/chapter07.tex}
+\input{chapters/chapter08.tex}
+\input{chapters/chapter09.tex}
+\input{chapters/chapter10.tex}
+\input{chapters/chapter11.tex}
+\input{chapters/chapter12.tex}
+
+%----------------------------------------------------------------------------------------
+%	THESIS CONTENT -- APPENDICES
+%----------------------------------------------------------------------------------------
+
+\addtocontents{toc}{\string\def\string\chaptername{Appendix}}
+
+\appendix
+
+\renewcommand{\thesection}{\thechapter.\arabic{section}}
+\renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
+\renewcommand{\thesubsubsection}{\thesubsection.\arabic{subsubsection}}
+
+\include{appendices/appendixA}
+\include{appendices/appendixB}
+\include{appendices/appendixC}
+\include{appendices/appendixD}
+\include{appendices/appendixE}
+\include{appendices/appendixF}
+\include{appendices/appendixG}
+\include{appendices/appendixH}
+\include{appendices/appendixI}
+
+%----------------------------------------------------------------------------------------
+%	BIBLIOGRAPHY
+%----------------------------------------------------------------------------------------
+
+\newgeometry{
+	inner=2cm,
+	outer=2cm,
+	marginparwidth=0cm,
+	marginparsep=0mm,
+	bindingoffset=.5cm,
+	top=1.5cm,
+	bottom=2.5cm,
+	includehead,
+	includefoot
+}
+
+\addchap{References}
+
+\setlength\columnsep{2em}
+\begin{multicols}{2}
+	\begin{refcontext}[sorting=nyt]
+		\renewcommand*{\bibfont}{\small\RaggedRight}
+		\linespread{1.0}\selectfont
+		\printbibliography[heading=none]
+	\end{refcontext}
+\end{multicols}
+
+\restoregeometry
+
+\end{document}

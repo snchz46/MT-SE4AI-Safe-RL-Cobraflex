@@ -1,0 +1,128 @@
+% Converted from: manuscript/draft_v5_en/body/05_architecture_and_cage.md
+% Chapter 5 --- Architectural design and cage specification
+
+\chapter{Architectural Design and Cage Specification}
+\label{ch:05}
+
+\section{Purpose of the chapter}
+\label{sec:5.1}
+
+This chapter occupies the levels of architectural design (L3) and of module specification in its classical form (L4a). It produces the artefact where adaptation A1 is materialised for the first time: the \textbf{Cage Specification}, a deterministic and modular specification written in the traditional sense, as opposed to the process specification that \Cref{ch:07} will devote to the policy.
+
+What is developed here is the design philosophy of the safety envelope, the conceptual challenges that its construction raises, the derivation of the rules from the requirements, the design of each rule, the version-controlled parameterisation and the ROS2 architecture that hosts it.\sidenote{The complete parameter specification, with the numerical derivation of each threshold and its calibration status, is given in \textbf{\Cref{app:E}}.}
+
+\section{Design philosophy: the cage as a runtime shield}
+\label{sec:5.2}
+
+\subsection{Choice of mechanism}
+\label{sec:5.2.1}
+
+According to \Cref{ch:02}, the space of mechanisms for making a learned policy safe admits four families. This thesis adopts the \textbf{runtime shield} as the dominant mechanism, for three reasons.
+
+First, \textbf{verifiability}. A cage of hand-written rules is a classical component: it admits deterministic unit testing, static analysis and inspection. In the terms of TR 5469 it is a Class I element, while the policy is Class II. That asymmetry is precisely what allows the combined system to keep a verifiable core.
+
+Second, \textbf{independence from the training}. A guarantee obtained by modifying the learning objective is statistical and conditioned on the training distribution; a guarantee obtained by runtime filtering rests on the state observed in each cycle, independently of how the policy was trained --- and therefore it still holds if the policy is retrained, replaced or degraded.
+
+Third, \textbf{compatibility with the framework}. As a natural by-product of its operation, the shield produces an intervention log that is exactly the evidence that the runtime monitoring level (A3) needs. The cage is not only a safety mechanism: it is the \textbf{measuring instrument} for the behaviour of the policy.
+
+\subsection{What the cage is not}
+\label{sec:5.2.2}
+
+Three delimitations avoid excessive readings. The cage \textbf{is not a controller}: it does not author behaviour, it corrects unsafe commands; if the policy drives well, the cage should stay inactive, and \Cref{ch:08} will show that under clean nominal conditions this is what happens. The cage \textbf{is not a formal guarantee}: its rules are heuristics with thresholds derived from requirements, not invariants proved over a dynamic model; what it offers is measurable containment, not proof. And the cage \textbf{does not remove the need to train well}: it is the last line, not the first, and a system whose safety depended entirely on it would be a badly trained system --- a claim that \Cref{ch:08} forces us to qualify in an uncomfortable way.
+
+\section{Conceptual challenges of the design}
+\label{sec:5.3}
+
+Building an envelope of rules raises six problems that are not of implementation but of design, and whose explicit resolution is part of the contribution of this chapter.
+
+\paragraph{Priority and order between rules} Several rules can activate in the same cycle on the same actuation channel. A \textbf{declared, fixed-order evaluation chain} is adopted, with the rate limiter first --- it bounds the raw command before any safety rule reasons over it --- and the emergency mode last, because it must be able to overwrite any previous correction. In between, the lateral limit rule is evaluated after the heading rule, so that the harder bound on the more critical variable has the last word among the operational rules.
+
+\paragraph{Design of the corrective action} A correction can be added to the command of the policy or overwrite it. \textbf{Overwriting} is chosen, in order to avoid policy and cage competing in the same space and producing a sum that neither of them intended. The magnitude of the correction is proportional to the excess over the threshold, not a fixed value: a constant correction would generate discontinuities at the activation boundary.
+
+\paragraph{Reactive rules and predictive rules} Rules that observe the current state act late by construction: when the offset reaches the threshold, the dynamics are already compromised. A \textbf{predictive} rule is therefore added, which propagates the state over a short horizon and acts on the estimated time to lane departure. Reactive and predictive are complementary: the first bounds the present, the second buys margin.
+
+\paragraph{Hysteresis and prevention of spurious switching} A single threshold produces repeated activation and deactivation in its neighbourhood, with an oscillating resulting command that is a hazard in itself. Each rule with a threshold incorporates a \textbf{hysteresis band}: it activates above one value and deactivates below a lower one, with state memory between cycles.
+
+\paragraph{Saturation and conflict resolution} The composition of corrections can exceed the physical range of the actuator. Saturation is applied \textbf{at the end of the chain}, on the composed command, and not rule by rule, so that the result is predictable independently of how many rules intervened.
+
+\paragraph{Emergency mode and state validity} The emergency mode is defined with entry by a compound \emph{trigger}, deterministic behaviour --- deceleration at a minimum rate with frozen steering --- and an explicit exit. Its triggers include not only the unrecoverable compound state, but also the \textbf{invalidity of the state itself}: a stale observation, fields outside the plausible range, or loss of perception. This last part is the chain of trust of the system: if the cage cannot trust the state it observes, the safe response is not to correct the command but to \textbf{stop the vehicle in a controlled way}.
+
+\section{From requirements to rules}
+\label{sec:5.4}
+
+The mapping from requirements to rules follows an explicit procedure: for each requirement, the observable variable that expresses its predicate is identified, together with the mechanism capable of keeping it within limits and the actuation channel on which to act. When no such mechanism exists without violating the philosophy of the cage --- the case of \emph{liveness}, where a rule that forced positive throttle would be authorising behaviour instead of correcting it --- the requirement is implemented at another level and this is declared.
+
+\begin{table*}[t]
+	\caption{Traceability from requirements to cage rules.}
+	\label{tab:5.1}
+	\centering\small
+	\begin{tabularx}{\widefigurewidth}{@{}L{30mm}YYL{30mm}@{}}
+		\toprule
+		\tabhead{Requirement} & \tabhead{Rule} & \tabhead{Observed variable} & \tabhead{Channel}\\
+		\midrule
+		\sr{001} & \cagerule{01} --- hard lateral limit & lateral offset & steering\\
+		\sr{002} & \cagerule{02} --- heading error limit & heading error & steering\\
+		\sr{003} & \cagerule{03} --- predictive time-to-departure limit & projected time to crossing & steering\\
+		\sr{004} & \cagerule{04} --- speed ceiling & speed and local curvature & throttle\\
+		\sr{005}, \sr{007}, \sr{008}, \sr{013}, \sr{014} & \cagerule{05} --- emergency mode & compound state, validity, estimator health & both\\
+		\sr{006}, \sr{011} & \cagerule{06} --- rate limiter & command variation between cycles & both\\
+		\sr{009} & --- & --- & training constraint\\
+		\sr{010} & --- & --- & arbitration property of the chain\\
+		\sr{012} & \cagerule{01}, \cagerule{02}, \cagerule{03} over the estimated state & estimated offset and heading & steering\\
+		\bottomrule
+	\end{tabularx}
+\end{table*}
+
+Three observations. The first one: \textbf{six rules cover fourteen requirements}, because the same rule can implement several of them and one requirement can require several rules. The second one: two requirements are not implemented by a rule, and the framework forces this to be declared in the matrix with the implementation type made explicit --- training constraint and arbitration property --- instead of inventing a rule that covers them nominally. Labelling the type is more honest than forcing the metaphor. The third one: the requirements of the camera track \textbf{do not add rules}: they reuse the existing ones over a state with a different origin, which is a design result in itself --- the cage is agnostic to the origin of the state.
+
+\section{The six rules}
+\label{sec:5.5}
+
+Each rule is specified with the same format: requirement implemented, observed variable, activation logic, corrective strategy and parameters. The uniformity makes comparison and cross-verification easier. The complete numerical values are in \Cref{app:E}.
+
+\paragraph{\cagerule{01} --- Hard lateral limit} It observes the signed lateral offset. Hysteretic activation above a threshold placed below the limit of the requirement, with a lower deactivation band and memory between cycles. The correction is proportional to the excess, in the direction that returns the vehicle to the centre, and is applied by overwriting the steering; the throttle is left untouched. If the emergency mode is active, \cagerule{01} does not act.
+
+\paragraph{\cagerule{02} --- Heading error limit} Analogous logic over the orientation error, with its own hysteresis band and gain. \cagerule{01} and \cagerule{02} can activate at the same time; in the chosen order \cagerule{02} is evaluated first, so that the final correction is the composition of both and \cagerule{01} keeps the last word.\sidenote{This co-activation is exactly the scenario that hazard \hz{09} anticipates, and \Cref{ch:08} measures it.}
+
+\paragraph{\cagerule{03} --- Predictive time-to-crossing limit} It propagates the lateral state over a short horizon with a simple kinematic model and estimates the time until the lane boundary is crossed. If it falls below the minimum, it applies a correction proportional to the urgency. Its value is that it buys margin before \cagerule{01} has to act; its cost is the dependence on a propagation model whose validity degrades with curvature.
+
+\paragraph{\cagerule{04} --- Speed ceiling} It bounds the commanded speed by a ceiling that depends on the local curvature, interpolated between a straight-line value and a curve value. It acts on the throttle. It is the only rule that \textbf{never activates} in the reference campaign, for a reason that is documented in \Cref{ch:08} and that is a declared limitation of the operating point, not of the rule.
+
+\paragraph{\cagerule{05} --- Emergency mode} This is the most complex rule and the only one that can overwrite all the others. It is triggered by eight conditions grouped in three families: \textbf{unrecoverable compound state} --- sustained high heading and offset; \textbf{state invalidity} --- stale observation, fields out of range, lost messages; and \textbf{perception health} --- the lane estimator reports that it cannot produce a reliable estimate, or the estimate fails the plausibility check. The behaviour is deterministic: deceleration at a minimum rate with frozen steering until the vehicle stops. The last three families are what makes the system \textbf{degrade to a safe stop} instead of acting on a corrupted perception, and they are the materialisation of the camera track requirements.
+
+\paragraph{\cagerule{06} --- Rate limiter} It bounds the variation of the command between consecutive cycles, in steering and in throttle. It is evaluated first, over the raw command. It is formally the rule with the lowest criticality\sidenote{It implements class B requirements of smoothness and variance.} and \Cref{ch:08} will show that this classification \textbf{seriously underestimates its real role} in the final system.
+
+\section{Parameterisation, versioning and modes}
+\label{sec:5.6}
+
+All thresholds live in a \textbf{version-controlled parameter file}, not in the code. The separation has three operational consequences. First: every experimental run records the \emph{hash} of the file together with the rest of the reproducibility metadata, so that a result is linked unambiguously to the exact configuration that produced it. Second: thresholds pending physical calibration are marked explicitly in the file itself, so that their provisional character is visible to whoever reads it and is not buried in the documentation. Third: the versioning follows a backward compatibility policy --- when a new feature is introduced, its default values must leave it \textbf{inert} for earlier configurations --- so that a historical campaign can be re-run without a later feature altering its result.
+
+The cage also admits two \textbf{operating modes}, which are the basis of the whole experimental design of this work. In \enf{} mode the corrections are applied to the command that reaches the vehicle. In \mon{} mode the cage evaluates exactly the same rules and logs exactly the same activations, but \textbf{does not modify the command}: the policy drives alone. The contrast between both modes on the same scenario and the same seed is the instrument with which \Cref{ch:08} measures the contribution of the cage, and its methodological value is that it is a clean counterfactual --- not a comparison between different systems, but between the same system with and without the envelope active.
+
+\section{ROS2 architecture}
+\label{sec:5.7}
+
+\subsection{Decomposition into nodes}
+\label{sec:5.7.1}
+
+The system is decomposed into nodes with a single responsibility, communicating through explicit topics. The data chain is linear and auditable: perception produces the state; the policy consumes the state and produces a raw command; the cage consumes the raw command and the state and produces a safe command plus a record of the cage status; the vehicle control translates the safe command into actuation setpoints; and the logging node persists the cage status to disk.
+
+\fig{\textwidth}{Lane_camera_agent-cage}{Node chain: perception, policy, cage, vehicle control and logging. The command of the policy never reaches the actuator without passing through the cage.}{5.1}
+
+The architectural property that matters is that \textbf{the command of the policy does not reach the actuator without going through the cage}. This is not a coding convention: it is a topological property of the graph, verifiable by inspection of the connections, and it means that there is no path through which an unfiltered command could reach the vehicle.
+
+\subsection{Architecture of the camera track}
+\label{sec:5.7.2}
+
+The camera track keeps the same topology with two substantive differences. The policy receives \textbf{the image} instead of the state vector, and the cage obtains its state from its \textbf{own lane estimator}, a classical computer vision chain that processes the same image with a deterministic algorithm that is independent of the network.
+
+This decision is the most delicate design point of the work, and its trade-off should be stated precisely. The advantage is that the safety envelope \textbf{does not inherit the failure modes of the network}: it reasons over a state produced by an auditable algorithm, which can be inspected line by line and verified against a reference. The cost is a \textbf{common cause}: both consume the same image, so a sufficiently severe degradation of the visual channel blinds both at the same time. The design does not hide that cost; it mitigates it with the health and plausibility trigger family of \cagerule{05} --- which degrades to a controlled stop when the estimator cannot produce a reliable estimate --- and declares it as a residual risk, with its own registered hazard (\hz{12}) for the case in which the estimate is wrong \emph{but plausible}, which is the case that no internal consistency check can catch.
+
+\section{Traceability and automatic verification}
+\label{sec:5.8}
+
+With the rules specified, the matrix covers its second section: the correspondence between requirements and rules. The validator checks mechanically that every rule implements at least one requirement, that every requirement is implemented by a rule or declares explicitly its alternative implementation type, and that every rule is exercised by at least one scenario. Any violation \textbf{blocks the review gate}.
+
+The design effect that this produces deserves to be underlined, because it is one of the claims that \Cref{ch:11} evaluates: the constraint forces the implementation path to be decided \textbf{at the moment of writing the requirement}, not afterwards. The observable result is a set of requirements that are more operational, and a set of rules with no orphan functionality --- there is no rule in the cage that does not respond to a requirement traceable up to a registered hazard.
+
+With the specification defined, \Cref{ch:06} addresses its implementation and verification.

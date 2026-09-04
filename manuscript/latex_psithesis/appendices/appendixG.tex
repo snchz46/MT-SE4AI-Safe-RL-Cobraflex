@@ -1,0 +1,50 @@
+% Converted from: manuscript/draft_v5_en/back/G_appendix_positioning.md
+% Appendix G --- Positioning space (complete version)
+
+\chapter{Positioning Space (Complete Version)}
+\label{app:G}
+
+Complete version of \Cref{tab:2.1}, with the twenty-one lines of work reviewed in
+\Cref{ch:02} evaluated along the seven axes of interest. \ding{51} indicates substantive coverage of the
+axis; \emph{partial}, partial coverage; ---, no treatment at all.
+
+\begin{widetable}{@{}L{52mm}*{7}{>{\centering\arraybackslash}p{14mm}}@{}}
+  \caption{Positioning space of the thesis, complete.}\label{tab:G.1}\\
+  \toprule
+  \tabhead{Work / line} & \tabhead{Safe training} & \tabhead{Cage / runtime filter} &
+  \tabhead{Scenario validation} & \tabhead{Life cycle} & \tabhead{Explicit traceability} &
+  \tabhead{Sim-to-real gap} & \tabhead{E2E case study}\\
+  \midrule
+  \endfirsthead
+  \toprule
+  \tabhead{Work / line} & \tabhead{Safe training} & \tabhead{Cage / runtime filter} &
+  \tabhead{Scenario validation} & \tabhead{Life cycle} & \tabhead{Explicit traceability} &
+  \tabhead{Sim-to-real gap} & \tabhead{E2E case study}\\
+  \midrule
+  \endhead
+  \bottomrule
+  \endfoot
+
+  \textcite{garcia2015} --- safe RL survey (taxonomy)                          & \ding{51} & --- & --- & --- & --- & --- & ---\\
+  \textcite{salay2017} --- foundational analysis ISO 26262 $\leftrightarrow$ ML (S1--S5) & --- & --- & --- & partial & --- & --- & ---\\
+  \textcite{kuutti2019b} --- safety cage AV (runtime + weak supervision)        & partial & \ding{51} & --- & --- & --- & --- & ---\\
+  \textcite{mohseni2019} --- practical ML safety                                & --- & partial & --- & partial & --- & --- & ---\\
+  \textcite{tearle2021} --- predictive safety filter (MPC)                      & --- & \ding{51} & --- & --- & --- & --- & ---\\
+  \textcite{vasudevan2021} --- uncertainty + ISO 26262                          & --- & partial & --- & partial & --- & --- & ---\\
+  \textcite{keswani2025} --- SRPL (safety representations)                      & \ding{51} & --- & --- & --- & --- & --- & ---\\
+  \textcite{wei2026} --- CARRL (critical robust RL + adversarial)               & \ding{51} & --- & --- & --- & --- & --- & ---\\
+  \textcite{he2024} --- Q-learning + adversarial (TORCS)                        & --- & --- & partial & --- & --- & --- & ---\\
+  \textcite{degelder2024} --- scenario coverage metrics                         & --- & --- & \ding{51} & --- & --- & --- & ---\\
+  \textcite{gao2021} --- QED                                                    & --- & --- & \ding{51} & --- & --- & --- & ---\\
+  \textcite{paniego2024} --- Behavior Metrics (eval.\ toolkit)                  & --- & --- & \ding{51} & --- & --- & --- & ---\\
+  \textcite{giamattei2025} --- RL for online testing                            & --- & --- & \ding{51} & --- & --- & --- & ---\\
+  \textcite{cheng2025} --- DRL lane-keeping + sim2real                          & partial & --- & --- & --- & --- & partial & partial\\
+  \textcite{wang2024} --- SOTIF                                                 & --- & --- & partial & partial & --- & --- & ---\\
+  \textcite{paterson2025} --- AMLAS                                             & --- & --- & --- & partial & \ding{51} & --- & ---\\
+  \textcite{koopman2023} --- UL 4600                                            & --- & --- & --- & partial & partial & --- & ---\\
+  \textcite{bsi2024} --- PAS 8800                                               & --- & --- & partial & \ding{51} & partial & --- & partial\\
+  \textcite{sprockhoff2023} --- MBSE                                            & --- & --- & --- & \ding{51} & \ding{51} & --- & ---\\
+  \textcite{ullrich2025} --- expanded V-Model for AI                            & partial & partial & partial & \ding{51} & partial & --- & ---\\
+  \midrule
+  \textbf{This thesis} & \textbf{partial} & \textbf{\ding{51}} & \textbf{\ding{51}} & \textbf{\ding{51}} & \textbf{\ding{51}} & \textbf{\ding{51}} & \textbf{partial}\\
+\end{widetable}

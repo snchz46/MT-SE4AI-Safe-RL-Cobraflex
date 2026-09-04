@@ -1,0 +1,62 @@
+% Converted from: manuscript/draft_v5_en/front/40_abbreviations.md
+% List of abbreviations and symbols --- unnumbered chapter, listed in the ToC.
+
+\addchap{List of Abbreviations and Symbols}
+
+\begin{longtable}{@{}lL{0.72\textwidth}@{}}
+	\toprule
+	\tabhead{Abbreviation} & \tabhead{Meaning}\\
+	\midrule
+	\endfirsthead
+	\toprule
+	\tabhead{Abbreviation} & \tabhead{Meaning}\\
+	\midrule
+	\endhead
+	\bottomrule
+	\endfoot
+	ADAS & Advanced Driver-Assistance System\\
+	AI & Artificial Intelligence\\
+	CNN & Convolutional Neural Network\\
+	CV & Computer Vision\\
+	DR & Domain Randomization\\
+	HARA & Hazard Analysis and Risk Assessment\\
+	MDP & Markov Decision Process\\
+	ODD & Operational Design Domain\\
+	PD & Proportional-Derivative (controller)\\
+	PPO & Proximal Policy Optimization\\
+	RL & Reinforcement Learning\\
+	ROS2 & Robot Operating System 2\\
+	RTX / PhysX & NVIDIA rendering and physics engines (Isaac Sim)\\
+	SAC & Soft Actor-Critic\\
+	SE4AI & Systems Engineering for Artificial Intelligence\\
+	SOTIF & Safety of the Intended Functionality (ISO 21448)\\
+	SR & Safety Requirement\\
+	STPA & System-Theoretic Process Analysis\\
+	TTLC & Time-To-Lane-Crossing\\
+	V\&V & Verification and Validation\\
+\end{longtable}
+
+\paragraph{Framework identifiers} The work uses a single, non-reusable identifier space, defined in Appendix A: \hz{XX} (hazard), \sr{XXX} (safety requirement), \cagerule{XX} (cage rule), \scn{*} (scenario), \met{*} (metric), \dec{NN} (recorded design decision), \phase{F\nbh X} / \phase{G\nbh X} (project phase and gate).
+
+\paragraph{Main symbols}\mbox{}\par\medskip
+
+\begin{longtable}{@{}lL{0.58\textwidth}l@{}}
+	\toprule
+	\tabhead{Symbol} & \tabhead{Meaning} & \tabhead{Unit}\\
+	\midrule
+	\endfirsthead
+	\toprule
+	\tabhead{Symbol} & \tabhead{Meaning} & \tabhead{Unit}\\
+	\midrule
+	\endhead
+	\bottomrule
+	\endfoot
+	$e_y$ & Lateral deviation from the lane centre & \si{\meter}\\
+	$e_\psi$, $\theta$ & Heading error with respect to the lane tangent & \si{\radian} / \si{\degree}\\
+	$\kappa$ & Curvature of the reference trajectory & \si{\per\meter}\\
+	$d_{\max}$ & Hard limit on lateral deviation (rule \cagerule{01}) & \si{\meter}\\
+	$\theta_{\max}$ & Limit on heading error (rule \cagerule{02}) & \si{\degree}\\
+	$t_{\min}$ & Time-to-lane-crossing threshold (rule \cagerule{03}) & \si{\second}\\
+	$\sigma_\theta$ & Standard deviation of the heading over a sliding window & \si{\degree}\\
+	$s$ & Arc length travelled along the centre line of the circuit & \si{\meter}\\
+\end{longtable}

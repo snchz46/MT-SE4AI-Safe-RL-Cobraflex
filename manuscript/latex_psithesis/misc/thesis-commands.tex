@@ -1,0 +1,199 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% File: misc/thesis-commands.tex
+%
+% Project-specific macros. NOT part of the upstream PSIThesis template.
+%
+% The thesis runs on a single, non-reusable identifier space
+% (docs/01_id_conventions.md). Marking those identifiers semantically
+% rather than typing them as literal text buys three things:
+%
+%   1. one place to change how an identifier looks;
+%   2. \index-ability and \label-ability later, without touching prose;
+%   3. a grep-able source, so a traceability checker could be pointed at
+%      the .tex files as well as at the Markdown.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% ---------------------------------------------------------------------------
+% Inline semantic markup
+% ---------------------------------------------------------------------------
+% These five live in main.tex in the stock template, where they are declared
+% after \mainmatter. They are declared here instead so that the front matter
+% (abstract, preface, abbreviations) can use them as well.
+
+\newcommand{\keyword}[1]{\textbf{#1}}
+\newcommand{\tabhead}[1]{\textbf{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\file}[1]{\texttt{#1}}
+\newcommand{\option}[1]{\texttt{\itshape#1}}
+
+% ---------------------------------------------------------------------------
+% Identifier space
+% ---------------------------------------------------------------------------
+% Usage: \hz{01} \sr{003} \cagerule{06} \scn{NOM-01} \met{S1} \dec{69}
+%        \gate{4} \phase{F4}
+%
+% \nbh is a non-breaking hyphen so an identifier never splits over a line
+% break -- which matters here because the whole argument of the thesis is
+% that these identifiers are atomic.
+
+\newcommand{\nbh}{\mbox{-}}
+
+\newcommand{\hz}[1]{\mbox{H\nbh #1}}
+\newcommand{\sr}[1]{\mbox{SR\nbh #1}}
+\newcommand{\cagerule}[1]{\mbox{C\nbh #1}}
+\newcommand{\scn}[1]{\mbox{SC\nbh #1}}
+\newcommand{\met}[1]{\mbox{M\nbh #1}}
+\newcommand{\dec}[1]{\mbox{D\nbh #1}}
+\newcommand{\gate}[1]{\mbox{G#1}}
+\newcommand{\phase}[1]{\mbox{#1}}
+
+% ---------------------------------------------------------------------------
+% Verdict labels
+% ---------------------------------------------------------------------------
+% The campaign aggregator emits three literal verdicts. They are set in the
+% monospace face, small caps off, so that a verdict in running prose is
+% visibly a machine output and not the author's adjective -- a distinction
+% the thesis leans on repeatedly.
+
+\newcommand{\verdictsat}{\textcolor{ubgreen!70!black}{\texttt{SATISFIED}}}
+\newcommand{\verdictnot}{\textcolor{ubred}{\texttt{NOT SATISFIED}}}
+\newcommand{\verdictind}{\textcolor{gray50}{\texttt{INDETERMINATE}}}
+\newcommand{\verdictna}{\textcolor{gray50}{\texttt{N/A}}}
+\newcommand{\verdictopen}{\textcolor{gray50}{\texttt{NOT EXECUTED}}}
+
+% Mode names (enforcement / monitoring) -- used often enough to be worth
+% a macro, and italicising them consistently keeps the counterfactual legible.
+\newcommand{\enf}{\emph{enforcement}}
+\newcommand{\mon}{\emph{monitoring}}
+
+% ---------------------------------------------------------------------------
+% Evidence-status flags
+% ---------------------------------------------------------------------------
+% Phase-5 physical evidence is bring-up evidence, never verdict evidence.
+% The manuscript says so in prose every time; in this layout the margin is
+% the right place for that qualifier, so it never interrupts the sentence.
+
+\newcommand{\prelimflag}{%
+  \marginnote{\textcolor{ubred}{\textbf{PRELIMINARY}}\\
+  N=1, \mon, unscored. Does not re-score any gate.}}
+
+\newcommand{\retracted}[1]{%
+  \marginnote{\textcolor{ubred}{\textbf{RETRACTED}}\\ #1}}
+
+% A short caveat in the margin, without a number. Use for qualifications
+% that would otherwise become a parenthesis inside a long sentence.
+\newcommand{\caveat}[1]{\marginnote{#1}}
+
+% ---------------------------------------------------------------------------
+% Figures
+% ---------------------------------------------------------------------------
+% The template's \image prepends "../figures/". These wrappers do not, so
+% they resolve through \graphicspath and also work for figures/auto/.
+%
+%   \fig[placement]{width}{file}{caption}{label}
+%   \figwide[placement]{file}{caption}{label}   -- spans text + margin column
+%   \figmargin[offset]{file}{caption}{label}    -- lives in the margin column
+%
+% \detokenize on the file argument: every figure in this thesis has an
+% underscored name (fig_8_2_safety_invariant). Written straight into the
+% document, \includegraphics copes with that; passed through a wrapper macro
+% like these it is safer to hand graphicx catcode-12 characters, because the
+% underscore has already been tokenised as a subscript by the time the wrapper
+% sees it. \detokenize costs nothing when the name is plain.
+
+\newcommand{\fig}[5][t]{%
+	\begin{figure}[#1]
+		\centering
+		\includegraphics[width=#2]{\detokenize{#3}}
+		\caption{#4}
+		\label{fig:#5}
+	\end{figure}
+}
+
+\newcommand{\figwide}[4][t]{%
+	\begin{figure*}[#1]
+		\centering
+		\includegraphics[width=\widefigurewidth]{\detokenize{#2}}
+		\caption{\label{fig:#4}#3}
+	\end{figure*}
+}
+
+\newcommand{\figmargin}[4][1]{%
+	\begin{marginfigure}[#1\baselineskip]
+		\includegraphics[width=\marginparwidth]{\detokenize{#2}}
+		\caption{\label{fig:#4}#3}
+	\end{marginfigure}
+}
+
+% Placeholder for a figure that has not been regenerated on this host.
+% Draws a visible frame instead of failing the build, so a missing render
+% is obvious in the PDF rather than silent.
+\newcommand{\figmissing}[3][t]{%
+	\begin{figure}[#1]
+		\centering
+		\fbox{\parbox[c][40mm][c]{0.9\textwidth}{\centering\sffamily\small
+			\textcolor{ubred}{Figure not available on this host}\\[0.4em]
+			\texttt{#2}\\[0.4em]
+			\footnotesize regenerate on the compute host}}
+		\caption{#3}
+	\end{figure}
+}
+
+% ---------------------------------------------------------------------------
+% Tables
+% ---------------------------------------------------------------------------
+% Every table in this thesis is a small evidence table, so they all get the
+% same treatment: booktabs rules, tabularx for the wide ones, and a caption
+% ABOVE the table (KOMA default), which reads better in a narrow column.
+
+\newcommand{\tabnote}[1]{%
+  \par\vspace{0.4em}\noindent{\footnotesize\sffamily #1}}
+
+% The appendix registers -- hazards, requirements, ODD attributes, cage
+% parameters, traceability -- are wide tables of sentence-length cells that run
+% over a page. They need three things at once that no single stock environment
+% gives: page breaking (longtable), the full text+margin width, and a repeating
+% header.
+%
+% longtable cannot live inside table*, and it centres itself in \textwidth by
+% default. Setting \LTleft to 0pt and \LTright to \fill pins it flush with the
+% text block and lets it run out into the margin column, which is empty on
+% these pages. Column widths must sum to \widefigurewidth.
+%
+% Usage:  \begin{widetable}{@{}L{12mm}L{45mm}...@{}}  ... \end{widetable}
+\newenvironment{widetable}[1]
+  {\begingroup
+   \setlength{\LTleft}{0pt}%
+   \setlength{\LTright}{\fill}%
+   \scriptsize
+   \setlength{\tabcolsep}{3pt}%
+   \begin{longtable}{#1}}
+  {\end{longtable}\endgroup}
+
+% Width of a wide table, for convenience in column arithmetic.
+\newlength{\wtw}
+\AtBeginDocument{\setlength{\wtw}{\dimexpr\marginparwidth+\textwidth+\marginparsep\relax}}
+
+% A column type that wraps and stays left-aligned inside tabularx.
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
+
+% ---------------------------------------------------------------------------
+% Units and quantities
+% ---------------------------------------------------------------------------
+% siunitx is already loaded by the class. These shorthands keep the many
+% millimetre / metre-per-second figures consistent.
+%
+% NOTE on naming: \deg, \m and \sec already exist in LaTeX, and \H is an
+% accent. Every shorthand below is therefore prefixed with "q" (quantity)
+% so nothing in the kernel or in siunitx is clobbered.
+
+\newcommand{\qmm}[1]{\SI{#1}{\milli\meter}}
+\newcommand{\qm}[1]{\SI{#1}{\meter}}
+\newcommand{\qmps}[1]{\SI{#1}{\meter\per\second}}
+\newcommand{\qdeg}[1]{\SI{#1}{\degree}}
+\newcommand{\qhz}[1]{\SI{#1}{\hertz}}
+\newcommand{\qs}[1]{\SI{#1}{\second}}
+\newcommand{\qpc}[1]{\SI{#1}{\percent}}

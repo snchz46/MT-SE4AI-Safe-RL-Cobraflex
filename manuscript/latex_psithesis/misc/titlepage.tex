@@ -1,0 +1,94 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% File: misc/titlepage.tex
+%
+% Adapted from the PSIThesis template title page for
+% Hochschule Esslingen -- University of Applied Sciences.
+%
+% Changes against the stock PSIThesis title page:
+%   * the University of Bamberg logo is removed (see TODO below);
+%   * the thesis type, degree programme, subtitle, both examiners,
+%     the matriculation number and the submission date are printed,
+%     because the HS Esslingen Thesis Writing Guidelines require them;
+%   * the guide-only version/DOI block is removed;
+%   * geometry option "showframe" is NOT set (the upstream guide sets it
+%     deliberately to illustrate the type block).
+%
+% Licence of the original file: LPPL v1.3c
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\pagestyle{plain}
+
+%----------------------------------------------------------------------------------------
+%	TITLE PAGE
+%----------------------------------------------------------------------------------------
+
+\begin{titlepage}
+
+\newgeometry{
+	inner=4cm,
+	outer=4cm,
+	marginparwidth=0cm,
+	marginparsep=0mm,
+	bindingoffset=.5cm,
+	top=2.5cm,
+	bottom=2.5cm,
+}
+
+\begin{center}
+
+\vspace*{.04\textheight}
+
+% TODO: place the Hochschule Esslingen logo here, preferably as a vector PDF:
+% \includegraphics[width=45mm]{misc/hse-logo.pdf}
+% \vspace*{.04\textheight}
+
+{\LARGE \textls[130]{\MakeUppercase{\univname}}\par}\vspace{0.6\baselineskip}
+
+{\large University of Applied Sciences}\\[1.4\baselineskip]
+
+{\large \groupname}\\[0.4\baselineskip]
+{\large Master of Science in Automotive Systems (M.Sc.)}
+
+\vspace{1.4cm}
+
+\textsc{\Large \thesistype's~Thesis}\\[0.9cm]
+
+\HRule\\[0.7cm]
+
+{\huge \bfseries \ttitle\par}\vspace{0.7cm}
+
+{\large \itshape \thesissubtitle\par}
+
+\HRule\\[1.2cm]
+
+\textsc{\Large by}\\[0.7cm]
+
+{\Large \authorname}\\[0.35cm]
+
+{\small Matriculation number: \matriculation}
+
+\vspace{1.4cm}
+
+\begin{tabular}{@{}r@{\hspace{1.5em}}l@{}}
+  \emph{First examiner and supervisor:} & \supname\\[0.35cm]
+  \emph{Second examiner:}               & \secondexaminer\\
+\end{tabular}
+
+\vfill
+
+{\large Esslingen am Neckar}\\[0.35cm]
+{\large Submitted on \submissiondate}
+
+\vspace{0.9cm}
+
+{\footnotesize Typeset with the PSIThesis template (University of Bamberg), CC BY-SA 4.0}
+
+\vspace{0.4\baselineskip}
+
+\end{center}
+
+\restoregeometry
+
+\end{titlepage}

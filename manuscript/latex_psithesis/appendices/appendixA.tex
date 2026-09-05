@@ -10,7 +10,7 @@ domains where it applies, the main operational consequence and the dominant root
 hypothesis. The numbering is stable and non-reusable: a withdrawn identifier is never
 assigned again.
 
-\begin{widetable}{@{}L{9mm}L{40mm}L{13mm}L{13mm}L{8mm}L{15mm}L{11mm}L{27mm}L{27mm}@{}}
+\begin{registertable}{@{}L{9mm}L{40mm}L{13mm}L{13mm}L{8mm}L{15mm}L{11mm}L{27mm}L{27mm}@{}}
   \caption{Hazard register, extended.}\label{tab:A.1}\\
   \toprule
   \tabhead{ID} & \tabhead{Hazard (description)} & \tabhead{S} & \tabhead{E} & \tabhead{C} &
@@ -50,7 +50,7 @@ assigned again.
   \hz{11} & (Track `E') Loss of valid lane perception (occlusion, absence of features, camera dropout/latency); blinds both policy and cage (common cause, \dec{43}). & S3 & E2 & C2 & High & 1, 2, 3, 4 & Arbitrary commands over a blind perception; without a fallback, an undefined trajectory. & Occlusion; missing features; camera dropout/freeze; extreme wash-out.\\
   \addlinespace
   \hz{12} & (Track `E') Wrong detection by the cage: the CV detector of the cage produces a plausible false lane and the cage imposes a wrong envelope. & S3 & E2 & C2 & High & 1, 2, 3, 4 & The cage stops being a guarantee and can take the vehicle out of the true lane. & Misleading markings (branches, old paint); shadows/reflections read as edges; degraded vision that corrupts the detection.\\
-\end{widetable}
+\end{registertable}
 
 \paragraph{Note on three reclassifications} During the audit of the register, three initially ambiguous
 assessments were normalised. \hz{03} moved from a split severity --- not admitted by the

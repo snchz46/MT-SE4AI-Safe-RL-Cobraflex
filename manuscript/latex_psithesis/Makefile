@@ -51,6 +51,23 @@ check-complete:
 check-refs:
 	perl check_refs.pl chapters/*.tex appendices/*.tex front/*.tex
 
+# Copy the figures this document actually references out of the shared pool at
+# ../figures into ./figures, so the project is self-contained -- needed for an
+# Overleaf upload or a build on a machine without the rest of the repository.
+# ./figures is gitignored: it holds copies of already-tracked files.
+.PHONY: figures
+figures:
+	perl collect_figures.pl figures
+
+# A zip ready to drag into Overleaf: sources, class file, fonts and figures.
+.PHONY: dist
+dist: figures
+	rm -f thesis-psithesis.zip
+	zip -r thesis-psithesis.zip \
+	    main.tex PSIThesis.cls literature.bib Makefile deps.txt README.md \
+	    misc front chapters appendices fonts figures \
+	    -x '*.aux' '*.log' '*.out'
+
 .PHONY: clean
 clean:
 	rm -f main.aux main.bbl main.bcf main.blg main.log main.lof main.lot \

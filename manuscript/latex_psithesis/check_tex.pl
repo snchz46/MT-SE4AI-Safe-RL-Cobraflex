@@ -95,7 +95,7 @@ my %env_ok = map { $_ => 1 } qw(
   marginfigure margintable equation align aligned array displaymath math
   abstract acknowledgements declaration multicols minipage subfigure
   tikzpicture threeparttable adjustbox landscape
-  widetable
+  registertable
 );
 
 my $errors = 0;
@@ -103,6 +103,33 @@ my $warns  = 0;
 
 sub err  { my ($f,$l,$m)=@_; print "E  $f:$l: $m\n"; $errors++ }
 sub warn_{ my ($f,$l,$m)=@_; print "W  $f:$l: $m\n"; $warns++  }
+
+# ---------------------------------------------------------------------------
+# Preflight: the exemptions below assume things about the macro definitions.
+# Check those assumptions instead of trusting them -- this exact assumption,
+# left unchecked, is what shipped a broken chapter 7 to the first real build.
+# ---------------------------------------------------------------------------
+{
+    my $cmds = "misc/thesis-commands.tex";
+    if (-r $cmds) {
+        open(my $c, "<:encoding(UTF-8)", $cmds) or die "$cmds: $!";
+        local $/;
+        my $src = <$c>;
+        close $c;
+
+        # \figmissing typesets its file-name argument. Underscores in it are
+        # only safe while the definition detokenizes them.
+        if ($src =~ /\\newcommand\{\\figmissing\}.*?\n\}/s) {
+            my ($body) = $src =~ /(\\newcommand\{\\figmissing\}.*?\n\})/s;
+            unless ($body =~ /\\detokenize\s*\{\s*#2\s*\}/) {
+                err($cmds, 0,
+                    "\\figmissing no longer wraps #2 in \\detokenize, but this ".
+                    "checker still exempts its argument from the underscore ".
+                    "check -- either restore \\detokenize or drop the exemption");
+            }
+        }
+    }
+}
 
 for my $file (@ARGV) {
     open(my $fh, "<:encoding(UTF-8)", $file) or do { print "E  cannot open $file\n"; $errors++; next };
@@ -141,10 +168,22 @@ for my $file (@ARGV) {
 
             # _ # $ outside math and outside \verb
             my $u = $t;
-            # Filename and key arguments are never typeset, so an underscore in
-            # them is legal. Drop them before the escaping check.
+            # Filename and key arguments are exempt from the escaping check ONLY
+            # where they are never typeset -- \fig, \figwide and \figmargin hand
+            # theirs straight to \includegraphics.
+            #
+            # \figmissing is deliberately NOT in that list. It PRINTS its file
+            # name, and blanket-exempting it here is what let
+            #   \figmissing{fig_ppo2d_training_curve.png}{...}
+            # through the checker and straight into "Missing $ inserted" on the
+            # first real build. It is safe now only because the macro wraps the
+            # argument in \detokenize; if that ever changes, this check must
+            # catch it, so leave \figmissing checked.
             $u =~ s/\\fig(?:\[[^\]]*\])?\{[^{}]*\}\{[^{}]*\}/FIGCALL/g;
-            $u =~ s/\\(?:figwide|figmargin|figmissing)(?:\[[^\]]*\])?\{[^{}]*\}/FIGCALL/g;
+            $u =~ s/\\(?:figwide|figmargin)(?:\[[^\]]*\])?\{[^{}]*\}/FIGCALL/g;
+            # \figmissing: exempt only when the macro's own \detokenize is what
+            # protects it -- i.e. verify the definition still does that.
+            $u =~ s/\\figmissing(?:\[[^\]]*\])?\{[^{}]*\}/FIGMISSING/g;
             $u =~ s/\\(?:label|ref|Cref|cref|autoref|pageref|nameref|parencite|textcite|cite|citeauthor|citeyear|includegraphics|graphicspath|input|include)(?:\[[^\]]*\])?\{[^{}]*\}/REFCALL/g;
             $u =~ s/\\[a-zA-Z]+//g;                   # drop control words
             $u =~ s/\\[_#\$&{}%]//g;                  # drop escaped specials

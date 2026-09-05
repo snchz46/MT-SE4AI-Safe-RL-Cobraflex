@@ -15,7 +15,7 @@ Consolidated table of parameters for the four operational domains. Each paramete
 name, a value per domain and a provenance; no claim in the body about the domain rests
 on a qualitative description when a named parameter exists.
 
-\begin{widetable}{@{}L{31mm}L{29mm}L{13mm}L{13mm}L{13mm}L{13mm}L{47mm}@{}}
+\begin{registertable}{@{}L{31mm}L{29mm}L{13mm}L{13mm}L{13mm}L{13mm}L{47mm}@{}}
   \caption{Operational domain parameters, by domain.}\label{tab:D.1}\\
   \toprule
   \tabhead{Parameter} & \tabhead{Meaning} & \tabhead{ODD-1} & \tabhead{ODD-2} &
@@ -44,7 +44,7 @@ on a qualitative description when a named parameter exists.
   \code{*.STUCK\_TIMEOUT} & Stuck criterion timeout (s) & n/a & n/a & n/a & n/a & Subsumed by env truncation ($500\times\qs{0.10} = \qs{50}$); TBD-Q11\\
   \code{*.OBS\_DIM} & Observation & \multicolumn{4}{l}{camera $84\times84\times4$ (policy); CV lane-estimate (cage)} & Track `E' (\dec{43}). F-track baseline: 6-D state vector\\
   \code{*.ACT\_DIM} & \textbf{GE4-realised} action vector dimension & 1 & 1 & 1 & 1 & Steering-only verdict parameter (\dec{49}). Posterior Gazebo and Isaac configs set 2 locally (\dec{50}/\dec{59}/\dec{60}) without changing this ODD value\\
-\end{widetable}
+\end{registertable}
 
 \section{Open questions of the domain and their closure}
 \label{sec:D.1}
@@ -53,7 +53,7 @@ Of the twelve quantitative questions that the specification opened when it was w
 closed with an explicit value and its date; the twelfth remains open because of a hardware
 dependency and not because of an omission.
 
-\begin{widetable}{@{}L{14mm}L{40mm}L{9mm}L{16mm}L{80mm}@{}}
+\begin{registertable}{@{}L{14mm}L{40mm}L{9mm}L{16mm}L{80mm}@{}}
   \caption{Open questions of the operational domain and their closure.}\label{tab:D.2}\\
   \toprule
   \tabhead{ID} & \tabhead{Question} & \tabhead{Owner} & \tabhead{Status} & \tabhead{Resolution}\\
@@ -89,4 +89,4 @@ dependency and not because of an omission.
   TBD-Q11 & Stuck-criterion timeout? & SS & closed & \textbf{n/a} --- no separate stuck monitor; env truncation \code{max\_episode\_steps} $\times$ \code{control\_dt} = $500\times\qs{0.10}=\qs{50}$ is the implicit timeout. (2026-05-21, F3 update 2026-06-01)\\
   \addlinespace
   TBD-Q12 & Do ODD-4 profiles add any stressor beyond ODD-2? & SS & closed & \textbf{No} --- ODD-4 = ODD-3 geometry $\times$ ODD-2 perception stressors, realised as curve-traversing \code{complex\_b} scenarios (\scn{PERT-11}/12/13, \scn{FRONT-07}). (2026-06-03; retargeted 2026-07-07)\\
-\end{widetable}
+\end{registertable}

@@ -8,7 +8,7 @@ Complete version of \Cref{tab:4.2}, with thresholds and traceability, followed b
 requirement by requirement: where each threshold comes from, what makes it falsifiable and what its
 calibration status is.
 
-\begin{widetable}{@{}L{13mm}L{48mm}L{30mm}L{13mm}L{20mm}L{13mm}L{25mm}@{}}
+\begin{registertable}{@{}L{13mm}L{48mm}L{30mm}L{13mm}L{20mm}L{13mm}L{25mm}@{}}
   \caption{Safety requirements, thresholds and traceability.}\label{tab:B.1}\\
   \toprule
   \tabhead{ID} & \tabhead{Short statement} & \tabhead{Main parameters} & \tabhead{H covered} &
@@ -50,7 +50,7 @@ calibration status is.
   \sr{013} & (Track `E') On loss of valid perception (occlusion / absence of features / stale or dropped frames), the system shall enter an open-loop controlled stop through \cagerule{05} without exceeding \code{d\_max}. & \code{perc\_staleness\_max} = 200 ms (provisional); \code{d\_max} = \qm{0.16} & \hz{11} & part of \cagerule{05} (health of the CV estimator of the cage) & SR-CL-A & \scn{PERT-07}\\
   \addlinespace
   \sr{014} & (Track `E') The cage shall not impose its rules on a lane estimate that fails the plausibility / temporal consistency check; instead it shall enter a controlled stop (\cagerule{05}). & \code{plaus\_tol}, $\Delta t_{\mathrm{plaus}}$ (provisional, against the ground-truth oracle) & \hz{12} & part of \cagerule{05} (plausibility check $\rightarrow$ stop) & SR-CL-A & \scn{PERT-08}, \scn{PERT-04}..06, \scn{PERT-09}, \scn{PERT-10}\\
-\end{widetable}
+\end{registertable}
 
 \section{Rationale per requirement}
 \label{sec:B.1}

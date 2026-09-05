@@ -17,7 +17,7 @@ corresponding review gate.
 \section{Summary by mitigation chain}
 \label{sec:F.1}
 
-\begin{widetable}{@{}L{17mm}L{17mm}L{27mm}L{38mm}L{22mm}L{40mm}@{}}
+\begin{registertable}{@{}L{17mm}L{17mm}L{27mm}L{38mm}L{22mm}L{40mm}@{}}
   \caption{Traceability by mitigation chain, with the simulation verdict.}\label{tab:F.1}\\
   \toprule
   \tabhead{Hazard} & \tabhead{Safety Requirement} & \tabhead{Cage Rule(s)} &
@@ -59,7 +59,7 @@ corresponding review gate.
   \hz{11} & \sr{013} & \cagerule{05} (CV-estimator health $\rightarrow$ controlled stop) & \scn{NOM-01}, \scn{PERT-07}, \scn{PERT-13} & \met{S3} & \textbf{Satisfied} (2-D PPO 550k, verdict of record; GE4-V2 gate record: \scn{PERT-07} 25/25 + \scn{PERT-13} 40/40; \dec{29} closed by \dec{46})\,\textsuperscript{5}\,\textsuperscript{6}\,\textsuperscript{9}\\
   \addlinespace
   \hz{12} & \sr{014} & \cagerule{05} (plausibility check $\rightarrow$ controlled stop) & \scn{NOM-01}, \scn{PERT-08}, \scn{PERT-04}..06, \scn{PERT-09}..10, \scn{PERT-11}..13 & \met{S1}, \met{S3} & \textbf{Satisfied} (2-D PPO 550k, verdict of record; GE4-V2 gate record: \scn{PERT-08} false-lane 25/25)\,\textsuperscript{4}\,\textsuperscript{6}\,\textsuperscript{9}\\
-\end{widetable}
+\end{registertable}
 
 \section{Machine-processable form}
 \label{sec:F.2}
@@ -69,7 +69,7 @@ several rows because it spans several chains. The physical verdict column is dec
 executed} in its entirety: the deployment chain is built and has driven on hardware, but no
 run has been executed under the scenario protocol (\S10.4d--e).
 
-\begin{widetable}{@{}L{15mm}L{16mm}L{13mm}L{28mm}L{22mm}L{15mm}L{25mm}L{22mm}@{}}
+\begin{registertable}{@{}L{15mm}L{16mm}L{13mm}L{28mm}L{22mm}L{15mm}L{25mm}L{22mm}@{}}
   \caption{Machine-processable traceability matrix, one row per hazard-to-metric chain.}\label{tab:F.2}\\
   \toprule
   \tabhead{Hazard} & \tabhead{Requirement} & \tabhead{Rule} & \tabhead{Type} &
@@ -117,7 +117,7 @@ run has been executed under the scenario protocol (\S10.4d--e).
   \hz{08} & \sr{009} & ---           & training constraint & \scn{PERT-03} & \met{P6} & satisfied & not executed\\
   \hz{09} & \sr{010} & ---           & arbiter & \scn{EDGE-04} & \met{I3} & satisfied & not executed\\
   \hz{09} & \sr{010} & ---           & arbiter & \scn{EDGE-05} & \met{S2} & \textbf{not satisfied} & not executed\\
-\end{widetable}
+\end{registertable}
 
 \section{Verified constraints}
 \label{sec:F.3}

@@ -15,6 +15,12 @@
 main.pdf
 pdf/
 
+# figures/ holds COPIES of files already tracked under manuscript/figures/.
+# They live here only so the project is self-contained for an Overleaf upload
+# or a build on a machine without the rest of the repository. Regenerate with:
+#   perl collect_figures.pl figures      (or: make figures)
+figures/
+
 # Vendored fonts are ~4.6 MB of binaries (Roboto + Iosevka SS04), committed on
 # purpose so the project builds offline on the compute host. If the repository
 # would rather not carry them, uncomment the next line and fetch them with:

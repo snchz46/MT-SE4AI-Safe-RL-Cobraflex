@@ -56,7 +56,7 @@ The table lists the \textbf{complete effective configuration}. The E-main column
 the one of the camera run \code{ppo\_newcam\_complex\_b\_2024\_1M}; the F baseline is the one of the
 state run \code{ppo\_train\_2024\_200k}.
 
-\begin{widetable}{@{}L{34mm}L{44mm}L{38mm}L{44mm}@{}}
+\begin{registertable}{@{}L{34mm}L{44mm}L{38mm}L{44mm}@{}}
   \caption{Effective training configuration: camera E-main against the F-track state baseline.}\label{tab:H.2}\\
   \toprule
   \tabhead{Parameter} & \tabhead{E-main (camera)} & \tabhead{Baseline (F, state)} & \tabhead{Source / note}\\
@@ -85,7 +85,7 @@ state run \code{ppo\_train\_2024\_200k}.
   \code{vf\_coef}          & 0.5 & 0.5 & SB3 default\\
   \code{max\_grad\_norm}   & 0.5 & 0.5 & SB3 default\\
   \code{device}            & auto (CUDA if present) & cpu & E: the CNN benefits from a GPU\\
-\end{widetable}
+\end{registertable}
 
 The \textbf{four stability levers} of the E-main run (\code{target\_kl}, linear LR
 anneal, \code{VecNormalize(norm\_reward)} and \code{clip\_range\_vf}) do \textbf{not} exist in the
@@ -105,7 +105,7 @@ values come from the nominal scenario with the randomization switched off. The p
 belongs to the training curve and does not always coincide with the checkpoint
 cadence, so the final selection is resolved by closed-loop evaluation.
 
-\begin{widetable}{@{}L{40mm}L{38mm}L{20mm}L{33mm}L{29mm}@{}}
+\begin{registertable}{@{}L{40mm}L{38mm}L{20mm}L{33mm}L{29mm}@{}}
   \caption{Chain run $\rightarrow$ checkpoint $\rightarrow$ evaluation of the later SAC study. The intervention percentages in \mon{} are counterfactual activations: they are logged, but the action of the cage is not applied.}\label{tab:H.3}\\
   \toprule
   \tabhead{Action $\cdot$ configuration} & \tabhead{Training evidence} & \tabhead{Checkpoint evaluated} &
@@ -135,4 +135,4 @@ cadence, so the final selection is resolved by closed-loop evaluation.
   \textbf{2-D}, \code{ent\_coef=0.005}, seed 2024 $\cdot$ \code{sac\_gz2d\_tuned\_entfix\_2024\_1M} & peak 558.7 @ 77,825; rise without abrupt cycles; stop at 176,129 & 75k (\code{b76724c7}\ldots) & \textbf{4.32 laps; \qmm{17.1}; 0 emerg.}; 17.1\,\% \cagerule{06} & 4.31 laps; \qmm{16.3}; 0 emerg.\\
   \addlinespace
   \textbf{2-D}, \code{ent\_coef=0.005}, seed 42 $\cdot$ \code{sac\_gz2d\_tuned\_entfix\_42\_120k} & peak 270.9 @ 47,105; replica bounded to 120,833 & 50k (\code{cbde3836}\ldots) & \textbf{4.97 laps; \qmm{18.2}; 0 emerg.}; 46.4\,\% \cagerule{06} & 4.84 laps; \qmm{22.6}; 39 steps with a counterfactual \cagerule{05} trigger\\
-\end{widetable}
+\end{registertable}

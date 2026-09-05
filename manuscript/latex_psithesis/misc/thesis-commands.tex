@@ -130,13 +130,26 @@
 % Placeholder for a figure that has not been regenerated on this host.
 % Draws a visible frame instead of failing the build, so a missing render
 % is obvious in the PDF rather than silent.
+%
+% Unlike \fig and friends, this macro is the one that TYPESETS the file name
+% instead of handing it to \includegraphics, so the name needs protecting:
+% every figure here is called fig_something_something, and a raw underscore in
+% text mode is "Missing $ inserted". \detokenize re-emits the argument as
+% catcode-12 characters, which \texttt sets literally.
+%
+% \par\medskip rather than \\[...]: inside a fixed-height box a \\ that lands
+% next to a \centering can raise "There's no line here to end", and \par is
+% unambiguous.
 \newcommand{\figmissing}[3][t]{%
 	\begin{figure}[#1]
 		\centering
-		\fbox{\parbox[c][40mm][c]{0.9\textwidth}{\centering\sffamily\small
-			\textcolor{ubred}{Figure not available on this host}\\[0.4em]
-			\texttt{#2}\\[0.4em]
-			\footnotesize regenerate on the compute host}}
+		\fbox{%
+			\begin{minipage}[c][38mm][c]{0.88\textwidth}
+				\centering\sffamily\small
+				\textcolor{ubred}{Figure not available on this host}\par\medskip
+				\texttt{\detokenize{#2}}\par\medskip
+				{\footnotesize regenerate it on the compute host}
+			\end{minipage}}
 		\caption{#3}
 	\end{figure}
 }
@@ -162,8 +175,8 @@
 % text block and lets it run out into the margin column, which is empty on
 % these pages. Column widths must sum to \widefigurewidth.
 %
-% Usage:  \begin{widetable}{@{}L{12mm}L{45mm}...@{}}  ... \end{widetable}
-\newenvironment{widetable}[1]
+% Usage:  \begin{registertable}{@{}L{12mm}L{45mm}...@{}}  ... \end{registertable}
+\newenvironment{registertable}[1]
   {\begingroup
    \setlength{\LTleft}{0pt}%
    \setlength{\LTright}{\fill}%
@@ -172,9 +185,28 @@
    \begin{longtable}{#1}}
   {\end{longtable}\endgroup}
 
-% Width of a wide table, for convenience in column arithmetic.
+% ---------------------------------------------------------------------------
+% \widefigurewidth, made safe for tabularx
+% ---------------------------------------------------------------------------
+% PSIThesis.cls line 398 defines
+%     \def\widefigurewidth{\dimexpr(\marginparwidth + \textwidth + \marginparsep)}
+% with NO \relax terminator. That is fine for \includegraphics[width=...],
+% where the keyval parser terminates the scan -- which is the only use the
+% template itself makes of it.
+%
+% It is NOT fine as the width argument of tabularx. tabularx measures its
+% columns over several passes and does arithmetic on that width repeatedly; an
+% unterminated \dimexpr expression is not a length register, and the scan runs
+% on into the column specification. Nine tables in this thesis pass
+% \widefigurewidth to tabularx.
+%
+% So: compute it once into a real length and point \widefigurewidth at that.
+% Both uses then work, and the class file stays unmodified.
 \newlength{\wtw}
-\AtBeginDocument{\setlength{\wtw}{\dimexpr\marginparwidth+\textwidth+\marginparsep\relax}}
+\AtBeginDocument{%
+  \setlength{\wtw}{\dimexpr\marginparwidth+\textwidth+\marginparsep\relax}%
+  \def\widefigurewidth{\wtw}%
+}
 
 % A column type that wraps and stays left-aligned inside tabularx.
 \newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}

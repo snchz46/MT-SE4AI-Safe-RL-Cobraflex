@@ -167,7 +167,7 @@ for my $file (@ARGV) {
             warn_($file,$ln,"leftover Markdown bold '**'")      if $t =~ /\*\*/;
             warn_($file,$ln,"leftover Markdown heading '#'")    if $t =~ /^\s*#{1,6}\s/;
             warn_($file,$ln,"leftover Markdown table row '|'")  if $t =~ /^\s*\|.*\|\s*$/;
-            warn_($file,$ln,"leftover Markdown backtick")       if $t =~ /`/;
+            warn_($file,$ln,"leftover Markdown code span") if $t =~ /`[^`']*`/;  # a lone ` ... ' is a LaTeX open quote, not Markdown
         }
 
         # ---- E: unknown macros -------------------------------------------

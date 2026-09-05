@@ -1,0 +1,132 @@
+% Converted from: manuscript/draft_v5_en/back/F_appendix_traceability.md
+% Appendix F --- Traceability matrix
+%
+% NOTE: the F.1 table carries superscript markers 1..7 and 9 whose footnote
+% texts are not present in the source Markdown. They are transcribed verbatim
+% as \textsuperscript{} so nothing is lost, but they are dangling references in
+% the source and will read as such until the notes are supplied.
+
+\chapter{Traceability Matrix}
+\label{app:F}
+
+The matrix exists in two complementary forms that are kept synchronised: a readable one,
+organised by mitigation chain, and a machine-processable one over which the validator
+checks the eight coverage constraints. A violation of any of them blocks the
+corresponding review gate.
+
+\section{Summary by mitigation chain}
+\label{sec:F.1}
+
+\begin{widetable}{@{}L{17mm}L{17mm}L{27mm}L{38mm}L{22mm}L{40mm}@{}}
+  \caption{Traceability by mitigation chain, with the simulation verdict.}\label{tab:F.1}\\
+  \toprule
+  \tabhead{Hazard} & \tabhead{Safety Requirement} & \tabhead{Cage Rule(s)} &
+  \tabhead{Scenarios} & \tabhead{Verifying Metric(s)} & \tabhead{Verdict (Sim)}\\
+  \midrule
+  \endfirsthead
+  \toprule
+  \tabhead{Hazard} & \tabhead{Safety Requirement} & \tabhead{Cage Rule(s)} &
+  \tabhead{Scenarios} & \tabhead{Verifying Metric(s)} & \tabhead{Verdict (Sim)}\\
+  \midrule
+  \endhead
+  \bottomrule
+  \endfoot
+
+  \hz{01} & \sr{001} & \cagerule{01} & \scn{NOM-01}, \scn{NOM-02}, \scn{EDGE-02} & \met{S1} & \textbf{Satisfied}\\
+  \addlinespace
+  \hz{01}, \hz{02} & \sr{003} & \cagerule{03} & \scn{NOM-02}, \scn{EDGE-01} & \met{S4} & \textbf{Satisfied}\,\textsuperscript{7}\\
+  \addlinespace
+  \hz{02} & \sr{002} & \cagerule{02} & \scn{EDGE-01}, \scn{EDGE-04} & \met{P4} & \textbf{Satisfied}\,\textsuperscript{7}\\
+  \addlinespace
+  \hz{02} & \sr{011} & \cagerule{06} + training & \scn{EDGE-01}, \scn{EDGE-04} & \met{P7} & \textbf{Satisfied}\\
+  \addlinespace
+  \hz{03} & \sr{004} & \cagerule{04} & \scn{NOM-02}, \scn{EDGE-03} & \met{P3} & \textbf{Satisfied}\\
+  \addlinespace
+  \hz{04}, \hz{07} & \sr{005} & \cagerule{05} & \scn{EDGE-04} & \met{S3} & \textbf{Satisfied}\\
+  \addlinespace
+  \hz{05} & \sr{006} & \cagerule{06} & All scenarios & \met{I5} & \textbf{Satisfied}\,\textsuperscript{1}\\
+  \addlinespace
+  \hz{06} & \sr{007} & \cagerule{05} (state-validity triggers) & \scn{PERT-02} & \met{S3} & \textbf{Satisfied}\\
+  \addlinespace
+  \hz{07} & \sr{008} & \cagerule{05} (external-stop trigger) & \scn{NOM-03}, \scn{EDGE-04} & \met{S3} & \textbf{Satisfied}\\
+  \addlinespace
+  \hz{08} & \sr{009} & training & \scn{NOM-01}, \scn{NOM-02}, \scn{NOM-03}, \scn{PERT-03} & \met{P6}, \met{S2} (\mon) & \textbf{Satisfied} (out-of-band, \dec{64}/\dec{69})\,\textsuperscript{2}\\
+  \addlinespace
+  \hz{09} & \sr{010} & arbiter & \scn{EDGE-04}, \scn{EDGE-05} & \met{S2}, \met{I3} & \textbf{Not satisfied} --- CL-B finding, non-vetoing (\dec{69})\,\textsuperscript{3}\\
+  \addlinespace
+  \hz{10} & \sr{012} & \cagerule{01}, \cagerule{02}, \cagerule{03} (over CV state) + training & \scn{NOM-01}, \scn{PERT-04}, \scn{PERT-05}, \scn{PERT-06}, \scn{PERT-09}, \scn{PERT-10}, \scn{PERT-11}, \scn{PERT-12}, \scn{PERT-13} & \met{S1}, \met{S2} & \textbf{Satisfied} (2-D PPO 550k, verdict of record; GE4-V2 gate record; \dec{29} coverage closed)\,\textsuperscript{4}\,\textsuperscript{6}\,\textsuperscript{9}\\
+  \addlinespace
+  \hz{11} & \sr{013} & \cagerule{05} (CV-estimator health $\rightarrow$ controlled stop) & \scn{NOM-01}, \scn{PERT-07}, \scn{PERT-13} & \met{S3} & \textbf{Satisfied} (2-D PPO 550k, verdict of record; GE4-V2 gate record: \scn{PERT-07} 25/25 + \scn{PERT-13} 40/40; \dec{29} closed by \dec{46})\,\textsuperscript{5}\,\textsuperscript{6}\,\textsuperscript{9}\\
+  \addlinespace
+  \hz{12} & \sr{014} & \cagerule{05} (plausibility check $\rightarrow$ controlled stop) & \scn{NOM-01}, \scn{PERT-08}, \scn{PERT-04}..06, \scn{PERT-09}..10, \scn{PERT-11}..13 & \met{S1}, \met{S3} & \textbf{Satisfied} (2-D PPO 550k, verdict of record; GE4-V2 gate record: \scn{PERT-08} false-lane 25/25)\,\textsuperscript{4}\,\textsuperscript{6}\,\textsuperscript{9}\\
+\end{widetable}
+
+\section{Machine-processable form}
+\label{sec:F.2}
+
+Each row represents a chain from a hazard to a metric. A hazard appears in
+several rows because it spans several chains. The physical verdict column is declared \textbf{not
+executed} in its entirety: the deployment chain is built and has driven on hardware, but no
+run has been executed under the scenario protocol (\S10.4d--e).
+
+\begin{widetable}{@{}L{15mm}L{16mm}L{13mm}L{28mm}L{22mm}L{15mm}L{25mm}L{22mm}@{}}
+  \caption{Machine-processable traceability matrix, one row per hazard-to-metric chain.}\label{tab:F.2}\\
+  \toprule
+  \tabhead{Hazard} & \tabhead{Requirement} & \tabhead{Rule} & \tabhead{Type} &
+  \tabhead{Scenario} & \tabhead{Metric} & \tabhead{Sim.\ verdict} & \tabhead{Phys.\ verdict}\\
+  \midrule
+  \endfirsthead
+  \toprule
+  \tabhead{Hazard} & \tabhead{Requirement} & \tabhead{Rule} & \tabhead{Type} &
+  \tabhead{Scenario} & \tabhead{Metric} & \tabhead{Sim.\ verdict} & \tabhead{Phys.\ verdict}\\
+  \midrule
+  \endhead
+  \bottomrule
+  \endfoot
+
+  \hz{01} & \sr{001} & \cagerule{01} & cage rule & \scn{NOM-01}  & \met{S1} & satisfied & not executed\\
+  \hz{01} & \sr{001} & \cagerule{01} & cage rule & \scn{NOM-02}  & \met{S1} & satisfied & not executed\\
+  \hz{01} & \sr{001} & \cagerule{01} & cage rule & \scn{EDGE-02} & \met{S1} & satisfied & not executed\\
+  \hz{01} & \sr{001} & \cagerule{01} & cage rule & \scn{NOM-01}  & \met{S2} & satisfied & not executed\\
+  \hz{01} & \sr{003} & \cagerule{03} & cage rule & \scn{NOM-02}  & \met{S4} & satisfied & not executed\\
+  \hz{01} & \sr{003} & \cagerule{03} & cage rule & \scn{EDGE-01} & \met{S4} & satisfied & not executed\\
+  \hz{02} & \sr{002} & \cagerule{02} & cage rule & \scn{EDGE-01} & \met{P4} & satisfied & not executed\\
+  \hz{02} & \sr{002} & \cagerule{02} & cage rule & \scn{EDGE-04} & \met{P4} & satisfied & not executed\\
+  \hz{02} & \sr{003} & \cagerule{03} & cage rule & \scn{EDGE-01} & \met{S4} & satisfied & not executed\\
+  \hz{03} & \sr{004} & \cagerule{04} & cage rule & \scn{NOM-02}  & \met{P3} & satisfied & not executed\\
+  \hz{03} & \sr{004} & \cagerule{04} & cage rule & \scn{EDGE-03} & \met{P3} & satisfied & not executed\\
+  \hz{04} & \sr{005} & \cagerule{05} & cage rule & \scn{EDGE-04} & \met{S3} & satisfied & not executed\\
+  \hz{05} & \sr{006} & \cagerule{06} & cage rule & \scn{NOM-01}  & \met{I5} & satisfied & not executed\\
+  \hz{05} & \sr{006} & \cagerule{06} & cage rule & \scn{NOM-02}  & \met{I5} & satisfied & not executed\\
+  \hz{06} & \sr{007} & \cagerule{05} & cage rule & \scn{PERT-02} & \met{S3} & satisfied & not executed\\
+  \hz{07} & \sr{005} & \cagerule{05} & cage rule & \scn{EDGE-04} & \met{S3} & satisfied & not executed\\
+  \hz{07} & \sr{008} & \cagerule{05} & cage rule & \scn{NOM-03}  & \met{S3} & satisfied & not executed\\
+  \hz{07} & \sr{008} & \cagerule{05} & cage rule & \scn{EDGE-04} & \met{S3} & satisfied & not executed\\
+  \hz{10} & \sr{012} & \cagerule{01} & cage rule & \scn{PERT-04} & \met{S1} & satisfied & not executed\\
+  \hz{10} & \sr{012} & \cagerule{02} & cage rule & \scn{PERT-05} & \met{S1} & satisfied & not executed\\
+  \hz{10} & \sr{012} & \cagerule{03} & cage rule & \scn{PERT-06} & \met{S2} & satisfied & not executed\\
+  \hz{10} & \sr{012} & ---           & training  & \scn{PERT-04} & \met{S2} & satisfied & not executed\\
+  \hz{10} & \sr{012} & \cagerule{01} & cage rule & \scn{PERT-09} & \met{S1} & satisfied & not executed\\
+  \hz{10} & \sr{012} & \cagerule{01} & cage rule & \scn{PERT-10} & \met{S1} & satisfied & not executed\\
+  \hz{11} & \sr{013} & \cagerule{05} & cage rule & \scn{PERT-07} & \met{S3} & satisfied & not executed\\
+  \hz{12} & \sr{014} & \cagerule{05} & cage rule & \scn{PERT-08} & \met{S1} & satisfied & not executed\\
+  \hz{12} & \sr{014} & \cagerule{05} & cage rule & \scn{PERT-08} & \met{S3} & satisfied & not executed\\
+  \hz{12} & \sr{014} & \cagerule{05} & cage rule & \scn{PERT-09} & \met{S3} & satisfied & not executed\\
+  \hz{12} & \sr{014} & \cagerule{05} & cage rule & \scn{PERT-10} & \met{S3} & satisfied & not executed\\
+  \hz{08} & \sr{009} & ---           & training constraint & \scn{NOM-01}  & \met{P6} & satisfied & not executed\\
+  \hz{08} & \sr{009} & ---           & training constraint & \scn{PERT-03} & \met{P6} & satisfied & not executed\\
+  \hz{09} & \sr{010} & ---           & arbiter & \scn{EDGE-04} & \met{I3} & satisfied & not executed\\
+  \hz{09} & \sr{010} & ---           & arbiter & \scn{EDGE-05} & \met{S2} & \textbf{not satisfied} & not executed\\
+\end{widetable}
+
+\section{Verified constraints}
+\label{sec:F.3}
+
+The validator checks mechanically that: every hazard is referenced by at least one
+requirement; every requirement references at least one hazard; every requirement is implemented by
+at least one rule, training constraint or arbitration property; every rule
+implements at least one requirement; every rule is exercised by at least one scenario; every
+scenario references at least one requirement; every requirement has at least one verifying
+metric; and every referenced metric is defined.
+
+\textbf{Status at the close: all checks pass, with no orphans and no warnings.}

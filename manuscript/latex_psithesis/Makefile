@@ -36,14 +36,20 @@ quick:
 #                   macros, figure arity, table column counts, bare Greek
 #   check-complete  section counts and word ratios against the Markdown source,
 #                   i.e. "did the conversion silently drop or summarise text"
-.PHONY: check check-tex check-complete
-check: check-tex check-complete
+#   check-refs      cross-file: a \Cref whose \label is never defined renders as
+#                   "??" and is only a WARNING in the log, so it survives a
+#                   successful build. Per-file checks cannot see it.
+.PHONY: check check-tex check-complete check-refs
+check: check-tex check-complete check-refs
 
 check-tex:
 	perl check_tex.pl chapters/*.tex appendices/*.tex front/*.tex
 
 check-complete:
 	perl check_complete.pl
+
+check-refs:
+	perl check_refs.pl chapters/*.tex appendices/*.tex front/*.tex
 
 .PHONY: clean
 clean:

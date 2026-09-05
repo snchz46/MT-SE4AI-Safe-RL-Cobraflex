@@ -1,0 +1,149 @@
+% Converted from: manuscript/draft_v5_en/back/I_appendix_campaign.md
+% Appendix I --- Breakdown of the reference campaign
+
+\chapter{Breakdown of the Reference Campaign}
+\label{app:I}
+
+Data generated directly from the campaign artefacts
+(\file{campaign\_report.json} and \file{failure\_mode\_breakdown.json}): \textbf{1,890 runs, 0 errors},
+27 scenarios $\times$ 2 modes, over the two-dimensional reference policy.
+
+\section{Runs passed by scenario and mode}
+\label{sec:I.1}
+
+The verdict in the right-hand column corresponds to \enf{} mode and is computed against the
+pass criterion declared by each scenario, with the fraction threshold that the
+scenario fixes.
+
+\begin{table}[t]
+  \caption{Runs passed by scenario and mode, with the enforcement verdict.}
+  \label{tab:I.1}
+  \centering\small
+  \begin{tabular}{@{}lrrc@{}}
+    \toprule
+    \tabhead{Scenario} & \tabhead{Enforcement} & \tabhead{Monitoring} & \tabhead{Enf.\ verdict}\\
+    \midrule
+    \scn{EDGE-01}  & 8/30   & 4/30   & \ding{55}\\
+    \scn{EDGE-02}  & 29/30  & 22/30  & \ding{51}\\
+    \scn{EDGE-03}  & 25/25  & 25/25  & \ding{51}\\
+    \scn{EDGE-04}  & 30/30  & 0/30   & \ding{51}\\
+    \scn{EDGE-05}  & 44/100 & 25/100 & \ding{55}\\
+    \scn{FRONT-01} & 0/25   & 0/25   & \ding{55}\\
+    \scn{FRONT-02} & 25/25  & 25/25  & \ding{51}\\
+    \scn{FRONT-03} & 25/25  & 0/25   & \ding{51}\\
+    \scn{FRONT-04} & 19/25  & 0/25   & \ding{55}\\
+    \scn{FRONT-05} & 25/25  & 6/25   & \ding{51}\\
+    \scn{FRONT-06} & 17/25  & 0/25   & \ding{55}\\
+    \scn{FRONT-07} & 25/25  & 25/25  & \ding{51}\\
+    \scn{NOM-01}   & 50/50  & 50/50  & \ding{51}\\
+    \scn{NOM-02}   & 49/50  & 44/50  & \ding{51}\\
+    \scn{NOM-03}   & 25/25  & 8/25   & \ding{51}\\
+    \scn{PERT-01}  & 60/60  & 60/60  & \ding{51}\\
+    \scn{PERT-02}  & 40/40  & 40/40  & \ding{51}\\
+    \scn{PERT-04}  & 40/40  & 33/40  & \ding{51}\\
+    \scn{PERT-05}  & 40/40  & 37/40  & \ding{51}\\
+    \scn{PERT-06}  & 40/40  & 40/40  & \ding{51}\\
+    \scn{PERT-07}  & 25/25  & 25/25  & \ding{51}\\
+    \scn{PERT-08}  & 25/25  & 25/25  & \ding{51}\\
+    \scn{PERT-09}  & 25/25  & 0/25   & \ding{51}\\
+    \scn{PERT-10}  & 25/25  & 25/25  & \ding{51}\\
+    \scn{PERT-11}  & 30/30  & 30/30  & \ding{51}\\
+    \scn{PERT-12}  & 40/40  & 32/40  & \ding{51}\\
+    \scn{PERT-13}  & 40/40  & 20/40  & \ding{51}\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Status per requirement}
+\label{sec:I.2}
+
+\begin{table}[t]
+  \caption{Status of each requirement in the reference campaign.}
+  \label{tab:I.2}
+  \centering\small
+  \begin{tabularx}{\textwidth}{@{}lcYl@{}}
+    \toprule
+    \tabhead{Requirement} & \tabhead{Class} & \tabhead{Status in the campaign} & \tabhead{Failing scenarios}\\
+    \midrule
+    \sr{001} & A & satisfied              & ---\\
+    \sr{002} & A & literal failure        & \scn{EDGE-01}\\
+    \sr{003} & A & literal failure        & \scn{EDGE-01}\\
+    \sr{004} & A & satisfied              & ---\\
+    \sr{005} & A & satisfied              & ---\\
+    \sr{006} & B & out of band            & ---\\
+    \sr{007} & A & satisfied              & ---\\
+    \sr{008} & A & satisfied              & ---\\
+    \sr{009} & B & insufficient evidence  & ---\\
+    \sr{010} & B & literal failure        & \scn{EDGE-05}\\
+    \sr{011} & B & literal failure        & \scn{EDGE-01}\\
+    \sr{012} & A & satisfied              & ---\\
+    \sr{013} & A & satisfied              & ---\\
+    \sr{014} & A & satisfied              & ---\\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{Safety invariant (enforcement mode)}
+\label{sec:I.3}
+
+\begin{table}[t]
+  \caption{Safety invariant over the enforcement runs of the reference campaign.}
+  \label{tab:I.3}
+  \centering\small
+  \begin{tabularx}{\textwidth}{@{}Yr@{}}
+    \toprule
+    \tabhead{Quantity} & \tabhead{Value}\\
+    \midrule
+    Enforcement runs                                & 945\\
+    Contacts with the road edge                     & 56\\
+    Runs with a lateral excursion $\ge$ the limit   & 69\\
+    Maximum lateral excursion (m)                   & 0.2824\\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+The contacts counted correspond entirely to runs whose \textbf{initial
+condition falls outside the operational domain} (edge and frontier families). Inside the
+domain, the count is \textbf{zero}.
+
+\section{Co-activation grid: breakdown of the negative verdict}
+\label{sec:I.4}
+
+Partition of the grid according to whether the injected point falls inside the operational domain:
+
+\begin{table}[t]
+  \caption{Co-activation grid, partitioned by domain membership.}
+  \label{tab:I.4}
+  \centering\small
+  \begin{tabularx}{\textwidth}{@{}Yrrrr@{}}
+    \toprule
+    \tabhead{Block} & \tabhead{Runs} & \tabhead{Passed} & \tabhead{Failed} & \tabhead{Lateral margin violations}\\
+    \midrule
+    Inside the ODD  & 85 & 42 & 43 & \textbf{16}\\
+    Outside the ODD & 15 & 2  & 13 & 10\\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Breakdown by the combination of rules actually co-activated, which is what localises the
+arbitration problem:
+
+\begin{table}[t]
+  \caption{Co-activation grid by rule combination.}
+  \label{tab:I.5}
+  \centering\small
+  \begin{tabularx}{\textwidth}{@{}Yrrrr@{}}
+    \toprule
+    \tabhead{Rule combination} & \tabhead{Runs} & \tabhead{Failures} & \tabhead{Lateral margin violations} & \tabhead{Inside the ODD}\\
+    \midrule
+    \cagerule{01} $\wedge$ \cagerule{02}                        & 20 & 15 & 11 & 15\\
+    \cagerule{01} $\wedge$ \cagerule{02} $\wedge$ \cagerule{04} & 20 & 14 & 11 & 15\\
+    \cagerule{01} $\wedge$ \cagerule{03}                        & 20 & 15 & 4  & 20\\
+    \cagerule{01} $\wedge$ \cagerule{04} $\wedge$ \cagerule{06} & 20 & 12 & 0  & 15\\
+    \cagerule{04} $\wedge$ \cagerule{06}                        & 20 & 0  & 0  & 20\\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+The reading is in \Cref{sec:8.6}: the violations concentrate where the lateral correction and the
+heading correction come into conflict, and they disappear where they do not.

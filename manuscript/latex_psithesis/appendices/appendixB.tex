@@ -1,0 +1,147 @@
+% Converted from: manuscript/draft_v5_en/back/B_appendix_requirements.md
+% Appendix B --- Safety requirements specification and rationale
+
+\chapter{Safety Requirements Specification and \emph{Rationale}}
+\label{app:B}
+
+Complete version of \Cref{tab:4.2}, with thresholds and traceability, followed by the \emph{rationale}
+requirement by requirement: where each threshold comes from, what makes it falsifiable and what its
+calibration status is.
+
+\begin{widetable}{@{}L{13mm}L{48mm}L{30mm}L{13mm}L{20mm}L{13mm}L{25mm}@{}}
+  \caption{Safety requirements, thresholds and traceability.}\label{tab:B.1}\\
+  \toprule
+  \tabhead{ID} & \tabhead{Short statement} & \tabhead{Main parameters} & \tabhead{H covered} &
+  \tabhead{Cage rule} & \tabhead{Criticality} & \tabhead{Verification}\\
+  \midrule
+  \endfirsthead
+  \toprule
+  \tabhead{ID} & \tabhead{Short statement} & \tabhead{Main parameters} & \tabhead{H covered} &
+  \tabhead{Cage rule} & \tabhead{Criticality} & \tabhead{Verification}\\
+  \midrule
+  \endhead
+  \bottomrule
+  \endfoot
+
+  \sr{001} & The absolute lateral offset with respect to the centre of the road shall stay below \code{d\_max} during operation inside the applicable ODD. & \code{d\_max = 0.16 m} & \hz{01} & \cagerule{01} & SR-CL-A & \scn{NOM-01}, \scn{NOM-02}, \scn{EDGE-02}\\
+  \addlinespace
+  \sr{002} & The absolute orientation error with respect to the lane direction shall stay below $\theta_{\max}$. & $\theta_{\max}$ = 0.44 rad (\qdeg{25}) & \hz{02} & \cagerule{02} & SR-CL-A & \scn{EDGE-01}, \scn{EDGE-04}\\
+  \addlinespace
+  \sr{003} & The projected time to lane crossing (TTLC) shall stay above \code{t\_min}; the 5th percentile of TTLC over nominal runs shall be $\ge\qs{0.5}$. & \code{t\_min} = \qs{1.0}; p5 floor = \qs{0.5} & \hz{01}, \hz{02} (partial) & \cagerule{03} & SR-CL-A & \scn{NOM-02}, \scn{EDGE-01}\\
+  \addlinespace
+  \sr{004} & The longitudinal speed shall not exceed \code{v\_max}$(\kappa)$, a ceiling dependent on the local curvature $\kappa$. & \code{v\_max\_straight} = \qmps{0.5}; \code{v\_max\_curve} = \qmps{0.25} & \hz{03} & \cagerule{04} & SR-CL-A & \scn{NOM-02}, \scn{EDGE-03}\\
+  \addlinespace
+  \sr{005} & Under a compound trigger on heading and offset lasting $\Delta t_{\max}$, the system shall transition to emergency mode with minimum deceleration and frozen steering. & $\theta_{\mathrm{warn}}=\qdeg{20}$; \code{d\_warn} = \qm{0.12}; $\Delta t_{\max}=\qs{0.2}$; $a_{\min}=0.3$ m/s$^2$ (provisional, subject to \met{3}) & \hz{04}, \hz{07} (partial) & \cagerule{05} & SR-CL-A & \scn{EDGE-04}\\
+  \addlinespace
+  \sr{006} & The command variation between two consecutive cycles shall stay below $\delta_{\max}$ for steering and throttle. & $\delta_{\max,\mathrm{steer}} = 0.15$; $\delta_{\max,\mathrm{thr}} = 0.10$ (per cycle) & \hz{05} & \cagerule{06} & SR-CL-B & All scenarios (rate limiter active)\\
+  \addlinespace
+  \sr{007} & The cage shall activate emergency mode if the observation is older than \code{staleness\_max} or if any field is outside the plausible range. & \code{staleness\_max} = 200 ms; \code{N\_missing\_max} = 5 cycles & \hz{06} & part of \cagerule{05} & SR-CL-A & \scn{PERT-02}\\
+  \addlinespace
+  \sr{008} & Under an external stop signal or a controlled end of episode, the system shall decelerate to \qmps{0} within \code{t\_stop\_max} without exceeding the lateral \code{d\_max}. & \code{t\_stop\_max} = \qs{1.7}; \code{d\_max} = \qm{0.16} & \hz{07} & part of \cagerule{05} + vehicle-control node & SR-CL-A & \scn{NOM-03}, \scn{EDGE-04}\\
+  \addlinespace
+  \sr{009} & In every eligible window of \code{t\_window}, the vehicle shall accumulate at least $\Delta s_{\min}$ of nominal longitudinal progress; the metric \met{S2} under \mon{} mode shall not exhibit a sustained rise with respect to the baseline. & $\Delta s_{\min}=\qm{0.10}$; \code{t\_window} = \qs{2.0}; $\Delta t_{\mathrm{settle}}=\qs{1.0}$ & \hz{08} & training (\dec{25}) & SR-CL-B & \scn{NOM-01}..03, \scn{PERT-03}\\
+  \addlinespace
+  \sr{010} & When two or more cage rules activate in the same cycle, the final command shall satisfy the safe envelope of every activated rule and the inter-cycle pattern shall not exhibit sustained oscillation above $f_{\mathrm{osc,max}}$. & $f_{\mathrm{osc,max}}=\qhz{5}$; joint-envelope assertion & \hz{09} & arbiter (\dec{25}) & SR-CL-B & \scn{EDGE-04}, \scn{EDGE-05}\\
+  \addlinespace
+  \sr{011} & The standard deviation of the heading error over eligible windows of \code{t\_psd} shall stay below $\sigma_{\theta,\max}$, covering the in-band branch of \hz{02} that \sr{002} does not bound. & $\sigma_{\theta,\max}=\qdeg{5}$; \code{t\_psd} = \qs{1.0} & \hz{02} (oscillatory branch) & \cagerule{06} + training & SR-CL-B & \scn{EDGE-01}, \scn{EDGE-04}\\
+  \addlinespace
+  \sr{012} & (Track `E') Lane keeping shall stay inside the \sr{001}/\sr{002} envelope under degraded visual input (glare, exposure, motion blur, contrast, shadow). & \code{d\_max} = \qm{0.16}; $\theta_{\max}=\qdeg{25}$ (reused); provisional visual envelope & \hz{10} & \cagerule{01}, \cagerule{02}, \cagerule{03} + training & SR-CL-A & \scn{PERT-04}, \scn{PERT-05}, \scn{PERT-06}, \scn{PERT-09}, \scn{PERT-10}\\
+  \addlinespace
+  \sr{013} & (Track `E') On loss of valid perception (occlusion / absence of features / stale or dropped frames), the system shall enter an open-loop controlled stop through \cagerule{05} without exceeding \code{d\_max}. & \code{perc\_staleness\_max} = 200 ms (provisional); \code{d\_max} = \qm{0.16} & \hz{11} & part of \cagerule{05} (health of the CV estimator of the cage) & SR-CL-A & \scn{PERT-07}\\
+  \addlinespace
+  \sr{014} & (Track `E') The cage shall not impose its rules on a lane estimate that fails the plausibility / temporal consistency check; instead it shall enter a controlled stop (\cagerule{05}). & \code{plaus\_tol}, $\Delta t_{\mathrm{plaus}}$ (provisional, against the ground-truth oracle) & \hz{12} & part of \cagerule{05} (plausibility check $\rightarrow$ stop) & SR-CL-A & \scn{PERT-08}, \scn{PERT-04}..06, \scn{PERT-09}, \scn{PERT-10}\\
+\end{widetable}
+
+\section{Rationale per requirement}
+\label{sec:B.1}
+
+The complete rationale for each SR --- including the physical justification of the
+threshold citing the ODD parameters, the description of the falsifiable
+form, the identification of the verification experiment, and the cross
+reference to the hazard from which it derives --- lives in \file{docs/03\_safety\_requirements.md}.
+As an illustration of the level of detail required, this subsection
+presents the complete rationale of \sr{001} as a representative example;
+the rest is summarised briefly at the end of the subsection and cited
+by reference.
+
+The rationale of \sr{001} is the following. The parameter
+\code{d\_max} = \qm{0.16} is not chosen from the performance of the policy
+but from the geometric envelope of the ODD: the road has a total width
+\code{ODD-1.ROAD\_WIDTH} = \qm{0.50}, which places the physical edge of the drivable
+corridor at \qm{0.25} from the longitudinal axis of the track. An aggregate
+safety margin of $\Delta = \qm{0.09}$ absorbs three independent
+contributions: the lateral noise of the state estimator
+($\approx\qm{0.01}$), the maximum drift expected from the nominal control latency
+(\code{v\_max} $\cdot$ \code{LATENCY\_NOMINAL} = \qmps{0.5} $\cdot$ 50 ms = \qm{0.025}), and
+half the lateral physical footprint of the 1:14 CobraFlex ($\approx\qm{0.05}$). The
+falsifiable threshold is then \code{d\_max} = \code{ROAD\_WIDTH}/2 $-\ \Delta$ = $0.25 - 0.09 = \qm{0.16}$,
+interpreted as the modulus of the lateral offset of the geometric centre
+of the vehicle with respect to the axis of the drivable corridor. This
+convention of sign and unit is fixed in the statement of \sr{001} in
+\file{docs/03\_safety\_requirements.md} and is cited by the derived SRs
+(\sr{005} on \code{d\_warning} = \qm{0.12} $<$ \code{d\_max} as an early warning
+threshold, \sr{008} on staying below \code{d\_max} during the controlled
+stop).
+
+The summarised rationale of the rest of the SRs is described below,
+with a reference to the standalone artefact for the details. \textbf{\sr{002}}
+($\theta_{\max}=\qdeg{25}$) is justified through a bicycle-model calculation of
+recoverability with a wheelbase of \qm{0.15}, a saturated steering of 0.5 rad,
+a nominal speed of \qmps{0.3} and a cage response time of \qs{0.05};
+the value falls inside the recoverable envelope with a margin of approximately
+a factor of two. \textbf{\sr{003}} (\code{t\_min} = \qs{1.0}) is decomposed into \qs{0.3} of
+margin for the cage (defensible by kinematic physics) and \qs{0.7} of
+margin for the policy (marked as provisional, subject to review
+after the training prototype in F3). \textbf{\sr{004}} defines a speed
+ceiling dependent on the curvature, anchored on \code{ODD-1.V\_MAX} = \qmps{0.5}
+for straight sections and reduced to \qmps{0.25} in a curve; the interpolation
+coefficient $k_\kappa = 0.3$ is chosen so that the curve falls
+exactly at the maximum curvature expected from the \code{odd3\_curvy\_loop}
+map (pending closure with TBD-Q9). \textbf{\sr{005}} introduces a compound
+trigger with a persistence of $\Delta t_{\max}=\qs{0.2}$ (four control cycles,
+necessary to distinguish a genuine compound state from a transient
+glitch); $a_{\min} = 0.3$ m/s$^2$ is provisional pending the
+\met{3} measurement on the platform. \textbf{\sr{006}} fixes a rate
+limiter as a conservative defence against abrupt actuation;
+the values $\delta_{\max,\mathrm{steer}} = 0.15$ and $\delta_{\max,\mathrm{thr}} = 0.10$ are
+defaults that require an empirical cross-check against the mechanical
+envelope of the actuator (measurement \met{5}) and against the 95th percentile of the
+natural delta of the trained policy (after the F3 prototype). \textbf{\sr{007}}
+preserves a staleness horizon of \code{staleness\_max} = 200 ms (four
+control cycles) complemented by a counter of missing
+messages \code{N\_missing\_max} = 5, both values conservative with respect to
+the nominal properties of the ROS2 bus; the plausible ranges per
+state field are kept deliberately wider than the operating
+envelope of each variable, so that range violations are unambiguous
+indicators of a sensor failure. \textbf{\sr{008}}
+fixes \code{t\_stop\_max} = \qs{1.7}, consistent with \code{v\_max\_straight} / $a_{\min} \approx \qs{1.67}$
+from \sr{005} plus a margin for granularity and latency; the consolidation
+of the earlier inconsistency with \sr{005} (\qs{1.5} in the F0 baseline) is
+recorded in \file{docs/CHANGELOG.md}. \textbf{\sr{009}} bounds the longitudinal
+progress from below: $\Delta s_{\min} = \qm{0.10}$ derives from the product of the
+minimum useful operating speed ($v_{\min} \approx \qmps{0.05}$) and a sliding
+window of \code{t\_window} = \qs{2.0}; the carve-out of $\Delta t_{\mathrm{settle}} = \qs{1.0}$
+after transitions from emergency mode or controlled stop prevents
+\sr{009} from conflicting with \sr{005} or \sr{008} during the restart
+ramp (cf.\ \S\sr{009} of the SRS for the explicit priority
+order). Its implementation is training (\dec{25}): the cage does not inject
+progress, it only observes the stall through \met{P6} and emits a signal to
+the test harness. \textbf{\sr{010}} ensures the compositional consistency of the
+cage: the \emph{joint-envelope assertion} at the end of each cycle
+verifies that the emitted command satisfies the preconditions of every
+rule active in that cycle, and an inter-cycle monitor bounds the
+oscillation between contradictory corrections below
+$f_{\mathrm{osc,max}} = \qhz{5}$. The implementation is a structural property
+of the cage pipeline (\code{arbiter}, \dec{25}), not an additional numbered
+rule; the failure of the assertion drops the system into \cagerule{05}
+(emergency mode) as a last-line mitigation. \textbf{\sr{011}} closes
+the oscillatory branch of \hz{02} that the pure-magnitude threshold of \sr{002} does not
+bound: $\sigma_{\theta,\max} = \qdeg{5}$ admits oscillations up to an amplitude of $\approx\qdeg{7}$ with
+sufficient margin against $\theta_{\max} = \qdeg{25}$, but is tight enough
+to detect the within-bounds-but-oscillatory mode; the window
+\code{t\_psd} = \qs{1.0} captures at least one period of the significant
+oscillation ($\approx\qhz{1}$) without being diluted by drifts on a longer time scale.
+The implementation is hybrid (\cagerule{06} + training): \cagerule{06} attenuates
+high-frequency content in the commands of the policy, and a
+heading variance term in the reward encourages the policy not to
+oscillate in steady state.

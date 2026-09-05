@@ -125,7 +125,15 @@ quote the 96-page figure from the 31.07.2026 build against this layout.
 ## Static checks — the stand-in for a trial compile
 
 ```bash
-make check          # both of the below
+make check
+```
+
+or, where `make` is not installed (the Windows authoring host has no `make`):
+
+```bash
+perl check_tex.pl chapters/*.tex appendices/*.tex front/*.tex
+perl check_complete.pl
+perl check_refs.pl chapters/*.tex appendices/*.tex front/*.tex
 ```
 
 `check_tex.pl` answers *would it compile*: unescaped `%` `&` `_` `#` `$` in
@@ -141,11 +149,22 @@ compares each `.tex` against the Markdown it came from on section and
 subsection counts, which must match exactly, and on running-word count after
 markup is stripped from both sides, which must land in a 0.90–1.12 band. Below
 the band means text went missing; above usually means Markdown leaked through.
+Three files trip a threshold for a reason that was checked by hand and is not
+content loss; they are listed in the script as **verified exceptions**, each
+with the evidence that settled it, so that anything else tripping is genuinely
+unexplained.
 
-**Neither is proof.** They cannot catch a wrong `\Cref` target, a table too wide
-for its column, or a sentence whose meaning changed. They exist because the
-authoring host has no TeX, and a deterministic check is a better use of the
-budget than an agent re-reading for the same mechanical defects.
+`check_refs.pl` catches the one defect that only exists *between* files: a
+`\Cref` whose `\label` is never defined. LaTeX renders those as `??` and emits
+only a warning, so they survive a successful build and reach the examiner.
+
+**Status: all three pass.** 0 errors and 0 warnings on all 25 files; 0
+unexplained completeness flags; 217 labels, 56 references, none dangling and
+none duplicated.
+
+**None of this is proof.** They cannot catch a table too wide for its column, a
+float that lands three pages from its reference, or a sentence whose meaning
+changed. They exist because the authoring host has no TeX.
 
 ## Known gaps
 
@@ -168,6 +187,20 @@ budget than an agent re-reading for the same mechanical defects.
    directory, nothing more.
 5. **Cross-references are conservative.** `\Cref` was used only where the target
    label certainly exists. Some "see Chapter 8" mentions are still plain text.
+6. **Two source defects were repaired, not transcribed.** Both are noted in a
+   comment at the top of the file that carries them. **Appendix D**'s two tables
+   have no header row in the Markdown — the rows begin directly with data — so
+   headers were supplied from the column contents; this is the only place where
+   content was added rather than converted. **Appendix F**'s first table carries
+   superscript markers 1–7 and 9 whose footnote texts do not exist anywhere in
+   the source; they are transcribed verbatim and remain dangling until the notes
+   are written.
+7. **Appendix C is renumbered.** Its source hand-numbers 13 `##` headings under
+   two `#` divisions, skipping C.3 and restarting at C.1, and one subsection
+   headed "Middleware" is actually about the RL algorithm. The manual numbers
+   were dropped so LaTeX numbers the appendix consistently; no heading text was
+   changed and nothing cross-references those numbers. **The mis-titled heading
+   was left alone** — that is an editorial call, not a typesetting one.
 
 ## Licence
 

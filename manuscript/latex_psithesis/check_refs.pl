@@ -25,6 +25,17 @@ for my $file (@ARGV) {
             my $l = $1;
             push @{ $label_at{$l} }, "$file:$ln";
         }
+
+        # The figure wrappers in misc/thesis-commands.tex build the label out
+        # of their last argument -- ig{width}{file}{caption}{2.3} defines
+        # fig:2.3 -- so a scan for \label alone reports every figure reference
+        # as dangling. Take the last brace group of the call; the caption may
+        # itself contain braces, so match it non-greedily up to end of line.
+        #   ig[pl]{w}{file}{caption}{label}
+        #   igwide[pl]{file}{caption}{label}   igmargin[off]{file}{caption}{label}
+        while ($t =~ /\\fig(?:wide|margin)?(?:\\[[^\\]]*\\])?(?:\{(?:[^{}]|\{[^{}]*\})*\})+?\{([0-9A-Za-z.:_-]+)\}\s*$/gm) {
+            push @{ $label_at{"fig:$1"} }, "$file:$ln";
+        }
         while ($t =~ /\\(?:Cref|cref|ref|autoref|nameref|pageref)\{([^}]+)\}/g) {
             push @{ $ref_at{$1} }, "$file:$ln";
         }

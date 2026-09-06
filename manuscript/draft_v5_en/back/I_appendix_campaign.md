@@ -1,7 +1,7 @@
 # Appendix I — Breakdown of the reference campaign
 
 Data generated directly from the campaign artefacts
-(`campaign_report.json` and `failure_mode_breakdown.json`): **1,890 runs, 0 errors**,
+(`campaign_report.json` and `failure_mode_breakdown.json`): 1,890 runs, 0 errors,
 27 scenarios × 2 modes, over the two-dimensional reference policy.
 
 ## I.1 Runs passed by scenario and mode
@@ -68,9 +68,9 @@ scenario fixes.
 | Runs with a lateral excursion ≥ the limit | 69 |
 | Maximum lateral excursion (m) | 0.2824 |
 
-The contacts counted correspond entirely to runs whose **initial
-condition falls outside the operational domain** (edge and frontier families). Inside the
-domain, the count is **zero**.
+The contacts counted correspond entirely to runs whose initial
+condition falls outside the operational domain (edge and frontier families). Inside the
+domain, the count is zero.
 
 ## I.4 Co-activation grid: breakdown of the negative verdict
 
@@ -78,7 +78,7 @@ Partition of the grid according to whether the injected point falls inside the o
 
 | Block | Runs | Passed | Failed | Lateral margin violations |
 | --- | ---: | ---: | ---: | ---: |
-| Inside the ODD | 85 | 42 | 43 | **16** |
+| Inside the ODD | 85 | 42 | 43 | 16 |
 | Outside the ODD | 15 | 2 | 13 | 10 |
 
 Breakdown by the combination of rules actually co-activated, which is what localises the

@@ -32,41 +32,86 @@ corresponding review gate.
   \bottomrule
   \endfoot
 
-  \hz{01} & \sr{001} & \cagerule{01} & \scn{NOM-01}, \scn{NOM-02}, \scn{EDGE-02} & \met{S1} & \textbf{Satisfied}\\
+  \hz{01} & \sr{001} & \cagerule{01} & \scn{NOM-01}, \scn{NOM-02}, \scn{EDGE-02} & \met{S1} & Satisfied\\
   \addlinespace
-  \hz{01}, \hz{02} & \sr{003} & \cagerule{03} & \scn{NOM-02}, \scn{EDGE-01} & \met{S4} & \textbf{Satisfied}\,\textsuperscript{7}\\
+  \hz{01}, \hz{02} & \sr{003} & \cagerule{03} & \scn{NOM-02}, \scn{EDGE-01} & \met{S4} & Satisfied\,\textsuperscript{7}\\
   \addlinespace
-  \hz{02} & \sr{002} & \cagerule{02} & \scn{EDGE-01}, \scn{EDGE-04} & \met{P4} & \textbf{Satisfied}\,\textsuperscript{7}\\
+  \hz{02} & \sr{002} & \cagerule{02} & \scn{EDGE-01}, \scn{EDGE-04} & \met{P4} & Satisfied\,\textsuperscript{7}\\
   \addlinespace
-  \hz{02} & \sr{011} & \cagerule{06} + training & \scn{EDGE-01}, \scn{EDGE-04} & \met{P7} & \textbf{Satisfied}\\
+  \hz{02} & \sr{011} & \cagerule{06} + training & \scn{EDGE-01}, \scn{EDGE-04} & \met{P7} & Satisfied\\
   \addlinespace
-  \hz{03} & \sr{004} & \cagerule{04} & \scn{NOM-02}, \scn{EDGE-03} & \met{P3} & \textbf{Satisfied}\\
+  \hz{03} & \sr{004} & \cagerule{04} & \scn{NOM-02}, \scn{EDGE-03} & \met{P3} & Satisfied\\
   \addlinespace
-  \hz{04}, \hz{07} & \sr{005} & \cagerule{05} & \scn{EDGE-04} & \met{S3} & \textbf{Satisfied}\\
+  \hz{04}, \hz{07} & \sr{005} & \cagerule{05} & \scn{EDGE-04} & \met{S3} & Satisfied\\
   \addlinespace
-  \hz{05} & \sr{006} & \cagerule{06} & All scenarios & \met{I5} & \textbf{Satisfied}\,\textsuperscript{1}\\
+  \hz{05} & \sr{006} & \cagerule{06} & All scenarios & \met{I5} & Satisfied\,\textsuperscript{1}\\
   \addlinespace
-  \hz{06} & \sr{007} & \cagerule{05} (state-validity triggers) & \scn{PERT-02} & \met{S3} & \textbf{Satisfied}\\
+  \hz{06} & \sr{007} & \cagerule{05} (state-validity triggers) & \scn{PERT-02} & \met{S3} & Satisfied\\
   \addlinespace
-  \hz{07} & \sr{008} & \cagerule{05} (external-stop trigger) & \scn{NOM-03}, \scn{EDGE-04} & \met{S3} & \textbf{Satisfied}\\
+  \hz{07} & \sr{008} & \cagerule{05} (external-stop trigger) & \scn{NOM-03}, \scn{EDGE-04} & \met{S3} & Satisfied\\
   \addlinespace
-  \hz{08} & \sr{009} & training & \scn{NOM-01}, \scn{NOM-02}, \scn{NOM-03}, \scn{PERT-03} & \met{P6}, \met{S2} (\mon) & \textbf{Satisfied} (out-of-band, \dec{64}/\dec{69})\,\textsuperscript{2}\\
+  \hz{08} & \sr{009} & training & \scn{NOM-01}, \scn{NOM-02}, \scn{NOM-03}, \scn{PERT-03} & \met{P6}, \met{S2} (\mon) & Satisfied (out-of-band, \dec{64}/\dec{69})\,\textsuperscript{2}\\
   \addlinespace
-  \hz{09} & \sr{010} & arbiter & \scn{EDGE-04}, \scn{EDGE-05} & \met{S2}, \met{I3} & \textbf{Not satisfied} --- CL-B finding, non-vetoing (\dec{69})\,\textsuperscript{3}\\
+  \hz{09} & \sr{010} & arbiter & \scn{EDGE-04}, \scn{EDGE-05} & \met{S2}, \met{I3} & Not satisfied --- CL-B finding, non-vetoing (\dec{69})\,\textsuperscript{3}\\
   \addlinespace
-  \hz{10} & \sr{012} & \cagerule{01}, \cagerule{02}, \cagerule{03} (over CV state) + training & \scn{NOM-01}, \scn{PERT-04}, \scn{PERT-05}, \scn{PERT-06}, \scn{PERT-09}, \scn{PERT-10}, \scn{PERT-11}, \scn{PERT-12}, \scn{PERT-13} & \met{S1}, \met{S2} & \textbf{Satisfied} (2-D PPO 550k, verdict of record; GE4-V2 gate record; \dec{29} coverage closed)\,\textsuperscript{4}\,\textsuperscript{6}\,\textsuperscript{9}\\
+  \hz{10} & \sr{012} & \cagerule{01}, \cagerule{02}, \cagerule{03} (over CV state) + training & \scn{NOM-01}, \scn{PERT-04}, \scn{PERT-05}, \scn{PERT-06}, \scn{PERT-09}, \scn{PERT-10}, \scn{PERT-11}, \scn{PERT-12}, \scn{PERT-13} & \met{S1}, \met{S2} & Satisfied (2-D PPO 550k, verdict of record; GE4-V2 gate record; \dec{29} coverage closed)\,\textsuperscript{4}\,\textsuperscript{6}\,\textsuperscript{9}\\
   \addlinespace
-  \hz{11} & \sr{013} & \cagerule{05} (CV-estimator health $\rightarrow$ controlled stop) & \scn{NOM-01}, \scn{PERT-07}, \scn{PERT-13} & \met{S3} & \textbf{Satisfied} (2-D PPO 550k, verdict of record; GE4-V2 gate record: \scn{PERT-07} 25/25 + \scn{PERT-13} 40/40; \dec{29} closed by \dec{46})\,\textsuperscript{5}\,\textsuperscript{6}\,\textsuperscript{9}\\
+  \hz{11} & \sr{013} & \cagerule{05} (CV-estimator health $\rightarrow$ controlled stop) & \scn{NOM-01}, \scn{PERT-07}, \scn{PERT-13} & \met{S3} & Satisfied (2-D PPO 550k, verdict of record; GE4-V2 gate record: \scn{PERT-07} 25/25 + \scn{PERT-13} 40/40; \dec{29} closed by \dec{46})\,\textsuperscript{5}\,\textsuperscript{6}\,\textsuperscript{9}\\
   \addlinespace
-  \hz{12} & \sr{014} & \cagerule{05} (plausibility check $\rightarrow$ controlled stop) & \scn{NOM-01}, \scn{PERT-08}, \scn{PERT-04}..06, \scn{PERT-09}..10, \scn{PERT-11}..13 & \met{S1}, \met{S3} & \textbf{Satisfied} (2-D PPO 550k, verdict of record; GE4-V2 gate record: \scn{PERT-08} false-lane 25/25)\,\textsuperscript{4}\,\textsuperscript{6}\,\textsuperscript{9}\\
+  \hz{12} & \sr{014} & \cagerule{05} (plausibility check $\rightarrow$ controlled stop) & \scn{NOM-01}, \scn{PERT-08}, \scn{PERT-04}..06, \scn{PERT-09}..10, \scn{PERT-11}..13 & \met{S1}, \met{S3} & Satisfied (2-D PPO 550k, verdict of record; GE4-V2 gate record: \scn{PERT-08} false-lane 25/25)\,\textsuperscript{4}\,\textsuperscript{6}\,\textsuperscript{9}\\
 \end{registertable}
+
+\paragraph{Notes to \Cref{tab:F.1}} The eight markers point at the full treatment of each case in the
+living traceability document; the condensed version is given here.
+
+\begin{description}
+  \item[\textsuperscript{1} \sr{006} --- Satisfied on its own metric (\dec{39}).] The coarse
+    all-scenarios aggregation made it inherit a fraction failure unrelated to smoothness, so it is
+    scored directly on its own metric: over the steps the rate limiter actually governs --- no safety
+    rule overriding, no emergency --- the per-cycle delta of the committed command respects
+    \code{$\delta$\_max = 0.15} in 559 of 559 evaluable \enf{} runs; in \mon{} only
+    \qpc{67.6} hold and the worst rate reaches 0.43. It is, incidentally, the most direct measure of
+    \cagerule{06}'s value.
+  \item[\textsuperscript{2} \sr{009} --- Satisfied out of band (\dec{64}, ratified by \dec{69}).]
+    \scn{PERT-03} was excluded from the campaign by protocol, so the verdict does not come from
+    aggregation but from three separately measured parts: the nominal policy never stalls; a
+    deliberate attempt to force it to stall does not succeed; and the detector does fire on a
+    scripted, genuinely injected stall.
+  \item[\textsuperscript{3} \sr{010} --- \verdictnot{}, a determinate class-B finding (\dec{69}).] It
+    is the one requirement the work closes as unmet, measured twice on two different
+    policies: 30 of 85 in-ODD grid points on the earlier policy, 16 of 85 on the reference one. It
+    concentrates on the co-activation of \cagerule{01} and \cagerule{02} and vanishes where there is
+    no conflict between lateral and heading correction. Being class B it does not veto the
+    global verdict.
+  \item[\textsuperscript{4} \sr{012} / \sr{014} --- Satisfied.] The perturbed scenarios pass in
+    \enf{}, the injected false lane included. Where the scenario criterion marks a failure it does so
+    \emph{only} on the no-emergency clause: the cage executed its controlled stop on a degraded
+    percept and the criterion scores that safe stop as a failure. \sr{012}'s own criterion is met in
+    every case.
+  \item[\textsuperscript{5} \sr{013} --- Satisfied.] The open-loop stop executes within budget with no
+    road-edge contact, and the two-sided coverage closes the gap the earlier version carried by having
+    no second adverse scenario.
+  \item[\textsuperscript{6} \scn{PERT-11} / 12 / 13] --- worn markings, image degradation and both
+    compounded --- broaden the adverse family of \sr{012} / \sr{014} and give \sr{013} its
+    \textbf{second adverse scenario}. They score 30/30, 40/40 and 40/40 in \enf{}, against 0/30,
+    23/40 and 0/40 in \mon{}.
+  \item[\textsuperscript{7} \sr{002} / \sr{003} --- Satisfied on their own criterion (\dec{47}).] The
+    \scn{EDGE-01} \enquote{failure} is a performance clause inherited from the oval --- heading
+    recovery time --- which is the documented satisfaction criterion of neither: \sr{002}
+    requires \met{P4} $\le$ \qdeg{25} and the measured maximum is \qdeg{14.2}; \sr{003} requires a
+    time margin that is never compromised, with a maximum lateral excursion of \qm{0.043} and zero
+    emergencies. See \Cref{sec:8.3}.
+  \item[\textsuperscript{9} The verdict of record is the 2-D PPO 550k campaign] (31.07.2026,
+    \dec{69}). \sr{012} / \sr{013} / \sr{014} are satisfied on both camera arms; the rows
+    above cite that campaign as current evidence and retain GE4-V2 as the frozen \gate{4} gate record.
+\end{description}
 
 \section{Machine-processable form}
 \label{sec:F.2}
 
 Each row represents a chain from a hazard to a metric. A hazard appears in
-several rows because it spans several chains. The physical verdict column is declared \textbf{not
-executed} in its entirety: the deployment chain is built and has driven on hardware, but no
+several rows because it spans several chains. The physical verdict column is declared not
+executed in its entirety: the deployment chain is built and has driven on hardware, but no
 run has been executed under the scenario protocol (\S10.4d--e).
 
 \begin{registertable}{@{}L{15mm}L{16mm}L{13mm}L{28mm}L{22mm}L{15mm}L{25mm}L{22mm}@{}}
@@ -116,7 +161,7 @@ run has been executed under the scenario protocol (\S10.4d--e).
   \hz{08} & \sr{009} & ---           & training constraint & \scn{NOM-01}  & \met{P6} & satisfied & not executed\\
   \hz{08} & \sr{009} & ---           & training constraint & \scn{PERT-03} & \met{P6} & satisfied & not executed\\
   \hz{09} & \sr{010} & ---           & arbiter & \scn{EDGE-04} & \met{I3} & satisfied & not executed\\
-  \hz{09} & \sr{010} & ---           & arbiter & \scn{EDGE-05} & \met{S2} & \textbf{not satisfied} & not executed\\
+  \hz{09} & \sr{010} & ---           & arbiter & \scn{EDGE-05} & \met{S2} & not satisfied & not executed\\
 \end{registertable}
 
 \section{Verified constraints}

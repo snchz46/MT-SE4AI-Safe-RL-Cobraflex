@@ -21,7 +21,15 @@ This approach ensures:
 
 ### 1. Hazard Register (`docs/data/hazard_register.csv`)
 
-**Source**: Markdown tables in `manuscript/chapters/chapter_*.md` with hazard-like IDs (H-01, H-02, etc.)
+**Source**: the consolidated register table in `docs/02_hazard_register.md`.
+
+> The manuscript stays the **editorial** source, but it is not what this generator reads. The
+> chapter table splits the rating across four columns (`S | E | C | Criticidad`), whereas the
+> parser expects the single `S3/E2/C1 - Medium-High` cell that only the register carries. So the
+> register is the machine-readable mirror, and **keeping it in step with the chapter is a hand
+> step**. That hand step is exactly where H-03's criticality drifted — register `Medium`, chapter
+> and Appendix A `Medium-High` — until it was reconciled on 05.09.2026. Check both after any
+> rating change.
 
 **Generator**: `tools/sync_hazard_register.py`
 

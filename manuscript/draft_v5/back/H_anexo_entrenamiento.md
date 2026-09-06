@@ -2,7 +2,7 @@
 
 ## H.1 Función de recompensa
 
-La recompensa es **idéntica en ambos tracks** y se computa sobre el estado
+La recompensa es idéntica en ambos tracks y se computa sobre el estado
 **ground-truth** + progreso, agnóstica a la observación:
 
 ```text
@@ -13,10 +13,10 @@ r = w_fwd · max(progress, 0)
   - w_term · [terminated_off_road]
 ```
 
-donde `progress` es el avance **normalizado** a lo largo de la línea
-central, `Δsteering` es el cambio en el steering **crudo de la política**
-(no el post-cage; §7.2.5), y `[terminated_off_road]` es 1 solo si el
-episodio termina por salida de **vía** (no por emergencia C-05; §7.2.4).
+donde `progress` es el avance normalizado a lo largo de la línea
+central, `Δsteering` es el cambio en el steering crudo de la política
+(no el post-cage; §7.2.2), y `[terminated_off_road]` es 1 solo si el
+episodio termina por salida de vía (no por emergencia C-05; §7.2.4).
 Los pesos nominales (sujetos a ajuste experimental) son:
 
 | Parámetro | Valor | Rationale |
@@ -24,32 +24,32 @@ Los pesos nominales (sujetos a ajuste experimental) son:
 | `w_fwd` (forward_progress) | 1.0 | Premia progreso real (≈1.0/paso a crucero) |
 | `w_ey` (lateral_error) | 2.5 | Penalización principal: offset lateral |
 | `w_eps` (heading_error) | 0.75 | Penalización secundaria: heading |
-| `w_ds` (steer_delta) | 0.20 | Suavidad de actuación (sobre Δsteering **crudo**, v1.2; §7.2.5) |
+| `w_ds` (steer_delta) | 0.20 | Suavidad de actuación (sobre Δsteering crudo, v1.2; §7.2.2) |
 | `w_term` (termination) | 25.0 | Desincentiva salida de vía |
 
-El término forward usa **progreso normalizado** (no velocidad): como la
+El término forward usa progreso normalizado (no velocidad): como la
 velocidad es fija, un término `w_fwd·speed` sería una constante que no
 discrimina la conducta y dejaba `explained_variance ≈ 0` (revisión F3,
 primer run). La penalización de terminación alta (25.0) prioriza la
-permanencia en **vía**; **solo** la salida de vía la aplica — la emergencia
+permanencia en vía; solo la salida de vía la aplica — la emergencia
 C-05 termina sin penalización (la intervención de la cage es dinámica, no
 castigo; D-34, §7.2.4). Los pesos son `[provisional, M-P1..M-P4]`; detalle
 en `docs/10_reward_function.md`.
 
 ## H.2 Hiperparámetros
 
-La tabla lista la configuración **efectiva completa**. La columna E-main es
+La tabla lista la configuración efectiva completa. La columna E-main es
 la del run de cámara `ppo_newcam_complex_b_2024_1M`; la baseline F es la del
 run de estado `ppo_train_2024_200k`.
 
 | Parámetro | E-main (cámara) | Baseline (F, estado) | Fuente / nota |
 | --- | --- | --- | --- |
-| `policy` | **CnnPolicy** | MlpPolicy | red de la política |
+| `policy` | CnnPolicy | MlpPolicy | red de la política |
 | `total_timesteps` | 1 000 000 (plan; parado ≈662k) | 200 000 | `[provisional, M-P7]` |
-| `learning_rate` | 3×10⁻⁴, **anneal lineal** | 3×10⁻⁴ constante | E: `lr_schedule: linear` |
-| `target_kl` | **0.5** | — (sin freno) | E: freno de región de confianza (§7.4.1) |
-| `normalize_reward` | **True** (`VecNormalize`) | False | E: estabiliza el crítico (§7.4.1) |
-| `clip_range_vf` | **0.2** | null | E: clip del valor sobre recompensa normalizada |
+| `learning_rate` | 3×10⁻⁴, anneal lineal | 3×10⁻⁴ constante | E: `lr_schedule: linear` |
+| `target_kl` | 0.5 | — (sin freno) | E: freno de región de confianza (§7.3) |
+| `normalize_reward` | True (`VecNormalize`) | False | E: estabiliza el crítico (§7.3) |
+| `clip_range_vf` | 0.2 | null | E: clip del valor sobre recompensa normalizada |
 | `gamma` | 0.99 | 0.99 | = SB3 default |
 | `n_steps` | 1 024 | 1 024 | ≈ 1 episodio |
 | `batch_size` | 64 | 64 | = SB3 default |
@@ -61,13 +61,13 @@ run de estado `ppo_train_2024_200k`.
 | `max_grad_norm` | 0.5 | 0.5 | SB3 default |
 | `device` | auto (CUDA si existe) | cpu | E: la CNN aprovecha GPU |
 
-Los **cuatro levers de estabilidad** del E-main (`target_kl`, anneal lineal
-de LR, `VecNormalize(norm_reward)` y `clip_range_vf`) **no** existen en el
+Los cuatro levers de estabilidad del E-main (`target_kl`, anneal lineal
+de LR, `VecNormalize(norm_reward)` y `clip_range_vf`) no existen en el
 baseline F: se añadieron tras observar que PPO sobre CNN con randomización
-visual es marcadamente menos estable que sobre el vector de estado (§7.4.1).
-`norm_obs` se mantiene **False**, de modo que la evaluación/inferencia no se
-ve afectada y `ep_rew_mean` en la curva queda **cruda** (comparable con el
-baseline). El presupuesto de cámara es **≥ 1M pasos** (D-41 acepta la mayor
+visual es marcadamente menos estable que sobre el vector de estado (§7.3).
+`norm_obs` se mantiene False, de modo que la evaluación/inferencia no se
+ve afectada y `ep_rew_mean` en la curva queda cruda (comparable con el
+baseline). El presupuesto de cámara es ≥ 1M pasos (D-41 acepta la mayor
 demanda de datos del extremo a extremo); un piloto de ~20k valida el bucle
 antes de comprometer el presupuesto.
 

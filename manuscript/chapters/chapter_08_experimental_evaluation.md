@@ -515,8 +515,8 @@ flowchart LR
     C["C-01<br/>lane-boundary hard limit<br/>d_max 0.16 m &middot; hyst. 0.02 m<br/><i>docs/04 + cage.yaml</i>"]
     SC["SC-EDGE-02<br/>initial lateral perturbation<br/>30 spawns, IC clipped to ODD (ruta-1)<br/><i>docs/05 + scenarios/edge/</i>"]
     M["M-S1<br/>max lateral offset<br/>scored on ground-truth pose<br/><i>docs/06</i>"]
-    EV["Logged evidence<br/>campaign_e_v2/campaign_report.json<br/>1970 runs &middot; seed 2024 &middot; 0 errors<br/><i>experiments/sim/</i>"]
-    V["Verdict: <b>Satisfied</b><br/>GE4-V2 &middot; 28/30<br/>2 residuals = H-12 confident under-read<br/>at recovery-basin edge<br/><i>docs/07</i>"]
+    EV["Logged evidence<br/>campaign_2d_ppo550k/campaign_report.json<br/>1890 runs &middot; seed 2024 &middot; 0 errors<br/><i>experiments/sim/</i>"]
+    V["Verdict: <b>Satisfied</b><br/>2-D PPO 550k &middot; 29/30 enforcement<br/>1 residual = H-12 confident under-read<br/>at the recovery-basin edge<br/><i>docs/07</i>"]
     CHK["check_traceability.py &mdash; machine-checked before every Gate:<br/>no orphans in either direction, on any link"]
 
     H --> SR --> C --> SC --> M --> EV --> V
@@ -540,10 +540,12 @@ flowchart LR
 **Figura 8.1 — La cadena de trazabilidad instanciada de punta a punta sobre un
 caso real cerrado.** El compromiso definitorio de la tesis —`Hazard → SR →
 Cage Rule → Scenario → Metric → Logged Evidence → Verdict`— materializado con
-los artefactos del requisito más importante, sobre el brazo E (GE4-V2,
-veredicto de récord): SC-EDGE-02 con las condiciones iniciales recortadas al
-ODD por la ruta-1 pasa 28/30, y los 2 residuos son el *under-read* confiado
-del estimador CV (D-43/H-12) en el borde de la cuenca de recuperación. Cada
+los artefactos del requisito más importante, sobre el **veredicto de récord**
+—la campaña 2-D PPO 550k, que D-69 (31.07.2026) puso en lugar de GE4-V2—:
+SC-EDGE-02 con las condiciones iniciales recortadas al ODD por la ruta-1 pasa
+29/30 en enforcement, y el único residuo es un contacto de borde de la clase
+*under-read* confiado del estimador CV (D-43/H-12) en el borde de la cuenca de
+recuperación. Cada
 eslabón es un ID en un artefacto Markdown versionado, verificado sin huérfanos
 por `check_traceability.py` antes de cada Gate.
 

@@ -1,4 +1,4 @@
-%% Traceability chain, end to end, on one real case: H-01 -> verdict (GE4-V2).
+%% Traceability chain, end to end, on one real case: H-01 -> verdict.
 %% Canonical figure source. Render to PNG (Phase 6 / POLISH):
 %%   mmdc -i traceability_case_sr001.mmd -o traceability_case_sr001.png -b transparent -w 1900
 %% (mmdc = mermaid-cli, https://github.com/mermaid-js/mermaid-cli)
@@ -7,10 +7,12 @@
 %% Metric -> Logged Evidence -> Verdict — instantiated with the real artefacts
 %% of the most important requirement. Every link is an ID in a versioned
 %% Markdown artefact, and check_traceability.py fails any Gate review if an
-%% orphan appears on either side of any link. Numbers from the GE4-V2 campaign
-%% (verdict of record, 28.06.2026): SC-EDGE-02 initial conditions clipped to
-%% the ODD by ruta-1, 28/30 pass; the 2 residuals are the D-43/H-12 confident
-%% under-read at the recovery-basin edge (docs/07, footnote on SR-001).
+%% orphan appears on either side of any link. Numbers from the 2-D PPO 550k
+%% pre-deployment campaign, which D-69 (31.07.2026) made the verdict of record
+%% in place of GE4-V2: SC-EDGE-02 initial conditions clipped to the ODD by
+%% ruta-1, 29/30 pass in enforcement; the single residual is one road-edge
+%% contact of the D-43/H-12 confident under-read class, at the recovery-basin
+%% edge (Appendix I; campaign_2d_ppo550k analysis).
 %% WIRED (10.07.2026): Cap. 8 §8.7 as Figura 8.1, mermaid inline — keep the
 %% inline copy in sync with this file. Also the "thesis in one image" slide.
 
@@ -20,8 +22,8 @@ flowchart LR
     C["C-01<br/>lane-boundary hard limit<br/>d_max 0.16 m &middot; hyst. 0.02 m<br/><i>docs/04 + cage.yaml</i>"]
     SC["SC-EDGE-02<br/>initial lateral perturbation<br/>30 spawns, IC clipped to ODD (ruta-1)<br/><i>docs/05 + scenarios/edge/</i>"]
     M["M-S1<br/>max lateral offset<br/>scored on ground-truth pose<br/><i>docs/06</i>"]
-    EV["Logged evidence<br/>campaign_e_v2/campaign_report.json<br/>1970 runs &middot; seed 2024 &middot; 0 errors<br/><i>experiments/sim/</i>"]
-    V["Verdict: <b>Satisfied</b><br/>GE4-V2 &middot; 28/30<br/>2 residuals = H-12 confident under-read<br/>at recovery-basin edge<br/><i>docs/07</i>"]
+    EV["Logged evidence<br/>campaign_2d_ppo550k/campaign_report.json<br/>1890 runs &middot; seed 2024 &middot; 0 errors<br/><i>experiments/sim/</i>"]
+    V["Verdict: <b>Satisfied</b><br/>2-D PPO 550k &middot; 29/30 enforcement<br/>1 residual = H-12 confident under-read<br/>at the recovery-basin edge<br/><i>docs/07</i>"]
     CHK["check_traceability.py &mdash; machine-checked before every Gate:<br/>no orphans in either direction, on any link"]
 
     H --> SR --> C --> SC --> M --> EV --> V

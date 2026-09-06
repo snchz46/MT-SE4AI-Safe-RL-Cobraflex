@@ -31,6 +31,104 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [05.09.2026 · manuscript review] — Four-block review of the submission draft: one internal contradiction in the verdict table, one retracted claim still standing, nine dangling cross-references, and the figures the condensation had lost
+
+**Document(s) affected:** `manuscript/draft_v5/` (all twelve body chapters, `front/{05,10,15,40}`,
+`back/{C,F,H}`), `manuscript/draft_v5_en/` (mirrored), `manuscript/latex_psithesis/` (mirrored,
+plus `main.tex`, `README.md`, `check_tex.pl`, `check_refs.pl`),
+`manuscript/chapters/chapter_08`, `manuscript/figures/` (new renderers and renders),
+`docs/02_hazard_register.md`, `docs/data/hazard_register.csv`, `TRACEABILITY.md`,
+`tools/sync_hazard_register.py`
+**Phase:** E6 (write-up)
+**Gate context:** after G4; no gate re-scored, no verdict re-valued
+**Author:** Samuel Sanchez
+
+### Change
+
+Reviewed the submission draft in four blocks (1–3, 4–6, 7–8, 9–12 plus front matter and
+appendices), against the living documents and the campaign artefacts. Corrections, by kind:
+
+*Contradictions and retracted claims.* Table 8.1 classified **SR-009** as "class B without
+evidence" while §8.6.1, Table 10.1 and D-69 all close it as **Satisfied out of band**; the table
+was rewritten with five explicit rows (and SR-011 marked as a *literal* failure satisfied on its
+own metric, as SR-002/003 already were). The literal **"C-04 can never fire"**, amended in
+`docs/17` and in `manuscript/chapters/` on 01.09 but not carried into `draft_v5/`, was corrected
+in §9.3.5, §10.4f, Table 10.1, §11.2 and R14: it cannot fire *on commanded motion*, and it did
+fire 58 and 40 cycles on ZED velocity artefacts. **H-03**'s criticality was `Medium` in
+`docs/02` and the derived CSV and `Medium-High` in the chapter, Appendix A and the research
+record; the register was aligned with the manuscript and the CSV regenerated. The abstract
+counted "four things, three independent of the campaign" against chapter 9's five and four.
+
+*Cross-references.* Nine dangling section references (§3.6.1, §3.7.1, §4.7.1, §7.2.5 ×2,
+§7.4.1 ×3 — none of those sections exist) and one that resolved to the wrong section (§12.2
+pointed the hypotheses at §1.4, the objectives). §1.7's list of appendices named four that do
+not exist and omitted five that do. The identifier space was said to be "defined in Appendix A",
+which is the hazard register. Forty-three figures and tables had no in-text anchor; the ones in
+chapters 1–10 now do. The five standards (ISO 26262, 21448, TR 5469, PAS 8800, UL 4600) were
+named in bold without citation while having bibliography entries; `UL 4600` was cited nowhere,
+so it would not have been printed. Same for `Sensoy et al. (2018)` and
+`Shalev-Shwartz and Shashua (2016)`.
+
+*Figures.* Ten mermaid diagrams existed in `manuscript/chapters/` and none had reached
+`draft_v5/`; `figures/` held 33 rendered PNGs used nowhere. Added a matplotlib renderer for the
+`.mmd` sources (`mmd_render.py`, no Node required) and wired seven figures into chapters 4, 5, 6,
+7 and 10, plus a new reading map (Fig. 1.2) and a new ODD-stratification figure (Fig. 4.1).
+**Figure 3.4** declared `9H / 11SR` against the actual 12 and 14, `cage.yaml v0.3.0` against
+v0.6.1, a scenario family short, and physical verdicts that Chapter 10 declares not executed.
+The two `igmissing` placeholders in the LaTeX chapter 7 were stale — the PNGs exist on this
+host. **Appendix F** carried eight superscript markers whose note texts had been dropped in the
+condensation; they are restored from `docs/07`.
+
+*Editorial.* Appendix C had two divisions both numbered C.1–C.7, the first skipping C.3, and a
+section headed "Middleware" whose content is the RL algorithm choice. Figure 1.1 did not
+acknowledge SAE International as the source, which its licence requires. The declaration of
+authenticity dated the submission `15.09.26` against the cover's `15.09.2026`. The preface used
+the untranslated verdict literal.
+
+*Repository.* `tools/sync_hazard_register.py` and `TRACEABILITY.md` both claimed the CSV is
+generated from `manuscript/chapters/`; the code reads `docs/02_hazard_register.md`, and cannot
+read the chapter table because it splits the rating across four columns. That undocumented hand
+step is where H-03 drifted, and both documents now say so. `main.tex` carried two provenance
+macros under a comment claiming they were printed on the title page; nothing referenced them.
+
+*Typography.* Bold used for emphasis inside running text was removed from all three copies:
+1,822 spans stripped, 768 kept. What is kept is structural and only that: run-in headings
+(`**Nivel general.** ...`), bullet leads, bibliography entries, display quotes, table header rows
+and highlighted table rows. Author labels in §2.6 were stripped even where they open a line,
+because only some of the four would have survived a line-initial rule and the same role would
+have been set two ways. `***liveness***` keeps its italic and loses its bold. Bold that straddles
+a line break in the hard-wrapped appendices was handled by hand, and the four bullet leads that
+do so are untouched. The pass is idempotent: a second run changes nothing.
+
+### Rationale
+
+Submission is ~15.09.2026 and the evidence base is closed, so the remaining risk is documentary:
+a claim that was retracted in one document and not another, a table that contradicts the chapter
+two sections below it, or a cross-reference that sends the examiner to a section that does not
+exist. Every correction is traced to the artefact that settles it, and no measurement was
+re-interpreted.
+
+### Impact
+
+**No hazard, requirement, scenario, metric or verdict was added or re-valued**, and nothing in
+Phase 5 was re-scored. H-03's criticality changes in `docs/02` and the CSV only, to match the
+value the manuscript already carried in three places. `verdict_phys` stays open by design. The
+page budget is **not** re-measured — the review added figures and notes, so it must be checked
+on a host with Word before anything is trimmed.
+
+### Verification
+
+`tools/check_traceability.py` **PASS**, 0 warnings (12 H, 14 SR, 6 C, 28 SC, 19 M).
+`pytest cage/tests` 139 passed. `tools/build_thesis_docx.py` builds: 43 captions, 27 figures
+(was 33 and 16). LaTeX static checks: `check_tex.pl` 0 errors / 0 warnings on all 25 files,
+`check_refs.pl` 0 dangling and 0 duplicate over 244 labels, `check_complete.pl` 0 unexplained.
+`policy/tests/test_eval_policy_2d.py` and `test_lr_schedule.py` still fail to import on the
+Windows host for want of `ament_index_python`, as before this change. A cross-copy audit of the
+twelve chapters (headings, figure and table counts, project identifiers and every number that
+carries a unit) reports the Spanish, the English and the LaTeX in agreement.
+
+---
+
 ## [02.09.2026 · consistency pass] — Repo-wide audit before submission: every retracted claim traced to every place it still stood, the `chapters/` tree brought level with `draft_v5/`, and two stale duplicates collapsed
 
 **Document(s) affected:** `docs/04`, `docs/05`, `docs/07`, `docs/08`, `docs/12`, `docs/14`,

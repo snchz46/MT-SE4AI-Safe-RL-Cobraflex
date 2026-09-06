@@ -173,11 +173,12 @@ changed. They exist because the authoring host has no TeX.
    **checking is not building**. Expect to fix some errors on the first real
    run — most likely float placement, a table overflowing the 107 mm column,
    and undefined `\Cref` targets.
-2. **Two figures are missing.** `manuscript/figures/auto/` is empty on this
-   host, so `fig_ppo2d_training_curve` and `fig_ppo2d_action_distribution`
-   (Figures 7.2 and 7.3) render as framed `\figmissing` placeholders.
-   Regenerate them on the compute host — see the three-machine note in
-   `CLAUDE.md`.
+2. ~~**Two figures are missing.**~~ **Resolved (05.09.2026).**
+   `manuscript/figures/auto/` is *not* empty on the Windows authoring host:
+   `fig_ppo2d_training_curve.png` and `fig_ppo2d_action_distribution.png` are
+   both there. The two `\figmissing` placeholders became real `\figwide` calls
+   and no placeholder remains anywhere in the document. This was the
+   three-machine trap in reverse: the note assumed the compute host's state.
 3. **No institutional logo.** `misc/titlepage.tex` has a commented
    `\includegraphics` waiting for `misc/hse-logo.pdf`. A vector PDF, not a PNG.
 4. **The language is English.** `manuscript/README.md` records that the

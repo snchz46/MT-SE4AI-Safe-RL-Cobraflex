@@ -2,7 +2,7 @@
 
 ## H.1 Reward function
 
-The reward is **identical on both tracks** and is computed over the
+The reward is identical on both tracks and is computed over the
 **ground-truth** state plus progress, and is agnostic to the observation:
 
 ```text
@@ -13,10 +13,10 @@ r = w_fwd · max(progress, 0)
   - w_term · [terminated_off_road]
 ```
 
-where `progress` is the **normalised** advance along the centre
-line, `Δsteering` is the change in the **raw steering of the policy**
-(not the post-cage one; §7.2.5), and `[terminated_off_road]` is 1 only if the
-episode ends by leaving the **road** (not by a C-05 emergency; §7.2.4).
+where `progress` is the normalised advance along the centre
+line, `Δsteering` is the change in the raw steering of the policy
+(not the post-cage one; §7.2.2), and `[terminated_off_road]` is 1 only if the
+episode ends by leaving the road (not by a C-05 emergency; §7.2.4).
 The nominal weights (subject to experimental tuning) are:
 
 | Parameter | Value | Rationale |
@@ -24,32 +24,32 @@ The nominal weights (subject to experimental tuning) are:
 | `w_fwd` (forward_progress) | 1.0 | Rewards real progress (≈1.0/step at cruise) |
 | `w_ey` (lateral_error) | 2.5 | Main penalty: lateral offset |
 | `w_eps` (heading_error) | 0.75 | Secondary penalty: heading |
-| `w_ds` (steer_delta) | 0.20 | Actuation smoothness (over the **raw** Δsteering, v1.2; §7.2.5) |
+| `w_ds` (steer_delta) | 0.20 | Actuation smoothness (over the raw Δsteering, v1.2; §7.2.2) |
 | `w_term` (termination) | 25.0 | Discourages leaving the road |
 
-The forward term uses **normalised progress** (not speed): since the
+The forward term uses normalised progress (not speed): since the
 speed is fixed, a term `w_fwd·speed` would be a constant that does not
 discriminate between behaviours and left `explained_variance ≈ 0` (F3 review,
 first run). The high termination penalty (25.0) prioritises staying on the
-**road**; **only** the road departure applies it — the C-05
+**road**; only the road departure applies it — the C-05
 emergency ends the episode with no penalty (the intervention of the cage is dynamics, not
 punishment; D-34, §7.2.4). The weights are `[provisional, M-P1..M-P4]`; detail
 in `docs/10_reward_function.md`.
 
 ## H.2 Hyperparameters
 
-The table lists the **complete effective configuration**. The E-main column is
+The table lists the complete effective configuration. The E-main column is
 the one of the camera run `ppo_newcam_complex_b_2024_1M`; the F baseline is the one of the
 state run `ppo_train_2024_200k`.
 
 | Parameter | E-main (camera) | Baseline (F, state) | Source / note |
 | --- | --- | --- | --- |
-| `policy` | **CnnPolicy** | MlpPolicy | policy network |
+| `policy` | CnnPolicy | MlpPolicy | policy network |
 | `total_timesteps` | 1,000,000 (planned; stopped at ≈662k) | 200,000 | `[provisional, M-P7]` |
-| `learning_rate` | 3×10⁻⁴, **linear anneal** | 3×10⁻⁴ constant | E: `lr_schedule: linear` |
-| `target_kl` | **0.5** | — (no brake) | E: trust region brake (§7.4.1) |
-| `normalize_reward` | **True** (`VecNormalize`) | False | E: stabilises the critic (§7.4.1) |
-| `clip_range_vf` | **0.2** | null | E: value clip over the normalised reward |
+| `learning_rate` | 3×10⁻⁴, linear anneal | 3×10⁻⁴ constant | E: `lr_schedule: linear` |
+| `target_kl` | 0.5 | — (no brake) | E: trust region brake (§7.3) |
+| `normalize_reward` | True (`VecNormalize`) | False | E: stabilises the critic (§7.3) |
+| `clip_range_vf` | 0.2 | null | E: value clip over the normalised reward |
 | `gamma` | 0.99 | 0.99 | = SB3 default |
 | `n_steps` | 1,024 | 1,024 | ≈ 1 episode |
 | `batch_size` | 64 | 64 | = SB3 default |
@@ -61,13 +61,13 @@ state run `ppo_train_2024_200k`.
 | `max_grad_norm` | 0.5 | 0.5 | SB3 default |
 | `device` | auto (CUDA if present) | cpu | E: the CNN benefits from a GPU |
 
-The **four stability levers** of the E-main run (`target_kl`, linear LR
-anneal, `VecNormalize(norm_reward)` and `clip_range_vf`) do **not** exist in the
+The four stability levers of the E-main run (`target_kl`, linear LR
+anneal, `VecNormalize(norm_reward)` and `clip_range_vf`) do not exist in the
 F baseline: they were added after observing that PPO over a CNN with visual
-randomization is markedly less stable than over the state vector (§7.4.1).
-`norm_obs` is kept **False**, so that evaluation/inference is not
-affected and `ep_rew_mean` in the curve stays **raw** (comparable with the
-baseline). The camera budget is **≥ 1M steps** (D-41 accepts the higher
+randomization is markedly less stable than over the state vector (§7.3).
+`norm_obs` is kept False, so that evaluation/inference is not
+affected and `ep_rew_mean` in the curve stays raw (comparable with the
+baseline). The camera budget is ≥ 1M steps (D-41 accepts the higher
 data demand of the end-to-end approach); a pilot of ~20k validates the loop
 before committing the budget.
 

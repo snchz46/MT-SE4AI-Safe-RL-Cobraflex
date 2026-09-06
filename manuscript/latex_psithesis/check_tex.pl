@@ -57,6 +57,7 @@ my @latex = qw(
   par bigbreak smallbreak
   textbackslash textasciitilde textasciicircum textbar textless textgreater
   textendash textemdash textquotedblleft textquotedblright textdegree
+  textcopyright texttrademark textregistered
   times pm le ge approx neq equiv leq geq ll gg propto sim simeq
   rightarrow leftarrow leftrightarrow Rightarrow Leftarrow Leftrightarrow
   to mapsto implies iff wedge vee neg forall exists in notin subset subseteq

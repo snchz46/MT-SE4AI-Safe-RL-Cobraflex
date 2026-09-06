@@ -23,7 +23,7 @@
 | TTLC | Time-To-Lane-Crossing |
 | V&V | Verification and Validation |
 
-**Framework identifiers.** The work uses a single, non-reusable identifier space, defined in Appendix A: `H-XX` (hazard), `SR-XXX` (safety requirement), `C-XX` (cage rule), `SC-*` (scenario), `M-*` (metric), `D-NN` (recorded design decision), `F-X` / `G-X` (project phase and gate).
+**Framework identifiers.** The work uses a single, non-reusable identifier space, summarised here; the corresponding registers are Appendices A (hazards), B (requirements), E (cage) and F (traceability): `H-XX` (hazard), `SR-XXX` (safety requirement), `C-XX` (cage rule), `SC-*` (scenario), `M-*` (metric), `D-NN` (recorded design decision), `F-X` / `G-X` (project phase and gate).
 
 **Main symbols.**
 

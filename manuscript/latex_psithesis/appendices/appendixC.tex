@@ -1,13 +1,14 @@
 % Converted from: manuscript/draft_v5_en/back/C_appendix_instruments.md
 % Appendix C --- Instrument choices and normative mapping
 %
-% NOTE on numbering: the source Markdown numbers its headings by hand and the
-% numbering is inconsistent -- the first division runs C.1, C.2, C.4, C.5, C.6,
-% C.7 (C.3 is skipped, and the subsection headed "C.2 Middleware" is about the
-% RL algorithm, not middleware), and the second division restarts at C.1. The
-% manual numbers are dropped here and LaTeX numbers the sections itself, so the
-% appendix comes out consistently numbered. No heading text was changed, and
-% nothing in the thesis cross-references these numbers.
+% NOTE on numbering: the source Markdown used to number its headings by hand,
+% inconsistently -- the first division ran C.1, C.2, C.4, C.5, C.6, C.7 (C.3
+% skipped) and the second restarted at C.1. That was repaired at source on
+% 05.09.2026 (C.1.1..C.1.6 and C.2.1..C.2.7); the manual numbers are still
+% dropped here, because LaTeX numbers the sections itself.
+%
+% The subsection headed "Middleware" was about the RL algorithm and not about
+% middleware at all; it was retitled at source on the same date, and here.
 
 \chapter{Instrument Choices and Normative Mapping}
 \label{app:C}
@@ -85,18 +86,18 @@ libraries in Gazebo format; this means that the scenario library of the
 project has to be built explicitly, which falls within the
 scope of \Cref{ch:06}.
 
-Alternatives considered and discarded. \textbf{CARLA} \parencite{dosovitskiy2017} is the strongest candidate and the default choice in
+Alternatives considered and discarded. CARLA \parencite{dosovitskiy2017} is the strongest candidate and the default choice in
 recent autonomous driving research; it offers superior sensor
 fidelity and a mature benchmark ecosystem, but it requires a
 ROS2 \emph{bridge} with its own complications, and its higher computation cost is an
-operational obstacle for an individual thesis. \textbf{Highway-Env} and other environments
+operational obstacle for an individual thesis. Highway-Env and other environments
 derived from Gym, without realistic sensors and with an abstract observation
-space, are not suitable for camera-based policies. \textbf{LGSVL}, a
+space, are not suitable for camera-based policies. LGSVL, a
 project discontinued in 2022 with a decaying ecosystem.
 \textbf{AirSim}, with an aerospace focus, secondary automotive support and
 development on hold.
 
-\subsection{Middleware}
+\subsection{Reinforcement-learning algorithm}
 \label{sec:C.1.2}
 
 \textbf{Choice: PPO} --- \emph{Proximal Policy Optimization} --- \parencite{schulman2017}. PPO is chosen for four reasons that are coherent with the
@@ -117,14 +118,14 @@ gymnasium-Gazebo-ROS2 interface mentioned above. Fourth,
 explore \emph{constrained RL} (in the style of the RECPO of \textcite{zhao2024}),
 PPO admits a natural extension to CMDP.
 
-Alternatives considered and discarded: \textbf{SAC} \parencite{haarnoja2018}
+Alternatives considered and discarded: SAC \parencite{haarnoja2018}
 is competitive in sample efficiency and in robustness to hyperparameters,
 but its \emph{off-policy} character makes the Training Spec less interpretable
 --- the notion of \enquote{which policy produced which experience} is blurred in the
 \emph{replay buffer} --- and its stochastic nature with \emph{temperature tuning}
-adds complexity to the experiment design; \textbf{DDPG / TD3} (deterministic
+adds complexity to the experiment design; DDPG / TD3 (deterministic
 \emph{off-policy}) are less stable than SAC and have been superseded by it in
-almost all benchmarks; \textbf{A3C / A2C} are less sample-efficient
+almost all benchmarks; A3C / A2C are less sample-efficient
 and have been virtually abandoned in favour of PPO since 2018.
 
 \subsection{Learning loop and implementation tools}

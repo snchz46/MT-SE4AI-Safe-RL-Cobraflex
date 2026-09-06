@@ -23,7 +23,7 @@
 | TTLC | Time-To-Lane-Crossing (tiempo hasta el cruce de carril) |
 | V&V | Verificación y Validación |
 
-**Identificadores del marco.** El trabajo usa un espacio de identificadores único y no reutilizable, definido en el Anexo A: `H-XX` (hazard), `SR-XXX` (requisito de seguridad), `C-XX` (regla de la cage), `SC-*` (escenario), `M-*` (métrica), `D-NN` (decisión de diseño registrada), `F-X` / `G-X` (fase y puerta del proyecto).
+**Identificadores del marco.** El trabajo usa un espacio de identificadores único y no reutilizable, resumido aquí; los registros correspondientes son los Anexos A (peligros), B (requisitos), E (cage) y F (trazabilidad): `H-XX` (hazard), `SR-XXX` (requisito de seguridad), `C-XX` (regla de la cage), `SC-*` (escenario), `M-*` (métrica), `D-NN` (decisión de diseño registrada), `F-X` / `G-X` (fase y puerta del proyecto).
 
 **Símbolos principales.**
 

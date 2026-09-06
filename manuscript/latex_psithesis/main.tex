@@ -37,13 +37,12 @@ nohyperref,
 consistentlayout,
 ]{PSIThesis}
 
-% ---------------------------------------------------------------------------
-% Repository provenance. These are printed on the title page so that any
-% printed copy states which commit of the research repository it was built
-% from -- the same reproducibility discipline the thesis argues for.
-% ---------------------------------------------------------------------------
-\def\treporurl{https://github.com/} % TODO: fill in if the repo is published
-\def\tbuildnote{built from manuscript/draft\_v5\_en}
+% NOTE. A pair of repository-provenance macros used to sit here, under a comment
+% claiming they were printed on the title page. They were not: misc/titlepage.tex
+% never referenced either of them, so the block was a dead definition carrying a
+% false statement about the document. Removed 05.09.2026. If a printed copy should
+% state the commit it was built from, add the field to misc/titlepage.tex first and
+% define the macro next to it.
 
 \input{misc/setup.tex}
 \input{misc/commands.tex}

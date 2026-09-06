@@ -137,7 +137,7 @@ The format is structured to enable mechanical extraction into the Traceability M
 - Policy learning to prioritise progress without sufficient curvature-dependent penalisation.
 - Reward function incentivising forward motion without regard to safety margin.
 
-**Rating.** S=3 (conservative; worst case in tight curves), E=2, C=1 (with speed ceiling), Criticality=Medium.
+**Rating.** S=3 (conservative; worst case in tight curves), E=2, C=1 (with speed ceiling), Criticality=Medium-High.
 
 **Rating rationale.** S=3 is assigned conservatively to the worst case (high-energy tangential exit in a tight curve). The previous split rating "S=2 (S=3 in curve)" is not admissible under ISO 26262, which prescribes one rating per hazard; the conservative consolidation is preferred to splitting H-03 into two sub-hazards because the mitigation logic is unified through SR-004 / C-04 (curvature-dependent ceiling). E=2 reflects that excess-speed conditions arise occasionally during normal operation (1–10 %), driven by curvature transitions where the policy has not yet adapted. C=1 follows from the deterministic nature of the speed ceiling enforced by C-04.
 
@@ -384,7 +384,7 @@ Two further STPA-informed design findings sit outside the standard UCA grid and 
 | --- | --- | --- | --- | --- | --- | --- |
 | H-01 | Unintended lane exit | S3/E3/C2 - High | SR-001, SR-003 | C-01, C-03 | Open | TTLC predictive constraint |
 | H-02 | Divergent or oscillatory heading error | S2/E3/C2 - Medium-High | SR-002, SR-003, SR-011 | C-02, C-03, C-06 | Open | Heading stability (divergence + oscillation branches) |
-| H-03 | Excessive speed for current conditions | S3/E2/C1 - Medium | SR-004 | C-04 | Open | Curvature-dependent speed ceiling |
+| H-03 | Excessive speed for current conditions | S3/E2/C1 - Medium-High | SR-004 | C-04 | Open | Curvature-dependent speed ceiling |
 | H-04 | Compound unrecoverable state | S3/E1/C3 - High | SR-005 | C-05 | Open | Emergency substitution mode |
 | H-05 | Excessively abrupt actuator command | S1/E3/C1 - Medium | SR-006 | C-06 | Open | Actuator rate limiting |
 | H-06 | Operation under invalid or unobservable state | S3/E2/C2 - High | SR-007 | C-05 | Open | ROS2 state freshness and validity |

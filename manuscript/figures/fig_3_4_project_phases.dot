@@ -71,7 +71,7 @@ digraph project_phases {
     <TR>
         <TD BGCOLOR="#eaf3ff" ALIGN="LEFT"><B>L2</B> System Safety Req.</TD>
         <TD></TD>
-        <TD BGCOLOR="#f7faff">HazReg + SRS<BR/>(9H / 11SR)</TD>
+        <TD BGCOLOR="#f7faff">HazReg + SRS<BR/>(12H / 14SR)</TD>
         <TD BGCOLOR="#f7faff">SRS calibration<BR/>(M-1..M-5)</TD>
         <TD></TD>
         <TD></TD>
@@ -92,7 +92,7 @@ digraph project_phases {
         <TD BGCOLOR="#eaf3ff" ALIGN="LEFT"><B>L4a</B> Cage Specification</TD>
         <TD></TD>
         <TD></TD>
-        <TD BGCOLOR="#f7faff">C-01..C-06<BR/>cage.yaml v0.3.0</TD>
+        <TD BGCOLOR="#f7faff">C-01..C-06<BR/>cage.yaml v0.6.1</TD>
         <TD></TD>
         <TD></TD>
         <TD></TD>
@@ -157,7 +157,7 @@ digraph project_phases {
         <TD></TD>
         <TD></TD>
         <TD></TD>
-        <TD BGCOLOR="#fbf6ff">SC-NOM/EDGE/PERT</TD>
+        <TD BGCOLOR="#fbf6ff">SC-NOM/EDGE/PERT/FRONT</TD>
         <TD BGCOLOR="#fbf6ff">runs in Gazebo</TD>
         <TD></TD>
         <TD></TD>
@@ -169,7 +169,7 @@ digraph project_phases {
         <TD></TD>
         <TD></TD>
         <TD BGCOLOR="#fbf6ff">sim verdicts</TD>
-        <TD BGCOLOR="#fbf6ff">phys verdicts<BR/>+ sim-to-real gap</TD>
+        <TD BGCOLOR="#fbf6ff">sim-to-real gap<BR/>+ physical bring-up</TD>
         <TD BGCOLOR="#fbf6ff">global verdict<BR/>+ defense</TD>
     </TR>
 
@@ -195,7 +195,7 @@ digraph project_phases {
         <TD BGCOLOR="#fafafa" ALIGN="CENTER">+ C</TD>
         <TD BGCOLOR="#fafafa" ALIGN="CENTER">+ SC, M</TD>
         <TD BGCOLOR="#fafafa" ALIGN="CENTER">sim verdicts</TD>
-        <TD BGCOLOR="#fafafa" ALIGN="CENTER">phys verdicts</TD>
+        <TD BGCOLOR="#fafafa" ALIGN="CENTER">gap evidence</TD>
         <TD BGCOLOR="#fafafa" ALIGN="CENTER"><B>close at G6</B></TD>
     </TR>
     <TR>

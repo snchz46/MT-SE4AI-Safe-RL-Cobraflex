@@ -13,7 +13,7 @@ quedarían implícitas. Cada subsección sigue un patrón uniforme:
 herramienta elegida, justificación, alternativas descartadas con motivo
 del descarte.
 
-## C.1 Simulador
+## C.1.1 Simulador
 
 **Elección: Gazebo** (Koenig y Howard, 2004), en su variante moderna con
 integración ROS2 nativa, operada a través de una interfaz
@@ -72,19 +72,19 @@ reutilizables en formato Gazebo; esto supone que la scenario library del
 proyecto debe construirse explícitamente, lo cual queda dentro del
 alcance del Capítulo 6.
 
-Alternativas consideradas y descartadas. **CARLA** (Dosovitskiy et al.,
+Alternativas consideradas y descartadas. CARLA (Dosovitskiy et al.,
 2017) es el candidato más fuerte y la elección por defecto en
 investigación de conducción autónoma reciente; ofrece fidelidad
 sensorial superior y un ecosistema maduro de benchmarks, pero requiere
 *bridge* ROS2 con sus propias complicaciones, y su mayor coste de cómputo es un freno
-operativo para una tesis individual. **Highway-Env** y otros entornos
+operativo para una tesis individual. Highway-Env y otros entornos
 derivados de Gym, sin sensores realistas, con espacio de observación
-abstracto, no adecuados para políticas basadas en cámara. **LGSVL**,
+abstracto, no adecuados para políticas basadas en cámara. LGSVL,
 proyecto discontinuado en 2022 con ecosistema en descomposición.
 **AirSim**, foco aeroespacial con soporte automotriz secundario y
 desarrollo en pausa.
 
-## C.2 Middleware
+## C.1.2 Algoritmo de aprendizaje por refuerzo
 
 **Elección: PPO** —*Proximal Policy Optimization*— (Schulman et al.,
 2017). PPO se impone por cuatro motivos coherentes con el marco
@@ -100,22 +100,22 @@ entropía), lo que facilita escribir el Training Spec del nivel L4b como
 documento legible. Tercero, *soporte en herramientas abiertas*: la
 implementación de Stable-Baselines3 está madura, ampliamente usada, y
 admite integración directa con Gazebo a través de la interfaz
-gymnasium-Gazebo-ROS2 mencionada en §3.6.1. Cuarto,
+gymnasium-Gazebo-ROS2 mencionada en §3.6. Cuarto,
 *compatibilidad con extensiones*: si en futuras iteraciones la tesis
 explorase *constrained RL* (al estilo de RECPO de Zhao et al., 2024),
 PPO admite extensión natural a CMDP.
 
-Alternativas consideradas y descartadas: **SAC** (Haarnoja et al., 2018)
+Alternativas consideradas y descartadas: SAC (Haarnoja et al., 2018)
 es competitivo en eficiencia de muestras y en robustez a hiperparámetros,
 pero su carácter *off-policy* hace el Training Spec menos interpretable
 —la noción de "qué política produjo qué experiencia" se difumina en el
 *replay buffer*—, y su naturaleza estocástica con *temperature tuning*
-añade complejidad al diseño del experimento; **DDPG / TD3** (deterministas
+añade complejidad al diseño del experimento; DDPG / TD3 (deterministas
 *off-policy*) son más inestables que SAC y han sido superados por este en
-casi todos los benchmarks; **A3C / A2C** son menos eficientes en muestras
+casi todos los benchmarks; A3C / A2C son menos eficientes en muestras
 y han sido virtualmente abandonados a favor de PPO desde 2018.
 
-## C.4 Bucle de aprendizaje y herramientas de implementación
+## C.1.3 Bucle de aprendizaje y herramientas de implementación
 
 - **Stable-Baselines3** como implementación de PPO. Justificación:
   estabilidad, comunidad, integración con *gym* / *gymnasium*, código
@@ -128,7 +128,7 @@ y han sido virtualmente abandonados a favor de PPO desde 2018.
 - **Python 3.10+** con herramientas de calidad: `ruff` (linting),
   `mypy` (type checking), `pre-commit` para automatización en commits.
 
-## C.5 Plataforma física
+## C.1.4 Plataforma física
 
 El vehículo radio-controlado a escala 1:14 se selecciona sobre alternativas
 de otras escalas por tres motivos: *coste* —un 1:14 es manipulable, las
@@ -148,7 +148,7 @@ documentan en el Capítulo 5 y en el Anexo correspondiente.
 
 *Figura 3.5 — fotografía/diagrama del vehículo RC 1:14 instrumentado con la cámara, IMU, encoder y SBC, con etiquetas sobre cada componente.*
 
-## C.6 Instrumentación de medida
+## C.1.5 Instrumentación de medida
 
 El instrumento primario de captura de evidencia es el Logger Node de la
 arquitectura ROS2, ya descrito en la adaptación A3 (§3.4.3). El Logger
@@ -180,7 +180,7 @@ decisión sobre adopción definitiva como métrica oficial del proyecto se
 difiere a Fase 4, cuando se cuente con la *policy* entrenada y se pueda
 calibrar contra el evaluador humano del autor.
 
-## C.7 Documentación, control de versiones y reproducibilidad
+## C.1.6 Documentación, control de versiones y reproducibilidad
 
 Todos los artefactos del proyecto —documentos, código, plantillas,
 matriz de trazabilidad, scripts de validación— viven en un único
@@ -215,7 +215,7 @@ estándar y qué va más allá. La revisión sigue el orden cronológico de
 publicación, que coincide aproximadamente con el orden de adopción
 industrial.
 
-## C.1 ISO 26262:2018 — Functional Safety for Road Vehicles
+## C.2.1 ISO 26262:2018 — Functional Safety for Road Vehicles
 
 ISO 26262:2018 establece el V-Model clásico aplicado a automoción. La
 tesis lo toma como punto de partida y como marco al que pretende
@@ -231,7 +231,7 @@ mantenerse fiel en su estructura general.
   filosofía es de *tailoring* aditivo: nada se elimina; se añade lo
   estrictamente necesario.
 
-## C.2 ISO 21448:2022 — SOTIF (Safety Of The Intended Functionality)
+## C.2.2 ISO 21448:2022 — SOTIF (Safety Of The Intended Functionality)
 
 ISO 21448:2022 introduce la noción de seguridad más allá de fallos,
 incluyendo uso de funciones en condiciones no anticipadas, y es la
@@ -250,7 +250,7 @@ ningún componente haya "fallado" en sentido clásico (Wang et al.,
   arquitectónico explícito del lifecycle, no solo como práctica
   recomendada en operación.
 
-## C.3 ISO/IEC TR 5469:2024 — AI Functional Safety
+## C.2.3 ISO/IEC TR 5469:2024 — AI Functional Safety
 
 ISO/IEC TR 5469:2024 es el documento normativo más específico
 publicado hasta la fecha sobre uso de IA en funciones de seguridad.
@@ -272,7 +272,7 @@ principle* (cláusula 7) y propiedades deseables de los componentes IA
   documentos versionados separados es un refinamiento operativo del
   TR, no presente en el documento normativo en esa granularidad.
 
-## C.4 ISO/PAS 8800:2024 — Road Vehicles, Safety and AI
+## C.2.4 ISO/PAS 8800:2024 — Road Vehicles, Safety and AI
 
 ISO/PAS 8800:2024 es la especialización automotriz del marco
 genérico de TR 5469. Indica qué cláusulas de ISO 26262 se mantienen,
@@ -291,7 +291,7 @@ para articular ISO 26262 + SOTIF + ISO/PAS 8800.
   del gap, excede en concreción a los ejemplos publicados hasta la
   fecha.
 
-## C.5 UL 4600 — Standard for Safety for the Evaluation of Autonomous Products
+## C.2.5 UL 4600 — Standard for Safety for the Evaluation of Autonomous Products
 
 UL 4600 (Koopman, 2023) enfatiza la noción de *safety case* y
 evidencia estructurada como mecanismo central de assurance para
@@ -306,7 +306,7 @@ productos autónomos.
   aplicada por herramienta automatizada (`check_traceability.py`), no
   en buena práctica documental revisable.
 
-## C.6 AMLAS — Assurance of Machine Learning for Autonomous Systems
+## C.2.6 AMLAS — Assurance of Machine Learning for Autonomous Systems
 
 AMLAS, consolidado por Paterson et al. (2025), no es un estándar
 formal sino una metodología con patrones GSN (*Goal Structuring
@@ -325,7 +325,7 @@ emergentes, en particular ISO/PAS 8800.
   explícita para *policies* RL, dominio aún poco cubierto por
   AMLAS.
 
-## C.7 HARA simplificado y su relación con la versión formal de la norma
+## C.2.7 HARA simplificado y su relación con la versión formal de la norma
 
 La cláusula 6 de la Parte 3 de ISO 26262:2018 prescribe el método HARA
 formal aplicado a *items* de automoción: análisis de situación,
@@ -368,7 +368,7 @@ enuncian aquí con honestidad:
   sobre lo que se está midiendo y sobre el uso que se le dará.
   Los Safety Requirements derivados, por separado, llevan su propia
   rúbrica de criticidad de tres niveles SR-CL-A/B/C definida en
-  §4.7.1 del Capítulo 4 con consecuencias operativas distintas
+  §4.7 del Capítulo 4 con consecuencias operativas distintas
   (rigor mínimo de implementación y de verificación).
 
 - **Complemento con STPA-light sobre hazards seleccionados.** El HARA

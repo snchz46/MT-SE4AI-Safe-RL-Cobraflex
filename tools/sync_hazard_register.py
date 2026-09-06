@@ -9,8 +9,19 @@ Usage:
     python tools/sync_hazard_register.py [--input INPUT_MD] [--output OUTPUT_CSV]
 
 Default paths:
-    INPUT:  manuscript/chapters/chapter_*.md (searches for hazard tables)
+    INPUT:  docs/02_hazard_register.md (the consolidated register table)
     OUTPUT: docs/data/hazard_register.csv
+
+NOTE ON THE SOURCE. TRACEABILITY.md describes a manuscript-first flow, and the
+intent is still that the manuscript is the editorial source. This parser reads
+the *register* rather than manuscript/chapters/chapter_04_*.md for a mechanical
+reason: the chapter table splits the rating into three columns (S | E | C |
+Criticality), while this parser expects the single consolidated "S3/E2/C1 -
+Medium-High" cell that only the register carries. So the register is the
+machine-readable mirror the CSV is generated from, and it must be kept in step
+with the chapter by hand. That hand step is what let H-03's criticality drift
+(register said Medium, chapter and Appendix A said Medium-High) until it was
+reconciled on 05.09.2026. Pass --input explicitly to read anything else.
 """
 
 import argparse

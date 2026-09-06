@@ -13,7 +13,7 @@ remain implicit. Each subsection follows a uniform pattern:
 tool chosen, justification, discarded alternatives with the reason
 for discarding them.
 
-## C.1 Simulator
+## C.1.1 Simulator
 
 **Choice: Gazebo** (Koenig and Howard, 2004), in its modern variant with
 native ROS2 integration, operated through a
@@ -72,19 +72,19 @@ libraries in Gazebo format; this means that the scenario library of the
 project has to be built explicitly, which falls within the
 scope of Chapter 6.
 
-Alternatives considered and discarded. **CARLA** (Dosovitskiy et al.,
+Alternatives considered and discarded. CARLA (Dosovitskiy et al.,
 2017) is the strongest candidate and the default choice in
 recent autonomous driving research; it offers superior sensor
 fidelity and a mature benchmark ecosystem, but it requires a
 ROS2 *bridge* with its own complications, and its higher computation cost is an
-operational obstacle for an individual thesis. **Highway-Env** and other environments
+operational obstacle for an individual thesis. Highway-Env and other environments
 derived from Gym, without realistic sensors and with an abstract observation
-space, are not suitable for camera-based policies. **LGSVL**, a
+space, are not suitable for camera-based policies. LGSVL, a
 project discontinued in 2022 with a decaying ecosystem.
 **AirSim**, with an aerospace focus, secondary automotive support and
 development on hold.
 
-## C.2 Middleware
+## C.1.2 Reinforcement-learning algorithm
 
 **Choice: PPO** — *Proximal Policy Optimization* — (Schulman et al.,
 2017). PPO is chosen for four reasons that are coherent with the
@@ -100,22 +100,22 @@ coefficient), which makes it easier to write the Training Spec of level L4b as
 a readable document. Third, *support in open tools*: the
 Stable-Baselines3 implementation is mature, widely used, and
 admits direct integration with Gazebo through the
-gymnasium-Gazebo-ROS2 interface mentioned in §3.6.1. Fourth,
+gymnasium-Gazebo-ROS2 interface mentioned in §3.6. Fourth,
 *compatibility with extensions*: if in future iterations the thesis were to
 explore *constrained RL* (in the style of the RECPO of Zhao et al., 2024),
 PPO admits a natural extension to CMDP.
 
-Alternatives considered and discarded: **SAC** (Haarnoja et al., 2018)
+Alternatives considered and discarded: SAC (Haarnoja et al., 2018)
 is competitive in sample efficiency and in robustness to hyperparameters,
 but its *off-policy* character makes the Training Spec less interpretable
 — the notion of "which policy produced which experience" is blurred in the
 *replay buffer* — and its stochastic nature with *temperature tuning*
-adds complexity to the experiment design; **DDPG / TD3** (deterministic
+adds complexity to the experiment design; DDPG / TD3 (deterministic
 *off-policy*) are less stable than SAC and have been superseded by it in
-almost all benchmarks; **A3C / A2C** are less sample-efficient
+almost all benchmarks; A3C / A2C are less sample-efficient
 and have been virtually abandoned in favour of PPO since 2018.
 
-## C.4 Learning loop and implementation tools
+## C.1.3 Learning loop and implementation tools
 
 - **Stable-Baselines3** as the PPO implementation. Justification:
   stability, community, integration with *gym* / *gymnasium*, auditable
@@ -128,7 +128,7 @@ and have been virtually abandoned in favour of PPO since 2018.
 - **Python 3.10+** with quality tools: `ruff` (linting),
   `mypy` (type checking), `pre-commit` for automation on commits.
 
-## C.5 Physical platform
+## C.1.4 Physical platform
 
 The 1:14 scale radio-controlled vehicle is selected over alternatives
 of other scales for three reasons: *cost* — a 1:14 vehicle can be handled easily, the
@@ -148,7 +148,7 @@ documented in Chapter 5 and in the corresponding appendix.
 
 *Figure 3.5 — photograph/diagram of the 1:14 RC vehicle instrumented with the camera, IMU, encoder and SBC, with labels on each component.*
 
-## C.6 Measurement instrumentation
+## C.1.5 Measurement instrumentation
 
 The primary instrument for evidence capture is the Logger Node of the
 ROS2 architecture, already described in adaptation A3 (§3.4.3). The Logger
@@ -180,7 +180,7 @@ decision on definitive adoption as the official metric of the project is
 deferred to Phase 4, when the trained *policy* is available and it can be
 calibrated against the human evaluation of the author.
 
-## C.7 Documentation, version control and reproducibility
+## C.1.6 Documentation, version control and reproducibility
 
 All the artefacts of the project — documents, code, templates,
 traceability matrix, validation scripts — live in a single
@@ -215,7 +215,7 @@ standard and what goes beyond it. The review follows the chronological order of
 publication, which coincides approximately with the order of industrial
 adoption.
 
-## C.1 ISO 26262:2018 — Functional Safety for Road Vehicles
+## C.2.1 ISO 26262:2018 — Functional Safety for Road Vehicles
 
 ISO 26262:2018 establishes the classical V-Model applied to the automotive
 industry. The thesis takes it as a starting point and as a framework to which it intends
@@ -231,7 +231,7 @@ to stay faithful in its general structure.
   philosophy is one of additive *tailoring*: nothing is removed; only what is
   strictly necessary is added.
 
-## C.2 ISO 21448:2022 — SOTIF (Safety Of The Intended Functionality)
+## C.2.2 ISO 21448:2022 — SOTIF (Safety Of The Intended Functionality)
 
 ISO 21448:2022 introduces the notion of safety beyond faults,
 including the use of functions under unanticipated conditions, and is the
@@ -250,7 +250,7 @@ any component having "failed" in the classical sense (Wang et al.,
   architectural level of the life cycle, not only as a practice
   recommended in operation.
 
-## C.3 ISO/IEC TR 5469:2024 — AI Functional Safety
+## C.2.3 ISO/IEC TR 5469:2024 — AI Functional Safety
 
 ISO/IEC TR 5469:2024 is the most specific normative document
 published to date on the use of AI in safety functions.
@@ -272,7 +272,7 @@ principle* (clause 7) and the desirable properties of AI components
   separate version-controlled documents is an operational refinement of the
   TR, not present in the normative document at that granularity.
 
-## C.4 ISO/PAS 8800:2024 — Road Vehicles, Safety and AI
+## C.2.4 ISO/PAS 8800:2024 — Road Vehicles, Safety and AI
 
 ISO/PAS 8800:2024 is the automotive specialisation of the generic
 framework of TR 5469. It indicates which ISO 26262 clauses are kept,
@@ -291,7 +291,7 @@ for articulating ISO 26262 + SOTIF + ISO/PAS 8800.
   of the gap, is more concrete than the examples published to
   date.
 
-## C.5 UL 4600 — Standard for Safety for the Evaluation of Autonomous Products
+## C.2.5 UL 4600 — Standard for Safety for the Evaluation of Autonomous Products
 
 UL 4600 (Koopman, 2023) emphasises the notion of the *safety case* and
 structured evidence as the central assurance mechanism for
@@ -306,7 +306,7 @@ autonomous products.
   enforced by an automated tool (`check_traceability.py`), and not
   into a documentary good practice to be reviewed.
 
-## C.6 AMLAS — Assurance of Machine Learning for Autonomous Systems
+## C.2.6 AMLAS — Assurance of Machine Learning for Autonomous Systems
 
 AMLAS, consolidated by Paterson et al. (2025), is not a formal
 standard but a methodology with GSN (*Goal Structuring
@@ -325,7 +325,7 @@ standards, in particular ISO/PAS 8800.
   articulation for RL *policies*, a domain still poorly covered by
   AMLAS.
 
-## C.7 The simplified HARA and its relation to the formal version of the standard
+## C.2.7 The simplified HARA and its relation to the formal version of the standard
 
 Clause 6 of Part 3 of ISO 26262:2018 prescribes the formal HARA
 method applied to automotive *items*: situation analysis,
@@ -368,7 +368,7 @@ stated here honestly:
   about what is being measured and about the use it will be given.
   The derived Safety Requirements carry, separately, their own
   three-level criticality rubric SR-CL-A/B/C defined in
-  §4.7.1 of Chapter 4 with different operational consequences
+  §4.7 of Chapter 4 with different operational consequences
   (minimum rigour of implementation and of verification).
 
 - **Complement with STPA-light over selected hazards.** The simplified

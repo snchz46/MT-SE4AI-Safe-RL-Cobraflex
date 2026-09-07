@@ -58,11 +58,11 @@ The reference system does not add nodes: it specialises the environment, as Figu
 
 **Shared camera chain and common-cause guarantee.** The native image arrives through the bridge between simulator and middleware and goes through a single chain per cycle. The visual degradation injector of the scenario is applied before the branching, so that the same degraded image feeds both the cage estimator, at native resolution, and the reduction to 84×84 in grey scale that the policy consumes. Applying the degradation only once, before the branching, is what guarantees that policy and cage see the same world, also when that world is degraded. One implementation finding has a direct consequence for the experimental budget: camera rendering is tied to real time, so the simulation clock runs at factor one on this track, as opposed to the accelerated execution of the state track.
 
-<img src="../figures/etrack_camera_control_loop.png" alt="Figure 6.2 — Control loop of the camera track." width="540"/>
+<img src="../figures/fig_6_2_etrack_camera_control_loop.png" alt="Figure 6.2 — Control loop of the camera track." width="540"/>
 
 *Figure 6.2 — The control loop of the camera track. The degradation injector is applied before the fork, so that the deterministic cage estimator and the 84×84 reduction the network consumes receive exactly the same image. Hence the common cause that Chapter 5 declares as a residual risk, and hence also that a scenario stressor is attributable: it enters the system exactly once.*
 
-<img src="../figures/cv_lane_estimator_pipeline.png" alt="Figure 6.3 — Chain of the cage lane estimator." width="520"/>
+<img src="../figures/fig_6_3_cv_lane_estimator_pipeline.png" alt="Figure 6.3 — Chain of the cage lane estimator." width="520"/>
 
 *Figure 6.3 — The lane-estimator chain the cage reasons over: five deterministic stages from the native image to the lane-relative state, with no learned component anywhere. It is what lets the safety envelope avoid inheriting the failure modes of the network.*
 

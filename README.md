@@ -122,7 +122,7 @@ The system is the end-to-end camera PPO driver `ppo_gz2d_cap022_1M_2024` (seed 2
 </p>
 
 <p align="center">
-  <img src="manuscript/figures/auto/fig_ppo2d_training_curve.png" alt="Training reward of the 2-D camera PPO policy — rises to a stable high plateau, peak 1755 at 472k, with the evaluated checkpoint candidates marked" width="720">
+  <img src="manuscript/figures/auto/fig_7_4_ppo2d_training_curve.png" alt="Training reward of the 2-D camera PPO policy — rises to a stable high plateau, peak 1755 at 472k, with the evaluated checkpoint candidates marked" width="720">
   <br>
   <sub>Training reward of the policy (top curve): a stable high plateau, <code>ep_rew_mean</code> peaking at <b>1755 @ 472 k</b>. The marked points are the three checkpoints that were evaluated by driving. The two lower curves are earlier camera-policy variants, shown only for scale.</sub>
 </p>

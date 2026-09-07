@@ -28,7 +28,7 @@ the page.
 
 Run:
     python mmd_render.py                 # render every figure in FIGURES
-    python mmd_render.py cage_rule_chain # render one
+    python mmd_render.py fig_5_1_cage_rule_chain # render one
 
 Produces:
     <name>.png in this directory.
@@ -41,6 +41,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+from matplotlib.path import Path as MplPath
 
 HERE = Path(__file__).resolve().parent
 
@@ -52,14 +53,24 @@ HERE = Path(__file__).resolve().parent
 #   box_h     : height of one node box, inches
 #   side      : which side of the main chain the off-chain nodes go on
 # --------------------------------------------------------------------------
+# Three .mmd files in this directory are deliberately absent from this table,
+# because this module renders flowcharts and none of them is one. Listing them
+# here did not make them renderable: it only made `python mmd_render.py` with
+# no arguments die on the first of them.
+#
+#   fig_4_1_odd_taxonomy_reduced  `subgraph` blocks and undirected `---` links.
+#                                 Figure 4.1 is drawn by its own renderer,
+#                                 fig_4_1_odd_taxonomy.py, which transcribes it.
+#   c05_emergency_states          a `stateDiagram-v2`.
+#   control_cycle_sequence        a `sequenceDiagram`.
+#
+# The last two render no figure in the manuscript; they are structure sources,
+# which is also why they keep a descriptive name instead of a chapter number.
 FIGURES = {
-    "odd_taxonomy_reduced": dict(direction="TD", width=6.10, box_h=0.62, side="right"),
-    "hara_procedure": dict(direction="TD", width=6.10, box_h=0.60, side="right"),
-    "sr_derivation": dict(direction="TD", width=6.10, box_h=0.60, side="right"),
-    "cage_rule_chain": dict(direction="TD", width=6.10, box_h=0.58, side="right"),
-    "c05_emergency_states": dict(direction="TD", width=6.10, box_h=0.60, side="right"),
-    "control_cycle_sequence": dict(direction="TD", width=6.10, box_h=0.58, side="right"),
-    "traceability_case_sr001": dict(direction="TD", width=6.10, box_h=0.62, side="right"),
+    "fig_4_2_hara_procedure": dict(direction="TD", width=6.10, box_h=0.60, side="right"),
+    "fig_4_3_sr_derivation": dict(direction="TD", width=6.10, box_h=0.60, side="right"),
+    "fig_5_1_cage_rule_chain": dict(direction="TD", width=6.10, box_h=0.58, side="right"),
+    "fig_10_1_traceability_case_sr001": dict(direction="TD", width=6.10, box_h=0.62, side="right"),
     "sim2real_roadmap": dict(direction="TD", width=6.10, box_h=0.60, side="right"),
 }
 
@@ -238,10 +249,19 @@ def render(name: str) -> Path:
     width = cfg["width"]
     box_h = cfg["box_h"]
     gap = 0.20
-    main_w = width * (0.56 if off else 0.86)
+    # The space between the two columns is a routing lane, not spare margin:
+    # every dotted edge travels along it and every edge label sits inside it.
+    # At 0.24 in there was room for neither, so the edges were drawn as
+    # diagonals over the top of the figure and the labels were dropped on the
+    # boxes. It is widened only where labels actually have to fit, because the
+    # room comes out of the two columns and an unlabelled edge does not need it.
+    labelled = any(lab for _, _, lab in g.dotted)
+    gutter = 0.50 if labelled else 0.24
+    main_w = width * ((0.54 if labelled else 0.56) if off else 0.86)
     main_x = 0.04 if off and cfg["side"] == "right" else (width - main_w) / 2
-    side_w = width - main_w - 0.32 if off else 0.0
-    side_x = main_x + main_w + 0.24
+    side_w = width - main_w - 0.08 - gutter if off else 0.0
+    side_x = main_x + main_w + gutter
+    gutter_x = main_x + main_w + gutter / 2
 
     def box_height(nid):
         n = len(g.labels[nid].split("\n"))
@@ -317,12 +337,39 @@ def render(name: str) -> Path:
         draw_box(nid, main_x, y, main_w, h)
         y -= gap
 
-    # Side nodes, spread down the right-hand column.
+    # Side nodes go BESIDE the node they attach to -- what the header of this
+    # module has always said the layout does, and what it did not do. They were
+    # spread evenly down the column in declaration order, so an annotation on
+    # the first step and one on the last step could land in each other's place
+    # and their edges then crossed the whole figure diagonally to reach back.
+    # Anchored at their neighbour's height, the same edges are short and
+    # horizontal. A side node with no edge into the chain keeps its even slot.
     if off:
+        centre = {n: pos[n][1] + pos[n][3] / 2 for n in chain}
+        edges = [(a, b) for a, b, _ in g.dotted] + list(g.solid)
         step = (height - 0.16) / len(off)
+        want = {}
         for i, nid in enumerate(off):
-            h = box_height(nid)
-            sy = height - 0.08 - step * (i + 0.5) - h / 2
+            near = [centre[o] for e in edges if nid in e
+                    for o in e if o in centre]
+            want[nid] = (sum(near) / len(near) if near
+                         else height - 0.08 - step * (i + 0.5))
+
+        rows = [[nid, want[nid] - box_height(nid) / 2, box_height(nid)]
+                for nid in sorted(off, key=lambda n: -want[n])]
+        # Preferred positions can overlap; two clamping passes separate them.
+        # The figure height was sized to hold the entire column, so whatever
+        # the downward pass has to force, the upward pass can undo.
+        top = height - 0.08
+        for row in rows:
+            row[1] = min(row[1], top - row[2])
+            top = row[1] - gap
+        bottom = 0.08
+        for row in reversed(rows):
+            row[1] = max(row[1], bottom)
+            bottom = row[1] + row[2] + gap
+
+        for nid, sy, h in rows:
             pos[nid] = (side_x, sy, side_w, h)
             draw_box(nid, side_x, sy, side_w, h)
 
@@ -339,18 +386,87 @@ def render(name: str) -> Path:
         ax.add_patch(FancyArrowPatch(p0, p1, arrowstyle="-|>", mutation_scale=9,
                                      linewidth=0.9, color="#6b6b6b", zorder=2))
 
+    def dotted_arrow(verts):
+        """An orthogonal dotted run through the gutter, arrowhead at the end."""
+        codes = [MplPath.MOVETO] + [MplPath.LINETO] * (len(verts) - 1)
+        ax.add_patch(FancyArrowPatch(
+            path=MplPath(verts, codes), arrowstyle="-|>", mutation_scale=8,
+            linewidth=0.8, color="#8a8a8a", linestyle=(0, (2.5, 2)),
+            shrinkA=0, shrinkB=0, zorder=2))
+
+    def dotted_line(x0, y0, x1, y1):
+        ax.plot([x0, x1], [y0, y1], color="#8a8a8a", linewidth=0.8,
+                linestyle=(0, (2.5, 2)), zorder=2)
+
+    def edge_label(text, x, y):
+        """
+        An edge label, wrapped to fit the gutter it now lives in.
+
+        These used to be dropped at a fixed fraction along a diagonal, with an
+        opaque background: in Figure 4.2 that background erased a piece of the
+        border of the very box the edge came from, which is why the edge looked
+        like it started out of nowhere. There is nothing to erase in the gutter.
+        """
+        words = text.split()
+        if len(words) > 1:
+            cut = min(range(1, len(words)),
+                      key=lambda i: abs(len(" ".join(words[:i]))
+                                        - len(" ".join(words[i:]))))
+            text = " ".join(words[:cut]) + "\n" + " ".join(words[cut:])
+        t = ax.text(x, y, text, ha="center", va="center", fontsize=4.6,
+                    color="#6b6b6b", style="italic", linespacing=1.2, zorder=5,
+                    bbox=dict(boxstyle="round,pad=0.10", facecolor="white",
+                              edgecolor="none", alpha=0.9))
+        fig.canvas.draw()
+        drawn = t.get_window_extent(renderer=fig.canvas.get_renderer()).width / fig.dpi
+        if drawn > gutter - 0.04:
+            t.set_fontsize(max(3.4, 4.6 * (gutter - 0.04) / drawn))
+
+    # A dotted edge is an annotation -- an off-chain box commenting on the
+    # chain -- so it is routed orthogonally along the gutter instead of being
+    # drawn as a diagonal across everything else. Grouped by source, because
+    # one source with several targets is a different drawing problem.
+    by_source = {}
     for a, b, lab in g.dotted:
-        p0, p1 = anchor(a, b), anchor(b, a)
-        ax.add_patch(FancyArrowPatch(p0, p1, arrowstyle="-|>", mutation_scale=8,
-                                     linewidth=0.8, color="#8a8a8a",
-                                     linestyle=(0, (2.5, 2)), zorder=2))
-        if lab:
-            t = 0.22 + 0.16 * (g.dotted.index((a, b, lab)) % 3)
-            ax.text(p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t + 0.04,
-                    clean(lab), ha="center", va="bottom", fontsize=4.6,
-                    color="#6b6b6b", style="italic", zorder=5,
-                    bbox=dict(boxstyle="round,pad=0.12", facecolor="white",
-                              edgecolor="none", alpha=0.85))
+        by_source.setdefault(a, []).append((b, lab))
+
+    for src, targets in by_source.items():
+        sx, sy, sw, sh = pos[src]
+        src_c = sy + sh / 2
+        ends = [(pos[t][1] + pos[t][3] / 2, pos[t][0] + pos[t][2]) for t, _ in targets]
+
+        if not all(pos[t][0] < sx for t, _ in targets):
+            # Not the side-column-to-chain case this routing is for; a straight
+            # line is the right drawing between neighbours.
+            for t, lab in targets:
+                p0, p1 = anchor(src, t), anchor(t, src)
+                dotted_arrow([p0, p1])
+                if lab:
+                    edge_label(clean(lab), (p0[0] + p1[0]) / 2,
+                               (p0[1] + p1[1]) / 2 + 0.09)
+            continue
+
+        if len(ends) >= 3:
+            # One box annotating three or more links -- "this is checked on
+            # every one of them". As separate edges that is a fan of diagonals
+            # that overlap each other and have to be traced one by one; as a
+            # spine with a tick into each target it is a single shape, and it
+            # says "all of these" the way the sentence does.
+            span = [c for c, _ in ends] + [src_c]
+            dotted_line(gutter_x, min(span), gutter_x, max(span))
+            dotted_line(sx, src_c, gutter_x, src_c)
+            for c, right in ends:
+                dotted_arrow([(gutter_x, c), (right, c)])
+            continue
+
+        for (t, lab), (c, right) in zip(targets, ends):
+            if abs(src_c - c) < 0.012:
+                dotted_arrow([(sx, src_c), (right, c)])
+            else:
+                dotted_arrow([(sx, src_c), (gutter_x, src_c),
+                              (gutter_x, c), (right, c)])
+            if lab:
+                edge_label(clean(lab), gutter_x, c + 0.10)
 
     out = HERE / f"{name}.png"
     fig.savefig(out, dpi=300, bbox_inches="tight", facecolor="white")

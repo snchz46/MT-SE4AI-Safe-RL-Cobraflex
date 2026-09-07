@@ -60,7 +60,7 @@ Three observations. The first one: six rules cover fourteen requirements, becaus
 
 ## 5.5 The six rules
 
-<img src="../figures/cage_rule_chain.png" alt="Figure 5.1 — The rule chain in evaluation order." width="500"/>
+<img src="../figures/fig_5_1_cage_rule_chain.png" alt="Figure 5.1 — The rule chain in evaluation order." width="500"/>
 
 *Figure 5.1 — The six rules in their fixed evaluation order, a single pass per cycle. Each rule consumes the previous rule's safe action as its raw action. C-06 first sanitises the command into a feasible baseline; C-05 is evaluated last so that its substituted action — steering frozen and braking — overrides every upstream correction. The joint-envelope assertion at the end of the cycle can still escalate to emergency.*
 
@@ -90,7 +90,7 @@ The cage also admits two operating modes, which are the basis of the whole exper
 
 The system is decomposed into the nodes of Figure 5.2, each with a single responsibility, communicating through explicit topics. The data chain is linear and auditable: perception produces the state; the policy consumes the state and produces a raw command; the cage consumes the raw command and the state and produces a safe command plus a record of the cage status; the vehicle control translates the safe command into actuation setpoints; and the logging node persists the cage status to disk.
 
-<img src="../figures/Lane_camera_agent-cage.png" alt="Figure 5.2 — Node chain of the system." width="480"/>
+<img src="../figures/fig_5_2_node_chain.png" alt="Figure 5.2 — Node chain of the system." width="480"/>
 
 *Figure 5.2 — Node chain: perception, policy, cage, vehicle control and logging. The command of the policy never reaches the actuator without passing through the cage.*
 

@@ -78,7 +78,7 @@ Three observations. The first one: six rules cover fourteen requirements, becaus
 \section{The six rules}
 \label{sec:5.5}
 
-\figwide{cage_rule_chain}{The six rules in their fixed evaluation order, a single pass per cycle. Each rule consumes the previous rule's safe action as its raw action. \cagerule{06} first sanitises the command into a feasible baseline; \cagerule{05} is evaluated last so that its substituted action --- steering frozen and braking --- overrides every upstream correction. The joint-envelope assertion at the end of the cycle can still escalate to emergency.}{5.1}
+\figwide{fig_5_1_cage_rule_chain}{The six rules in their fixed evaluation order, a single pass per cycle. Each rule consumes the previous rule's safe action as its raw action. \cagerule{06} first sanitises the command into a feasible baseline; \cagerule{05} is evaluated last so that its substituted action --- steering frozen and braking --- overrides every upstream correction. The joint-envelope assertion at the end of the cycle can still escalate to emergency.}{5.1}
 
 The six rules are evaluated in the fixed order shown in \Cref{fig:5.1}, in a single pass per cycle. Each rule is specified with the same format: requirement implemented, observed variable, activation logic, corrective strategy and parameters. The uniformity makes comparison and cross-verification easier. The complete numerical values are in \Cref{app:E}.
 
@@ -109,7 +109,7 @@ The cage also admits two operating modes, which are the basis of the whole exper
 
 The system is decomposed into the nodes of \Cref{fig:5.2}, each with a single responsibility, communicating through explicit topics. The data chain is linear and auditable: perception produces the state; the policy consumes the state and produces a raw command; the cage consumes the raw command and the state and produces a safe command plus a record of the cage status; the vehicle control translates the safe command into actuation setpoints; and the logging node persists the cage status to disk.
 
-\figwide{Lane_camera_agent-cage}{Node chain: perception, policy, cage, vehicle control and logging. The command of the policy never reaches the actuator without passing through the cage.}{5.2}
+\figwide{fig_5_2_node_chain}{Node chain: perception, policy, cage, vehicle control and logging. The command of the policy never reaches the actuator without passing through the cage.}{5.2}
 
 The architectural property that matters is that the command of the policy does not reach the actuator without going through the cage. This is not a coding convention: it is a topological property of the graph, verifiable by inspection of the connections, and it means that there is no path through which an unfiltered command could reach the vehicle.
 

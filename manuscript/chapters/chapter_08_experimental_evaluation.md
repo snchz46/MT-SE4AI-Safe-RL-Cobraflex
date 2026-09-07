@@ -508,7 +508,7 @@ ambos casos. Nada de esto reabre G4, que cerró sobre F4 + GE4-V2 sin depender d
 las dos abstenciones.
 
 ```mermaid
-%% Fuente canónica: manuscript/figures/traceability_case_sr001.mmd
+%% Fuente canónica: manuscript/figures/fig_10_1_traceability_case_sr001.mmd
 flowchart LR
     H["H-01<br/>Unintended lane exit<br/>S3/E3/C2 &middot; High<br/><i>docs/02</i>"]
     SR["SR-001<br/>|d| &lt; 0.16 m<br/>within applicable ODD<br/><i>docs/03</i>"]

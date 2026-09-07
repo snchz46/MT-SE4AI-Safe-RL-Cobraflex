@@ -3061,7 +3061,7 @@ availability + one CL-B (SR-010) + the documented stall construct (SR-009). Cite
 
 | Field | Value |
 | --- | --- |
-| Section | `experiments/sim/training/ppo_gz2d_cap022_1M_2024/`; Ch.7 §7.5.5; `manuscript/figures/auto/fig_ppo2d_training_curve.png` |
+| Section | `experiments/sim/training/ppo_gz2d_cap022_1M_2024/`; Ch.7 §7.5.5; `manuscript/figures/auto/fig_7_4_ppo2d_training_curve.png` |
 | Status | CONFIRMED — best deterministic checkpoint selected (550k); its D-43 preflight PASS; **verdict campaign closed 31.07.2026** (1890 runs, 0 errors; `CAMPAIGN_2D_PPO550K_ANALYSIS.md`) |
 | Date | 27.07.2026 |
 
@@ -3084,7 +3084,7 @@ the best** (14 safety interventions, max\|ey\| 49 mm), while **550k wins** (5.32
 8.6 mm, max 27 mm, **0 emergencies, 0 safety interventions**, lowest C-06). Selecting on reward alone
 would have picked the worst of the three.
 
-**Evidence.** `fig_ppo2d_training_curve.png` (PPO 2-D vs 1-D E-main vs SAC 2-D). Candidate evals
+**Evidence.** `fig_7_4_ppo2d_training_curve.png` (PPO 2-D vs 1-D E-main vs SAC 2-D). Candidate evals
 `rl_ppo2d_cap022_{400k,475k,550k}_nom_4k4`. 550k D-43 preflight (cage = joint_pair_quadratic + gain
 1.60 + T3, identical to margin022 for comparability) **PASS** (7/7,
 `d43_preflight_ppo2d_cap022_550k.json`). Verdict campaign on 550k launched

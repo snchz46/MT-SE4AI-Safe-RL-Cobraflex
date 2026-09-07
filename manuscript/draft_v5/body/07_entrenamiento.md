@@ -76,7 +76,7 @@ El primer intento de campaña completa sobre acción bidimensional se ejecutó c
 
 Una advertencia de honestidad sobre las cifras: la recompensa no es comparable uno a uno entre espacios de acción, porque el techo de episodio se duplica al pasar a dos dimensiones. El factor ~2 frente a la política unidimensional es sobre todo mayor supervivencia y horizonte, no «el doble de buena conducción».
 
-<img src="../figures/auto/fig_ppo2d_training_curve.png" alt="Figura 7.4 — Curva de entrenamiento de la política bidimensional de referencia." width="600"/>
+<img src="../figures/auto/fig_7_4_ppo2d_training_curve.png" alt="Figura 7.4 — Curva de entrenamiento de la política bidimensional de referencia." width="600"/>
 
 *Figura 7.4 — Recompensa de entrenamiento de la política bidimensional de referencia frente a la unidimensional y a la variante fuera de política. Pico 1755 y meseta alta estable, frente al colapso posterior al pico de la primera y al techo de ~200 de la segunda. Los puntos de control candidatos evaluados aparecen marcados.*
 
@@ -88,7 +88,7 @@ Elegir por recompensa habría seleccionado el peor candidato. Es un control anti
 
 ### 7.5.3 Qué hace la política con la autoridad longitudinal
 
-<img src="../figures/auto/fig_ppo2d_action_distribution.png" alt="Figura 7.5 — Distribución de la acción cruda bidimensional." width="640"/>
+<img src="../figures/auto/fig_7_5_ppo2d_action_distribution.png" alt="Figura 7.5 — Distribución de la acción cruda bidimensional." width="640"/>
 
 *Figura 7.5 — Distribución de la acción cruda al inicio frente al final del entrenamiento, un panel por dimensión. En dirección, el mando de todo-o-nada inicial se disuelve (36,9 % → 7,1 % de muestras saturadas). En tracción, la evolución es la contraria, hacia la saturación (48,2 % → 89,6 %): la política aprende a pedir el techo casi siempre.*
 

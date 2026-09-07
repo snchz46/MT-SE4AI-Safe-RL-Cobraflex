@@ -89,7 +89,7 @@ The first attempt at a complete campaign over a two-dimensional action was execu
 
 \paragraph{Speed ceiling} A single-variable comparison shows that at 0.5 m/s the policy peaks at 654 and drives dirty --- it overshoots the tight curves --- against 1421 at 0.22 m/s, where it takes them cleanly.\sidenote{An honesty warning about the figures: the reward is not comparable one to one between action spaces, because the episode ceiling doubles when moving to two dimensions. The factor of $\sim$2 with respect to the one-dimensional policy is mostly greater survival and horizon, not \enquote{twice as good driving}.}
 
-\figwide{fig_ppo2d_training_curve}{Training reward of the two-dimensional reference policy against the one-dimensional one and against the off-policy variant. Peak 1755 and a high stable plateau, against the post-peak collapse of the first one and the ceiling of $\sim$200 of the second one. The candidate checkpoints evaluated are marked.}{7.4}
+\figwide{fig_7_4_ppo2d_training_curve}{Training reward of the two-dimensional reference policy against the one-dimensional one and against the off-policy variant. Peak 1755 and a high stable plateau, against the post-peak collapse of the first one and the ceiling of $\sim$200 of the second one. The candidate checkpoints evaluated are marked.}{7.4}
 
 \subsection{Checkpoint selection: by driving, not by reward}
 \label{sec:7.5.2}
@@ -101,7 +101,7 @@ Selecting by reward would have chosen the worst candidate. It is a bias control 
 \subsection{What the policy does with longitudinal authority}
 \label{sec:7.5.3}
 
-\figwide{fig_ppo2d_action_distribution}{Distribution of the raw action at the start against the end of training, one panel per dimension. In steering, the initial all-or-nothing command dissolves (36.9\,\% $\rightarrow$ 7.1\,\% of saturated samples). In throttle, the evolution is the opposite, towards saturation (48.2\,\% $\rightarrow$ 89.6\,\%): the policy learns to ask for the ceiling almost always.}{7.5}
+\figwide{fig_7_5_ppo2d_action_distribution}{Distribution of the raw action at the start against the end of training, one panel per dimension. In steering, the initial all-or-nothing command dissolves (36.9\,\% $\rightarrow$ 7.1\,\% of saturated samples). In throttle, the evolution is the opposite, towards saturation (48.2\,\% $\rightarrow$ 89.6\,\%): the policy learns to ask for the ceiling almost always.}{7.5}
 
 \Cref{fig:7.5} supports the honest reading of the longitudinal authority: the policy uses it to set the speed regime, not to draw a profile. There is modulation and it is well localised --- the 8.3\,\% of steps with reduced throttle are concentrated at high curvature and rise to 35.6\,\% at the tightest apex --- but its magnitude is marginal: the throttle drops to 0.81 and the speed falls only from 0.218 to 0.216 m/s. The policy arrives at the tightest curves practically at the ceiling. This apparently minor observation explains one result of \Cref{ch:08}: the speed rule of the cage never activates during the whole campaign.
 

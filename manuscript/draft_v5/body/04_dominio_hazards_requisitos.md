@@ -23,7 +23,7 @@ La especificación del dominio operacional se estratifica en los cuatro dominios
 - **ODD-3 — geometría exigente.** Trazado sinuoso y cerrado en condiciones limpias, con envolvente de velocidad dependiente de la curvatura.
 - **ODD-4 — combinado.** Producto cartesiano de la geometría de ODD-3 con los estresores de ODD-2.
 
-<img src="../figures/fig_odd_taxonomy_es.png" alt="Figura 4.1 — Taxonomía ODD retenida y los cuatro dominios estratificados." width="580"/>
+<img src="../figures/fig_4_1_odd_taxonomy_es.png" alt="Figura 4.1 — Taxonomía ODD retenida y los cuatro dominios estratificados." width="580"/>
 
 *Figura 4.1 — Taxonomía ODD retenida y los cuatro dominios estratificados. A la izquierda, las dimensiones de PAS 1883 / ISO 34503 con las que se describe cada dominio; a la derecha, la estratificación 2 × 2 cuyos contrastes por pares permiten al Capítulo 8 atribuir un efecto a un único eje de complejidad: ODD-1 frente a ODD-2 aísla los estresores sobre geometría recta, ODD-1 frente a ODD-3 aísla la complejidad geométrica en condiciones limpias, y ODD-3 frente a ODD-4 añade estresores sobre geometría curva.*
 
@@ -43,7 +43,7 @@ Para el despliegue sobre la plataforma real se prevé un dominio análogo, el m�
 
 El análisis sigue la estructura de un HARA conforme a ISO 26262 —la Figura 4.2 recoge el procedimiento tal como se aplicó—, simplificado en tres puntos que conviene declarar: se aplica sobre una única función y un único elemento, en lugar de sobre un vehículo completo; las situaciones operacionales se enumeran a partir de los cuatro dominios en lugar de derivarse de un catálogo de uso; y la asignación de nivel de integridad se sustituye por una clasificación de criticidad propia de dos clases, adecuada a un vehículo a escala sin consecuencias sobre personas. Las simplificaciones no afectan a la estructura del razonamiento —situación, peligro, severidad, exposición, controlabilidad, criticidad, mitigación— sino a su alcance.
 
-<img src="../figures/hara_procedure.png" alt="Figura 4.2 — Procedimiento HARA aplicado." width="560"/>
+<img src="../figures/fig_4_2_hara_procedure.png" alt="Figura 4.2 — Procedimiento HARA aplicado." width="560"/>
 
 *Figura 4.2 — El procedimiento HARA tal como se aplicó: cinco pasos desde la enumeración de funciones hasta la documentación de consecuencia e hipótesis de causa raíz, con la pasada sistémica ligera refinando restricciones sobre los peligros seleccionados y el registro de peligros como salida.*
 
@@ -82,7 +82,7 @@ Sobre los peligros de mayor criticidad se ejecuta además una pasada ligera de a
 
 Cada peligro se traduce en uno o más requisitos siguiendo el procedimiento de la Figura 4.3, bajo cuatro criterios obligatorios, que la plantilla del documento hace exigibles: falsabilidad —expresado como condición medible con procedimiento de veredicto definido—; operatividad —implementable por un mecanismo concreto, sea regla, restricción de entrenamiento o test de escenario—; trazabilidad —referencia al menos un peligro y es referenciado al menos por una regla y un escenario—; y atomicidad —captura una sola propiedad.
 
-<img src="../figures/sr_derivation.png" alt="Figura 4.3 — Procedimiento de derivación de requisitos de seguridad." width="560"/>
+<img src="../figures/fig_4_3_sr_derivation.png" alt="Figura 4.3 — Procedimiento de derivación de requisitos de seguridad." width="560"/>
 
 *Figura 4.3 — Derivación de un requisito de seguridad a partir de un peligro, en cuatro pasos. Dos guardas hacen defendible el resultado: los umbrales se fijan desde la física del ODD y nunca desde el rendimiento observado de la policy entrenada —lo que evitaría la tautología— y la clase de criticidad decide la ruta de implementación, con todo requisito de clase A aterrizando en una regla determinista.*
 

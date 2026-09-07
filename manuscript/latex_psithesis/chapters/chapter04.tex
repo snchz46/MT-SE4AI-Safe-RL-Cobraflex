@@ -35,7 +35,7 @@ The specification of the operational domain is stratified into the four nested d
 
 Each domain fixes named parameters --- lane and road width, friction coefficient, maximum curvature, speed envelope, control latency, dimensionality of the observation and of the action --- so that any later claim can refer to a concrete value and not to a qualitative description.
 
-\figwide{fig_odd_taxonomy}{The ODD taxonomy retained and the four stratified domains. On the left, the PAS 1883 / ISO 34503 dimensions with which each domain is described; on the right, the $2\times2$ stratification whose pairwise contrasts let \Cref{ch:08} attribute an effect to a single complexity axis: ODD-1 against ODD-2 isolates the stressors on straight geometry, ODD-1 against ODD-3 isolates geometric complexity under clean conditions, and ODD-3 against ODD-4 adds stressors on curved geometry.}{4.1}
+\figwide{fig_4_1_odd_taxonomy}{The ODD taxonomy retained and the four stratified domains. On the left, the PAS 1883 / ISO 34503 dimensions with which each domain is described; on the right, the $2\times2$ stratification whose pairwise contrasts let \Cref{ch:08} attribute an effect to a single complexity axis: ODD-1 against ODD-2 isolates the stressors on straight geometry, ODD-1 against ODD-3 isolates geometric complexity under clean conditions, and ODD-3 against ODD-4 adds stressors on curved geometry.}{4.1}
 
 \subsection{Domain attributes versus scenario stressors}
 \label{sec:4.3.2}
@@ -55,7 +55,7 @@ For the deployment on the real platform an analogous domain is foreseen, the clo
 
 The analysis follows the structure of a HARA according to ISO 26262 --- \Cref{fig:4.2} gives the procedure as it was applied --- simplified at three points that should be declared: it is applied to a single function and a single element instead of to a complete vehicle; the operational situations are enumerated from the four domains instead of being derived from a usage catalogue; and the assignment of an integrity level is replaced by a two-class criticality classification of our own, appropriate for a scale vehicle with no consequences for people. The simplifications do not affect the structure of the reasoning --- situation, hazard, severity, exposure, controllability, criticality, mitigation --- but its scope.
 
-\figwide{hara_procedure}{The HARA procedure as applied: five steps from the enumeration of functions to the documentation of consequence and root-cause hypothesis, with the lightweight systemic pass refining constraints on the selected hazards and the hazard register as the output.}{4.2}
+\figwide{fig_4_2_hara_procedure}{The HARA procedure as applied: five steps from the enumeration of functions to the documentation of consequence and root-cause hypothesis, with the lightweight systemic pass refining constraints on the selected hazards and the hazard register as the output.}{4.2}
 
 Each hazard is classified along three axes with explicit rubrics: severity (from S0, no injury, to S3, a serious consequence on the full-scale analogue), exposure (from E0 to E4, according to the frequency of the situation inside the domain) and controllability (from C0 to C3, according to the ability of the system or of a supervisor to avoid the damage). The combination produces the criticality, and this determines whether the hazard requires mitigation by a deterministic rule, by a training constraint, or by both.
 
@@ -103,7 +103,7 @@ For the hazards with the highest criticality, a light pass of systemic analysis 
 
 Each hazard is translated into one or more requirements following the procedure of \Cref{fig:4.3}, under four mandatory criteria, which the document template makes enforceable: falsifiability --- expressed as a measurable condition with a defined verdict procedure; operability --- implementable by a concrete mechanism, whether a rule, a training constraint or a scenario test; traceability --- it references at least one hazard and is referenced by at least one rule and one scenario; and atomicity --- it captures a single property.
 
-\figwide{sr_derivation}{Derivation of a safety requirement from a hazard, in four steps. Two guards make the result defensible: thresholds are fixed from ODD physics and never from the observed performance of the trained policy --- which would be tautological --- and the criticality class decides the implementation route, with every class-A requirement landing on a deterministic rule.}{4.3}
+\figwide{fig_4_3_sr_derivation}{Derivation of a safety requirement from a hazard, in four steps. Two guards make the result defensible: thresholds are fixed from ODD physics and never from the observed performance of the trained policy --- which would be tautological --- and the criticality class decides the implementation route, with every class-A requirement landing on a deterministic rule.}{4.3}
 
 Falsifiability deserves emphasis because it is the criterion that makes everything else possible. A requirement such as \enquote{the vehicle shall drive safely} is not falsifiable and therefore is neither verifiable nor traceable: there is no measurement that could contradict it. The discipline of demanding a named threshold, a metric and a verdict procedure is what turns the traceability matrix into an instrument with content, instead of a documentary exercise.
 

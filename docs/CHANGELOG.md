@@ -31,6 +31,138 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [06.09.2026 · figure naming] — Every figure that reaches the page now states its chapter in its filename
+
+**Document(s) affected:** `manuscript/figures/` (20 files renamed, `mmd_render.py`),
+`manuscript/draft_v5/body/{04,05,06,07,10}`, `manuscript/draft_v5_en/body/{04,05,06,07,10}`,
+`manuscript/latex_psithesis/chapters/{04,05,06,07,10}.tex` + `README.md` + `check_tex.pl`,
+`manuscript/chapters/{04,05,07,08}`, `docs/11_camera_rl_training.md`,
+`docs/12_cv_lane_keeper.md`, `docs/DECISIONS.md`, `tools/plot_f3_figures.py`, `README.md`
+**Phase:** E6 (write-up)
+**Gate context:** after G4; no content changed, no gate re-scored
+**Author:** Samuel Sanchez
+
+### Change
+
+Eleven of the figures printed in the thesis were named after their subject rather than after
+their position in it — `hara_procedure.png`, `cage_rule_chain.png`, `Lane_camera_agent-cage.png`
+and so on. Each was renamed to the `fig_<chapter>_<n>_<slug>` convention the rest of the
+directory already followed, taking the number the three copies of the manuscript actually print:
+
+| was | is |
+| --- | --- |
+| `fig_odd_taxonomy` (+ `_es`, + `.py`) | `fig_4_1_odd_taxonomy` |
+| `odd_taxonomy_reduced.mmd` | `fig_4_1_odd_taxonomy_reduced.mmd` |
+| `hara_procedure` | `fig_4_2_hara_procedure` |
+| `sr_derivation` | `fig_4_3_sr_derivation` |
+| `cage_rule_chain` | `fig_5_1_cage_rule_chain` |
+| `Lane_camera_agent-cage` | `fig_5_2_node_chain` |
+| `etrack_camera_control_loop` | `fig_6_2_etrack_camera_control_loop` |
+| `cv_lane_estimator_pipeline` | `fig_6_3_cv_lane_estimator_pipeline` |
+| `fig_ppo2d_training_curve` | `fig_7_4_ppo2d_training_curve` |
+| `fig_ppo2d_action_distribution` | `fig_7_5_ppo2d_action_distribution` |
+| `traceability_case_sr001` | `fig_10_1_traceability_case_sr001` |
+
+The companion source moved with each image — the `.mmd` it is rendered from, the `.svg` it was
+laid out in, the `.py` that draws it — so that `mmd_render.py`'s "stem in, stem out" rule keeps
+holding and the pairing stays visible in a directory listing. All twenty moves were made with
+`git mv`, so the history follows the file. 85 references were rewritten across the three copies
+of the manuscript, the research record, the two living documents that link a `.mmd` as the
+source of an inline figure, `DECISIONS.md`, and the root `README.md`.
+
+Two `.mmd` files keep a descriptive name on purpose: `c05_emergency_states` and
+`control_cycle_sequence` render no figure in the manuscript, so there is no chapter number to
+give them. The rule is: rendered into the thesis ⇒ numbered; structure source only ⇒ descriptive.
+
+*One defect found while editing the table it lives in.* `mmd_render.py` listed three sources in
+`FIGURES` that it cannot render — `fig_4_1_odd_taxonomy_reduced` (subgraphs and undirected
+links), `c05_emergency_states` (a `stateDiagram-v2`) and `control_cycle_sequence` (a
+`sequenceDiagram`) — and because the first of them sorted first in the dict, `python
+mmd_render.py` with no arguments died before rendering anything. The three entries were removed
+with a comment saying why; the module renders flowcharts, and Figure 4.1 has its own renderer.
+
+*Not changed, and worth stating.* Three figures carry a prefix that disagrees with the number
+they print: `fig_8_1_campaign_pass_fraction` prints as Figure 8.2 and `fig_8_2_safety_invariant`
+as Figure 8.1 (the two are swapped), and `fig_7_8_multiseed_newcam_notitle` prints as Figure 7.3.
+`fig_3_6_normative_pyramid` is a fourth case of a different kind: it is used twice, as Figure 2.3
+in chapter 2 and as Figure 3.6 in Appendix C, so no single number fits it. These were left alone
+because the instruction was scoped to the figures with *no* prefix.
+
+### Change (later the same day) — the dotted edges of Figures 4.2, 4.3 and 10.1
+
+The annotation edges in the three flowcharts rendered by `mmd_render.py` were unreadable, for
+three reasons that compounded:
+
+*The side boxes were in the wrong place.* The header of the module says the layout places every
+off-chain node "beside the neighbour it attaches to"; the code spread them evenly down the
+column in declaration order and never looked at the edges. In Figure 4.3 that put the annotation
+on step 1 at the top and the annotation on step 4 at the bottom, when their targets are the
+other way round, so the two edges crossed the middle of the figure in a long X and neither label
+could be attributed to a line. Side nodes are now anchored at the mid-height of the chain node
+they attach to, with two clamping passes to separate boxes whose preferred positions overlap. A
+side node with no edge into the chain keeps its even slot, which is what `sim2real_roadmap`
+needs — six of its eight side boxes are free-standing.
+
+*The edges were diagonals drawn over everything.* They are now routed orthogonally along the
+gutter between the two columns: out of the source horizontally, along the gutter, into the
+target horizontally. With the boxes anchored at their targets most of them collapse to a single
+short horizontal.
+
+*The labels were erasing what they sat on.* A label was dropped at a fixed fraction along the
+diagonal with an opaque white background. In Figure 4.2 that fraction landed it on the border of
+the box the edge came from and erased part of it — which is why that edge appeared to start out
+of nowhere, halfway across the figure. Labels now sit in the gutter, where there is nothing to
+erase, wrapped onto two lines and shrunk to fit. The gutter is widened from 0.24 in to 0.50 in
+only in the figures that have labelled edges, since the room comes out of the two columns.
+
+Figure 10.1 needed one thing more. `check_traceability.py` annotates six of the seven links, and
+six separate edges were a fan of overlapping diagonals that had to be traced one at a time. It
+is now drawn as a spine: one dotted vertical in the gutter with a tick into each target and a
+single connector from the box. That is one shape to read, and it says "all of these" the way the
+caption does. Any source with three or more targets gets this treatment.
+
+Nothing in the `.mmd` sources changed, so the inline mermaid copies in `manuscript/chapters/`
+stay in sync, and no caption was touched.
+
+*Containment.* Of the five figures this module renders, exactly the three named above changed;
+`fig_5_1_cage_rule_chain.png` (Figure 5.1, which has no annotation edges) is byte-identical
+before and after, and so are the two ODD-taxonomy renders, which have their own renderer.
+`sim2real_roadmap` — the fifth, and not used in the manuscript — reroutes its two unlabelled
+edges and keeps its canvas exactly as before. Its committed PNG was already stale against the
+current script, which is how it was checked: the baseline was re-rendered from the pre-change
+code rather than taken from git.
+
+`tools/build_thesis_docx.py` rebuilt: 43 captions, 27 figures, none missing.
+`collect_figures.pl`: 26 referenced, 26 copied, 0 missing.
+
+
+### Rationale
+
+A filename that names its subject cannot be checked against the caption, and a figure that
+changes chapter leaves no trace in the repository. Naming the position instead makes the two
+verifiable against each other, which matters now that the chapter condensation has moved
+figures once already.
+
+### Impact
+
+None on content: no caption, number, cross-reference or claim was touched, and both renderers
+reproduce byte-identical PNGs under the new names (`md5sum -c`, 6/6 OK) — which is also the
+evidence that the rename did not silently break them. `manuscript/thesis-psithesis-overleaf.zip`
+is **not** regenerated and is now stale in one further respect; it was already stale in a larger
+one, holding 13 figures against the 26 the LaTeX references and `.tex` files from before the
+05.09 review. Rebuild it with `make dist` from `manuscript/latex_psithesis` when it is next
+needed.
+
+### Verification
+
+`check_tex.pl` PASS 0 errors / 0 warnings · `check_refs.pl` PASS, 244 labels, 0 dangling,
+0 duplicate · `check_complete.pl` 0 unexplained, 3 verified exceptions · `collect_figures.pl`
+26 referenced, 26 copied, **0 missing** · `tools/check_traceability.py` **All checks PASSED**,
+0 warnings · `tools/build_thesis_docx.py` 43 captions, 27 figures embedded, none missing ·
+cross-copy audit: the three copies agree on headings, figures, identifiers and numbers.
+
+---
+
 ## [05.09.2026 · manuscript review] — Four-block review of the submission draft: one internal contradiction in the verdict table, one retracted claim still standing, nine dangling cross-references, and the figures the condensation had lost
 
 **Document(s) affected:** `manuscript/draft_v5/` (all twelve body chapters, `front/{05,10,15,40}`,

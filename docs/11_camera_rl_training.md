@@ -80,7 +80,7 @@ flowchart TD
     class GZ,DEG,CMD,STEP sim;
 ```
 
-*Figure — the E-track control loop (source: [`manuscript/figures/etrack_camera_control_loop.mmd`](../manuscript/figures/etrack_camera_control_loop.mmd)). The degraded frame splits to **two parallel consumers**: the CV estimator (teal) feeds the cage, the downsample/stack (purple) feeds the CNN policy — they are not in series. Ground truth is the sim-only reward/metrics oracle (§6), never an input to policy or cage.*
+*Figure — the E-track control loop (source: [`manuscript/figures/fig_6_2_etrack_camera_control_loop.mmd`](../manuscript/figures/fig_6_2_etrack_camera_control_loop.mmd)). The degraded frame splits to **two parallel consumers**: the CV estimator (teal) feeds the cage, the downsample/stack (purple) feeds the CNN policy — they are not in series. Ground truth is the sim-only reward/metrics oracle (§6), never an input to policy or cage.*
 
 The degradation is applied **once, to the native frame, before both consumers** —
 the D-43 *common-cause* design: the policy CNN and the cage's CV detector see the

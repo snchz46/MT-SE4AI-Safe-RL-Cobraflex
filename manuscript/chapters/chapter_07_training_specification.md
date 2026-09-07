@@ -898,7 +898,7 @@ objetivo de conducción una cuenca ancha e indulgente. La campaña **cerró el
 disponibilidad de margin022 se limpian y los estructurales persisten, con **0
 contactos de borde in-ODD** en enforcement — cap. 8 §8.9.9.
 
-<img src="../figures/auto/fig_ppo2d_training_curve.png" alt="Figura 7.10 — Curva de entrenamiento de la política 2-D de cámara (PPO, cap 0,22) frente al E-main 1-D y al SAC 2-D." width="640"/>
+<img src="../figures/auto/fig_7_4_ppo2d_training_curve.png" alt="Figura 7.10 — Curva de entrenamiento de la política 2-D de cámara (PPO, cap 0,22) frente al E-main 1-D y al SAC 2-D." width="640"/>
 
 *Figura 7.10 — Recompensa de entrenamiento de la política **2-D** de cámara
 (PPO, cap 0,22 m/s, seed 2024, `complex_b`) frente al E-main 1-D y al SAC 2-D.
@@ -909,7 +909,7 @@ techo de episodio es 2048 pasos en 2-D frente a 1024 en 1-D); el juicio es el
 eval nominal, y por eso el pico de recompensa (475k) **no** es el checkpoint
 elegido (D-66).*
 
-<img src="../figures/auto/fig_ppo2d_action_distribution.png" alt="Figura 7.11 — Distribución de la acción cruda 2-D (dirección y acelerador), inicio vs fin del entrenamiento." width="720"/>
+<img src="../figures/auto/fig_7_5_ppo2d_action_distribution.png" alt="Figura 7.11 — Distribución de la acción cruda 2-D (dirección y acelerador), inicio vs fin del entrenamiento." width="720"/>
 
 *Figura 7.11 — Distribución de la **acción cruda 2-D** al inicio (primer 10 %
 de pasos) frente al final (último 10 %) del run `ppo_gz2d_cap022_1M_2024`, una
@@ -929,7 +929,7 @@ prácticamente al cap. Lectura honesta de la autoridad longitudinal: la usa para
 *fijar* el régimen de velocidad, no para trazar un perfil, y la modulación en
 curva es direccionalmente correcta pero demasiado pequeña para cambiar la
 dinámica. Generada por
-`tools/plot_f3_figures.py --action-run … --action-stem fig_ppo2d_action_distribution`.*
+`tools/plot_f3_figures.py --action-run … --action-stem fig_7_5_ppo2d_action_distribution`.*
 
 **Frontera de validez.** Estas corridas son trabajo **posterior E5**. Ninguna
 agotó el presupuesto nominal de 1M y las réplicas de semilla cubren N=3 en 1-D y

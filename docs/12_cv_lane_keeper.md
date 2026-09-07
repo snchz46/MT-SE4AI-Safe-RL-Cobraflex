@@ -167,7 +167,7 @@ flowchart TD
     class OUT out;
 ```
 
-*Figure — the five-stage estimator (source: [`manuscript/figures/cv_lane_estimator_pipeline.mmd`](../manuscript/figures/cv_lane_estimator_pipeline.mmd)). The same `CvLaneEstimate` output feeds both the safety cage and the classical CV controller of §3.*
+*Figure — the five-stage estimator (source: [`manuscript/figures/fig_6_3_cv_lane_estimator_pipeline.mmd`](../manuscript/figures/fig_6_3_cv_lane_estimator_pipeline.mmd)). The same `CvLaneEstimate` output feeds both the safety cage and the classical CV controller of §3.*
 
 ### 4.1 White mask
 HSV threshold: saturation `≤ 30` **and** value `≥ 150` → white-marking candidate.

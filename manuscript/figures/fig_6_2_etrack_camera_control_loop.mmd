@@ -2,12 +2,12 @@
 %% Canonical STRUCTURE source (this file). The PNG shipped in the manuscript is
 %% the laid-out house-style version rendered from the sibling SVG — keep the two
 %% in sync when the structure changes:
-%%   etrack_camera_control_loop.svg  ->  etrack_camera_control_loop.png  (1360x1180)
+%%   fig_6_2_etrack_camera_control_loop.svg  ->  fig_6_2_etrack_camera_control_loop.png  (1360x1180)
 %%   chrome --headless --no-sandbox --hide-scrollbars --force-device-scale-factor=1 \
-%%          --window-size=1360,1180 --screenshot=etrack_camera_control_loop.png \
-%%          file://$PWD/etrack_camera_control_loop.svg
+%%          --window-size=1360,1180 --screenshot=fig_6_2_etrack_camera_control_loop.png \
+%%          file://$PWD/fig_6_2_etrack_camera_control_loop.svg
 %% A plain mermaid render also works for drafts (loses the legend and the layout):
-%%   grep -v '^%%' etrack_camera_control_loop.mmd > /tmp/f.mmd && mmdc -i /tmp/f.mmd -o out.png -b transparent -w 1600
+%%   grep -v '^%%' fig_6_2_etrack_camera_control_loop.mmd > /tmp/f.mmd && mmdc -i /tmp/f.mmd -o out.png -b transparent -w 1600
 %% (mmdc = mermaid-cli; mermaid v11 rejects the leading %% comment block, hence the grep)
 %%
 %% One Gazebo camera frame is degraded once, then split to two PARALLEL

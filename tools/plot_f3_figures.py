@@ -517,7 +517,7 @@ def main() -> None:
                     help="training run for the action-distribution figure alone (one panel per "
                          "action dimension; 2-D runs get the throttle panel too).")
     ap.add_argument("--action-stem", type=str, default="fig_7_4_action_distribution",
-                    help="output file stem for --action-run (e.g. fig_ppo2d_action_distribution).")
+                    help="output file stem for --action-run (e.g. fig_7_5_ppo2d_action_distribution).")
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
 

@@ -33,7 +33,7 @@ El brazo de percepción perfecta aporta 1.260 corridas con veredicto global sati
 
 *Tabla 10.1 — Veredictos consolidados por requisito. La columna física no se puntúa en este trabajo: ninguna corrida sobre hardware se ejecutó bajo el protocolo de escenarios, y todas lo hicieron en monitorización (§10.4e). Se declara «no ejecutado» y no «pendiente» para no sugerir una medición en curso.*
 
-<img src="../figures/traceability_case_sr001.png" alt="Figura 10.1 — La cadena de trazabilidad instanciada de punta a punta." width="520"/>
+<img src="../figures/fig_10_1_traceability_case_sr001.png" alt="Figura 10.1 — La cadena de trazabilidad instanciada de punta a punta." width="520"/>
 
 *Figura 10.1 — Una fila de la Tabla 10.1 recorrida hacia atrás hasta la evidencia que la sostiene. El compromiso definitorio del trabajo —`Peligro → Requisito → Regla → Escenario → Métrica → Evidencia → Veredicto`— instanciado sobre el requisito más importante: cada eslabón es un identificador en un artefacto versionado, y `check_traceability.py` bloquea la puerta de revisión si aparece un huérfano en cualquiera de los dos sentidos. Es la forma que tiene una casilla de esta tabla de ser auditable.*
 

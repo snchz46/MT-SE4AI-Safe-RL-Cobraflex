@@ -175,7 +175,7 @@ changed. They exist because the authoring host has no TeX.
    and undefined `\Cref` targets.
 2. ~~**Two figures are missing.**~~ **Resolved (05.09.2026).**
    `manuscript/figures/auto/` is *not* empty on the Windows authoring host:
-   `fig_ppo2d_training_curve.png` and `fig_ppo2d_action_distribution.png` are
+   `fig_7_4_ppo2d_training_curve.png` and `fig_7_5_ppo2d_action_distribution.png` are
    both there. The two `\figmissing` placeholders became real `\figwide` calls
    and no placeholder remains anywhere in the document. This was the
    three-machine trap in reverse: the note assumed the compute host's state.

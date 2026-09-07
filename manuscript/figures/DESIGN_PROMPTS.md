@@ -16,7 +16,7 @@
 > gris cálido = simulador/infraestructura.
 >
 > **Estado de los PNG (31.07.2026).** `camera_cnn_ppo_architecture.png` y
-> `etrack_camera_control_loop.png` ya **no** dependen de la herramienta de diseño:
+> `fig_6_2_etrack_camera_control_loop.png` ya **no** dependen de la herramienta de diseño:
 > su fuente versionada es el `.svg` hermano y se re-renderizan con Chrome headless
 > (comando exacto en la cabecera del `.mmd` correspondiente). Si se vuelven a
 > generar desde estos prompts, hay que actualizar también el SVG o borrarlo, para

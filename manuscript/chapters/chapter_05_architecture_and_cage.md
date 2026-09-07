@@ -469,7 +469,7 @@ de evaluación y orden de numeración es deliberada y se documenta
 explícitamente en la Cage Specification para evitar confusión.
 
 ```mermaid
-%% Fuente canónica: manuscript/figures/cage_rule_chain.mmd
+%% Fuente canónica: manuscript/figures/fig_5_1_cage_rule_chain.mmd
 flowchart LR
     RAW["raw_action<br/>policy steering + throttle"]
     C06["C-06 rate limiter<br/>SR-006 &middot; always active<br/>&Delta;steer &le; 0.15, &Delta;thr &le; 0.10 / cycle"]

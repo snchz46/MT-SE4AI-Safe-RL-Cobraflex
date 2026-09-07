@@ -33,7 +33,7 @@ The perfect perception arm provides 1,260 runs with a global verdict of satisfie
 
 *Table 10.1 — Consolidated verdicts per requirement. The physical column is not scored in this work: no run on hardware was executed under the scenario protocol, and all of them were executed in monitoring (§10.4e). It is declared "not executed" and not "pending", so as not to suggest a measurement in progress.*
 
-<img src="../figures/traceability_case_sr001.png" alt="Figure 10.1 — The traceability chain instantiated end to end." width="520"/>
+<img src="../figures/fig_10_1_traceability_case_sr001.png" alt="Figure 10.1 — The traceability chain instantiated end to end." width="520"/>
 
 *Figure 10.1 — One row of Table 10.1 walked backwards to the evidence that sustains it. The defining commitment of the work — `Hazard → Requirement → Rule → Scenario → Metric → Evidence → Verdict` — instantiated on the most important requirement: every link is an identifier in a versioned artefact, and `check_traceability.py` blocks the review gate if an orphan appears in either direction. It is how a cell of this table gets to be auditable.*
 

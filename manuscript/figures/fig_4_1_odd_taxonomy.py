@@ -1,7 +1,7 @@
 """
 ODD taxonomy retained + the four stratified operational domains.
 
-Bespoke renderer for `odd_taxonomy_reduced.mmd`, which the generic
+Bespoke renderer for `fig_4_1_odd_taxonomy_reduced.mmd`, which the generic
 `mmd_render.py` cannot handle: that source is the only one in the set that
 uses mermaid `subgraph` blocks and labelled solid edges, i.e. a two-column
 layout with a 2x2 grid rather than a chain. The content below is a
@@ -15,11 +15,11 @@ Drawn at final printed size (6.1 in == \\widefigurewidth), with a full-bleed
 axes so one data unit is one inch and the point sizes are literal.
 
 Run:
-    python fig_odd_taxonomy.py          # both languages
-    python fig_odd_taxonomy.py es
+    python fig_4_1_odd_taxonomy.py          # both languages
+    python fig_4_1_odd_taxonomy.py es
 
 Produces:
-    fig_odd_taxonomy.png / fig_odd_taxonomy_es.png
+    fig_4_1_odd_taxonomy.png / fig_4_1_odd_taxonomy_es.png
 """
 
 import sys
@@ -29,9 +29,9 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 
 HERE = Path(__file__).resolve().parent
-OUT = {"en": HERE / "fig_odd_taxonomy.png", "es": HERE / "fig_odd_taxonomy_es.png"}
+OUT = {"en": HERE / "fig_4_1_odd_taxonomy.png", "es": HERE / "fig_4_1_odd_taxonomy_es.png"}
 
-# Palette taken from the classDefs of odd_taxonomy_reduced.mmd.
+# Palette taken from the classDefs of fig_4_1_odd_taxonomy_reduced.mmd.
 TAX = dict(fill="#E1F5EE", stroke="#0F6E56", color="#04342C")
 NOM = dict(fill="#EEEDFE", stroke="#534AB7", color="#26215C")
 ADV = dict(fill="#FAECE7", stroke="#993C1D", color="#4A1B0C")

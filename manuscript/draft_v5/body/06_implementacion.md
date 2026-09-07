@@ -58,11 +58,11 @@ El sistema de referencia no añade nodos: especializa el entorno, según la Figu
 
 **Cadena de cámara compartida y garantía de causa común.** La imagen nativa llega por el puente entre simulador y middleware y atraviesa una cadena única por ciclo. El inyector de degradación visual del escenario se aplica antes de la bifurcación, de modo que la misma imagen degradada alimenta tanto al estimador de la cage, a resolución nativa, como a la reducción a 84×84 en escala de grises que consume la policy. Aplicar la degradación una sola vez antes de la bifurcación es lo que garantiza que policy y cage ven el mismo mundo, también cuando ese mundo está degradado. Un hallazgo de implementación con consecuencia directa sobre el presupuesto experimental: el renderizado de cámara está ligado a tiempo real, de modo que el reloj de simulación corre a factor uno en este track, frente a la ejecución acelerada del track de estado.
 
-<img src="../figures/etrack_camera_control_loop.png" alt="Figura 6.2 — Lazo de control del track de cámara." width="540"/>
+<img src="../figures/fig_6_2_etrack_camera_control_loop.png" alt="Figura 6.2 — Lazo de control del track de cámara." width="540"/>
 
 *Figura 6.2 — El lazo de control del track de cámara. El inyector de degradación se aplica antes de la bifurcación, de modo que el estimador determinista de la cage y la reducción a 84×84 que consume la red reciben exactamente la misma imagen. De ahí la causa común que el Capítulo 5 declara como riesgo residual, y de ahí también que un estresor de escenario sea atribuible: entra una sola vez en el sistema.*
 
-<img src="../figures/cv_lane_estimator_pipeline.png" alt="Figura 6.3 — Cadena del estimador de carril de la cage." width="520"/>
+<img src="../figures/fig_6_3_cv_lane_estimator_pipeline.png" alt="Figura 6.3 — Cadena del estimador de carril de la cage." width="520"/>
 
 *Figura 6.3 — La cadena del estimador de carril sobre la que razona la cage: cinco etapas deterministas desde la imagen nativa hasta el estado relativo al carril, sin ningún componente aprendido. Es lo que permite que la envolvente de seguridad no herede los modos de fallo de la red.*
 

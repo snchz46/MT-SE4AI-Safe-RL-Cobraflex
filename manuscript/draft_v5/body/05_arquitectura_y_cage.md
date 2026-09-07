@@ -62,7 +62,7 @@ Tres observaciones. La primera: seis reglas cubren catorce requisitos, porque un
 
 Las seis reglas se evalúan en el orden fijo que muestra la Figura 5.1, en una sola pasada por ciclo. Cada regla se especifica con el mismo formato: requisito implementado, variable observada, lógica de activación, estrategia correctiva y parámetros. La uniformidad facilita la comparación y la verificación cruzada. Los valores numéricos completos están en el Anexo E.
 
-<img src="../figures/cage_rule_chain.png" alt="Figura 5.1 — Cadena de reglas en orden de evaluación." width="500"/>
+<img src="../figures/fig_5_1_cage_rule_chain.png" alt="Figura 5.1 — Cadena de reglas en orden de evaluación." width="500"/>
 
 *Figura 5.1 — Las seis reglas en su orden fijo de evaluación, una sola pasada por ciclo. Cada regla consume como acción cruda la acción segura de la anterior. C-06 sanea primero el comando hasta una línea base factible; C-05 se evalúa la última para que su acción sustituida —dirección congelada y frenado— prevalezca sobre toda corrección anterior. La aserción de envolvente conjunta al cierre del ciclo puede aún escalar a emergencia.*
 
@@ -90,7 +90,7 @@ La cage admite además dos modos de operación que son la base de todo el diseñ
 
 El sistema se descompone en los nodos de la Figura 5.2, con responsabilidad única y comunicados por tópicos explícitos. La cadena de datos es lineal y auditable: la percepción produce el estado; la policy consume el estado y produce un comando crudo; la cage consume comando crudo y estado y produce comando seguro más un registro de estado de la cage; el control de vehículo traduce el comando seguro a consignas de actuación; y el nodo de registro persiste el estado de la cage a disco.
 
-<img src="../figures/Lane_camera_agent-cage.png" alt="Figura 5.2 — Cadena de nodos del sistema." width="480"/>
+<img src="../figures/fig_5_2_node_chain.png" alt="Figura 5.2 — Cadena de nodos del sistema." width="480"/>
 
 *Figura 5.2 — Cadena de nodos: percepción, policy, cage, control de vehículo y registro. El comando de la policy nunca alcanza al actuador sin pasar por la cage.*
 

@@ -76,7 +76,7 @@ The first attempt at a complete campaign over a two-dimensional action was execu
 
 An honesty warning about the figures: the reward is not comparable one to one between action spaces, because the episode ceiling doubles when moving to two dimensions. The factor of ~2 with respect to the one-dimensional policy is mostly greater survival and horizon, not "twice as good driving".
 
-<img src="../figures/auto/fig_ppo2d_training_curve.png" alt="Figure 7.4 — Training curve of the two-dimensional reference policy." width="600"/>
+<img src="../figures/auto/fig_7_4_ppo2d_training_curve.png" alt="Figure 7.4 — Training curve of the two-dimensional reference policy." width="600"/>
 
 *Figure 7.4 — Training reward of the two-dimensional reference policy against the one-dimensional one and against the off-policy variant. Peak 1755 and a high stable plateau, against the post-peak collapse of the first one and the ceiling of ~200 of the second one. The candidate checkpoints evaluated are marked.*
 
@@ -88,7 +88,7 @@ Selecting by reward would have chosen the worst candidate. It is a bias control 
 
 ### 7.5.3 What the policy does with longitudinal authority
 
-<img src="../figures/auto/fig_ppo2d_action_distribution.png" alt="Figure 7.5 — Distribution of the two-dimensional raw action." width="640"/>
+<img src="../figures/auto/fig_7_5_ppo2d_action_distribution.png" alt="Figure 7.5 — Distribution of the two-dimensional raw action." width="640"/>
 
 *Figure 7.5 — Distribution of the raw action at the start against the end of training, one panel per dimension. In steering, the initial all-or-nothing command dissolves (36.9 % → 7.1 % of saturated samples). In throttle, the evolution is the opposite, towards saturation (48.2 % → 89.6 %): the policy learns to ask for the ceiling almost always.*
 

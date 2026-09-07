@@ -175,7 +175,7 @@ for my $file (@ARGV) {
             #
             # \figmissing is deliberately NOT in that list. It PRINTS its file
             # name, and blanket-exempting it here is what let
-            #   \figmissing{fig_ppo2d_training_curve.png}{...}
+            #   \figmissing{fig_7_4_ppo2d_training_curve.png}{...}
             # through the checker and straight into "Missing $ inserted" on the
             # first real build. It is safe now only because the macro wraps the
             # argument in \detokenize; if that ever changes, this check must

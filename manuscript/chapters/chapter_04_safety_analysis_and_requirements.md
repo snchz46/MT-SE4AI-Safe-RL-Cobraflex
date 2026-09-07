@@ -218,7 +218,7 @@ e interfaces de sensores y actuadores. Cada dominio cierra con
 exclusiones explícitas y suposiciones de salida del ODD.
 
 ```mermaid
-%% Fuente canónica: manuscript/figures/odd_taxonomy_reduced.mmd
+%% Fuente canónica: manuscript/figures/fig_4_1_odd_taxonomy_reduced.mmd
 flowchart LR
     subgraph TAX ["Taxonomy retained (PAS 1883 / ISO 34503, ASAM OpenODD semantics)"]
         direction TB
@@ -357,7 +357,7 @@ trata el componente AI como una caja cuyo comportamiento debe acotarse
 desde la envoltura del sistema.
 
 ```mermaid
-%% Fuente canónica: manuscript/figures/hara_procedure.mmd
+%% Fuente canónica: manuscript/figures/fig_4_2_hara_procedure.mmd
 flowchart TD
     S1["1 &middot; Enumerate system functions<br/>perceive lane-relative state &middot; decide action<br/>actuate on vehicle &middot; runtime monitoring"]
     S2["2 &middot; Derive failure modes per function<br/>qualitative FMEA + literature on recurrent<br/>RL-for-driving failures"]
@@ -732,7 +732,7 @@ Capítulo 8 como criterios de evaluación, pero no participan en la matriz
 de trazabilidad de seguridad ni se vinculan a cage rules.
 
 ```mermaid
-%% Fuente canónica: manuscript/figures/sr_derivation.mmd
+%% Fuente canónica: manuscript/figures/fig_4_3_sr_derivation.mmd
 flowchart TD
     HZ[("Hazard H-XX<br/>from Hazard Register")]
     P1["1 &middot; Formulate observable system property<br/>whose violation materialises the hazard<br/>+ validity condition (within applicable ODD)"]
@@ -1363,13 +1363,13 @@ REFERENCIAS USADAS EN ESTE CAPÍTULO (D11):
 
 REFERENCIAS A FIGURAS (placeholders explícitos):
   - Figura 4.1 (cableada 10.07.2026, mermaid inline en §4.3.2; fuente
-       canónica figures/odd_taxonomy_reduced.mmd — render SVG final
+       canónica figures/fig_4_1_odd_taxonomy_reduced.mmd — render SVG final
        pendiente de mmdc en POLISH): taxonomía PAS 1883 reducida +
        cuatro dominios operacionales
   - Figura 4.2 (cableada 10.07.2026, mermaid inline en §4.4.1; fuente
-       figures/hara_procedure.mmd): flujo del procedimiento HARA aplicado
+       figures/fig_4_2_hara_procedure.mmd): flujo del procedimiento HARA aplicado
   - Figura 4.3 (cableada 10.07.2026, mermaid inline en §4.6.1; fuente
-       figures/sr_derivation.mmd): derivación SR desde hazards
+       figures/fig_4_3_sr_derivation.mmd): derivación SR desde hazards
   - Figura 4.4 (pendiente): figures/traceability_matrix_heatmap.svg —
        matriz H ↔ SR como heatmap con marcas de cobertura (prompt con
        los datos reales listo en figures/DESIGN_PROMPTS.md, §P5)

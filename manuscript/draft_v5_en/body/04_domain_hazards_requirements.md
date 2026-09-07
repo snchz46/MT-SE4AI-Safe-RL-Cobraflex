@@ -23,7 +23,7 @@ The specification of the operational domain is stratified into the four nested d
 - **ODD-3 — demanding geometry.** A winding and tight layout in clean conditions, with a speed envelope that depends on curvature.
 - **ODD-4 — combined.** Cartesian product of the ODD-3 geometry with the ODD-2 stressors.
 
-<img src="../figures/fig_odd_taxonomy.png" alt="Figure 4.1 — ODD taxonomy retained and the four stratified domains." width="580"/>
+<img src="../figures/fig_4_1_odd_taxonomy.png" alt="Figure 4.1 — ODD taxonomy retained and the four stratified domains." width="580"/>
 
 *Figure 4.1 — The ODD taxonomy retained and the four stratified domains. On the left, the PAS 1883 / ISO 34503 dimensions with which each domain is described; on the right, the 2 × 2 stratification whose pairwise contrasts let Chapter 8 attribute an effect to a single complexity axis: ODD-1 against ODD-2 isolates the stressors on straight geometry, ODD-1 against ODD-3 isolates geometric complexity under clean conditions, and ODD-3 against ODD-4 adds stressors on curved geometry.*
 
@@ -43,7 +43,7 @@ For the deployment on the real platform an analogous domain is foreseen, the clo
 
 The analysis follows the structure of a HARA according to ISO 26262 — Figure 4.2 gives the procedure as it was applied — simplified at three points that should be declared: it is applied to a single function and a single element instead of to a complete vehicle; the operational situations are enumerated from the four domains instead of being derived from a usage catalogue; and the assignment of an integrity level is replaced by a two-class criticality classification of our own, appropriate for a scale vehicle with no consequences for people. The simplifications do not affect the structure of the reasoning — situation, hazard, severity, exposure, controllability, criticality, mitigation — but its scope.
 
-<img src="../figures/hara_procedure.png" alt="Figure 4.2 — The HARA procedure as applied." width="560"/>
+<img src="../figures/fig_4_2_hara_procedure.png" alt="Figure 4.2 — The HARA procedure as applied." width="560"/>
 
 *Figure 4.2 — The HARA procedure as applied: five steps from the enumeration of functions to the documentation of consequence and root-cause hypothesis, with the lightweight systemic pass refining constraints on the selected hazards and the hazard register as the output.*
 
@@ -82,7 +82,7 @@ For the hazards with the highest criticality, a light pass of systemic analysis 
 
 Each hazard is translated into one or more requirements following the procedure of Figure 4.3, under four mandatory criteria, which the document template makes enforceable: falsifiability — expressed as a measurable condition with a defined verdict procedure; operability — implementable by a concrete mechanism, whether a rule, a training constraint or a scenario test; traceability — it references at least one hazard and is referenced by at least one rule and one scenario; and atomicity — it captures a single property.
 
-<img src="../figures/sr_derivation.png" alt="Figure 4.3 — The safety-requirement derivation procedure." width="560"/>
+<img src="../figures/fig_4_3_sr_derivation.png" alt="Figure 4.3 — The safety-requirement derivation procedure." width="560"/>
 
 *Figure 4.3 — Derivation of a safety requirement from a hazard, in four steps. Two guards make the result defensible: thresholds are fixed from ODD physics and never from the observed performance of the trained policy — which would be tautological — and the criticality class decides the implementation route, with every class-A requirement landing on a deterministic rule.*
 

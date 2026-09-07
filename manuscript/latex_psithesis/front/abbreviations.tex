@@ -16,27 +16,45 @@
 	\endfoot
 	ADAS & Advanced Driver-Assistance System\\
 	AI & Artificial Intelligence\\
+	AMLAS & Assurance of Machine Learning for Autonomous Systems\\
+	ASIL & Automotive Safety Integrity Level\\
+	CMDP & Constrained Markov Decision Process\\
 	CNN & Convolutional Neural Network\\
 	CV & Computer Vision\\
 	DR & Domain Randomization\\
+	DRL & Deep Reinforcement Learning\\
+	ESC & Electronic Speed Controller\\
+	GSN & Goal Structuring Notation\\
 	HARA & Hazard Analysis and Risk Assessment\\
+	IMU & Inertial Measurement Unit\\
+	KL & Kullback--Leibler (divergence between distributions)\\
+	MBSE & Model-Based Systems Engineering\\
 	MDP & Markov Decision Process\\
+	ML & Machine Learning\\
+	MPC & Model Predictive Control\\
 	ODD & Operational Design Domain\\
 	PD & Proportional-Derivative (controller)\\
 	PPO & Proximal Policy Optimization\\
+	RC & Radio-Controlled\\
 	RL & Reinforcement Learning\\
 	ROS2 & Robot Operating System 2\\
 	RTX / PhysX & NVIDIA rendering and physics engines (Isaac Sim)\\
 	SAC & Soft Actor-Critic\\
+	SAE & SAE International (standards body; J3016 levels)\\
+	SB3 & Stable-Baselines3 (RL algorithm library)\\
+	SBC & Single-Board Computer\\
 	SE4AI & Systems Engineering for Artificial Intelligence\\
 	SOTIF & Safety of the Intended Functionality (ISO 21448)\\
 	SR & Safety Requirement\\
+	SRS & Safety Requirements Specification\\
 	STPA & System-Theoretic Process Analysis\\
 	TTLC & Time-To-Lane-Crossing\\
 	V\&V & Verification and Validation\\
 \end{longtable}
 
-\paragraph{Framework identifiers} The work uses a single, non-reusable identifier space, summarised here; the corresponding registers are \Cref{app:A} (hazards), \Cref{app:B} (requirements), \Cref{app:E} (cage) and \Cref{app:F} (traceability): \hz{XX} (hazard), \sr{XXX} (safety requirement), \cagerule{XX} (cage rule), \scn{*} (scenario), \met{*} (metric), \dec{NN} (recorded design decision), \phase{F\nbh X} / \phase{G\nbh X} (project phase and gate).
+\paragraph{Framework identifiers} The work uses a single, non-reusable identifier space, summarised here; the corresponding registers are \Cref{app:A} (hazards), \Cref{app:B} (requirements), \Cref{app:E} (cage) and \Cref{app:F} (traceability): \hz{XX} (hazard), \sr{XXX} (safety requirement), \code{SR\nbh CL\nbh A} / \code{SR\nbh CL\nbh B} (criticality class of a requirement), \cagerule{XX} (cage rule), \scn{*} (scenario), \met{*} (metric), \dec{NN} (recorded design decision), \phase{F\nbh X} / \phase{G\nbh X} (project phase and gate), \code{ODD\nbh n.PARAMETER} (declared parameter of the operational domain), \code{TBD\nbh Qn} (open question pending closure).
+
+\paragraph{Argument identifiers} Distinct from the previous ones, these organise the thread of the text rather than the chain of evidence: \code{OE1}--\code{OE7} (specific objectives, \Cref{sec:1.4}), \code{H1}--\code{H3} (hypotheses, \Cref{sec:1.5} --- not to be confused with \hz{01}--\hz{12}, which are hazards), \code{A1}--\code{A5} (adaptations to the V-Model, \Cref{sec:3.4}), \code{R1}--\code{R14} (results, \Cref{ch:12}), \code{T1}--\code{T7} (lines of future work, \Cref{ch:12}).
 
 \paragraph{Main symbols}\mbox{}\par\medskip
 
@@ -59,4 +77,5 @@
 	$t_{\min}$ & Time-to-lane-crossing threshold (rule \cagerule{03}) & \si{\second}\\
 	$\sigma_\theta$ & Standard deviation of the heading over a sliding window & \si{\degree}\\
 	$s$ & Arc length travelled along the centre line of the circuit & \si{\meter}\\
+	$\Delta s$ & Arc-length increment between two consecutive cycles & \si{\meter}\\
 \end{longtable}

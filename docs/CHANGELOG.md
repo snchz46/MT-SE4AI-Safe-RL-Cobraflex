@@ -31,6 +31,184 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [07.09.2026 · abbreviations] — The list of abbreviations and symbols brought up to what the text actually uses
+
+**Document(s) affected:** `manuscript/draft_v5/front/40_abbreviations.md`,
+`manuscript/draft_v5_en/front/40_abbreviations.md`,
+`manuscript/latex_psithesis/front/abbreviations.tex`
+**Phase:** E6 (write-up)
+**Gate context:** after G4; front matter only, no claim or number touched
+**Author:** Samuel Sanchez
+
+### Change
+
+Every acronym in the twelve body chapters and the nine appendices was extracted and matched
+against the list. Excluded from the sweep on purpose: the bibliography, whose venue acronyms
+(IEEE, PMLR, ICRA, CoRL, NeurIPS…) are not thesis vocabulary; the sub-tokens of the identifier
+space (`NOM`, `EDGE`, `PERT`, `FRONT` are parts of `SC-*`, not abbreviations); and file-format
+and hardware noise (CSV, YAML, GPU).
+
+**Sixteen abbreviations added**, 20 rows to 36: AMLAS, ASIL, CMDP, DRL, ESC, GSN, IMU, KL,
+MBSE, ML, MPC, RC, SAE, SB3, SBC, SRS. Every expansion was taken from the repository's own
+text rather than supplied from outside — ASIL is spelled out in Appendix C, SB3 as
+Stable-Baselines3 in the same appendix, SAE J3016 in chapter 1. The clearest case is
+**AMLAS**, used sixteen times across chapters 2 and 3 and expanded nowhere in `draft_v5`: the
+full form survives only in `manuscript/chapters/`, the research record, so the condensation
+dropped it and the reader of the submitted document had no way to recover it. GSN and MBSE are
+the same story with smaller numbers.
+
+**The identifier paragraph gained three families it never listed:** `SR-CL-A` / `SR-CL-B`
+(criticality class, 15 uses), `ODD-n.PARAMETER` and `TBD-Qn` (open question pending closure,
+20 uses).
+
+**A second identifier paragraph was added** for the ones that organise the argument rather than
+the chain of evidence, none of which was listed anywhere: `OE1`–`OE7` (specific objectives),
+`H1`–`H3` (hypotheses), `A1`–`A5` (V-Model adaptations, **92 uses** — the most-used identifier
+family in the thesis and absent from the list), `R1`–`R14` (results) and `T1`–`T7` (future
+work). It states explicitly that `H1`–`H3` are hypotheses and not `H-01`–`H-12`, which are
+hazards: two identifier families one character apart, and the collision was undocumented.
+
+**Symbols needed one addition**, `Δs`. The physical chapters were checked specifically, on the
+theory that Phase 5 would have introduced new notation; they had not — chapters 9 and 10
+describe the physical measurements in words, so the eight existing symbols still cover the
+document.
+
+Not added, and worth recording so the decision is not revisited: the simulator product names
+(CARLA, TORCS, LGSVL, AirSim) are names, not abbreviations; DDPG and TD3 appear once each in a
+list of algorithms considered and rejected; and **QED**, the composite coverage metric of
+Gao et al. (2021) cited three times in Appendix C, is never expanded in the source — an
+invented expansion would be worse than the omission.
+
+### Rationale
+
+The list had not moved since it was written, while the manuscript had been condensed, extended
+with Phase 5 and rewritten twice. An abbreviations list exists for exactly the term the reader
+meets once and cannot place.
+
+### Verification
+
+The three copies carry the same 36 abbreviation rows in the same order, checked
+programmatically rather than by eye. `check_tex.pl` PASS 0/0 · `check_refs.pl` PASS, 244
+labels, 0 dangling — the four new `\Cref` targets in the argument-identifiers paragraph all
+resolve · `check_complete.pl` `front/abbreviations.tex` ok, word ratio 0.92, 0 unexplained ·
+`check_traceability.py` All checks PASSED · both DOCX rebuilt, 43 captions and 27 figures each.
+
+---
+
+## [07.09.2026 · later] — Every bibliography entry is cited; the English copy had lost three citations of chapter 2
+
+**Document(s) affected:** `manuscript/draft_v5_en/body/02_related_work.md`
+**Phase:** E6 (write-up)
+**Gate context:** after G4; no claim, number or verdict touched
+**Author:** Samuel Sanchez
+
+### Change
+
+The bibliography opens by promising it "contains the works cited in the text" and excludes
+anything merely consulted, so an entry with no mention contradicts the document. All three
+copies were checked against that promise, each by the means available to it.
+
+The LaTeX is exact — biblatex keys, not prose: **47 entries in `literature.bib`, 47 distinct
+keys cited, 0 uncited and 0 dangling.** The two Markdown copies cite in prose
+("Kuutti et al. (2019a)", "García y Fernández (2015)"), so each entry was matched on the first
+author's surname within 40 characters of its year, in the narrative and parenthetical forms
+both, with compound surnames also tried on their last token — `De Gelder, E.` is cited as
+"Gelder et al. (2024)". The standards bodies are the exception nobody writes as an author:
+`ISO (2018)` is matched on `ISO 26262`.
+
+**Spanish: 47 of 47.** **English: 45 of 47**, and the two gaps are content that chapter 2 lost
+in translation, not entries that should be deleted — the Spanish and the LaTeX both carry them:
+
+- **Shalev-Shwartz and Shashua (2016)**: a whole sentence was missing, the sample-complexity
+  counter-argument to the end-to-end approach, which is also the argument for keeping the
+  envelope outside the network. The LaTeX still has it as `\textcite{shalevshwartz2016}`.
+- **Sensoy et al. (2018)**: the parenthetical after "evidential deep learning" in §2.3(d),
+  which the LaTeX carries as `\parencite{sensoy2018}`.
+
+The same paragraph turned up a third loss of the same kind, one the count does not show because
+the entries stay reachable by designation: §2.5 of the English copy had dropped the author-year
+parenthetical from all five standards — `(ISO, 2018)`, `(ISO, 2022)`, `(ISO/IEC, 2024)`,
+`(ISO, 2024)`, `(UL Standards, 2023)` — leaving an English reader unable to get from
+"ISO 26262:2018" in the text to "ISO (2018)" in the bibliography. Restored from the two copies
+that have them.
+
+All three restorations take the wording from the LaTeX, which is downstream of the English and
+was converted before the losses.
+
+### Rationale
+
+No existing gate can see this. `check_refs.pl` audits the LaTeX only, where citations are keys;
+the cross-copy audit compares headings, figures, identifiers and unit-bearing numbers, and a
+citation is none of those. A sentence dropped from one copy of a prose paragraph is exactly what
+falls between them.
+
+### Impact
+
+English chapter 2 gains one sentence and six parentheticals; nothing else changes. No hazard,
+requirement, scenario, metric or verdict is touched, and the Spanish source of record was
+already correct.
+
+### Verification
+
+47 of 47 entries cited in all three copies. Cross-copy audit: the three still agree on
+headings, figures, identifiers and numbers. `draft_V5_en.docx` rebuilt — 43 captions,
+27 figures, none missing.
+
+---
+
+## [07.09.2026] — The DOCX builder can build the English draft, not only the Spanish one
+
+**Document(s) affected:** `tools/build_thesis_docx.py`
+**Phase:** E6 (write-up)
+**Gate context:** after G4; tooling only, no manuscript content touched
+**Author:** Samuel Sanchez
+
+### Change
+
+`tools/build_thesis_docx.py` had `manuscript/draft_v5` hard-coded, so `draft_v5_en`
+had no way to reach a .docx. It now takes `--lang {es,en}`, defaulting to `es`, the
+source of record:
+
+```bash
+python tools/build_thesis_docx.py            # -> draft_V5.docx     (Spanish)
+python tools/build_thesis_docx.py --lang en  # -> draft_V5_en.docx  (English)
+```
+
+The whole of the language dependency turned out to be the caption vocabulary. Two
+regular expressions were written against `Figura|Tabla`: one decides whether a
+paragraph is a caption, which is what the list of figures and tables is assembled
+from, and one recognises the caption line following an `<img>` so it can be attached
+to the figure. Against the English tree both would have matched nothing — the build
+would have produced a document with an empty list of figures and no caption styling,
+and it would not have failed while doing it. Both now come from a `LANGUAGES` table
+along with the source directory, the default output name, and the placeholder text
+shown inside the table-of-contents field until Word updates it. Everything else in the
+two trees is structurally identical: same front-matter file names, same twelve body
+chapters, same appendix order under a different set of file names that sorts the same.
+
+### Rationale
+
+The English rendering has been kept in step with the Spanish one chapter by chapter
+and verified by the cross-copy audit, but it could not be read as a document.
+
+### Impact
+
+None on the Spanish build, which is byte-for-byte the same procedure and reports the
+same 43 captions, 27 figures and 692 body paragraphs as before the change. The two
+author-only gaps carry into the English build as they do into the Spanish one: the
+matriculation number on the cover (`[to be completed]`) and the personal
+acknowledgements in the preface. The page budget is unmeasured for both — Word COM is
+not installed on this host.
+
+### Verification
+
+`--lang en`: 43 captions listed, 27 figures embedded, none missing, 33 tables, 1178
+paragraphs; the list of figures and tables is populated with all 43 entries in order;
+no Spanish caption survives in the English document, and no English one in the
+Spanish. `--lang es` (default): 43 / 27 / 692, unchanged.
+
+---
+
 ## [06.09.2026 · figure naming] — Every figure that reaches the page now states its chapter in its filename
 
 **Document(s) affected:** `manuscript/figures/` (20 files renamed, `mmd_render.py`),

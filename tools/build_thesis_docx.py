@@ -16,6 +16,8 @@ bullet/numbered lists, `**bold**` / `*italic*` / `` `code` `` inline runs, and
 HTML comments (dropped -- they are editorial notes, not thesis text).
 
 Usage:
+    python tools/build_thesis_docx.py                  # Spanish, the source of record
+    python tools/build_thesis_docx.py --lang en        # the English rendering
     python tools/build_thesis_docx.py --out "B:/SE4AI/Documentos/draft_V5.docx"
 """
 
@@ -35,8 +37,30 @@ from docx.oxml.ns import qn
 from docx.shared import Emu, Inches, Pt, RGBColor
 
 REPO = Path(__file__).resolve().parent.parent
-SRC = REPO / "manuscript" / "draft_v5"
 FIGURES = REPO / "manuscript" / "figures"
+
+# The manuscript exists in two languages and the builder has to recognise a
+# caption in both: the caption word is what separates a caption paragraph from
+# an ordinary one, and the list of figures and tables is assembled from exactly
+# those paragraphs. Nothing else about the two trees differs -- same front
+# matter file names, same twelve body chapters, same appendix order -- so the
+# vocabulary below is the whole of the language dependency.
+LANGUAGES = {
+    "es": dict(
+        src="draft_v5",
+        caption=r"(?:Figura|Tabla)",
+        figure=r"(?:Figura|Fig\.)",
+        toc_placeholder="Actualice el índice con F9.",
+        out="draft_V5.docx",
+    ),
+    "en": dict(
+        src="draft_v5_en",
+        caption=r"(?:Figure|Table)",
+        figure=r"(?:Figure|Fig\.)",
+        toc_placeholder="Update the table of contents with F9.",
+        out="draft_V5_en.docx",
+    ),
+}
 
 # --- guideline constants -------------------------------------------------------
 BODY_PT = 12
@@ -230,7 +254,26 @@ def set_margins(section) -> None:
 # ==============================================================================
 # inline markdown -> runs
 # ==============================================================================
-CAPTION_RE = re.compile(r"^(Figura|Tabla)\s+[\d.]+\s*[—–-]")
+def use_language(lang: str) -> dict:
+    """
+    Point the module at one of the two source trees.
+
+    These stay module-level globals rather than a config threaded through the
+    call chain because render_markdown() and Builder reach for them from
+    several places: rebinding four names is a smaller and more reviewable
+    change than passing a settings object through every layer, and the script
+    builds exactly one document per run.
+    """
+    global SRC, CAPTION_RE, FIGURE_CAPTION_RE, TOC_PLACEHOLDER
+    cfg = LANGUAGES[lang]
+    SRC = REPO / "manuscript" / cfg["src"]
+    CAPTION_RE = re.compile(rf"^{cfg['caption']}\s+[\d.]+\s*[—–-]")
+    FIGURE_CAPTION_RE = re.compile(rf"^\**\*?{cfg['figure']}")
+    TOC_PLACEHOLDER = cfg["toc_placeholder"]
+    return cfg
+
+
+use_language("es")
 
 INLINE = re.compile(
     r"(\*\*\*.+?\*\*\*|\*\*.+?\*\*|(?<!\*)\*(?!\s)[^*]+?\*|`[^`]+`|\[[^\]]+\]\([^)]+\))",
@@ -507,7 +550,7 @@ def render_markdown(builder: Builder, text: str, heading_offset: int = 0) -> Non
             k = i + 1
             while k < n and not lines[k].strip():
                 k += 1
-            if k < n and re.match(r"^\**\*?(Figura|Fig\.)", lines[k].strip()):
+            if k < n and FIGURE_CAPTION_RE.match(lines[k].strip()):
                 caption = lines[k].strip().strip("*")
                 k += 1
             builder.figure(mi.group(1), mi.group(2), caption)
@@ -598,7 +641,7 @@ def build(out_path: Path) -> None:
         if name.name == "20_toc.md":
             p = doc.add_paragraph()
             p.paragraph_format.first_line_indent = Inches(0)
-            add_field(p, r' TOC \o "1-3" \h \z \u ', "Actualice el índice con F9.")
+            add_field(p, r' TOC \o "1-3" \h \z \u ', TOC_PLACEHOLDER)
         if name.name == "30_list_of_figures.md":
             lof_anchor = doc.paragraphs[-1]
         builder.page_break()
@@ -665,15 +708,23 @@ def build(out_path: Path) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument(
+        "--lang",
+        choices=sorted(LANGUAGES),
+        default="es",
+        help="which source tree to build; es (draft_v5) is the source of record",
+    )
+    ap.add_argument(
         "--out",
-        default=str(Path("B:/SE4AI/Documentos/draft_V5.docx")),
-        help="output .docx path",
+        default=None,
+        help="output .docx path (default: B:/SE4AI/Documentos/draft_V5[_en].docx)",
     )
     args = ap.parse_args()
+    cfg = use_language(args.lang)
     if not SRC.exists():
         print(f"source tree not found: {SRC}", file=sys.stderr)
         return 1
-    build(Path(args.out))
+    out = Path(args.out) if args.out else Path("B:/SE4AI/Documentos") / cfg["out"]
+    build(out)
     return 0
 
 

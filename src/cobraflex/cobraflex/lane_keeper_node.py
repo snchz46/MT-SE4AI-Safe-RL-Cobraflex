@@ -16,10 +16,38 @@ from std_msgs.msg import Float32, String
 from visualization_msgs.msg import Marker, MarkerArray
 
 
-def _gstreamer_pipeline(sensor_id=0, width=1280, height=720, fps=60, flip_method=0):
-    """GStreamer pipeline string for the Jetson CSI camera (nvarguscamerasrc)."""
+def _gstreamer_pipeline(
+    sensor_id=0,
+    width=1280,
+    height=720,
+    fps=60,
+    flip_method=0,
+    wb_mode=1,
+    ae_lock=True,
+    exposure_min_ns=5000000,
+    exposure_max_ns=15000000,
+    gain_min=1.0,
+    gain_max=4.0,
+):
+    """GStreamer pipeline string for the Jetson CSI camera (nvarguscamerasrc).
+
+    Exposure, gain and white balance are pinned by default. Left on auto, the ISP
+    pushes gain until bright asphalt saturates towards white, at which point the
+    white lane lines and the road surface end up on the same side of any fixed
+    threshold and the binary mask fills solid.
+    """
+    src = f"nvarguscamerasrc sensor-id={sensor_id} wbmode={wb_mode} "
+
+    if ae_lock:
+        src += (
+            "aelock=true "
+            f'exposuretimerange="{int(exposure_min_ns)} {int(exposure_max_ns)}" '
+            f'gainrange="{float(gain_min)} {float(gain_max)}" '
+            'ispdigitalgainrange="1 1" '
+        )
+
     return (
-        f"nvarguscamerasrc sensor-id={sensor_id} ! "
+        f"{src}! "
         f"video/x-raw(memory:NVMM), width=(int){width}, height=(int){height}, "
         f"format=(string)NV12, framerate=(fraction){fps}/1 ! "
         f"nvvidconv flip-method={flip_method} ! "
@@ -90,10 +118,21 @@ def _build_trapezoid_mask(binary_shape, top_y_pct, top_w_pct, bottom_w_pct):
     return mask, pts
 
 
-def _threshold_image(roi_bgr, threshold_val, blur_k, morph_k, invert):
-    """Blur + threshold (+ optional invert) + morphological close of the ROI."""
+def _threshold_image(roi_bgr, threshold_val, blur_k, morph_k, invert, tophat_k=0):
+    """Blur + optional top-hat + threshold (+ optional invert) + morphological close.
+
+    With ``tophat_k`` > 0 the slowly varying background (road brightness gradient,
+    glare, soft shadows) is subtracted first, leaving only thin bright structures.
+    That makes the useful ``threshold_val`` range much lower — roughly 25-45 — and
+    far less sensitive to lighting than thresholding raw grey levels.
+    """
     gray = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2GRAY)
     blur = cv2.GaussianBlur(gray, (blur_k, blur_k), 0)
+
+    if tophat_k > 0:
+        # Kernel clearly wider than the lane line, short in y so it survives curves.
+        kernel_th = cv2.getStructuringElement(cv2.MORPH_RECT, (_odd(int(tophat_k)), 5))
+        blur = cv2.morphologyEx(blur, cv2.MORPH_TOPHAT, kernel_th)
 
     if invert:
         _, binary = cv2.threshold(blur, threshold_val, 255, cv2.THRESH_BINARY_INV)
@@ -195,6 +234,14 @@ class LaneKeeperNode(Node):
         self.declare_parameter("capture_fps", 60)
         self.declare_parameter("flip_method", 0)
 
+        # Camera exposure. ae_lock=False falls back to the ISP auto mode.
+        self.declare_parameter("wb_mode", 1)
+        self.declare_parameter("ae_lock", True)
+        self.declare_parameter("exposure_min_ns", 5000000)
+        self.declare_parameter("exposure_max_ns", 15000000)
+        self.declare_parameter("gain_min", 1.0)
+        self.declare_parameter("gain_max", 4.0)
+
         self.declare_parameter("proc_width", 640)
         self.declare_parameter("proc_height", 360)
 
@@ -212,19 +259,26 @@ class LaneKeeperNode(Node):
         self.declare_parameter("marker_frame_id", "base_footprint")
         self.declare_parameter("camera_hfov_deg", 90.0)
 
-        self.declare_parameter("roi_start_pct", 58)
-        self.declare_parameter("threshold_val", 145)
+        self.declare_parameter("roi_start_pct", 17)
+        # Bright lines on dark road: invert=False keeps the pixels ABOVE the
+        # threshold. Set invert=True for the opposite case (dark tape on a light
+        # floor). threshold_val is low because tophat_k is on by default.
+        self.declare_parameter("threshold_val", 13)
         self.declare_parameter("blur_k", 5)
-        self.declare_parameter("morph_k", 5)
-        self.declare_parameter("invert", True)
+        self.declare_parameter("morph_k", 0)
+        self.declare_parameter("invert", False)
+        self.declare_parameter("tophat_k", 40)
 
-        self.declare_parameter("trap_top_y_pct", 18)
-        self.declare_parameter("trap_top_w_pct", 26)
-        self.declare_parameter("trap_bottom_w_pct", 82)
+        self.declare_parameter("trap_top_y_pct", 20)
+        self.declare_parameter("trap_top_w_pct", 100)
+        self.declare_parameter("trap_bottom_w_pct", 100)
 
         self.declare_parameter("band_h_pct", 10)
-        self.declare_parameter("peak_min", 8)
+        self.declare_parameter("peak_min", 5)
         self.declare_parameter("peak_gap_px", 45)
+        # Above this white ratio inside the trapezoid a band is treated as
+        # saturated and dropped: the only peaks left would be the mask edges.
+        self.declare_parameter("max_white_pct", 55)
 
         self.declare_parameter("lane_width_init_px", 150.0)
         self.declare_parameter("lane_side", 1)   # 0 left, 1 right
@@ -274,6 +328,12 @@ class LaneKeeperNode(Node):
             height=self.get_parameter("capture_height").value,
             fps=self.get_parameter("capture_fps").value,
             flip_method=self.get_parameter("flip_method").value,
+            wb_mode=self.get_parameter("wb_mode").value,
+            ae_lock=bool(self.get_parameter("ae_lock").value),
+            exposure_min_ns=self.get_parameter("exposure_min_ns").value,
+            exposure_max_ns=self.get_parameter("exposure_max_ns").value,
+            gain_min=self.get_parameter("gain_min").value,
+            gain_max=self.get_parameter("gain_max").value,
         )
 
         self.get_logger().info(f"Using pipeline: {pipeline}")
@@ -312,6 +372,8 @@ class LaneKeeperNode(Node):
             "blur_k": _odd(int(self.get_parameter("blur_k").value)),
             "morph_k": _odd(int(self.get_parameter("morph_k").value)),
             "invert": bool(self.get_parameter("invert").value),
+            "tophat_k": int(self.get_parameter("tophat_k").value),
+            "max_white_pct": int(self.get_parameter("max_white_pct").value),
             "trap_top_y_pct": self.get_parameter("trap_top_y_pct").value,
             "trap_top_w_pct": self.get_parameter("trap_top_w_pct").value,
             "trap_bottom_w_pct": self.get_parameter("trap_bottom_w_pct").value,
@@ -348,6 +410,8 @@ class LaneKeeperNode(Node):
                 ("Blur", int(self.get_parameter("blur_k").value), 31),
                 ("Morph", int(self.get_parameter("morph_k").value), 21),
                 ("Invert", 1 if self.get_parameter("invert").value else 0, 1),
+                ("Tophat k", int(self.get_parameter("tophat_k").value), 121),
+                ("Max white %", int(self.get_parameter("max_white_pct").value), 100),
                 ("Trap top y %", int(self.get_parameter("trap_top_y_pct").value), 80),
                 ("Trap top w %", int(self.get_parameter("trap_top_w_pct").value), 100),
                 ("Trap bottom w %", int(self.get_parameter("trap_bottom_w_pct").value), 100),
@@ -389,6 +453,8 @@ class LaneKeeperNode(Node):
             "blur_k": _odd(cv2.getTrackbarPos("Blur", self.controls_window_name)),
             "morph_k": _odd(cv2.getTrackbarPos("Morph", self.controls_window_name)),
             "invert": bool(cv2.getTrackbarPos("Invert", self.controls_window_name)),
+            "tophat_k": cv2.getTrackbarPos("Tophat k", self.controls_window_name),
+            "max_white_pct": cv2.getTrackbarPos("Max white %", self.controls_window_name),
             "trap_top_y_pct": cv2.getTrackbarPos("Trap top y %", self.controls_window_name),
             "trap_top_w_pct": cv2.getTrackbarPos("Trap top w %", self.controls_window_name),
             "trap_bottom_w_pct": cv2.getTrackbarPos("Trap bottom w %", self.controls_window_name),
@@ -591,6 +657,7 @@ class LaneKeeperNode(Node):
             cfg["blur_k"],
             cfg["morph_k"],
             cfg["invert"],
+            cfg["tophat_k"],
         )
 
         trap_mask, trap_pts = _build_trapezoid_mask(
@@ -630,6 +697,7 @@ class LaneKeeperNode(Node):
 
         band_estimates = []
         lane_width_measurements = []
+        saturated_bands = 0
         debug_hist_image = np.zeros((roi_h, roi_w, 3), dtype=np.uint8)
 
         for band_center_pct, band_weight in zip(band_centers_pct, band_weights):
@@ -639,21 +707,39 @@ class LaneKeeperNode(Node):
 
             band = masked[y1:y2, :]
 
-            peaks, hist_smooth = _extract_peaks_from_band(
-                band,
-                cfg["peak_min"],
-                cfg["peak_gap_px"],
+            # A band that comes out almost solid white means the threshold has
+            # saturated (overexposed road, threshold too low). The only histogram
+            # peaks left are the slanted edges of the trapezoid mask, and steering
+            # towards those looks like a confident lock on nothing. Drop the band.
+            band_roi_px = float(np.count_nonzero(trap_mask[y1:y2, :]))
+            band_white_px = float(np.count_nonzero(band))
+            band_saturated = (
+                band_roi_px > 0.0
+                and 100.0 * band_white_px / band_roi_px >= cfg["max_white_pct"]
             )
 
-            lane_center_x, lane_width_px, confidence = _choose_lane_center_from_peaks(
-                peaks,
-                cfg["lane_side"],
-                roi_center_x,
-                lane_width_guess,
-            )
+            if band_saturated:
+                saturated_bands += 1
+                peaks = []
+                hist_smooth = np.zeros(roi_w, dtype=np.float32)
+                lane_center_x, lane_width_px, confidence = None, None, 0.0
+            else:
+                peaks, hist_smooth = _extract_peaks_from_band(
+                    band,
+                    cfg["peak_min"],
+                    cfg["peak_gap_px"],
+                )
 
-            cv2.rectangle(masked_vis, (0, y1), (roi_w - 1, y2), (0, 255, 255), 1)
-            cv2.rectangle(overlay, (0, roi_y + y1), (w - 1, roi_y + y2), (0, 255, 255), 1)
+                lane_center_x, lane_width_px, confidence = _choose_lane_center_from_peaks(
+                    peaks,
+                    cfg["lane_side"],
+                    roi_center_x,
+                    lane_width_guess,
+                )
+
+            band_color = (0, 0, 255) if band_saturated else (0, 255, 255)
+            cv2.rectangle(masked_vis, (0, y1), (roi_w - 1, y2), band_color, 1)
+            cv2.rectangle(overlay, (0, roi_y + y1), (w - 1, roi_y + y2), band_color, 1)
 
             for p in peaks:
                 px = int(p["x"])
@@ -720,6 +806,8 @@ class LaneKeeperNode(Node):
             "lane_width_px": new_lane_width_px,
             "image_center_x": w / 2.0,
             "track_confidence": track_confidence,
+            "saturated_bands": saturated_bands,
+            "total_bands": len(band_centers_pct),
         }
 
     def _timer_callback(self):
@@ -740,6 +828,7 @@ class LaneKeeperNode(Node):
         raw_lane_center_x = debug["raw_lane_center_x"]
         image_center_x = debug["image_center_x"]
         track_confidence = debug["track_confidence"]
+        saturated_bands = debug["saturated_bands"]
 
         if debug["lane_width_px"] is not None:
             self.prev_lane_width_px = debug["lane_width_px"]
@@ -879,6 +968,15 @@ class LaneKeeperNode(Node):
         cv2.putText(overlay, f"Steer: {steer}", (18, 258),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.85, steer_color, 2)
 
+        if saturated_bands > 0:
+            cv2.putText(
+                overlay,
+                f"MASK SATURATED {saturated_bands}/{debug['total_bands']}"
+                " - check exposure/threshold",
+                (18, 290),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.60, (0, 0, 255), 2,
+            )
+
         self._publish_visual_topics(cfg, debug, overlay, masked_vis, stamp)
 
         if cfg["publish_markers"]:
@@ -925,6 +1023,7 @@ class LaneKeeperNode(Node):
                 f"status={status} lane={lane_name} err={err_str} "
                 f"cmd=({cmd.linear.x:.3f},{cmd.angular.z:.3f}) "
                 f"width_px={width_str} "
+                f"sat={saturated_bands}/{debug['total_bands']} "
                 f"lost={self.lost_frames}"
             )
             self.last_debug_print = now

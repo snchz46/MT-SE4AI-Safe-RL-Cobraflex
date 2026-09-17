@@ -2,56 +2,56 @@
 
 ## 4.1 Propósito del capítulo
 
-Este capítulo materializa la rama izquierda superior del V-Model adaptado: los requisitos de las partes interesadas (nivel L1), concretados en el dominio operacional, y los requisitos de seguridad del sistema (nivel L2), derivados sistemáticamente de un análisis de peligros. Es el primer capítulo donde el marco del Capítulo 3 deja de ser propuesta y produce artefactos sobre los que la adaptación A4 opera como restricción dura.
+Este capítulo cubre la parte superior de la rama izquierda del V-Model adaptado. Contiene los requisitos de las partes interesadas (nivel L1), expresados como dominio operacional, y los requisitos de seguridad del sistema (nivel L2), obtenidos paso a paso a partir de un análisis de peligros. Es el primer capítulo en el que el marco del Capítulo 3 deja de ser solo una propuesta: produce artefactos que la adaptación A4 comprueba como restricción dura.
 
-El contenido canónico de cada artefacto vive como documento vivo versionado; aquí se presenta la forma consolidada y el razonamiento que la produce. El registro de peligros completo, con la hipótesis de causa raíz y las referencias cruzadas de cada entrada, se recoge en el Anexo A; el *rationale* íntegro requisito por requisito, con la derivación de cada umbral, en el Anexo B; y la especificación completa del dominio operacional, con sus doce cuestiones abiertas y su cierre, en el Anexo D.
+El contenido oficial de cada artefacto se guarda en un documento vivo versionado. Este capítulo muestra su forma final y el razonamiento que hay detrás. El registro de peligros completo, con la hipótesis de causa raíz y las referencias cruzadas de cada entrada, está en el Anexo A. El *rationale* completo de cada requisito, con la forma en que se obtuvo cada umbral, está en el Anexo B. La especificación completa del dominio operacional, con sus doce cuestiones abiertas y cómo se cerraron, está en el Anexo D.
 
-## 4.2 Función pretendida y requisitos de sistema
+## 4.2 Función prevista y requisitos de sistema
 
-La función pretendida es mantener el vehículo dentro de su carril a lo largo de una pista delimitada, bajo condiciones controladas, sin intervención humana durante el episodio. Es deliberadamente modesta: el interés de la tesis no está en la sofisticación de la función sino en el rigor del ciclo que la produce y la valida.
+La función prevista es mantener el vehículo dentro de su carril a lo largo de una pista cerrada, en condiciones controladas y sin ayuda humana durante el episodio. La función es sencilla a propósito. Lo que interesa en esta tesis no es lo avanzada que sea la función, sino lo riguroso que sea el ciclo que la construye y la valida.
 
-De esa función se derivan cuatro requisitos de sistema que preceden a cualquier consideración de seguridad: el vehículo debe seguir el carril con un error lateral acotado; debe completar el recorrido sin detenerse indebidamente; debe operar en tiempo real dentro del ciclo de control declarado; y debe registrar su comportamiento de forma que la evidencia sea reconstruible a posteriori. Los tres primeros son de función; el cuarto es una consecuencia directa de la adaptación A3 y no aparecería en un ciclo clásico.
+De esta función salen cuatro requisitos de sistema, antes de cualquier consideración de seguridad. El vehículo debe seguir el carril con un error lateral limitado. Debe completar el recorrido sin detenerse sin motivo. Debe funcionar en tiempo real dentro del ciclo de control declarado. Y debe registrar su comportamiento para que la evidencia se pueda reconstruir después. Los tres primeros son funcionales. El cuarto viene directamente de la adaptación A3 y no aparecería en un ciclo clásico.
 
 ## 4.3 Dominio operacional
 
-### 4.3.1 Estructura de cuatro dominios
+### 4.3.1 Cuatro dominios
 
-La especificación del dominio operacional se estratifica en los cuatro dominios anidados de la Figura 4.1, que aíslan un eje de complejidad cada uno, lo que permite atribuir un cambio observado en seguridad o rendimiento a una única causa y no a una combinación confundida:
+El dominio operacional se divide en los cuatro dominios anidados de la Figura 4.1. Cada uno aísla una fuente de complejidad. Así se puede relacionar un cambio observado en la seguridad o el rendimiento con una sola causa, y no con una mezcla de causas:
 
-- **ODD-1 — nominal.** Geometría de referencia, condiciones limpias, sin estresores. Es la línea base.
-- **ODD-2 — adverso.** La misma geometría con estresores sobre el canal de percepción. En el track de cámara ese eje es la degradación visual: deslumbramiento, baja iluminación, desenfoque de movimiento, marcas desgastadas u ocluidas.
-- **ODD-3 — geometría exigente.** Trazado sinuoso y cerrado en condiciones limpias, con envolvente de velocidad dependiente de la curvatura.
-- **ODD-4 — combinado.** Producto cartesiano de la geometría de ODD-3 con los estresores de ODD-2.
+- **ODD-1 — nominal.** Trazado de referencia, condiciones limpias, sin estresores. Es la línea base.
+- **ODD-2 — adverso.** El mismo trazado con estresores sobre el canal de percepción. En el track de cámara son problemas visuales: deslumbramiento, poca luz, desenfoque de movimiento y marcas desgastadas o tapadas.
+- **ODD-3 — trazado exigente.** Un trazado sinuoso y cerrado en condiciones limpias, con un límite de velocidad que depende de la curvatura.
+- **ODD-4 — combinado.** El trazado de ODD-3 combinado con los estresores de ODD-2.
 
 <img src="../figures/fig_4_1_odd_taxonomy_es.png" alt="Figura 4.1 — Taxonomía ODD retenida y los cuatro dominios estratificados." width="580"/>
 
-*Figura 4.1 — Taxonomía ODD retenida y los cuatro dominios estratificados. A la izquierda, las dimensiones de PAS 1883 / ISO 34503 con las que se describe cada dominio; a la derecha, la estratificación 2 × 2 cuyos contrastes por pares permiten al Capítulo 8 atribuir un efecto a un único eje de complejidad: ODD-1 frente a ODD-2 aísla los estresores sobre geometría recta, ODD-1 frente a ODD-3 aísla la complejidad geométrica en condiciones limpias, y ODD-3 frente a ODD-4 añade estresores sobre geometría curva.*
+*Figura 4.1 — La taxonomía ODD usada y los cuatro dominios. A la izquierda, las dimensiones de PAS 1883 / ISO 34503 con las que se describe cada dominio. A la derecha, la división 2 × 2 cuyas comparaciones por pares permiten al Capítulo 8 relacionar un efecto con una sola fuente de complejidad: ODD-1 frente a ODD-2 aísla los estresores en tramo recto, ODD-1 frente a ODD-3 aísla el trazado más difícil en condiciones limpias, y ODD-3 frente a ODD-4 añade estresores en curva.*
 
-Cada dominio fija parámetros con nombre —ancho de carril y de calzada, coeficiente de fricción, curvatura máxima, envolvente de velocidad, latencia de control, dimensionalidad de la observación y de la acción— de modo que cualquier afirmación posterior pueda referirse a un valor concreto y no a una descripción cualitativa.
+Cada dominio fija parámetros con nombre: ancho de carril y de calzada, coeficiente de fricción, curvatura máxima, rango de velocidad, latencia de control y tamaño de la observación y de la acción. Así, cualquier afirmación posterior puede referirse a un valor concreto y no a una descripción vaga.
 
-### 4.3.2 Atributos del dominio frente a estresores de escenario
+### 4.3.2 Atributos del dominio y estresores de escenario
 
-Una distinción que el trabajo mantiene con disciplina, porque su confusión es una fuente habitual de conclusiones inválidas: un atributo del dominio define dónde el sistema está *autorizado* a operar; un estresor de escenario es una perturbación inyectada dentro de ese dominio para provocar un modo de fallo concreto. Una excursión inducida por un estresor dentro del dominio es un fallo del sistema; la misma excursión provocada por una condición inicial fuera del dominio no lo es, y contarla como tal invalidaría el veredicto. Esta distinción sostiene la partición «dentro/fuera del ODD» con la que el Capítulo 8 lee todos sus resultados.
+Hay una distinción que el trabajo respeta de forma estricta, porque mezclar las dos cosas lleva a menudo a conclusiones equivocadas. Un atributo del dominio define dónde el sistema está *autorizado* a funcionar. Un estresor de escenario es una perturbación que se añade dentro de ese dominio para provocar un modo de fallo concreto. Si un estresor dentro del dominio hace que el vehículo se salga del carril, es un fallo del sistema. Si la misma salida la provoca una condición inicial fuera del dominio, no lo es, y contarla como fallo invalidaría el veredicto. Esta distinción es la base de la división «dentro/fuera del ODD» que usa el Capítulo 8 para leer todos sus resultados.
 
 ### 4.3.3 Dominio físico
 
-Para el despliegue sobre la plataforma real se prevé un dominio análogo, el más próximo realizable en hardware, que comparte tipo de escenario, exclusiones e hipótesis de salida pero difiere en la envolvente dinámica del vehículo, en las interfaces de sensado y actuación y en la latencia nominal del lazo. Un único parámetro del dominio —la aceleración lateral máxima comandada— es inmedible en simulación por construcción, porque en el simulador sería una consecuencia del coeficiente de fricción que el propio mundo asume; queda abierto y explícitamente pendiente de una calibración física. Es la única cuestión del dominio que el trabajo cierra como pendiente, y se declara como tal en lugar de estimarse.
+Para el despliegue en la plataforma real se prevé un dominio equivalente, lo más parecido que permite el hardware. Comparte el tipo de escenario, las exclusiones y las hipótesis de salida, pero cambia en los límites dinámicos del vehículo, en las interfaces de sensado y actuación y en la latencia normal del lazo. Hay un parámetro del dominio, la aceleración lateral máxima comandada, que no se puede medir en simulación de ninguna manera, porque allí sería una simple consecuencia del coeficiente de fricción que supone el mundo simulado. Sigue abierto, a la espera explícita de una calibración física. Es la única cuestión del dominio que este trabajo deja abierta, y se marca como abierta en lugar de estimarla.
 
 ## 4.4 Análisis de peligros
 
 ### 4.4.1 Procedimiento
 
-El análisis sigue la estructura de un HARA conforme a ISO 26262 —la Figura 4.2 recoge el procedimiento tal como se aplicó—, simplificado en tres puntos que conviene declarar: se aplica sobre una única función y un único elemento, en lugar de sobre un vehículo completo; las situaciones operacionales se enumeran a partir de los cuatro dominios en lugar de derivarse de un catálogo de uso; y la asignación de nivel de integridad se sustituye por una clasificación de criticidad propia de dos clases, adecuada a un vehículo a escala sin consecuencias sobre personas. Las simplificaciones no afectan a la estructura del razonamiento —situación, peligro, severidad, exposición, controlabilidad, criticidad, mitigación— sino a su alcance.
+El análisis sigue la estructura de un HARA según ISO 26262 (la Figura 4.2 muestra el procedimiento tal como se aplicó), con tres simplificaciones que hay que declarar. Se aplica a una sola función y un solo elemento, y no a un vehículo completo. Las situaciones operacionales salen de los cuatro dominios, y no de un catálogo de uso. Y en lugar de asignar un nivel de integridad, se usa una escala propia de criticidad con dos clases, que encaja con un vehículo a escala que no puede causar daños a personas. Estas simplificaciones cambian el alcance del razonamiento, no su estructura: situación, peligro, severidad, exposición, controlabilidad, criticidad y mitigación.
 
 <img src="../figures/fig_4_2_hara_procedure.png" alt="Figura 4.2 — Procedimiento HARA aplicado." width="560"/>
 
-*Figura 4.2 — El procedimiento HARA tal como se aplicó: cinco pasos desde la enumeración de funciones hasta la documentación de consecuencia e hipótesis de causa raíz, con la pasada sistémica ligera refinando restricciones sobre los peligros seleccionados y el registro de peligros como salida.*
+*Figura 4.2 — El procedimiento HARA tal como se aplicó: cinco pasos desde la lista de funciones hasta documentar la consecuencia y la hipótesis de causa raíz. Una pasada sistémica ligera ajusta las restricciones de algunos peligros seleccionados, y la salida es el registro de peligros.*
 
-Cada peligro se clasifica según tres ejes con rúbricas explícitas: severidad (de S0, sin lesión, a S3, consecuencia grave sobre el análogo a escala real), exposición (de E0 a E4, según la frecuencia de la situación dentro del dominio) y controlabilidad (de C0 a C3, según la capacidad del sistema o de un supervisor de evitar el daño). La combinación produce la criticidad, y esta determina si el peligro exige mitigación por regla determinista, por restricción de entrenamiento o por ambas.
+Cada peligro se valora en tres ejes con escalas explícitas: severidad (de S0, sin lesión, a S3, consecuencia grave en el equivalente a tamaño real), exposición (de E0 a E4, según la frecuencia con que se da la situación dentro del dominio) y controlabilidad (de C0 a C3, según lo bien que el sistema o un supervisor pueden evitar el daño). Juntas dan la criticidad, que decide si el peligro necesita una regla determinista, una restricción de entrenamiento o ambas.
 
 ### 4.4.2 Registro de peligros
 
-El registro, que la Tabla 4.1 resume, consolida doce peligros: nueve de nivel sistema, comunes a ambos tracks, y tres específicos del track de cámara. La numeración es estable: un identificador asignado no se reutiliza ni se renombra, aunque el peligro se descarte en revisiones posteriores. La tabla presenta la forma compacta; el registro extendido, con hipótesis de causa raíz y consecuente operacional de cada entrada, está en el Anexo A.
+El registro, resumido en la Tabla 4.1, contiene doce peligros: nueve de nivel sistema, comunes a los dos tracks, y tres propios del track de cámara. La numeración es estable. Un identificador asignado nunca se reutiliza ni se cambia de nombre, aunque el peligro se descarte en una revisión posterior. La tabla es la versión corta. El registro ampliado, con la hipótesis de causa raíz y la consecuencia operacional de cada entrada, está en el Anexo A.
 
 | ID | Peligro | S | E | C | Criticidad |
 | --- | --- | :-: | :-: | :-: | --- |
@@ -68,29 +68,29 @@ El registro, que la Tabla 4.1 resume, consolida doce peligros: nueve de nivel si
 | H-11 | Pérdida de percepción de carril válida | S3 | E2 | C2 | Alta |
 | H-12 | Detección errónea del estimador de la cage (carril falso plausible) | S3 | E2 | C2 | Alta |
 
-*Tabla 4.1 — Registro de peligros en forma compacta (registro extendido en el Anexo A).*
+*Tabla 4.1 — Registro de peligros, versión corta (registro ampliado en el Anexo A).*
 
-Tres entradas merecen comentario porque no aparecerían en un análisis clásico. H-08 es un peligro propio del componente aprendido: la explotación de la función de recompensa, por la cual la policy converge a la inacción o a una conducta adversa que acumula más recompensa que el seguimiento nominal. H-09 es un peligro propio de la *mitigación*: si dos o más reglas de la cage se activan en el mismo ciclo y su composición produce un comando fuera de la envolvente segura, la cage deja de ser garantía y se convierte en fuente de mandos inseguros. Registrar el peligro que introduce el propio mecanismo de seguridad es una exigencia elemental de honestidad, y el Capítulo 8 mostrará que no era una precaución retórica. H-12 es su equivalente en el track de cámara: el estimador de la cage produce un carril falso pero plausible, e impone una envolvente errónea sobre el carril verdadero.
+Tres entradas necesitan un comentario, porque no aparecerían en un análisis clásico. H-08 es propio del componente aprendido. Es la explotación de la recompensa: la policy acaba sin hacer nada, o haciendo algo perjudicial, porque así gana más recompensa que siguiendo el carril con normalidad. H-09 es propio de la *mitigación*. Si dos o más reglas de la cage se activan en el mismo ciclo y la combinación da un comando fuera de la envolvente segura, la cage deja de ser una garantía y pasa a generar comandos inseguros. Registrar los peligros que crea el propio mecanismo de seguridad es una cuestión básica de honestidad, y el Capítulo 8 muestra que no era una precaución puramente formal. H-12 es la versión del mismo problema en el track de cámara: el estimador de la cage produce un carril falso pero creíble, y aplica una envolvente equivocada sobre el carril real.
 
-### 4.4.3 Complemento sistémico
+### 4.4.3 Análisis sistémico
 
-Sobre los peligros de mayor criticidad se ejecuta además una pasada ligera de análisis sistémico basado en teoría de control, que examina las acciones de control inseguras del lazo completo en lugar de los modos de fallo de sus componentes. Su aportación fue identificar dos clases de peligro que el análisis por componentes no había producido: los derivados de actuar sobre información inválida —modelo de proceso desactualizado— y los derivados de la ausencia de acción cuando era necesaria. Ambas clases se materializaron en requisitos que hoy son parte del núcleo de la cage. La pasada es *ligera* y se declara como tal: no construye el modelo de control jerárquico completo ni enumera exhaustivamente los escenarios causales.
+Para los peligros más críticos se hace además un análisis sistémico ligero basado en teoría de control. Este análisis mira las acciones de control inseguras en todo el lazo, en lugar de los modos de fallo de cada componente. Encontró dos tipos de peligro que el análisis por componentes no había detectado: los que vienen de actuar sobre información no válida (un modelo de proceso desactualizado) y los que vienen de no actuar cuando hacía falta. Los dos tipos se convirtieron en requisitos que hoy forman parte del núcleo de la cage. La pasada es *ligera*, y se presenta así: no construye el modelo de control jerárquico completo ni enumera todos los escenarios causales.
 
-## 4.5 Derivación de requisitos de seguridad
+## 4.5 Obtención de los requisitos de seguridad
 
 ### 4.5.1 Procedimiento y criterios de calidad
 
-Cada peligro se traduce en uno o más requisitos siguiendo el procedimiento de la Figura 4.3, bajo cuatro criterios obligatorios, que la plantilla del documento hace exigibles: falsabilidad —expresado como condición medible con procedimiento de veredicto definido—; operatividad —implementable por un mecanismo concreto, sea regla, restricción de entrenamiento o test de escenario—; trazabilidad —referencia al menos un peligro y es referenciado al menos por una regla y un escenario—; y atomicidad —captura una sola propiedad.
+Cada peligro se convierte en uno o más requisitos siguiendo el procedimiento de la Figura 4.3. Hay cuatro criterios obligatorios, que la plantilla del documento hace cumplir. Falsabilidad: el requisito es una condición medible con una forma definida de llegar a un veredicto. Operatividad: se puede implementar con un mecanismo concreto, como una regla, una restricción de entrenamiento o un test de escenario. Trazabilidad: apunta al menos a un peligro y al menos una regla y un escenario apuntan a él. Atomicidad: describe una sola propiedad.
 
 <img src="../figures/fig_4_3_sr_derivation.png" alt="Figura 4.3 — Procedimiento de derivación de requisitos de seguridad." width="560"/>
 
-*Figura 4.3 — Derivación de un requisito de seguridad a partir de un peligro, en cuatro pasos. Dos guardas hacen defendible el resultado: los umbrales se fijan desde la física del ODD y nunca desde el rendimiento observado de la policy entrenada —lo que evitaría la tautología— y la clase de criticidad decide la ruta de implementación, con todo requisito de clase A aterrizando en una regla determinista.*
+*Figura 4.3 — Cómo se obtiene un requisito de seguridad a partir de un peligro, en cuatro pasos. Dos salvaguardas hacen defendible el resultado. Los umbrales se fijan a partir de la física del ODD y nunca a partir del rendimiento de la policy entrenada, lo que sería circular. Y la clase de criticidad decide cómo se implementa el requisito: todo requisito de clase A acaba en una regla determinista.*
 
-La falsabilidad merece énfasis porque es el criterio que hace posible todo lo demás. Un requisito como «el vehículo conducirá de forma segura» no es falsable y, por tanto, no es verificable ni trazable: no existe medición que pueda contradecirlo. La disciplina de exigir un umbral con nombre, una métrica y un procedimiento de veredicto es lo que convierte la matriz de trazabilidad en un instrumento con contenido, y no en un ejercicio documental.
+La falsabilidad merece destacarse, porque todo lo demás depende de ella. Un requisito como «el vehículo conducirá de forma segura» no se puede falsar, así que tampoco se puede verificar ni trazar: ninguna medición podría contradecirlo nunca. Exigir un umbral con nombre, una métrica y un procedimiento de veredicto es lo que hace de la matriz de trazabilidad una herramienta útil y no un ejercicio de papeleo.
 
 ### 4.5.2 Especificación de requisitos
 
-El registro contiene catorce requisitos. La Tabla 4.2 los presenta en forma compacta; el *rationale* completo de cada uno —incluida la derivación de cada umbral y la discusión de los valores marcados como provisionales a la espera de calibración física— está en el Anexo B.
+El registro tiene catorce requisitos. La Tabla 4.2 muestra la versión corta. El *rationale* completo de cada uno, incluida la forma en que se obtuvo cada umbral y la discusión de los valores marcados como provisionales hasta la calibración física, está en el Anexo B.
 
 | ID | Requisito (forma abreviada) | Umbral principal | Peligro | Implementación | Clase |
 | --- | --- | --- | --- | --- | :-: |
@@ -109,30 +109,30 @@ El registro contiene catorce requisitos. La Tabla 4.2 los presenta en forma comp
 | SR-013 | Parada controlada ante pérdida de percepción | `≤ 200 ms` | H-11 | C-05 | A |
 | SR-014 | No imponer reglas sobre una estimación implausible | tolerancia de plausibilidad | H-12 | C-05 | A |
 
-*Tabla 4.2 — Especificación de requisitos de seguridad en forma compacta (rationale completo en el Anexo B).*
+*Tabla 4.2 — Especificación de requisitos de seguridad, versión corta (rationale completo en el Anexo B).*
 
-Un umbral de la tabla merece una nota, porque es el único que la implementación reparametriza. SR-007 fija la antigüedad máxima de la observación en `200 ms`, que son cuatro ciclos del lazo de control a 20 Hz. El disparador correspondiente de C-05 se ejecuta a 10 Hz en el track de cámara y usa `0,5 s`: la misma tolerancia expresada en ciclos —cinco— y no un relajamiento del requisito. La equivalencia está registrada en el fichero de parámetros y en el Anexo D; se señala aquí para que el lector no lea una discrepancia donde hay una reparametrización declarada.
+Un umbral de la tabla necesita una nota, porque es el único que la implementación cambia. SR-007 fija la antigüedad máxima de la observación en `200 ms`, que son cuatro ciclos del lazo de control a 20 Hz. El disparador correspondiente de C-05 funciona a 10 Hz en el track de cámara y usa `0,5 s`. Es la misma tolerancia expresada en ciclos (cinco), no un requisito más flojo. La equivalencia está anotada en el fichero de parámetros y en el Anexo D. Se señala aquí para que el lector no vea una contradicción donde solo hay un cambio de parámetros declarado.
 
 ### 4.5.3 Clases de criticidad
 
-Los requisitos se reparten en dos clases con consecuencias distintas sobre el veredicto global. La clase A agrupa los que expresan un predicado de seguridad propiamente dicho: su incumplimiento invalida el veredicto global de la campaña. La clase B agrupa los que expresan propiedades deseables de calidad —suavidad, ausencia de oscilación, *liveness*, consistencia de composición— cuyo incumplimiento se reporta pero no veta el veredicto.
+Los requisitos se dividen en dos clases, que afectan de forma distinta al veredicto global. La clase A reúne los requisitos que expresan condiciones de seguridad propiamente dichas. Si se incumple uno de ellos, el veredicto global de la campaña queda invalidado. La clase B reúne requisitos sobre propiedades de calidad deseables, como suavidad, ausencia de oscilación, *liveness* y composición coherente de reglas. Su incumplimiento se informa, pero no bloquea el veredicto.
 
-La distinción no es una vía de escape: es la que permite reportar honestamente un requisito no satisfecho sin que ello obligue a declarar inseguro un sistema cuyos predicados de seguridad se cumplen íntegramente. El Capítulo 8 hace uso de esa distinción exactamente una vez, y lo hace de forma explícita y argumentada.
+Esta división no es una forma de escurrir el bulto. Permite informar con honestidad de un requisito no cumplido sin tener que declarar inseguro un sistema que cumple todas sus condiciones de seguridad. El Capítulo 8 usa esta distinción una sola vez, y lo hace abiertamente y con argumentos.
 
-## 4.6 Matriz de trazabilidad bidireccional
+## 4.6 Matriz de trazabilidad en ambos sentidos
 
-La matriz es el artefacto donde A4 se materializa. Registra la cadena completa `Peligro → Requisito → Regla → Escenario → Métrica → Evidencia → Veredicto` y se mantiene en dos formas complementarias: una legible, tabular, y otra procesable por máquina que el validador comprueba.
+La matriz es donde A4 se hace concreta. Registra la cadena completa `Peligro → Requisito → Regla → Escenario → Métrica → Evidencia → Veredicto` y se mantiene en dos formas: una tabla legible y una versión que puede leer una máquina, que es la que usa el validador.
 
-En este capítulo la matriz cubre su primer tramo: la cobertura entre peligros y requisitos. Todos los peligros del registro tienen al menos un requisito que los mitiga y todos los requisitos derivan de al menos un peligro, sin huérfanos en ninguna dirección. Dos peligros —H-01 y H-02— reciben mitigación de más de un requisito, lo que refleja que admiten ramas distintas: H-01 se mitiga por límite duro de offset y también por el criterio predictivo de tiempo a salida; H-02 por límite de magnitud y por límite de varianza, que cubren respectivamente la rama divergente y la rama oscilatoria del mismo peligro.
+En este capítulo la matriz cubre solo su primera parte: la relación entre peligros y requisitos. Todos los peligros del registro tienen al menos un requisito que los mitiga, y todos los requisitos vienen de al menos un peligro, sin huérfanos en ningún sentido. Dos peligros, H-01 y H-02, están cubiertos por más de un requisito, porque cada uno puede ocurrir de más de una forma. H-01 se cubre con un límite duro de offset y también con el criterio predictivo de tiempo hasta la salida. H-02 se cubre con un límite de magnitud y otro de varianza, que cubren respectivamente la versión divergente y la versión oscilatoria del mismo peligro.
 
-El validador aplica ocho restricciones de cobertura y falla la puerta de revisión si alguna se viola. La matriz completa, con los tramos que los capítulos siguientes van rellenando y con los veredictos finales, se recoge en el Anexo F.
+El validador aplica ocho restricciones de cobertura y bloquea la puerta de revisión si se incumple alguna. La matriz completa, con las partes que van rellenando los capítulos siguientes y con los veredictos finales, está en el Anexo F.
 
 ## 4.7 Limitaciones del análisis
 
-- **Análisis de peligros de alcance acotado.** El HARA cubre la función de seguimiento de carril sobre una plataforma a escala; ni las situaciones operacionales ni las rúbricas de severidad son trasladables sin revisión a un vehículo de calle.
-- **Severidades por analogía.** Las severidades se asignan por analogía con un vehículo real, no por consecuencia física medida sobre la plataforma a escala. Es una convención declarada, no una medición.
-- **Pasada sistémica ligera.** El complemento basado en teoría de control no es exhaustivo; se ejecutó sobre los peligros de mayor criticidad y produjo dos clases nuevas, pero no cabe afirmar que el catálogo esté cerrado.
-- **Umbrales provisionales.** Varios umbrales quedan marcados como provisionales a la espera de calibración sobre la plataforma física. El marco exige que esa condición sea visible en el propio artefacto en lugar de quedar implícita, y el ciclo de resolución está definido: medir, actualizar el fichero de parámetros, versionar, re-ejecutar los escenarios afectados y registrar el cambio.
-- **Completitud no demostrable.** No existe procedimiento que demuestre que el catálogo de peligros es completo. Lo que sí se afirma —y se comprueba mecánicamente— es que ninguno de los identificados queda sin mitigación y sin evidencia.
+- **Alcance limitado del análisis de peligros.** El HARA cubre el seguimiento de carril en una plataforma a escala. Ni las situaciones operacionales ni las escalas de severidad se pueden usar en un vehículo de calle sin revisarlas.
+- **Severidades por analogía.** Las severidades se fijan comparando con un vehículo real, no midiendo consecuencias físicas sobre la plataforma a escala. Es una convención declarada, no una medición.
+- **Pasada sistémica ligera.** El análisis basado en teoría de control no es completo. Se hizo sobre los peligros más críticos y encontró dos tipos nuevos, pero no se puede decir que el catálogo esté cerrado.
+- **Umbrales provisionales.** Varios umbrales están marcados como provisionales hasta que se calibren en la plataforma física. El marco exige que esta situación sea visible en el propio artefacto y no quede sin decir, y el proceso para resolverla está definido: medir, actualizar el fichero de parámetros, versionarlo, volver a ejecutar los escenarios afectados y registrar el cambio.
+- **La completitud no se puede demostrar.** Ningún procedimiento puede demostrar que el catálogo de peligros está completo. Lo que sí se afirma, y se comprueba de forma automática, es que ningún peligro identificado se queda sin mitigación y sin evidencia.
 
-Con el dominio fijado, los peligros catalogados y los requisitos derivados, el Capítulo 5 aborda el nivel de diseño: la arquitectura del sistema y la especificación de la cage que ha de hacer cumplir estos requisitos en tiempo de ejecución.
+Con el dominio definido, los peligros registrados y los requisitos obtenidos, el Capítulo 5 pasa al nivel de diseño: la arquitectura del sistema y la especificación de la cage que debe hacer cumplir estos requisitos en tiempo de ejecución.

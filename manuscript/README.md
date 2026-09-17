@@ -37,15 +37,20 @@ idempotent and the page budget is the acceptance check.
 The layout choices live in one place — `tools/build_thesis_docx.py`, top of file — and **that
 file is the authority; this section describes it**:
 
-- A4, justified, paragraphs indented; margins top and bottom 1.25".
+- A4, justified, paragraphs indented; **1.0" margins on all four sides**.
 - Preliminary pages in **lower-case roman, centred at the bottom**; the title page carries no
-  number. Body in **arabic, upper right**, restarting at 1, with no header or ornamentation.
+  number, header or footer. Body in **arabic, upper right**, restarting at 1.
+- **Running header and footer** on every numbered page, 8.5 pt grey with a hairline rule:
+  header = the current level-1 heading (chapter, appendix or front-matter section, via a
+  `STYLEREF 1` field) and, in the body, the page number; footer = the author (read from the
+  cover) and "Tesis de Máster · Hochschule Esslingen" / "Master's Thesis · Hochschule
+  Esslingen", with the roman page number between them on the preliminary pages.
 - Cover with the required fields (thesis type, title, both examiners, author) and the
   **certification of authenticity** as a preliminary page.
 - Abstract single-spaced and within two pages.
 - **Body of the text: 80–100 pages**, excluding bibliography and appendices.
 
-**Three guideline items are deliberately deviated from**, and the reasons are recorded here.
+**Four guideline items are deliberately deviated from**, and the reasons are recorded here.
 **(a) Typography.** The guidelines specify 12 pt Times New Roman at 1.5 line spacing with a
 1.5" left margin; the build sets **Arial 11 pt at 1.15 line spacing with 1.0" left and right
 margins**, throughout — body text, headings and captions alike. This was the author's choice.
@@ -54,7 +59,12 @@ set**, so the resulting page count is not comparable to a budget computed under 
 typography and must be re-measured rather than assumed. **(b)** The recommendation of "three or
 four blank lines before subheadings" is implemented as paragraph spacing rather than literal
 blank lines (visually equivalent, cheaper in pages). **(c)** Citations are parenthetical
-author-year rather than footnotes, which the guidelines permit.
+author-year rather than footnotes, which the guidelines permit. **(d) Page furniture and
+vertical margins** (16.09.2026, author's choice). The guidelines ask for top and bottom margins
+of 1¼" and, in the body, *the number only — no header or ornamentation*; the build sets 1.0"
+top and bottom (the same as the lateral margins, so more text fits per page) and adds the
+running header and footer above. Measured in Word on that day, the body went from 93 to 90
+pages (ES) and from 91 to 85 (EN).
 
 > **Open item — the page budget is unverified.** `tools/thesis_page_budget.py` drives Word and
 > needs **Word COM (pywin32)**, so it runs only on a Windows host with Word installed — not on

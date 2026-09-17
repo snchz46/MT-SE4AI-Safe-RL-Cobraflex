@@ -10,7 +10,7 @@ Two levels that are often confused should be separated. The *research methodolog
 
 ### 3.2.1 Type of research
 
-The work belongs to the tradition of *design science research* (Hevner et al., 2004) or, in a close formulation, *constructive research* (March and Smith, 1995). In that tradition the academic contribution is not an empirical proposition contrasted against reality, nor a logical proposition proved deductively, but an artefact that addresses a previously identified problem and whose usefulness is evaluated through one or several application cases.
+The work belongs to the tradition of *design science research* (March and Smith, 1995; Hevner et al., 2004). In that tradition the academic contribution is not an empirical proposition contrasted against reality, nor a logical proposition proved deductively, but an artefact that addresses a previously identified problem and whose usefulness is evaluated through one or several application cases.
 
 The artefact is the adapted V-Model — five adaptations A1–A5 over the ISO 26262 V-Model — together with the templates, validators and derived artefacts that materialise it. This characterisation has three consequences. First: the thesis does not look for the typical contribution of an empirical thesis — discovering a phenomenon, refuting a statistical hypothesis — but for the production of a useful artefact and the demonstration of its operation. Second: the evaluation is made on the artefact and not only on the system built with it, which requires a chapter devoted to evaluating the framework itself (Chapter 11). Third: generalisation is argued by structural plausibility — the adaptations attack V-Model assumptions that fail for any system with a learned component — and not by statistical induction over multiple cases.
 
@@ -24,7 +24,7 @@ The author is at the same time the designer of the framework, the implementer of
 
 ## 3.3 The classical V-Model and its implicit assumptions
 
-The V-Model, with its root in systems engineering (Forsberg and Mooz, 1991), formalised in ISO/IEC/IEEE 15288 and adopted by ISO 26262, structures the process in five hierarchical levels with a bidirectional correspondence between specification (descending branch) and verification/validation (ascending branch).
+The V-Model, with its root in systems engineering (Forsberg and Mooz, 1991) and adopted by ISO 26262 as its reference process model, structures the process in five hierarchical levels with a bidirectional correspondence between specification (descending branch) and verification/validation (ascending branch).
 
 <img src="../figures/fig_3_1_adopted_classical_v_model.png" alt="Figure 3.1 — V-Model adopted by ISO 26262, instantiated on the lane-following case." width="480"/>
 
@@ -42,7 +42,7 @@ It operates on five assumptions that are rarely made explicit but that support i
 
 *Table 3.1 — The five assumptions of the classical V-Model and how they fail for learned components.*
 
-The quantitative extent of the problem is illustrated by the finding of Salay et al. about the 75 software techniques prescribed in Part 6 of ISO 26262: close to 40 % do not apply to ML components without modification, distributed between techniques that are directly reusable, adaptable with modification, and inapplicable because they are oriented towards imperative languages. That void is operational, not only conceptual, and it is what motivates a complementary framework.
+The quantitative extent of the problem is illustrated by the finding of Salay et al. about the software techniques prescribed in Part 6 of ISO 26262: of the 34 (out of 75) that apply at unit level, about 40 % do not apply to ML components at all — the rest being usable directly or with adaptation — largely because they are oriented towards imperative languages. That void is operational, not only conceptual, and it is what motivates a complementary framework.
 
 The five failures are not an argument for abandoning the V-Model but for adapting it. The methodological core of this work consists in keeping the structure of the V — and with it the coherence with ISO 26262 — while introducing the minimum modifications necessary for the policy to fit inside the cycle without breaking the traceability or the honesty of the process.
 
@@ -54,7 +54,7 @@ The five failures are not an argument for abandoning the V-Model but for adaptin
 
 **Adaptation.** L4 is split into two conceptually different sublevels. L4a — Cage Specification is classical specification: deterministic and modular, where each cage rule is a pure, testable function with defined inputs and outputs, designed in the traditional sense. L4b — Training Specification is a *meta-specification*: it does not specify the behaviour of the policy but the process that produces it — reward function, state and action spaces, training ODD, convergence criteria, algorithm, constraints active during the training.
 
-The separation is coherent with the three-stage realisation principle of ISO/IEC TR 5469:2024, which distinguishes acquisition from inputs, induction of knowledge from data, and generation of outputs; A1 brings that distinction to the level of the design process. Artefacts: the cage specification with its formally defined rules (Chapter 5) and the training specification (Chapter 7).
+The separation is coherent with the three-stage realisation principle of ISO/IEC TR 5469:2024, which distinguishes data acquisition, knowledge induction from data and human knowledge, and processing and generation of outputs; the TR states that the principle does not describe a life cycle, so A1 is an extension that carries the distinction to the level of the design process. Artefacts: the cage specification with its formally defined rules (Chapter 5) and the training specification (Chapter 7).
 
 ### 3.4.2 A2 — From unit testing to behavioural evaluation
 
@@ -62,7 +62,7 @@ The separation is coherent with the three-stage realisation principle of ISO/IEC
 
 **Adaptation.** The level is split in correspondence with A1. L4a' — Cage Unit Tests: classical unit tests over each rule, with synthetic state vectors, expected deterministic behaviour and a binary verdict; identical in philosophy to those of the classical V. L4b' — Policy Behavioral Evaluation: statistical evaluation over state distributions — "over N states sampled from the ODD, the policy produces actions that satisfy property X with frequency Y". This is not verification in the logical sense, it is statistical characterisation of the behaviour.
 
-The adaptation recognises that classical verification is not applicable to learned components. The thesis does not force the metaphor: it replaces it with an appropriate tool, and keeps classical verification where it is still applicable, namely the cage. The asymmetry is coherent with the Class I / Class II element distinction of TR 5469: the cage operates as a Class I element, the policy as a Class II element.
+The adaptation recognises that classical verification is not applicable to learned components. The thesis does not force the metaphor: it replaces it with an appropriate tool, and keeps classical verification where it is still applicable, namely the cage. The asymmetry is coherent, by analogy, with the technology classes of TR 5469: the cage, a conventional rule-based component, can be developed and reviewed entirely with existing functional safety practice, as Class I technology can, while the policy is at best a Class II element, whose required properties can only be approached with complementary methods such as the statistical evaluation of A2.
 
 ### 3.4.3 A3 — Runtime monitoring as continuous validation
 
@@ -70,7 +70,7 @@ The adaptation recognises that classical verification is not applicable to learn
 
 **Adaptation.** A horizontal level is added — Runtime Monitoring — fed by the intervention logs of the cage during operation, which feeds validation back continuously. The level recognises three facts that are specific to systems with AI: the operational distribution can differ from the testing one; failure modes that were not anticipated in the hazard analysis can emerge; and safety evidence has to be accumulated over time.
 
-In this work the logging node is not an auxiliary component but the primary instrument of the level: the logs it produces during the experimental campaigns are continuous validation evidence within the project window, and in a real deployment the same mechanism would generate evidence indefinitely. The adaptation is coherent with the SOTIF philosophy and with the V-Model reformulation of Wang et al. (2024), and it inherits from Mohseni et al. (2019) the categorisation of the *monitoring function* as an architectural category in its own right, taking it one step further: it raises it from a technical mechanism to an explicit level of the life cycle, with version-controlled artefacts and a defined role in the traceability matrix.
+In this work the logging node is not an auxiliary component but the primary instrument of the level: the logs it produces during the experimental campaigns are continuous validation evidence within the project window, and in a real deployment the same mechanism would generate evidence indefinitely. The adaptation is coherent with the SOTIF philosophy and with the operation phase that Wang et al. (2024) use to organise SOTIF research, and it inherits from Mohseni et al. (2019) the categorisation of the *monitoring function* as an architectural category in its own right, taking it one step further: it raises it from a technical mechanism to an explicit level of the life cycle, with version-controlled artefacts and a defined role in the traceability matrix.
 
 ### 3.4.4 A4 — Mandatory traceability as a hard constraint
 
@@ -179,7 +179,7 @@ The framework does not replace the standards: it articulates them. Each adaptati
 | --- | --- |
 | A1 — Cage Spec + Training Spec | TR 5469 §7 (three-stage realisation principle); PAS 8800 (adaptation of the module design) |
 | A2 — Cage tests + behavioural evaluation | TR 5469 (Class I / Class II elements); ISO 26262 Part 6 for the classical part |
-| A3 — Runtime monitoring | SOTIF (insufficiency of static validation); Wang et al. (2024), continuous operation phase |
+| A3 — Runtime monitoring | SOTIF (insufficiency of static validation); operation phase as surveyed by Wang et al. (2024) |
 | A4 — Hard traceability | ISO 26262 Part 8 (requirements management); AMLAS (GSN patterns); UL 4600 (claim–argument–evidence) |
 | A5 — Bounded validation + gap | SOTIF (unanticipated conditions); UL 4600 (declared limits of the safety case) |
 

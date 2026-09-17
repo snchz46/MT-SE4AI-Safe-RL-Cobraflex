@@ -2,11 +2,14 @@
 """Build the submission DOCX from the Markdown thesis source.
 
 Renders `manuscript/draft_v5/` (front matter + condensed body + appendices) into a
-single .docx laid out to the HS Esslingen *Thesis Writing Guidelines*:
+single .docx laid out after the HS Esslingen *Thesis Writing Guidelines*, with the
+author's deliberate deviations (manuscript/README.md, "Guideline compliance"):
 
     A4 · 11 pt Arial · 1.15 line spacing · justified · first-line indent
-    margins  left 1.5"  right 1"  top/bottom 1.25"
-    preliminary pages  lower-case roman, centred at the bottom
+    margins  1" on all four sides
+    header   current chapter (STYLEREF 1) left; body page number right
+    footer   author left; preliminary page number centred; thesis/institution right
+    preliminary pages  lower-case roman, centred at the bottom; title page bare
     body                arabic, upper right
     body length         80-100 pages  (checked by tools/thesis_page_budget.py)
 
@@ -31,7 +34,7 @@ from pathlib import Path
 from docx import Document
 from docx.enum.section import WD_SECTION
 from docx.enum.table import WD_TABLE_ALIGNMENT
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Emu, Inches, Pt, RGBColor
@@ -51,6 +54,8 @@ LANGUAGES = {
         caption=r"(?:Figura|Tabla)",
         figure=r"(?:Figura|Fig\.)",
         toc_placeholder="Actualice el índice con F9.",
+        author_label="Autor",
+        footer_right="Tesis de Máster · Hochschule Esslingen",
         out="draft_V5.docx",
     ),
     "en": dict(
@@ -58,6 +63,8 @@ LANGUAGES = {
         caption=r"(?:Figure|Table)",
         figure=r"(?:Figure|Fig\.)",
         toc_placeholder="Update the table of contents with F9.",
+        author_label="Author",
+        footer_right="Master's Thesis · Hochschule Esslingen",
         out="draft_V5_en.docx",
     ),
 }
@@ -73,7 +80,14 @@ BODY_SIZE_PT = 11
 LINE_SPACING = 1.15
 MARGIN_LEFT = Inches(1.0)
 MARGIN_RIGHT = Inches(1.0)
-MARGIN_TOPBOT = Inches(1.25)
+# Also the author's choice, not the guidelines' 1.25": top and bottom match the
+# lateral margins, so more text fits per page. The header and footer sit 0.5" from
+# the edge, which leaves ~0.3" between them and the text block.
+MARGIN_TOPBOT = MARGIN_LEFT
+HEADER_FOOTER_DISTANCE = Inches(0.5)
+HF_SIZE_PT = 8.5
+HF_COLOR = RGBColor(0x59, 0x59, 0x59)
+TEXT_WIDTH = Inches(8.27) - MARGIN_LEFT - MARGIN_RIGHT
 FIRST_LINE_INDENT = Inches(0.25)  # "indent paragraphs five spaces"
 MAX_FIGURE_WIDTH = Inches(5.4)  # text column is 5.77"; leave a hair of slack
 
@@ -123,18 +137,83 @@ def set_page_numbering(section, fmt: str, start: int | None = None) -> None:
     sectPr.append(_el("w:pgNumType", **attrs))
 
 
-def put_page_number(container, alignment) -> None:
-    """Drop a bare PAGE field into a header/footer, with no ornamentation."""
-    p = container.paragraphs[0] if container.paragraphs else container.add_paragraph()
-    p.text = ""
-    p.alignment = alignment
-    p.paragraph_format.space_before = Pt(0)
-    p.paragraph_format.space_after = Pt(0)
-    p.paragraph_format.line_spacing = 1.0
-    p.paragraph_format.first_line_indent = Inches(0)
-    add_field(p, " PAGE ", "1")
-    for r in p.runs:
-        r.font.size = Pt(BODY_PT)
+# Every pPr child that the schema places after w:pBdr. python-docx writes tabs,
+# spacing, indentation and alignment in schema order; the border has to be slotted
+# in before them, or Word reports the file as damaged.
+_AFTER_PBDR = (
+    "w:shd", "w:tabs", "w:suppressAutoHyphens", "w:kinsoku", "w:wordWrap",
+    "w:overflowPunct", "w:topLinePunct", "w:autoSpaceDE", "w:autoSpaceDN", "w:bidi",
+    "w:adjustRightInd", "w:snapToGrid", "w:spacing", "w:ind", "w:contextualSpacing",
+    "w:mirrorIndents", "w:suppressOverlap", "w:jc", "w:textDirection",
+    "w:textAlignment", "w:textboxTightWrap", "w:outlineLvl", "w:divId", "w:cnfStyle",
+    "w:rPr", "w:sectPr", "w:pPrChange",
+)
+
+
+def _hf_paragraph(container, rule: str):
+    """Empty `container` and start its single line: small grey text, a centre and a
+    right tab stop across the text width, and a hairline rule on the `rule` side
+    ("bottom" under a header, "top" over a footer)."""
+    clear(container)
+    p = container.add_paragraph()
+    pf = p.paragraph_format
+    pf.space_before = Pt(0)
+    pf.space_after = Pt(0)
+    pf.line_spacing = 1.0
+    pf.first_line_indent = Inches(0)
+    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    pf.tab_stops.add_tab_stop(Emu(TEXT_WIDTH // 2), WD_TAB_ALIGNMENT.CENTER)
+    pf.tab_stops.add_tab_stop(Emu(TEXT_WIDTH), WD_TAB_ALIGNMENT.RIGHT)
+    border = _el("w:pBdr")
+    border.append(_el(f"w:{rule}", **{
+        "w:val": "single", "w:sz": "4", "w:space": "4", "w:color": "A6A6A6",
+    }))
+    p._p.get_or_add_pPr().insert_element_before(border, *_AFTER_PBDR)
+    return p
+
+
+def _hf_style(run, bold: bool = False) -> None:
+    run.font.size = Pt(HF_SIZE_PT)
+    run.font.color.rgb = HF_COLOR
+    run.bold = bold
+
+
+def _hf_text(p, text: str) -> None:
+    _hf_style(p.add_run(text))
+
+
+def _hf_field(p, instr: str, placeholder: str = "", bold: bool = False) -> None:
+    add_field(p, instr, placeholder)
+    _hf_style(p.runs[-1], bold)
+
+
+def put_header(section, page_number: bool) -> None:
+    """Running head: the current level-1 heading (chapter, appendix, or front-matter
+    section) on the left; in the body, the page number on the right."""
+    p = _hf_paragraph(section.header, "bottom")
+    # STYLEREF 1 = nearest Heading 1; the level number keeps the field independent
+    # of the style name, which Word localises.
+    _hf_field(p, " STYLEREF 1 ")
+    if page_number:
+        _hf_text(p, "\t\t")
+        _hf_field(p, " PAGE ", "1", bold=True)
+
+
+def put_footer(section, author: str, right: str, page_number: bool) -> None:
+    """Author on the left, thesis and institution on the right; on the preliminary
+    pages the roman page number sits in the centre, where the guidelines put it."""
+    p = _hf_paragraph(section.footer, "top")
+    _hf_text(p, author + "\t")
+    if page_number:
+        _hf_field(p, " PAGE ", "i", bold=True)
+    _hf_text(p, "\t" + right)
+
+
+def bare(container) -> None:
+    """A header/footer with no content (the title page). Word expects at least one
+    paragraph in the part."""
+    clear(container)
+    container.add_paragraph()
 
 
 def unlink_headers_footers(section) -> None:
@@ -247,8 +326,8 @@ def set_margins(section) -> None:
     section.right_margin = MARGIN_RIGHT
     section.top_margin = MARGIN_TOPBOT
     section.bottom_margin = MARGIN_TOPBOT
-    section.header_distance = Inches(0.6)
-    section.footer_distance = Inches(0.6)
+    section.header_distance = HEADER_FOOTER_DISTANCE
+    section.footer_distance = HEADER_FOOTER_DISTANCE
 
 
 # ==============================================================================
@@ -264,13 +343,24 @@ def use_language(lang: str) -> dict:
     change than passing a settings object through every layer, and the script
     builds exactly one document per run.
     """
-    global SRC, CAPTION_RE, FIGURE_CAPTION_RE, TOC_PLACEHOLDER
+    global SRC, CAPTION_RE, FIGURE_CAPTION_RE, TOC_PLACEHOLDER, AUTHOR_LABEL, FOOTER_RIGHT
     cfg = LANGUAGES[lang]
     SRC = REPO / "manuscript" / cfg["src"]
     CAPTION_RE = re.compile(rf"^{cfg['caption']}\s+[\d.]+\s*[—–-]")
     FIGURE_CAPTION_RE = re.compile(rf"^\**\*?{cfg['figure']}")
     TOC_PLACEHOLDER = cfg["toc_placeholder"]
+    AUTHOR_LABEL = cfg["author_label"]
+    FOOTER_RIGHT = cfg["footer_right"]
     return cfg
+
+
+def cover_author(cover_md: str) -> str:
+    """The author's name as the cover states it (the line after **Autor**/**Author**),
+    so the footer cannot drift from the title page."""
+    m = re.search(rf"\*\*{AUTHOR_LABEL}\*\*[ \t]*\n(?:[ \t]*\n)*[ \t]*([^\n]+)", cover_md)
+    if not m:
+        raise SystemExit(f"cover: no author line under **{AUTHOR_LABEL}**")
+    return m.group(1).strip()
 
 
 use_language("es")
@@ -646,10 +736,12 @@ def build(out_path: Path) -> None:
             lof_anchor = doc.paragraphs[-1]
         builder.page_break()
 
+    author = cover_author(read(cover))
     set_page_numbering(front_sec, "lowerRoman", start=1)
-    clear(front_sec.footer)
-    put_page_number(front_sec.footer, WD_ALIGN_PARAGRAPH.CENTER)
-    clear(front_sec.first_page_footer)  # title page carries no number
+    put_header(front_sec, page_number=False)
+    put_footer(front_sec, author, FOOTER_RIGHT, page_number=True)
+    bare(front_sec.first_page_header)  # the title page carries neither
+    bare(front_sec.first_page_footer)
     front_sec.different_first_page_header_footer = True
 
     # ---- body: arabic, upper right, restarting at 1 -----------------------
@@ -657,9 +749,8 @@ def build(out_path: Path) -> None:
     set_margins(body_sec)
     unlink_headers_footers(body_sec)
     set_page_numbering(body_sec, "decimal", start=1)
-    clear(body_sec.footer)
-    clear(body_sec.header)
-    put_page_number(body_sec.header, WD_ALIGN_PARAGRAPH.RIGHT)
+    put_header(body_sec, page_number=True)
+    put_footer(body_sec, author, FOOTER_RIGHT, page_number=False)
     body_sec.different_first_page_header_footer = False
 
     body_files = sorted((SRC / "body").glob("*.md"))

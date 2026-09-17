@@ -12,7 +12,7 @@ Se desarrollan aquí la filosofía de diseño de la envolvente de seguridad, los
 
 El espacio de mecanismos para hacer segura una policy aprendida admite, según el Capítulo 2, cuatro familias. La tesis adopta el escudo en tiempo de ejecución como mecanismo dominante, por tres razones.
 
-Primera, verificabilidad. Una cage de reglas escritas a mano es un componente clásico: admite test unitario determinista, análisis estático e inspección. En los términos del TR 5469 es un elemento de Clase I, mientras la policy es de Clase II. Esa asimetría es precisamente lo que permite que el sistema conjunto conserve un núcleo verificable.
+Primera, verificabilidad. Una cage de reglas escritas a mano es un componente clásico: admite test unitario determinista, análisis estático e inspección. En los términos del TR 5469, aplicados por analogía porque el TR clasifica tecnología de IA, corresponde a la Clase I, mientras la policy es como mucho de Clase II. Esa asimetría es precisamente lo que permite que el sistema conjunto conserve un núcleo verificable.
 
 Segunda, independencia del entrenamiento. Una garantía obtenida por modificación del objetivo de aprendizaje es estadística y está condicionada a la distribución de entrenamiento; una garantía obtenida por filtrado en tiempo de ejecución se sostiene sobre el estado observado en cada ciclo, con independencia de cómo se haya entrenado la policy —y, por tanto, sigue en pie si la policy se reentrena, se sustituye o se degrada.
 
@@ -90,9 +90,9 @@ La cage admite además dos modos de operación que son la base de todo el diseñ
 
 El sistema se descompone en los nodos de la Figura 5.2, con responsabilidad única y comunicados por tópicos explícitos. La cadena de datos es lineal y auditable: la percepción produce el estado; la policy consume el estado y produce un comando crudo; la cage consume comando crudo y estado y produce comando seguro más un registro de estado de la cage; el control de vehículo traduce el comando seguro a consignas de actuación; y el nodo de registro persiste el estado de la cage a disco.
 
-<img src="../figures/fig_5_2_node_chain.png" alt="Figura 5.2 — Cadena de nodos del sistema." width="480"/>
+<img src="../figures/fig_5_2_node_chain.png" alt="Figura 5.2 — Grafo de nodos del sistema." width="518"/>
 
-*Figura 5.2 — Cadena de nodos: percepción, policy, cage, control de vehículo y registro. El comando de la policy nunca alcanza al actuador sin pasar por la cage.*
+*Figura 5.2 — Grafo de nodos del sistema: percepción, policy, cage, control de vehículo y registro, con los tópicos que los conectan. En el track de estado la policy consume el estado que publica la percepción; en el track de cámara consume directamente la imagen, y la cage obtiene su estado del estimador de carril CV (§5.7.2). La única arista que alcanza la plataforma, `/cmd_vel`, sale del control de vehículo, que solo recibe de la cage: el comando de la policy nunca alcanza al actuador sin pasar por ella.*
 
 La propiedad arquitectónica que importa es que el comando de la policy no alcanza el actuador sin atravesar la cage. No es una convención de código: es una propiedad topológica del grafo, verificable por inspección de las conexiones, y significa que no existe camino por el cual un comando no filtrado llegue al vehículo.
 

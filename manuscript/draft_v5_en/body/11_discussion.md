@@ -2,7 +2,7 @@
 
 ## 11.1 Purpose and method
 
-This chapter evaluates the framework, not the system. The distinction is the one established in §3.2.1 when the work was declared as constructive research: the artefact under judgement is the adapted V-Model, and the lane-following system is the instrument with which it has been put to the test. The method is the one fixed in advance in §3.7 — five criteria with their indicators — plus the evaluation of the three hypotheses of Chapter 1. Fixing the criteria before knowing the result is what allows this evaluation to be something more than a defence.
+This chapter evaluates the framework, not the system. The distinction is the one established in §3.2.1 when the work was declared as design science research: the artefact under judgement is the adapted V-Model, and the lane-following system is the instrument with which it has been put to the test. The method is the one fixed in advance in §3.7 — five criteria with their indicators — plus the evaluation of the three hypotheses of Chapter 1. Fixing the criteria before knowing the result is what allows this evaluation to be something more than a defence.
 
 ## 11.2 The framework against its five criteria
 

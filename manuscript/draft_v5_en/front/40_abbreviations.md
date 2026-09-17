@@ -48,11 +48,11 @@
 | Symbol | Meaning | Unit |
 | --- | --- | --- |
 | `ey` | Lateral deviation from the lane centre | m |
-| `epsi`, θ | Heading error with respect to the lane tangent | rad / ° |
-| κ | Curvature of the reference trajectory | m⁻¹ |
+| `epsi`, `θ` | Heading error with respect to the lane tangent | rad / ° |
+| `κ` | Curvature of the reference trajectory | m⁻¹ |
 | `d_max` | Hard limit on lateral deviation (rule C-01) | m |
-| θ_max | Limit on heading error (rule C-02) | ° |
+| `θ_max` | Limit on heading error (rule C-02) | ° |
 | `t_min` | Time-to-lane-crossing threshold (rule C-03) | s |
-| σ_θ | Standard deviation of the heading over a sliding window | ° |
+| `σ_θ` | Standard deviation of the heading over a sliding window | ° |
 | `s` | Arc length travelled along the centre line of the circuit | m |
-| Δs | Arc-length increment between two consecutive cycles | m |
+| `Δs` | Arc-length increment between two consecutive cycles | m |

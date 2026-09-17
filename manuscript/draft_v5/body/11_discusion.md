@@ -2,7 +2,7 @@
 
 ## 11.1 Propósito y método
 
-Este capítulo evalúa el marco, no el sistema. La distinción es la que §3.2.1 estableció al declarar el trabajo como investigación constructiva: el artefacto sometido a juicio es el V-Model adaptado, y el sistema de seguimiento de carril es el instrumento con el que se le ha sometido a prueba. El método es el fijado por adelantado en §3.7 —cinco criterios con su indicador— más la evaluación de las tres hipótesis del Capítulo 1. Fijar los criterios antes de conocer el resultado es lo que permite que esta evaluación sea algo más que una defensa.
+Este capítulo evalúa el marco, no el sistema. La distinción es la que §3.2.1 estableció al declarar el trabajo como *design science research*: el artefacto sometido a juicio es el V-Model adaptado, y el sistema de seguimiento de carril es el instrumento con el que se le ha sometido a prueba. El método es el fijado por adelantado en §3.7 —cinco criterios con su indicador— más la evaluación de las tres hipótesis del Capítulo 1. Fijar los criterios antes de conocer el resultado es lo que permite que esta evaluación sea algo más que una defensa.
 
 ## 11.2 El marco frente a sus cinco criterios
 

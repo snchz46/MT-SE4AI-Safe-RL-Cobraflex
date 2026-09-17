@@ -64,7 +64,7 @@ Verification and synchronisation utilities for the repository.
 
 ## Manuscript build
 
-- `build_thesis_docx.py` — renders `manuscript/draft_v5/` (front matter + condensed body + appendices A–I) to a submission `.docx`. **The layout constants at the top of the file are the authority**, and they are deliberately *not* the guidelines' 12 pt Times New Roman at 1.5: the author set **Arial 11 pt, 1.15 line spacing, 1.0" left/right margins**. Changing them changes the page count, so re-run the budget below after any edit. Run: `python tools/build_thesis_docx.py --out <path>.docx`.
+- `build_thesis_docx.py` — renders `manuscript/draft_v5/` (front matter + condensed body + appendices A–I) to a submission `.docx`. **The layout constants at the top of the file are the authority**, and they are deliberately *not* the guidelines' 12 pt Times New Roman at 1.5: the author set **Arial 11 pt, 1.15 line spacing, 1.0" margins on all four sides, and a running header (current chapter, page number) and footer (author, thesis, institution)** — see `manuscript/README.md`, "Guideline compliance". Changing them changes the page count, so re-run the budget below after any edit. Run: `python tools/build_thesis_docx.py --out <path>.docx`.
 - `thesis_page_budget.py` — drives Word to repaginate the built DOCX, exports a PDF and reports where each chapter starts and **how many pages the body occupies** (the 80–100 page acceptance check). Requires **Word COM (pywin32)** and therefore a Windows host — it cannot run on the Ubuntu compute host.
 
 ## Analysis & figures

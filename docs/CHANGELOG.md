@@ -31,6 +31,135 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [16.09.2026 · page layout] — Running header and footer; 1" margins on all four sides
+
+**Document(s) affected:** `tools/build_thesis_docx.py`, `manuscript/README.md`, `tools/README.md`
+**Phase:** E6 (write-up)
+**Gate context:** after G4; layout only, no text, claim or number touched
+**Author:** Samuel Sanchez
+
+### Change
+
+The DOCX build now puts a header and a footer on every numbered page (the title page stays
+bare): header = the current level-1 heading via `STYLEREF 1` and, in the body, the page number
+on the right; footer = the author, read from the cover, and "Tesis de Máster · Hochschule
+Esslingen" (EN: "Master's Thesis · Hochschule Esslingen"), with the roman page number centred
+between them on the preliminary pages. 8.5 pt grey, hairline rule towards the text. Top and
+bottom margins go from 1.25" to 1.0", the same as the lateral ones; header/footer distance
+0.6" → 0.5".
+
+### Rationale
+
+Author's choice: page furniture beyond the bare number, and more text per page. It is a
+deliberate deviation from the HS Esslingen guidelines (1¼" top/bottom; body pages "number
+only, no header"), recorded as item (d) in `manuscript/README.md`.
+
+### Impact
+
+Page count. Exported through Word on the Windows host (PowerShell COM, same builds before and
+after): body from chapter 1 to the bibliography **93 → 90 pages (ES)** and **91 → 85 (EN)**;
+whole document 145 → 139 and 143 → 134. The TOC field was not updated in either export, so the
+front matter will grow when it is; the body count does not depend on it. `thesis_page_budget.py`
+itself was not run (pywin32 is still not installed). The DOCX files in `B:/SE4AI/Documentos`
+have not been regenerated.
+
+### Verification
+
+Both builds succeed; header/footer parts inspected in the OOXML (`pBdr` in schema order,
+`pgMar` 1440 twips on all sides) and on rendered pages of the Word-exported PDF.
+
+---
+
+## [16.09.2026 · figure 5.2] — The node-graph figure was an RViz screenshot; now it is the node graph
+
+**Document(s) affected:** `manuscript/figures/fig_5_2_node_chain.png` (+ new `fig_5_2_node_chain.py`),
+`manuscript/draft_v5_en/body/05_architecture_and_cage.md`, `manuscript/draft_v5/body/05_arquitectura_y_cage.md`
+**Phase:** E6 (write-up)
+**Gate context:** after G4; figure and caption only, no claim or number touched
+**Author:** Samuel Sanchez
+
+### Change
+
+`fig_5_2_node_chain.png` held a screenshot of RViz (the lane camera and the image the RL agent
+observes), not the node chain that §5.7.1 describes and cites as Figure 5.2. It is now drawn by
+`fig_5_2_node_chain.py` from the graph wired in `src/`: perception, policy, `cage_ros_node`,
+`vehicle_control_node` and `cage_logger_node`, with their topics, for both observation tracks
+(state track: policy on `/state_obs`; camera track: policy on the image, cage on the CV
+estimator's `/state_obs` and `/perception_invalid`), the `/cmd_vel` loop to the platform and the
+operator inputs `/cage_reset` / `/external_stop`. The screenshot is kept as
+`manuscript/figures/rviz_lane_camera_and_policy_observation.png`. Caption rewritten in both
+drafts to describe the two tracks; `width` raised 480 → 518 so the figure prints at the 5.4"
+column cap instead of 82 % of its design size.
+
+### Impact
+
+`manuscript/latex_psithesis/chapters/chapter05.tex` picks up the new PNG but keeps the old
+caption.
+
+### Verification
+
+Figure rendered and inspected; both DOCX builds (`--lang en`, `--lang es`) succeed.
+
+---
+
+## [16.09.2026 · citations] — Every attributed claim checked against its source; unsupported ones rewritten
+
+**Document(s) affected:** `manuscript/draft_v5_en/` and `manuscript/draft_v5/` — body 01, 02, 03,
+05, 11; back C, G and the bibliography
+**Phase:** E6 (write-up)
+**Gate context:** after G4; no hazard, SR, cage rule, scenario, metric or verdict touched
+**Author:** Samuel Sanchez
+
+### Change
+
+Each author-year citation was read against the cited PDF (local copies, arXiv or the publisher)
+and every bibliography entry against publisher metadata. **Rewritten where the source does not
+say what the text attributed to it:** the ADAS / level-4 sentence (NIST IR 8527 is workshop
+proceedings and says neither; now cited to Cheng et al. and Paniego et al., who do); Salay et al.'s
+40 % (unit-level techniques, not applicable *at all*); Wäschle et al. (102 publications, not 145;
+the "central gaps" are not in the paper); De Gelder et al. (ODD-tag and data coverage over time
+and actors); Paniego et al. (simulation only); Cheng et al. (CycleGAN, not domain randomization,
+made navigation transfer); Keswani and Bhattacharyya (they evaluate SRPL, which is Mani et al.,
+ICLR 2025); Wei et al. (their asymmetry is agent–adversary); Ullrich et al. (they *do* have
+explicit sim-to-real transfer stages — the positioning now rests on the empirical, on-platform
+characterisation, and the sim-to-real cell of their row is `partial`); Wang et al. (a survey
+organised by phases, not a proposed V-Model); TR 5469 (two axes and three classes; the Clause 8
+properties; the cage as Class I only by analogy); PAS 8800 (extends ISO 26262 / ISO 21448, not a
+specialisation of TR 5469); the BSI use case (illustrative, Hawkins 2025, no "first template"
+claim); Kuutti et al. 2019 (did not introduce the cage; already retrained from interventions);
+Tearle et al. and Alshiekh et al. (what minimal intervention means in each); March and Smith
+(design science, not constructive research — §11.1 follows); E3 in Appendix C (the project's
+10–50 % band is its own; the standard's E3 is 1–10 %); unsupported PPO/SAC/A2C/TD3 comparisons in
+C.1.2 now rest on the two papers' own benchmarks; ISO/IEC/IEEE 15288 and Varshney no longer
+named without an entry; "twenty-one" lines of work → twenty.
+
+**Bibliography:** Kootbally et al. removed (no longer cited; its first author is Schlenoff);
+BSI/CCAV → Hawkins (2025); Mani et al. (2025) added; Kuutti relabelled 2019 / 2021a / 2021b (the
+T-ITS survey is 2021); authors, titles or volumes corrected for Cheng, Gao, He, Keswani, Koopman,
+Paterson, Sprockhoff, Sutton and Barto (2nd ed., 2018), Ullrich, Vasudevan, Wang, Wei, Zhao.
+
+### Rationale
+
+Several claims were attributed to papers that do not contain them, and a third of the
+bibliography had wrong authors or titles. A citation that cannot be found in the cited work is a
+defect of the evidence chain, not of style.
+
+### Impact
+
+`manuscript/chapters/` (the research record) and `manuscript/latex_psithesis/` (generated from
+`draft_v5_en`, including `literature.bib`) still carry the old claims and entries. Still missing
+from the bibliography although named: SAE J3016, ISO 34503, BSI PAS 1883, STPA (Leveson),
+Stable-Baselines3. The ISO 26262-3 exposure bands were checked against secondary sources, not
+the standard's text. Page budget not re-measured.
+
+### Verification
+
+`tools/check_traceability.py` PASS, 0 warnings. Both DOCX builds (`--lang en`, `--lang es`)
+succeed. Every in-text author-year citation resolves to a bibliography entry and every entry is
+cited, in both trees.
+
+---
+
 ## [07.09.2026 · abbreviations] — The list of abbreviations and symbols brought up to what the text actually uses
 
 **Document(s) affected:** `manuscript/draft_v5/front/40_abbreviations.md`,

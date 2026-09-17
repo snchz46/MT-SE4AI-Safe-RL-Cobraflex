@@ -12,7 +12,7 @@ What is developed here is the design philosophy of the safety envelope, the conc
 
 According to Chapter 2, the space of mechanisms for making a learned policy safe admits four families. This thesis adopts the runtime shield as the dominant mechanism, for three reasons.
 
-First, verifiability. A cage of hand-written rules is a classical component: it admits deterministic unit testing, static analysis and inspection. In the terms of TR 5469 it is a Class I element, while the policy is Class II. That asymmetry is precisely what allows the combined system to keep a verifiable core.
+First, verifiability. A cage of hand-written rules is a classical component: it admits deterministic unit testing, static analysis and inspection. In the terms of TR 5469, applied by analogy since the TR classifies AI technology, it corresponds to Class I, while the policy is at best Class II. That asymmetry is precisely what allows the combined system to keep a verifiable core.
 
 Second, independence from the training. A guarantee obtained by modifying the learning objective is statistical and conditioned on the training distribution; a guarantee obtained by runtime filtering rests on the state observed in each cycle, independently of how the policy was trained — and therefore it still holds if the policy is retrained, replaced or degraded.
 
@@ -90,9 +90,9 @@ The cage also admits two operating modes, which are the basis of the whole exper
 
 The system is decomposed into the nodes of Figure 5.2, each with a single responsibility, communicating through explicit topics. The data chain is linear and auditable: perception produces the state; the policy consumes the state and produces a raw command; the cage consumes the raw command and the state and produces a safe command plus a record of the cage status; the vehicle control translates the safe command into actuation setpoints; and the logging node persists the cage status to disk.
 
-<img src="../figures/fig_5_2_node_chain.png" alt="Figure 5.2 — Node chain of the system." width="480"/>
+<img src="../figures/fig_5_2_node_chain.png" alt="Figure 5.2 — Node graph of the system." width="518"/>
 
-*Figure 5.2 — Node chain: perception, policy, cage, vehicle control and logging. The command of the policy never reaches the actuator without passing through the cage.*
+*Figure 5.2 — Node graph of the system: perception, policy, cage, vehicle control and logging, with the topics that connect them. In the state track the policy consumes the state published by perception; in the camera track it consumes the image directly, and the cage takes its state from the CV lane estimator (§5.7.2). The only edge that reaches the platform, `/cmd_vel`, leaves vehicle control, which is fed only by the cage: the command of the policy never reaches the actuator without passing through it.*
 
 The architectural property that matters is that the command of the policy does not reach the actuator without going through the cage. This is not a coding convention: it is a topological property of the graph, verifiable by inspection of the connections, and it means that there is no path through which an unfiltered command could reach the vehicle.
 

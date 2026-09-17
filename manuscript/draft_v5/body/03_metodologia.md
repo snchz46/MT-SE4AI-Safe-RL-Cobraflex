@@ -10,7 +10,7 @@ Conviene separar dos niveles que a menudo se confunden. La *metodología de inve
 
 ### 3.2.1 Tipo de investigación
 
-El trabajo se inscribe en la tradición del *design science research* (Hevner et al., 2004) o, en formulación próxima, *constructive research* (March y Smith, 1995). En ella la contribución académica no es una proposición empírica contrastada contra la realidad ni una proposición lógica demostrada deductivamente, sino un artefacto que aborda un problema previamente identificado y cuya utilidad se evalúa mediante uno o varios casos de aplicación.
+El trabajo se inscribe en la tradición del *design science research* (March y Smith, 1995; Hevner et al., 2004). En ella la contribución académica no es una proposición empírica contrastada contra la realidad ni una proposición lógica demostrada deductivamente, sino un artefacto que aborda un problema previamente identificado y cuya utilidad se evalúa mediante uno o varios casos de aplicación.
 
 El artefacto es el V-Model adaptado —cinco adaptaciones A1–A5 sobre el V-Model de ISO 26262— junto con las plantillas, validadores y artefactos derivados que lo materializan. Esta caracterización tiene tres consecuencias. Primera: la tesis no busca la contribución típica de una tesis empírica —descubrir un fenómeno, refutar una hipótesis estadística— sino producir un artefacto útil y demostrar su funcionamiento. Segunda: la evaluación se hace sobre el artefacto y no solo sobre el sistema construido con él, lo que exige un capítulo dedicado a evaluar el marco en sí (Capítulo 11). Tercera: la generalización se argumenta por plausibilidad estructural —las adaptaciones atacan supuestos del V-Model que fallan para cualquier sistema con componente aprendido— y no por inducción estadística sobre múltiples casos.
 
@@ -24,7 +24,7 @@ El autor es a la vez diseñador del marco, implementador del sistema y evaluador
 
 ## 3.3 El V-Model clásico y sus supuestos implícitos
 
-El V-Model, con raíz en la ingeniería de sistemas (Forsberg y Mooz, 1991), formalizado en ISO/IEC/IEEE 15288 y adoptado por ISO 26262, estructura el proceso en cinco niveles jerárquicos con correspondencia bidireccional entre especificación (rama descendente) y verificación/validación (rama ascendente).
+El V-Model, con raíz en la ingeniería de sistemas (Forsberg y Mooz, 1991) y adoptado por ISO 26262 como modelo de proceso de referencia, estructura el proceso en cinco niveles jerárquicos con correspondencia bidireccional entre especificación (rama descendente) y verificación/validación (rama ascendente).
 
 <img src="../figures/fig_3_1_adopted_classical_v_model.png" alt="Figura 3.1 — El V-Model adoptado por ISO 26262, simplificado a cinco niveles." width="480"/>
 
@@ -42,7 +42,7 @@ Opera sobre cinco supuestos que rara vez se explicitan pero que sostienen toda s
 
 *Tabla 3.1 — Los cinco supuestos del V-Model clásico y su modo de fallo ante componentes aprendidos.*
 
-El alcance cuantitativo del problema lo ilustra el hallazgo de Salay et al. sobre las 75 técnicas de software prescritas en la Parte 6 de ISO 26262: cerca del 40 % no aplica a componentes ML sin modificación, repartido entre técnicas directamente reutilizables, adaptables con modificación e inaplicables por estar orientadas a lenguajes imperativos. Ese vacío es operativo, no solo conceptual, y es lo que motiva un marco complementario.
+El alcance cuantitativo del problema lo ilustra el hallazgo de Salay et al. sobre las técnicas de software prescritas en la Parte 6 de ISO 26262: de las 34 (de 75) que aplican a nivel de unidad, cerca del 40 % no aplica en absoluto a componentes ML —el resto es utilizable directamente o con adaptación—, en buena parte por estar orientadas a lenguajes imperativos. Ese vacío es operativo, no solo conceptual, y es lo que motiva un marco complementario.
 
 Los cinco fallos no son un argumento para abandonar el V-Model sino para adaptarlo. El núcleo metodológico del trabajo consiste en mantener la estructura del V —y con ella la coherencia con ISO 26262— introduciendo las modificaciones mínimas necesarias para que la policy quepa dentro del ciclo sin romper la trazabilidad ni la honestidad del proceso.
 
@@ -54,7 +54,7 @@ Los cinco fallos no son un argumento para abandonar el V-Model sino para adaptar
 
 **Adaptación.** L4 se desdobla en dos subniveles conceptualmente distintos. L4a — Cage Specification es especificación clásica, determinista y modular: cada regla de la cage es una función pura, testeable, con entradas y salidas definidas, diseñada en sentido tradicional. L4b — Training Specification es una *meta-especificación*: no especifica el comportamiento de la policy sino el proceso que la produce —función de recompensa, espacios de estado y acción, ODD de entrenamiento, criterios de convergencia, algoritmo, restricciones activas durante el entrenamiento.
 
-La separación es coherente con el principio de realización en tres etapas de ISO/IEC TR 5469:2024, que distingue adquisición desde entradas, inducción de conocimiento desde datos y generación de salidas; A1 lleva esa distinción al nivel del proceso de diseño. Artefactos: la especificación de la cage con sus reglas formalmente definidas (Capítulo 5) y la especificación de entrenamiento (Capítulo 7).
+La separación es coherente con el principio de realización en tres etapas de ISO/IEC TR 5469:2024, que distingue adquisición de datos, inducción de conocimiento desde datos y conocimiento humano, y procesamiento y generación de salidas; el TR precisa que el principio no describe un ciclo de vida, de modo que A1 es una extensión que lleva esa distinción al nivel del proceso de diseño. Artefactos: la especificación de la cage con sus reglas formalmente definidas (Capítulo 5) y la especificación de entrenamiento (Capítulo 7).
 
 ### 3.4.2 A2 — Del test unitario a la evaluación conductual
 
@@ -62,7 +62,7 @@ La separación es coherente con el principio de realización en tres etapas de I
 
 **Adaptación.** El nivel se desdobla en correspondencia con A1. L4a' — Cage Unit Tests: tests unitarios clásicos sobre cada regla, con vectores de estado sintéticos, comportamiento determinista esperado y veredicto binario; idénticos en filosofía a los del V clásico. L4b' — Policy Behavioral Evaluation: evaluación estadística sobre distribuciones de estado —«en N estados muestreados del ODD, la policy produce acciones que satisfacen la propiedad X con frecuencia Y»—. No es verificación en sentido lógico, es caracterización estadística del comportamiento.
 
-La adaptación reconoce que la verificación clásica no es aplicable a componentes aprendidos. La tesis no fuerza la metáfora: la sustituye por una herramienta apropiada, manteniendo la verificación clásica allí donde sigue siendo aplicable —la cage—. La asimetría es coherente con la distinción de elementos Clase I / Clase II del TR 5469: la cage opera como elemento de Clase I, la policy como elemento de Clase II.
+La adaptación reconoce que la verificación clásica no es aplicable a componentes aprendidos. La tesis no fuerza la metáfora: la sustituye por una herramienta apropiada, manteniendo la verificación clásica allí donde sigue siendo aplicable —la cage—. La asimetría es coherente, por analogía, con las clases tecnológicas del TR 5469: la cage, un componente convencional de reglas, puede desarrollarse y revisarse íntegramente con la práctica de seguridad funcional existente, como la tecnología de Clase I, mientras que la policy es como mucho un elemento de Clase II, cuyas propiedades requeridas solo pueden abordarse con métodos complementarios como la evaluación estadística de A2.
 
 ### 3.4.3 A3 — Monitorización en operación como validación continua
 
@@ -70,7 +70,7 @@ La adaptación reconoce que la verificación clásica no es aplicable a componen
 
 **Adaptación.** Se añade un nivel horizontal —Runtime Monitoring— alimentado por los registros de intervención de la cage durante la operación, que realimenta la validación de forma continua. El nivel reconoce tres hechos propios de los sistemas con IA: la distribución operacional puede diferir de la de testing; pueden emerger modos de fallo no anticipados en el análisis de peligros; y la evidencia de seguridad debe acumularse con el tiempo.
 
-En este trabajo el nodo de registro no es un componente auxiliar sino el instrumento primario del nivel: los registros que produce durante las campañas experimentales son evidencia de validación continua dentro de la ventana del proyecto, y en un despliegue real el mismo mecanismo generaría evidencia indefinidamente. La adaptación es coherente con la filosofía de SOTIF y con la reformulación del V-Model de Wang et al. (2024), y hereda de Mohseni et al. (2019) la categorización de la *función de monitorización* como categoría arquitectónica propia, llevándola un paso más allá: la eleva de mecanismo técnico a nivel explícito del ciclo de vida, con artefactos versionados y un papel definido en la matriz de trazabilidad.
+En este trabajo el nodo de registro no es un componente auxiliar sino el instrumento primario del nivel: los registros que produce durante las campañas experimentales son evidencia de validación continua dentro de la ventana del proyecto, y en un despliegue real el mismo mecanismo generaría evidencia indefinidamente. La adaptación es coherente con la filosofía de SOTIF y con la fase de operación con la que Wang et al. (2024) organizan la investigación sobre SOTIF, y hereda de Mohseni et al. (2019) la categorización de la *función de monitorización* como categoría arquitectónica propia, llevándola un paso más allá: la eleva de mecanismo técnico a nivel explícito del ciclo de vida, con artefactos versionados y un papel definido en la matriz de trazabilidad.
 
 ### 3.4.4 A4 — Trazabilidad obligatoria como restricción dura
 
@@ -179,7 +179,7 @@ El marco no sustituye a los estándares: los articula. Cada adaptación tiene un
 | --- | --- |
 | A1 — Cage Spec + Training Spec | TR 5469 §7 (principio de realización en tres etapas); PAS 8800 (adaptación del diseño de módulo) |
 | A2 — Tests de cage + evaluación conductual | TR 5469 (elementos Clase I / Clase II); ISO 26262 Parte 6 para la parte clásica |
-| A3 — Monitorización en operación | SOTIF (insuficiencia de la validación estática); Wang et al. (2024), fase de operación continua |
+| A3 — Monitorización en operación | SOTIF (insuficiencia de la validación estática); fase de operación tal como la revisan Wang et al. (2024) |
 | A4 — Trazabilidad dura | ISO 26262 Parte 8 (gestión de requisitos); AMLAS (patrones GSN); UL 4600 (afirmación–argumento–evidencia) |
 | A5 — Validación acotada + gap | SOTIF (condiciones no anticipadas); UL 4600 (límites declarados del safety case) |
 

@@ -89,9 +89,9 @@ development on hold.
 **Choice: PPO** — *Proximal Policy Optimization* — (Schulman et al.,
 2017). PPO is chosen for four reasons that are coherent with the
 methodological framework. First, *training stability*: the *clipped
-surrogate objective* limits the update divergence without requiring
-an explicit KL constraint, which reduces the sensitivity to
-hyperparameters and improves reproducibility — an important property for an
+surrogate objective* limits the size of each policy update without requiring
+an explicit KL constraint, which favours stable training and
+reproducibility — an important property for an
 individual work with limited compute for exhaustive *sweeps*.
 Second, *interpretability of the Training Spec*: being *on-policy*, the
 hyperparameters have a relatively direct semantic meaning
@@ -106,14 +106,15 @@ explore *constrained RL* (in the style of the RECPO of Zhao et al., 2024),
 PPO admits a natural extension to CMDP.
 
 Alternatives considered and discarded: SAC (Haarnoja et al., 2018)
-is competitive in sample efficiency and in robustness to hyperparameters,
+is competitive in sample efficiency and stable across random seeds,
 but its *off-policy* character makes the Training Spec less interpretable
 — the notion of "which policy produced which experience" is blurred in the
 *replay buffer* — and its stochastic nature with *temperature tuning*
 adds complexity to the experiment design; DDPG / TD3 (deterministic
-*off-policy*) are less stable than SAC and have been superseded by it in
-almost all benchmarks; A3C / A2C are less sample-efficient
-and have been virtually abandoned in favour of PPO since 2018.
+*off-policy*) were outperformed by SAC on the harder benchmark tasks of
+Haarnoja et al. (2018), where DDPG is also reported as brittle to
+hyperparameters; A3C / A2C were less sample-efficient than PPO in the
+benchmarks of Schulman et al. (2017).
 
 ## C.1.3 Learning loop and implementation tools
 
@@ -175,7 +176,7 @@ can be transferred, but the calibrated weights would have to be recomputed for
 the lane-following scenario in Gazebo if a metric with an
 equivalent meaning is wanted. *Behavior Metrics* (Paniego et al., 2024) is
 considered as an auxiliary tool for quantitative evaluation, given
-that its design is relatively agnostic to the underlying simulator. The
+that it already supports two simulators, CARLA and Gazebo. The
 decision on definitive adoption as the official metric of the project is
 deferred to Phase 4, when the trained *policy* is available and it can be
 calibrated against the human evaluation of the author.
@@ -255,31 +256,40 @@ any component having "failed" in the classical sense (Wang et al.,
 ISO/IEC TR 5469:2024 is the most specific normative document
 published to date on the use of AI in safety functions.
 Its main contribution for the proposed framework is threefold:
-classification of elements into Class I and II, the *three-stage realization
-principle* (clause 7) and the desirable properties of AI components
-(robustness, specifiability, verifiability, interpretability).
+the classification of AI technology by usage level and by technology
+class (Class I, II and III; clause 6), the *three-stage realization
+principle* (clause 7), and the properties and risk factors of AI systems
+(clause 8: level of automation and control, transparency and
+explainability, complexity of the environment and vague specifications,
+resilience to adversarial inputs, AI hardware, maturity of the technology).
 
-- **Coherent:** the PPO *policy* of the thesis classifies as a
-  Class II element of TR 5469 — it does not admit complete classical verification — and
-  adaptation A2 (statistical Policy Behavioral Evaluation) is
-  congruent with this classification. Mandatory bidirectional
-  traceability (A4) operationalises the *specifiability* principle of the
-  TR. The split into Cage Spec / Training Spec (A1) articulates at
-  the level of the design process the distinction of the *three-stage realization
-  principle* between the acquisition, induction and processing phases.
-- **Beyond:** the explicit separation between Cage Spec (Class I
-  element) and Training Spec (meta-design for a Class II element) in
+- **Coherent:** the PPO *policy* of the thesis corresponds at best to a
+  Class II element of TR 5469 — existing functional safety standards cover
+  only part of its required properties and complementary methods are
+  needed — and adaptation A2 (statistical Policy Behavioral Evaluation) is
+  one such complementary method. Mandatory bidirectional traceability (A4)
+  has no specific counterpart among the properties of the TR; its normative
+  anchor is argued in C.2.5 and C.2.6. The split into Cage Spec / Training
+  Spec (A1) carries to the level of the design process the distinction of
+  the *three-stage realization principle* between data acquisition,
+  knowledge induction and processing, which the TR itself does not present
+  as a life cycle.
+- **Beyond:** the explicit separation between Cage Spec (a conventional
+  element that corresponds, by analogy, to Class I) and Training Spec
+  (meta-design for a Class II element) in
   separate version-controlled documents is an operational refinement of the
   TR, not present in the normative document at that granularity.
 
 ## C.2.4 ISO/PAS 8800:2024 — Road Vehicles, Safety and AI
 
-ISO/PAS 8800:2024 is the automotive specialisation of the generic
-framework of TR 5469. It indicates which ISO 26262 clauses are kept,
-which are *tailored* and which are replaced when there is an AI
-component. Its early application to a real case (BSI/CAM, 2024, on a
-stop sign detector) is the first public template
-for articulating ISO 26262 + SOTIF + ISO/PAS 8800.
+ISO/PAS 8800:2024 is the automotive document on safety and AI, closely
+related to the generic concepts of TR 5469. It extends ISO 26262 and
+ISO 21448 to AI elements: functional safety risks are addressed by
+*tailoring* the applicable clauses of ISO 26262 (Parts 4, 6 and 8), and
+functional insufficiencies by extending the concepts of SOTIF. An
+illustrative use case published by BSI for the UK CCAV (Hawkins, 2025),
+on an ML traffic-sign detector with stop-sign requirements, shows how
+ISO 26262 + SOTIF + ISO/PAS 8800 are articulated over an ML component.
 
 - **Coherent:** the additive *tailoring* philosophy of the adapted
   V-Model coincides with that of ISO/PAS 8800. The five adaptations
@@ -293,7 +303,7 @@ for articulating ISO 26262 + SOTIF + ISO/PAS 8800.
 
 ## C.2.5 UL 4600 — Standard for Safety for the Evaluation of Autonomous Products
 
-UL 4600 (Koopman, 2023) emphasises the notion of the *safety case* and
+UL 4600 (UL Standards, 2023; Koopman, 2023) emphasises the notion of the *safety case* and
 structured evidence as the central assurance mechanism for
 autonomous products.
 
@@ -348,8 +358,10 @@ stated here honestly:
   each level are reinterpreted for a 1:14 scale vehicle on a closed
   track: S3 stops meaning "fatal injury" and comes to
   mean "total loss of the integrity of the platform", E3
-  keeps the meaning of "10–50 % of the operating time" but
-  referred to the declared ODD, and C2 keeps the meaning of
+  is defined as "10–50 % of the operating time" referred to the
+  declared ODD (a banding of this project: in the duration-based
+  exposure classes of the standard, E3 corresponds to 1–10 % and E4 to
+  more than 10 % of the average operating time), and C2 keeps the meaning of
   "controllable in > 90 % of the cases" referred to the rule-based cage
   instead of to the human driver. The reinterpreted rubric is versioned
   together with the register and remains auditable.
@@ -410,6 +422,6 @@ component where it applies.
 
 <img src="../figures/fig_3_6_normative_pyramid.png" alt="Figure 3.6 — Diagram of the normative pyramid." width="500"/>
 
-*Figure 3.6 — diagram of the normative pyramid: ISO 26262 at the base as the life cycle, SOTIF as the complement for unanticipated conditions, TR 5469 as the AI umbrella, PAS 8800 as the automotive specialisation, UL 4600 as the enclosing safety case, AMLAS as transversal argumentation patterns. On top of that pyramid, the five adaptations A1–A5 marked with their scope of application. Suggested position: close of §3.8. Pending for Phase 6.*
+*Figure 3.6 — diagram of the normative pyramid: ISO 26262 at the base as the life cycle, SOTIF as the complement for unanticipated conditions, TR 5469 as the AI umbrella, PAS 8800 as the automotive AI extension, UL 4600 as the enclosing safety case, AMLAS as transversal argumentation patterns. On top of that pyramid, the five adaptations A1–A5 marked with their scope of application. Suggested position: close of §3.8. Pending for Phase 6.*
 
 ---

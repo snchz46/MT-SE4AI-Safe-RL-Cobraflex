@@ -78,9 +78,9 @@ Este es el resultado central del trabajo. La Tabla 8.3 cuenta los contactos con 
 
 La Figura 8.1 la representa: dentro del dominio operacional, con la cage activa, no se registra un solo contacto con el borde de la calzada; la policy por sí sola comete sesenta, y la cage los elimina en su totalidad al coste de 406 paradas controladas. Fuera del dominio —donde el sistema no está obligado a funcionar— la mejora respecto de la política anterior es grande: 56 contactos frente a 117, concentrada precisamente donde el estrés de frontera aprieta.
 
-<img src="../figures/fig_8_2_safety_invariant.png" alt="Figura 8.1 — Contactos con el borde por modo y por pertenencia al dominio." width="560"/>
+<img src="../figures/fig_8_1_safety_invariant.png" alt="Figura 8.1 — Contactos con el borde por modo y por pertenencia al dominio." width="560"/>
 
-*Figura 8.1 — Contactos con el borde de la calzada por modo y por pertenencia al dominio operacional, con las campañas anteriores superpuestas. El bloque «dentro del ODD, enforcement» es cero en todas ellas; la diferencia entre políticas está fuera del dominio.*
+*Figura 8.1 — Contactos con el borde de la calzada por modo y por pertenencia al dominio operacional, para la campaña de referencia y las dos anteriores, `margin022` y `GE4-V2` (Tabla 7.1). El bloque «dentro del ODD, enforcement» es cero en todas ellas; la diferencia entre políticas está fuera del dominio.*
 
 ### 8.4.1 Latente dentro, activa donde se degrada la percepción
 
@@ -98,9 +98,9 @@ En el escenario nominal limpio la cage es latente: la política conduce 5,32 vue
 
 Este es el contenido empírico de la afirmación central: la cage elimina fallos que la política comete por sí sola, y lo hace mediante el mecanismo previsto —la parada controlada ante percepción no fiable— exactamente en los escenarios donde el canal visual se degrada. La cage no mejora la conducción; acota la consecuencia de que la conducción falle.
 
-<img src="../figures/fig_8_1_campaign_pass_fraction.png" alt="Figura 8.2 — Fracción de aprobados por escenario y modo." width="600"/>
+<img src="../figures/fig_8_2_campaign_pass_fraction.png" alt="Figura 8.2 — Fracción de aprobados por escenario y modo." width="600"/>
 
-*Figura 8.2 — Fracción de corridas aprobadas por escenario, enforcement frente a monitoring, ordenada por la contribución de la cage. Los escenarios de la parte superior son aquellos donde la envolvente marca la diferencia entre completar y no completar.*
+*Figura 8.2 — Fracción de corridas aprobadas por escenario en la campaña de referencia (`2-D PPO 550k`, Tabla 7.1; identificadores de escenario sin el prefijo `SC-`), enforcement frente a monitoring, ordenada por la contribución de la cage. Los escenarios de la parte superior son aquellos donde la envolvente marca la diferencia entre completar y no completar.*
 
 ## 8.5 El hallazgo incómodo: el limitador de tasa sostiene el carril
 

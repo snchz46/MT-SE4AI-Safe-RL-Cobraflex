@@ -31,6 +31,58 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [17.09.2026 · run labels] — The labels of trainings and campaigns are defined (Table 7.1); the figures that carried them are relabelled
+
+**Document(s) affected:** `manuscript/draft_v5{,_en}/body/07_*`, `08_*`, `10_*`, `front/40_abbreviations.md`;
+figures 7.1, 7.4, 8.1, 10.1; `tools/plot_training_reward_comparison.py` (new),
+`tools/plot_campaign_contrast.py`, `tools/build_thesis_docx.py`, `manuscript/figures/crop_titles.py`
+**Phase:** E6 (write-up)
+**Gate context:** after G4; nomenclature, figure labels and captions — no number, claim or verdict changed
+**Author:** Samuel Sanchez
+
+### Change
+
+Every figure of both drafts was inspected for repository labels. They appear in Figs. 4.3
+(`F-track`, `track E`), 7.1 (in-image title "run .figcut_tmp"), 7.3 (`seed N`, `@297k`), 7.4
+(`E-main`, `margin022`, `400k/475k/550k`), 8.1 (directory names `campaign_2d_ppo550k`,
+`campaign_2d_margin022`, `campaign_e_v2`), 8.2 (`2-D PPO 550k`, `complex_b`) and 10.1
+(`campaign_2d_ppo550k`, `2-D PPO 550k`, and "ruta-1", an internal Spanish tag), and in
+Appendices D, F and H — while the body text named none of them.
+
+- **Table 7.1 (new, §7.2.4)** matches each label with the descriptive name the text uses and
+  says what it is: the two observation tracks, `E-main`, the five seeds, `GE4-V2`, `margin022`,
+  `2-D PPO 550k` and `sim-to-real v2` (explicitly unrelated to `GE4-V2`), with run and campaign
+  directories and the conventions `k`, `@297k`, `1-D`/`2-D`, `cap`, `complex_b`, `oval`, `newcam`.
+  The former Table 7.1 becomes 7.2. The list of abbreviations points to it.
+- **Fig. 7.1:** title band cropped (`crop_titles.py`, new `_notitle` PNG); data untouched.
+- **Fig. 7.4:** regenerated from the three `learning_curve.csv` by the new
+  `tools/plot_training_reward_comparison.py` (the previous PNG had been rendered outside the
+  repository). Its legend called the 1-D run "verdict, cap ~0.5": it ran at a **fixed 0.20 m/s**
+  and, since D-69, is the G4 gate record, not the verdict. Peaks reproduce (1755 @ 472k,
+  823 @ 297k, 199 @ 54k); the kept checkpoints of each run are marked.
+- **Fig. 8.1:** regenerated with `plot_campaign_contrast.py --labels` (new option), readable
+  legend instead of directory names; counts identical (0/60/56/217, 0/98/50/147, 0/128/117/265).
+- **Fig. 10.1:** "(ruta-1)" replaced by "initial conditions clipped to the ODD"; re-rendered.
+- Captions of Figs. 7.1, 7.3, 7.4, 8.1, 8.2 and 10.1 name their labels and point to Table 7.1.
+- The EN draft still pointed at the pre-rename files of Figs. 8.1/8.2 (renamed in the ES draft
+  only); fixed.
+- **Builder:** table captions (`*Table n.m — …*`) now parse inline code instead of printing the
+  backticks, as figure captions already did.
+
+### Impact
+
+`manuscript/latex_psithesis/chapters/chapter08.tex` still uses the old Fig. 8.1/8.2 file names
+and old captions; `manuscript/chapters/` keeps the old Fig. 7.1. Figs. 7.1 and 7.2 end at
+~450k steps although the run reached 662k, so the post-peak collapse their captions mention is
+visible only in Fig. 7.4 — not changed here. ES build measured in Word: 141 pages.
+
+### Verification
+
+Both DOCX builds: 27 figures embedded, 44 captions, none missing. Table 7.1 and Figs. 7.4/8.1
+inspected on the Word-exported PDF.
+
+---
+
 ## [16.09.2026 · page layout] — Running header and footer; 1" margins on all four sides
 
 **Document(s) affected:** `tools/build_thesis_docx.py`, `manuscript/README.md`, `tools/README.md`

@@ -33,6 +33,7 @@ HERE = Path(__file__).resolve().parent
 
 # Plots whose baked-in title contradicts the manuscript's own numbering.
 SOURCES = [
+    "fig_7_1_convergence_newcam",
     "fig_7_2_intervention_newcam",
     "fig_7_8_multiseed_newcam",
 ]

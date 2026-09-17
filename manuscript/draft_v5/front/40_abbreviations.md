@@ -41,6 +41,8 @@
 
 **Identificadores del marco.** El trabajo usa un espacio de identificadores único y no reutilizable, resumido aquí; los registros correspondientes son los Anexos A (peligros), B (requisitos), E (cage) y F (trazabilidad): `H-XX` (peligro), `SR-XXX` (requisito de seguridad), `SR-CL-A` / `SR-CL-B` (clase de criticidad del requisito), `C-XX` (regla de la cage), `SC-*` (escenario), `M-*` (métrica), `D-NN` (decisión de diseño registrada), `F-X` / `G-X` (fase y puerta del proyecto), `ODD-n.PARÁMETRO` (parámetro declarado del dominio operacional), `TBD-Qn` (cuestión abierta pendiente de cierre).
 
+**Nombres de entrenamientos y campañas.** Las figuras y los anexos etiquetan los tracks de observación, las ejecuciones de entrenamiento, los puntos de control y las campañas de escenarios con nombres cortos —`F-track`, `track E`, `E-main`, `GE4-V2`, `margin022`, `2-D PPO 550k`, `sim-to-real v2`, y recuentos de pasos como `550k`— que la Tabla 7.1 (§7.2.4) empareja con los nombres descriptivos que usa el texto.
+
 **Identificadores de la argumentación.** Distintos de los anteriores, ordenan el hilo del texto en lugar de la cadena de evidencia: `OE1`…`OE7` (objetivos específicos, §1.4), `H1`…`H3` (hipótesis, §1.5 — no confundir con `H-01`…`H-12`, que son peligros), `A1`…`A5` (adaptaciones al V-Model, §3.4), `R1`…`R14` (resultados, Capítulo 12), `T1`…`T7` (líneas de trabajo futuro, Capítulo 12).
 
 **Símbolos principales.**

@@ -430,6 +430,14 @@ class Builder:
             p.paragraph_format.first_line_indent = Inches(0)
         p.paragraph_format.line_spacing = self.line_spacing
         p.paragraph_format.space_after = Pt(0)
+        # A table caption is one italic span, `*Table 7.1 — ...*`. Handed to add_inline
+        # whole, the span is a single italic chunk and any `code` inside it comes out with
+        # its backticks; strip the outer asterisks and italicise the runs instead, as the
+        # figure captions already do.
+        stripped = text.strip()
+        if (CAPTION_RE.match(stripped.lstrip("*")) and stripped.startswith("*")
+                and not stripped.startswith("**") and stripped.endswith("*")):
+            text, italic = stripped[1:-1], True
         add_inline(p, text, base_italic=italic)
         if CAPTION_RE.match(text.strip().lstrip('*')):
             self.register_caption(p, text)

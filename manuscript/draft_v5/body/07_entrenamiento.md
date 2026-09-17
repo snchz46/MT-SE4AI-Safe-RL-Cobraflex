@@ -28,13 +28,28 @@ La cage está activa en el lazo de entrenamiento, filtrando el comando antes de 
 
 Cada ejecución de entrenamiento registra semilla, versión de configuración, *hash* del fichero de parámetros de la cage, revisión del código y marca temporal. Los puntos de control se guardan con cadencia fija y cada uno lleva un identificador criptográfico que lo liga a su configuración; una evaluación que intente cargar un punto de control con una configuración incompatible falla de forma explícita en lugar de producir un resultado silenciosamente inválido. Es un mecanismo modesto que evitó al menos una confusión seria durante el proyecto.
 
+El texto se refiere a entrenamientos, puntos de control y campañas con nombres descriptivos; las figuras y los anexos usan las etiquetas cortas del repositorio. La Tabla 7.1 empareja unos con otras.
+
+| Etiqueta en figuras y anexos | Nombre en el texto | Qué es |
+| --- | --- | --- |
+| `F-track` | Track de estado (brazo de control) | La política observa un vector de estado proyectado desde la pose verdadera, en el circuito oval; aísla el efecto de la cage (§1.6.3). Campaña: `campaign`. |
+| `track E`, `E-track` | Track de cámara | La política observa la imagen de la cámara frontal; el sistema de referencia de la tesis. |
+| `E-main`, `1-D PPO`, `297k` | Política de cámara unidimensional | PPO, solo dirección a velocidad fija de 0,20 m/s en `complex_b`; punto de control conservado en el pico de recompensa, 297.000 pasos (§7.3). Ejecución: `ppo_newcam_complex_b_2024_1M`. |
+| `seed 2024`, `42`, `23`, `666`, `123` | Las cinco semillas | Réplicas de ese entrenamiento que solo difieren en la semilla (§7.4). Ejecuciones: `ppo_newcam_complex_b_<semilla>`. |
+| `GE4-V2`, `campaign_e_v2` | Campaña de la política unidimensional | Segunda versión de la campaña de escenarios de la puerta G4, ejecutada sobre `E-main`: 1.970 corridas, conservada congelada como registro de la puerta. |
+| `margin022`, `2-D SAC` | Primera campaña bidimensional | SAC, dirección y acelerador, techo de velocidad 0,22 m/s —0,03 m/s bajo el techo en curva de 0,25 m/s de C-04, de ahí el nombre—; punto de control a 75.000 pasos; 1.970 corridas (§7.5.1). Ejecución: `sac_gz2d_entfix_margin022_2024_75k`; campaña: `campaign_2d_margin022`. |
+| `2-D PPO 550k`, `cap 0.22` | Política y campaña de referencia | PPO, dirección y acelerador, techo de velocidad 0,22 m/s; punto de control a 550.000 pasos elegido por conducción en lazo cerrado (§7.5.2); su campaña de 1.890 corridas da el veredicto (Capítulo 8). Ejecución: `ppo_gz2d_cap022_1M_2024`; campaña: `campaign_2d_ppo550k`. |
+| `sim-to-real v2`, `1650k` | Política reentrenada para transferir | PPO bidimensional reentrenada con espejado por episodio y aleatorización fotométrica y de geometría de cámara, 2,5 millones de pasos; punto de control a 1.650.000 pasos desplegado en el vehículo (§9.3.4). Su `v2` no tiene relación con `GE4-V2`. Ejecución: `ppo_gz2d_sim2real_v2_2024`. |
+
+*Tabla 7.1 — Nombres de entrenamientos, puntos de control y campañas. Convenciones: `k` tras un número cuenta miles de pasos de entrenamiento (`550k` = 550.000; `@297k` = a los 297.000 pasos); `1-D` y `2-D` indican la dimensión de la acción (dirección; dirección y acelerador); `cap` es el techo de velocidad de la acción; `complex_b` es el circuito sinuoso (perímetro 19,22 m) y `oval` el oval (R = 0,8 m); `newcam` en el nombre de una ejecución marca las realizadas tras el cambio a la cámara dedicada de carril.*
+
 ## 7.3 Resultados: la política de cámara unidimensional
 
 La primera política de cámara competente se entrena sobre el circuito sinuoso con acción unidimensional. Su recompensa media por episodio asciende hasta un pico de ≈ 823 hacia los 297 000 pasos y mantiene una banda alta durante unos 150 000 pasos más, tras lo cual decae. El diagnóstico importa: la pérdida del crítico permanece minúscula durante todo el recorrido, de modo que no es inestabilidad de la función de valor sino contracción de la exploración una vez que la desviación típica de la política se recoce en exceso. Por eso la política que se conserva es la del pico y no la del final.
 
-<img src="../figures/fig_7_1_convergence_newcam.png" alt="Figura 7.1 — Convergencia del entrenamiento de cámara unidimensional." width="540"/>
+<img src="../figures/fig_7_1_convergence_newcam_notitle.png" alt="Figura 7.1 — Convergencia del entrenamiento de cámara unidimensional." width="540"/>
 
-*Figura 7.1 — Convergencia de la política de cámara unidimensional: recompensa y longitud media de episodio frente a pasos. Pico ≈ 823 y meseta alta; el colapso posterior de exploración motivó la parada manual y la selección del punto de control en el pico.*
+*Figura 7.1 — Convergencia de la política de cámara unidimensional (`E-main`, Tabla 7.1): recompensa y longitud media de episodio frente a pasos. Pico ≈ 823 y meseta alta; el colapso posterior de exploración motivó la parada manual y la selección del punto de control en el pico.*
 
 Un segundo resultado de este entrenamiento, que la Figura 7.2 desglosa, es la co-adaptación entre policy y cage: la tasa de intervención desciende de ~87 % al inicio a ~40 %, dominada por el limitador de tasa, mientras las reglas de seguridad caen a cero. La lectura es que la policy aprende a respetar las restricciones de seguridad —no se acerca al borde— pero su mando de dirección sigue siendo a tirones y el limitador lo suaviza de forma continua.
 
@@ -42,7 +57,7 @@ Un segundo resultado de este entrenamiento, que la Figura 7.2 desglosa, es la co
 
 *Figura 7.2 — Actividad de la cage a lo largo del entrenamiento unidimensional. Arriba, la tasa total de intervención cae de ~87 % a ~40 % mientras la tasa de emergencia es nula desde el primer momento. Abajo, el desglose por regla muestra de qué está hecha esa tasa: es el limitador de tasa, y las reglas de seguridad C-01, C-02, C-03 y C-05 caen a cero en los primeros pasos y ahí se quedan.*
 
-La evaluación nominal determinista contra un controlador clásico sobre el mismo circuito, que recoge la Tabla 7.1, arroja el resultado que justifica el coste del componente aprendido:
+La evaluación nominal determinista contra un controlador clásico sobre el mismo circuito, que recoge la Tabla 7.2, arroja el resultado que justifica el coste del componente aprendido:
 
 | Métrica (escenario nominal) | Baseline clásico | **RL cámara 1-D** |
 | --- | --- | --- |
@@ -52,7 +67,7 @@ La evaluación nominal determinista contra un controlador clásico sobre el mism
 | Paradas de emergencia | 0 | 0 |
 | Intervención de la cage | 0 % | 43,5 % (solo limitador) |
 
-*Tabla 7.1 — Evaluación nominal: política de cámara frente al baseline clásico sobre el mismo circuito.*
+*Tabla 7.2 — Evaluación nominal: política de cámara frente al baseline clásico sobre el mismo circuito.*
 
 El agente bate al baseline clásico en precisión de seguimiento —un 37 % menos de error lateral medio, a la misma distancia recorrida y con cero emergencias—, lo que invierte el hallazgo obtenido sobre el óvalo, donde el controlador clásico era el más preciso: sobre una geometría sinuosa el punto de mira del método clásico se degrada mientras la red sostiene la línea. Dos observaciones cualitativas acompañan al resultado. La cage queda latente dentro del dominio en ambos modos: cero emergencias y ninguna activación de las reglas de seguridad, solo del limitador de tasa; enforcement y monitoring dan vueltas y errores casi idénticos. Y el coste del agente aprendido no es seguridad sino suavidad: dispara el limitador en el 43 % de los pasos frente al 0 % del controlador clásico, una intervención benigna que absorbe el tirón sin dañar la precisión.
 
@@ -62,7 +77,7 @@ Un resultado con una sola semilla no dice nada sobre un procedimiento estocásti
 
 <img src="../figures/fig_7_8_multiseed_newcam_notitle.png" alt="Figura 7.3 — Comparación entre cinco semillas." width="540"/>
 
-*Figura 7.3 — Cinco semillas del mismo procedimiento. Arriba, la recompensa: las curvas son del mismo orden y sus picos se reparten entre 713 y 823, sin que ninguna se distinga de las demás. Abajo, la tasa de intervención de la cage sobre las mismas ejecuciones, que sí las separa. La información que clasifica el comportamiento está en el panel inferior, no en el superior, y es el panel que una selección por recompensa no mira.*
+*Figura 7.3 — Cinco semillas del mismo procedimiento (Tabla 7.1; `@297k` marca el paso de cada pico). Arriba, la recompensa: las curvas son del mismo orden y sus picos se reparten entre 713 y 823, sin que ninguna se distinga de las demás. Abajo, la tasa de intervención de la cage sobre las mismas ejecuciones, que sí las separa. La información que clasifica el comportamiento está en el panel inferior, no en el superior, y es el panel que una selección por recompensa no mira.*
 
 La consecuencia metodológica es directa y se aplica al resto del trabajo: la selección de la política no puede hacerse por recompensa. Debe hacerse por evaluación en lazo cerrado sobre escenarios, con la tasa de intervención de la cage como criterio de primer orden. Es un ejemplo concreto de aquello que el marco pretende: un criterio de aceptación que ninguna métrica de entrenamiento habría producido.
 
@@ -78,7 +93,7 @@ Una advertencia de honestidad sobre las cifras: la recompensa no es comparable u
 
 <img src="../figures/auto/fig_7_4_ppo2d_training_curve.png" alt="Figura 7.4 — Curva de entrenamiento de la política bidimensional de referencia." width="600"/>
 
-*Figura 7.4 — Recompensa de entrenamiento de la política bidimensional de referencia frente a la unidimensional y a la variante fuera de política. Pico 1755 y meseta alta estable, frente al colapso posterior al pico de la primera y al techo de ~200 de la segunda. Los puntos de control candidatos evaluados aparecen marcados.*
+*Figura 7.4 — Recompensa de entrenamiento de la política bidimensional de referencia (`2-D PPO`) frente a la unidimensional (`E-main`) y a la variante fuera de política (`margin022`); etiquetas en la Tabla 7.1. Pico 1755 y meseta alta estable, frente al colapso posterior al pico de la primera y al techo de ~200 de la segunda. Aparecen marcados los tres puntos de control candidatos evaluados en lazo cerrado, con el seleccionado, y el punto de control conservado de cada una de las otras dos ejecuciones.*
 
 ### 7.5.2 Selección del punto de control: por conducción, no por recompensa
 

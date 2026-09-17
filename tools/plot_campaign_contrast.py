@@ -23,7 +23,12 @@ Reads ``<campaign-dir>/campaign_report.json`` (per-scenario roll-up) and
 Usage:
   python tools/plot_campaign_contrast.py --campaign-dir experiments/sim/campaign_2d_ppo550k
   python tools/plot_campaign_contrast.py --campaign-dir <dir> \
-      --compare experiments/sim/campaign_2d_margin022,experiments/sim/campaign_e_v2
+      --compare experiments/sim/campaign_2d_margin022,experiments/sim/campaign_e_v2 \
+      --labels "2-D PPO 550k (reference),2-D SAC margin022,1-D PPO E-main (GE4-V2)"
+
+``--labels`` replaces the directory names in the safety-invariant legend, in the order
+main campaign first, then the ``--compare`` dirs; the manuscript figure uses the labels
+of its Table 7.1 rather than repository paths.
 """
 from __future__ import annotations
 
@@ -146,6 +151,9 @@ def main() -> None:
                     help="comma-separated campaign dirs overlaid on the safety-invariant figure")
     ap.add_argument("--title", type=str, default=None,
                     help="title for the pass-fraction figure (default: the campaign dir name)")
+    ap.add_argument("--labels", type=str, default=None,
+                    help="comma-separated legend labels for the safety-invariant figure, main "
+                         "campaign first then --compare dirs (default: the dir names)")
     args = ap.parse_args()
 
     campaign_dir = args.campaign_dir.resolve()
@@ -164,6 +172,13 @@ def main() -> None:
             continue
         other = Path(extra).resolve()
         series.append((other.name, _contacts(_load_runs(other))))
+    if args.labels:
+        labels = [label.strip() for label in args.labels.split(",")]
+        if len(labels) != len(series):
+            ap.error(f"--labels gives {len(labels)} labels for {len(series)} campaigns")
+        series = [(label, counts) for label, (_, counts) in zip(labels, series)]
+    for label, counts in series:
+        print(f"  {label}: {dict(sorted(counts.items()))}")
     fig_safety_invariant(series, out)
 
 

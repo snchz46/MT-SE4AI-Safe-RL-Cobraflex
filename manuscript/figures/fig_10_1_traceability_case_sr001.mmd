@@ -20,7 +20,7 @@ flowchart LR
     H["H-01<br/>Unintended lane exit<br/>S3/E3/C2 &middot; High<br/><i>docs/02</i>"]
     SR["SR-001<br/>|d| &lt; 0.16 m<br/>within applicable ODD<br/><i>docs/03</i>"]
     C["C-01<br/>lane-boundary hard limit<br/>d_max 0.16 m &middot; hyst. 0.02 m<br/><i>docs/04 + cage.yaml</i>"]
-    SC["SC-EDGE-02<br/>initial lateral perturbation<br/>30 spawns, IC clipped to ODD (ruta-1)<br/><i>docs/05 + scenarios/edge/</i>"]
+    SC["SC-EDGE-02<br/>initial lateral perturbation<br/>30 spawns, initial conditions clipped to the ODD<br/><i>docs/05 + scenarios/edge/</i>"]
     M["M-S1<br/>max lateral offset<br/>scored on ground-truth pose<br/><i>docs/06</i>"]
     EV["Logged evidence<br/>campaign_2d_ppo550k/campaign_report.json<br/>1890 runs &middot; seed 2024 &middot; 0 errors<br/><i>experiments/sim/</i>"]
     V["Verdict: <b>Satisfied</b><br/>2-D PPO 550k &middot; 29/30 enforcement<br/>1 residual = H-12 confident under-read<br/>at the recovery-basin edge<br/><i>docs/07</i>"]

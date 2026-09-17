@@ -157,11 +157,11 @@ consistentlayout,
 % stock template. They have been moved to misc/thesis-commands.tex so that the
 % front matter (abstract, preface, abbreviations) can use them too.
 
-% Figures live in the shared manuscript figure pool, one level up. The
-% template's \image macro prepends "../figures/", so the first graphicspath
-% entry resolves ../figures/../figures/<name> -> ../figures/<name>.
-% Plain \includegraphics{<name>} resolves through the second and third entries.
-\graphicspath{{../figures/}{../figures/auto/}{./figures/}}
+% Figures live in the shared manuscript figure pool, one level up. The chapters
+% name them as the Markdown does, relative to that pool (auto/ included), so
+% ../figures/ resolves them inside the repository and ./figures/ -- the copy
+% that `python md2tex.py --zip` puts in the Overleaf project -- everywhere else.
+\graphicspath{{../figures/}{./figures/}}
 
 \input{chapters/chapter01.tex}
 \input{chapters/chapter02.tex}
@@ -187,6 +187,24 @@ consistentlayout,
 \renewcommand{\thesection}{\thechapter.\arabic{section}}
 \renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
 \renewcommand{\thesubsubsection}{\thesubsection.\arabic{subsubsection}}
+
+% The appendices are registers: tables of seven to nine columns that run over
+% several pages. A page-breaking table cannot follow the margin column, which
+% sits right of the text on odd pages and LEFT of it on even pages, so a
+% longtable widened into the margin runs off the paper on every even page.
+% The appendices therefore drop the margin column and set the text over the
+% full width it occupied (107 + 8.2 + 49.4 = 164.6 mm). inner/outer are chosen
+% so the block keeps the same outer edges as text + margin in the body, which
+% keeps the running heads -- sized to that width by the class -- aligned.
+\newgeometry{
+	head=13.6pt,
+	top=27.4mm,
+	bottom=27.4mm,
+	inner=24.8mm,
+	outer=20.6mm,
+	marginparwidth=0pt,
+	marginparsep=0pt,
+}
 
 \include{appendices/appendixA}
 \include{appendices/appendixB}
@@ -215,6 +233,10 @@ consistentlayout,
 }
 
 \addchap{References}
+
+% The Markdown reference list is the list of works cited; print all of it even
+% where a work is named in the text without a year the converter can resolve.
+\nocite{*}
 
 \setlength\columnsep{2em}
 \begin{multicols}{2}

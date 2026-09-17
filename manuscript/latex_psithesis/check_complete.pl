@@ -84,6 +84,8 @@ sub words_md {
 sub words_tex {
     my ($s) = @_;
     $s =~ s/^\s*%.*$//gm;                       # comments
+    # margin notes come from margin_notes.md, not from the Markdown chapter
+    $s =~ s/\\sidenote(\{(?:[^{}]++|(?1))*\})//g;
     $s =~ s/\\begin\{(verbatim|lstlisting)\}.*?\\end\{\1\}//gs;
     $s =~ s/\\(label|ref|Cref|cref|includegraphics|graphicspath)\{[^{}]*\}//g;
     $s =~ s/\\[a-zA-Z]+\*?//g;                  # control words
@@ -103,15 +105,21 @@ sub words_tex {
 # ---------------------------------------------------------------------------
 my %expected = (
   'appendices/appendixC.tex' =>
-    'section depth deliberately changed: the source hand-numbers 13 "##" headings '.
-    'under 2 "#" divisions, so the "##" became subsections and LaTeX now numbers '.
-    'them (the source numbering skipped C.3 and restarted at C.1)',
+    'section depth follows the source: its two divisions C.1 and C.2 are "#" '.
+    'headings and their 13 parts "##", so the "#" are sections and the "##" '.
+    'subsections (md2tex.py shifts levels in any file with more than one "#")',
   'appendices/appendixF.tex' =>
     'identifier-dense: nearly every cell is an ID that collapsed into a macro. '.
     'Table rows counted directly: 47 in the Markdown, 47 in the LaTeX',
   'appendices/appendixG.tex' =>
-    'every row label "Author and Author (year)" became \\textcite{key}, which is '.
-    'the intended conversion; 21 rows in, 21 rows out',
+    'every row label "Author and Author (year)" became "Author and Author \\cite{key}", '.
+    'and the key counts as a word; 21 rows in, 21 rows out',
+  'appendices/appendixD.tex' =>
+    'the source tables have no header row; md2tex.py supplies the 12 header cells '.
+    '(SUPPLIED_TABLE_HEADERS), which the Markdown side cannot count',
+  'front/declaration.tex' =>
+    'a 70-word file: the column specs of the signature tabulars (@{}l@{}) count as '.
+    'words; the declaration sentence itself is verbatim',
 );
 
 my ($fail, $warn, $missing) = (0, 0, 0);
@@ -130,8 +138,8 @@ for my $p (@pairs) {
 
     my $md_sec  = () = $md  =~ /^##\s+/gm;
     my $md_sub  = () = $md  =~ /^###\s+/gm;
-    my $tx_sec  = () = $tex =~ /^\\section\{/gm;
-    my $tx_sub  = () = $tex =~ /^\\subsection\{/gm;
+    my $tx_sec  = () = $tex =~ /^\\section[\[{]/gm;      # \section[short]{...} too
+    my $tx_sub  = () = $tex =~ /^\\subsection[\[{]/gm;
 
     my $mw = words_md($md);
     my $tw = words_tex($tex);

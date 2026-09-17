@@ -31,6 +31,62 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [17.09.2026 · LaTeX rendering] — The PSIThesis rendering is generated from `draft_v5_en`, compiled for the first time, and its appendix tables fixed
+
+**Document(s) affected:** `manuscript/latex_psithesis/` — `md2tex.py`, `margin_notes.md`, `latexmkrc`
+(new); `chapters/`, `appendices/`, `front/`, `literature.bib` (regenerated); `main.tex`,
+`misc/thesis-commands.tex`, `Makefile`, `deps.txt`, `README.md`, `check_tex.pl`,
+`check_complete.pl`; `collect_figures.pl` (removed); `manuscript/thesis-psithesis-overleaf.zip`
+**Phase:** E6 (write-up)
+**Gate context:** after G4; typesetting of the English draft only — no text, number, claim or verdict changed
+**Author:** Samuel Sanchez
+
+### Change
+
+- **Generated, not hand-converted.** The `.tex` files had been converted by hand on 05–07.09 and
+  missed everything since: the citation audit, the rewritten English, Table 7.1, the new Figs. 5.2,
+  7.4, 8.1 and 10.1, and the renamed Fig. 8.1/8.2 files (so the project no longer compiled).
+  `md2tex.py` now writes every chapter, appendix, front-matter file and `literature.bib` from
+  `draft_v5_en`: citations to `\cite` (keys parsed from the same bibliography), "Chapter/Figure/
+  Table/Appendix/§" to `\ref`, identifiers to the project macros, figures at their DOCX width.
+  It reports every citation, reference, figure or note it cannot resolve; the current run
+  reports none.
+- **Appendix tables.** On Overleaf the large registers ran off the page. Cause: `longtable`s
+  widened into the margin column, which is right of the text on odd pages and left of it on
+  even pages; a page-breaking table cannot follow it. The appendices now use a full-width
+  geometry without the margin column (same outer edges, so the running heads still align).
+  Column widths are computed from the content to minimise table height; check-mark matrices get
+  rotated headers; short appendix tables are floats. Appendix D's missing header rows and the
+  captions the appendix tables lack are supplied in one visible place in the converter.
+- **Margin notes.** `margin_notes.md`: 56 short notes that explain a term where it first matters,
+  plus the *PRELIMINARY* flag, twice, beside the physical driving figures of Ch. 9 (one run, monitoring,
+  unscored). Rendering only; each note may explain or point, never add a result.
+- **Build.** Compiled for the first time (TinyTeX: LuaHBTeX 1.24.0, TeX Live 2026, biber 2.22),
+  from the unpacked Overleaf zip. `deps.txt` gains `scrhack` (split out of `koma-script`),
+  `setspaceenhanced` and `oberdiek`; `latexmkrc` selects LuaLaTeX on Overleaf.
+
+### Rationale
+
+The author asked for the LaTeX files to be importable into Overleaf at the latest version, with
+care for the large tables, and for margin notes where they clarify concepts. A hand conversion
+goes stale at the next edit of the draft; a generator does not.
+
+### Impact
+
+The rendering is still not the submission build; `draft_v5/` and the DOCX are unaffected. It
+now has 155 pages: 18 front, 98 body, 36 appendices, 3 references (a different layout from the
+DOCX; not a page-budget measurement). The cover data stay in `main.tex`.
+
+### Verification
+
+Build: 0 errors, 0 undefined references/citations, 0 missing glyphs, 0 floats too large; no
+overfull box above 1.3 pt apart from the template's chapter-title line. Every table page and
+every page with a margin note inspected as rendered. `check_tex.pl` 0 errors ·
+`check_complete.pl` 0 unexplained, 4 verified exceptions · `check_refs.pl` 245 labels, 0
+dangling, 0 duplicate. `tools/check_traceability.py` not affected (no `docs/` register touched).
+
+---
+
 ## [17.09.2026 · run labels] — The labels of trainings and campaigns are defined (Table 7.1); the figures that carried them are relabelled
 
 **Document(s) affected:** `manuscript/draft_v5{,_en}/body/07_*`, `08_*`, `10_*`, `front/40_abbreviations.md`;

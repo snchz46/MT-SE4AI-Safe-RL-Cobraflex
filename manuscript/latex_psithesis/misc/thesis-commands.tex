@@ -77,7 +77,7 @@
 
 \newcommand{\prelimflag}{%
   \marginnote{\textcolor{ubred}{\textbf{PRELIMINARY}}\\
-  N=1, \mon, unscored. Does not re-score any gate.}}
+  One run, \mon{} mode, not scored under the scenario protocol.}}
 
 \newcommand{\retracted}[1]{%
   \marginnote{\textcolor{ubred}{\textbf{RETRACTED}}\\ #1}}
@@ -229,3 +229,26 @@
 \newcommand{\qhz}[1]{\SI{#1}{\hertz}}
 \newcommand{\qs}[1]{\SI{#1}{\second}}
 \newcommand{\qpc}[1]{\SI{#1}{\percent}}
+
+% ---------------------------------------------------------------------------
+% Float placement
+% ---------------------------------------------------------------------------
+% The LaTeX defaults (\topfraction 0.7, \textfraction 0.2, \floatpagefraction
+% 0.5) are tuned for small floats. This thesis has many tables and figures
+% that span text + margin and take a third to two thirds of a page; with the
+% defaults they drift onto float-only pages and leave half-empty text pages
+% behind. These values let a large float share a page with text.
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.6}
+\renewcommand{\dbltopfraction}{0.9}
+\renewcommand{\dblfloatpagefraction}{0.6}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{5}
+
+% A little extra stretch before TeX gives up on a line: the text column is
+% only 107 mm and the prose is dense with unbreakable identifiers and citation
+% labels, so without it a few justified lines stick out into the margin.
+\setlength{\emergencystretch}{1.5em}

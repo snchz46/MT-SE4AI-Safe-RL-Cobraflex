@@ -17,6 +17,7 @@
 
 use strict;
 use warnings;
+binmode(STDOUT, ':encoding(UTF-8)');
 
 # ---------------------------------------------------------------------------
 # Everything the document may legally call.
@@ -84,6 +85,7 @@ my @latex = qw(
   authorshipname abstractname acknowledgementname listfigurename listtablename
   detokenize hspace textcelsius numrange SIrange leavevmode
   LTleft LTright fill begingroup endgroup newlength AtBeginDocument wtw
+  allowbreak rotatebox LTcapwidth
   endlastfoot caption newenvironment kill
 );
 
@@ -198,6 +200,8 @@ for my $file (@ARGV) {
         # ---- E: bare Greek / maths glyphs outside math -------------------
         my $g = $t;
         $g =~ s/\$[^\$]*\$//g;
+        # \texttt is set in Iosevka, which does have Greek, arrows and maths glyphs
+        $g =~ s/\\texttt\{(?:[^{}]|\{[^{}]*\})*\}//g;
         if ($g =~ /([\x{0370}-\x{03FF}\x{2190}-\x{21FF}\x{2200}-\x{22FF}\x{00B1}\x{00D7}\x{00F7}\x{00B2}\x{00B3}])/) {
             err($file,$ln,"bare maths/Greek glyph '$1' outside math mode (Cochineal has no Greek)");
         }

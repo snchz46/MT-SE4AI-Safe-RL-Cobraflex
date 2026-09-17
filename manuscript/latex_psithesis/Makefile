@@ -51,22 +51,25 @@ check-complete:
 check-refs:
 	perl check_refs.pl chapters/*.tex appendices/*.tex front/*.tex
 
-# Copy the figures this document actually references out of the shared pool at
-# ../figures into ./figures, so the project is self-contained -- needed for an
-# Overleaf upload or a build on a machine without the rest of the repository.
-# ./figures is gitignored: it holds copies of already-tracked files.
+# Regenerate chapters/, appendices/, front/ and literature.bib from
+# ../draft_v5_en (and margin_notes.md). The .tex files are generated: edit the
+# Markdown, never the .tex.
+.PHONY: convert
+convert:
+	python md2tex.py
+
+# Copy the figures this document references out of the shared pool at
+# ../figures into ./figures (auto/ kept as a subfolder), so the project is
+# self-contained. ./figures is gitignored: it holds copies of tracked files.
 .PHONY: figures
 figures:
-	perl collect_figures.pl figures
+	python md2tex.py --figures
 
-# A zip ready to drag into Overleaf: sources, class file, fonts and figures.
+# ../thesis-psithesis-overleaf.zip: sources, class, fonts, figures, latexmkrc.
+# Upload it with Overleaf's New Project -> Upload Project.
 .PHONY: dist
-dist: figures
-	rm -f thesis-psithesis.zip
-	zip -r thesis-psithesis.zip \
-	    main.tex PSIThesis.cls literature.bib Makefile deps.txt README.md \
-	    misc front chapters appendices fonts figures \
-	    -x '*.aux' '*.log' '*.out'
+dist:
+	python md2tex.py --zip
 
 .PHONY: clean
 clean:

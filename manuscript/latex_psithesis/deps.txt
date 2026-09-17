@@ -4,6 +4,9 @@ etoolbox
 parskip
 babel-german 
 koma-script
+scrhack
+setspaceenhanced
+oberdiek
 xpatch 
 setspace
 siunitx

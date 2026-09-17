@@ -2,47 +2,62 @@
 
 ## 7.1 Purpose of the chapter
 
-This chapter develops the second half of adaptation A1: the Training Specification. It is a meta-specification, not a behaviour specification. It does not say what the policy will do for a given state — it cannot say it — but it fixes precisely the process that produces it: observation and action spaces, reward function, termination criteria, role of the cage during training, hyperparameters, seeds and checkpoint policy. A reader who has this document and the code can reproduce the process; they cannot predict the result. That asymmetry is exactly the point of the adaptation.
+This chapter covers the second half of adaptation A1: the Training Specification. It is a meta-specification, not a specification of behaviour. It does not say what the policy will do in a given state, because it cannot. What it does is fix the process that produces the policy: observation and action spaces, reward function, termination criteria, the role of the cage during training, hyperparameters, seeds and how checkpoints are kept. Someone with this document and the code can repeat the process, but they cannot predict the result. That difference is exactly the point of the adaptation.
 
-The complete hyperparameter table and the comparative study between algorithms, with its eight configurations and its evaluated checkpoints, are given in Appendix H.
+The full hyperparameter table and the comparison between algorithms, with its eight configurations and the checkpoints that were evaluated, are in Appendix H.
 
-## 7.2 Specification of the process
+## 7.2 Process specification
 
 ### 7.2.1 Observation and action
 
-The observation of the reference system is the front camera image, reduced to 84×84 in grey scale and stacked over four consecutive frames in order to give the policy motion information. The stacking is not an implementation detail: without it the policy cannot distinguish a static situation from a dynamic one, and the heading error becomes partially unobservable. The network is a standard convolutional network of the type used in control from pixels.
+The observation of the reference system is the front camera image, reduced to 84×84 in greyscale and stacked over four consecutive frames so that the policy gets information about motion. The stacking is not a small implementation detail. Without it, the policy cannot tell a static situation from a moving one, and the heading error becomes partly unobservable. The network is a standard convolutional network of the kind used for control from pixels.
 
-The action space is configuration, not a constant of the work, and the path between its two values is one of the argument lines of this chapter. During most of the project the action was one-dimensional — steering only, with fixed longitudinal speed — which reduces the problem to lateral control and keeps clean the separation between what the reward guides and what the cage guarantees. The final reference configuration is two-dimensional — steering and throttle — with a speed ceiling of 0.22 m/s and a dead band in the throttle command. The consequence is substantive: in 1-D the speed rules of the cage are structurally inert, because speed is not a decision variable; only with longitudinal authority can they really arbitrate.
+The action space is a configuration choice, not something fixed for the whole work, and how it changed between its two values is one of the main threads of this chapter. For most of the project the action was one-dimensional: steering only, with a fixed forward speed. This reduces the problem to lateral control and keeps a clean line between what the reward guides and what the cage guarantees. The final reference configuration is two-dimensional, with steering and throttle, a speed ceiling of 0.22 m/s and a dead band in the throttle command. This matters a lot. In 1-D, the cage's speed rules can never do anything, because speed is not something the policy decides. Only when the policy controls speed can those rules really step in.
 
 ### 7.2.2 Reward function
 
-The reward combines four terms: progress along the arc of the circuit, which is the task signal; penalty on the lateral error, which centres it in the lane; penalty on the heading error, which aligns it with the tangent; and penalty on the command variation, which discourages jerky driving. In the two-dimensional configuration a fifth term is added against the degenerate optimum of stopping: without it, a policy with authority over the throttle discovers that parking avoids all the penalties, a textbook case of the reward exploitation hazard that the hazard register anticipated.
+The reward has four terms: progress along the circuit, which is the task signal; a penalty on lateral error, which keeps the vehicle centred in the lane; a penalty on heading error, which keeps it aligned with the track; and a penalty on changes in the command, which discourages jerky driving. In the two-dimensional configuration a fifth term is added to stop the policy from simply stopping. Without it, a policy that controls the throttle finds out that parking avoids all the penalties. This is a textbook case of the reward exploitation hazard that the hazard register had predicted.
 
-The relation between reward and safety should be made explicit, because it is one of the most important design decisions of this work: the reward contains no safety terms. It does not penalise the activation of the cage and it does not reward staying away from the limit. The reason is separation of responsibilities — the reward guides, the cage guarantees — and it has a valuable experimental consequence: since the policy was not trained to please the cage, the frequency with which the cage intervenes is an uncontaminated measure of the quality of the learned driving.
+The link between reward and safety needs to be stated clearly, because it is one of the most important design decisions of this work: the reward has no safety terms. It does not penalise cage activations, and it does not reward staying away from the limits. The reason is a split of responsibilities: the reward guides, the cage guarantees. This has a useful side effect for the experiments. Since the policy was not trained to please the cage, how often the cage intervenes is a clean measure of how good the learned driving is.
 
 ### 7.2.3 The cage during training
 
-The cage is active in the training loop, filtering the command before it reaches the simulated vehicle. The decision has obvious advantages: episodes are not wasted on catastrophic excursions and the agent experiences the dynamics of the system as it will be deployed. It also has a cost that this work did not fully anticipate and that Chapter 8 documents as a finding: if the cage integrates the command during training, the policy learns against a system that already includes the cage, and what is optimised is the pair and not the policy alone.
+The cage is active in the training loop and filters the command before it reaches the simulated vehicle. This has clear advantages: episodes are not wasted on crashes, and the agent learns the dynamics of the system as it will be deployed. It also has a cost that this work did not fully expect, and that Chapter 8 reports as a finding. If the cage shapes the command during training, the policy learns against a system that already includes the cage, so what gets optimised is the pair and not the policy alone.
 
 ### 7.2.4 Reproducibility
 
-Every training run records the seed, the configuration version, the *hash* of the cage parameter file, the code revision and a timestamp. Checkpoints are saved at a fixed cadence and each one carries a cryptographic identifier that links it to its configuration; an evaluation that tries to load a checkpoint with an incompatible configuration fails explicitly instead of producing a silently invalid result. It is a modest mechanism that avoided at least one serious confusion during the project.
+Every training run records the seed, the configuration version, the *hash* of the cage parameter file, the code revision and a timestamp. Checkpoints are saved at fixed intervals, and each one has a cryptographic identifier that links it to its configuration. If an evaluation tries to load a checkpoint with a configuration that does not match, it fails with an error instead of quietly producing an invalid result. It is a simple mechanism, and it prevented at least one serious mix-up during the project.
+
+The text uses descriptive names for trainings, checkpoints and campaigns, while figures and appendices use the short labels from the repository. Table 7.1 connects the two.
+
+| Label in figures and appendices | Name in the text | What it is |
+| --- | --- | --- |
+| `F-track` | State track (control arm) | The policy observes a state vector projected from the true pose, on the oval circuit; it isolates the effect of the cage (§1.6.3). Campaign: `campaign`. |
+| `track E`, `E-track` | Camera track | The policy observes the front-camera image; the reference system of the thesis. |
+| `E-main`, `1-D PPO`, `297k` | One-dimensional camera policy | PPO, steering only at a fixed 0.20 m/s on `complex_b`; checkpoint kept at the reward peak, 297,000 steps (§7.3). Run: `ppo_newcam_complex_b_2024_1M`. |
+| `seed 2024`, `42`, `23`, `666`, `123` | The five seeds | Copies of that training that differ only in the seed (§7.4). Runs: `ppo_newcam_complex_b_<seed>`. |
+| `GE4-V2`, `campaign_e_v2` | Campaign of the one-dimensional policy | Second version of the scenario campaign of gate G4, run on `E-main`: 1,970 runs, kept frozen as the gate record. |
+| `margin022`, `2-D SAC` | First two-dimensional campaign | SAC, steering and throttle, speed cap 0.22 m/s, which is 0.03 m/s below the 0.25 m/s curve ceiling of C-04 (hence the name); checkpoint at 75,000 steps; 1,970 runs (§7.5.1). Run: `sac_gz2d_entfix_margin022_2024_75k`; campaign: `campaign_2d_margin022`. |
+| `2-D PPO 550k`, `cap 0.22` | Reference policy and reference campaign | PPO, steering and throttle, speed cap 0.22 m/s; checkpoint at 550,000 steps chosen by closed-loop driving (§7.5.2); its 1,890-run campaign gives the verdict (Chapter 8). Run: `ppo_gz2d_cap022_1M_2024`; campaign: `campaign_2d_ppo550k`. |
+| `sim-to-real v2`, `1650k` | Policy retrained for transfer | Two-dimensional PPO retrained with per-episode mirroring and randomisation of photometry and camera geometry, 2.5 million steps; checkpoint at 1,650,000 steps deployed on the vehicle (§9.3.4). Its `v2` has nothing to do with `GE4-V2`. Run: `ppo_gz2d_sim2real_v2_2024`. |
+
+*Table 7.1 — Names of trainings, checkpoints and campaigns. Conventions: `k` after a number counts thousands of training steps (`550k` = 550,000; `@297k` = at 297,000 steps); `1-D` and `2-D` give the size of the action (steering; steering and throttle); `cap` is the speed ceiling of the action; `complex_b` is the winding circuit (perimeter 19.22 m) and `oval` the oval one (R = 0.8 m); `newcam` in a run name marks runs made after the switch to the dedicated lane camera.*
 
 ## 7.3 Results: the one-dimensional camera policy
 
-The first competent camera policy is trained on the winding circuit with a one-dimensional action. Its mean episode reward rises to a peak of ≈ 823 at around 297,000 steps and keeps a high band for about 150,000 more steps, after which it decays. The diagnosis matters: the critic loss stays tiny during the whole run, so this is not value function instability but exploration contraction once the standard deviation of the policy is annealed too far. That is why the policy that is kept is the one at the peak and not the one at the end.
+The first camera policy that drives well is trained on the winding circuit with a one-dimensional action. Its mean episode reward rises to a peak of ≈ 823 at around 297,000 steps, stays high for about 150,000 more steps, and then drops. The cause matters. The critic loss stays very small during the whole run, so the problem is not an unstable value function. It is that exploration shrinks once the policy's standard deviation is annealed too far. That is why the policy kept is the one at the peak and not the one at the end.
 
-<img src="../figures/fig_7_1_convergence_newcam.png" alt="Figure 7.1 — Convergence of the one-dimensional camera training." width="540"/>
+<img src="../figures/fig_7_1_convergence_newcam_notitle.png" alt="Figure 7.1 — Convergence of the one-dimensional camera training." width="540"/>
 
-*Figure 7.1 — Convergence of the one-dimensional camera policy: reward and mean episode length against steps. Peak ≈ 823 and a high plateau; the later exploration collapse motivated the manual stop and the selection of the checkpoint at the peak.*
+*Figure 7.1 — Convergence of the one-dimensional camera policy (`E-main`, Table 7.1): reward and mean episode length against steps. Peak ≈ 823 and a high plateau. The later collapse in exploration led to stopping the run by hand and keeping the checkpoint at the peak.*
 
 <img src="../figures/fig_7_2_intervention_newcam_notitle.png" alt="Figure 7.2 — Cage activity during training." width="540"/>
 
-*Figure 7.2 — Cage activity over the one-dimensional training. Above, the total intervention rate falls from ~87 % to ~40 % while the emergency rate is nil from the first moment. Below, the per-rule breakdown shows what that rate is made of: it is the rate limiter, and the safety rules C-01, C-02, C-03 and C-05 fall to zero in the first steps and stay there.*
+*Figure 7.2 — Cage activity during the one-dimensional training. Top: the total intervention rate falls from ~87 % to ~40 %, while the emergency rate is zero from the start. Bottom: the per-rule breakdown shows what that rate is made of. It is the rate limiter. The safety rules C-01, C-02, C-03 and C-05 drop to zero in the first steps and stay there.*
 
-A second result of this training, which Figure 7.2 breaks down, is the co-adaptation between policy and cage: the intervention rate falls from ~87 % at the start to ~40 %, dominated by the rate limiter, while the safety rules fall to zero. The reading is that the policy learns to respect the safety constraints — it does not approach the edge — but its steering command is still jerky and the limiter smooths it continuously.
+A second result of this training, shown in detail in Figure 7.2, is that policy and cage adapt to each other. The intervention rate falls from ~87 % at the start to ~40 %, mostly from the rate limiter, while the safety rules drop to zero. This means the policy learns to respect the safety constraints (it does not go near the edge), but its steering is still jerky and the limiter keeps smoothing it.
 
-The deterministic nominal evaluation against a classical controller on the same circuit, collected in Table 7.1, gives the result that justifies the cost of the learned component:
+The deterministic nominal evaluation against a classical controller on the same circuit, shown in Table 7.2, gives the result that justifies the cost of the learned component:
 
 | Metric (nominal scenario) | Classical baseline | **1-D camera RL** |
 | --- | --- | --- |
@@ -52,56 +67,56 @@ The deterministic nominal evaluation against a classical controller on the same 
 | Emergency stops | 0 | 0 |
 | Cage intervention | 0 % | 43.5 % (limiter only) |
 
-*Table 7.1 — Nominal evaluation: camera policy against the classical baseline on the same circuit.*
+*Table 7.2 — Nominal evaluation: camera policy against the classical baseline on the same circuit.*
 
-The agent beats the classical baseline in tracking precision — 37 % less mean lateral error, over the same distance travelled and with zero emergencies — which reverses the finding obtained on the oval, where the classical controller was the more precise one: on a winding geometry the look-ahead point of the classical method degrades while the network holds the line. Two qualitative observations accompany the result. The cage stays latent inside the domain in both modes: zero emergencies and no activation of the safety rules, only of the rate limiter; enforcement and monitoring give almost identical laps and errors. And the cost of the learned agent is not safety but smoothness: it triggers the limiter in 43 % of the steps against 0 % for the classical controller, a benign intervention that absorbs the jerk without damaging precision.
+The agent is more precise than the classical baseline: 37 % less mean lateral error, over the same distance and with zero emergencies. This is the opposite of what happened on the oval, where the classical controller was more precise. On a winding layout, the look-ahead point of the classical method becomes less reliable, while the network keeps its line. Two more observations come with this result. The cage stays latent inside the domain in both modes: zero emergencies and no safety rule activations, only the rate limiter, and enforcement and monitoring give almost the same laps and errors. And the cost of the learned agent is smoothness, not safety. It triggers the limiter in 43 % of the steps, against 0 % for the classical controller. This intervention is harmless: it absorbs the jerky steering without hurting precision.
 
-## 7.4 Variability between seeds
+## 7.4 Variation between seeds
 
-A result with a single seed says nothing about a stochastic procedure. Replication over five seeds, collected in Figure 7.3, produces the most uncomfortable and probably the most useful finding of the chapter: the training curve does not classify the behaviour. Three of the five seeds turn out to be constraint-respecting — the cage stays latent — while the other two depend on the cage substantially, with hundreds of safety interventions, and that difference is not predictable from the training reward: seeds with practically indistinguishable curves fall on different sides.
+A result from a single seed says nothing about a stochastic procedure. Repeating the training with five seeds, shown in Figure 7.3, gives the most uncomfortable and probably the most useful finding of the chapter: the training curve does not tell how the policy behaves. Three of the five seeds respect the constraints (the cage stays latent), while the other two rely heavily on the cage, with hundreds of safety interventions. This difference cannot be predicted from the training reward. Seeds with almost identical curves end up on different sides.
 
 <img src="../figures/fig_7_8_multiseed_newcam_notitle.png" alt="Figure 7.3 — Comparison across five seeds." width="540"/>
 
-*Figure 7.3 — Five seeds of the same procedure. Above, the reward: the curves are of the same order and their peaks are spread between 713 and 823, with none standing out from the others. Below, the cage intervention rate over the same runs, which does separate them. The information that classifies the behaviour is in the lower panel, not in the upper one, and it is the panel a selection by reward does not look at.*
+*Figure 7.3 — Five seeds of the same procedure (Table 7.1; `@297k` marks the step of each peak). Top: the reward. The curves are similar and their peaks range from 713 to 823, with none clearly better than the others. Bottom: the cage intervention rate for the same runs, which does separate them. The information that tells the behaviours apart is in the bottom panel, not the top one, and it is exactly the panel that a selection by reward ignores.*
 
-The methodological consequence is direct and applies to the rest of the work: the policy cannot be selected by reward. It has to be selected by closed-loop evaluation over scenarios, with the intervention rate of the cage as a first-order criterion. It is a concrete example of what the framework is meant to produce: an acceptance criterion that no training metric would have produced.
+The consequence for the method is direct and applies to the rest of the work: the policy cannot be chosen by reward. It has to be chosen by closed-loop evaluation on scenarios, with the cage intervention rate as a main criterion. This is a concrete example of what the framework is supposed to produce: an acceptance criterion that no training metric would have given.
 
 ## 7.5 The reference policy: two-dimensional action
 
 ### 7.5.1 Motivation and choice of algorithm
 
-The first attempt at a complete campaign over a two-dimensional action was executed with a doubly suboptimal policy: an algorithm outside its regime, a short training, and, worse, a checkpoint after the peak instead of at the peak. Its result left a well-posed question: were the observed failures of the two-dimensional action or of that policy? To answer it, a two-dimensional policy was trained properly, with two changes, both of them measured.
+The first attempt at a full campaign with a two-dimensional action used a policy that was weak in two ways: an algorithm used outside the range where it works well, and a short training. Worse, the checkpoint came after the peak instead of at the peak. Its result raised a clear question: were the failures caused by the two-dimensional action or by that particular policy? To answer it, a proper two-dimensional policy was trained, with two changes, both measured.
 
-**Algorithm.** A policy trained with the on-policy method reaches a mean reward of 1755 at around 472,000 steps (Figure 7.4) with a high and stable plateau, while the off-policy method never exceeds ~200 and does not manage to master the circuit. Speed ceiling. A single-variable comparison shows that at 0.5 m/s the policy peaks at 654 and drives dirty — it overshoots the tight curves — against 1421 at 0.22 m/s, where it takes them cleanly.
+**Algorithm.** A policy trained with the on-policy method reaches a mean reward of 1755 at around 472,000 steps (Figure 7.4), with a high and stable plateau. The off-policy method never goes above ~200 and never learns to drive the circuit. **Speed ceiling.** A comparison that changes only this variable shows that at 0.5 m/s the policy peaks at 654 and drives badly (it overshoots the tight curves), against 1421 at 0.22 m/s, where it takes them cleanly.
 
-An honesty warning about the figures: the reward is not comparable one to one between action spaces, because the episode ceiling doubles when moving to two dimensions. The factor of ~2 with respect to the one-dimensional policy is mostly greater survival and horizon, not "twice as good driving".
+A warning about these numbers: reward cannot be compared directly between action spaces, because the maximum episode reward doubles when moving to two dimensions. The factor of ~2 compared with the one-dimensional policy comes mostly from surviving longer and a longer horizon, not from "driving twice as well".
 
 <img src="../figures/auto/fig_7_4_ppo2d_training_curve.png" alt="Figure 7.4 — Training curve of the two-dimensional reference policy." width="600"/>
 
-*Figure 7.4 — Training reward of the two-dimensional reference policy against the one-dimensional one and against the off-policy variant. Peak 1755 and a high stable plateau, against the post-peak collapse of the first one and the ceiling of ~200 of the second one. The candidate checkpoints evaluated are marked.*
+*Figure 7.4 — Training reward of the two-dimensional reference policy (`2-D PPO`) compared with the one-dimensional policy (`E-main`) and with the off-policy version (`margin022`); labels in Table 7.1. Peak 1755 and a high stable plateau, against the collapse after the peak of the first one and the ~200 ceiling of the second. Marked: the three candidate checkpoints evaluated in closed loop, including the selected one, and the checkpoint kept from each of the other two runs.*
 
-### 7.5.2 Checkpoint selection: by driving, not by reward
+### 7.5.2 Choosing the checkpoint: by driving, not by reward
 
-During the whole training the cage stays latent in safety: no activation of the lateral limit, heading, predictive or emergency rules; only of the rate limiter. The selection was resolved by evaluating three candidates in closed loop, and the result confirms the lesson of §7.4 as clearly as possible: the checkpoint at the reward peak is the worst of the three — fourteen safety interventions and 49 mm maximum lateral error — while the one at 550,000 steps wins clearly: 5.32 laps, 8.6 mm mean error, 27 mm maximum, zero emergencies and zero safety interventions.
+During the whole training, the cage stays latent for safety: the lateral limit, heading, predictive and emergency rules never fire, only the rate limiter does. The choice was made by testing three candidates in closed loop, and the result confirms the lesson of §7.4 very clearly. The checkpoint at the reward peak is the worst of the three, with fourteen safety interventions and a 49 mm maximum lateral error. The one at 550,000 steps clearly wins: 5.32 laps, 8.6 mm mean error, 27 mm maximum, zero emergencies and zero safety interventions.
 
-Selecting by reward would have chosen the worst candidate. It is a bias control documented before the verdict campaign was executed, and it is the direct answer to the objection that the best arm might have been selected after the fact.
+Choosing by reward would have picked the worst candidate. This is a control against bias that was documented before the verdict campaign was run, and it directly answers the objection that the best option might have been picked after seeing the results.
 
-### 7.5.3 What the policy does with longitudinal authority
+### 7.5.3 What the policy does with speed control
 
 <img src="../figures/auto/fig_7_5_ppo2d_action_distribution.png" alt="Figure 7.5 — Distribution of the two-dimensional raw action." width="640"/>
 
-*Figure 7.5 — Distribution of the raw action at the start against the end of training, one panel per dimension. In steering, the initial all-or-nothing command dissolves (36.9 % → 7.1 % of saturated samples). In throttle, the evolution is the opposite, towards saturation (48.2 % → 89.6 %): the policy learns to ask for the ceiling almost always.*
+*Figure 7.5 — Distribution of the raw action at the start and at the end of training, one panel per dimension. In steering, the early all-or-nothing command goes away (36.9 % → 7.1 % of saturated samples). In throttle, the change goes the other way, towards saturation (48.2 % → 89.6 %): the policy learns to ask for the ceiling almost all the time.*
 
-Figure 7.5 supports the honest reading of the longitudinal authority: the policy uses it to set the speed regime, not to draw a profile. There is modulation and it is well localised — the 8.3 % of steps with reduced throttle are concentrated at high curvature and rise to 35.6 % at the tightest apex — but its magnitude is marginal: the throttle drops to 0.81 and the speed falls only from 0.218 to 0.216 m/s. The policy arrives at the tightest curves practically at the ceiling. This apparently minor observation explains one result of Chapter 8: the speed rule of the cage never activates during the whole campaign.
+Figure 7.5 supports a realistic reading of how the policy uses its speed control: it uses it to set the overall speed, not to follow a speed profile. There is some modulation, and it happens in the right places. The 8.3 % of steps with reduced throttle are concentrated at high curvature and rise to 35.6 % at the tightest apex. But the effect is very small: the throttle drops to 0.81 and the speed only falls from 0.218 to 0.216 m/s. The policy enters the tightest curves at almost the ceiling speed. This small detail explains a result in Chapter 8: the cage's speed rule never fires during the whole campaign.
 
-### 7.5.4 Authorisation before the campaign
+### 7.5.4 Approval before the campaign
 
-Before executing the verdict campaign, the policy passed a preflight check bound by cryptographic identifier to its checkpoint and to its configuration, which verifies that the measurement interface of the cage — the lane estimator and its heading reading — behaves as it should: real heading failures detected, zero false positives over safe centred cycles, and bounded delay. The check passed in all seven of its tests, and it is what authorises the campaign.
+Before running the verdict campaign, the policy had to pass a preflight check tied by cryptographic identifier to its checkpoint and configuration. The check makes sure that the cage's measurement interface (the lane estimator and its heading reading) works as it should: real heading failures are detected, there are zero false positives on safe, centred cycles, and the delay stays within limits. The check passed all seven of its tests, and that is what allowed the campaign to start.
 
-The order matters methodologically: the policy is selected by nominal evaluation, the instrumentation is verified separately and bound by *hash*, and only then is the campaign executed. None of the three steps can be reordered without weakening the evidence.
+The order matters for the method. The policy is chosen by nominal evaluation, the instrumentation is checked separately and tied by *hash*, and only then is the campaign run. None of these three steps can be done in a different order without weakening the evidence.
 
-## 7.6 Synthesis
+## 7.6 Summary
 
-The chapter leaves three results that the next one uses. First, a competent camera policy exists and the reference against a classical method is established. Second, the training curve does not classify the behaviour: the selection has to be made by closed-loop driving, and that criterion, applied to the reference policy, discarded precisely the checkpoint that the reward would have chosen. Third, the reference policy has longitudinal authority but uses it to set the regime, not to modulate, which conditions which cage rules actually get exercised.
+This chapter gives three results that the next one builds on. First, a camera policy that drives well exists, and it has been compared with a classical method. Second, the training curve does not tell how the policy behaves. The choice has to be made by closed-loop driving, and when that criterion was applied to the reference policy, it rejected exactly the checkpoint that the reward would have picked. Third, the reference policy controls speed but uses that control to set the overall speed and not to adjust it along the track, which affects which cage rules actually get tested.
 
-Chapter 8 submits that policy to the scenario campaign and produces the verdict.
+Chapter 8 runs that policy through the scenario campaign and produces the verdict.

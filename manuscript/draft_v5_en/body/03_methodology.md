@@ -2,123 +2,123 @@
 
 ## 3.1 Purpose of the chapter
 
-This chapter presents the central methodological contribution of the thesis: the adapted V-Model, a life cycle framework designed for systems that incorporate components trained by reinforcement learning inside functions with safety implications. It establishes the framework that governs the rest of the work, justifies the decisions that configure it, and positions each one with respect to the standards and to the literature of Chapter 2; it does not present experimental results or implementation details.
+This chapter presents the main methodological contribution of the thesis: the adapted V-Model. It is a life cycle framework for systems that include components trained with reinforcement learning inside functions that affect safety. The chapter defines the framework used in the rest of the work, explains the decisions behind it, and relates each decision to the standards and to the literature from Chapter 2. It does not present experimental results or implementation details.
 
-Two levels that are often confused should be separated. The *research methodology* — how generalisable knowledge is produced from the work — is discussed in §3.2. The *system engineering methodology* — how the technical artefact is produced from the requirements to the deployment — occupies §3.3 to §3.8. The first one answers "what does this thesis contribute to knowledge?"; the second one, "how is the system built?". Chapters 4 to 10 are the experimental materialisation of what is defined here, and Chapter 11 evaluates the framework in the light of that materialisation.
+Two things are often mixed up and should be kept apart. The *research methodology*, meaning how this work produces knowledge that can be generalised, is covered in §3.2. The *system engineering methodology*, meaning how the technical system is built from requirements to deployment, is covered in §3.3 to §3.8. The first answers the question "what does this thesis add to knowledge?". The second answers "how is the system built?". Chapters 4 to 10 put into practice what is defined here, and Chapter 11 evaluates the framework based on that practice.
 
-## 3.2 Epistemological positioning
+## 3.2 Research approach
 
 ### 3.2.1 Type of research
 
-The work belongs to the tradition of *design science research* (March and Smith, 1995; Hevner et al., 2004). In that tradition the academic contribution is not an empirical proposition contrasted against reality, nor a logical proposition proved deductively, but an artefact that addresses a previously identified problem and whose usefulness is evaluated through one or several application cases.
+The work follows the *design science research* tradition (March and Smith, 1995; Hevner et al., 2004). In this tradition, the academic contribution is not an empirical claim tested against reality, and not a logical statement proved by deduction. It is an artefact that solves a known problem, and its usefulness is evaluated through one or more application cases.
 
-The artefact is the adapted V-Model — five adaptations A1–A5 over the ISO 26262 V-Model — together with the templates, validators and derived artefacts that materialise it. This characterisation has three consequences. First: the thesis does not look for the typical contribution of an empirical thesis — discovering a phenomenon, refuting a statistical hypothesis — but for the production of a useful artefact and the demonstration of its operation. Second: the evaluation is made on the artefact and not only on the system built with it, which requires a chapter devoted to evaluating the framework itself (Chapter 11). Third: generalisation is argued by structural plausibility — the adaptations attack V-Model assumptions that fail for any system with a learned component — and not by statistical induction over multiple cases.
+The artefact here is the adapted V-Model, which consists of five adaptations A1–A5 to the ISO 26262 V-Model, together with the templates, checkers and other artefacts that implement it. This has three consequences. First, the thesis does not aim for the usual result of an empirical thesis, such as finding a phenomenon or rejecting a statistical hypothesis. It aims to build a useful artefact and show that it works. Second, the evaluation looks at the artefact and not only at the system built with it, so one chapter is dedicated to evaluating the framework itself (Chapter 11). Third, generalisation is argued through structure, because the adaptations target V-Model assumptions that fail for any system with a learned component, and not through statistics over many cases.
 
-### 3.2.2 Evaluation strategy: a single case study
+### 3.2.2 Evaluation strategy: one case study
 
-The framework is evaluated through a single case: lane following on a 1:14 scale vehicle, trained by PPO in Gazebo and supervised by a deterministic safety cage. The reason is feasibility: a case that covers the complete cycle — from HARA to deployment — is already an ambitious commitment for a master's thesis, and multiplying it would introduce a superficiality that is incompatible with the rigour that the framework itself demands. A deep case is preferable to several shallow ones. The cost is in external validity, and it is mitigated in two ways: the structural plausibility argument, and the explicit recognition, in Chapter 12, of which parts of the framework are transferable and which ones require rethinking.
+The framework is evaluated on a single case: lane following on a 1:14 scale vehicle, trained with PPO in Gazebo and supervised by a deterministic safety cage. The reason is feasibility. A case that covers the whole cycle, from HARA to deployment, is already a lot of work for a master's thesis. Doing several would make each one shallow, which does not fit the rigour that the framework itself asks for. One deep case is better than several shallow ones. The price is lower external validity. This is reduced in two ways: the structural argument, and a clear statement in Chapter 12 of which parts of the framework can be reused and which parts need to be rethought.
 
 ### 3.2.3 Role of the author
 
-The author is at the same time the designer of the framework, the implementer of the system and the evaluator of the result. That triple condition introduces a structural confirmation bias that should be recognised before any attempt to neutralise it. The mitigation is articulated on three levels: bidirectional traceability as a hard constraint (A4), enforced by an automatic validator that exposes any orphan without intervention from the author and acts as a low-cost external auditor; the dated decision log, which documents not only what was decided but also which alternatives were discarded and why, and which can be audited afterwards by third parties; and the explicit declaration of limitations (§3.9 and Chapter 11) with the same honesty that would be reserved for someone else's solution. The three mechanisms do not eliminate the bias — none of them can — but they bound it to what an independent third party could audit over the version-controlled artefacts.
+The author designs the framework, builds the system and evaluates the result. Doing all three creates a built-in risk of confirmation bias, and this has to be admitted before trying to reduce it. It is handled on three levels. The first is two-way traceability as a hard constraint (A4). An automatic checker enforces it and reports any orphan without the author being involved, so it works as a cheap external auditor. The second is the dated decision log. It records what was decided, which alternatives were rejected and why, and others can audit it later. The third is a clear list of limitations (§3.9 and Chapter 11), written as critically as if the solution were someone else's. None of these removes the bias, and nothing could. What they do is limit it to what an independent person could check in the version-controlled artefacts.
 
-## 3.3 The classical V-Model and its implicit assumptions
+## 3.3 The classical V-Model and its hidden assumptions
 
-The V-Model, with its root in systems engineering (Forsberg and Mooz, 1991) and adopted by ISO 26262 as its reference process model, structures the process in five hierarchical levels with a bidirectional correspondence between specification (descending branch) and verification/validation (ascending branch).
+The V-Model comes from systems engineering (Forsberg and Mooz, 1991) and is the reference process model in ISO 26262. It organises development into five levels, with a two-way link between specification (left branch, going down) and verification and validation (right branch, going up).
 
 <img src="../figures/fig_3_1_adopted_classical_v_model.png" alt="Figure 3.1 — V-Model adopted by ISO 26262, instantiated on the lane-following case." width="480"/>
 
-*Figure 3.1 — V-Model adopted by ISO 26262 (simplified), instantiated on the lane-following case.*
+*Figure 3.1 — V-Model adopted by ISO 26262 (simplified), applied to the lane-following case.*
 
-It operates on five assumptions that are rarely made explicit but that support its whole structure. Their systematic identification has a founding antecedent in Salay, Queiroz and Czarnecki (2017); the assumptions S1–S5 that follow are an operational reformulation of that analysis, articulated so that each one admits a corresponding adaptation in §3.4.
+The model relies on five assumptions. They are rarely written down, but the whole structure depends on them. Salay, Queiroz and Czarnecki (2017) were the first to identify them systematically. The assumptions S1–S5 below are a practical rewrite of their analysis, set up so that each one has a matching adaptation in §3.4.
 
 | Assumption | Statement | Why it fails for an RL component |
 | --- | --- | --- |
-| S1 | Every module has a complete and deterministic specification written in advance | The policy has no pre-designed specification: it emerges from the training. There is no document saying "when the input is Y, produce Z" |
-| S2 | The behaviour can be faithfully derived from the specification | The behaviour is observable *post hoc* but not predictable analytically |
-| S3 | Unit tests verify compliance with finite coverage | There is no "correct" output defined per input: only statistically plausible outputs |
-| S4 | Static verification is enough to guarantee the properties | The policy can pass the tests and fail in operation because of state distributions that were not covered |
-| S5 | The operational environment is sufficiently similar to the testing one | The gap between simulation and reality can be large and silent |
+| S1 | Every module has a complete and deterministic specification written in advance | The policy has no designed specification: it comes out of training. No document says "when the input is Y, produce Z" |
+| S2 | The behaviour can be derived reliably from the specification | The behaviour can be observed *post hoc* but cannot be predicted analytically |
+| S3 | Unit tests check compliance with finite coverage | There is no "correct" output for each input, only statistically plausible outputs |
+| S4 | Static verification is enough to guarantee the properties | The policy can pass the tests and still fail in operation, because of state distributions that were not tested |
+| S5 | The operating environment is close enough to the test environment | The gap between simulation and reality can be large and go unnoticed |
 
 *Table 3.1 — The five assumptions of the classical V-Model and how they fail for learned components.*
 
-The quantitative extent of the problem is illustrated by the finding of Salay et al. about the software techniques prescribed in Part 6 of ISO 26262: of the 34 (out of 75) that apply at unit level, about 40 % do not apply to ML components at all — the rest being usable directly or with adaptation — largely because they are oriented towards imperative languages. That void is operational, not only conceptual, and it is what motivates a complementary framework.
+The size of the problem can be seen in what Salay et al. found about the software techniques in Part 6 of ISO 26262. Of the 34 techniques (out of 75) that apply at unit level, about 40 % do not apply to ML components at all, mostly because they were written for imperative languages. The rest can be used directly or with changes. This gap is practical, not only conceptual, and it is the reason for a complementary framework.
 
-The five failures are not an argument for abandoning the V-Model but for adapting it. The methodological core of this work consists in keeping the structure of the V — and with it the coherence with ISO 26262 — while introducing the minimum modifications necessary for the policy to fit inside the cycle without breaking the traceability or the honesty of the process.
+These five failures are not a reason to drop the V-Model. They are a reason to adapt it. The core of this work is to keep the V structure, and with it the consistency with ISO 26262, while adding only the changes needed so that the policy fits into the cycle without breaking traceability or the honesty of the process.
 
 ## 3.4 The five adaptations
 
 ### 3.4.1 A1 — Splitting the module design
 
-**Problem.** The module design level (L4) assumes that every module admits a complete, deterministic specification that can be written in advance. For the policy the assumption breaks: it is not possible to write "the policy must produce `a = f(s)` such that…" because `f` is the result of the optimisation, not its input.
+**Problem.** The module design level (L4) assumes that every module can have a complete, deterministic specification written beforehand. This is not true for the policy. It is not possible to write "the policy must produce `a = f(s)` such that…" because `f` is the result of the optimisation, not something that goes into it.
 
-**Adaptation.** L4 is split into two conceptually different sublevels. L4a — Cage Specification is classical specification: deterministic and modular, where each cage rule is a pure, testable function with defined inputs and outputs, designed in the traditional sense. L4b — Training Specification is a *meta-specification*: it does not specify the behaviour of the policy but the process that produces it — reward function, state and action spaces, training ODD, convergence criteria, algorithm, constraints active during the training.
+**Adaptation.** L4 is split into two different sublevels. L4a — Cage Specification is a classical specification. It is deterministic and modular, and each cage rule is a pure, testable function with defined inputs and outputs, designed in the traditional way. L4b — Training Specification is a *meta-specification*. It does not describe how the policy behaves. It describes the process that produces the policy: reward function, state and action spaces, training ODD, convergence criteria, algorithm, and constraints active during training.
 
-The separation is coherent with the three-stage realisation principle of ISO/IEC TR 5469:2024, which distinguishes data acquisition, knowledge induction from data and human knowledge, and processing and generation of outputs; the TR states that the principle does not describe a life cycle, so A1 is an extension that carries the distinction to the level of the design process. Artefacts: the cage specification with its formally defined rules (Chapter 5) and the training specification (Chapter 7).
+This split fits the three-stage realisation principle of ISO/IEC TR 5469:2024, which separates data acquisition, knowledge induction from data and human knowledge, and processing and output generation. The TR says that this principle is not a life cycle, so A1 extends the idea to the design process. Artefacts: the cage specification with its formally defined rules (Chapter 5) and the training specification (Chapter 7).
 
 ### 3.4.2 A2 — From unit testing to behavioural evaluation
 
-**Problem.** The unit test verifies a module against its specification through cases with expected outputs. For the policy there is no "expected output" for a given state: only plausible distributions conditioned on the state.
+**Problem.** A unit test checks a module against its specification using cases with expected outputs. For the policy there is no "expected output" for a given state, only plausible distributions that depend on the state.
 
-**Adaptation.** The level is split in correspondence with A1. L4a' — Cage Unit Tests: classical unit tests over each rule, with synthetic state vectors, expected deterministic behaviour and a binary verdict; identical in philosophy to those of the classical V. L4b' — Policy Behavioral Evaluation: statistical evaluation over state distributions — "over N states sampled from the ODD, the policy produces actions that satisfy property X with frequency Y". This is not verification in the logical sense, it is statistical characterisation of the behaviour.
+**Adaptation.** This level is split in the same way as A1. L4a' — Cage Unit Tests are classical unit tests for each rule, with synthetic state vectors, expected deterministic behaviour and a pass/fail result, just like in the classical V. L4b' — Policy Behavioral Evaluation is a statistical evaluation over state distributions, for example "over N states sampled from the ODD, the policy produces actions that meet property X with frequency Y". This is not verification in the logical sense. It is a statistical description of behaviour.
 
-The adaptation recognises that classical verification is not applicable to learned components. The thesis does not force the metaphor: it replaces it with an appropriate tool, and keeps classical verification where it is still applicable, namely the cage. The asymmetry is coherent, by analogy, with the technology classes of TR 5469: the cage, a conventional rule-based component, can be developed and reviewed entirely with existing functional safety practice, as Class I technology can, while the policy is at best a Class II element, whose required properties can only be approached with complementary methods such as the statistical evaluation of A2.
+The adaptation accepts that classical verification does not work for learned components. The thesis does not try to force it. It uses a suitable tool instead, and keeps classical verification where it still works, which is the cage. This difference matches, by analogy, the technology classes of TR 5469. The cage is a conventional rule-based component and can be fully developed and reviewed with existing functional safety practice, like Class I technology. The policy is at best a Class II element, whose required properties can only be approached with extra methods such as the statistical evaluation of A2.
 
 ### 3.4.3 A3 — Runtime monitoring as continuous validation
 
-**Problem.** The V-Model assumes that validation is completed before deployment: once validated, the system is deployed and maintained. There is no level devoted to continuous post-deployment validation.
+**Problem.** The V-Model assumes that validation ends before deployment. Once validated, the system is deployed and maintained. There is no level for continuous validation after deployment.
 
-**Adaptation.** A horizontal level is added — Runtime Monitoring — fed by the intervention logs of the cage during operation, which feeds validation back continuously. The level recognises three facts that are specific to systems with AI: the operational distribution can differ from the testing one; failure modes that were not anticipated in the hazard analysis can emerge; and safety evidence has to be accumulated over time.
+**Adaptation.** A horizontal level called Runtime Monitoring is added. It is fed by the cage's intervention logs during operation, and it sends that information back to validation continuously. This level accepts three facts that are specific to AI systems: the operating distribution can be different from the test distribution; failure modes that the hazard analysis did not predict can appear; and safety evidence has to be collected over time.
 
-In this work the logging node is not an auxiliary component but the primary instrument of the level: the logs it produces during the experimental campaigns are continuous validation evidence within the project window, and in a real deployment the same mechanism would generate evidence indefinitely. The adaptation is coherent with the SOTIF philosophy and with the operation phase that Wang et al. (2024) use to organise SOTIF research, and it inherits from Mohseni et al. (2019) the categorisation of the *monitoring function* as an architectural category in its own right, taking it one step further: it raises it from a technical mechanism to an explicit level of the life cycle, with version-controlled artefacts and a defined role in the traceability matrix.
+In this work the logging node is not a helper component. It is the main tool of this level. The logs it produces during the experimental campaigns are continuous validation evidence within the project period, and in a real deployment the same mechanism would keep producing evidence with no end date. The adaptation fits the SOTIF approach and the operation phase that Wang et al. (2024) use to organise SOTIF research. From Mohseni et al. (2019) it takes the idea of the *monitoring function* as its own architectural category, and goes one step further: monitoring stops being only a technical mechanism and becomes an explicit level of the life cycle, with version-controlled artefacts and a defined place in the traceability matrix.
 
-### 3.4.4 A4 — Mandatory traceability as a hard constraint
+### 3.4.4 A4 — Required traceability as a hard constraint
 
-**Problem.** Traceability between levels is recommended but, in practice, not required: glue logic can exist without an explicit parent requirement. In classical systems this is tolerable because the behaviour can be inspected in its entirety.
+**Problem.** Traceability between levels is recommended but in practice not enforced. Glue code can exist without a parent requirement. In classical systems this is acceptable, because the whole behaviour can be inspected.
 
-**Specific problem in RL.** When a component is learned, the temptation to attribute behaviours to "emergent properties" is high. Without strict traceability, any behaviour can be justified retrospectively as something the policy learned, which empties engineering responsibility of its content.
+**Specific problem in RL.** When a component is learned, it is tempting to explain behaviours as "emergent properties". Without strict traceability, any behaviour can be explained afterwards as something the policy learned, and engineering responsibility loses its meaning.
 
-**Adaptation.** Bidirectional traceability moves from good practice to hard constraint, with five simultaneous obligations: every cage rule references at least one safety requirement; every requirement has at least one rule that implements it — or an explicit argument for why it does not require one; every hazard has at least one requirement that mitigates it or a documented accepted risk; every scenario references at least one requirement that it verifies; and every metric references at least one requirement to which it contributes evidence. An automated validator runs on every change and fails if it detects orphans in either direction.
+**Adaptation.** Two-way traceability changes from good practice to a hard constraint, with five obligations that all apply at once. Every cage rule points to at least one safety requirement. Every requirement has at least one rule that implements it, or an explicit reason why it does not need one. Every hazard has at least one requirement that reduces it, or a documented accepted risk. Every scenario points to at least one requirement that it verifies. Every metric points to at least one requirement for which it provides evidence. An automatic checker runs on every change and fails if it finds orphans in either direction.
 
 <img src="../figures/fig_3_2_check_traceability_flow.png" alt="Figure 3.2 — Flow of the traceability validator." width="470"/>
 
-*Figure 3.2 — Flow of the traceability validator, in four layers: loading of the living documents; extraction of identifiers defined by regular expressions over the headings; chain of constraints over the graph `H ↔ SR ↔ C ↔ SC` with the subgraph `SR ↔ M` hanging from the requirements node; and final aggregation with three possible outputs — all checks pass, orphan or invalid reference, or a warning in strict mode.*
+*Figure 3.2 — Flow of the traceability checker, in four layers: loading the living documents; extracting identifiers with regular expressions over the headings; checking the chain of constraints over the graph `H ↔ SR ↔ C ↔ SC`, with the subgraph `SR ↔ M` attached to the requirements node; and combining the results into one of three outputs: all checks pass, orphan or invalid reference, or a warning in strict mode.*
 
-The design consequence is indirect but important: the constraint simplifies the hazard analysis phase, because it forces the question "which rule am I going to have for this?" from the very first requirement. The result is requirements that are more operational and less abstract. The philosophy is close to the GSN patterns of AMLAS, but A4 goes one step further by turning traceability into a property verifiable by a tool instead of a documentary practice to be reviewed.
+This has an indirect but important effect on design. The constraint makes the hazard analysis easier, because from the very first requirement it forces the question "which rule will handle this?". The result is requirements that are more practical and less abstract. The idea is close to the GSN patterns of AMLAS, but A4 goes one step further by making traceability something a tool can check, instead of a documentation practice that someone has to review.
 
-### 3.4.5 A5 — Bounded operational validation and gap characterisation
+### 3.4.5 A5 — Bounded operational validation and gap measurement
 
-**Problem.** The acceptance test assumes a binary verdict against the requirements of the stakeholders and, implicitly, that the test conditions represent the operational ones. For a system trained in simulation this is false: the gap is a first-order risk, and a test passed in simulation does not imply safe operation in the real world.
+**Problem.** The acceptance test assumes a pass/fail verdict against the stakeholders' requirements and, without saying it, assumes that test conditions represent real operating conditions. For a system trained in simulation this is false. The gap is a major risk, and passing a test in simulation does not mean the system is safe in the real world.
 
-**Adaptation.** The level is reformulated as Operational Validation with two mandatory components: scenario-based validation linked to requirements, with coverage metrics over the ODD; and explicit and quantitative characterisation of the gap between the training environment and the operational environment, per metric and per relevant failure mode. The validation conclusion stops being "the system is safe" and becomes: *the system satisfies the requirements under the conditions of ODD X, with a measured gap of Y with respect to the training conditions, and with the following residual risks documented*.
+**Adaptation.** This level becomes Operational Validation, with two required parts. The first is scenario-based validation linked to requirements, with coverage metrics over the ODD. The second is an explicit, quantitative measurement of the gap between the training environment and the operating environment, for each metric and each relevant failure mode. The conclusion is no longer "the system is safe". It becomes: *the system meets the requirements under the conditions of ODD X, with a measured gap of Y compared with the training conditions, and with the following residual risks documented*.
 
-### 3.4.6 Synthesis
+### 3.4.6 Summary
 
 | ID | Adaptation | Problem of the classical V | Solution | Artefact |
 | --- | --- | --- | --- | --- |
-| A1 | Splitting the module design | The policy admits no a priori specification | Cage Spec (classical) + Training Spec (meta-design) | Ch. 5 and 7 |
-| A2 | Splitting the unit test | The policy admits no classical unit test | Cage tests + statistical behavioural evaluation | Test suite + Ch. 8 |
-| A3 | Runtime monitoring level | Static validation is not sufficient | Intervention logging as continuous evidence | Logging node + data |
-| A4 | Mandatory traceability | Orphans hide "emergent properties" | Bidirectional hard constraint `H↔SR↔C↔SC↔M` | Matrix + validator |
-| A5 | Bounded validation with gap | The simulation test does not represent operation | Verdict with limits + quantified gap | Ch. 9 and 10 |
+| A1 | Splitting the module design | The policy has no a priori specification | Cage Spec (classical) + Training Spec (meta-design) | Ch. 5 and 7 |
+| A2 | Splitting the unit test | The policy cannot be unit tested in the classical way | Cage tests + statistical behavioural evaluation | Test suite + Ch. 8 |
+| A3 | Runtime monitoring level | Static validation is not enough | Intervention logging as continuous evidence | Logging node + data |
+| A4 | Required traceability | Orphans hide "emergent properties" | Two-way hard constraint `H↔SR↔C↔SC↔M` | Matrix + checker |
+| A5 | Bounded validation with gap | The simulation test does not represent operation | Verdict with limits + measured gap | Ch. 9 and 10 |
 
 *Table 3.2 — The five adaptations to the classical V-Model.*
 
 <img src="../figures/fig_3_3_adapted_v_model.png" alt="Figure 3.3 — Adapted V-Model." width="480"/>
 
-*Figure 3.3 — V-Model adapted to AI. In grey, the elements inherited from the classical V; in colour, those that are new or modified by adaptations A1–A5.*
+*Figure 3.3 — V-Model adapted to AI. Grey elements come from the classical V; coloured elements are new or changed by adaptations A1–A5.*
 
-## 3.5 Operationalisation on the case study
+## 3.5 Applying the framework to the case study
 
-### 3.5.1 System under study and architectural decision
+### 3.5.1 System under study and architecture decision
 
-The system is a 1:14 scale radio-controlled vehicle with a monocular front camera as its primary sensor, an inertial unit and a motor encoder, with embedded computation on a board with ROS2 support. It is developed on two parallel platforms: the simulated one — Gazebo with native ROS2 integration, operated through a gymnasium–Gazebo–ROS2 interface that reuses an environment built by the author in earlier work — and the physical one, on a closed track with controlled lighting.
+The system is a 1:14 scale radio-controlled vehicle. Its main sensor is a single front camera, and it also has an inertial unit and a motor encoder, with onboard computing on a board that supports ROS2. It is developed on two platforms in parallel. One is simulated: Gazebo with native ROS2 integration, run through a gymnasium–Gazebo–ROS2 interface that reuses an environment the author built in earlier work. The other is physical: a closed track with controlled lighting.
 
-One architectural decision is relevant for the methodology and not only for the system. Initially the project adopted an explicit modular decomposition — perception, policy, cage, actuation and logging — with the learned component in a bounded position, in line with the recommendation of Salay et al. (2017) to avoid ML at the architectural level and to limit it to the unit level. Later on, the main system became an end-to-end camera variant: the policy is a CNN that learns perception and maps image to action.
+One architecture decision matters for the methodology and not only for the system. At first, the project used an explicit modular split (perception, policy, cage, actuation and logging), with the learned component kept in a limited position. This followed the advice of Salay et al. (2017) to avoid ML at the architectural level and keep it at unit level. Later, the main system became an end-to-end camera version, where the policy is a CNN that learns perception and maps the image to an action.
 
-The supersession is safe because the safety architecture is not replaced: the cage is kept and operates on its own deterministic lane estimator — a classical vision chain, separate from the CNN and therefore neither ground truth nor a learned network — so that the pixels enter the policy but the envelope reasons over an auditable and independent state. The adaptations that motivated the original decision are still valid: A1, because cage and policy are still different modules; A2, because the cage is verifiable independently of the policy; and A4, because the traceability chain does not change. The cost accepted is the other original reason — the larger training volume that the end-to-end approach demands — which is budgeted in Chapter 7. The state track is kept frozen as a control arm in order to isolate the cost of perception.
+This change is safe because the safety architecture stays the same. The cage is kept and works on its own deterministic lane estimator. This estimator is a classical vision pipeline, separate from the CNN, so it is neither ground truth nor a learned network. The pixels go into the policy, but the envelope works on a state that can be audited and is independent. The reasons for the original decision still hold. A1 holds because cage and policy are still different modules. A2 holds because the cage can be verified without the policy. A4 holds because the traceability chain does not change. The cost that was accepted is the other original reason: end-to-end learning needs more training, and Chapter 7 plans for this. The state track is kept frozen as a control arm to isolate the cost of perception.
 
-### 3.5.2 Mapping of the framework onto the case
+### 3.5.2 Mapping the framework onto the case
 
 | Level of the adapted V-Model | Artefact in the case study | Chapter |
 | --- | --- | --- |
@@ -130,72 +130,72 @@ The supersession is safe because the safety architecture is not replaced: the ca
 | L5 — Implementation | ROS2 cage node + trained policy | 6, 7 |
 | L4a' — Cage unit tests | Deterministic cage suite | 6 |
 | L4b' — Policy behavioural evaluation | Statistical analysis over the scenario library | 8 |
-| L3' — Integration test | Tests of the complete chain | 6 |
+| L3' — Integration test | Tests of the full chain | 6 |
 | L2' — Scenario-based test | Families `SC-NOM` / `SC-EDGE` / `SC-PERT` / `SC-FRONT` | 6, 8 |
 | L1' — Operational validation | Campaign + sim-to-real gap + verdict per requirement | 9, 10 |
-| Runtime monitoring (A3) | Logging node + intervention logs (transversal) | 5–10 |
+| Runtime monitoring (A3) | Logging node + intervention logs (across levels) | 5–10 |
 
 *Table 3.3 — Mapping of the framework onto the case study.*
 
-The mapping is the first check that the framework can be operationalised: every level of the V has an identifiable artefact, a chapter where it is developed, and a position in the traceability matrix.
+This mapping is the first check that the framework can be put into practice. Every level of the V has an artefact, a chapter where it is developed, and a place in the traceability matrix.
 
-### 3.5.3 Phase structure
+### 3.5.3 Phases
 
-The project is organised in seven sequential phases, each one with defined deliverables and a review gate at its close that decides whether to proceed to the next one. The phase structure is orthogonal to the V-Model: one phase produces artefacts of several levels at the same time, and one level can be built across several phases. In summary: the initial phase establishes the framework and the templates; the next one produces the ODD, the hazard analysis and the requirements; the third one develops the cage and its tests; the fourth one defines the training specification and the scenario library; the fifth one executes the training and the behavioural evaluation; the sixth one deploys physically and characterises the gap; and the last one consolidates the evidence and closes the matrix.
+The project has seven phases in sequence. Each phase has defined deliverables and ends with a review gate that decides whether to move on. The phases are independent of the V-Model levels: one phase can produce artefacts for several levels, and one level can be built over several phases. In short: the first phase sets up the framework and the templates; the second produces the ODD, the hazard analysis and the requirements; the third develops the cage and its tests; the fourth defines the training specification and the scenario library; the fifth runs the training and the behavioural evaluation; the sixth deploys on the physical platform and measures the gap; and the last one collects the evidence and closes the matrix.
 
 <img src="../figures/fig_3_4_project_phases.png" alt="Figure 3.4 — Project phases against the levels of the adapted V-Model." width="480"/>
 
-*Figure 3.4 — Project phases against the levels of the adapted V-Model. The monitoring band extends horizontally because it becomes operative as soon as the cage node exists and persists until the close; the traceability band shows how the chain `H ↔ SR ↔ C ↔ SC ↔ M` is completed phase by phase.*
+*Figure 3.4 — Project phases compared with the levels of the adapted V-Model. The monitoring band runs horizontally because it starts working as soon as the cage node exists and continues until the end. The traceability band shows how the chain `H ↔ SR ↔ C ↔ SC ↔ M` is completed phase by phase.*
 
-One point deserves emphasis because it is where the framework stops being a proposal and becomes practice: A4 comes fully into force from the hazard analysis phase onwards. The validator runs on every change of the hazard register and of the requirements specification, requiring that every hazard link to at least one requirement that mitigates it — or to a documented accepted risk — and vice versa. From that moment the cycle "document → link → validate" runs on every commit.
+One point is worth stressing, because it is where the framework stops being a proposal and becomes practice. A4 is fully active from the hazard analysis phase onwards. The checker runs on every change to the hazard register and the requirements specification. It requires every hazard to link to at least one requirement that reduces it, or to a documented accepted risk, and the other way round. From then on, the cycle "document → link → check" runs on every commit.
 
-## 3.6 Instrument choices
+## 3.6 Choice of tools
 
-Each instrument choice is justified against the alternatives that were discarded, so that decisions which would otherwise remain implicit leave an auditable record. Only the simulator is argued here, because it is the choice the methodology depends on: it is what adaptation A5 has to measure the gap against. The remaining ones — the learning algorithm and library, the physical platform, the measurement instrumentation and the reproducibility tooling — are argued with the same structure in Appendix C, together with the clause-by-clause normative mapping. The middleware is not argued separately because its choice sits inside the simulator's: native ROS2 integration is precisely the first of the four reasons above.
+Each tool choice is explained against the alternatives that were rejected, so that decisions that would otherwise stay implicit leave a record that can be audited. Only the simulator is discussed here, because the methodology depends on it: it is the reference that adaptation A5 measures the gap against. The other choices (the learning algorithm and library, the physical platform, the measurement equipment and the reproducibility tools) are discussed in the same way in Appendix C, together with the clause-by-clause mapping to the standards. The middleware is not discussed separately because it comes with the simulator choice: native ROS2 integration is the first of the four reasons below.
 
-**Simulator: Gazebo.** The choice differs from dominant practice, where CARLA is the reference, and it rests on four reasons. *Native ROS2 integration*: Gazebo is co-developed with ROS and shares primitives without intermediate layers; since the whole architecture is ROS2 by design, hosting the simulator in the same graph removes failure surface and reduces the ambiguity about where latencies occur, which directly affects the fidelity of the integration metrics. *Reuse of earlier work*: the author has an environment with the vehicle modelled and the track configured; reusing it frees time for the methodological contribution, which is the real object of the thesis — coherent with the *design science* approach, where the contribution is not in the instrument. *Available training interface*, which allows a clean separation of algorithm, environment and system, and therefore facilitates A1. *Modest computation requirements*, which is relevant for an individual thesis without dedicated infrastructure.
+**Simulator: Gazebo.** This choice is different from common practice, where CARLA is the reference. There are four reasons. *Native ROS2 integration*: Gazebo is developed together with ROS and shares its basic building blocks without extra layers. The whole architecture is ROS2 by design, so running the simulator in the same graph removes possible failure points and makes it clearer where delays happen, which directly affects how accurate the integration metrics are. *Reuse of earlier work*: the author already has an environment with the vehicle modelled and the track set up. Reusing it frees time for the methodological contribution, which is the real subject of the thesis. This fits the *design science* approach, where the contribution is not the tool. *An existing training interface*, which keeps algorithm, environment and system cleanly separated and so makes A1 easier. *Low computing requirements*, which matters for an individual thesis without dedicated infrastructure.
 
-The choice carries two trade-offs that should be recognised. The visual fidelity of Gazebo is lower than that of the photorealistic engines; for a camera-based policy this can translate into a more pronounced sim-to-real gap. Adaptation A5 is designed precisely to make that effect visible and to measure it, not to hide it. And the autonomous driving community mostly uses CARLA, so there are no reusable scenario libraries in Gazebo format: the one for this project has to be built explicitly.
+The choice has two downsides that need to be stated. Gazebo's visual quality is lower than that of photorealistic engines, and for a camera-based policy this can mean a larger sim-to-real gap. Adaptation A5 exists to make this effect visible and to measure it, not to hide it. Also, most of the autonomous driving community uses CARLA, so there are no ready-made scenario libraries for Gazebo, and this project has to build its own.
 
-Discarded alternatives: CARLA, the strongest candidate, because of its computation cost and because it requires a ROS2 bridge with its own complications; Highway-Env and derivatives, because they lack realistic sensors and work over abstract observations, which makes them unsuitable for camera-based policies; LGSVL, discontinued; and AirSim, with an aerospace focus and development on hold.
+Rejected alternatives: CARLA, the strongest option, because of its computing cost and because it needs a ROS2 bridge that brings its own problems; Highway-Env and similar tools, because they have no realistic sensors and use abstract observations, which makes them unsuitable for camera-based policies; LGSVL, which has been discontinued; and AirSim, which focuses on aerial vehicles and is no longer being developed.
 
-## 3.7 How the framework itself will be evaluated
+## 3.7 How the framework itself is evaluated
 
-The question in this section is whether the methodology was useful for producing the system, not whether the system turned out to be useful: the two are separable, because a successful framework applied to a modest system is possible, and so is the opposite. The evaluation is articulated in five criteria, each one with an indicator that can be measured at the close:
+This section asks whether the methodology helped to build the system, not whether the system turned out to be useful. These are two different questions: a good framework can be applied to a modest system, and the other way round. The evaluation uses five criteria, each with an indicator that can be measured at the end:
 
-1. **Traceability integrity.** Indicator: orphans detected by the validator in the last run. Success: zero.
-2. **Requirement coverage by evidence.** Indicator: percentage of requirements with a verdict backed by quantitative evidence. Success: 100 % have a verdict, even if the verdict is negative or partial. An uncomfortable verdict is preferable to an omission.
-3. **Hazard anticipation.** Indicator: proportion of hazards that actually appeared, against the unanticipated ones that emerged. Success: most of the observed ones were anticipated, and the unanticipated ones are auditable and can be categorised.
-4. **Adoption cost.** Indicator: time spent on framework artefacts against purely technical artefacts. Success: cost proportional to the observed benefit.
-5. **Productivity of the matrix.** Indicator: technical changes whose impact analysis was accelerated by the matrix. Success: documented cases where it provided observable value.
+1. **Traceability integrity.** Indicator: orphans found by the checker in the last run. Success: zero.
+2. **Requirement coverage by evidence.** Indicator: percentage of requirements with a verdict supported by quantitative evidence. Success: 100 % have a verdict, even if it is negative or partial. An uncomfortable verdict is better than a missing one.
+3. **Hazard anticipation.** Indicator: how many of the hazards that actually appeared were predicted, compared with those that were not. Success: most observed hazards were predicted, and the unexpected ones can be audited and categorised.
+4. **Adoption cost.** Indicator: time spent on framework artefacts compared with purely technical artefacts. Success: the cost is in proportion to the benefit observed.
+5. **Usefulness of the matrix.** Indicator: technical changes where the matrix made the impact analysis faster. Success: documented cases where it clearly added value.
 
-The evaluation has three declared limits: it is internal to a single project and without a control group, so the inference is by plausibility and not by controlled experimentation; the author bias is bounded but not eliminated; and the experimental window is finite, whereas the benefits of A3 would appear over much longer horizons.
+The evaluation has three stated limits. It is internal to one project and has no control group, so conclusions are based on plausibility and not on controlled experiments. The author bias is limited but not removed. And the experimental period is short, while the benefits of A3 would show up over much longer periods.
 
 ## 3.8 Relation to the standards
 
-The framework does not replace the standards: it articulates them. Each adaptation has an identifiable normative anchor, summarised in Table 3.4; the complete mapping, clause by clause, is given in Appendix C.
+The framework does not replace the standards. It connects them. Each adaptation has a clear anchor in the standards, summarised in Table 3.4. The full clause-by-clause mapping is in Appendix C.
 
-| Adaptation | Main normative anchor |
+| Adaptation | Main anchor in the standards |
 | --- | --- |
-| A1 — Cage Spec + Training Spec | TR 5469 §7 (three-stage realisation principle); PAS 8800 (adaptation of the module design) |
+| A1 — Cage Spec + Training Spec | TR 5469 §7 (three-stage realisation principle); PAS 8800 (adapting the module design) |
 | A2 — Cage tests + behavioural evaluation | TR 5469 (Class I / Class II elements); ISO 26262 Part 6 for the classical part |
-| A3 — Runtime monitoring | SOTIF (insufficiency of static validation); operation phase as surveyed by Wang et al. (2024) |
+| A3 — Runtime monitoring | SOTIF (static validation is not enough); operation phase as described by Wang et al. (2024) |
 | A4 — Hard traceability | ISO 26262 Part 8 (requirements management); AMLAS (GSN patterns); UL 4600 (claim–argument–evidence) |
-| A5 — Bounded validation + gap | SOTIF (unanticipated conditions); UL 4600 (declared limits of the safety case) |
+| A5 — Bounded validation + gap | SOTIF (unexpected conditions); UL 4600 (stated limits of the safety case) |
 
-*Table 3.4 — Normative anchor of the five adaptations.*
+*Table 3.4 — Anchors in the standards for the five adaptations.*
 
-One clarification about the hazard analysis: the HARA adopted here is simplified with respect to the one prescribed by ISO 26262, and it is not developed in parallel to the V but inside it, occupying exactly the position that the standard reserves for the output of the formal HARA. The simplifications and their justification are detailed in Chapter 4.
+A note on the hazard analysis: the HARA used here is simpler than the one ISO 26262 prescribes. It is not done alongside the V but inside it, in exactly the place where the standard puts the output of the formal HARA. Chapter 4 describes the simplifications and why they were made.
 
 ## 3.9 Limitations of the methodology
 
-It is better to declare them in cold blood, before the reader identifies them in the heat of the closing chapters.
+It is better to state them clearly now, before the reader finds them in the final chapters.
 
-- **Construct validity limited by the single case.** Generalisation rests on structural plausibility, not on multi-case evidence. Mitigation: Chapter 12 distinguishes which parts are transferable and which ones require rethinking.
-- **Dependence on a simulation of moderate visual fidelity.** The training runs entirely in Gazebo, which can accentuate the gap in the visual features captured by the camera. Mitigation: A5 makes it visible and Chapter 9 quantifies it; replicating the experiment on a photorealistic simulator remains a natural extension.
-- **The five adaptations are not exhaustive.** Others would be defensible — for example a level devoted to data engineering, following the data-centric philosophy of TR 5469 and AMLAS. The five adopted here are justified individually, but there is no argument that they are the only possible ones.
-- **The framework does not eliminate the author bias**, it only exposes it to audit.
+- **Construct validity is limited by having one case.** Generalisation relies on structure, not on evidence from several cases. Mitigation: Chapter 12 separates the parts that can be reused from those that need to be rethought.
+- **The simulation has only moderate visual quality.** All training happens in Gazebo, which can make the gap larger for the visual features the camera sees. Mitigation: A5 makes the gap visible and Chapter 9 measures it. Repeating the experiment on a photorealistic simulator is a natural next step.
+- **The five adaptations are not a complete list.** Others could be justified, for example a level for data engineering, following the data-centred approach of TR 5469 and AMLAS. Each of the five chosen here is justified, but there is no argument that they are the only possible ones.
+- **The framework does not remove the author bias.** It only makes it open to audit.
 
-## 3.10 Transition
+## 3.10 Next steps
 
-With the framework defined, the following chapters execute it. Chapter 4 materialises the upper left branch of the V — operational domain, hazard analysis and requirement derivation — and produces the first artefacts on which A4 operates as a hard constraint. From there on, each chapter occupies one level of the V and closes its correspondence with the symmetric level of the right branch.
+With the framework defined, the next chapters apply it. Chapter 4 covers the upper left branch of the V (operational domain, hazard analysis and requirement derivation) and produces the first artefacts that A4 checks as a hard constraint. After that, each chapter covers one level of the V and closes its link with the matching level on the right branch.

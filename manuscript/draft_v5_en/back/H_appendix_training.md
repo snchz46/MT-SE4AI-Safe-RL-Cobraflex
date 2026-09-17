@@ -2,8 +2,7 @@
 
 ## H.1 Reward function
 
-The reward is identical on both tracks and is computed over the
-**ground-truth** state plus progress, and is agnostic to the observation:
+The reward is the same on both tracks. It is calculated on the **ground-truth** state plus progress, so it does not depend on the observation:
 
 ```text
 r = w_fwd · max(progress, 0)
@@ -13,11 +12,7 @@ r = w_fwd · max(progress, 0)
   - w_term · [terminated_off_road]
 ```
 
-where `progress` is the normalised advance along the centre
-line, `Δsteering` is the change in the raw steering of the policy
-(not the post-cage one; §7.2.2), and `[terminated_off_road]` is 1 only if the
-episode ends by leaving the road (not by a C-05 emergency; §7.2.4).
-The nominal weights (subject to experimental tuning) are:
+where `progress` is the normalised progress along the centre line, `Δsteering` is the change in the policy's raw steering (not the value after the cage; §7.2.2), and `[terminated_off_road]` is 1 only if the episode ends because the vehicle left the road (not because of a C-05 emergency; §7.2.4). The nominal weights (which may be tuned experimentally) are:
 
 | Parameter | Value | Rationale |
 | --- | --- | --- |
@@ -27,20 +22,11 @@ The nominal weights (subject to experimental tuning) are:
 | `w_ds` (steer_delta) | 0.20 | Actuation smoothness (over the raw Δsteering, v1.2; §7.2.2) |
 | `w_term` (termination) | 25.0 | Discourages leaving the road |
 
-The forward term uses normalised progress (not speed): since the
-speed is fixed, a term `w_fwd·speed` would be a constant that does not
-discriminate between behaviours and left `explained_variance ≈ 0` (F3 review,
-first run). The high termination penalty (25.0) prioritises staying on the
-**road**; only the road departure applies it — the C-05
-emergency ends the episode with no penalty (the intervention of the cage is dynamics, not
-punishment; D-34, §7.2.4). The weights are `[provisional, M-P1..M-P4]`; detail
-in `docs/10_reward_function.md`.
+The forward term uses normalised progress, not speed. Since speed is fixed, a `w_fwd·speed` term would be a constant that does not tell behaviours apart, and it left `explained_variance ≈ 0` (F3 review, first run). The high termination penalty (25.0) gives priority to staying on the **road**. It only applies when the vehicle leaves the road: a C-05 emergency ends the episode with no penalty, because the cage's intervention is part of the dynamics and not a punishment (D-34, §7.2.4). The weights are `[provisional, M-P1..M-P4]`. Details are in `docs/10_reward_function.md`.
 
 ## H.2 Hyperparameters
 
-The table lists the complete effective configuration. The E-main column is
-the one of the camera run `ppo_newcam_complex_b_2024_1M`; the F baseline is the one of the
-state run `ppo_train_2024_200k`.
+The table shows the full effective configuration. The E-main column is the camera run `ppo_newcam_complex_b_2024_1M`, and the F baseline is the state run `ppo_train_2024_200k`.
 
 | Parameter | E-main (camera) | Baseline (F, state) | Source / note |
 | --- | --- | --- | --- |
@@ -61,22 +47,11 @@ state run `ppo_train_2024_200k`.
 | `max_grad_norm` | 0.5 | 0.5 | SB3 default |
 | `device` | auto (CUDA if present) | cpu | E: the CNN benefits from a GPU |
 
-The four stability levers of the E-main run (`target_kl`, linear LR
-anneal, `VecNormalize(norm_reward)` and `clip_range_vf`) do not exist in the
-F baseline: they were added after observing that PPO over a CNN with visual
-randomization is markedly less stable than over the state vector (§7.3).
-`norm_obs` is kept False, so that evaluation/inference is not
-affected and `ep_rew_mean` in the curve stays raw (comparable with the
-baseline). The camera budget is ≥ 1M steps (D-41 accepts the higher
-data demand of the end-to-end approach); a pilot of ~20k validates the loop
-before committing the budget.
+The four stability settings of the E-main run (`target_kl`, linear LR decay, `VecNormalize(norm_reward)` and `clip_range_vf`) are not in the F baseline. They were added after seeing that PPO with a CNN and visual randomization is much less stable than with the state vector (§7.3). `norm_obs` is left False, so evaluation and inference are not affected and `ep_rew_mean` in the curve stays unnormalised (comparable with the baseline). The camera budget is at least 1M steps (D-41 accepts that the end-to-end approach needs more data), and a pilot of about 20k steps checks that the loop works before that budget is spent.
 
 ## H.3 Comparative study of algorithms and checkpoints
 
-Chain run → checkpoint → evaluation of the later study. All the evaluation
-values come from the nominal scenario with the randomization switched off. The peak indicated
-belongs to the training curve and does not always coincide with the checkpoint
-cadence, so the final selection is resolved by closed-loop evaluation.
+The table follows the chain run → checkpoint → evaluation of the later study. All evaluation values come from the nominal scenario with randomization turned off. The peak shown is the peak of the training curve and does not always match the saved checkpoints, so the final choice is made by closed-loop evaluation.
 
 | Action · configuration | Training evidence | Checkpoint evaluated | SC-NOM-01, enforcement | SC-NOM-01, monitoring |
 | --- | --- | --- | --- | --- |
@@ -89,6 +64,4 @@ cadence, so the final selection is resolved by closed-loop evaluation.
 | **2-D**, `ent_coef=0.005`, seed 2024 · `sac_gz2d_tuned_entfix_2024_1M` | peak 558.7 @ 77,825; rise without abrupt cycles; stop at 176,129 | 75k (`b76724c7…`) | **4.32 laps; 17.1 mm; 0 emerg.**; 17.1 % C-06 | 4.31 laps; 16.3 mm; 0 emerg. |
 | **2-D**, `ent_coef=0.005`, seed 42 · `sac_gz2d_tuned_entfix_42_120k` | peak 270.9 @ 47,105; replica bounded to 120,833 | 50k (`cbde3836…`) | **4.97 laps; 18.2 mm; 0 emerg.**; 46.4 % C-06 | 4.84 laps; 22.6 mm; 39 steps with a counterfactual C-05 trigger |
 
-*Chain run → checkpoint → evaluation of the later SAC
-study. The intervention percentages in monitoring are counterfactual
-activations: they are logged, but the action of the cage is not applied.*
+*Chain run → checkpoint → evaluation of the later SAC study. The intervention percentages in monitoring are counterfactual activations: they are logged, but the cage's action is not applied.*

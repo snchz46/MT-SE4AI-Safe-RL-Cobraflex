@@ -1,14 +1,8 @@
 # Appendix E — Cage parameters
 
-Full content of the version-controlled parameter file, exactly as the running node consumes
-it. Every experimental run records the cryptographic identifier of this file
-together with the rest of the reproducibility metadata, so that any result of
-Chapter 8 is linked unambiguously to the exact configuration that produced it.
+This appendix reproduces the full version-controlled parameter file, exactly as the node reads it at runtime. Every experimental run stores the cryptographic identifier of this file together with the other reproducibility metadata, so any result in Chapter 8 is clearly linked to the exact configuration that produced it.
 
-The values marked as provisional are waiting for calibration on the physical platform. Their
-resolution cycle is defined: measure, update the file, increment the version,
-re-run the verification suite, re-run the affected scenarios and record the
-change in the change log.
+The values marked as provisional are waiting to be calibrated on the physical platform. The process to close them is defined: measure, update the file, increase the version, run the verification suite and the affected scenarios again, and record the change in the change log.
 
 ```yaml
 # =============================================================

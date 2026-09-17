@@ -1,430 +1,128 @@
 # Anexo C — Elecciones de instrumento y mapeo normativo
 
-Desarrollo completo de §3.6 y §3.8. Cada elección se presenta con su justificación y con las alternativas descartadas y el motivo del descarte, de modo que la decisión sea auditable y no meramente declarada.
+Este anexo desarrolla por completo §3.6 y §3.8. Cada elección se presenta con su justificación, las alternativas descartadas y el motivo por el que se descartaron, para que la decisión se pueda auditar y no quede solo enunciada.
 
 # C.1 Instrumentos
 
-
-Esta sección documenta las elecciones de instrumento que articulan el marco
-metodológico sobre el caso de estudio. La intención no es enumerar
-herramientas, sino justificar cada elección frente a las alternativas
-descartadas, dejando registro auditable de decisiones que de otro modo
-quedarían implícitas. Cada subsección sigue un patrón uniforme:
-herramienta elegida, justificación, alternativas descartadas con motivo
-del descarte.
+Esta sección recoge las herramientas con las que el marco metodológico se aplica al caso de estudio. No se trata de hacer una lista de herramientas, sino de justificar cada elección frente a las alternativas descartadas y dejar un registro auditable de decisiones que de otro modo quedarían sin explicar. Todas las subsecciones siguen el mismo esquema: herramienta elegida, justificación y alternativas descartadas con su motivo.
 
 ## C.1.1 Simulador
 
-**Elección: Gazebo** (Koenig y Howard, 2004), en su variante moderna con
-integración ROS2 nativa, operada a través de una interfaz
-gymnasium-Gazebo-ROS2 que reutiliza un entorno previamente construido por
-el autor en un trabajo de investigación anterior. La elección se
-justifica por cuatro razones que conviene articular con honestidad, dado
-que difiere de la práctica dominante en investigación de conducción
-autónoma —donde CARLA es el simulador de referencia—.
+**Elección: Gazebo** (Koenig y Howard, 2004), en su versión moderna con integración ROS2 nativa, usado a través de una interfaz gymnasium-Gazebo-ROS2 que reutiliza un entorno que el autor construyó en un trabajo de investigación anterior. Hay cuatro motivos, y conviene explicarlos con claridad, porque la elección se aparta de lo habitual en investigación de conducción autónoma, donde el simulador de referencia es CARLA.
 
-Primero, *integración ROS2 nativa*. Gazebo es co-desarrollado con ROS por
-Open Robotics y comparte primitivas (tópicos, transformadas, herramientas
-de visualización) sin necesidad de capas de bridge intermedias. Toda la
-arquitectura del proyecto descrita en el Capítulo 5 —percepción, policy,
-cage, actuación, logger— es ROS2 desde su concepción; alojar el simulador
-en el mismo grafo elimina superficie de falla y reduce la ambigüedad
-sobre dónde ocurren latencias o desincronizaciones, lo que tiene
-consecuencias directas para la fidelidad de las métricas de integración
-(M-I).
+Primero, *integración ROS2 nativa*. Open Robotics desarrolla Gazebo junto con ROS, y los dos comparten piezas básicas (tópicos, transformadas, herramientas de visualización) sin necesidad de capas de puente intermedias. Toda la arquitectura del proyecto descrita en el Capítulo 5 (percepción, policy, cage, actuación, logger) es ROS2 desde el principio. Tener el simulador en el mismo grafo elimina posibles puntos de fallo y deja más claro dónde se producen retardos o desincronizaciones, lo que influye directamente en la fiabilidad de las métricas de integración (M-I).
 
-Segundo, *reutilización del trabajo previo del autor*. El autor dispone
-de un entorno Gazebo previamente construido para una tarea afín, con el
-vehículo a escala modelado y la pista controlada configurada.
-Reutilizar este entorno, en lugar de reconstruirlo desde cero en otra
-plataforma, libera tiempo de proyecto para concentrarse en el aporte
-metodológico —las adaptaciones A1–A5 y su materialización—, que es el
-verdadero objeto de la tesis. Esta decisión es coherente con el enfoque
-*design science* explicitado en §3.2.1: la contribución no está en el
-simulador sino en el marco, y la elección de instrumento debe minimizar
-el coste accidental.
+Segundo, *reutilizar el trabajo previo del autor*. El autor ya tenía un entorno Gazebo construido para una tarea parecida, con el vehículo a escala modelado y la pista controlada preparada. Reutilizarlo, en lugar de construirlo de nuevo en otra plataforma, deja más tiempo para la aportación metodológica (las adaptaciones A1–A5 y su puesta en práctica), que es el verdadero tema de la tesis. Esto encaja con el enfoque *design science* de §3.2.1: la aportación no está en el simulador sino en el marco, y la elección de herramienta debe reducir al mínimo el coste que no aporta nada.
 
-Tercero, *interfaz gymnasium-Gazebo-ROS2 para entrenamiento*. La
-interfaz que une el bucle de entrenamiento (Stable-Baselines3 sobre
-gymnasium) con el simulador (Gazebo, vía ROS2) está disponible como
-tooling abierto y permite una separación limpia entre algoritmo, entorno
-y sistema. Esto facilita el cumplimiento de la adaptación A1 (Training
-Specification como meta-design): los hiperparámetros, la función de
-recompensa y el ODD de entrenamiento se especifican en un módulo Python
-separado, sin acoplamiento al simulador subyacente.
+Tercero, *interfaz gymnasium-Gazebo-ROS2 para el entrenamiento*. La interfaz que une el bucle de entrenamiento (Stable-Baselines3 sobre gymnasium) con el simulador (Gazebo, vía ROS2) existe como herramienta abierta y separa con claridad algoritmo, entorno y sistema. Esto facilita cumplir la adaptación A1 (Training Specification como meta-diseño): los hiperparámetros, la función de recompensa y el ODD de entrenamiento se definen en un módulo Python aparte, sin depender del simulador que hay debajo.
 
-Cuarto, *requisitos de cómputo más modestos*. Gazebo opera sobre
-hardware menos exigente que CARLA, lo que es relevante para una tesis
-individual sin acceso a infraestructura de cómputo dedicada y permite
-acelerar el ciclo de iteración durante el desarrollo del Training Spec.
+Cuarto, *menos necesidades de cómputo*. Gazebo funciona en hardware menos potente que CARLA. Esto importa en una tesis individual sin infraestructura de cómputo dedicada, y permite iterar más rápido mientras se desarrolla el Training Spec.
 
-Esta elección lleva consigo dos compromisos que conviene reconocer
-abiertamente. Por un lado, la fidelidad visual de Gazebo es inferior a
-la que ofrece el motor Unreal Engine subyacente a CARLA; para una policy
-basada en cámara monocular, esto puede traducirse en un gap sim-to-real
-más pronunciado de lo que se observaría con un simulador fotorrealista.
-La adaptación A5 del marco —caracterización empírica del gap— está
-precisamente diseñada para hacer este efecto visible y medirlo, no para
-ocultarlo (cf. §3.9 y Capítulo 9). Por otro lado, la comunidad de
-investigación específica de conducción autónoma usa mayoritariamente
-CARLA, lo que limita la disponibilidad inmediata de scenario libraries
-reutilizables en formato Gazebo; esto supone que la scenario library del
-proyecto debe construirse explícitamente, lo cual queda dentro del
-alcance del Capítulo 6.
+La elección tiene dos inconvenientes que hay que reconocer abiertamente. Por un lado, la calidad visual de Gazebo es menor que la del motor Unreal Engine que usa CARLA. Para una policy basada en una cámara monocular, esto puede dar un gap sim-to-real mayor que con un simulador fotorrealista. La adaptación A5 del marco (medición empírica del gap) está pensada precisamente para hacer visible este efecto y medirlo, no para ocultarlo (ver §3.9 y Capítulo 9). Por otro lado, la comunidad de conducción autónoma usa sobre todo CARLA, así que no hay bibliotecas de escenarios listas para usar en formato Gazebo. Por eso la biblioteca de escenarios del proyecto hay que construirla, algo que entra en el alcance del Capítulo 6.
 
-Alternativas consideradas y descartadas. CARLA (Dosovitskiy et al.,
-2017) es el candidato más fuerte y la elección por defecto en
-investigación de conducción autónoma reciente; ofrece fidelidad
-sensorial superior y un ecosistema maduro de benchmarks, pero requiere
-*bridge* ROS2 con sus propias complicaciones, y su mayor coste de cómputo es un freno
-operativo para una tesis individual. Highway-Env y otros entornos
-derivados de Gym, sin sensores realistas, con espacio de observación
-abstracto, no adecuados para políticas basadas en cámara. LGSVL,
-proyecto discontinuado en 2022 con ecosistema en descomposición.
-**AirSim**, foco aeroespacial con soporte automotriz secundario y
-desarrollo en pausa.
+Alternativas consideradas y descartadas. CARLA (Dosovitskiy et al., 2017) es la opción más fuerte y la elección por defecto en la investigación reciente de conducción autónoma. Ofrece mejor calidad de sensores y un ecosistema maduro de benchmarks, pero necesita un *bridge* ROS2 con sus propios problemas, y su mayor coste de cómputo es un freno práctico para una tesis individual. Highway-Env y otros entornos derivados de Gym no tienen sensores realistas y usan un espacio de observación abstracto, así que no sirven para políticas basadas en cámara. LGSVL es un proyecto abandonado en 2022, con un ecosistema que se está deshaciendo. **AirSim** está centrado en vehículos aéreos, con el soporte para coches en segundo plano, y su desarrollo está parado.
 
 ## C.1.2 Algoritmo de aprendizaje por refuerzo
 
-**Elección: PPO** —*Proximal Policy Optimization*— (Schulman et al.,
-2017). PPO se impone por cuatro motivos coherentes con el marco
-metodológico. Primero, *estabilidad de entrenamiento*: el *clipped
-surrogate objective* limita el tamaño de cada actualización de la política sin requerir
-restricción explícita de KL, lo que favorece un entrenamiento estable y la
-reproducibilidad —propiedad importante para un
-trabajo individual con limitada compute para *sweeps* exhaustivos—.
-Segundo, *interpretabilidad del Training Spec*: al ser *on-policy*, los
-hiperparámetros tienen un significado semántico relativamente directo
-(tamaño de rollout, épocas por update, ratio de clipping, coeficiente de
-entropía), lo que facilita escribir el Training Spec del nivel L4b como
-documento legible. Tercero, *soporte en herramientas abiertas*: la
-implementación de Stable-Baselines3 está madura, ampliamente usada, y
-admite integración directa con Gazebo a través de la interfaz
-gymnasium-Gazebo-ROS2 mencionada en §3.6. Cuarto,
-*compatibilidad con extensiones*: si en futuras iteraciones la tesis
-explorase *constrained RL* (al estilo de RECPO de Zhao et al., 2024),
-PPO admite extensión natural a CMDP.
+**Elección: PPO**, *Proximal Policy Optimization* (Schulman et al., 2017). PPO se elige por cuatro motivos que encajan con el marco metodológico. Primero, *entrenamiento estable*: el *clipped surrogate objective* limita el tamaño de cada actualización de la política sin necesitar una restricción explícita de KL. Esto favorece un entrenamiento estable y la reproducibilidad, algo importante en un trabajo individual con poco cómputo para hacer *sweeps* completos. Segundo, *un Training Spec fácil de interpretar*: como es *on-policy*, sus hiperparámetros tienen un significado bastante directo (tamaño del rollout, épocas por actualización, ratio de clipping, coeficiente de entropía), lo que facilita escribir el Training Spec del nivel L4b como un documento legible. Tercero, *buen soporte en herramientas abiertas*: la implementación de Stable-Baselines3 es madura, muy usada y se integra directamente con Gazebo a través de la interfaz gymnasium-Gazebo-ROS2 de §3.6. Cuarto, *compatibilidad con extensiones*: si más adelante la tesis explorase *constrained RL* (como RECPO de Zhao et al., 2024), PPO se puede extender de forma natural a CMDP.
 
-Alternativas consideradas y descartadas: SAC (Haarnoja et al., 2018)
-es competitivo en eficiencia de muestras y estable entre semillas aleatorias,
-pero su carácter *off-policy* hace el Training Spec menos interpretable
-—la noción de "qué política produjo qué experiencia" se difumina en el
-*replay buffer*—, y su naturaleza estocástica con *temperature tuning*
-añade complejidad al diseño del experimento; DDPG / TD3 (deterministas
-*off-policy*) fueron superados por SAC en las tareas más difíciles de los
-benchmarks de Haarnoja et al. (2018), donde DDPG se describe además como
-frágil ante los hiperparámetros; A3C / A2C fueron menos eficientes en
-muestras que PPO en los benchmarks de Schulman et al. (2017).
+Alternativas consideradas y descartadas: SAC (Haarnoja et al., 2018) es competitivo en eficiencia de muestras y estable entre semillas, pero al ser *off-policy* hace que el Training Spec sea menos fácil de interpretar (la idea de "qué política produjo qué experiencia" se pierde en el *replay buffer*), y su naturaleza estocástica con *temperature tuning* complica el diseño del experimento. DDPG / TD3 (deterministas y *off-policy*) quedaron por detrás de SAC en las tareas más difíciles de los benchmarks de Haarnoja et al. (2018), donde además se describe DDPG como frágil frente a los hiperparámetros. A3C / A2C fueron menos eficientes en muestras que PPO en los benchmarks de Schulman et al. (2017).
 
 ## C.1.3 Bucle de aprendizaje y herramientas de implementación
 
-- **Stable-Baselines3** como implementación de PPO. Justificación:
-  estabilidad, comunidad, integración con *gym* / *gymnasium*, código
-  auditable.
-- **PyTorch** como backend de redes neuronales. Justificación: estándar
-  en investigación contemporánea, integración nativa con
-  Stable-Baselines3, herramientas de profiling maduras.
-- **pytest** como framework de testing para Cage Unit Tests (L4a' del
-  V-Model adaptado) y para la suite de regresión general.
-- **Python 3.10+** con herramientas de calidad: `ruff` (linting),
-  `mypy` (type checking), `pre-commit` para automatización en commits.
+- **Stable-Baselines3** como implementación de PPO. Motivo: estabilidad, comunidad, integración con *gym* / *gymnasium* y código auditable.
+- **PyTorch** como backend de redes neuronales. Motivo: es el estándar en la investigación actual, se integra de forma nativa con Stable-Baselines3 y tiene herramientas de profiling maduras.
+- **pytest** como framework de testing para los Cage Unit Tests (L4a' del V-Model adaptado) y para la suite de regresión general.
+- **Python 3.10+** con herramientas de calidad: `ruff` (linting), `mypy` (type checking) y `pre-commit` para automatizar comprobaciones en cada commit.
 
 ## C.1.4 Plataforma física
 
-El vehículo radio-controlado a escala 1:14 se selecciona sobre alternativas
-de otras escalas por tres motivos: *coste* —un 1:14 es manipulable, las
-piezas son asequibles y el riesgo de daño en operación es acotado—;
-*seguridad de operación* —velocidades bajas, energía cinética baja, riesgo
-para terceros despreciable en pista cerrada—; y *transferibilidad de la
-simulación* —la dinámica de un 1:14 admite aproximación razonable en
-Gazebo mediante un modelo vehicular plugin-based con parámetros
-ajustables (masa, distribución de carga, fricción de neumáticos,
-parámetros de actuación), mientras que escalas mayores (1:5, 1:1)
-introducirían discrepancias dinámicas que dominarían el gap
-sim-to-real—. Las especificaciones detalladas del coche (motor, ESC,
-controlador de bajo nivel, cámara, plataforma de cómputo embebido) se
-documentan en el Capítulo 5 y en el Anexo correspondiente.
+Se elige el vehículo radiocontrolado a escala 1:14 frente a otras escalas por tres motivos. *Coste*: un 1:14 es fácil de manejar, las piezas son baratas y el riesgo de daños durante el uso es limitado. *Seguridad de operación*: velocidades bajas, poca energía cinética y un riesgo para terceros despreciable en una pista cerrada. *Transferibilidad desde la simulación*: la dinámica de un 1:14 se puede aproximar razonablemente en Gazebo con un modelo de vehículo basado en plugins y parámetros ajustables (masa, reparto de carga, fricción de los neumáticos, parámetros de actuación), mientras que escalas mayores (1:5, 1:1) añadirían diferencias dinámicas que dominarían el gap sim-to-real. Las especificaciones detalladas del coche (motor, ESC, controlador de bajo nivel, cámara, plataforma de cómputo embarcado) están en el Capítulo 5 y en el anexo correspondiente.
 
 <img src="../figures/fig_3_5_vehicle_cad.png" alt="Figura 3.5 — Fotografía del vehículo RC 1:14 instrumentado con la cámara, IMU." width="300"/>
 
-*Figura 3.5 — fotografía/diagrama del vehículo RC 1:14 instrumentado con la cámara, IMU, encoder y SBC, con etiquetas sobre cada componente.*
+*Figura 3.5 — El vehículo RC 1:14 instrumentado con cámara, IMU, encoder y SBC, con cada componente etiquetado.*
 
 ## C.1.5 Instrumentación de medida
 
-El instrumento primario de captura de evidencia es el Logger Node de la
-arquitectura ROS2, ya descrito en la adaptación A3 (§3.4.3). El Logger
-Node graba todas las interacciones relevantes en el bus —observaciones,
-acciones de *policy*, decisiones de cage, intervenciones, estados del
-vehículo— con marcas de tiempo que permiten reconstrucción posterior.
+La herramienta principal para recoger evidencia es el Logger Node de la arquitectura ROS2, ya descrito en la adaptación A3 (§3.4.3). El Logger Node guarda todo lo relevante que pasa por el bus (observaciones, acciones de la *policy*, decisiones de la cage, intervenciones, estados del vehículo) con marcas de tiempo que permiten reconstruirlo después.
 
-Las métricas concretas que se computan a partir de los logs se definen
-formalmente en el Capítulo 4 y se agrupan en cinco familias por su
-naturaleza: M-P (performance: error de seguimiento, completitud de
-trayectoria), M-S (safety: tasa de intervención de cage, número de
-violaciones por SR), M-I (integración: latencias, jitter, throughput),
-M-C (comportamiento: estabilidad lateral, suavidad de control), y M-T
-(transfer: divergencia sim-vs-real para cada métrica anterior, métricas
-específicas del gap A5). El detalle se difiere al Capítulo 4.
+Las métricas concretas que se calculan a partir de los logs se definen formalmente en el Capítulo 4 y se agrupan en cinco familias: M-P (rendimiento: error de seguimiento, completitud de la trayectoria), M-S (seguridad: tasa de intervención de la cage, número de violaciones por SR), M-I (integración: latencias, jitter, throughput), M-C (comportamiento: estabilidad lateral, suavidad del control) y M-T (transferencia: diferencia entre simulación y realidad para cada métrica anterior, y métricas propias del gap de A5). El detalle está en el Capítulo 4.
 
-Para evaluación cuantitativa adicional sobre la *scenario library* se
-considera la métrica compuesta QED (Gao et al., 2021) como inspiración
-conceptual: una métrica compuesta calibrada contra evaluadores humanos
-para tareas de conducción autónoma. La adopción directa requiere
-matización porque QED fue desarrollada y calibrada sobre CARLA, mientras
-que el simulador adoptado en esta tesis es Gazebo; la fórmula conceptual
-puede transferirse, pero los pesos calibrados deberían recomputarse para
-el escenario lane-following en Gazebo si se quiere una métrica con
-significado equivalente. *Behavior Metrics* (Paniego et al., 2024) se
-considera como herramienta auxiliar de evaluación cuantitativa, dado
-que ya soporta dos simuladores, CARLA y Gazebo. La
-decisión sobre adopción definitiva como métrica oficial del proyecto se
-difiere a Fase 4, cuando se cuente con la *policy* entrenada y se pueda
-calibrar contra el evaluador humano del autor.
+Para una evaluación cuantitativa adicional sobre la *scenario library* se toma como inspiración la métrica compuesta QED (Gao et al., 2021), calibrada con evaluadores humanos para tareas de conducción autónoma. No se puede adoptar tal cual, porque QED se desarrolló y calibró sobre CARLA y esta tesis usa Gazebo. La fórmula se puede trasladar, pero los pesos calibrados habría que volver a calcularlos para el escenario de seguimiento de carril en Gazebo si se quiere una métrica con el mismo significado. *Behavior Metrics* (Paniego et al., 2024) se considera como herramienta auxiliar de evaluación cuantitativa, porque ya funciona con dos simuladores, CARLA y Gazebo. La decisión de adoptarla como métrica oficial del proyecto se aplaza a la Fase 4, cuando se tenga la *policy* entrenada y se pueda calibrar con el criterio humano del autor.
 
 ## C.1.6 Documentación, control de versiones y reproducibilidad
 
-Todos los artefactos del proyecto —documentos, código, plantillas,
-matriz de trazabilidad, scripts de validación— viven en un único
-repositorio Git con la siguiente filosofía: el repositorio *es* el
-proyecto. La elección consciente es de *plain text first*: los
-artefactos se redactan en Markdown con extensiones mínimas (citas en
-formato `[Apellido (año)]`, ecuaciones LaTeX, figuras como SVG/PNG en
-carpeta dedicada), no en herramientas MBSE industriales del estilo de
-Cameo o Capella.
+Todos los artefactos del proyecto (documentos, código, plantillas, matriz de trazabilidad, scripts de validación) están en un único repositorio Git, con una idea de base: el repositorio *es* el proyecto. Se elige a propósito trabajar *primero en texto plano*: los artefactos se escriben en Markdown con extensiones mínimas (citas con formato `[Apellido (año)]`, ecuaciones LaTeX, figuras SVG/PNG en una carpeta propia), y no en herramientas MBSE industriales como Cameo o Capella.
 
-Esta elección difiere de la propuesta MBSE de Sprockhoff et al. (2023)
-para sistemas con componentes IA, que defiende SysML y herramientas
-estructuradas como columna vertebral del ciclo de vida. La diferencia es
-de *coste de adopción*: una tesis individual sin acceso a licencias
-industriales obtiene mejor relación coste/beneficio con archivos de
-texto versionados, manteniendo equivalencia funcional en cuanto a
-trazabilidad (vía `traceability_matrix.csv` + `check_traceability.py`)
-y consistencia (vía revisión por pares automatizada en cada commit).
-La decisión se documenta en `DECISIONS.md` con su justificación
-explícita y la conjetura de que escalar el marco a un equipo
-industrial mediano sí motivaría el cambio a MBSE.
+Esta elección se aparta de la propuesta MBSE de Sprockhoff et al. (2023) para sistemas con componentes de IA, que defiende SysML y herramientas estructuradas como eje del ciclo de vida. La diferencia está en el *coste de adopción*: para una tesis individual sin licencias industriales, los archivos de texto versionados salen más a cuenta, y cumplen la misma función en trazabilidad (con `traceability_matrix.csv` + `check_traceability.py`) y en coherencia (con revisión automática en cada commit). La decisión está en `DECISIONS.md` con su justificación y con la hipótesis de que, si el marco se aplicara en un equipo industrial mediano, sí tendría sentido pasar a MBSE.
 
 ---
 
 # C.2 Relación con los estándares
 
-
-El V-Model adaptado se relaciona con el estado del arte normativo en
-seguridad de sistemas IA. Esta sección sitúa cada adaptación en el
-ecosistema regulatorio, distinguiendo qué es coherente con cada
-estándar y qué va más allá. La revisión sigue el orden cronológico de
-publicación, que coincide aproximadamente con el orden de adopción
-industrial.
+El V-Model adaptado se apoya en el estado actual de las normas de seguridad para sistemas con IA. Esta sección sitúa cada adaptación dentro de ese panorama normativo y separa lo que es coherente con cada estándar de lo que va más allá. El repaso sigue el orden de publicación, que coincide más o menos con el orden en que la industria los fue adoptando.
 
 ## C.2.1 ISO 26262:2018 — Functional Safety for Road Vehicles
 
-ISO 26262:2018 establece el V-Model clásico aplicado a automoción. La
-tesis lo toma como punto de partida y como marco al que pretende
-mantenerse fiel en su estructura general.
+ISO 26262:2018 aplica el V-Model clásico a la automoción. La tesis lo toma como punto de partida y como marco cuya estructura general quiere respetar.
 
-- **Coherente:** la columna vertebral de cinco niveles L1–L5, la noción
-  de safety requirement, el principio de correspondencia bidireccional
-  especificación↔V&V, la derivación de requisitos a partir del HARA con
-  asignación de niveles ASIL.
-- **Más allá:** ISO 26262 no contempla módulos aprendidos. Las
-  adaptaciones A1, A2 y A3 son extensiones explícitas para acomodar
-  componentes RL sin romper la estructura general del estándar. La
-  filosofía es de *tailoring* aditivo: nada se elimina; se añade lo
-  estrictamente necesario.
+- **Coherente:** la estructura de cinco niveles L1–L5, la idea de safety requirement, el principio de relación en ambos sentidos entre especificación y V&V, y la obtención de requisitos a partir del HARA con asignación de niveles ASIL.
+- **Va más allá:** ISO 26262 no contempla módulos aprendidos. Las adaptaciones A1, A2 y A3 son extensiones explícitas para incluir componentes RL sin romper la estructura general del estándar. La idea es un *tailoring* que solo suma: no se quita nada y se añade solo lo imprescindible.
 
 ## C.2.2 ISO 21448:2022 — SOTIF (Safety Of The Intended Functionality)
 
-ISO 21448:2022 introduce la noción de seguridad más allá de fallos,
-incluyendo uso de funciones en condiciones no anticipadas, y es la
-respuesta institucional al hecho de que sistemas con percepción y
-decisión basada en ML pueden comportarse incorrectamente sin que
-ningún componente haya "fallado" en sentido clásico (Wang et al.,
-2024).
+ISO 21448:2022 amplía la seguridad más allá de los fallos, incluido el uso de funciones en condiciones no previstas. Es la respuesta oficial al hecho de que un sistema con percepción y decisión basadas en ML puede comportarse mal sin que ningún componente haya "fallado" en el sentido clásico (Wang et al., 2024).
 
-- **Coherente:** la adaptación A5 (validación operacional acotada y
-  caracterización del gap sim-to-real) es directamente consistente con
-  la filosofía SOTIF de que la validación estática es insuficiente
-  cuando el ODD no está completamente especificado. La adaptación A3
-  (runtime monitoring continuo) es coherente con el principio SOTIF
-  de gestión de *triggering conditions* descubiertas en operación.
-- **Más allá:** A3 propone runtime monitoring como nivel
-  arquitectónico explícito del lifecycle, no solo como práctica
-  recomendada en operación.
+- **Coherente:** la adaptación A5 (validación operacional acotada y medición del gap sim-to-real) encaja directamente con la idea de SOTIF de que la validación estática no basta cuando el ODD no está especificado por completo. La adaptación A3 (runtime monitoring continuo) encaja con el principio de SOTIF de gestionar las *triggering conditions* que se descubren en operación.
+- **Va más allá:** A3 propone el runtime monitoring como un nivel arquitectónico explícito del ciclo de vida, no solo como una práctica recomendada durante la operación.
 
 ## C.2.3 ISO/IEC TR 5469:2024 — AI Functional Safety
 
-ISO/IEC TR 5469:2024 es el documento normativo más específico
-publicado hasta la fecha sobre uso de IA en funciones de seguridad.
-Su aportación principal para el marco propuesto es triple:
-la clasificación de la tecnología IA por nivel de uso y por clase
-tecnológica (Clase I, II y III; cláusula 6), el *three-stage realization
-principle* (cláusula 7) y las propiedades y factores de riesgo de los
-sistemas IA (cláusula 8: nivel de automatización y control, transparencia
-y explicabilidad, complejidad del entorno y especificaciones vagas,
-resiliencia ante entradas adversarias, hardware de IA, madurez de la
-tecnología).
+ISO/IEC TR 5469:2024 es hasta hoy el documento normativo más específico sobre el uso de IA en funciones de seguridad. Aporta tres cosas al marco propuesto: la clasificación de la tecnología IA por nivel de uso y por clase tecnológica (Clase I, II y III; cláusula 6), el *three-stage realization principle* (cláusula 7), y las propiedades y factores de riesgo de los sistemas con IA (cláusula 8: nivel de automatización y control, transparencia y explicabilidad, complejidad del entorno y especificaciones vagas, resiliencia ante entradas adversarias, hardware de IA y madurez de la tecnología).
 
-- **Coherente:** la *policy* PPO de la tesis corresponde como mucho a un
-  elemento Clase II del TR 5469 —las normas de seguridad funcional
-  existentes solo cubren parte de sus propiedades requeridas y hacen
-  falta métodos complementarios—, y la adaptación A2 (Policy Behavioral
-  Evaluation estadística) es uno de esos métodos complementarios. La
-  trazabilidad bidireccional obligatoria (A4) no tiene una contrapartida
-  específica entre las propiedades del TR; su anclaje normativo se
-  argumenta en C.2.5 y C.2.6. El desdoblamiento Cage Spec / Training Spec
-  (A1) lleva al nivel del proceso de diseño la distinción del
-  *three-stage realization principle* entre adquisición de datos,
-  inducción de conocimiento y procesamiento, que el propio TR no
-  presenta como ciclo de vida.
-- **Más allá:** la separación explícita entre Cage Spec (elemento
-  convencional que corresponde, por analogía, a la Clase I) y Training
-  Spec (meta-design para elemento Clase II) en
-  documentos versionados separados es un refinamiento operativo del
-  TR, no presente en el documento normativo en esa granularidad.
+- **Coherente:** la *policy* PPO de la tesis es como mucho un elemento de Clase II del TR 5469 (las normas de seguridad funcional existentes solo cubren parte de sus propiedades requeridas y hacen falta métodos complementarios), y la adaptación A2 (Policy Behavioral Evaluation estadística) es uno de esos métodos complementarios. La trazabilidad obligatoria en ambos sentidos (A4) no tiene un equivalente concreto entre las propiedades del TR; su anclaje normativo se explica en C.2.5 y C.2.6. La división Cage Spec / Training Spec (A1) lleva al proceso de diseño la distinción del *three-stage realization principle* entre adquisición de datos, inducción de conocimiento y procesamiento, que el propio TR no presenta como un ciclo de vida.
+- **Va más allá:** separar explícitamente el Cage Spec (elemento convencional que, por analogía, corresponde a la Clase I) y el Training Spec (meta-diseño para un elemento de Clase II) en documentos versionados distintos es un refinamiento práctico del TR, que el documento normativo no llega a detallar con ese nivel de granularidad.
 
 ## C.2.4 ISO/PAS 8800:2024 — Road Vehicles, Safety and AI
 
-ISO/PAS 8800:2024 es el documento automotriz sobre seguridad e IA,
-estrechamente relacionado con los conceptos genéricos de TR 5469.
-Extiende ISO 26262 e ISO 21448 a los elementos de IA: los riesgos de
-seguridad funcional se abordan mediante *tailoring* de las cláusulas
-aplicables de ISO 26262 (Partes 4, 6 y 8), y las insuficiencias
-funcionales extendiendo los conceptos de SOTIF. Un caso de uso ilustrativo
-publicado por BSI para el UK CCAV (Hawkins, 2025), sobre un detector ML
-de señales de tráfico con requisitos para las señales de stop, muestra
-cómo se articulan ISO 26262 + SOTIF + ISO/PAS 8800 sobre un componente ML.
+ISO/PAS 8800:2024 es el documento automotriz sobre seguridad e IA, muy ligado a los conceptos generales del TR 5469. Extiende ISO 26262 e ISO 21448 a los elementos de IA: los riesgos de seguridad funcional se tratan adaptando (*tailoring*) las cláusulas aplicables de ISO 26262 (Partes 4, 6 y 8), y las insuficiencias funcionales, ampliando los conceptos de SOTIF. Un caso de uso de ejemplo publicado por BSI para el UK CCAV (Hawkins, 2025), sobre un detector ML de señales de tráfico con requisitos para las señales de stop, muestra cómo se combinan ISO 26262, SOTIF e ISO/PAS 8800 sobre un componente ML.
 
-- **Coherente:** la filosofía de *tailoring* aditivo del V-Model
-  adaptado coincide con la de ISO/PAS 8800. Las cinco adaptaciones
-  A1–A5 son razonablemente alineables con las áreas que el estándar
-  identifica como críticas (definición de operating environment,
-  análisis sistemático de insuficiencias, monitoring post-despliegue).
-- **Más allá:** la operacionalización del marco en un caso completo
-  desde HARA hasta despliegue físico, con caracterización empírica
-  del gap, excede en concreción a los ejemplos publicados hasta la
-  fecha.
+- **Coherente:** el *tailoring* que solo suma del V-Model adaptado coincide con el de ISO/PAS 8800. Las cinco adaptaciones A1–A5 se pueden alinear razonablemente con las áreas que el estándar señala como críticas (definición del operating environment, análisis sistemático de insuficiencias, monitoring después del despliegue).
+- **Va más allá:** aplicar el marco a un caso completo, desde el HARA hasta el despliegue físico y con medición empírica del gap, es más concreto que los ejemplos publicados hasta ahora.
 
 ## C.2.5 UL 4600 — Standard for Safety for the Evaluation of Autonomous Products
 
-UL 4600 (UL Standards, 2023; Koopman, 2023) enfatiza la noción de *safety case* y
-evidencia estructurada como mecanismo central de assurance para
-productos autónomos.
+UL 4600 (UL Standards, 2023; Koopman, 2023) pone el foco en el *safety case* y en la evidencia estructurada como forma principal de dar garantías sobre productos autónomos.
 
-- **Coherente:** la Matriz de Trazabilidad H↔SR↔C↔SC↔M es un
-  micro-safety-case en la línea de UL 4600: cada *claim* de seguridad
-  se respalda con un argumento explícito (la regla de cage, el
-  escenario, la métrica) y con evidencia trazable (los logs, los
-  resultados experimentales).
-- **Más allá:** A4 convierte la trazabilidad en restricción dura
-  aplicada por herramienta automatizada (`check_traceability.py`), no
-  en buena práctica documental revisable.
+- **Coherente:** la Matriz de Trazabilidad H↔SR↔C↔SC↔M es un pequeño safety case en la línea de UL 4600: cada *claim* de seguridad se apoya en un argumento explícito (la regla de la cage, el escenario, la métrica) y en evidencia trazable (los logs, los resultados experimentales).
+- **Va más allá:** A4 convierte la trazabilidad en una restricción dura que aplica una herramienta automática (`check_traceability.py`), en lugar de una buena práctica documental que alguien tiene que revisar.
 
 ## C.2.6 AMLAS — Assurance of Machine Learning for Autonomous Systems
 
-AMLAS, consolidado por Paterson et al. (2025), no es un estándar
-formal sino una metodología con patrones GSN (*Goal Structuring
-Notation*) específicos para construir argumentos de safety sobre
-componentes ML. Se está incorporando como insumo a estándares
-emergentes, en particular ISO/PAS 8800.
+AMLAS, consolidado por Paterson et al. (2025), no es un estándar formal sino una metodología con patrones GSN (*Goal Structuring Notation*) específicos para construir argumentos de seguridad sobre componentes ML. Se está incorporando como base a estándares nuevos, en particular a ISO/PAS 8800.
 
-- **Coherente:** la filosofía claim-argument-evidence de AMLAS
-  coincide con la trazabilidad bidireccional propuesta como A4. El
-  ciclo de vida data-céntrico que AMLAS articula (definición de
-  requisitos, gestión de datos, aprendizaje, verificación,
-  despliegue, monitorización) coincide a grandes rasgos con la
-  estructura por fases del proyecto descrita en §3.5.3.
-- **Más allá:** AMLAS está principalmente probado sobre modelos
-  supervisados; el marco propuesto en esta tesis es una articulación
-  explícita para *policies* RL, dominio aún poco cubierto por
-  AMLAS.
+- **Coherente:** el enfoque claim-argument-evidence de AMLAS coincide con la trazabilidad en ambos sentidos de A4. El ciclo de vida centrado en los datos que plantea AMLAS (definición de requisitos, gestión de datos, aprendizaje, verificación, despliegue, monitorización) se parece a grandes rasgos a las fases del proyecto descritas en §3.5.3.
+- **Va más allá:** AMLAS se ha probado sobre todo con modelos supervisados. El marco de esta tesis está pensado explícitamente para *policies* RL, un ámbito que AMLAS todavía cubre poco.
 
 ## C.2.7 HARA simplificado y su relación con la versión formal de la norma
 
-La cláusula 6 de la Parte 3 de ISO 26262:2018 prescribe el método HARA
-formal aplicado a *items* de automoción: análisis de situación,
-identificación sistemática de hazards asociados a las funciones del
-item, clasificación de cada hazard por tres ejes —severidad (S, escala
-S0–S3), exposición (E, escala E0–E4) y controlabilidad (C, escala
-C0–C3)— y derivación del *ASIL* (Automotive Safety Integrity Level,
-QM/A/B/C/D) mediante una tabla de combinación de S×E×C. El ASIL
-determina el rigor exigible al resto del ciclo de vida, incluyendo
-medidas de diseño, técnicas de verificación y cobertura de tests.
+La cláusula 6 de la Parte 3 de ISO 26262:2018 define el método HARA formal para *items* de automoción: análisis de situaciones, identificación sistemática de los hazards ligados a las funciones del item, clasificación de cada hazard en tres ejes (severidad S, escala S0–S3; exposición E, escala E0–E4; controlabilidad C, escala C0–C3) y obtención del *ASIL* (Automotive Safety Integrity Level, QM/A/B/C/D) con una tabla que combina S×E×C. El ASIL marca el nivel de rigor exigido en el resto del ciclo de vida, incluidas las medidas de diseño, las técnicas de verificación y la cobertura de tests.
 
-La versión adoptada en esta tesis se denomina explícitamente *HARA
-simplificado* y se documenta como tal en el encabezado del Hazard
-Register. Las diferencias respecto a la norma formal son tres y se
-enuncian aquí con honestidad:
+La versión usada en esta tesis se llama explícitamente *HARA simplificado*, y así figura en la cabecera del Hazard Register. Hay tres diferencias con la norma formal, que se explican aquí con franqueza:
 
-- **Escalas S/E/C preservadas pero reinterpretadas para el contexto
-  escalado.** Las tres escalas se mantienen con la granularidad de la
-  norma (S1–S3, E1–E4, C1–C3), pero las definiciones cualitativas de
-  cada nivel se reinterpretan para un vehículo a escala 1:14 sobre
-  pista cerrada: S3 deja de significar "lesión mortal" y pasa a
-  significar "pérdida total de la integridad de la plataforma", E3
-  se define como "10–50% del tiempo operativo" referido al ODD
-  declarado (una banda propia de este proyecto: en las clases de
-  exposición por duración de la norma, E3 corresponde al 1–10 % y E4
-  a más del 10 % del tiempo medio de operación), y C2 mantiene el significado de
-  "controlable en >90% de los casos" referido a la cage de reglas en
-  lugar de al conductor humano. La rúbrica reinterpretada se versiona
-  junto con el registro y queda auditable.
+- **Se mantienen las escalas S/E/C, pero se reinterpretan para un vehículo a escala.** Las tres escalas conservan la granularidad de la norma (S1–S3, E1–E4, C1–C3), pero las definiciones de cada nivel se adaptan a un vehículo 1:14 en pista cerrada. S3 ya no significa "lesión mortal", sino "pérdida total de la integridad de la plataforma". E3 se define como "10–50% del tiempo operativo" dentro del ODD declarado (una banda propia de este proyecto: en las clases de exposición por duración de la norma, E3 corresponde al 1–10 % y E4 a más del 10 % del tiempo medio de operación). C2 mantiene el significado de "controlable en >90% de los casos", pero referido a la cage de reglas y no al conductor humano. Esta rúbrica adaptada se versiona junto con el registro y se puede auditar.
 
-- **No se emite ASIL formal; se sustituye por una "Criticality"
-  cualitativa.** El producto del HARA simplificado es, para cada
-  hazard, una etiqueta cualitativa de criticidad en cuatro niveles
-  (Low, Medium, Medium-High, High), derivada por agregación
-  cualitativa del trío S/E/C y utilizada exclusivamente para
-  priorización del trabajo de mitigación. La elección de no emitir
-  un ASIL letra reconoce que el ASIL es una construcción
-  legal-normativa orientada a la certificación industrial, no a la
-  demostración metodológica que persigue la tesis. Emitir un
-  "ASIL B" sobre un coche a escala introduciría una falsa precisión
-  que el marco prefiere evitar; la criticidad cualitativa es honesta
-  sobre lo que se está midiendo y sobre el uso que se le dará.
-  Los Safety Requirements derivados, por separado, llevan su propia
-  rúbrica de criticidad de tres niveles SR-CL-A/B/C definida en
-  §4.7 del Capítulo 4 con consecuencias operativas distintas
-  (rigor mínimo de implementación y de verificación).
+- **No se asigna un ASIL formal; en su lugar se usa una "Criticality" cualitativa.** El resultado del HARA simplificado es, para cada hazard, una etiqueta cualitativa de criticidad con cuatro niveles (Low, Medium, Medium-High, High), obtenida combinando cualitativamente S, E y C, y usada solo para priorizar el trabajo de mitigación. No se asigna una letra de ASIL porque el ASIL es una construcción legal y normativa pensada para la certificación industrial, no para la demostración metodológica que busca la tesis. Poner un "ASIL B" a un coche a escala daría una falsa sensación de precisión que el marco prefiere evitar. La criticidad cualitativa es honesta sobre lo que se mide y sobre para qué se usa. Por separado, los Safety Requirements tienen su propia rúbrica de criticidad con dos clases, SR-CL-A y SR-CL-B, definida en §4.5.3 del Capítulo 4 y con consecuencias prácticas distintas (nivel mínimo de rigor en la implementación y en la verificación).
 
-- **Complemento con STPA-light sobre hazards seleccionados.** El HARA
-  simplificado se complementa con un análisis *STPA-light* aplicado a
-  los hazards de criticidad alta, acotado a las cuatro categorías de
-  *unsafe control actions* —acción no provista cuando se necesita,
-  provista cuando no debe, provista con magnitud inadecuada, provista
-  en el momento equivocado—. Este complemento captura modos de fallo
-  de tipo sistémico que un HARA puro, centrado en consecuencias,
-  tiende a infrarrepresentar. La incorporación de STPA es un préstamo
-  metodológico habitual en la práctica reciente de seguridad de
-  sistemas con componentes IA y se documenta como tal, no como parte
-  del HARA formal de ISO 26262.
+- **Se añade un STPA-light sobre algunos hazards.** El HARA simplificado se completa con un análisis *STPA-light* aplicado a los hazards de criticidad alta y limitado a las cuatro categorías de *unsafe control actions*: acción no dada cuando hace falta, dada cuando no debe, dada con una magnitud inadecuada y dada en el momento equivocado. Este añadido recoge modos de fallo sistémicos que un HARA puro, centrado en las consecuencias, suele dejar poco representados. Usar STPA es un préstamo metodológico habitual en la práctica reciente de seguridad de sistemas con IA, y se documenta como tal, no como parte del HARA formal de ISO 26262.
 
-Lo que el HARA simplificado *preserva* es lo metodológicamente
-esencial: la enumeración sistemática de hazards a partir del análisis
-del item, la clasificación previa a la derivación de requisitos, la
-trazabilidad bidireccional desde cada hazard a sus SRs mitigantes
-(adaptación A4), y la documentación auditable de cada decisión de
-clasificación. La estructura del proceso —situación → hazards →
-clasificación → SRs— es idéntica a la de la norma; lo que se modula
-es la naturaleza del producto final (criticidad cualitativa en lugar
-de ASIL) y la complementación con STPA-light sobre los hazards de
-mayor severidad relativa.
+Lo que el HARA simplificado *mantiene* es lo esencial del método: la enumeración sistemática de hazards a partir del análisis del item, su clasificación antes de obtener los requisitos, la trazabilidad en ambos sentidos entre cada hazard y los SRs que lo mitigan (adaptación A4), y el registro auditable de cada decisión de clasificación. La estructura del proceso (situación → hazards → clasificación → SRs) es la misma que la de la norma. Lo que cambia es el tipo de resultado final (criticidad cualitativa en lugar de ASIL) y el añadido de STPA-light sobre los hazards de mayor severidad relativa.
 
-La división del trabajo respecto a ISO 21448 (SOTIF) se mantiene
-coherente con la repartición usual en la práctica industrial: el
-HARA simplificado identifica fallos sistemáticos del sistema —foco
-tradicional de ISO 26262—, mientras que las *insuficiencias de la
-función intencionada* —comportamientos correctos respecto a la
-especificación pero peligrosos en operación, foco de SOTIF— quedan
-recogidas mediante la adaptación A5 (caracterización empírica del
-gap sim-to-real) y la adaptación A3 (runtime monitoring sobre logs
-de intervención), no por el HARA en sí. Esta repartición se hace
-explícita en la matriz de trazabilidad: los hazards H↔SR cubren la
-componente ISO 26262 del problema, y la columna de "modo de evidencia
-esperado" (test / análisis estadístico / runtime) cubre la componente
-SOTIF cuando aplica.
+El reparto del trabajo con ISO 21448 (SOTIF) sigue la división habitual en la industria. El HARA simplificado identifica fallos sistemáticos del sistema, que es el foco tradicional de ISO 26262. Las *insuficiencias de la función prevista*, es decir, comportamientos correctos según la especificación pero peligrosos en operación, que son el foco de SOTIF, se recogen con la adaptación A5 (medición empírica del gap sim-to-real) y la adaptación A3 (runtime monitoring sobre los logs de intervención), no con el HARA. Este reparto se ve en la matriz de trazabilidad: los enlaces H↔SR cubren la parte ISO 26262 del problema, y la columna de "modo de evidencia esperado" (test / análisis estadístico / runtime) cubre la parte SOTIF cuando corresponde.
 
 <img src="../figures/fig_3_6_normative_pyramid.png" alt="Figura 3.6 — Diagrama de la pirámide normativa." width="500"/>
 
-*Figura 3.6 — diagrama de la pirámide normativa: ISO26262 en la base como ciclo de vida, SOTIF como complemento para condiciones no anticipadas, TR 5469 como paraguas IA, PAS 8800 como extensión automotriz para IA, UL 4600 como safety case envolvente, AMLAS como patrones argumentativos transversales. Sobre esa pirámide, las cinco adaptaciones A1–A5 marcadas con su ámbito de aplicación. Posición sugerida: cierre de §3.8 Pendiente para Fase 6.*
+*Figura 3.6 — Pirámide normativa: ISO 26262 en la base como ciclo de vida, SOTIF como complemento para condiciones no previstas, TR 5469 como capa general de IA, PAS 8800 como extensión automotriz para IA, UL 4600 como safety case que lo envuelve todo y AMLAS como patrones de argumentación transversales. Sobre la pirámide se marcan las cinco adaptaciones A1–A5 con su ámbito de aplicación.*
 
 ---

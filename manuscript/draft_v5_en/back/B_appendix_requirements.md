@@ -1,8 +1,6 @@
 # Appendix B — Safety requirements specification and *rationale*
 
-Complete version of Table 4.2, with thresholds and traceability, followed by the *rationale*
-requirement by requirement: where each threshold comes from, what makes it falsifiable and what its
-calibration status is.
+This is the full version of Table 4.2, with thresholds and traceability. It is followed by the *rationale* for each requirement: where each threshold comes from, what makes it falsifiable and what state its calibration is in.
 
 | ID | Short statement | Main parameters | H covered | Cage rule | Criticality | Verification |
 | -- | ------------------- | ---------------------- | ----------- | --------- | ---------- | ------------ |
@@ -23,95 +21,10 @@ calibration status is.
 
 ## Rationale per requirement
 
-The complete rationale for each SR — including the physical justification of the
-threshold citing the ODD parameters, the description of the falsifiable
-form, the identification of the verification experiment, and the cross
-reference to the hazard from which it derives — lives in `docs/03_safety_requirements.md`.
-As an illustration of the level of detail required, this subsection
-presents the complete rationale of SR-001 as a representative example;
-the rest is summarised briefly at the end of the subsection and cited
-by reference.
+The full rationale for each SR is in `docs/03_safety_requirements.md`. It includes the physical justification of the threshold based on the ODD parameters, the falsifiable form of the requirement, the experiment that verifies it and the reference to the hazard it comes from. To show the level of detail required, this subsection gives the full rationale of SR-001 as an example. The rest is summarised at the end and cited by reference.
 
-The rationale of SR-001 is the following. The parameter
-`d_max = 0.16 m` is not chosen from the performance of the policy
-but from the geometric envelope of the ODD: the road has a total width
-`ODD-1.ROAD_WIDTH = 0.50 m`, which places the physical edge of the drivable
-corridor at `0.25 m` from the longitudinal axis of the track. An aggregate
-safety margin of `Δ = 0.09 m` absorbs three independent
-contributions: the lateral noise of the state estimator
-(`≈ 0.01 m`), the maximum drift expected from the nominal control latency
-(`v_max · LATENCY_NOMINAL = 0.5 m/s · 50 ms = 0.025 m`), and
-half the lateral physical footprint of the 1:14 CobraFlex (`≈ 0.05 m`). The
-falsifiable threshold is then `d_max = ROAD_WIDTH/2 − Δ = 0.25 − 0.09 = 0.16 m`,
-interpreted as the modulus of the lateral offset of the geometric centre
-of the vehicle with respect to the axis of the drivable corridor. This
-convention of sign and unit is fixed in the statement of SR-001 in
-`docs/03_safety_requirements.md` and is cited by the derived SRs
-(SR-005 on `d_warning = 0.12 m < d_max` as an early warning
-threshold, SR-008 on staying below `d_max` during the controlled
-stop).
+The rationale of SR-001 is as follows. The parameter `d_max = 0.16 m` is not chosen based on the policy's performance, but on the geometric limits of the ODD. The road has a total width of `ODD-1.ROAD_WIDTH = 0.50 m`, so the physical edge of the drivable corridor is `0.25 m` from the track axis. A total safety margin of `Δ = 0.09 m` covers three independent contributions: the lateral noise of the state estimator (`≈ 0.01 m`), the maximum drift expected from the nominal control latency (`v_max · LATENCY_NOMINAL = 0.5 m/s · 50 ms = 0.025 m`) and half the physical width of the 1:14 CobraFlex (`≈ 0.05 m`). The falsifiable threshold is then `d_max = ROAD_WIDTH/2 − Δ = 0.25 − 0.09 = 0.16 m`, read as the absolute lateral offset of the vehicle's geometric centre from the axis of the drivable corridor. This sign and unit convention is fixed in the statement of SR-001 in `docs/03_safety_requirements.md`, and the SRs that depend on it cite it (SR-005, with `d_warning = 0.12 m < d_max` as an early warning threshold, and SR-008, which requires staying below `d_max` during the controlled stop).
 
-The summarised rationale of the rest of the SRs is described below,
-with a reference to the standalone artefact for the details. **SR-002**
-(`θ_max = 25°`) is justified through a bicycle-model calculation of
-recoverability with a wheelbase of 0.15 m, a saturated steering of 0.5 rad,
-a nominal speed of 0.3 m/s and a cage response time of 0.05 s;
-the value falls inside the recoverable envelope with a margin of approximately
-a factor of two. **SR-003** (`t_min = 1.0 s`) is decomposed into 0.3 s of
-margin for the cage (defensible by kinematic physics) and 0.7 s of
-margin for the policy (marked as provisional, subject to review
-after the training prototype in F3). **SR-004** defines a speed
-ceiling dependent on the curvature, anchored on `ODD-1.V_MAX = 0.5 m/s`
-for straight sections and reduced to 0.25 m/s in a curve; the interpolation
-coefficient `k_κ = 0.3` is chosen so that the curve falls
-exactly at the maximum curvature expected from the `odd3_curvy_loop`
-map (pending closure with TBD-Q9). **SR-005** introduces a compound
-trigger with a persistence of `Δt_max = 0.2 s` (four control cycles,
-necessary to distinguish a genuine compound state from a transient
-glitch); `a_min = 0.3 m/s²` is provisional pending the
-M-3 measurement on the platform. **SR-006** fixes a rate
-limiter as a conservative defence against abrupt actuation;
-the values `δ_max_steer = 0.15` and `δ_max_thr = 0.10` are
-defaults that require an empirical cross-check against the mechanical
-envelope of the actuator (measurement M-5) and against the 95th percentile of the
-natural delta of the trained policy (after the F3 prototype). **SR-007**
-preserves a staleness horizon of `staleness_max = 200 ms` (four
-control cycles) complemented by a counter of missing
-messages `N_missing_max = 5`, both values conservative with respect to
-the nominal properties of the ROS2 bus; the plausible ranges per
-state field are kept deliberately wider than the operating
-envelope of each variable, so that range violations are unambiguous
-indicators of a sensor failure. **SR-008**
-fixes `t_stop_max = 1.7 s`, consistent with `v_max_straight / a_min ≈ 1.67 s`
-from SR-005 plus a margin for granularity and latency; the consolidation
-of the earlier inconsistency with SR-005 (1.5 s in the F0 baseline) is
-recorded in `docs/CHANGELOG.md`. **SR-009** bounds the longitudinal
-progress from below: `Δs_min = 0.10 m` derives from the product of the
-minimum useful operating speed (`v_min ≈ 0.05 m/s`) and a sliding
-window of `t_window = 2.0 s`; the carve-out of `Δt_settle = 1.0 s`
-after transitions from emergency mode or controlled stop prevents
-SR-009 from conflicting with SR-005 or SR-008 during the restart
-ramp (cf. §SR-009 of the SRS for the explicit priority
-order). Its implementation is training (D-25): the cage does not inject
-progress, it only observes the stall through M-P6 and emits a signal to
-the test harness. **SR-010** ensures the compositional consistency of the
-cage: the *joint-envelope assertion* at the end of each cycle
-verifies that the emitted command satisfies the preconditions of every
-rule active in that cycle, and an inter-cycle monitor bounds the
-oscillation between contradictory corrections below
-`f_osc_max = 5 Hz`. The implementation is a structural property
-of the cage pipeline (`arbiter`, D-25), not an additional numbered
-rule; the failure of the assertion drops the system into C-05
-(emergency mode) as a last-line mitigation. **SR-011** closes
-the oscillatory branch of H-02 that the pure-magnitude threshold of SR-002 does not
-bound: `σ_θ_max = 5°` admits oscillations up to an amplitude of ≈ 7° with
-sufficient margin against `θ_max = 25°`, but is tight enough
-to detect the within-bounds-but-oscillatory mode; the window
-`t_psd = 1.0 s` captures at least one period of the significant
-oscillation (≈ 1 Hz) without being diluted by drifts on a longer time scale.
-The implementation is hybrid (`C-06 + training`): C-06 attenuates
-high-frequency content in the commands of the policy, and a
-heading variance term in the reward encourages the policy not to
-oscillate in steady state.
+The rationale for the other SRs is summarised below, with a pointer to the separate document for the details. **SR-002** (`θ_max = 25°`) is justified with a recoverability calculation based on the bicycle model, with a wheelbase of 0.15 m, steering saturated at 0.5 rad, a nominal speed of 0.3 m/s and a cage response time of 0.05 s. The value falls inside the recoverable region with a margin of roughly a factor of two. **SR-003** (`t_min = 1.0 s`) is split into 0.3 s of margin for the cage (justifiable with kinematics) and 0.7 s of margin for the policy (marked provisional, to be reviewed after the F3 training prototype). **SR-004** defines a speed ceiling that depends on curvature, with `ODD-1.V_MAX = 0.5 m/s` on straights and 0.25 m/s in curves. The interpolation coefficient `k_κ = 0.3` is chosen so that the ceiling drops exactly at the maximum curvature expected on the `odd3_curvy_loop` map (pending closure with TBD-Q9). **SR-005** introduces a compound trigger with a persistence of `Δt_max = 0.2 s` (four control cycles, needed to tell a real compound state apart from a passing glitch). `a_min = 0.3 m/s²` is provisional until the M-3 measurement on the platform. **SR-006** sets a rate limiter as a cautious defence against abrupt actuation. The values `δ_max_steer = 0.15` and `δ_max_thr = 0.10` are defaults that still need to be checked against the mechanical limits of the actuator (measurement M-5) and against the 95th percentile of the trained policy's natural command change (after the F3 prototype). **SR-007** keeps a staleness limit of `staleness_max = 200 ms` (four control cycles) together with a counter of missing messages, `N_missing_max = 5`. Both values are cautious compared with the nominal properties of the ROS2 bus. The plausible ranges for each state field are kept wider than the operating limits of each variable on purpose, so that an out-of-range value is a clear sign of sensor failure. **SR-008** sets `t_stop_max = 1.7 s`, consistent with `v_max_straight / a_min ≈ 1.67 s` from SR-005 plus a margin for granularity and latency. The fix of the earlier mismatch with SR-005 (1.5 s in the F0 baseline) is recorded in `docs/CHANGELOG.md`. **SR-009** sets a minimum on longitudinal progress. `Δs_min = 0.10 m` is the product of the minimum useful operating speed (`v_min ≈ 0.05 m/s`) and a sliding window of `t_window = 2.0 s`. The exception of `Δt_settle = 1.0 s` after leaving emergency mode or a controlled stop keeps SR-009 from clashing with SR-005 or SR-008 while the vehicle starts moving again (see §SR-009 of the SRS for the explicit priority order). It is implemented in training (D-25): the cage does not force progress, it only detects the stall through M-P6 and signals the test harness. **SR-010** makes sure the cage combines its rules consistently. The *joint-envelope assertion* at the end of each cycle checks that the command sent out meets the preconditions of every rule active in that cycle, and a monitor across cycles keeps oscillation between contradictory corrections below `f_osc_max = 5 Hz`. It is not an extra numbered rule but a structural property of the cage pipeline (`arbiter`, D-25). If the assertion fails, the system drops into C-05 (emergency mode) as a last line of defence. **SR-011** covers the oscillating version of H-02, which the magnitude threshold of SR-002 does not limit. `σ_θ_max = 5°` allows oscillations up to about 7° of amplitude, with plenty of margin against `θ_max = 25°`, but it is strict enough to catch oscillation that stays within bounds. The window of `t_psd = 1.0 s` covers at least one period of the relevant oscillation (≈ 1 Hz) without mixing it with slower drifts. The implementation is mixed (`C-06 + training`): C-06 smooths the high-frequency content of the policy's commands, and a heading variance term in the reward encourages the policy not to oscillate in steady state.
 
 ---

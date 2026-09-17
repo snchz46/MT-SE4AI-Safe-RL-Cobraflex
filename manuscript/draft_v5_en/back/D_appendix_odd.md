@@ -1,8 +1,6 @@
 # Appendix D — Operational domain specification
 
-Consolidated table of parameters for the four operational domains. Each parameter has a
-name, a value per domain and a provenance; no claim in the body about the domain rests
-on a qualitative description when a named parameter exists.
+This is the full table of parameters for the four operational domains. Each parameter has a name, a value for each domain and a source. Whenever a named parameter exists, no claim about the domain in the main text relies on a qualitative description.
 
 | `*.V_MAX` / `*.V_MAX_STRAIGHT` | Speed ceiling, straight (m/s) | 0.5 | 0.5 | 0.5 | 0.5 | SR-004; C-04. Operating point = 0.20 |
 | `*.V_MAX_CURVE` | Speed ceiling, curve (m/s) | n/a | n/a | 0.25 | 0.25 | SR-004; C-04 |
@@ -21,9 +19,7 @@ on a qualitative description when a named parameter exists.
 
 ## D.1 Open questions of the domain and their closure
 
-Of the twelve quantitative questions that the specification opened when it was written, eleven are
-closed with an explicit value and its date; the twelfth remains open because of a hardware
-dependency and not because of an omission.
+Of the twelve quantitative questions that were opened when the specification was written, eleven are closed with an explicit value and a date. The twelfth is still open because it depends on hardware, not because it was forgotten.
 
 | TBD-Q1 | Friction coefficient of the road surface? | SS | closed | 1.0 — world SDFs ship an empty `<surface><friction>` block; Gazebo ODE defaults `mu1=mu2=1.0`. Inferred, not explicit `<mu>`; re-read if a future world sets one. (2026-05-14) |
 | TBD-Q2 | Max commanded lateral accel., ODD-1? | SS | closed | 9.81 — Coulomb ceiling FRICTION×g. Physical envelope, not a typical value (operational `a_lat ≈ 0` at κ=0). (2026-05-14) |

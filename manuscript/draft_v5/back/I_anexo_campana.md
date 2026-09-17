@@ -1,14 +1,10 @@
 # Anexo I — Desglose de la campaña de referencia
 
-Datos generados directamente a partir de los artefactos de la campaña
-(`campaign_report.json` y `failure_mode_breakdown.json`): 1.890 corridas, 0 errores,
-27 escenarios × 2 modos, sobre la política bidimensional de referencia.
+Estos datos salen directamente de los artefactos de la campaña (`campaign_report.json` y `failure_mode_breakdown.json`): 1.890 corridas, 0 errores, 27 escenarios × 2 modos, con la política bidimensional de referencia.
 
 ## I.1 Corridas aprobadas por escenario y modo
 
-El veredicto de la columna derecha corresponde al modo *enforcement* y se calcula contra el
-criterio de aprobación declarado por cada escenario, con el umbral de fracción que ese
-escenario fija.
+El veredicto de la columna de la derecha es el del modo *enforcement*, y se calcula con el criterio de aprobación de cada escenario y el umbral de proporción que ese escenario fija.
 
 | Escenario | Enforcement | Monitoring | Veredicto enf. |
 | --- | ---: | ---: | :-: |
@@ -68,21 +64,18 @@ escenario fija.
 | Corridas con excursión lateral ≥ límite | 69 |
 | Excursión lateral máxima (m) | 0.2824 |
 
-Los contactos contabilizados corresponden en su totalidad a corridas cuya condición
-inicial cae fuera del dominio operacional (familias límite y de frontera). Dentro del
-dominio, el recuento es cero.
+Todos los contactos contados son de corridas cuya condición inicial está fuera del dominio operacional (familias límite y de frontera). Dentro del dominio, el recuento es cero.
 
 ## I.4 Rejilla de co-activación: desglose del veredicto negativo
 
-Partición de la rejilla según si el punto inyectado cae dentro del dominio operacional:
+La rejilla se divide según si el punto inyectado está dentro del dominio operacional:
 
 | Bloque | Corridas | Aprobadas | Fallidas | Violaciones de margen lateral |
 | --- | ---: | ---: | ---: | ---: |
 | Dentro del ODD | 85 | 42 | 43 | 16 |
 | Fuera del ODD | 15 | 2 | 13 | 10 |
 
-Desglose por combinación de reglas efectivamente co-activadas, que es lo que localiza el
-problema de arbitraje:
+Desglose por la combinación de reglas que realmente se activaron a la vez, que es lo que señala dónde está el problema de arbitraje:
 
 | Combinación de reglas | Corridas | Fallos | Violaciones de margen lateral | Dentro del ODD |
 | --- | ---: | ---: | ---: | ---: |
@@ -92,5 +85,4 @@ problema de arbitraje:
 | C-01 ∧ C-04 ∧ C-06 | 20 | 12 | 0 | 15 |
 | C-04 ∧ C-06 | 20 | 0 | 0 | 20 |
 
-La lectura está en §8.6: las violaciones se concentran donde la corrección lateral y la de
-rumbo entran en conflicto, y desaparecen donde no lo hacen.
+La interpretación está en §8.6: las violaciones se concentran donde la corrección lateral y la de rumbo chocan, y desaparecen donde no lo hacen.

@@ -1,14 +1,8 @@
 # Anexo E — Parámetros de la cage
 
-Contenido íntegro del fichero de parámetros versionado, tal como lo consume el nodo en
-ejecución. Cada corrida experimental registra el identificador criptográfico de este fichero
-junto con el resto de metadatos de reproducibilidad, de modo que cualquier resultado del
-Capítulo 8 queda ligado sin ambigüedad a la configuración exacta que lo produjo.
+Este anexo reproduce completo el fichero de parámetros versionado, tal como lo lee el nodo durante la ejecución. Cada corrida experimental guarda el identificador criptográfico de este fichero junto con el resto de metadatos de reproducibilidad, así que cualquier resultado del Capítulo 8 queda ligado sin duda a la configuración exacta que lo produjo.
 
-Los valores marcados como provisionales esperan calibración sobre la plataforma física. Su
-ciclo de resolución está definido: medir, actualizar el fichero, incrementar la versión,
-re-ejecutar la suite de verificación, re-ejecutar los escenarios afectados y registrar el
-cambio en el registro de cambios.
+Los valores marcados como provisionales están a la espera de calibrarse en la plataforma física. El proceso para cerrarlos está definido: medir, actualizar el fichero, subir la versión, volver a ejecutar la suite de verificación y los escenarios afectados, y anotar el cambio en el registro de cambios.
 
 ```yaml
 # =============================================================

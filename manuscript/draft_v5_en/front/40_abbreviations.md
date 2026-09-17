@@ -39,11 +39,11 @@
 | TTLC | Time-To-Lane-Crossing |
 | V&V | Verification and Validation |
 
-**Framework identifiers.** The work uses a single, non-reusable identifier space, summarised here; the corresponding registers are Appendices A (hazards), B (requirements), E (cage) and F (traceability): `H-XX` (hazard), `SR-XXX` (safety requirement), `SR-CL-A` / `SR-CL-B` (criticality class of a requirement), `C-XX` (cage rule), `SC-*` (scenario), `M-*` (metric), `D-NN` (recorded design decision), `F-X` / `G-X` (project phase and gate), `ODD-n.PARAMETER` (declared parameter of the operational domain), `TBD-Qn` (open question pending closure).
+**Framework identifiers.** The work uses a single set of identifiers that are never reused. They are summarised here, and their registers are in Appendices A (hazards), B (requirements), E (cage) and F (traceability): `H-XX` (hazard), `SR-XXX` (safety requirement), `SR-CL-A` / `SR-CL-B` (criticality class of a requirement), `C-XX` (cage rule), `SC-*` (scenario), `M-*` (metric), `D-NN` (recorded design decision), `F-X` / `G-X` (project phase and gate), `ODD-n.PARAMETER` (declared parameter of the operational domain), `TBD-Qn` (open question pending closure).
 
-**Names of trainings and campaigns.** Figures and appendices label the observation tracks, training runs, checkpoints and scenario campaigns with short names — `F-track`, `track E`, `E-main`, `GE4-V2`, `margin022`, `2-D PPO 550k`, `sim-to-real v2`, and step counts such as `550k` — which Table 7.1 (§7.2.4) matches with the descriptive names used in the text.
+**Names of trainings and campaigns.** Figures and appendices use short names for the observation tracks, training runs, checkpoints and scenario campaigns: `F-track`, `track E`, `E-main`, `GE4-V2`, `margin022`, `2-D PPO 550k`, `sim-to-real v2`, and step counts such as `550k`. Table 7.1 (§7.2.4) links them to the descriptive names used in the text.
 
-**Argument identifiers.** Distinct from the previous ones, these organise the thread of the text rather than the chain of evidence: `OE1`…`OE7` (specific objectives, §1.4), `H1`…`H3` (hypotheses, §1.5 — not to be confused with `H-01`…`H-12`, which are hazards), `A1`…`A5` (adaptations to the V-Model, §3.4), `R1`…`R14` (results, Chapter 12), `T1`…`T7` (lines of future work, Chapter 12).
+**Argument identifiers.** These are different from the ones above: they organise the thread of the text, not the chain of evidence. They are `SO1`…`SO7` (specific objectives, §1.4), `H1`…`H3` (hypotheses, §1.3; not to be confused with `H-01`…`H-12`, which are hazards), `A1`…`A5` (adaptations to the V-Model, §3.4), `R1`…`R14` (results, Chapter 12), `T1`…`T7` (lines of future work, Chapter 12).
 
 **Main symbols.**
 

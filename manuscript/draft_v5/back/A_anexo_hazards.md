@@ -1,10 +1,6 @@
 # Anexo A — Registro de peligros (versión extendida)
 
-Versión completa del registro resumido en la Tabla 4.1. Cada entrada conserva su
-clasificación de severidad (S), exposición (E) y controlabilidad (C), los dominios
-operacionales en que aplica, el consecuente operacional principal y la hipótesis de causa
-raíz dominante. La numeración es estable y no reutilizable: un identificador retirado no
-vuelve a asignarse.
+Esta es la versión completa del registro resumido en la Tabla 4.1. Para cada peligro se indican su severidad (S), exposición (E) y controlabilidad (C), los dominios operacionales en los que aplica, su principal consecuencia operacional y la hipótesis de causa raíz más probable. La numeración es estable y no se reutiliza: un identificador retirado no se vuelve a asignar.
 
 | ID | Hazard (descripción) | S | E | C | Criticidad | ODDs aplicables | Consecuente operacional principal | Hipótesis de causa raíz dominante |
 | -- | -------------------- | - | - | - | ---------- | --------------- | --------------------------------- | --------------------------------- |
@@ -21,10 +17,4 @@ vuelve a asignarse.
 | H-11 | (Track 'E') Pérdida de percepción de carril válida (oclusión, ausencia de features, caída/latencia de cámara); ciega a policy y cage (causa común, D-43). | S3 | E2 | C2 | High | 1, 2, 3, 4 | Comandos arbitrarios sobre percepción ciega; sin fallback, trayectoria indefinida. | Oclusión; features ausentes; dropout/freeze de cámara; wash-out extremo. |
 | H-12 | (Track 'E') Mala detección del cage: el detector CV del cage produce un carril falso plausible y la cage impone una envolvente errónea. | S3 | E2 | C2 | High | 1, 2, 3, 4 | La cage deja de ser garantía y puede sacar al vehículo del carril verdadero. | Marcas engañosas (bifurcaciones, pintura antigua); sombras/reflejos como bordes; visión degradada que corrompe la detección. |
 
-**Nota sobre tres reclasificaciones.** Durante la auditoría del registro se normalizaron
-tres valoraciones inicialmente ambiguas. H-03 pasó de una severidad partida —no admitida por
-la norma— a un único valor conservador sobre el peor caso en curva. H-05 bajó de S2 a S1
-para alinearse con la convención de vehículo real: la actuación abrupta es primariamente un
-peligro de confort y desgaste, no de lesión. Y H-06 consolidó su exposición en un único
-valor dominado por el despliegue físico. Las tres quedan registradas porque una
-reclasificación silenciosa de severidad es indistinguible de un ajuste a conveniencia.
+**Nota sobre tres reclasificaciones.** Al auditar el registro se corrigieron tres valoraciones que al principio eran ambiguas. H-03 tenía una severidad partida, algo que la norma no admite, y pasó a un único valor prudente basado en el peor caso en curva. H-05 bajó de S2 a S1 para seguir la convención de vehículo real: un mando brusco es sobre todo un problema de confort y desgaste, no de lesiones. Y la exposición de H-06 se fijó en un único valor, marcado por el despliegue físico. Las tres se dejan registradas porque un cambio de severidad hecho sin avisar no se puede distinguir de un ajuste a conveniencia.

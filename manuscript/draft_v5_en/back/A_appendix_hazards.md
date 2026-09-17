@@ -1,10 +1,6 @@
 # Appendix A — Hazard register (extended version)
 
-Complete version of the register summarised in Table 4.1. Each entry keeps its
-classification of severity (S), exposure (E) and controllability (C), the operational
-domains where it applies, the main operational consequence and the dominant root cause
-hypothesis. The numbering is stable and non-reusable: a withdrawn identifier is never
-assigned again.
+This is the full version of the register summarised in Table 4.1. For each hazard it gives the severity (S), exposure (E) and controllability (C), the operational domains where it applies, its main operational consequence and the most likely root cause hypothesis. The numbering is stable and never reused: a withdrawn identifier is not assigned again.
 
 | ID | Hazard (description) | S | E | C | Criticality | Applicable ODDs | Main operational consequence | Dominant root cause hypothesis |
 | -- | -------------------- | - | - | - | ---------- | --------------- | --------------------------------- | --------------------------------- |
@@ -21,10 +17,4 @@ assigned again.
 | H-11 | (Track 'E') Loss of valid lane perception (occlusion, absence of features, camera dropout/latency); blinds both policy and cage (common cause, D-43). | S3 | E2 | C2 | High | 1, 2, 3, 4 | Arbitrary commands over a blind perception; without a fallback, an undefined trajectory. | Occlusion; missing features; camera dropout/freeze; extreme wash-out. |
 | H-12 | (Track 'E') Wrong detection by the cage: the CV detector of the cage produces a plausible false lane and the cage imposes a wrong envelope. | S3 | E2 | C2 | High | 1, 2, 3, 4 | The cage stops being a guarantee and can take the vehicle out of the true lane. | Misleading markings (branches, old paint); shadows/reflections read as edges; degraded vision that corrupts the detection. |
 
-**Note on three reclassifications.** During the audit of the register, three initially ambiguous
-assessments were normalised. H-03 moved from a split severity — not admitted by the
-standard — to a single conservative value for the worst case in a curve. H-05 went down from S2 to S1
-in order to align with the convention for a real vehicle: abrupt actuation is primarily a
-hazard of comfort and wear, not of injury. And H-06 consolidated its exposure into a single
-value dominated by the physical deployment. All three are recorded because a silent
-reclassification of severity is indistinguishable from an adjustment made for convenience.
+**Note on three reclassifications.** When the register was audited, three ratings that were unclear at first were corrected. H-03 had a split severity, which the standard does not allow, and was given a single cautious value based on the worst case in a curve. H-05 went down from S2 to S1 to follow the convention for a real vehicle: an abrupt command is mainly a problem of comfort and wear, not of injury. And the exposure of H-06 was set to a single value, driven by the physical deployment. All three changes are recorded because a change of severity made without notice cannot be told apart from an adjustment made for convenience.

@@ -1,8 +1,6 @@
 # Anexo D — Especificación del dominio operacional
 
-Tabla consolidada de parámetros de los cuatro dominios operacionales. Cada parámetro tiene
-nombre, valor por dominio y procedencia; ninguna afirmación del cuerpo sobre el dominio se
-apoya en una descripción cualitativa cuando existe un parámetro con nombre.
+Esta es la tabla completa de parámetros de los cuatro dominios operacionales. Cada parámetro tiene un nombre, un valor para cada dominio y una procedencia. Cuando existe un parámetro con nombre, ninguna afirmación del texto sobre el dominio se apoya en una descripción cualitativa.
 
 | `*.V_MAX` / `*.V_MAX_STRAIGHT` | Speed ceiling, straight (m/s) | 0.5 | 0.5 | 0.5 | 0.5 | SR-004; C-04. Operating point = 0.20 |
 | `*.V_MAX_CURVE` | Speed ceiling, curve (m/s) | n/a | n/a | 0.25 | 0.25 | SR-004; C-04 |
@@ -21,9 +19,7 @@ apoya en una descripción cualitativa cuando existe un parámetro con nombre.
 
 ## D.1 Cuestiones abiertas del dominio y su cierre
 
-De las doce cuestiones cuantitativas que la especificación abrió al redactarse, once están
-cerradas con un valor explícito y su fecha; la duodécima permanece abierta por dependencia
-de hardware y no por omisión.
+De las doce cuestiones cuantitativas que se abrieron al escribir la especificación, once están cerradas con un valor explícito y su fecha. La duodécima sigue abierta porque depende del hardware, no porque se haya olvidado.
 
 | TBD-Q1 | Friction coefficient of the road surface? | SS | closed | 1.0 — world SDFs ship an empty `<surface><friction>` block; Gazebo ODE defaults `mu1=mu2=1.0`. Inferred, not explicit `<mu>`; re-read if a future world sets one. (2026-05-14) |
 | TBD-Q2 | Max commanded lateral accel., ODD-1? | SS | closed | 9.81 — Coulomb ceiling FRICTION×g. Physical envelope, not a typical value (operational `a_lat ≈ 0` at κ=0). (2026-05-14) |

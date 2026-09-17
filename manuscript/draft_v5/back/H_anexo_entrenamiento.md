@@ -2,8 +2,7 @@
 
 ## H.1 Función de recompensa
 
-La recompensa es idéntica en ambos tracks y se computa sobre el estado
-**ground-truth** + progreso, agnóstica a la observación:
+La recompensa es la misma en los dos tracks. Se calcula sobre el estado **ground-truth** más el avance, así que no depende de la observación:
 
 ```text
 r = w_fwd · max(progress, 0)
@@ -13,11 +12,7 @@ r = w_fwd · max(progress, 0)
   - w_term · [terminated_off_road]
 ```
 
-donde `progress` es el avance normalizado a lo largo de la línea
-central, `Δsteering` es el cambio en el steering crudo de la política
-(no el post-cage; §7.2.2), y `[terminated_off_road]` es 1 solo si el
-episodio termina por salida de vía (no por emergencia C-05; §7.2.4).
-Los pesos nominales (sujetos a ajuste experimental) son:
+donde `progress` es el avance normalizado a lo largo de la línea central, `Δsteering` es el cambio en el steering crudo de la política (no el que sale de la cage; §7.2.2), y `[terminated_off_road]` vale 1 solo si el episodio termina por salida de vía (no por emergencia C-05; §7.2.4). Los pesos nominales (que pueden ajustarse experimentalmente) son:
 
 | Parámetro | Valor | Rationale |
 | --- | --- | --- |
@@ -27,20 +22,11 @@ Los pesos nominales (sujetos a ajuste experimental) son:
 | `w_ds` (steer_delta) | 0.20 | Suavidad de actuación (sobre Δsteering crudo, v1.2; §7.2.2) |
 | `w_term` (termination) | 25.0 | Desincentiva salida de vía |
 
-El término forward usa progreso normalizado (no velocidad): como la
-velocidad es fija, un término `w_fwd·speed` sería una constante que no
-discrimina la conducta y dejaba `explained_variance ≈ 0` (revisión F3,
-primer run). La penalización de terminación alta (25.0) prioriza la
-permanencia en vía; solo la salida de vía la aplica — la emergencia
-C-05 termina sin penalización (la intervención de la cage es dinámica, no
-castigo; D-34, §7.2.4). Los pesos son `[provisional, M-P1..M-P4]`; detalle
-en `docs/10_reward_function.md`.
+El término de avance usa el progreso normalizado y no la velocidad. Como la velocidad es fija, un término `w_fwd·speed` sería una constante que no distingue ninguna conducta, y dejaba `explained_variance ≈ 0` (revisión F3, primer run). La penalización alta por terminación (25.0) da prioridad a seguir en la vía. Solo se aplica al salir de la vía: la emergencia C-05 termina el episodio sin penalización, porque la intervención de la cage es parte de la dinámica y no un castigo (D-34, §7.2.4). Los pesos son `[provisional, M-P1..M-P4]`. El detalle está en `docs/10_reward_function.md`.
 
 ## H.2 Hiperparámetros
 
-La tabla lista la configuración efectiva completa. La columna E-main es
-la del run de cámara `ppo_newcam_complex_b_2024_1M`; la baseline F es la del
-run de estado `ppo_train_2024_200k`.
+La tabla recoge la configuración efectiva completa. La columna E-main corresponde al run de cámara `ppo_newcam_complex_b_2024_1M`, y la baseline F, al run de estado `ppo_train_2024_200k`.
 
 | Parámetro | E-main (cámara) | Baseline (F, estado) | Fuente / nota |
 | --- | --- | --- | --- |
@@ -61,22 +47,11 @@ run de estado `ppo_train_2024_200k`.
 | `max_grad_norm` | 0.5 | 0.5 | SB3 default |
 | `device` | auto (CUDA si existe) | cpu | E: la CNN aprovecha GPU |
 
-Los cuatro levers de estabilidad del E-main (`target_kl`, anneal lineal
-de LR, `VecNormalize(norm_reward)` y `clip_range_vf`) no existen en el
-baseline F: se añadieron tras observar que PPO sobre CNN con randomización
-visual es marcadamente menos estable que sobre el vector de estado (§7.3).
-`norm_obs` se mantiene False, de modo que la evaluación/inferencia no se
-ve afectada y `ep_rew_mean` en la curva queda cruda (comparable con el
-baseline). El presupuesto de cámara es ≥ 1M pasos (D-41 acepta la mayor
-demanda de datos del extremo a extremo); un piloto de ~20k valida el bucle
-antes de comprometer el presupuesto.
+Los cuatro ajustes de estabilidad del E-main (`target_kl`, reducción lineal del LR, `VecNormalize(norm_reward)` y `clip_range_vf`) no están en el baseline F. Se añadieron al ver que PPO con una CNN y aleatorización visual es bastante menos estable que con el vector de estado (§7.3). `norm_obs` se deja en False, así que la evaluación y la inferencia no se ven afectadas y `ep_rew_mean` en la curva queda sin normalizar (comparable con el baseline). El presupuesto para la cámara es de al menos 1M pasos (D-41 acepta que el enfoque end-to-end necesita más datos), y un piloto de unos 20k pasos comprueba que el bucle funciona antes de gastar ese presupuesto.
 
 ## H.3 Estudio comparativo de algoritmos y puntos de control
 
-Cadena corrida → punto de control → evaluación del estudio posterior. Todos los valores de
-evaluación proceden del escenario nominal con la aleatorización desactivada. El pico indicado
-pertenece a la curva de entrenamiento y no siempre coincide con la cadencia de puntos de
-control, por lo que la selección final se resuelve por evaluación en lazo cerrado.
+La tabla sigue la cadena corrida → punto de control → evaluación del estudio posterior. Todos los valores de evaluación vienen del escenario nominal con la aleatorización desactivada. El pico indicado es el de la curva de entrenamiento y no siempre coincide con los puntos de control guardados, así que la elección final se hace con evaluación en lazo cerrado.
 
 | Acción · configuración | Evidencia de entrenamiento | Checkpoint evaluado | SC-NOM-01, enforcement | SC-NOM-01, monitoring |
 | --- | --- | --- | --- | --- |
@@ -89,6 +64,4 @@ control, por lo que la selección final se resuelve por evaluación en lazo cerr
 | **2-D**, `ent_coef=0.005`, seed 2024 · `sac_gz2d_tuned_entfix_2024_1M` | pico 558,7 @ 77 825; subida sin ciclos abruptos; parada en 176 129 | 75k (`b76724c7…`) | **4,32 vueltas; 17,1 mm; 0 emerg.**; 17,1 % C-06 | 4,31 vueltas; 16,3 mm; 0 emerg. |
 | **2-D**, `ent_coef=0.005`, seed 42 · `sac_gz2d_tuned_entfix_42_120k` | pico 270,9 @ 47 105; réplica acotada a 120 833 | 50k (`cbde3836…`) | **4,97 vueltas; 18,2 mm; 0 emerg.**; 46,4 % C-06 | 4,84 vueltas; 22,6 mm; 39 pasos con trigger C-05 contrafactual |
 
-*Cadena corrida → checkpoint → evaluación del estudio SAC
-posterior. Los porcentajes de intervención en monitoring son activaciones
-contrafactuales: se registran, pero la acción de la cage no se aplica.*
+*Cadena corrida → checkpoint → evaluación del estudio SAC posterior. Los porcentajes de intervención en monitoring son activaciones contrafactuales: se registran, pero la acción de la cage no se aplica.*

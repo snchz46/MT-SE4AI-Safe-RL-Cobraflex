@@ -1,14 +1,10 @@
 # Appendix I — Breakdown of the reference campaign
 
-Data generated directly from the campaign artefacts
-(`campaign_report.json` and `failure_mode_breakdown.json`): 1,890 runs, 0 errors,
-27 scenarios × 2 modes, over the two-dimensional reference policy.
+These data come directly from the campaign artefacts (`campaign_report.json` and `failure_mode_breakdown.json`): 1,890 runs, 0 errors, 27 scenarios × 2 modes, using the two-dimensional reference policy.
 
 ## I.1 Runs passed by scenario and mode
 
-The verdict in the right-hand column corresponds to *enforcement* mode and is computed against the
-pass criterion declared by each scenario, with the fraction threshold that the
-scenario fixes.
+The verdict in the right-hand column is for *enforcement* mode. It is calculated with each scenario's pass criterion and the pass fraction threshold that the scenario sets.
 
 | Scenario | Enforcement | Monitoring | Enf. verdict |
 | --- | ---: | ---: | :-: |
@@ -68,21 +64,18 @@ scenario fixes.
 | Runs with a lateral excursion ≥ the limit | 69 |
 | Maximum lateral excursion (m) | 0.2824 |
 
-The contacts counted correspond entirely to runs whose initial
-condition falls outside the operational domain (edge and frontier families). Inside the
-domain, the count is zero.
+All counted contacts come from runs whose starting condition is outside the operational domain (edge and frontier families). Inside the domain, the count is zero.
 
 ## I.4 Co-activation grid: breakdown of the negative verdict
 
-Partition of the grid according to whether the injected point falls inside the operational domain:
+The grid is split by whether the injected point is inside the operational domain:
 
 | Block | Runs | Passed | Failed | Lateral margin violations |
 | --- | ---: | ---: | ---: | ---: |
 | Inside the ODD | 85 | 42 | 43 | 16 |
 | Outside the ODD | 15 | 2 | 13 | 10 |
 
-Breakdown by the combination of rules actually co-activated, which is what localises the
-arbitration problem:
+Breakdown by the combination of rules that actually fired together, which is what shows where the arbitration problem is:
 
 | Rule combination | Runs | Failures | Lateral margin violations | Inside the ODD |
 | --- | ---: | ---: | ---: | ---: |
@@ -92,5 +85,4 @@ arbitration problem:
 | C-01 ∧ C-04 ∧ C-06 | 20 | 12 | 0 | 15 |
 | C-04 ∧ C-06 | 20 | 0 | 0 | 20 |
 
-The reading is in §8.6: the violations concentrate where the lateral correction and the
-heading correction come into conflict, and they disappear where they do not.
+The interpretation is in §8.6: the violations are concentrated where the lateral and heading corrections conflict, and they disappear where they do not.

@@ -1,8 +1,6 @@
 # Appendix G — Positioning space (complete version)
 
-Complete version of Table 2.1, with the twenty lines of work reviewed in
-Chapter 2 evaluated along the seven axes of interest. `✓` indicates substantive coverage of the
-axis; `partial`, partial coverage; `–`, no treatment at all.
+This is the full version of Table 2.1: the twenty lines of work reviewed in Chapter 2, rated on the seven axes of interest. `✓` means the axis is covered in depth; `partial`, that it is partly covered; `–`, that it is not dealt with.
 
 | Work / line | Safe training | Cage / runtime filter | Scenario validation | Lifecycle | Explicit traceability | Sim-to-real gap | E2e case study |
 | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |

@@ -1,9 +1,6 @@
 # Anexo F — Matriz de trazabilidad
 
-La matriz existe en dos formas complementarias que se mantienen sincronizadas: una legible,
-organizada por cadena de mitigación, y otra procesable por máquina sobre la que el validador
-comprueba las ocho restricciones de cobertura. Una violación de cualquiera de ellas bloquea la
-puerta de revisión correspondiente.
+La matriz existe en dos formas que se mantienen sincronizadas. Una es legible y está organizada por cadena de mitigación. La otra la puede procesar una máquina, y sobre ella el validador comprueba las ocho restricciones de cobertura. Si se incumple cualquiera de ellas, la puerta de revisión correspondiente queda bloqueada.
 
 ## F.1 Resumen por cadena de mitigación
 
@@ -24,48 +21,20 @@ puerta de revisión correspondiente.
 | H-11 | SR-013 | C-05 (CV-estimator health → controlled stop) | SC-NOM-01, SC-PERT-07, SC-PERT-13 | M-S3 | Satisfied (2-D PPO 550k, verdict of record; GE4-V2 gate record: SC-PERT-07 25/25 + SC-PERT-13 40/40; D-29 closed by D-46) ⁵ ⁶ ⁹ |
 | H-12 | SR-014 | C-05 (plausibility check → controlled stop) | SC-NOM-01, SC-PERT-08, SC-PERT-04..06, SC-PERT-09..10, SC-PERT-11..13 | M-S1, M-S3 | Satisfied (2-D PPO 550k, verdict of record; GE4-V2 gate record: SC-PERT-08 false-lane 25/25) ⁴ ⁶ ⁹ |
 
-**Notas de la tabla F.1.** Los ocho marcadores remiten al desarrollo completo de cada caso en el
-documento vivo de trazabilidad; aquí se recoge la versión condensada.
+**Notas de la tabla F.1.** Los ocho marcadores remiten al desarrollo completo de cada caso en el documento vivo de trazabilidad. Aquí se recoge la versión resumida.
 
-- **¹ SR-006 — Satisfecho sobre su propia métrica (D-39).** La agregación gruesa sobre «todos los
-  escenarios» le hacía heredar un fallo de fracción ajeno a la suavidad, de modo que se puntúa
-  directamente sobre su métrica: en los pasos que el limitador realmente gobierna —sin regla de
-  seguridad prevaleciendo ni emergencia— la variación por ciclo del mando comprometido respeta
-  `δ_max = 0,15` en 559 de 559 corridas evaluables de enforcement; en monitorización solo el
-  67,6 % aguanta y la peor tasa llega a 0,43. Es, de paso, la medida más directa del valor de C-06.
-- **² SR-009 — Satisfecho fuera de banda (D-64, ratificado por D-69).** SC-PERT-03 quedó excluido de
-  la campaña por protocolo, de modo que el veredicto no procede de la agregación sino de tres partes
-  medidas por separado: la política nominal nunca se detiene; un intento deliberado de forzarla a
-  detenerse no lo consigue; y el detector dispara ante una parada real inyectada por guion.
-- **³ SR-010 — `No satisfecho`, hallazgo determinado de clase B (D-69).** Es el único requisito que el
-  trabajo cierra como incumplido, medido dos veces sobre dos políticas distintas: 30 de 85 puntos
-  de rejilla dentro del ODD en la política anterior, 16 de 85 en la de referencia. Se concentra en la
-  co-activación de C-01 y C-02, y desaparece donde no hay conflicto entre corrección lateral y de
-  rumbo. Al ser de clase B no veta el veredicto global.
-- **⁴ SR-012 / SR-014 — Satisfechos.** Los escenarios perturbados aprueban en enforcement, incluido el
-  carril falso inyectado. Donde el criterio del escenario marca fallo, lo hace *solo* por la cláusula
-  de ausencia de emergencia: la cage ejecutó su parada controlada sobre una percepción degradada y el
-  criterio puntúa esa parada segura como fallo. El criterio propio de SR-012 se cumple en todos los casos.
-- **⁵ SR-013 — Satisfecho.** La parada en lazo abierto se ejecuta dentro de presupuesto, sin contacto
-  con el borde, y la cobertura por ambos lados cierra la carencia que la versión anterior arrastraba
-  al no disponer de un segundo escenario adverso.
-- **⁶ SC-PERT-11 / 12 / 13** —marcas desgastadas, degradación de imagen y ambas combinadas— amplían la
-  familia adversa de SR-012 / SR-014 y dan a SR-013 su segundo escenario adverso. Puntúan 30/30,
-  40/40 y 40/40 en enforcement, contra 0/30, 23/40 y 0/40 en monitorización.
-- **⁷ SR-002 / SR-003 — Satisfechos sobre su propio criterio (D-47).** El «fallo» de SC-EDGE-01 es una
-  cláusula de rendimiento heredada del óvalo —tiempo de recuperación de rumbo— que no es el criterio
-  de satisfacción documentado de ninguno de los dos: SR-002 exige `M-P4 ≤ 25°` y el máximo medido es
-  14,2°; SR-003 exige un margen de tiempo que nunca se compromete, con excursión lateral máxima de
-  0,043 m y cero emergencias. Véase §8.3.
-- **⁹ El veredicto de récord es la campaña 2-D PPO 550k** (31.07.2026, D-69). SR-012 / SR-013 / SR-014
-  están satisfechos en ambos brazos de cámara; las filas anteriores citan esa campaña como
-  evidencia vigente y conservan GE4-V2 como registro congelado de la puerta G4.
+- **¹ SR-006 — Satisfecho sobre su propia métrica (D-39).** Al agregarlo de forma gruesa sobre «todos los escenarios», heredaba un fallo de proporción que no tenía nada que ver con la suavidad. Por eso se puntúa directamente sobre su métrica. En los pasos que de verdad controla el limitador (sin una regla de seguridad por encima ni emergencia), la variación por ciclo del mando aplicado respeta `δ_max = 0,15` en 559 de 559 corridas evaluables de enforcement. En monitorización solo lo cumple el 67,6 %, y la peor tasa llega a 0,43. De paso, es la medida más directa de lo que vale C-06.
+- **² SR-009 — Satisfecho fuera de banda (D-64, ratificado por D-69).** SC-PERT-03 quedó fuera de la campaña por protocolo, así que el veredicto no sale de la agregación sino de tres partes medidas por separado: la política nominal nunca se para, un intento deliberado de hacer que se pare no funciona, y el detector salta ante una parada real inyectada por un script.
+- **³ SR-010 — `No satisfecho`, hallazgo confirmado de clase B (D-69).** Es el único requisito que el trabajo cierra como incumplido, y se midió dos veces con dos políticas distintas: 30 de 85 puntos de rejilla dentro del ODD con la política anterior, y 16 de 85 con la de referencia. Se concentra en la co-activación de C-01 y C-02, y desaparece donde no hay conflicto entre la corrección lateral y la de rumbo. Como es de clase B, no bloquea el veredicto global.
+- **⁴ SR-012 / SR-014 — Satisfechos.** Los escenarios perturbados aprueban en enforcement, incluido el del carril falso inyectado. Cuando el criterio de un escenario marca fallo, lo hace *solo* por la cláusula de ausencia de emergencia: la cage hizo su parada controlada ante una percepción degradada, y el criterio cuenta esa parada segura como fallo. El criterio propio de SR-012 se cumple en todos los casos.
+- **⁵ SR-013 — Satisfecho.** La parada en lazo abierto se hace dentro del presupuesto de tiempo y sin tocar el borde. Tener cobertura por los dos lados cierra la carencia de la versión anterior, que no tenía un segundo escenario adverso.
+- **⁶ SC-PERT-11 / 12 / 13** (marcas desgastadas, degradación de imagen y las dos combinadas) amplían la familia adversa de SR-012 / SR-014 y dan a SR-013 su segundo escenario adverso. Puntúan 30/30, 40/40 y 40/40 en enforcement, frente a 0/30, 23/40 y 0/40 en monitorización.
+- **⁷ SR-002 / SR-003 — Satisfechos sobre su propio criterio (D-47).** El «fallo» de SC-EDGE-01 viene de una cláusula de rendimiento heredada del óvalo (tiempo de recuperación del rumbo) que no es el criterio de satisfacción documentado de ninguno de los dos. SR-002 pide `M-P4 ≤ 25°`, y el máximo medido es 14,2°. SR-003 pide un margen de tiempo que nunca se pierde, con una excursión lateral máxima de 0,043 m y cero emergencias. Ver §8.3.
+- **⁹ El veredicto de referencia es la campaña 2-D PPO 550k** (31.07.2026, D-69). SR-012 / SR-013 / SR-014 se cumplen en los dos brazos de cámara. Las filas de arriba citan esa campaña como evidencia vigente y mantienen GE4-V2 como registro congelado de la puerta G4.
 
 ## F.2 Forma procesable por máquina
 
-Cada fila representa una cadena desde un peligro hasta una métrica. Un peligro aparece en
-varias filas porque abarca varias cadenas. La columna de veredicto físico permanece pendiente
-en su totalidad: la fase de despliegue está construida pero no ejecutada sobre hardware.
+Cada fila es una cadena desde un peligro hasta una métrica. Un mismo peligro aparece en varias filas porque cubre varias cadenas. La columna de veredicto físico está vacía en todas las filas: la cadena de despliegue está construida y se ha puesto en marcha sobre hardware, pero ningún escenario se ha puntuado allí (§9.3.1, §10.4).
 
 | Peligro | Requisito | Regla | Tipo | Escenario | Métrica | Veredicto sim. | Veredicto fís. |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -105,11 +74,6 @@ en su totalidad: la fase de despliegue está construida pero no ejecutada sobre 
 
 ## F.3 Restricciones verificadas
 
-El validador comprueba mecánicamente que: todo peligro está referenciado por al menos un
-requisito; todo requisito referencia al menos un peligro; todo requisito está implementado por
-al menos una regla, restricción de entrenamiento o propiedad de arbitraje; toda regla
-implementa al menos un requisito; toda regla es ejercitada por al menos un escenario; todo
-escenario referencia al menos un requisito; todo requisito tiene al menos una métrica
-verificadora; y toda métrica referenciada está definida.
+El validador comprueba de forma automática que: todo peligro está referenciado por al menos un requisito; todo requisito referencia al menos un peligro; todo requisito está implementado por al menos una regla, una restricción de entrenamiento o una propiedad de arbitraje; toda regla implementa al menos un requisito; toda regla se prueba en al menos un escenario; todo escenario referencia al menos un requisito; todo requisito tiene al menos una métrica que lo verifica; y toda métrica referenciada está definida.
 
 **Estado al cierre: todas las comprobaciones pasan, sin huérfanos y sin avisos.**

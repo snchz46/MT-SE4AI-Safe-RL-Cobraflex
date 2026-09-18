@@ -22,7 +22,7 @@ Cada escenario se ejecuta en modo enforcement, en el que la cage corrige el coma
 
 El veredicto de un requisito se construye a partir de los veredictos de sus escenarios, con dos reglas definidas de antemano. La primera trata de tener suficiente evidencia. Un requisito solo recibe veredicto si tiene al menos un número mínimo de ejecuciones, repartidas entre una familia nominal y otra adversa. Si no, se marca como evidencia insuficiente, que no es lo mismo que un fallo. La segunda es una regla de veto: solo los requisitos de clase A pueden hacer que el veredicto global falle.
 
-Un detalle de implementación resultó ser importante. El veredicto de una ejecución puede ser indeterminado cuando el criterio del escenario usa una magnitud que el registro no guarda. Eso no es un fallo. Se quita del denominador y se transmite como evidencia insuficiente. Una versión temprana del agregador lo contaba como fallo, y eso daba requisitos «incumplidos» que en realidad eran huecos de instrumentación. Puede parecer un detalle menor, pero es justo lo que separa un hueco de un resultado. Los dos requisitos que este trabajo cierra de forma no trivial (uno satisfecho y otro no) solo se pudieron cerrar porque se arregló el hueco de instrumentación y se pudo tomar la medida de verdad.
+Un detalle de implementación resultó importante. El veredicto de una ejecución puede ser indeterminado cuando el criterio del escenario usa una magnitud que el registro no guarda; eso no es un fallo, se quita del denominador y se transmite como evidencia insuficiente. Una versión temprana del agregador lo contaba como fallo, y producía requisitos «incumplidos» que en realidad eran huecos de instrumentación. Parece menor, pero es justo lo que separa un hueco de un resultado: los dos requisitos que este trabajo cierra de forma no trivial, uno satisfecho y otro no, solo se pudieron cerrar tras arreglar el hueco y tomar la medida de verdad.
 
 ## 8.3 La campaña de referencia
 
@@ -61,7 +61,7 @@ El veredicto se registra tal cual, con la explicación anotada al lado, y no se 
 
 La misma cláusula bloqueó el veredicto en dos campañas seguidas. Eso es un motivo para sospechar de la cláusula, no solo del sistema. Se auditó, y tenía un defecto real. Su banda de recuperación era un valor *fijo*, calibrado sobre un controlador y un trazado anteriores. Como el error de rumbo oscila alrededor de cero con una amplitud que depende del controlador y del trazado, pedir varias muestras seguidas dentro de esa banda medía el rizado y no la recuperación. Al aplicarla a corridas sin ninguna perturbación, la métrica decía que el 100 % de ellas «nunca se recupera».
 
-La corrección fija la banda en relación con la envolvente de régimen permanente de cada corrida. Se aplicó una sola vez, con su criterio de aceptación fijado antes: los falsos positivos en escenarios sin perturbar tenían que desaparecer. Desaparecieron. De aquí salen dos conclusiones, y las dos importan. La primera: al volver a puntuar esta campaña con la métrica corregida, sigue fallando el escenario, mientras que la política anterior lo aprobaría. Es decir, la corrección favorece a la opción que la tesis no presenta, así que no se puede ver como un ajuste hecho a conveniencia. La segunda: el fallo no es un error de medida. La recuperación de esta política de verdad *repica* (13,6° → 1,4° → 5,9°, y se asienta hacia los 2,5 s), y lo hace en una recta. Así es como se ve en lazo cerrado el mando a tirones que documenta §8.5. Es una propiedad de rendimiento, no de seguridad, y la explicación se apoya ahora en algo más sólido que «la cláusula es heredada».
+La corrección fija la banda en relación con la envolvente de régimen permanente de cada corrida. Se aplicó una sola vez, con su criterio de aceptación fijado antes: los falsos positivos en escenarios sin perturbar tenían que desaparecer, y desaparecieron. De ahí salen dos conclusiones. Primera: al volver a puntuar esta campaña con la métrica corregida el escenario sigue fallando, mientras que la política anterior lo aprobaría, así que la corrección favorece a la opción que la tesis *no* presenta y no se puede ver como un ajuste a conveniencia. Segunda: el fallo no es un error de medida. La recuperación de esta política de verdad *repica* (13,6° → 1,4° → 5,9°, asentándose hacia los 2,5 s) y lo hace en una recta: así se ve en lazo cerrado el mando a tirones que documenta §8.5. Es una propiedad de rendimiento, no de seguridad, y la explicación se apoya ahora en algo más sólido que «la cláusula es heredada».
 
 El límite de 2,0 s se dejó igual a propósito: la auditoría corrige una medición, no baja el listón.
 
@@ -69,12 +69,12 @@ El límite de 2,0 s se dejó igual a propósito: la auditoría corrige una medic
 
 Este es el resultado principal del trabajo. La Tabla 8.3 cuenta los contactos con el borde de la calzada y separa las corridas según si su condición inicial está dentro o fuera del dominio operacional:
 
-| | Dentro del ODD | Fuera del ODD |
+| | Dentro del ODD (555 corridas/modo) | Fuera del ODD (390 corridas/modo) |
 | --- | ---: | ---: |
 | **Enforcement** (cage activa) | **0** | 56 |
 | Monitoring (cage inactiva) | 60 | 217 |
 
-*Tabla 8.3 — Contactos con el borde de la calzada por modo y según si la corrida empieza dentro del dominio.*
+*Tabla 8.3 — Contactos con el borde de la calzada por modo y según si la corrida empieza dentro del dominio. Las 945 corridas de cada modo se reparten en 555 dentro del dominio (familias nominal y perturbada) y 390 fuera (familias límite y frontera).*
 
 La Figura 8.1 lo muestra: dentro del dominio operacional, con la cage activa, no hay ni un solo contacto con el borde de la calzada. La policy sola comete sesenta, y la cage los elimina todos a cambio de 406 paradas controladas. Fuera del dominio, donde el sistema no tiene obligación de funcionar, la mejora respecto a la política anterior es grande: 56 contactos frente a 117, concentrados justo donde las condiciones de frontera son más duras.
 
@@ -84,7 +84,7 @@ La Figura 8.1 lo muestra: dentro del dominio operacional, con la cage activa, no
 
 ### 8.4.1 Latente dentro, activa donde empeora la percepción
 
-En el escenario nominal limpio la cage está latente. La política conduce 5,32 vueltas con 8,6 mm de error lateral medio, cero emergencias y cero intervenciones de seguridad, y solo actúa el limitador de tasa. Pero al comparar los modos escenario a escenario (Tabla 8.4) se ve dónde deja de estar latente:
+En el escenario nominal limpio la cage está latente, con las cifras que ya dio §7.5.2 al elegir el punto de control: solo actúa el limitador de tasa. Pero al comparar los modos escenario a escenario (Tabla 8.4) se ve dónde deja de estar latente:
 
 | Escenario | Enforcement | Monitoring |
 | --- | ---: | ---: |
@@ -147,15 +147,15 @@ El requisito es de clase B, así que no bloquea el veredicto global, y no afecta
 
 Dos requisitos se cierran con su propia métrica en lugar de con los resultados de los escenarios. En los dos casos el motivo está documentado.
 
-El requisito de suavidad de actuación se comprueba directamente sobre la traza del mando que de verdad se aplicó. En enforcement, 840 de 840 corridas respetan el límite por ciclo. En monitoring, solo 263 de 945. De paso, es la medida más directa de lo que vale el limitador.
+El requisito de suavidad de actuación se comprueba directamente sobre la traza del mando que de verdad se aplicó, contando solo los ciclos que no anula la parada de emergencia. En enforcement, las 840 corridas que tienen ciclos de ese tipo respetan todas el límite; las 105 restantes terminan en emergencia y no aportan muestra. En monitoring, donde la cage no anula nada y las 945 corridas puntúan, solo 263 lo respetan. De paso, es la medida más directa de lo que vale el limitador.
 
 El requisito de *liveness* se cierra con sus propias mediciones. Su escenario, una meta-prueba de dos brazos que añade un incentivo para detenerse, quedó fuera de la campaña porque no depende de la política y ya se había cerrado por separado, con tres partes medidas. La política nominal nunca se detiene. Un intento deliberado de hacer que se detenga no funciona, lo que es evidencia positiva de que la mitigación del entrenamiento funciona. Y el detector sí salta ante una parada real inyectada por un script. Es decir: una mitigación que funciona, un modo de fallo que no aparece y una métrica que funciona.
 
 ## 8.7 Comparación con el brazo de percepción perfecta
 
-El brazo de control usa la misma cage y los mismos escenarios, pero el estado viene de la verdad de referencia y no de la cámara. Cierra con un veredicto global satisfecho y da un hallazgo que pone todo lo anterior en contexto: con percepción perfecta, la cage está completamente latente dentro del dominio. Su métrica de violación de frontera es cero en los dos modos, y no hay ninguna diferencia entre enforcement y monitoring.
+El brazo de control usa la misma cage y los mismos escenarios, pero toma el estado de la verdad de referencia y no de la cámara. Cierra con un veredicto global satisfecho y da un hallazgo que pone todo lo anterior en contexto: con percepción perfecta la cage está completamente latente dentro del dominio, con la métrica de violación de frontera a cero en los dos modos y ninguna diferencia entre enforcement y monitoring.
 
-Leídos juntos, los dos brazos dan la aportación empírica del trabajo: lo que vale la cage depende de lo buena que sea la percepción. Cuando la percepción es perfecta, la envolvente no tiene nada que corregir y su valor solo se ve fuera del dominio. Cuando la percepción es una red que aprende de píxeles degradados, la envolvente pasa de latente a activa y elimina fallos que se pueden medir. Sin el brazo de control, el resultado del brazo de cámara no estaría claro: no se podría saber si la cage ayuda porque el problema es difícil o porque la política es mala.
+Leídos juntos, los dos brazos dan la aportación empírica del trabajo: lo que vale la cage depende de lo buena que sea la percepción. Con percepción perfecta no tiene nada que corregir y su valor solo se ve fuera del dominio; con una red que aprende de píxeles degradados pasa de latente a activa y elimina fallos medibles. Sin el brazo de control no se podría saber si la cage ayuda porque el problema es difícil o porque la política es mala.
 
 ## 8.8 Amenazas a la validez
 

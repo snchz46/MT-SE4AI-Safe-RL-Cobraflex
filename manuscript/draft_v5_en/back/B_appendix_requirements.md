@@ -31,7 +31,7 @@ The rationale for the other SRs is summarised below, with a pointer to the separ
 
 **SR-003** (`t_min = 1.0 s`) is split into 0.3 s of margin for the cage (justifiable with kinematics) and 0.7 s of margin for the policy (marked provisional, to be reviewed after the F3 training prototype).
 
-**SR-004** defines a speed ceiling that depends on curvature, with `ODD-1.V_MAX = 0.5 m/s` on straights and 0.25 m/s in curves. The interpolation coefficient `k_κ = 0.3` is chosen so that the ceiling drops exactly at the maximum curvature expected on the `odd3_curvy_loop` map (pending closure with TBD-Q9). **SR-005** introduces a compound trigger with a persistence of `Δt_max = 0.2 s` (four control cycles, needed to tell a real compound state apart from a passing glitch). `a_min = 0.3 m/s²` is provisional until the M-3 measurement on the platform.
+**SR-004** defines a speed ceiling that depends on curvature, with `ODD-1.V_MAX = 0.5 m/s` on straights and 0.25 m/s in curves. The interpolation coefficient `k_κ = 0.3` is chosen so that the ceiling drops exactly at the maximum curvature expected on the `odd3_curvy_loop` map (TBD-Q9, closed at `KAPPA_MAX ≈ 1.14 m⁻¹`; Appendix D). **SR-005** introduces a compound trigger with a persistence of `Δt_max = 0.2 s` (four control cycles, needed to tell a real compound state apart from a passing glitch). `a_min = 0.3 m/s²` is provisional until the M-3 measurement on the platform.
 
 **SR-006** sets a rate limiter as a cautious defence against abrupt actuation. The values `δ_max_steer = 0.15` and `δ_max_thr = 0.10` are defaults that still need to be checked against the mechanical limits of the actuator (measurement M-5) and against the 95th percentile of the trained policy's natural command change (after the F3 prototype).
 

@@ -22,7 +22,7 @@ Each scenario runs in enforcement mode, where the cage corrects the command, and
 
 The verdict for a requirement is built from the verdicts of its scenarios, using two rules defined in advance. The first is about having enough evidence. A requirement only gets a verdict if it has at least a minimum number of runs, spread across a nominal family and an adverse one. Otherwise it is marked as insufficient evidence, which is not the same as a failure. The second is a veto rule: only class A requirements can make the global verdict fail.
 
-One implementation detail turned out to be important. A per-run verdict can be indeterminate when the scenario's criterion uses a quantity that the log does not record. That is not a failure. It is removed from the denominator and passed on as insufficient evidence. An early version of the aggregator counted it as a failure, and that produced "unsatisfied" requirements that were really gaps in the instrumentation. This may sound like a minor detail, but it is exactly what separates a gap from a result. The two requirements that this work closes in a non-trivial way (one satisfied, one not) could only be closed because the instrumentation gap was fixed and the measurement could really be taken.
+One implementation detail turned out to be important. A per-run verdict can be indeterminate when the scenario's criterion uses a quantity that the log does not record; that is not a failure, it is removed from the denominator and passed on as insufficient evidence. An early version of the aggregator counted it as a failure, producing "unsatisfied" requirements that were really gaps in the instrumentation. It sounds minor, but it is exactly what separates a gap from a result: the two requirements this work closes in a non-trivial way, one satisfied and one not, could only be closed after the gap was fixed and the measurement really taken.
 
 ## 8.3 The reference campaign
 
@@ -61,7 +61,7 @@ The verdict is recorded as literal, with the explanation noted next to it, and i
 
 The same clause blocked the verdict in two campaigns in a row. That is a reason to suspect the clause, not only the system. It was audited, and it had a real defect. Its recovery band was a *fixed* value, calibrated on an older controller and an older layout. Since the heading error oscillates around zero with an amplitude that depends on the controller and the layout, asking for several consecutive samples inside that band measured the ripple, not the recovery. When applied to runs with no perturbation at all, the metric said that 100 % of them "never recover".
 
-The fix sets the band relative to the steady-state envelope of each run. It was applied once, with its acceptance criterion fixed beforehand: the false positives on unperturbed scenarios must go away. They did. Two conclusions follow, and both matter. First, when this campaign is re-scored with the corrected metric, it still fails the scenario, while the previous policy would pass. In other words, the fix helps the option that the thesis does not present, so it cannot be seen as a convenient adjustment. Second, the failure is not a measurement error. This policy's recovery really does *ring* (13.6° → 1.4° → 5.9°, settling towards 2.5 s), and it does so on a straight section. That is what the jerky command documented in §8.5 looks like in closed loop. It is a performance property, not a safety one, and the explanation now rests on firmer ground than "the clause is inherited".
+The fix sets the band relative to the steady-state envelope of each run. It was applied once, with its acceptance criterion fixed beforehand: the false positives on unperturbed scenarios had to go away, and they did. Two conclusions follow. First, re-scoring this campaign with the corrected metric still fails the scenario, while the previous policy would pass, so the fix helps the option the thesis does *not* present and cannot be seen as a convenient adjustment. Second, the failure is not a measurement error. This policy's recovery really does *ring* (13.6° → 1.4° → 5.9°, settling towards 2.5 s), and it does so on a straight section: that is what the jerky command documented in §8.5 looks like in closed loop. It is a performance property, not a safety one, and the explanation now rests on firmer ground than "the clause is inherited".
 
 The 2.0 s limit was left unchanged on purpose: the audit fixes a measurement, it does not lower the bar.
 
@@ -69,12 +69,12 @@ The 2.0 s limit was left unchanged on purpose: the audit fixes a measurement, it
 
 This is the main result of the work. It counts contacts with the road edge and splits the runs by whether their starting condition is inside or outside the operational domain:
 
-| | Inside the ODD | Outside the ODD |
+| | Inside the ODD (555 runs/mode) | Outside the ODD (390 runs/mode) |
 | --- | ---: | ---: |
 | **Enforcement** (cage active) | **0** | 56 |
 | Monitoring (cage inactive) | 60 | 217 |
 
-*Table 8.3 — Contacts with the road edge by mode and by whether the run starts inside the domain.*
+*Table 8.3 — Contacts with the road edge by mode and by whether the run starts inside the domain. The 945 runs of each mode split into 555 inside the domain (nominal and perturbed families) and 390 outside (edge and frontier families).*
 
 **Inside the operational domain, with the cage active, there is not a single contact with the road edge.** The policy alone makes sixty, and the cage removes all of them at the cost of 406 controlled stops. Outside the domain, where the system is not required to work, the improvement over the previous policy is large: 56 contacts against 117, concentrated exactly where the boundary conditions are hardest.
 
@@ -84,7 +84,7 @@ This is the main result of the work. It counts contacts with the road edge and s
 
 ### 8.4.1 Latent inside, active where perception gets worse
 
-In the clean nominal scenario the cage is latent. The policy drives 5.32 laps with 8.6 mm mean lateral error, zero emergencies and zero safety interventions, and only the rate limiter acts. But comparing the modes scenario by scenario (Table 8.4) shows where the cage stops being latent:
+In the clean nominal scenario the cage is latent, with the figures §7.5.2 already gave when the checkpoint was chosen: only the rate limiter acts. But comparing the modes scenario by scenario (Table 8.4) shows where the cage stops being latent:
 
 | Scenario | Enforcement | Monitoring |
 | --- | ---: | ---: |
@@ -151,15 +151,15 @@ The requirement is class B, so it does not block the global verdict, and no clas
 
 Two requirements are closed on their own metric instead of through scenario results. In both cases the reason is documented.
 
-The actuation smoothness requirement is checked directly on the trace of the command that was actually applied. In enforcement, 840 out of 840 runs stay within the per-cycle limit. In monitoring, only 263 out of 945 do. This is also the most direct measure of what the limiter is worth.
+The actuation smoothness requirement is checked directly on the trace of the command that was actually applied, counting only the cycles that the emergency stop does not override. In enforcement, the 840 runs that have such cycles all stay within the per-cycle limit; the remaining 105 end in emergency and contribute no sample. In monitoring, where the cage overrides nothing and all 945 runs score, only 263 stay within it. This is also the most direct measure of what the limiter is worth.
 
 The *liveness* requirement is closed on its own measurements. Its scenario, a two-arm meta-test that adds an incentive to stop, was left out of the campaign because it does not depend on the policy and had already been closed separately, with three measured parts. The nominal policy never stops. A deliberate attempt to make it stop does not work, which is positive evidence that the training mitigation works. And the detector does fire on a real stop injected by a script. So: a mitigation that works, a failure mode that is resisted, and a metric that works.
 
 ## 8.7 Comparison with the perfect perception arm
 
-The control arm uses the same cage and the same scenarios, but the state comes from ground truth instead of the camera. It closes with a global verdict of satisfied, and it gives a finding that puts everything above into context: with perfect perception, the cage is completely latent inside the domain. Its boundary violation metric is zero in both modes, and there is no difference between enforcement and monitoring.
+The control arm uses the same cage and the same scenarios, but takes the state from ground truth instead of the camera. It closes with a global verdict of satisfied, and gives a finding that puts everything above into context: with perfect perception the cage is completely latent inside the domain, with its boundary violation metric at zero in both modes and no difference between enforcement and monitoring.
 
-Read together, the two arms give the empirical contribution of the work: how much the cage is worth depends on how good perception is. When perception is perfect, the envelope has nothing to correct, and its value only shows outside the domain. When perception is a network learning from degraded pixels, the envelope goes from latent to active and removes failures that can be measured. Without the control arm, the result of the camera arm would be unclear: it would not be possible to tell whether the cage helps because the problem is hard or because the policy is bad.
+Read together, the two arms give the empirical contribution of the work: how much the cage is worth depends on how good perception is. With perfect perception it has nothing to correct and its value only shows outside the domain; with a network learning from degraded pixels it goes from latent to active and removes measurable failures. Without the control arm there would be no way to tell whether the cage helps because the problem is hard or because the policy is bad.
 
 ## 8.8 Threats to validity
 

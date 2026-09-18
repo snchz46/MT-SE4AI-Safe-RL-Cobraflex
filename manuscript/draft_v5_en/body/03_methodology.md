@@ -4,7 +4,7 @@
 
 This chapter presents the main methodological contribution of the thesis: the adapted V-Model. It is a life cycle framework for systems that include components trained with reinforcement learning inside functions that affect safety. The chapter defines the framework used in the rest of the work, explains the decisions behind it, and relates each decision to the standards and to the literature from Chapter 2. It does not present experimental results or implementation details.
 
-Two things are often mixed up and should be kept apart. The *research methodology*, meaning how this work produces knowledge that can be generalised, is covered in §3.2. The *system engineering methodology*, meaning how the technical system is built from requirements to deployment, is covered in §3.3 to §3.8. The first answers the question "what does this thesis add to knowledge?". The second answers "how is the system built?". Chapters 4 to 10 put into practice what is defined here, and Chapter 11 evaluates the framework based on that practice.
+Two things are often mixed up and should be kept apart. The *research methodology* — how this work produces knowledge that can be generalised — is covered in §3.2. The *system engineering methodology* — how the technical system is built from requirements to deployment — runs from §3.3 to §3.8. Chapters 4 to 10 put into practice what is defined here, and Chapter 11 evaluates the framework based on that practice.
 
 ## 3.2 Research approach
 
@@ -12,7 +12,7 @@ Two things are often mixed up and should be kept apart. The *research methodolog
 
 The work follows the *design science research* tradition (March and Smith, 1995; Hevner et al., 2004). In this tradition, the academic contribution is not an empirical claim tested against reality, and not a logical statement proved by deduction. It is an artefact that solves a known problem, and its usefulness is evaluated through one or more application cases.
 
-The artefact here is the adapted V-Model, which consists of five adaptations A1–A5 to the ISO 26262 V-Model, together with the templates, checkers and other artefacts that implement it. This has three consequences. First, the thesis does not aim for the usual result of an empirical thesis, such as finding a phenomenon or rejecting a statistical hypothesis. It aims to build a useful artefact and show that it works. Second, the evaluation looks at the artefact and not only at the system built with it, so one chapter is dedicated to evaluating the framework itself (Chapter 11). Third, generalisation is argued through structure, because the adaptations target V-Model assumptions that fail for any system with a learned component, and not through statistics over many cases.
+The artefact here is the adapted V-Model: five adaptations A1–A5 to the ISO 26262 V-Model, with the templates and checkers that implement them. Three consequences follow. The thesis does not aim to find a phenomenon or reject a statistical hypothesis, but to build a useful artefact and show that it works. The evaluation looks at the artefact and not only at the system built with it, which is where Chapter 11 comes from. And generalisation is argued through structure — the adaptations target assumptions that fail for any system with a learned component — and not through statistics over many cases.
 
 ### 3.2.2 Evaluation strategy: one case study
 
@@ -20,7 +20,7 @@ The framework is evaluated on a single case: lane following on a 1:14 scale vehi
 
 ### 3.2.3 Role of the author
 
-The author designs the framework, builds the system and evaluates the result. Doing all three creates a built-in risk of confirmation bias, and this has to be admitted before trying to reduce it. It is handled on three levels. The first is two-way traceability as a hard constraint (A4). An automatic checker enforces it and reports any orphan without the author being involved, so it works as a cheap external auditor. The second is the dated decision log. It records what was decided, which alternatives were rejected and why, and others can audit it later. The third is a clear list of limitations (§3.9 and Chapter 11), written as critically as if the solution were someone else's. None of these removes the bias, and nothing could. What they do is limit it to what an independent person could check in the version-controlled artefacts.
+The author designs the framework, builds the system and evaluates the result. That creates a built-in risk of confirmation bias, which has to be admitted before trying to reduce it, and it is handled on three levels. Two-way traceability as a hard constraint (A4), enforced by a checker that reports orphans without the author being involved, works as a cheap external auditor. The dated decision log records what was decided, what was rejected and why, so others can audit it later. And the list of limitations (§3.9 and Chapter 11) is written as critically as if the solution were someone else's. None of these removes the bias, and nothing could: what they do is leave it open to what an independent person can check in the version-controlled artefacts.
 
 ## 3.3 The classical V-Model and its hidden assumptions
 
@@ -42,7 +42,7 @@ The model relies on five assumptions. They are rarely written down, but the whol
 
 *Table 3.1 — The five assumptions of the classical V-Model and how they fail for learned components.*
 
-The size of the problem can be seen in what Salay et al. found about the software techniques in Part 6 of ISO 26262. Of the 34 techniques (out of 75) that apply at unit level, about 40 % do not apply to ML components at all, mostly because they were written for imperative languages. The rest can be used directly or with changes. This gap is practical, not only conceptual, and it is the reason for a complementary framework.
+The gap is practical and not only conceptual: of the Part 6 software techniques that apply at unit level, about 40 % do not apply to ML components at all (§2.6). That is the reason for a complementary framework.
 
 These five failures are not a reason to drop the V-Model. They are a reason to adapt it. The core of this work is to keep the V structure, and with it the consistency with ISO 26262, while adding only the changes needed so that the policy fits into the cycle without breaking traceability or the honesty of the process.
 
@@ -114,9 +114,9 @@ This has an indirect but important effect on design. The constraint makes the ha
 
 The system is a 1:14 scale radio-controlled vehicle. Its main sensor is a single front camera, and it also has an inertial unit and a motor encoder, with onboard computing on a board that supports ROS2. It is developed on two platforms in parallel. One is simulated: Gazebo with native ROS2 integration, run through a gymnasium–Gazebo–ROS2 interface that reuses an environment the author built in earlier work. The other is physical: a closed track with controlled lighting.
 
-One architecture decision matters for the methodology and not only for the system. At first, the project used an explicit modular split (perception, policy, cage, actuation and logging), with the learned component kept in a limited position. This followed the advice of Salay et al. (2017) to avoid ML at the architectural level and keep it at unit level. Later, the main system became an end-to-end camera version, where the policy is a CNN that learns perception and maps the image to an action.
+One architecture decision matters for the methodology and not only for the system. At first the project used an explicit modular split (perception, policy, cage, actuation and logging), with the learned component kept in a limited position, following the advice of Salay et al. (2017) to avoid ML at the architectural level and keep it at unit level. Later the main system became an end-to-end camera version, with the policy a CNN that learns perception and maps the image to an action.
 
-This change is safe because the safety architecture stays the same. The cage is kept and works on its own deterministic lane estimator. This estimator is a classical vision pipeline, separate from the CNN, so it is neither ground truth nor a learned network. The pixels go into the policy, but the envelope works on a state that can be audited and is independent. The reasons for the original decision still hold. A1 holds because cage and policy are still different modules. A2 holds because the cage can be verified without the policy. A4 holds because the traceability chain does not change. The cost that was accepted is the other original reason: end-to-end learning needs more training, and Chapter 7 plans for this. The state track is kept frozen as a control arm to isolate the cost of perception.
+The change is safe because the safety architecture stays the same: the cage still works on its own lane estimator, a classical vision pipeline separate from the CNN that is neither ground truth nor a learned network. The pixels go into the policy, but the envelope works on an independent, auditable state. So A1 still holds (cage and policy are still different modules), A2 too (the cage is verified without the policy) and A4 likewise (the traceability chain does not change). The cost accepted is the one the original reason already named: end-to-end learning needs more training, and Chapter 7 plans for it. The state track is kept frozen as a control arm to isolate the cost of perception.
 
 ### 3.5.2 Mapping the framework onto the case
 
@@ -141,7 +141,7 @@ This mapping is the first check that the framework can be put into practice. Eve
 
 ### 3.5.3 Phases
 
-The project has seven phases in sequence. Each phase has defined deliverables and ends with a review gate that decides whether to move on. The phases are independent of the V-Model levels: one phase can produce artefacts for several levels, and one level can be built over several phases. In short: the first phase sets up the framework and the templates; the second produces the ODD, the hazard analysis and the requirements; the third develops the cage and its tests; the fourth defines the training specification and the scenario library; the fifth runs the training and the behavioural evaluation; the sixth deploys on the physical platform and measures the gap; and the last one collects the evidence and closes the matrix.
+The project has seven phases in sequence, each with defined deliverables and a review gate that decides whether to move on. They are independent of the V-Model levels: one phase can produce artefacts for several levels, and one level can be built over several phases. Figure 3.4 crosses phases against levels: setting up the framework and the templates; ODD, hazard analysis and requirements; the cage and its tests; the training specification and the scenario library; training and behavioural evaluation; physical deployment and gap measurement; and closing the evidence and the matrix.
 
 <img src="../figures/fig_3_4_project_phases.png" alt="Figure 3.4 — Project phases against the levels of the adapted V-Model." width="480"/>
 
@@ -151,13 +151,13 @@ One point is worth stressing, because it is where the framework stops being a pr
 
 ## 3.6 Choice of tools
 
-Each tool choice is explained against the alternatives that were rejected, so that decisions that would otherwise stay implicit leave a record that can be audited. Only the simulator is discussed here, because the methodology depends on it: it is the reference that adaptation A5 measures the gap against. The other choices (the learning algorithm and library, the physical platform, the measurement equipment and the reproducibility tools) are discussed in the same way in Appendix C, together with the clause-by-clause mapping to the standards. The middleware is not discussed separately because it comes with the simulator choice: native ROS2 integration is the first of the four reasons below.
+Each tool choice is explained against the alternatives that were rejected, so that decisions that would otherwise stay implicit leave an auditable record. Only the simulator is discussed here, because the methodology depends on it: it is the reference that A5 measures the gap against. The others (the learning algorithm and library, the physical platform, the measurement equipment and the reproducibility tools) are treated the same way in Appendix C, together with the clause-by-clause mapping to the standards. The middleware is not discussed separately because it comes with the simulator: native ROS2 integration is the first of the reasons below.
 
-**Simulator: Gazebo.** This choice is different from common practice, where CARLA is the reference. There are four reasons. *Native ROS2 integration*: Gazebo is developed together with ROS and shares its basic building blocks without extra layers. The whole architecture is ROS2 by design, so running the simulator in the same graph removes possible failure points and makes it clearer where delays happen, which directly affects how accurate the integration metrics are. *Reuse of earlier work*: the author already has an environment with the vehicle modelled and the track set up. Reusing it frees time for the methodological contribution, which is the real subject of the thesis. This fits the *design science* approach, where the contribution is not the tool. *An existing training interface*, which keeps algorithm, environment and system cleanly separated and so makes A1 easier. *Low computing requirements*, which matters for an individual thesis without dedicated infrastructure.
+**Simulator: Gazebo.** This choice is different from common practice, where CARLA is the reference, and it rests on four reasons that Appendix C.1.1 develops one by one: native ROS2 integration, which keeps the whole system in a single graph and makes the latency metrics trustworthy; reuse of an environment the author had already built, consistent with a *design science* approach in which the tool is not the contribution; an existing training interface that keeps algorithm, environment and system cleanly separated and so makes A1 easier; and modest computing requirements, which matter for an individual thesis without dedicated infrastructure.
 
 The choice has two downsides that need to be stated. Gazebo's visual quality is lower than that of photorealistic engines, and for a camera-based policy this can mean a larger sim-to-real gap. Adaptation A5 exists to make this effect visible and to measure it, not to hide it. Also, most of the autonomous driving community uses CARLA, so there are no ready-made scenario libraries for Gazebo, and this project has to build its own.
 
-Rejected alternatives: CARLA, the strongest option, because of its computing cost and because it needs a ROS2 bridge that brings its own problems; Highway-Env and similar tools, because they have no realistic sensors and use abstract observations, which makes them unsuitable for camera-based policies; LGSVL, which has been discontinued; and AirSim, which focuses on aerial vehicles and is no longer being developed.
+The rejected alternatives (CARLA, Highway-Env, LGSVL and AirSim) are argued in Appendix C.1.1 as well.
 
 ## 3.7 How the framework itself is evaluated
 
@@ -189,12 +189,11 @@ A note on the hazard analysis: the HARA used here is simpler than the one ISO 26
 
 ## 3.9 Limitations of the methodology
 
-It is better to state them clearly now, before the reader finds them in the final chapters.
+The limitations of the *work* are in §1.6.2. The three that affect the *methodology* itself, rather than the case that tests it, are these:
 
 - **Construct validity is limited by having one case.** Generalisation relies on structure, not on evidence from several cases. Mitigation: Chapter 12 separates the parts that can be reused from those that need to be rethought.
 - **The simulation has only moderate visual quality.** All training happens in Gazebo, which can make the gap larger for the visual features the camera sees. Mitigation: A5 makes the gap visible and Chapter 9 measures it. Repeating the experiment on a photorealistic simulator is a natural next step.
-- **The five adaptations are not a complete list.** Others could be justified, for example a level for data engineering, following the data-centred approach of TR 5469 and AMLAS. Each of the five chosen here is justified, but there is no argument that they are the only possible ones.
-- **The framework does not remove the author bias.** It only makes it open to audit.
+- **The five adaptations are not a complete list.** Others could be justified, for example a level for data engineering, following the data-centred approach of TR 5469 and AMLAS. Each one is justified, but there is no argument that they are the only possible ones.
 
 ## 3.10 Next steps
 

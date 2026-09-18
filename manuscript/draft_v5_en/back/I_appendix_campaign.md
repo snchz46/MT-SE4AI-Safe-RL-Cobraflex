@@ -59,7 +59,7 @@ The verdict in the right-hand column is for *enforcement* mode. It is calculated
 
 | Quantity | Value |
 | --- | ---: |
-| Enforcement runs | 945 |
+| Enforcement runs | 945 (555 inside the ODD, 390 outside) |
 | Contacts with the road edge | 56 |
 | Runs with a lateral excursion ≥ the limit | 69 |
 | Maximum lateral excursion (m) | 0.2824 |

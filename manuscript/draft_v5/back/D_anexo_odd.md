@@ -2,6 +2,13 @@
 
 Esta es la tabla completa de parámetros de los cuatro dominios operacionales. Cada parámetro tiene un nombre, un valor para cada dominio y una procedencia. Cuando existe un parámetro con nombre, ninguna afirmación del texto sobre el dominio se apoya en una descripción cualitativa.
 
+| Parameter ID | Quantity | ODD-1 | ODD-2 | ODD-3 | ODD-4 | Source |
+| ------------ | -------- | ----- | ----- | ----- | ----- | ------ |
+| `*.LANE_WIDTH` | Lane width (m) | 0.245 | 0.245 | 0.245 | 0.245 | Centerline configs (`complex_b_centerline.yaml`) |
+| `*.ROAD_WIDTH` | Total road width (m) | 0.52 | 0.52 | 0.52 | 0.52 | complex_b configs (oval legacy 0.50) |
+| `*.ROAD_LENGTH` | Loop / segment length (m) | straight portion | straight portion | 19.22 (centre) / 19.93 (driven) | 19.22 / 19.93 | complex_b perimeter (oval legacy ≈ 8.79) |
+| `*.GRADIENT` | Road gradient | 0 | 0 | 0 | 0 | Map convention |
+| `*.FRICTION` | Surface friction coeff. | 1.0 | 1.0 | 1.0 | 1.0 | Gazebo ODE default (empty `<friction>`); TBD-Q1 |
 | `*.V_MAX` / `*.V_MAX_STRAIGHT` | Speed ceiling, straight (m/s) | 0.5 | 0.5 | 0.5 | 0.5 | SR-004; C-04. Operating point = 0.20 |
 | `*.V_MAX_CURVE` | Speed ceiling, curve (m/s) | n/a | n/a | 0.25 | 0.25 | SR-004; C-04 |
 | `*.K_KAPPA` | Curvature speed-decay coeff. | n/a | n/a | 0.3 | 0.3 | SR-004; C-04 |
@@ -21,6 +28,8 @@ Esta es la tabla completa de parámetros de los cuatro dominios operacionales. C
 
 De las doce cuestiones cuantitativas que se abrieron al escribir la especificación, once están cerradas con un valor explícito y su fecha. La duodécima sigue abierta porque depende del hardware, no porque se haya olvidado.
 
+| Tag | Question | Owner | Target close | Resolution |
+| --- | -------- | ----- | ------------ | ---------- |
 | TBD-Q1 | Friction coefficient of the road surface? | SS | closed | 1.0 — world SDFs ship an empty `<surface><friction>` block; Gazebo ODE defaults `mu1=mu2=1.0`. Inferred, not explicit `<mu>`; re-read if a future world sets one. (2026-05-14) |
 | TBD-Q2 | Max commanded lateral accel., ODD-1? | SS | closed | 9.81 — Coulomb ceiling FRICTION×g. Physical envelope, not a typical value (operational `a_lat ≈ 0` at κ=0). (2026-05-14) |
 | TBD-Q3 | Numerical drivable-corridor edge; why differ from LANE_EDGE? | SS | closed | 0.1225 — the env terminates at `\|ey\| > lane_width/2`; CORRIDOR_EDGE = LANE_EDGE, no separate margin. (Track 'E' adds off-road-by-road-centre-distance vs ROAD_EDGE = 0.26 for self-approaching loops, docs/11 §3.5.) (2026-05-14) |

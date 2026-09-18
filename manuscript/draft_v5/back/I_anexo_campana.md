@@ -59,7 +59,7 @@ El veredicto de la columna de la derecha es el del modo *enforcement*, y se calc
 
 | Magnitud | Valor |
 | --- | ---: |
-| Corridas de enforcement | 945 |
+| Corridas de enforcement | 945 (555 dentro del ODD, 390 fuera) |
 | Contactos con el borde de la calzada | 56 |
 | Corridas con excursión lateral ≥ límite | 69 |
 | Excursión lateral máxima (m) | 0.2824 |

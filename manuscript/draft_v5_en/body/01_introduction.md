@@ -61,7 +61,7 @@ The thesis claims five contributions, C1–C5. They are different from the five 
 - **C1 — A single methodological framework.** An adapted V-Model with five explicit changes (A1–A5): module design is split into *Cage Specification* and *Training Specification*; unit testing is split into *Cage Unit Tests* and *Policy Behavioral Evaluation*; a runtime monitoring level is added as continuous validation; two-way traceability becomes a hard requirement; and operational validation is redefined so that it includes an explicit description of the sim-to-real gap.
 - **C2 — An executable version.** Each change comes with the artefacts that implement it, including reusable templates and automatic checkers. The most important one is the traceability checker, which turns traceability into a gate that a script can pass or fail.
 - **C3 — A complete, reproducible case study.** The framework is applied to a system built from scratch, in two versions whose comparison shows the cost of camera perception. Artefacts, training and evaluation scripts are versioned, and the run data is published.
-- **C4 — Measurement of the sim-to-real gap.**  Gazebo (reference campaign) → the physical platform. The second step ends as a bring-up and not as a results campaign. Chapters 9 and 10 say this openly instead of hiding it.
+- **C4 — Measurement of the sim-to-real gap** in two steps of increasing realism starting from Gazebo, where the reference campaign is produced: first a higher-fidelity simulator (Isaac Sim, PhysX + RTX) and then the physical platform. The second step ends as a bring-up and not as a results campaign. Chapters 9 and 10 say this openly instead of hiding it.
 - **C5 — Self-evaluation of the framework:** what it cost to adopt, where it worked as expected and where it showed its limits, so that others can improve it later.
 
 ## 1.6 Scope and limitations
@@ -77,7 +77,7 @@ The framework is applied to one system (lane following with PPO and a cage) on o
 - **Adoption cost without comparison.** The effort spent on the framework's artefacts is recorded, but there is no control group.
 - **The adaptations are not a complete list.** The five chosen here are the ones the author considers most relevant for this case. Others could also be justified.
 - **Scale platform.** The findings on the sim-to-real gap apply to a 1:14 vehicle on a controlled track.
-- **The physical step ends as a bring-up.** The deployment chain runs on the real vehicle and gives calibration results and structural findings. However, no scenario has been scored on hardware and the cage has never changed an action there. For this reason the physical column of the verdict table is marked *not executed* (§10.4), and all driving figures in Chapter 9 are preliminary. This is a limit of the evidence, not of the framework, and the text says so wherever it matters.
+- **The physical step ends as a bring-up.** The deployment chain runs on the real vehicle and gives calibration results and structural findings, but no scenario has been scored on hardware and the cage has never changed an action there. Hence the physical column of the verdict table is marked *not executed* (§10.4d–e) and every driving figure in Chapter 9 is preliminary. This is a limit of the evidence, not of the framework.
 
 These limitations are discussed further in §3.9 and in Chapter 11.
 

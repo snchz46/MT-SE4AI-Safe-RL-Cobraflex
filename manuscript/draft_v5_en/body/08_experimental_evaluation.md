@@ -30,7 +30,7 @@ The reference campaign runs 1,890 runs with no errors: twenty-seven scenarios in
 
 ### 8.3.1 Global verdict
 
-The literal global verdict is `NOT SATISFIED`, built as shown in Table 8.1. It is blocked by two class A requirements, heading stability and predictive time to lane departure, and only through one scenario and one clause. It is worth looking at in detail, because the difference between "the system is not safe" and what actually happens is the key point of the chapter:
+The literal global verdict is `NOT SATISFIED`, built as shown in Table 8.1. It is blocked by two class A requirements, heading stability and predictive time to lane departure, and only through one scenario and one clause. It is worth examining in detail, because the difference between "the system is not safe" and what actually happens is the central point of the chapter:
 
 | | Count | Requirements |
 | --- | :-: | --- |
@@ -61,7 +61,7 @@ The verdict is recorded as literal, with the explanation noted next to it, and i
 
 The same clause blocked the verdict in two campaigns in a row. That is a reason to suspect the clause, not only the system. It was audited, and it had a real defect. Its recovery band was a *fixed* value, calibrated on an older controller and an older layout. Since the heading error oscillates around zero with an amplitude that depends on the controller and the layout, asking for several consecutive samples inside that band measured the ripple, not the recovery. When applied to runs with no perturbation at all, the metric said that 100 % of them "never recover".
 
-The fix sets the band relative to the steady-state envelope of each run. It was applied once, with its acceptance criterion fixed beforehand: the false positives on unperturbed scenarios had to go away, and they did. Two conclusions follow. First, re-scoring this campaign with the corrected metric still fails the scenario, while the previous policy would pass, so the fix helps the option the thesis does *not* present and cannot be seen as a convenient adjustment. Second, the failure is not a measurement error. This policy's recovery really does *ring* (13.6° → 1.4° → 5.9°, settling towards 2.5 s), and it does so on a straight section: that is what the jerky command documented in §8.5 looks like in closed loop. It is a performance property, not a safety one, and the explanation now rests on firmer ground than "the clause is inherited".
+The fix sets the band relative to the steady-state envelope of each run. It was applied once, with its acceptance criterion fixed beforehand: the false positives on unperturbed scenarios had to go away, and they did. Two conclusions follow. First, re-scoring this campaign with the corrected metric still fails the scenario, while the previous policy would pass. The fix therefore helps the option the thesis does *not* present, and cannot be seen as a convenient adjustment. Second, the failure is not a measurement error. This policy's recovery really does *ring* (13.6° → 1.4° → 5.9°, settling towards 2.5 s), and it does so on a straight section: that is what the jerky command documented in §8.5 looks like in closed loop. It is a performance property, not a safety one, and the explanation now rests on firmer ground than "the clause is inherited".
 
 The 2.0 s limit was left unchanged on purpose: the audit fixes a measurement, it does not lower the bar.
 
@@ -143,7 +143,7 @@ Its criterion says that when two or more rules fire in the same cycle, the resul
 
 Looking at which rules fire together shows the problem clearly. The violations are concentrated where the lateral limit and heading rules fire together (15 out of 20 runs fail, with 11 violations) and in the triple that includes them. They are milder when the lateral rule fires with the predictive rule (4 violations). They disappear completely where lateral and heading corrections do not conflict: speed together with the rate limiter produces no violation and no failure.
 
-Training a better policy cuts the problem in half, but it does not change what kind of problem it is. That is the main conclusion. How the cage arbitrates when rules fire together is a design property of the cage, not a defect of the policy, and the evidence is that two very different policies show the same pattern, only weaker. It is exactly the hazard the register predicted when it included a hazard for the mitigation mechanism itself, and it is kept as stated future work.
+Training a better policy cuts the problem in half, but it does not change what kind of problem it is. That is the main conclusion. How the cage arbitrates when rules fire together is a design property of the cage, not a defect of the policy. The evidence is that two very different policies show the same pattern, only weaker. This is exactly the hazard the register predicted when it included a hazard for the mitigation mechanism itself, and it is kept as stated future work.
 
 The requirement is class B, so it does not block the global verdict, and no class A safety condition is involved. Having a negative verdict in the matrix, next to the claim of zero contacts inside the domain, is what makes that claim believable.
 

@@ -20,7 +20,7 @@ The framework is evaluated on a single case: lane following on a 1:14 scale vehi
 
 ### 3.2.3 Role of the author
 
-The author designs the framework, builds the system and evaluates the result. That creates a built-in risk of confirmation bias, which has to be admitted before trying to reduce it, and it is handled on three levels. Two-way traceability as a hard constraint (A4), enforced by a checker that reports orphans without the author being involved, works as a cheap external auditor. The dated decision log records what was decided, what was rejected and why, so others can audit it later. And the list of limitations (§3.9 and Chapter 11) is written as critically as if the solution were someone else's. None of these removes the bias, and nothing could: what they do is leave it open to what an independent person can check in the version-controlled artefacts.
+The author designs the framework, builds the system and evaluates the result. That creates a built-in risk of confirmation bias, which has to be admitted before trying to reduce it, and it is handled on three levels. The first is two-way traceability as a hard constraint (A4). A checker reports orphans without the author being involved, so it acts as an independent reviewer at very low cost. The second is the dated decision log, which records what was decided, what was rejected and why, so that others can audit it later. The third is the list of limitations (§3.9 and Chapter 11), written as critically as if the solution came from someone else. None of these removes the bias, and nothing could: what they do is leave it open to what an independent person can check in the version-controlled artefacts.
 
 ## 3.3 The classical V-Model and its hidden assumptions
 
@@ -44,7 +44,7 @@ The model relies on five assumptions. They are rarely written down, but the whol
 
 The gap is practical and not only conceptual: of the Part 6 software techniques that apply at unit level, about 40 % do not apply to ML components at all (§2.6). That is the reason for a complementary framework.
 
-These five failures are not a reason to drop the V-Model. They are a reason to adapt it. The core of this work is to keep the V structure, and with it the consistency with ISO 26262, while adding only the changes needed so that the policy fits into the cycle without breaking traceability or the honesty of the process.
+These five failures are not a reason to drop the V-Model. They are a reason to adapt it. The core of this work is to keep the V structure, and with it the consistency with ISO 26262. Only the changes needed to fit the policy into the cycle are added, and they must not break traceability or the honesty of the process.
 
 ## 3.4 The five adaptations
 

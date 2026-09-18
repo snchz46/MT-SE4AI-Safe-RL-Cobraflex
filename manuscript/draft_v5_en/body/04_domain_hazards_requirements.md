@@ -47,7 +47,7 @@ The analysis follows the structure of a HARA as in ISO 26262 (Figure 4.2 shows t
 
 *Figure 4.2 — The HARA procedure as applied: five steps from listing the functions to documenting the consequence and the root-cause hypothesis. A light systemic pass refines the constraints on selected hazards, and the output is the hazard register.*
 
-Each hazard is rated on three axes with explicit scales: severity (from S0, no injury, to S3, a serious consequence on the full-size equivalent), exposure (from E0 to E4, based on how often the situation happens inside the domain) and controllability (from C0 to C3, based on how well the system or a supervisor can avoid the damage). Together they give the criticality, which decides whether the hazard needs a deterministic rule, a training constraint, or both.
+Each hazard is rated on three axes with explicit scales. Severity runs from S0, no injury, to S3, a serious consequence on the full-size equivalent. Exposure runs from E0 to E4, based on how often the situation happens inside the domain. Controllability runs from C0 to C3, based on how well the system or a supervisor can avoid the damage. Together they give the criticality, which decides whether the hazard needs a deterministic rule, a training constraint, or both.
 
 ### 4.4.2 Hazard register
 
@@ -70,7 +70,7 @@ The register, summarised in Table 4.1, contains twelve hazards: nine at system l
 
 *Table 4.1 — Hazard register, short version (extended register in Appendix A).*
 
-Three entries need a comment, because they would not appear in a classical analysis. H-08 is specific to the learned component. It is reward exploitation: the policy ends up doing nothing, or doing something harmful, because that earns more reward than normal lane following. H-09 is specific to the *mitigation*. If two or more cage rules fire in the same cycle and their combined output is a command outside the safe envelope, the cage is no longer a guarantee and becomes a source of unsafe commands. Recording the hazards created by the safety mechanism itself is a basic matter of honesty, and Chapter 8 shows that this was not just a formal precaution. H-12 is the camera-track version of the same idea: the cage estimator produces a lane that is false but looks plausible, and applies a wrong envelope over the real lane.
+Three entries need a comment, because they would not appear in a classical analysis. H-08 is specific to the learned component. It is reward exploitation: the policy ends up doing nothing, or doing something harmful, because that earns more reward than normal lane following. H-09 is specific to the *mitigation*. Two or more cage rules may fire in the same cycle. If their combined output is a command outside the safe envelope, the cage is no longer a guarantee and becomes a source of unsafe commands. Recording the hazards created by the safety mechanism itself is a basic matter of honesty, and Chapter 8 shows that this was not just a formal precaution. H-12 is the camera-track version of the same idea: the cage estimator produces a lane that is false but looks plausible, and applies a wrong envelope over the real lane.
 
 ### 4.4.3 Systemic analysis
 

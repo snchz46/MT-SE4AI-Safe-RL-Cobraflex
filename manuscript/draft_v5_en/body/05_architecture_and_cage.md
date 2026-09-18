@@ -4,7 +4,7 @@
 
 This chapter covers two levels: architectural design (L3) and module specification in its classical form (L4a). It produces the first artefact where adaptation A1 becomes concrete: the Cage Specification. This is a deterministic, modular specification written in the traditional way, unlike the process specification that Chapter 7 writes for the policy.
 
-The chapter covers the design idea behind the safety envelope, the conceptual problems that come up when building it, how the rules are derived from the requirements, the design of each rule, the version-controlled parameters, and the ROS2 architecture that runs it. The full parameter specification, with the numerical derivation of each threshold and its calibration status, is in Appendix E.
+The chapter covers six things: the design idea behind the safety envelope, the conceptual problems that appear when building it, how the rules are derived from the requirements, the design of each rule, the version-controlled parameters, and the ROS2 architecture that runs it. The full parameter specification, with the numerical derivation of each threshold and its calibration status, is in Appendix E.
 
 ## 5.2 Design idea: the cage as a runtime shield
 
@@ -56,7 +56,7 @@ Requirements are mapped to rules with an explicit procedure. For each requiremen
 
 *Table 5.1 — Traceability from requirements to cage rules.*
 
-Three comments. First, six rules cover fourteen requirements, because one rule can implement several requirements and one requirement can need several rules. Second, two requirements are not implemented by any rule. The framework makes this visible in the matrix, with the type of implementation stated (training constraint and arbitration property), instead of inventing a rule that covers them only on paper. Naming the type is more honest than forcing a rule. Third, the camera-track requirements do not add new rules. They reuse the existing rules on a state that comes from a different source. This is a design result in itself: the cage does not care where the state comes from.
+Three comments. First, six rules cover fourteen requirements, because one rule can implement several requirements and one requirement can need several rules. Second, two requirements are not implemented by any rule. The framework makes this visible in the matrix and states the type of implementation instead, which is a training constraint in one case and an arbitration property in the other. Naming the type is more honest than inventing a rule that would cover them only formally. Third, the camera-track requirements do not add new rules. They reuse the existing rules on a state that comes from a different source. This is a design result in itself: the cage does not care where the state comes from.
 
 ## 5.5 The six rules
 
@@ -104,7 +104,7 @@ This is the most delicate design point of the work, and its trade-off needs to b
 
 ## 5.8 Traceability and automatic checks
 
-Now that the rules are specified, the matrix covers its second part: the links between requirements and rules. The checker automatically verifies that every rule implements at least one requirement, that every requirement is implemented by a rule or explicitly states another type of implementation, and that every rule is tested by at least one scenario. Any violation blocks the review gate.
+Now that the rules are specified, the matrix covers its second part: the links between requirements and rules. The checker verifies three conditions automatically. Every rule implements at least one requirement. Every requirement is implemented by a rule, or explicitly states another type of implementation. And every rule is tested by at least one scenario. Any violation blocks the review gate.
 
 The effect this has on design is worth pointing out, because Chapter 11 evaluates it. The constraint forces the implementation path to be chosen when the requirement is written, not later. The visible result is a set of more practical requirements, and a set of rules with no orphan functionality: every rule in the cage answers a requirement that can be traced back to a registered hazard.
 

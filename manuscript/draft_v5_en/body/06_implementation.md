@@ -46,7 +46,7 @@ The test suite grows with the system and has to pass before every review. Its va
 
 The integrated demo runs the full chain in simulation with the classical controller driving. Three first metrics are reported here. They are not an experimental result, only evidence that the chain works. The real characterisation is in Chapter 8.
 
-The cage cycle latency, measured over 845 s of continuous operation, has a median and a 95th percentile of 50.0 ms, with a maximum of 62.0 ms caused by a single cycle and by the operating system's non-deterministic scheduler. The median and 95th percentile fit within the control cycle budget.
+The cage cycle latency was measured over 845 s of continuous operation. Its median and its 95th percentile are both 50.0 ms. The maximum is 62.0 ms, caused by a single cycle and by the operating system's non-deterministic scheduler. The median and the 95th percentile fit within the control cycle budget.
 
 During nominal operation the cage intervenes in 0.047 % of the cycles (8 out of 16,910). All of them come from the heading rule or the rate limiter. The lateral limit, the predictive rule and emergency mode never fire. This result says two things, and both matter: the classical controller is well tuned for the nominal scenario, and the cage thresholds are not too strict. A cage that intervened all the time under nominal conditions would not be measuring safety. It would be measuring its own bad tuning.
 
@@ -74,4 +74,4 @@ The reference system does not add new nodes. It adapts the environment, as shown
 
 ## 6.8 Summary
 
-At the end of this chapter the system exists. The chain works end to end, the cage is implemented and verified with the classical technique that suits a deterministic component, and the logging produces the evidence that the upper levels of the right branch will use. What is still missing is the component the framework was built for. Chapter 7 covers its process specification, which is the second half of adaptation A1, and its training.
+At the end of this chapter the system exists. The chain works end to end. The cage is implemented and verified with the classical technique that suits a deterministic component. And the logging produces the evidence that the upper levels of the right branch will use. What is still missing is the component the framework was built for. Chapter 7 covers its process specification, which is the second half of adaptation A1, and its training.

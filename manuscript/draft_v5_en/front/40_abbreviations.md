@@ -52,7 +52,7 @@
 | `ey` | Lateral deviation from the lane centre | m |
 | `epsi`, `θ` | Heading error with respect to the lane tangent | rad / ° |
 | `κ` | Curvature of the reference trajectory | m⁻¹ |
-| `d_max` | Hard limit on lateral deviation (rule C-01) | m |
+| `d_max` | Hard limit on lateral error (rule C-01) | m |
 | `θ_max` | Limit on heading error (rule C-02) | ° |
 | `t_min` | Time-to-lane-crossing threshold (rule C-03) | s |
 | `σ_θ` | Standard deviation of the heading over a sliding window | ° |

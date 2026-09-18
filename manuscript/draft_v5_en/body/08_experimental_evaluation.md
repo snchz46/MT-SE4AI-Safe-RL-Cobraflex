@@ -121,7 +121,11 @@ Four measurements narrow down the cause.
 
 *Table 8.5 — Enforcement and monitoring at the apex: the only difference is the limiter.*
 
-**No safety rule steps in.** In the twenty-five enforcement runs, the intervention log contains only the rate limiter, with zero activations of the lateral limit, heading, predictive and emergency rules. The rule that keeps the vehicle in the lane at those apexes is, on paper, a class B smoothness rule.
+<img src="../figures/auto/fig_8_3_c06_load_bearing.png" alt="Figure 8.3 — The endurance scenario with and without the cage acting." width="620"/>
+
+*Figure 8.3 — The endurance scenario (`SC-NOM-03`, 300 s), all fifty runs of the reference campaign. Left: the largest lateral excursion of each run. The crosses are the runs that ended off the road, where the value is the point at which the run was cut short and not how far the vehicle would have gone, so the two marker types are not the same quantity. Right: the intervention ledger. With the cage acting it contains the rate limiter and nothing else — 58,124 cycles of C-06 against zero activations of C-01, C-02, C-03 and C-05 — while the same command stream, merely observed, applies changes of up to 2.0 per cycle against the 0.15 bound. This is the evidence behind the claim that the safety rules are latent *because* the limiter acts first.*
+
+**No safety rule steps in** (Figure 8.3). In the twenty-five enforcement runs, the intervention log contains only the rate limiter, with zero activations of the lateral limit, heading, predictive and emergency rules. The rule that keeps the vehicle in the lane at those apexes is, on paper, a class B smoothness rule.
 
 **This policy's raw command is about twice as abrupt** as that of the earlier policies, and it saturates the limiter in 77.5 % of the steps. Speed does not explain it. The previous policy drives 7 % slower and stays on the road, and in the comparison between modes the speed is the same because it is the same policy.
 

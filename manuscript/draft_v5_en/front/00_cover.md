@@ -1,5 +1,7 @@
 ::centre::
 
+<img src="../figures/HochschuleEsslingen_Logo.png" alt="HS Esslingen logo" width="200"/>
+
 Hochschule Esslingen — University of Applied Sciences
 
 Master of Science in Automotive Systems (M.Sc.)
@@ -21,8 +23,6 @@ Master of Science in Automotive Systems (M.Sc.)
 
 Samuel Sánchez Moreno
 
-Matriculation number: [to be completed]
-
 &nbsp;
 
 **First examiner and supervisor**
@@ -38,6 +38,6 @@ Prof. Dr. Markus Enzweiler
 &nbsp;
 &nbsp;
 
-Esslingen am Neckar — 2026
+Esslingen am Neckar
 
-Submission date: 15.09.2026
+September 2026

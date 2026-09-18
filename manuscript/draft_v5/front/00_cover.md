@@ -38,6 +38,6 @@ Prof. Dr. Markus Enzweiler
 &nbsp;
 &nbsp;
 
-Esslingen am Neckar — 2026
+Esslingen am Neckar
 
-Fecha de entrega: 15.09.2026
+Septiembre 2026

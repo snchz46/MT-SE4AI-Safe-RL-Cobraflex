@@ -31,6 +31,39 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [17.09.2026 · abstract] — The abstract (ES *Resumen*, EN *Abstract*) is cut to one page
+
+**Document(s) affected:** `manuscript/draft_v5/front/10_abstract.md`, `manuscript/draft_v5_en/front/10_abstract.md`;
+regenerated `manuscript/latex_psithesis/front/abstract.tex` and `manuscript/thesis-psithesis-overleaf.zip`
+**Phase:** E6 (write-up)
+**Gate context:** after G4; condensation only — no number, claim or verdict added or changed
+**Author:** Samuel Sanchez
+
+### Change
+
+Both abstracts went from about 1,000 words over two pages to about 390 (EN) on one page. Kept:
+the problem, A1–A5 and the standards, the traceability chain as the main contribution, the case
+study with its control arm, the 1,890-run campaign (0 in-ODD road-edge contacts vs 60; safety
+rules latent in clean driving; C-06 keeping the lane, 17/25 off-road without the cage; SR-010
+not met) and the bring-up findings (77.89° vs 90° field of view; non-transfer from the 6.5:1
+handedness; 18.05 m in one segment, one run; place-dependent estimator accuracy), with the
+statement that no scenario was scored on hardware and the cage never changed an action there.
+Dropped for length: the out-of-ODD comparison with the earlier policy, the 3.4 % / 3.0 % limiter
+figure, the fifth bring-up finding (rules without operational behaviour) and the closing sentence.
+All of them remain in Chapters 8–12.
+
+### Rationale
+
+Author's instruction: the abstract must fit on a single page.
+
+### Verification
+
+Measured, not estimated: Word COM on both DOCX builds — *Resumen* and *Abstract* on page 3,
+keywords at line 33 (ES) and 30 (EN), preface starting on page 4; LuaLaTeX build of the PSIThesis
+rendering — abstract on page v with one line to spare, page vi empty.
+
+---
+
 ## [17.09.2026 · LaTeX rendering] — The PSIThesis rendering is generated from `draft_v5_en`, compiled for the first time, and its appendix tables fixed
 
 **Document(s) affected:** `manuscript/latex_psithesis/` — `md2tex.py`, `margin_notes.md`, `latexmkrc`

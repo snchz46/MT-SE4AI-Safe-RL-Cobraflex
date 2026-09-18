@@ -31,6 +31,97 @@ Result of `tools/check_traceability.py` after the change.
 
 ---
 
+## [18.09.2026] — The repository is split into engineering record and authoring scaffolding
+
+**Document(s) affected:** `.gitignore` (new closing section); no living document under `docs/` and no
+`cage/cage.yaml` value touched
+**Phase:** E6 (write-up)
+**Gate context:** after G4; housekeeping only — no hazard, SR, cage rule, scenario, metric or verdict
+added, removed or re-valued
+**Author:** Samuel Sanchez
+
+### Change
+
+478 files were removed from the index (`git rm --cached`, all of them still on disk) and the patterns
+that cover them appended to `.gitignore`. Two distinct sets:
+
+**(a) Authoring scaffolding — the new rules.** The machinery that produced the *document* rather than
+the system under test: the six `tools/plot_*.py` figure renderers and the five one-off
+`manuscript/figures/*.py` plots plus `crop_titles.py`, `mmd_render.py` and `DESIGN_PROMPTS.md`;
+`tools/build_thesis_docx.py` and `tools/thesis_page_budget.py`; the manuscript by-products and
+third-party material (`thesis-psithesis-overleaf.zip`, `thesis_recap.pptx`, `fisba48428.pdf`,
+`thesis_bibliography_wordsources.xml`, the LaTeX-template bookmark `.txt`); the agent/local
+configuration (`.claude/`, `AGENTS.md`); and the two ROS2/TF debug viewers under `tools/assets/`.
+
+**(b) Files the existing rules already declared ignorable but that predated them.** 30 SB3 checkpoint
+archives under `experiments/sim/training/**/checkpoints_peak/` (1.06 GB), matched by
+`experiments/**/*.zip` since 25.07.2026; `campaign_e_297k/campaign_run.log`; the root
+`ppo_gz2d_cap022_1M_2024_vecnormalize_550000_steps.pkl`; and 420 estimator-overlay PNGs (19 MB) under
+`experiments/sim/runs/cv_probe_weak_sections_20260713T084230Z/raw_logs/frames/`, which leaked through
+a pattern gap — the 25.05 rule is written `run_*/raw_logs/` (singular) and does not match `runs/`.
+
+The three deliberate exceptions under `policy/checkpoints/` are untouched: `.gitkeep`,
+`checkpoint_registry.csv` and the deployed `ppo_gz2d_sim2real_v2_2024_r2_1650000_steps.zip`.
+
+Tracked content falls from 37,810 files / ~2.1 GB to 37,331 / ~978 MB.
+
+### Rationale
+
+Author's instruction: what a reader of the project needs is the engineering record — cage, policy,
+scenarios, campaigns, living documents — not the toolchain used to typeset the thesis. Set (b) is not
+a new judgement at all: those files were already declared ignorable by rules this file carries, and
+`CLAUDE.md` already describes the 297k E-main peak as "gitignored" and the checkpoint chain as holding
+"by hash, not by path".
+
+The figures themselves (`manuscript/figures/*.png`) and their declarative sources (`*.mmd`, `*.dot`)
+stay tracked; only the renderers leave. The trade-off is explicit and deliberate: a figure can no
+longer be re-derived from a clean clone, which relaxes the "generated artefacts must be re-derivable"
+rule in `CLAUDE.md` for figures only. Generated *data* — `docs/data/*.csv`, `tools/traceability_matrix.csv`
+— keeps its generators (`sync_hazard_register.py`, `sync_safety_requirements.py`,
+`check_traceability.py`), all still tracked.
+
+### Impact
+
+No re-run of any scenario, campaign or training is required; no evidence artefact was removed. Three
+consequences for a fresh clone:
+
+* `tools/run_campaign.py:1131` imports `plot_frontier` to render the SC-FRONT figures. The call is
+  inside a `try/except Exception` that is documented never to raise; without the module a campaign
+  completes and prints the render command instead.
+* `manuscript/latex_psithesis/md2tex.py --zip` *writes* `../thesis-psithesis-overleaf.zip`, so the
+  archive is a generated artefact of a tracked generator — the correct side of the line.
+* Prose references to the removed tooling remain in `tools/README.md`, `manuscript/README.md`,
+  `manuscript/latex_psithesis/README.md`, `docs/11`, `docs/15`, `docs/DECISIONS.md` and two
+  `src/cobraflex_rl` comments. They are descriptive, not executable, and were left as written.
+
+Both borderline cases were decided by the author the same day.
+
+**`CLAUDE.md` is untracked**, with `AGENTS.md` and `.claude/`: it is an agent brief, and the project
+status a reader needs is carried by `docs/CHANGELOG.md` and `docs/DECISIONS.md`, both tracked.
+
+**The 2-D trunk checkpoint stays tracked, and moved to where it belongs.**
+`ppo_gz2d_cap022_1M_2024_550000_steps.zip` is the subject of the verdict of record, so the argument
+that authorised tracking the deployed v2 policy applies to it verbatim: a safety argument whose
+subject cannot be rebuilt from the repository is not reproducible. It sat loose at the repository
+root, where the `/*_steps.zip` rule was written precisely to catch it; it is now
+`policy/checkpoints/ppo_gz2d_cap022_1M_2024_550000_steps.zip` with an explicit negation beside the v2
+one. The root copy turned out to be a stray duplicate of a file already present there (same MD5), and
+the tracked copy verifies against `checkpoint_registry.csv`: `sha256=0d4492461b24`. Its VecNormalize
+sidecar moved with it and stays untracked — `norm_obs=False`, so it carries reward statistics only.
+
+The repository root is now seven files: `.gitignore`, `LICENSE`, `README.md`, `TRACEABILITY.md`,
+`pyproject.toml`, `pytest.ini`, `requirements.txt`.
+
+### Verification
+
+`python tools/check_traceability.py` → **All checks PASSED. 0 warning(s)** (12 hazards, 14 SRs,
+6 cage rules, 28 scenarios, 19 metrics; matrix CSV present). `python -m pytest cage/tests tools/tests`
+→ **205 passed**. The full `pytest` run cannot be exercised on the Windows authoring host:
+`policy/tests/test_eval_policy_2d.py` and `test_lr_schedule.py` fail collection on a missing
+`ament_index_python`, which is pre-existing and unrelated to this change.
+
+---
+
 ## [17.09.2026 · abstract] — The abstract (ES *Resumen*, EN *Abstract*) is cut to one page
 
 **Document(s) affected:** `manuscript/draft_v5/front/10_abstract.md`, `manuscript/draft_v5_en/front/10_abstract.md`;

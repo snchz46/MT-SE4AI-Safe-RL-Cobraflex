@@ -123,6 +123,18 @@ experiments/**/*.zip
 # docs/17 §7.2.
 !policy/checkpoints/ppo_gz2d_sim2real_v2_2024_r2_1650000_steps.zip
 
+# THE 2-D TRUNK POLICY, by the same argument. ppo_gz2d_cap022_1M_2024_550000_steps.zip
+# is the subject of the verdict of record (D-66 selected it, D-69 closed the 1890-run
+# campaign on it): 0 in-ODD road-edge contacts in enforcement against 60 by the bare
+# policy. It was staged loose at the repository root by a deploy, where the
+# `/*_steps.zip` rule was written to catch it; moved here 18.09.2026 so that the rule
+# and the intent agree. 19.5 MB.
+#
+# Its VecNormalize sidecar moved with it but is NOT tracked, for the reason given
+# above: norm_obs=False, so it carries reward statistics only and is needed to resume
+# training, never to run the policy.
+!policy/checkpoints/ppo_gz2d_cap022_1M_2024_550000_steps.zip
+
 # Generated figures (regenerable from data)
 manuscript/figures/auto/
 
@@ -187,3 +199,76 @@ experiments/calibration/M7_offset_response_frames/
 # PNGs); they are untracked from 01.09 forward and remain retrievable from
 # commit 7c496ff5. See docs/CHANGELOG.md [31.08.2026].
 experiments/physical/runs/*/frames/
+
+# ===========================================================================
+# AUTHORING SCAFFOLDING (18.09.2026)
+#
+# Everything below is machinery that was used to *produce* the thesis and has
+# no use to a reader of it. The distinction this file draws everywhere else is
+# evidence vs. by-product; this block draws a second one: the engineering
+# artefact (cage, policy, scenarios, campaigns, living documents) vs. the
+# document-production toolchain. The first is the subject of the thesis and
+# stays; the second is scaffolding and goes.
+#
+# NOTE. The figures these scripts render are TRACKED (manuscript/figures/*.png)
+# and so are their declarative sources (*.mmd, *.dot). What leaves is the
+# renderer, not the picture and not its definition — the trade-off is that a
+# figure can no longer be re-derived from a clean clone. Deliberate: see the
+# CHANGELOG entry for 18.09.2026.
+# ===========================================================================
+
+# Figure generation. Pure read-over-evidence renderers into
+# manuscript/figures/auto/ (itself already ignored, line 127) plus the
+# hand-written one-off plots. None of them is imported by cage/, policy/ or
+# src/; none is exercised by pytest.
+tools/plot_*.py
+manuscript/figures/*.py
+manuscript/figures/DESIGN_PROMPTS.md
+
+# Manuscript build + page-budget measurement. build_thesis_docx.py renders
+# manuscript/draft_v5{,_en}/ to the submission .docx; thesis_page_budget.py
+# drives Word via COM to score it against the 80-100 page body budget. Both
+# operate on the document, never on the system under test.
+tools/build_thesis_docx.py
+tools/thesis_page_budget.py
+
+# Manuscript by-products and third-party material.
+#   *-overleaf.zip ...... a re-zipped copy of manuscript/latex_psithesis/,
+#                         which is tracked file-by-file; the archive is an
+#                         upload bundle, not a source.
+#   thesis_recap.pptx ... defence/meeting slides.
+#   fisba48428.pdf ...... third-party template documentation.
+#   *wordsources.xml .... Word's bibliography store for the .docx route
+#                         (literature.bib is the tracked source).
+#   https *.txt ......... a bookmark to the upstream LaTeX template.
+manuscript/*-overleaf.zip
+manuscript/thesis_recap.pptx
+manuscript/fisba48428.pdf
+manuscript/thesis_bibliography_wordsources.xml
+manuscript/https *.txt
+
+# Agent / local tooling configuration. Not part of the engineering record. The
+# equivalent project status for a reader lives in docs/CHANGELOG.md and
+# docs/DECISIONS.md, which are tracked.
+.claude/
+/AGENTS.md
+/CLAUDE.md
+
+# Ad-hoc ROS2 graph + TF debug viewers. Already matched by `tools/assets*`
+# (line 149); they predate that rule and stayed in the index.
+tools/assets/
+
+# Empty ZED diagnostic stub left at the repo root by the vendor tool.
+/ZED_Diagnostic_Results.json
+
+# Root-level VecNormalize sidecars. The `*.vecnormalize.pkl` rule (line 88)
+# only catches SB3's dotted spelling; CheckpointCallback writes
+# `<run>_vecnormalize_<steps>_steps.pkl`. Carries reward statistics only — it
+# is needed to RESUME TRAINING, never to run a policy.
+/*_steps.pkl
+
+# CV-probe debug frames. The raw_logs rule at line 78 is written `run_*`
+# (singular) and so misses `runs/<id>/raw_logs/`; 420 PNGs (19 MB) of
+# per-frame estimator overlays from the 13.07.2026 weak-section probe were
+# tracked through that gap. Same rule as every other frame dump in this file.
+experiments/sim/runs/*/raw_logs/frames/

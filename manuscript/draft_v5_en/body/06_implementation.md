@@ -30,7 +30,7 @@ All nodes follow the same pattern: parameters declared outside the code, explici
 
 **Logging node.** For every cycle it writes the full cage status (raw command, safe command, active rules, mode, observed state) to a structured file. It is the tool of the runtime monitoring level. Without it, adaptation A3 would have no evidence.
 
-## 6.4 A classical controller to validate the chain
+## 6.4 Classical controller for chain validation
 
 Before adding the learned component, a proportional-derivative controller on the lateral and heading error is implemented. Its role in the thesis is not to compete with the policy. It does three other things. It checks that the full chain works end to end with a controller whose behaviour is completely predictable. It gives a performance reference for reading the learning results. And it allows the cage thresholds to be calibrated with a driver that behaves the same way in every run.
 

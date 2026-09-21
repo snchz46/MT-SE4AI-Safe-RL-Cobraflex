@@ -1,6 +1,6 @@
 # Chapter 10 — Operational validation
 
-## 10.1 From results to a validation statement
+## 10.1 Purpose of the chapter
 
 The earlier chapters produce measurements. This chapter turns them into a validation statement that includes its own limits. It is the first half of adaptation A5 in practice: the conclusion is no longer "the system is safe" but a bounded claim about which requirements are met, in which domain, with what evidence, and with which residual risks stated.
 
@@ -61,6 +61,6 @@ Two groups of cells need a comment. The three requirements with a literal failur
 
 **(f) One rule that the hardware did test.** The speed ceiling is marked satisfied here without having fired once, and §9.3.5 adds two physical measurements that limit this cell without re-scoring it: in the deployed configuration the rule cannot fire on commanded motion, and the only times it did fire were caused by velocity errors from the pose sensor. For this statement that means one specific and limited thing: the verdict on this requirement depends entirely on the fact that its trigger condition was never reached in simulation, and not on evidence that the rule acts correctly when it is reached. It is the requirement with the weakest support in the table, and it is marked as such.
 
-## 10.5 From the statement to the methodological thesis
+## 10.5 Relation to the methodological thesis
 
 The statement above is what the framework promised to produce: not a yes-or-no judgement, but a bounded statement that can be traced back to its evidence and that states clearly what it does not cover. Its form matters as much as its content, because that is what separates an honest validation from an approval. Every claim can be followed back to a set of logged runs, and every limit is written inside the statement rather than in a separate section a reader in a hurry could skip. The three unfavourable results — a negative global verdict, an unmet requirement and a rule that was never tested — are all inside it, and Chapter 11 evaluates what that says about the framework.

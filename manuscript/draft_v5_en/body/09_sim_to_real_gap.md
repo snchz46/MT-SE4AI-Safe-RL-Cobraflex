@@ -1,12 +1,12 @@
 # Chapter 9 — Measuring the sim-to-real gap
 
-## 9.1 The gap as a subject of study
+## 9.1 Purpose and scope of the chapter
 
 Adaptation A5 requires operational validation to include an explicit description of the gap between the environment where the system was trained and the environment where it will run. This is a required part, not an optional one. It answers the imbalance described in §2.7.
 
 The starting point is Gazebo, where all the verdict evidence comes from. From there the chapter takes two steps towards more realism: a simulator with better physics and graphics, and the real platform. Each step answers a different question. The chapter states which questions have a measured answer today and which do not.
 
-## 9.2 First step: the high-fidelity bridge
+## 9.2 First step: the high-fidelity simulator
 
 An equivalent environment was built in Isaac Sim. It is more realistic than Gazebo in physics (PhysX) and in rendering (RTX). The full chain was ported: vehicle model, sensor publishing, in-process training, domain randomization, and the same cage with its parameter file.
 
@@ -24,7 +24,7 @@ The physical deployment chain is built, documented end to end, and running on ha
 
 It did not produce a scored scenario, for three independent reasons. The driving was done outside the library protocol, in monitoring mode instead of enforcement, and with a perception setting different from the one used to score the campaigns. Any one of these would be enough, and all three apply. Chapter 10 therefore marks its physical column as *not executed* (§10.4d–e). That column should not be confused with the physical column of the gap table in §9.4, which does contain figures. The first scores requirements under protocol and is empty by decision. The second compares driving quantities outside the protocol and is preliminary by definition.
 
-### 9.3.2 The blocking check was done, and it failed
+### 9.3.2 Camera field-of-view calibration
 
 The item marked as blocking was the effective field of view of the onboard camera. It was a default configuration value that the simulation had copied, so no simulation result could reveal an error in it, and every lateral quantity the cage uses depends on it. It was measured before any driving metric, as planned, and the value was wrong: the effective horizontal field of view of the real module is 77.89°, not the assumed 90°.
 
@@ -38,7 +38,7 @@ The effect was then measured against a tape measure, with the vehicle moved by h
 
 This is the kind of finding adaptation A5 exists for: an assumption that simulation could not falsify, because simulation had inherited it, was wrong at the first measurement on hardware, and it was in the path of a safety rule. The fix rectifies the real image to the standard camera model, so that one projection serves both the campaigns and the vehicle. Its effect was measured with the car stopped and untouched. Cycles with invalid perception drop from 45 % to 5.5 %, and the lane boundary rule goes from firing 102 times with the car standing still to not firing at all.
 
-### 9.3.3 The policy validated in simulation does not transfer
+### 9.3.3 Transfer of the reference policy
 
 The first real drive used the reference policy, the two-dimensional one evaluated by the verdict campaign, and the result was clearly negative. The vehicle was moved by hand over a range of 332 mm of lateral error, with the chain running but the motors not driven, over 5,665 logged cycles. The steering command reacts to the position with the correct sign, but ten times too weakly (Figure 9.2). Across the whole 332 mm the steering changes by only 0.055, while a constant bias to the left of 0.1155 is present, which is 2.1 times that whole change. Only 29 of the 5,665 samples (0.5 %) ask for a right turn. In closed loop the bias wins, and the vehicle leaves the lane to the left wherever it starts.
 
@@ -48,7 +48,7 @@ The first real drive used the reference policy, the two-dimensional one evaluate
 
 The cause is the training circuit itself. Driven clockwise, each lap has about 13 m of left curves and 2 m of right curves, a ratio of 6.5 to 1. The training action log confirms the effect: the mean steering stays flat at +0.112…+0.120 over all 284,672 steps. This is not a perception or a dynamics problem. The policy learned the handedness of the track as a steering bias. It is a property of the training distribution, and no appearance randomization would have corrected it.
 
-### 9.3.4 Retraining for transfer, and the result
+### 9.3.4 Retraining for transfer
 
 The gap was split into three separate terms, and only the first is a property of the track. Handedness: observation and action are mirrored in each episode. Photometry: three quarters of the episodes use the lighting range measured in the hall. Camera geometry: mount pitch, height and, in one tenth of the episodes, the real measured lens. A new policy was trained on this basis for 2.5 million steps.
 
@@ -64,7 +64,7 @@ The handedness term was corrected: the bias/excursion ratio drops to 0.07–1.10
 
 That last pair of numbers is the most important observation of the bring-up, because it is the first measurement of a question Chapter 8 left open. The transfer risk stated in advance was that the physical actuator does not apply the per-cycle change limit the policy had come to rely on, so the pair *(policy, limiter)* might not survive on hardware. In this first run it did survive, with the two numbers only four tenths of a percentage point apart. One run does not rule out the risk, and the campaign could still show it. But the difference is small and it goes in the opposite direction to the one expected. The framework required the risk to be stated before touching hardware and the first measurement to test it, and that is what happened. Closing the question needs the campaign.
 
-### 9.3.5 What stops the vehicle is not the policy
+### 9.3.5 Non-policy causes of run termination
 
 The run ended 2.11 m before completing the circuit, and the reason had nothing to do with driving. A single 400 ms pulse of invalid perception latched the emergency stop. The estimator recovered from the pulse on its own, but the vehicle was 27 mm from the lane centre on the tightest curve of the layout, and the rule stayed latched for the remaining 396 s. The rule did exactly what its specification says: to exit, it needs an explicit reset, a decision taken in the hazard analysis to avoid switching back and forth at the edge of the trigger. The gap is therefore not in the cage. It lies between an artefact validated on simulated episodes, which end, and a vehicle that has to keep running. It was solved by leaving the rule unchanged and placing the reset path outside the cage. The reason is that the effect exists only on hardware and simulation cannot validate it, so the artefact under verification should not be modified for it.
 
@@ -72,7 +72,7 @@ Two further findings are of the same kind, and neither involves the policy. The 
 
 The second concerns the cage's speed ceiling, and it has two sides. The rule cannot fire on commanded motion in the deployed configuration, because its threshold of 0.25 m/s is higher than the operating speed of 0.22 m/s. What Chapter 8 recorded as a coverage gap is, on hardware, a rule that does not protect a real case. The vehicle enters the tightest curve at contract speed with no speed protection at all. The audit of the caged runs adds the opposite problem. The rule did fire, in 58 and 40 cycles in the two audited runs. All of those activations were caused by velocity errors from the pose sensor, which reported 0.25–1.30 m/s, a speed the vehicle cannot reach under its own power. In one run these false activations blocked the reset path of the same rule that had triggered them. A rule that does not act on the case that exists, but does act on a case that does not, is a different finding from a coverage gap. The failure is not in the rule itself but in the combination of its threshold, the chosen operating point and the quality of its only speed input. It is documented and not corrected, because re-enabling it would first require a reliable curvature signal (§9.3.6).
 
-### 9.3.6 The estimator's accuracy depends on *where* the car is, not on how it moves
+### 9.3.6 Place dependence of the estimator's accuracy
 
 With the geometry corrected, the estimator still kept stopping the vehicle. The cause was found with a simple measurement: four stations marked with tape on the floor, the vehicle pushed by hand with a pointer on the chassis following the painted line, and only the camera running, without policy, cage or odometry. There were four laps and four tests with the vehicle stopped, about 11,500 frames in total. The acceptance criterion was set before measuring and uses a geometric fact that does not depend on odometry: on a closed circuit, the curvature integrated over one lap equals 2π.
 
@@ -84,7 +84,7 @@ The criterion fails by a factor of two. The integration gives 1.97 / 2.01 / 2.25
 
 This changes two things written earlier. First, the start of the straight, where every pre-deployment check was done, is the best point of the circuit for the estimator. The content of those measurements therefore holds, but it does not extend to the whole layout. Second, the mechanism is not the choice of the wrong pair among candidate lines but the way the candidates are generated: edges of the same stripe, nearby markings, or a single visible line. The surviving pair has a plausible width with a shifted midpoint, and a check for continuity over time would not correct it, because the wrong pair is stable to within 3.1 mm.
 
-### 9.3.7 The three cage blockages, measured
+### 9.3.7 Measurement of the three cage blockages
 
 The claim in §9.3.5, that what stops the vehicle is not the policy, was tested in three consecutive runs on the real circuit, all in monitoring mode, changing only the settings of the reset path. None of them kept the vehicle moving, and all three failed because of measurement, not driving.
 
@@ -94,7 +94,7 @@ The second run tests the documented way out, which is removing the lane boundary
 
 The third run shortens the wait and finds the next blockage. Over the 1,066 cycles in which it acts, the heading rule fires with the vehicle 20 mm from the lane centre and a heading standard deviation of 19.1°, against a threshold of 25°. The same configuration, measured at the start of the straight, gave 5.3°. This last comparison is the important one. It is the fourth independent confirmation of §9.3.6 and the first in the heading channel with the vehicle driving: heading degrades away from the good spot in the same way as offset and curvature. The three blockages do not show a policy that cannot drive. They show the stopping rule firing on a measurement that fails exactly where §9.3.6 said it fails. This is why the remaining work puts the estimator before the policy.
 
-### 9.3.8 Experimental design still to do
+### 9.3.8 Outstanding experimental design
 
 The physical subset of the library (the nominal scenario, and the nominal scenario with curvature and heading limit, in both modes) has not been run under protocol. Four conditions stand in the way. Three were identified before driving and concern instrumentation and contract. The first is a reset path for the emergency stop. The second is per-run provenance logging, which is already implemented. The third is a decision on which perception contract to use, because the heading setting that lets the vehicle drive is not the one the campaigns were scored with. They are listed with their criteria in §12.4 (T2).
 

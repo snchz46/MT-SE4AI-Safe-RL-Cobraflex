@@ -4,7 +4,7 @@
 
 This chapter presents the main methodological contribution of the thesis: the adapted V-Model. It is a life cycle framework for systems that include components trained with reinforcement learning inside functions that affect safety. The chapter defines the framework used in the rest of the work, explains the decisions behind it, and relates each decision to the standards and to the literature from Chapter 2. It does not present experimental results or implementation details.
 
-Two things are often mixed up and should be kept apart. The *research methodology* — how this work produces knowledge that can be generalised — is covered in §3.2. The *system engineering methodology* — how the technical system is built from requirements to deployment — runs from §3.3 to §3.8. Chapters 4 to 10 put into practice what is defined here, and Chapter 11 evaluates the framework based on that practice.
+Two things are often mixed up and should be kept apart. The *research methodology* is covered in §3.2, and it answers the question "what does this thesis add to knowledge?". The *system engineering methodology* runs from §3.3 to §3.8, and it answers a different one: "how is the system built?". Chapters 4 to 10 put into practice what is defined here, and Chapter 11 evaluates the framework based on that practice.
 
 ## 3.2 Research approach
 
@@ -22,7 +22,7 @@ The framework is evaluated on a single case: lane following on a 1:14 scale vehi
 
 The author designs the framework, builds the system and evaluates the result. That creates a built-in risk of confirmation bias, which has to be admitted before trying to reduce it, and it is handled on three levels. The first is two-way traceability as a hard constraint (A4). A checker reports orphans without the author being involved, so it acts as an independent reviewer at very low cost. The second is the dated decision log, which records what was decided, what was rejected and why, so that others can audit it later. The third is the list of limitations (§3.9 and Chapter 11), written as critically as if the solution came from someone else. None of these removes the bias, and nothing could: what they do is leave it open to what an independent person can check in the version-controlled artefacts.
 
-## 3.3 The classical V-Model and its hidden assumptions
+## 3.3 The classical V-Model and its underlying assumptions
 
 The V-Model comes from systems engineering (Forsberg and Mooz, 1991) and is the reference process model in ISO 26262. It organises development into five levels, with a two-way link between specification (left branch, going down) and verification and validation (right branch, going up).
 
@@ -159,7 +159,7 @@ The choice has two downsides that need to be stated. Gazebo's visual quality is 
 
 The rejected alternatives (CARLA, Highway-Env, LGSVL and AirSim) are argued in Appendix C.1.1 as well.
 
-## 3.7 How the framework itself is evaluated
+## 3.7 Evaluation of the framework
 
 This section asks whether the methodology helped to build the system, not whether the system turned out to be useful. These are two different questions: a good framework can be applied to a modest system, and the other way round. The evaluation uses five criteria, each with an indicator that can be measured at the end:
 

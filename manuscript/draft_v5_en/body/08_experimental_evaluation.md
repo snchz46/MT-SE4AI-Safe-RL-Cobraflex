@@ -14,11 +14,11 @@ The library has twenty-eight scenarios in four families, each with a different p
 
 Each scenario states its starting conditions, perturbation, end condition, main metrics and an explicit pass criterion. No run is interpreted unless that criterion was written beforehand.
 
-### 8.2.2 The two modes as a counterfactual
+### 8.2.2 The two operating modes as a counterfactual
 
 Each scenario runs in enforcement mode, where the cage corrects the command, and in monitoring mode, where the cage checks the same rules and logs the same activations but does not change the command. Comparing the two, on the same scenario and the same seed, is the main tool of this chapter. It does not compare two different systems, but the same system with and without the envelope, which removes the most obvious confounding factor. Everything this chapter says about "what the cage contributes" is based on this comparison.
 
-### 8.2.3 How verdicts are combined, and what to do with indeterminate results
+### 8.2.3 Verdict aggregation and indeterminate results
 
 The verdict for a requirement is built from the verdicts of its scenarios, using two rules defined in advance. The first is about having enough evidence. A requirement only gets a verdict if it has at least a minimum number of runs, spread across a nominal family and an adverse one. Otherwise it is marked as insufficient evidence, which is not the same as a failure. The second is a veto rule: only class A requirements can make the global verdict fail.
 
@@ -57,7 +57,7 @@ So both requirements are met on their own documented criterion. The heading requ
 
 The verdict is recorded as literal, with the explanation noted next to it, and it is not rewritten as satisfied. This was a conscious decision. A framework whose value is that no claim goes without evidence would lose its meaning if it rewrote the verdict every time it was uncomfortable. Instead, the text explains exactly what is broken and what is not.
 
-### 8.3.2 The clause, audited instead of excused
+### 8.3.2 Audit of the recovery clause
 
 The same clause blocked the verdict in two campaigns in a row. That is a reason to suspect the clause, not only the system. It was audited, and it had a real defect. Its recovery band was a *fixed* value, calibrated on an older controller and an older layout. Since the heading error oscillates around zero with an amplitude that depends on the controller and the layout, asking for several consecutive samples inside that band measured the ripple, not the recovery. When applied to runs with no perturbation at all, the metric said that 100 % of them "never recover".
 
@@ -82,7 +82,7 @@ This is the main result of the work. It counts contacts with the road edge and s
 
 *Figure 8.1 — Contacts with the road edge by mode and by whether the run starts inside the operational domain, for the reference campaign and the two earlier ones, `margin022` and `GE4-V2` (Table 7.1). The "inside the ODD, enforcement" block is zero in all three. The differences between policies are outside the domain.*
 
-### 8.4.1 Latent inside, active where perception gets worse
+### 8.4.1 Cage activity against perception quality
 
 In the clean nominal scenario the cage is latent, with the figures §7.5.2 already gave when the checkpoint was chosen: only the rate limiter acts. But comparing the modes scenario by scenario (Table 8.4) shows where the cage stops being latent:
 
@@ -102,7 +102,7 @@ This is the evidence behind the main claim. The cage removes failures that the p
 
 *Figure 8.2 — Share of runs passed per scenario in the reference campaign (`2-D PPO 550k`, Table 7.1; scenario IDs without the `SC-` prefix), enforcement against monitoring, sorted by how much the cage contributes. In the scenarios at the top, the envelope makes the difference between finishing and not finishing.*
 
-## 8.5 The uncomfortable finding: the rate limiter keeps the car in the lane
+## 8.5 The role of the rate limiter in lane keeping
 
 The 300 s endurance test shows a reversal that the verdict tables hide, and it turned out to be the most informative finding of the campaign. With the cage active, all twenty-five runs finish without any real excursion. With the cage inactive, seventeen out of twenty-five end off the road. None of the earlier policies, not even the worst ones, did this.
 
@@ -135,7 +135,7 @@ There are two limits to this explanation. The dependency is measured, but its or
 
 This has three consequences for reading the rest of the work. "The cage is latent inside the domain" is still true for the safety rules, but it must not be read as "the cage does nothing": for this policy, the safety rules are latent *because* the limiter acts first. The class B label of the smoothness requirement underestimates what that rule is doing. And on the physical platform, where the actuator dynamics are not the simulated limiter, a policy so tied to one specific parameter of the envelope is a transfer risk. Chapter 12 states this explicitly.
 
-## 8.6 The negative verdict: combining rules
+## 8.6 Rule composition and the negative verdict
 
 Of the fourteen requirements, one is closed as not satisfied, and it is reported that way instead of being explained away.
 
@@ -147,7 +147,7 @@ Training a better policy cuts the problem in half, but it does not change what k
 
 The requirement is class B, so it does not block the global verdict, and no class A safety condition is involved. Having a negative verdict in the matrix, next to the claim of zero contacts inside the domain, is what makes that claim believable.
 
-### 8.6.1 The two requirements closed out of band
+### 8.6.1 Requirements closed out of band
 
 Two requirements are closed on their own metric instead of through scenario results. In both cases the reason is documented.
 

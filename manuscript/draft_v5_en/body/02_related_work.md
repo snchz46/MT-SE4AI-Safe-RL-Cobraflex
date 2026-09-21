@@ -76,7 +76,7 @@ Vasudevan et al. (2021) are an intermediate step. Their work is limited to handl
 
 Apart from these works, there is very little literature on life cycle adaptations compared with the literature on individual aspects. This makes sense, since individual contributions are easier to publish and easier to evaluate cleanly. But it explains why the industrial use of AI in safety functions is still *ad hoc* and depends on the judgement of each team instead of a shared framework.
 
-## 2.7 The sim-to-real gap and how to measure it
+## 2.7 The sim-to-real gap and its measurement
 
 Every policy trained in simulation faces the same question when it is deployed: how much of the learned behaviour carries over? The techniques to reduce the gap fall into three groups that work together. Domain randomization trains on many different simulated variants. Domain adaptation adjusts the policy or its representations to the real domain with a small amount of data. System identification improves the simulation by calibrating it with physical data.
 

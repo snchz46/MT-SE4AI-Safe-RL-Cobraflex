@@ -4,7 +4,7 @@
 
 Este capítulo presenta la aportación metodológica principal de la tesis: el V-Model adaptado. Es un marco de ciclo de vida para sistemas con componentes entrenados por refuerzo dentro de funciones que afectan a la seguridad. El capítulo define el marco que se usa en el resto del trabajo, explica las decisiones que hay detrás y relaciona cada decisión con los estándares y con la literatura del Capítulo 2. No presenta resultados experimentales ni detalles de implementación.
 
-Conviene separar dos cosas que se suelen mezclar. La *metodología de investigación* —cómo este trabajo produce conocimiento generalizable— se trata en §3.2. La *metodología de ingeniería del sistema* —cómo se construye el sistema desde los requisitos hasta el despliegue— ocupa de §3.3 a §3.8. Los capítulos 4 a 10 llevan a la práctica lo que se define aquí, y el Capítulo 11 evalúa el marco a partir de esa práctica.
+Conviene separar dos cosas que se suelen mezclar. La *metodología de investigación* se trata en §3.2, y responde a la pregunta «¿qué aporta esta tesis al conocimiento?». La *metodología de ingeniería del sistema* ocupa de §3.3 a §3.8, y responde a otra distinta: «¿cómo se construye el sistema?». Los capítulos 4 a 10 llevan a la práctica lo que se define aquí, y el Capítulo 11 evalúa el marco a partir de esa práctica.
 
 ## 3.2 Enfoque de la investigación
 

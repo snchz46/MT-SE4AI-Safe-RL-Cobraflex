@@ -18,7 +18,7 @@ The second reason is independence from training. A guarantee that comes from cha
 
 The third reason is that it fits the framework. As a side effect of how it works, the shield produces an intervention log, and that log is exactly the evidence the runtime monitoring level (A3) needs. The cage is not only a safety mechanism. It is also the tool that measures how the policy behaves.
 
-### 5.2.2 What the cage is not
+### 5.2.2 Scope and limitations of the cage
 
 Three clarifications help avoid reading too much into it. The cage is not a controller. It does not create behaviour; it corrects unsafe commands. If the policy drives well, the cage should stay inactive, and Chapter 8 shows that this is what happens under clean nominal conditions. The cage is not a formal guarantee. Its rules are heuristics with thresholds taken from the requirements, not invariants proved on a dynamic model. It gives containment that can be measured, not proof. And the cage does not remove the need to train well. It is the last line of defence, not the first, and a system whose safety depended completely on the cage would be a badly trained system. Chapter 8 forces an uncomfortable correction to this last claim.
 

@@ -4,7 +4,7 @@
 
 This chapter evaluates the framework, not the system. This follows from §3.2.1, where the work was presented as design science research: the object being judged is the adapted V-Model, and the lane-following system is the tool used to test it. The method was fixed in advance in §3.7, with five criteria and their indicators, plus an evaluation of the three hypotheses from Chapter 1. Setting the criteria before knowing the results is what makes this evaluation more than a defence.
 
-## 11.2 The framework against its five criteria
+## 11.2 Evaluation against the five criteria
 
 **(1) Traceability integrity. Criterion: zero orphans. Met.** The checker found no orphans at any review gate or in the final matrix. What matters is not the final zero but the fact that the constraint worked as a hard gate during development: orphan identifiers were caught when they were added, not in a later audit. A zero obtained in a final audit would only show how careful the author was. A zero maintained continuously shows a property of the framework.
 
@@ -24,7 +24,7 @@ The honest reading is therefore that the criterion is met in simulation and only
 
 The counterexample is recorded with the same weight, because it shows a real limit. The matrix did not detect by itself that a scenario was being run without injecting its starting conditions. For some time that scenario produced zero co-activation and an indeterminate verdict that looked like an instrumentation gap. Traceability guarantees that the scenario exists and points to its requirement; it does not guarantee that the runner executes it as specified. That difference, checking the *execution* rather than the *reference*, is the most concrete improvement this work identifies for its own framework.
 
-## 11.3 The three hypotheses
+## 11.3 Evaluation of the three hypotheses
 
 **H1 (construct): supported.** The five adaptations were enough to cover the failure modes found during the cycle, and none of them required a mechanism from outside the framework. The condition is that "enough" here means that nothing was found that did not fit. That is evidence that they are enough in practice, not that they are complete.
 

@@ -43,7 +43,7 @@ The text uses descriptive names for trainings, checkpoints and campaigns, while 
 
 *Table 7.1 — Names of trainings, checkpoints and campaigns. Conventions: `k` after a number counts thousands of training steps (`550k` = 550,000; `@297k` = at 297,000 steps); `1-D` and `2-D` give the size of the action (steering; steering and throttle); `cap` is the speed ceiling of the action; `complex_b` is the winding circuit (perimeter 19.22 m) and `oval` the oval one (R = 0.8 m); `newcam` in a run name marks runs made after the switch to the dedicated lane camera.*
 
-## 7.3 Results: the one-dimensional camera policy
+## 7.3 Results of the one-dimensional camera policy
 
 The first camera policy that drives well is trained on the winding circuit with a one-dimensional action. Its mean episode reward rises to a peak of ≈ 823 at around 297,000 steps, stays high for about 150,000 more steps, and then drops. The cause matters. The critic loss stays very small during the whole run, so the problem is not an unstable value function. Instead, exploration shrinks once the policy's standard deviation is annealed too far. This is why the checkpoint kept is the one at the peak and not the one at the end.
 
@@ -99,13 +99,13 @@ One warning about these numbers. Reward cannot be compared directly between acti
 
 *Figure 7.4 — Training reward of the two-dimensional reference policy (`2-D PPO`) compared with the one-dimensional policy (`E-main`) and with the off-policy version (`margin022`); labels in Table 7.1. Peak 1755 and a high stable plateau, against the collapse after the peak of the first one and the ~200 ceiling of the second. Marked: the three candidate checkpoints evaluated in closed loop, including the selected one, and the checkpoint kept from each of the other two runs.*
 
-### 7.5.2 Choosing the checkpoint: by driving, not by reward
+### 7.5.2 Checkpoint selection criteria
 
 During the whole training the cage stays latent for safety: the lateral limit, heading, predictive and emergency rules never fire, and only the rate limiter does. The choice was made by testing three candidates in closed loop, and the result confirms the lesson of §7.4. The checkpoint at the reward peak is the worst of the three, with fourteen safety interventions and a 49 mm maximum lateral error. The one at 550,000 steps is clearly the best, with 5.32 laps, 8.6 mm mean error, 27 mm maximum, zero emergencies and zero safety interventions.
 
 Choosing by reward would have picked the worst candidate. This is a control against bias that was documented before the verdict campaign was run, and it directly answers the objection that the best option might have been picked after seeing the results.
 
-### 7.5.3 What the policy does with speed control
+### 7.5.3 Use of the speed control
 
 <img src="../figures/auto/fig_7_5_ppo2d_action_distribution.png" alt="Figure 7.5 — Distribution of the two-dimensional raw action." width="640"/>
 
@@ -113,7 +113,7 @@ Choosing by reward would have picked the worst candidate. This is a control agai
 
 Figure 7.5 supports a realistic reading of how the policy uses its speed control: it sets the overall speed rather than following a speed profile. There is some modulation, and it happens in the right places. The 8.3 % of steps with reduced throttle are concentrated at high curvature and rise to 35.6 % at the tightest apex. The effect is nevertheless very small: the throttle drops to 0.81 and the speed falls only from 0.218 to 0.216 m/s. The policy therefore enters the tightest curves at almost the ceiling speed. This small detail explains a result in Chapter 8, namely that the cage's speed rule never fires during the whole campaign.
 
-### 7.5.4 Approval before the campaign
+### 7.5.4 Preflight approval
 
 Before running the verdict campaign, the policy had to pass a preflight check tied by cryptographic identifier to its checkpoint and configuration. The check verifies that the cage's measurement interface, which is the lane estimator and its heading reading, works as it should: real heading failures are detected, there are zero false positives on safe centred cycles, and the delay stays within limits. The check passed all seven of its tests, and that is what allowed the campaign to start.
 

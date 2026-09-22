@@ -16,9 +16,9 @@ El espacio de acción es una opción de configuración, no algo fijo en todo el 
 
 ### 7.2.2 Función de recompensa
 
-La recompensa tiene cuatro términos: el avance a lo largo del circuito, que es la señal de la tarea; una penalización por error lateral, que mantiene el vehículo centrado en el carril; una penalización por error de rumbo, que lo mantiene alineado con la pista; y una penalización por los cambios de mando, que desanima la conducción a tirones. En la configuración bidimensional se añade un quinto término para evitar que la política simplemente se pare. Sin él, una política que controla la tracción descubre que aparcar evita todas las penalizaciones. Es un caso de manual del peligro de explotación de la recompensa que el registro de peligros ya había previsto.
+La recompensa tiene cuatro términos. El avance a lo largo del circuito es la señal de la tarea. Una penalización por error lateral mantiene el vehículo centrado en el carril. Una penalización por error de rumbo lo mantiene alineado con la pista. Y una penalización por los cambios de mando desanima la conducción a tirones. En la configuración bidimensional se añade un quinto término para evitar que la política simplemente se pare. Sin él, una política que controla la tracción descubre que aparcar evita todas las penalizaciones. Es un caso de manual del peligro de explotación de la recompensa que el registro de peligros ya había previsto.
 
-Hay que dejar clara la relación entre recompensa y seguridad, porque es una de las decisiones de diseño más importantes del trabajo: la recompensa no tiene términos de seguridad. No penaliza que la cage se active ni premia mantenerse lejos de los límites. El motivo es un reparto de responsabilidades: la recompensa guía, la cage garantiza. Esto tiene una ventaja para los experimentos. Como la policy no se entrenó para contentar a la cage, la frecuencia con la que la cage interviene es una medida limpia de lo buena que es la conducción aprendida.
+La relación entre recompensa y seguridad es una de las decisiones de diseño más importantes del trabajo, así que hay que dejarla clara: la recompensa no tiene términos de seguridad. No penaliza que la cage se active ni premia mantenerse lejos de los límites. El motivo es un reparto de responsabilidades, en el que la recompensa guía y la cage garantiza. Esto tiene un efecto secundario útil para los experimentos. Como la policy no se entrenó para contentar a la cage, la frecuencia con la que la cage interviene es una medida limpia de lo buena que es la conducción aprendida.
 
 ### 7.2.3 La cage durante el entrenamiento
 
@@ -43,7 +43,7 @@ El texto usa nombres descriptivos para los entrenamientos, puntos de control y c
 
 *Tabla 7.1 — Nombres de entrenamientos, puntos de control y campañas. Convenciones: `k` detrás de un número cuenta miles de pasos de entrenamiento (`550k` = 550.000; `@297k` = a los 297.000 pasos); `1-D` y `2-D` indican el tamaño de la acción (dirección; dirección y acelerador); `cap` es el techo de velocidad de la acción; `complex_b` es el circuito sinuoso (perímetro 19,22 m) y `oval` el oval (R = 0,8 m); `newcam` en el nombre de una ejecución marca las hechas después del cambio a la cámara dedicada de carril.*
 
-## 7.3 Resultados: la política de cámara unidimensional
+## 7.3 Resultados de la política de cámara unidimensional
 
 La primera política de cámara que conduce bien se entrena en el circuito sinuoso con acción unidimensional. Su recompensa media por episodio sube hasta un pico de ≈ 823 hacia los 297 000 pasos, se mantiene alta unos 150 000 pasos más y después baja. La causa importa. La pérdida del crítico se mantiene muy pequeña durante todo el entrenamiento, así que el problema no es una función de valor inestable. Lo que pasa es que la exploración se reduce cuando la desviación típica de la política se recuece demasiado. Por eso se guarda la política del pico y no la del final.
 
@@ -51,11 +51,11 @@ La primera política de cámara que conduce bien se entrena en el circuito sinuo
 
 *Figura 7.1 — Convergencia de la política de cámara unidimensional (`E-main`, Tabla 7.1): recompensa y longitud media de episodio frente a pasos. Pico ≈ 823 y meseta alta. El colapso posterior de la exploración llevó a parar el entrenamiento a mano y a quedarse con el punto de control del pico.*
 
-Un segundo resultado de este entrenamiento, que la Figura 7.2 desglosa, es que policy y cage se adaptan la una a la otra. La tasa de intervención baja de ~87 % al principio a ~40 %, sobre todo por el limitador de tasa, mientras que las reglas de seguridad caen a cero. Esto quiere decir que la policy aprende a respetar las restricciones de seguridad (no se acerca al borde), pero su dirección sigue siendo a tirones y el limitador la va suavizando todo el tiempo.
-
 <img src="../figures/fig_7_2_intervention_newcam_notitle.png" alt="Figura 7.2 — Actividad de la cage durante el entrenamiento." width="540"/>
 
 *Figura 7.2 — Actividad de la cage durante el entrenamiento unidimensional. Arriba: la tasa total de intervención baja de ~87 % a ~40 %, mientras que la tasa de emergencia es cero desde el principio. Abajo: el desglose por regla muestra de qué está hecha esa tasa. Es el limitador de tasa. Las reglas de seguridad C-01, C-02, C-03 y C-05 caen a cero en los primeros pasos y se quedan ahí.*
+
+Un segundo resultado de este entrenamiento, que muestra la Figura 7.2, es que policy y cage se adaptan la una a la otra. La tasa de intervención baja de ~87 % al principio a ~40 %, sobre todo por el limitador de tasa, mientras que las reglas de seguridad caen a cero. Esto quiere decir que la policy aprende a respetar las restricciones de seguridad (no se acerca al borde), pero su dirección sigue siendo a tirones y el limitador la va suavizando todo el tiempo.
 
 La evaluación nominal determinista frente a un controlador clásico en el mismo circuito, que muestra la Tabla 7.2, da el resultado que justifica el coste del componente aprendido:
 
@@ -69,7 +69,9 @@ La evaluación nominal determinista frente a un controlador clásico en el mismo
 
 *Tabla 7.2 — Evaluación nominal: política de cámara frente al baseline clásico en el mismo circuito.*
 
-El agente es más preciso que el baseline clásico: un 37 % menos de error lateral medio, en la misma distancia y con cero emergencias. Es lo contrario de lo que pasó en el óvalo, donde el controlador clásico era el más preciso. En un trazado sinuoso, el punto de mira del método clásico pierde fiabilidad, mientras que la red mantiene su línea. Hay dos observaciones más. La cage queda latente dentro del dominio en los dos modos: cero emergencias y ninguna activación de reglas de seguridad, solo del limitador de tasa, y enforcement y monitoring dan casi las mismas vueltas y los mismos errores. Y el coste del agente aprendido es la suavidad, no la seguridad. Activa el limitador en el 43 % de los pasos, frente al 0 % del controlador clásico. Esta intervención no hace daño: absorbe los tirones de la dirección sin perjudicar la precisión.
+El agente es más preciso que el baseline clásico, con un 37 % menos de error lateral medio sobre la misma distancia y con cero emergencias. Es lo contrario del resultado del óvalo, donde el controlador clásico era el más preciso. En un trazado sinuoso, el punto de mira del método clásico pierde fiabilidad, mientras que la red mantiene su línea.
+
+A este resultado lo acompañan dos observaciones más. La primera: la cage queda latente dentro del dominio en los dos modos, con cero emergencias y ninguna activación de reglas de seguridad, solo del limitador de tasa, y enforcement y monitoring dan casi las mismas vueltas y los mismos errores. La segunda: el coste del agente aprendido es la suavidad, no la seguridad. Activa el limitador en el 43 % de los pasos, frente al 0 % del controlador clásico, y esa intervención es inocua, porque absorbe los tirones de la dirección sin perjudicar la precisión.
 
 ## 7.4 Variación entre semillas
 
@@ -85,23 +87,25 @@ La consecuencia para el método es directa y vale para el resto del trabajo: la 
 
 ### 7.5.1 Motivación y elección del algoritmo
 
-El primer intento de campaña completa con acción bidimensional usó una política floja por dos motivos: un algoritmo usado fuera del rango en el que funciona bien y un entrenamiento corto. Y, peor aún, el punto de control era posterior al pico en lugar de ser el del pico. Su resultado dejó una pregunta clara: ¿los fallos venían de la acción bidimensional o de esa política en concreto? Para responderla se entrenó una política bidimensional como es debido, con dos cambios, los dos medidos.
+El primer intento de campaña completa con acción bidimensional usó una política floja. Lo era por dos motivos: el algoritmo se usó fuera del rango en el que funciona bien, y el entrenamiento fue corto. Además, el punto de control era posterior al pico en lugar de ser el del pico. Su resultado dejó una pregunta clara: ¿los fallos venían de la acción bidimensional o de esa política en concreto? Para responderla se entrenó una política bidimensional como es debido, con dos cambios, los dos medidos.
 
-**Algoritmo.** PPO, el método en política, llega a una recompensa media de 1755 hacia los 472 000 pasos (Figura 7.4), con una meseta alta y estable. SAC, el método fuera de política, nunca pasa de ~200 y no llega a aprender a conducir el circuito. Es la comparación experimental que anunciaba §2.2, y decide el algoritmo del resto del trabajo. **Techo de velocidad.** Una comparación que solo cambia esta variable muestra que a 0,5 m/s la política llega a un pico de 654 y conduce mal (se pasa en las curvas cerradas), frente a 1421 a 0,22 m/s, donde las toma limpiamente.
+**Algoritmo.** PPO, el método en política, llega a una recompensa media de 1755 hacia los 472 000 pasos (Figura 7.4), con una meseta alta y estable. SAC, el método fuera de política, nunca pasa de ~200 y no llega a aprender a conducir el circuito. Es la comparación experimental que anunciaba §2.2, y decide el algoritmo del resto del trabajo.
 
-Una advertencia sobre estas cifras: la recompensa no se puede comparar directamente entre espacios de acción, porque la recompensa máxima por episodio se duplica al pasar a dos dimensiones. El factor ~2 respecto a la política unidimensional viene sobre todo de sobrevivir más tiempo y de un horizonte más largo, no de «conducir el doble de bien».
+**Techo de velocidad.** Una comparación que solo cambia esta variable muestra que a 0,5 m/s la política llega a un pico de 654 y conduce mal, pasándose en las curvas cerradas. A 0,22 m/s llega a 1421 y las toma limpiamente.
+
+Una advertencia sobre estas cifras. La recompensa no se puede comparar directamente entre espacios de acción, porque la recompensa máxima por episodio se duplica al pasar a dos dimensiones. El factor de alrededor de 2 respecto a la política unidimensional viene sobre todo de sobrevivir más tiempo y de un horizonte más largo, no de conducir el doble de bien.
 
 <img src="../figures/auto/fig_7_4_ppo2d_training_curve.png" alt="Figura 7.4 — Curva de entrenamiento de la política bidimensional de referencia." width="600"/>
 
 *Figura 7.4 — Recompensa de entrenamiento de la política bidimensional de referencia (`2-D PPO`) comparada con la unidimensional (`E-main`) y con la versión fuera de política (`margin022`); etiquetas en la Tabla 7.1. Pico 1755 y meseta alta y estable, frente al colapso después del pico de la primera y el techo de ~200 de la segunda. Están marcados los tres puntos de control candidatos evaluados en lazo cerrado, incluido el elegido, y el punto de control guardado de cada una de las otras dos ejecuciones.*
 
-### 7.5.2 Elegir el punto de control: por conducción, no por recompensa
+### 7.5.2 Criterios de selección del punto de control
 
 Durante todo el entrenamiento, la cage se mantiene latente en cuanto a seguridad: las reglas de límite lateral, rumbo, predictiva y emergencia no se activan nunca, solo el limitador de tasa. La elección se hizo probando tres candidatos en lazo cerrado, y el resultado confirma muy claramente la lección de §7.4. El punto de control del pico de recompensa es el peor de los tres, con catorce intervenciones de seguridad y 49 mm de error lateral máximo. El de 550 000 pasos gana con claridad: 5,32 vueltas, 8,6 mm de error medio, 27 mm de máximo, cero emergencias y cero intervenciones de seguridad.
 
 Elegir por recompensa habría llevado al peor candidato. Es un control contra el sesgo documentado antes de ejecutar la campaña de veredicto, y responde directamente a la objeción de que se eligió la mejor opción después de ver los resultados.
 
-### 7.5.3 Qué hace la política con el control de la velocidad
+### 7.5.3 Uso del control de velocidad
 
 <img src="../figures/auto/fig_7_5_ppo2d_action_distribution.png" alt="Figura 7.5 — Distribución de la acción cruda bidimensional." width="640"/>
 
@@ -109,7 +113,7 @@ Elegir por recompensa habría llevado al peor candidato. Es un control contra el
 
 La Figura 7.5 apoya una lectura realista de cómo usa la política el control de la velocidad: lo usa para fijar la velocidad general, no para seguir un perfil de velocidad. Hay algo de modulación, y aparece en los sitios adecuados. El 8,3 % de pasos con tracción reducida se concentra en las zonas de mucha curvatura y sube al 35,6 % en el ápice más cerrado. Pero el efecto es muy pequeño: la tracción baja a 0,81 y la velocidad solo cae de 0,218 a 0,216 m/s. La política entra en las curvas más cerradas casi al techo de velocidad. Este detalle, que parece menor, explica un resultado del Capítulo 8: la regla de velocidad de la cage no se activa nunca en toda la campaña.
 
-### 7.5.4 Aprobación antes de la campaña
+### 7.5.4 Aprobación preflight
 
 Antes de ejecutar la campaña de veredicto, la política tuvo que pasar una comprobación previa ligada por identificador criptográfico a su punto de control y a su configuración. Esa comprobación asegura que la interfaz de medida de la cage (el estimador de carril y su lectura de rumbo) funciona como debe: detecta los fallos reales de rumbo, no da falsos positivos en ciclos seguros y centrados, y el retardo se mantiene dentro de los límites. Pasó las siete pruebas, y eso es lo que permitió empezar la campaña.
 

@@ -1,6 +1,6 @@
 # Capítulo 10 — Validación operacional
 
-## 10.1 De los resultados a una declaración de validación
+## 10.1 Propósito del capítulo
 
 Los capítulos anteriores producen mediciones. Este capítulo las convierte en una declaración de validación que incluye sus propios límites. Es la primera mitad de la adaptación A5 llevada a la práctica: la conclusión ya no es «el sistema es seguro», sino una afirmación acotada sobre qué requisitos se cumplen, en qué dominio, con qué evidencia y con qué riesgos residuales declarados.
 
@@ -61,6 +61,6 @@ Dos grupos de casillas necesitan un comentario. Los tres requisitos con fallo li
 
 **(f) Una regla que el hardware sí puso a prueba.** El techo de velocidad se declara satisfecho aquí sin haberse activado ni una vez, y §9.3.5 añade dos medidas físicas que limitan esta casilla sin volver a puntuarla: en la configuración desplegada la regla no puede activarse sobre movimiento comandado, y las únicas veces que sí se activó fue por errores de velocidad del sensor de pose. Para esta declaración eso significa una cosa concreta y limitada: el veredicto de este requisito depende por completo de que su condición de disparo nunca se alcanzó en simulación, y no de evidencia de que la regla actúe bien cuando se alcanza. Es el requisito con el respaldo más débil de la tabla, y se señala así.
 
-## 10.5 De la declaración a la tesis metodológica
+## 10.5 Relación con la tesis metodológica
 
 La declaración de arriba es lo que el marco prometía producir: no un juicio de sí o no, sino un enunciado acotado que se puede seguir hasta su evidencia y que dice claramente lo que no cubre. Su forma importa tanto como su contenido, porque es lo que separa una validación honesta de un sello de aprobación. Cada afirmación se puede seguir hacia atrás hasta un conjunto de corridas registradas, y cada límite está escrito dentro de la declaración, no en una sección aparte que un lector con prisa podría saltarse. Los tres resultados desfavorables —un veredicto global negativo, un requisito no cumplido y una regla que nunca se probó— están dentro de ella, y el Capítulo 11 evalúa qué dice eso sobre el marco.

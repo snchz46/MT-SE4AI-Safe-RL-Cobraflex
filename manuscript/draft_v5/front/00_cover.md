@@ -1,5 +1,7 @@
 ::centre::
 
+<img src="../figures/HochschuleEsslingen_Logo.png" alt="Logo HS Esslingen" width="200"/>
+
 Hochschule Esslingen — University of Applied Sciences
 
 Máster Universitario en Automotive Systems (M.Sc.)

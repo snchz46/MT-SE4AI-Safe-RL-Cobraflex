@@ -14,11 +14,11 @@ La biblioteca tiene veintiocho escenarios en cuatro familias, cada una con un pr
 
 Cada escenario indica sus condiciones iniciales, la perturbación, la condición de fin, las métricas principales y un criterio de aprobación explícito. Ninguna ejecución se interpreta si ese criterio no estaba escrito antes.
 
-### 8.2.2 Los dos modos como contrafactual
+### 8.2.2 Los dos modos de operación como contrafactual
 
 Cada escenario se ejecuta en modo enforcement, en el que la cage corrige el comando, y en modo monitoring, en el que la cage evalúa las mismas reglas y registra las mismas activaciones pero no cambia el comando. Comparar los dos, con el mismo escenario y la misma semilla, es la herramienta principal de este capítulo. No compara dos sistemas distintos, sino el mismo sistema con y sin la envolvente, lo que elimina el factor de confusión más evidente. Todo lo que este capítulo dice sobre «lo que aporta la cage» se basa en esta comparación.
 
-### 8.2.3 Cómo se combinan los veredictos y qué hacer con los resultados indeterminados
+### 8.2.3 Agregación de veredictos y resultados indeterminados
 
 El veredicto de un requisito se construye a partir de los veredictos de sus escenarios, con dos reglas definidas de antemano. La primera trata de tener suficiente evidencia. Un requisito solo recibe veredicto si tiene al menos un número mínimo de ejecuciones, repartidas entre una familia nominal y otra adversa. Si no, se marca como evidencia insuficiente, que no es lo mismo que un fallo. La segunda es una regla de veto: solo los requisitos de clase A pueden hacer que el veredicto global falle.
 
@@ -57,7 +57,7 @@ Por tanto, los dos requisitos se cumplen según su propio criterio documentado. 
 
 El veredicto se registra tal cual, con la explicación anotada al lado, y no se reescribe como satisfecho. Fue una decisión consciente. Un marco cuyo valor es no dejar ninguna afirmación sin evidencia perdería su sentido si reescribiera el veredicto cada vez que resulta incómodo. En su lugar, el texto explica exactamente qué se incumple y qué no.
 
-### 8.3.2 La cláusula, auditada en lugar de excusada
+### 8.3.2 Auditoría de la cláusula de recuperación
 
 La misma cláusula bloqueó el veredicto en dos campañas seguidas. Eso es un motivo para sospechar de la cláusula, no solo del sistema. Se auditó, y tenía un defecto real. Su banda de recuperación era un valor *fijo*, calibrado sobre un controlador y un trazado anteriores. Como el error de rumbo oscila alrededor de cero con una amplitud que depende del controlador y del trazado, pedir varias muestras seguidas dentro de esa banda medía el rizado y no la recuperación. Al aplicarla a corridas sin ninguna perturbación, la métrica decía que el 100 % de ellas «nunca se recupera».
 
@@ -82,7 +82,7 @@ La Figura 8.1 lo muestra: dentro del dominio operacional, con la cage activa, no
 
 *Figura 8.1 — Contactos con el borde de la calzada por modo y según si la corrida empieza dentro del dominio operacional, para la campaña de referencia y las dos anteriores, `margin022` y `GE4-V2` (Tabla 7.1). El bloque «dentro del ODD, enforcement» es cero en las tres. Las diferencias entre políticas están fuera del dominio.*
 
-### 8.4.1 Latente dentro, activa donde empeora la percepción
+### 8.4.1 Actividad de la cage frente a la calidad de la percepción
 
 En el escenario nominal limpio la cage está latente, con las cifras que ya dio §7.5.2 al elegir el punto de control: solo actúa el limitador de tasa. Pero al comparar los modos escenario a escenario (Tabla 8.4) se ve dónde deja de estar latente:
 
@@ -102,7 +102,7 @@ Esta es la evidencia que sostiene la afirmación principal. La cage elimina fall
 
 *Figura 8.2 — Proporción de corridas aprobadas por escenario en la campaña de referencia (`2-D PPO 550k`, Tabla 7.1; identificadores de escenario sin el prefijo `SC-`), enforcement frente a monitoring, ordenada según lo que aporta la cage. En los escenarios de arriba, la envolvente marca la diferencia entre terminar y no terminar.*
 
-## 8.5 El hallazgo incómodo: el limitador de tasa mantiene el coche en el carril
+## 8.5 El papel del limitador de tasa en el mantenimiento de carril
 
 La prueba de resistencia de 300 s muestra una inversión que las tablas de veredicto esconden, y resultó ser el hallazgo más informativo de la campaña. Con la cage activa, las veinticinco corridas terminan sin ninguna excursión apreciable. Con la cage inactiva, diecisiete de veinticinco acaban fuera de la calzada. Ninguna de las políticas anteriores, ni siquiera las peores, hacía esto.
 
@@ -121,7 +121,11 @@ Cuatro mediciones acotan la causa.
 
 *Tabla 8.5 — Enforcement y monitoring en el ápice: la única diferencia es el limitador.*
 
-**No interviene ninguna regla de seguridad.** En las veinticinco corridas de enforcement, el registro de intervenciones solo contiene el limitador de tasa, con cero activaciones de las reglas de límite lateral, rumbo, predictiva y emergencia. La regla que mantiene el vehículo en el carril en esos ápices es, sobre el papel, una regla de suavidad de clase B.
+<img src="../figures/auto/fig_8_3_c06_load_bearing.png" alt="Figura 8.3 — El escenario de resistencia con y sin la cage actuando." width="620"/>
+
+*Figura 8.3 — El escenario de resistencia (`SC-NOM-03`, 300 s), las cincuenta corridas de la campaña de referencia. Izquierda: la mayor excursión lateral de cada corrida. Las cruces son las corridas que terminaron fuera de la calzada, donde el valor es el punto en el que la corrida se cortó y no hasta dónde habría llegado el vehículo, así que los dos tipos de marcador no son la misma magnitud. Derecha: el registro de intervenciones. Con la cage actuando solo contiene el limitador de tasa y nada más —58.124 ciclos de C-06 frente a cero activaciones de C-01, C-02, C-03 y C-05—, mientras que el mismo flujo de comandos, simplemente observado, aplica cambios de hasta 2,0 por ciclo frente a la cota de 0,15. Esta es la evidencia detrás de la afirmación de que las reglas de seguridad quedan latentes *porque* el limitador actúa primero.*
+
+**No interviene ninguna regla de seguridad** (Figura 8.3). En las veinticinco corridas de enforcement, el registro de intervenciones solo contiene el limitador de tasa, con cero activaciones de las reglas de límite lateral, rumbo, predictiva y emergencia. La regla que mantiene el vehículo en el carril en esos ápices es, sobre el papel, una regla de suavidad de clase B.
 
 **El mando crudo de esta política es más o menos el doble de brusco** que el de las políticas anteriores, y satura el limitador en el 77,5 % de los pasos. La velocidad no lo explica. La política anterior va un 7 % más despacio y se mantiene en la calzada, y en la comparación entre modos la velocidad es la misma porque es la misma política.
 
@@ -131,7 +135,7 @@ Esta explicación tiene dos límites. La dependencia está medida, pero su orige
 
 Esto tiene tres consecuencias para leer el resto del trabajo. «La cage está latente dentro del dominio» sigue siendo verdad para las reglas de seguridad, pero no hay que leerlo como «la cage no hace nada»: en esta política, las reglas de seguridad están latentes *porque* el limitador actúa antes. La etiqueta de clase B del requisito de suavidad subestima lo que hace esa regla. Y en la plataforma física, donde la dinámica del actuador no es el limitador simulado, una política tan ligada a un parámetro concreto de la envolvente es un riesgo de transferencia. El Capítulo 12 lo dice de forma explícita.
 
-## 8.6 El veredicto negativo: composición de reglas
+## 8.6 Composición de reglas y el veredicto negativo
 
 De los catorce requisitos, uno se cierra como no satisfecho, y se informa así en lugar de justificarlo.
 
@@ -143,7 +147,7 @@ Entrenar una política mejor reduce el problema a la mitad, pero no cambia su na
 
 El requisito es de clase B, así que no bloquea el veredicto global, y no afecta a ninguna condición de seguridad de clase A. Tener un veredicto negativo en la matriz, junto a la afirmación de cero contactos dentro del dominio, es lo que hace creíble esa afirmación.
 
-### 8.6.1 Los dos requisitos cerrados fuera de banda
+### 8.6.1 Requisitos cerrados fuera de banda
 
 Dos requisitos se cierran con su propia métrica en lugar de con los resultados de los escenarios. En los dos casos el motivo está documentado.
 

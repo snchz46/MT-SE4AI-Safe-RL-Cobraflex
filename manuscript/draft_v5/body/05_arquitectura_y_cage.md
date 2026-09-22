@@ -12,13 +12,13 @@ El capítulo trata la idea de diseño de la envolvente de seguridad, los problem
 
 Como se vio en el Capítulo 2, hay cuatro familias de mecanismos para hacer segura una policy aprendida. Esta tesis usa el escudo en tiempo de ejecución como mecanismo principal, por tres motivos.
 
-El primero es la verificabilidad. Una cage hecha de reglas escritas a mano es un componente clásico: se puede probar con tests unitarios deterministas, analizar de forma estática e inspeccionar. En términos del TR 5469 (usados por analogía, ya que el TR clasifica tecnología de IA) corresponde a la Clase I, mientras que la policy es como mucho de Clase II, y esa diferencia es lo que permite al sistema completo mantener un núcleo verificable.
+El primer motivo es la verificabilidad. Una cage hecha de reglas escritas a mano es un componente clásico. Se puede probar con tests unitarios deterministas, analizar de forma estática e inspeccionar. En términos del TR 5469 (usados por analogía, ya que el TR clasifica tecnología de IA) corresponde a la Clase I, mientras que la policy es como mucho de Clase II. Esa diferencia es lo que permite al sistema completo mantener un núcleo verificable.
 
-El segundo es la independencia del entrenamiento. Una garantía obtenida cambiando el objetivo de aprendizaje es estadística y depende de la distribución de entrenamiento; una obtenida filtrando en tiempo de ejecución depende del estado observado en cada ciclo, así que se sigue cumpliendo si la policy se reentrena, se sustituye o empeora.
+El segundo motivo es la independencia del entrenamiento. Una garantía obtenida cambiando el objetivo de aprendizaje es estadística y depende de la distribución de entrenamiento. Una garantía obtenida filtrando en tiempo de ejecución depende del estado observado en cada ciclo, sin importar cómo se entrenó la policy. Por eso se sigue cumpliendo si la policy se reentrena, se sustituye o empeora.
 
-El tercero es que encaja con el marco: como efecto secundario de su funcionamiento, el escudo genera un registro de intervenciones, que es justo la evidencia que necesita el nivel de monitorización en operación (A3). La cage no es solo un mecanismo de seguridad; es también la herramienta que mide cómo se comporta la policy.
+El tercer motivo es que encaja con el marco. Como efecto secundario de su funcionamiento, el escudo genera un registro de intervenciones, y ese registro es justo la evidencia que necesita el nivel de monitorización en operación (A3). La cage no es solo un mecanismo de seguridad. Es también la herramienta que mide cómo se comporta la policy.
 
-### 5.2.2 Lo que la cage no es
+### 5.2.2 Alcance y limitaciones de la cage
 
 Tres aclaraciones ayudan a no sacar conclusiones exageradas. La cage no es un controlador. No crea comportamiento, sino que corrige comandos inseguros. Si la policy conduce bien, la cage debería quedarse inactiva, y el Capítulo 8 muestra que eso es lo que pasa en condiciones nominales limpias. La cage no es una garantía formal. Sus reglas son heurísticas con umbrales sacados de los requisitos, no invariantes demostradas sobre un modelo dinámico. Ofrece una contención que se puede medir, no una prueba. Y la cage no quita la necesidad de entrenar bien. Es la última línea de defensa, no la primera, y un sistema cuya seguridad dependiera por completo de la cage sería un sistema mal entrenado. El Capítulo 8 obliga a matizar esta última afirmación de una forma incómoda.
 
@@ -104,7 +104,7 @@ Este es el punto de diseño más delicado del trabajo, y hay que explicar bien l
 
 ## 5.8 Trazabilidad y comprobación automática
 
-Ahora que las reglas están especificadas, la matriz cubre su segunda parte: la relación entre requisitos y reglas. El validador comprueba de forma automática que toda regla implementa al menos un requisito, que todo requisito está implementado por una regla o indica explícitamente otro tipo de implementación, y que toda regla se prueba en al menos un escenario. Cualquier incumplimiento bloquea la puerta de revisión.
+Ahora que las reglas están especificadas, la matriz cubre su segunda parte: la relación entre requisitos y reglas. El validador comprueba de forma automática tres condiciones. Toda regla implementa al menos un requisito. Todo requisito está implementado por una regla, o indica explícitamente otro tipo de implementación. Y toda regla se prueba en al menos un escenario. Cualquier incumplimiento bloquea la puerta de revisión.
 
 Vale la pena señalar el efecto que esto tiene en el diseño, porque el Capítulo 11 lo evalúa. La restricción obliga a decidir cómo se implementa un requisito en el momento de escribirlo, no después. El resultado visible es un conjunto de requisitos más prácticos y un conjunto de reglas sin funcionalidad huérfana: cada regla de la cage responde a un requisito que se puede seguir hasta un peligro registrado.
 

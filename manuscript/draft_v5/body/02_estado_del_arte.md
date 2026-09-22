@@ -76,7 +76,7 @@ Vasudevan et al. (2021) son un paso intermedio. Su trabajo se limita a la gesti�
 
 Aparte de estos trabajos, hay muy poca literatura sobre adaptaciones del ciclo de vida comparada con la que trata aspectos concretos. Tiene lógica, porque las contribuciones puntuales son más fáciles de publicar y de evaluar limpiamente. Pero explica por qué el uso industrial de la IA en funciones de seguridad sigue siendo *ad hoc* y depende del criterio de cada equipo en lugar de un marco compartido.
 
-## 2.7 El gap sim-to-real y cómo medirlo
+## 2.7 El gap sim-to-real y su medición
 
 Toda policy entrenada en simulación se enfrenta a la misma pregunta al desplegarse: ¿cuánto del comportamiento aprendido se mantiene? Las técnicas para reducir el gap se dividen en tres grupos que se complementan. La aleatorización de dominio entrena sobre muchas variantes simuladas distintas. La adaptación de dominio ajusta la policy o sus representaciones al dominio real con pocos datos. La identificación de sistema mejora la simulación calibrándola con datos físicos.
 

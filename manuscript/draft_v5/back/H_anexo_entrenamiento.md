@@ -22,7 +22,7 @@ donde `progress` es el avance normalizado a lo largo de la línea central, `Δst
 | `w_ds` (steer_delta) | 0.20 | Suavidad de actuación (sobre Δsteering crudo, v1.2; §7.2.2) |
 | `w_term` (termination) | 25.0 | Desincentiva salida de vía |
 
-El término de avance usa el progreso normalizado y no la velocidad. Como la velocidad es fija, un término `w_fwd·speed` sería una constante que no distingue ninguna conducta, y dejaba `explained_variance ≈ 0` (revisión F3, primer run). La penalización alta por terminación (25.0) da prioridad a seguir en la vía. Solo se aplica al salir de la vía: la emergencia C-05 termina el episodio sin penalización, porque la intervención de la cage es parte de la dinámica y no un castigo (D-34, §7.2.4). Los pesos son `[provisional, M-P1..M-P4]`. El detalle está en `docs/10_reward_function.md`.
+El término de avance usa el progreso normalizado y no la velocidad. Como la velocidad es fija, un término `w_fwd·speed` sería una constante que no distingue ninguna conducta, y dejaba `explained_variance ≈ 0`. La penalización alta por terminación (25.0) da prioridad a seguir en la vía. Solo se aplica al salir de la vía: la emergencia C-05 termina el episodio sin penalización, porque la intervención de la cage es parte de la dinámica y no un castigo (§7.2.4). Los pesos son `[provisional, M-P1..M-P4]`. El detalle está en `docs/10_reward_function.md`.
 
 ## H.2 Hiperparámetros
 
@@ -47,7 +47,7 @@ La tabla recoge la configuración efectiva completa. La columna E-main correspon
 | `max_grad_norm` | 0.5 | 0.5 | SB3 default |
 | `device` | auto (CUDA si existe) | cpu | E: la CNN aprovecha GPU |
 
-Los cuatro ajustes de estabilidad del E-main (`target_kl`, reducción lineal del LR, `VecNormalize(norm_reward)` y `clip_range_vf`) no están en el baseline F. Se añadieron al ver que PPO con una CNN y aleatorización visual es bastante menos estable que con el vector de estado (§7.3). `norm_obs` se deja en False, así que la evaluación y la inferencia no se ven afectadas y `ep_rew_mean` en la curva queda sin normalizar (comparable con el baseline). El presupuesto para la cámara es de al menos 1M pasos (D-41 acepta que el enfoque end-to-end necesita más datos), y un piloto de unos 20k pasos comprueba que el bucle funciona antes de gastar ese presupuesto.
+Los cuatro ajustes de estabilidad del E-main (`target_kl`, reducción lineal del LR, `VecNormalize(norm_reward)` y `clip_range_vf`) no están en el baseline F. Se añadieron al ver que PPO con una CNN y aleatorización visual es bastante menos estable que con el vector de estado (§7.3). `norm_obs` se deja en False, así que la evaluación y la inferencia no se ven afectadas y `ep_rew_mean` en la curva queda sin normalizar (comparable con el baseline). El presupuesto para la cámara es de al menos 1M pasos, y un piloto de unos 20k pasos comprueba que el bucle funciona antes de gastar ese presupuesto.
 
 ## H.3 Estudio comparativo de algoritmos y puntos de control
 

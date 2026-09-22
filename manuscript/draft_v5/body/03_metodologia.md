@@ -22,7 +22,7 @@ El marco se evalúa con un único caso: seguimiento de carril en un vehículo a 
 
 El autor diseña el marco, construye el sistema y evalúa el resultado. Eso crea un riesgo de sesgo de confirmación que conviene reconocer antes de intentar reducirlo, y se aborda en tres niveles. La trazabilidad en ambos sentidos como restricción dura (A4), que un validador hace cumplir señalando huérfanos sin que intervenga el autor, funciona como un auditor externo barato. El registro fechado de decisiones anota qué se decidió, qué se descartó y por qué, y otros pueden auditarlo después. Y la lista de limitaciones (§3.9 y Capítulo 11) está escrita con el mismo espíritu crítico que si la solución fuera ajena. Ninguno elimina el sesgo, y nada podría: lo que consiguen es dejarlo abierto a lo que una persona independiente puede comprobar en los artefactos versionados.
 
-## 3.3 El V-Model clásico y sus supuestos ocultos
+## 3.3 El V-Model clásico y sus supuestos subyacentes
 
 El V-Model viene de la ingeniería de sistemas (Forsberg y Mooz, 1991) y es el modelo de proceso de referencia en ISO 26262. Organiza el desarrollo en cinco niveles, con una relación en ambos sentidos entre la especificación (rama izquierda, que baja) y la verificación y validación (rama derecha, que sube).
 
@@ -147,7 +147,7 @@ El proyecto tiene siete fases seguidas, cada una con entregables definidos y una
 
 *Figura 3.4 — Fases del proyecto frente a niveles del V-Model adaptado. La banda de monitorización es horizontal porque empieza a funcionar en cuanto existe el nodo de cage y sigue hasta el final. La banda de trazabilidad muestra cómo la cadena `H ↔ SR ↔ C ↔ SC ↔ M` se va completando fase a fase.*
 
-Hay un punto donde el marco deja de ser una propuesta y se convierte en práctica: A4 funciona por completo desde la fase de análisis de peligros. El validador se ejecuta con cada cambio del registro de hazards y de la especificación de requisitos, y exige que cada hazard tenga al menos un requisito que lo mitigue —o un riesgo aceptado documentado— y lo mismo al revés. Desde ahí, el ciclo «documentar → enlazar → validar» corre en cada commit.
+Conviene insistir en un punto, porque es donde el marco deja de ser una propuesta y se convierte en práctica. A4 funciona por completo desde la fase de análisis de peligros. El validador se ejecuta con cada cambio del registro de hazards y de la especificación de requisitos. Exige que cada hazard enlace con al menos un requisito que lo mitigue, o con un riesgo aceptado documentado, y lo mismo al revés. Desde ahí, el ciclo «documentar → enlazar → validar» corre en cada commit.
 
 ## 3.6 Elección de herramientas
 
@@ -155,9 +155,11 @@ Cada elección de herramienta se justifica frente a las alternativas descartadas
 
 **Simulador: Gazebo.** Esta elección se aparta de lo habitual, donde CARLA es la referencia, y se apoya en cuatro motivos que el Anexo C.1.1 desarrolla uno a uno: integración ROS2 nativa, que mantiene todo el sistema en un solo grafo y hace fiables las métricas de latencia; reutilización de un entorno que el autor ya tenía construido, coherente con un enfoque de *design science* en el que la herramienta no es la aportación; una interfaz de entrenamiento disponible que separa algoritmo, entorno y sistema, y así facilita A1; y unos requisitos de cómputo modestos, decisivos en una tesis individual.
 
-Sus dos inconvenientes hay que decirlos. La calidad visual es menor que la de los motores fotorrealistas, lo que para una policy basada en cámara puede suponer un gap mayor; la adaptación A5 existe precisamente para hacer visible ese efecto y medirlo, no para ocultarlo. Y como la comunidad de conducción autónoma usa sobre todo CARLA, no hay bibliotecas de escenarios para Gazebo y este proyecto tiene que construir la suya. Las alternativas descartadas (CARLA, Highway-Env, LGSVL y AirSim) se razonan también en el Anexo C.1.1.
+Sus dos inconvenientes hay que decirlos. La calidad visual es menor que la de los motores fotorrealistas, lo que para una policy basada en cámara puede suponer un gap mayor; la adaptación A5 existe precisamente para hacer visible ese efecto y medirlo, no para ocultarlo. Y como la comunidad de conducción autónoma usa sobre todo CARLA, no hay bibliotecas de escenarios para Gazebo y este proyecto tiene que construir la suya.
 
-## 3.7 Cómo se evalúa el propio marco
+Las alternativas descartadas (CARLA, Highway-Env, LGSVL y AirSim) se razonan también en el Anexo C.1.1.
+
+## 3.7 Evaluación del marco
 
 Esta sección se pregunta si la metodología ayudó a construir el sistema, no si el sistema resultó útil. Son dos preguntas distintas: se puede aplicar un buen marco a un sistema modesto, y al revés. La evaluación usa cinco criterios, cada uno con un indicador que se puede medir al final:
 

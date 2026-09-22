@@ -30,7 +30,7 @@ Todos los nodos siguen el mismo patrón: parámetros declarados fuera del códig
 
 **Nodo de registro.** En cada ciclo guarda en un fichero estructurado el estado completo de la cage: comando crudo, comando seguro, reglas activas, modo y estado observado. Es la herramienta del nivel de monitorización en operación. Sin él, la adaptación A3 no tendría evidencia.
 
-## 6.4 Un controlador clásico para validar la cadena
+## 6.4 Controlador clásico para la validación de la cadena
 
 Antes de añadir el componente aprendido, se implementa un controlador proporcional-derivativo sobre el error lateral y el de rumbo. Su papel en la tesis no es competir con la policy. Sirve para otras tres cosas. Comprueba que la cadena completa funciona de principio a fin con un controlador cuyo comportamiento es totalmente predecible. Da una referencia de rendimiento para interpretar los resultados del aprendizaje. Y permite calibrar los umbrales de la cage con un conductor que se comporta igual en todas las ejecuciones.
 
@@ -46,7 +46,7 @@ La suite de tests crece con el sistema y tiene que pasar antes de cada revisión
 
 La demostración integrada ejecuta la cadena completa en simulación con el controlador clásico conduciendo. Aquí se dan tres primeras métricas. No son un resultado experimental, solo evidencia de que la cadena funciona. La caracterización de verdad está en el Capítulo 8.
 
-La latencia del ciclo de la cage, medida durante 845 s de funcionamiento continuo, tiene una mediana y un percentil 95 de 50,0 ms, con un máximo de 62,0 ms causado por un único ciclo y por el planificador no determinista del sistema operativo. La mediana y el percentil 95 caben dentro del presupuesto del ciclo de control.
+La latencia del ciclo de la cage se midió durante 845 s de funcionamiento continuo. Su mediana y su percentil 95 son los dos de 50,0 ms. El máximo es de 62,0 ms, causado por un único ciclo y por el planificador no determinista del sistema operativo. La mediana y el percentil 95 caben dentro del presupuesto del ciclo de control.
 
 Durante la operación nominal, la cage interviene en el 0,047 % de los ciclos (8 de 16 910). Todas las intervenciones vienen de la regla de rumbo o del limitador de tasa. El límite lateral, la regla predictiva y el modo de emergencia no se activan nunca. Este resultado dice dos cosas, y las dos importan: el controlador clásico está bien ajustado para el escenario nominal, y los umbrales de la cage no son demasiado estrictos. Una cage que interviniera todo el rato en condiciones nominales no estaría midiendo seguridad. Estaría midiendo su propio mal ajuste.
 
@@ -74,4 +74,4 @@ El sistema de referencia no añade nodos nuevos. Adapta el entorno, como muestra
 
 ## 6.8 Resumen
 
-Al final de este capítulo el sistema existe. La cadena funciona de principio a fin, la cage está implementada y verificada con la técnica clásica que corresponde a un componente determinista, y el registro produce la evidencia que usarán los niveles superiores de la rama derecha. Lo que falta todavía es el componente para el que se construyó el marco. El Capítulo 7 trata su especificación de proceso, que es la segunda mitad de la adaptación A1, y su entrenamiento.
+Al final de este capítulo el sistema existe. La cadena funciona de principio a fin. La cage está implementada y verificada con la técnica clásica que corresponde a un componente determinista. Y el registro produce la evidencia que usarán los niveles superiores de la rama derecha. Lo que falta todavía es el componente para el que se construyó el marco. El Capítulo 7 trata su especificación de proceso, que es la segunda mitad de la adaptación A1, y su entrenamiento.

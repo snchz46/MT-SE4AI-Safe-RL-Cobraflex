@@ -4,7 +4,7 @@
 
 Este capítulo evalúa el marco, no el sistema. Esto viene de §3.2.1, donde el trabajo se presentó como *design science research*: lo que se juzga es el V-Model adaptado, y el sistema de seguimiento de carril es la herramienta con la que se ha puesto a prueba. El método se fijó de antemano en §3.7: cinco criterios con sus indicadores, más la evaluación de las tres hipótesis del Capítulo 1. Fijar los criterios antes de conocer los resultados es lo que hace que esta evaluación sea algo más que una defensa.
 
-## 11.2 El marco frente a sus cinco criterios
+## 11.2 Evaluación frente a los cinco criterios
 
 **(1) Integridad de la trazabilidad. Criterio: cero huérfanos. Cumplido.** El validador no encontró huérfanos en ninguna puerta de revisión ni en la matriz final. Lo importante no es el cero del final, sino que la restricción funcionó como una puerta dura durante el desarrollo: los identificadores huérfanos se detectaban en el momento de añadirlos, no en una auditoría posterior. Un cero obtenido en una auditoría final solo mostraría lo cuidadoso que ha sido el autor. Un cero mantenido de forma continua muestra una propiedad del marco.
 
@@ -24,7 +24,7 @@ La lectura honesta, entonces, es que el criterio se cumple en simulación y solo
 
 El contraejemplo se registra con el mismo peso, porque muestra un límite real del marco. La matriz no detectó por sí sola que un escenario se estaba ejecutando sin inyectar sus condiciones iniciales. Durante un tiempo, ese escenario dio cero co-activación y un veredicto indeterminado que parecía un hueco de instrumentación. La trazabilidad garantiza que el escenario existe y apunta a su requisito. No garantiza que el ejecutor lo ejecute tal como está especificado. Esa diferencia, validar la *ejecución* frente a validar la *referencia*, es la mejora más concreta que este trabajo encuentra para su propio marco.
 
-## 11.3 Las tres hipótesis
+## 11.3 Evaluación de las tres hipótesis
 
 **H1 (de constructo): apoyada.** Las cinco adaptaciones bastaron para cubrir los modos de fallo encontrados durante el ciclo, y ninguno necesitó un mecanismo de fuera del marco. El matiz es que «bastaron» significa «no se encontró nada que no encajara». Eso es evidencia de que bastan en la práctica, no de que sean completas.
 

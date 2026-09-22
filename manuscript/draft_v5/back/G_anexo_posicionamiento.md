@@ -1,6 +1,6 @@
 # Anexo G — Espacio de posicionamiento (versión completa)
 
-Esta es la versión completa de la Tabla 2.1: las veinte líneas de trabajo revisadas en el Capítulo 2, valoradas en los siete ejes de interés. `✓` indica que el eje se cubre de forma sustancial; `partial`, que se cubre en parte; `–`, que no se trata.
+Versión completa de la Tabla 2.1: las veinte líneas de trabajo revisadas en el Capítulo 2, valoradas en los siete ejes de interés. `✓` indica que el eje se cubre de forma sustancial; `partial`, que se cubre en parte; `–`, que no se trata.
 
 | Work / line | Safe training | Cage / runtime filter | Scenario validation | Lifecycle | Explicit traceability | Sim-to-real gap | E2e case study |
 | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |

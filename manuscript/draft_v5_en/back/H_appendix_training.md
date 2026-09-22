@@ -22,7 +22,7 @@ where `progress` is the normalised progress along the centre line, `Δsteering` 
 | `w_ds` (steer_delta) | 0.20 | Actuation smoothness (over the raw Δsteering, v1.2; §7.2.2) |
 | `w_term` (termination) | 25.0 | Discourages leaving the road |
 
-The forward term uses normalised progress, not speed. Since speed is fixed, a `w_fwd·speed` term would be a constant that does not tell behaviours apart, and it left `explained_variance ≈ 0` (F3 review, first run). The high termination penalty (25.0) gives priority to staying on the **road**. It only applies when the vehicle leaves the road: a C-05 emergency ends the episode with no penalty, because the cage's intervention is part of the dynamics and not a punishment (D-34, §7.2.4). The weights are `[provisional, M-P1..M-P4]`. Details are in `docs/10_reward_function.md`.
+The forward term uses normalised progress, not speed. Since speed is fixed, a `w_fwd·speed` term would be a constant that does not tell behaviours apart, and it left `explained_variance ≈ 0`. The high termination penalty (25.0) gives priority to staying on the **road**. It only applies when the vehicle leaves the road: a C-05 emergency ends the episode with no penalty, because the cage's intervention is part of the dynamics and not a punishment (§7.2.4). The weights are `[provisional, M-P1..M-P4]`. Details are in `docs/10_reward_function.md`.
 
 ## H.2 Hyperparameters
 
@@ -47,7 +47,7 @@ The table shows the full effective configuration. The E-main column is the camer
 | `max_grad_norm` | 0.5 | 0.5 | SB3 default |
 | `device` | auto (CUDA if present) | cpu | E: the CNN benefits from a GPU |
 
-The four stability settings of the E-main run (`target_kl`, linear LR decay, `VecNormalize(norm_reward)` and `clip_range_vf`) are not in the F baseline. They were added after seeing that PPO with a CNN and visual randomization is much less stable than with the state vector (§7.3). `norm_obs` is left False, so evaluation and inference are not affected and `ep_rew_mean` in the curve stays unnormalised (comparable with the baseline). The camera budget is at least 1M steps (D-41 accepts that the end-to-end approach needs more data), and a pilot of about 20k steps checks that the loop works before that budget is spent.
+The four stability settings of the E-main run (`target_kl`, linear LR decay, `VecNormalize(norm_reward)` and `clip_range_vf`) are not in the F baseline. They were added after seeing that PPO with a CNN and visual randomization is much less stable than with the state vector (§7.3). `norm_obs` is left False, so evaluation and inference are not affected and `ep_rew_mean` in the curve stays unnormalised (comparable with the baseline). The camera budget is at least 1M steps, and a pilot of about 20k steps checks that the loop works before that budget is spent.
 
 ## H.3 Comparative study of algorithms and checkpoints
 

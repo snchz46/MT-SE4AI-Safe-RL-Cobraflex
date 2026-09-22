@@ -19,72 +19,9 @@ The values marked as provisional are waiting to be calibrated on the physical pl
 # 5. Update docs/04_cage_specification.md if any logic changed.
 # =============================================================
 cage:
-  version: "0.6.1"   # bump on any parameter change; semantic versioning
-  # Version of docs/03_safety_requirements.md against which this YAML's
-  # parameter set was authored. SafetyCageNode.__init__ refuses to load
-  # if this field is missing or not in the accepted set declared by
-  # cage.cage_node._ACCEPTED_SR_SPEC_VERSIONS. Bump on each SR revision
-  # that changes a numerical threshold or adds/removes an SR; document
-  # the bump in docs/CHANGELOG.md.
+  version: "0.6.1"
   compatible_sr_spec_version: "1.0"
-  description: |
-    0.6.1 (2026-06-10, track 'E'): make C-05 Trigger 3's state-age
-    budget explicit and consistent with Trigger 5's missing-state
-    budget at the 10 Hz training/eval control rate:
-    staleness_max_s = n_missing_max_cycles x control_dt = 5 x 0.1 =
-    0.5 s (the code default 0.2 s assumed the 20 Hz deployment loop,
-    where 0.2 s ~ 4-5 cycles — the SAME tolerance). Found live at E2:
-    with the CV lane-estimator the state legitimately skips 2-3
-    cycles at the oval curve apex (dash gaps); Trigger 3 at 0.2 s
-    undercut the documented 5-cycle hold and stopped every lap
-    mid-curve. SR-007's staleness-detection mandate is unchanged —
-    only the budget is parameterised to the actual control rate.
-    At 0.2 m/s, 0.5 s = 10 cm of travel, inside the d_warning margin.
-    0.6.0 (2026-06-10, track 'E'): add C-05 Trigger 8 (perception
-    invalid; SR-013 loss / SR-014 misdetection; H-11/H-12; D-43).
-    The external perception supervisor — CV lane-estimator health
-    (cobraflex_rl.perception_health) + plausibility / temporal
-    consistency (cobraflex_rl.lane_plausibility) — sets
-    ctx["perception_invalid"]; C-05 answers with the open-loop
-    controlled stop. New key c05_emergency.perception_trigger_enabled
-    (default false in code, true in this YAML), so pre-0.6.0 YAMLs
-    keep their exact behaviour (back-compat precedent 0.4.0→0.5.0).
-    The supervisor's own thresholds (staleness, confidence, feature
-    count, plausibility ranges) live with the supervisor config, not
-    here — the cage only consumes the boolean, staying
-    camera-agnostic. compatible_sr_spec_version stays "1.0": SR-012..
-    SR-014 are additive; no existing threshold changed.
-    0.5.1 (2026-05-23): fix oscillation window upper-bound bug. The
-    _check_oscillation_persistence window had no upper bound on t, so
-    stale entries from a previous sim run (t_prev > current_t when
-    sim time resets to zero on relaunch) were included in the 1-second
-    window, creating spurious 16+ Hz rates that triggered C-05 via
-    oscillation_detected at t≈3.0 sim-seconds on every fresh launch.
-    cage_node.py now filters with current_t - t_osc_window <= t <= current_t.
-    F2 third cut (18.05.2026). 0.5.0 adds the inter-cycle oscillation
-    detection parameters from SR-010 Part 2:
-      - cage.oscillation.f_osc_max_hz: alternation-rate threshold above
-        which the cage logs the event for offline review.
-      - cage.oscillation.t_osc_window_s: sliding-window length over
-        which the alternation rate is computed.
-      - cage.oscillation.t_osc_persist_s: sustained-violation duration
-        above which the oscillation triggers C-05 emergency mode (via
-        the new `oscillation_detected` trigger of C-05).
-    SR-010 Part 1 (end-of-cycle joint-envelope assertion / C-05 Trigger
-    7) remains deferred because it requires a per-rule
-    `safe_envelope_predicate_holds(state, action)` API that does not
-    yet exist on the rule contract.
-    Carried from 0.4.0: complete C-05 trigger set 1–6 +
-    `oscillation_detected`. Carried from 0.3.0: parameters required by
-    the executable rule logic of C-03 and C-04 (`d_max_m`,
-    `v_min_estimate_mps`, `k_throttle_per_mps`). The (0.2.0) rationale
-    also still applies: parameters flagged "[provisional, M-X]" remain
-    at conservative defaults pending the calibration campaign
-    (`experiments/calibration/`); measurement-driven revisions will land
-    in a 0.6.0 bump. The SR-005 ↔ SR-008 consistency reconciliation
-    noted in `docs/CHANGELOG.md` (t_stop_max raised from 1.5 s to 1.7 s
-    at the SRS level) is unchanged; `a_min_mps2` below is the cage-side
-    parameter that participates in the same consistency relation.
+  description: "0.6.1 (2026-06-10, track 'E')"
   # -----------------------------------------------------------
   # Operating mode
   # -----------------------------------------------------------

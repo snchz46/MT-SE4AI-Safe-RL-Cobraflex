@@ -1,5 +1,0 @@
-# latexmk configuration -- read by Overleaf and by a local `latexmk`.
-# This project builds with LuaLaTeX only (fontspec + TTF/OTF fonts); pdfLaTeX fails.
-$pdf_mode = 4;
-$lualatex = 'lualatex -shell-escape -interaction=nonstopmode %O %S';
-$bibtex_use = 2;

@@ -158,6 +158,8 @@ htmlcov/
 *.bak
 docs/.phases*
 docs/.temp_templates/
+docs/16_defense_compendium.md
+docs/17_physical_deployment.md
 tools/assets*
 # Ad-hoc sim launch logs from manual evidence sessions (tools/*.sh, validation runs)
 /*.log
@@ -246,6 +248,7 @@ manuscript/thesis_recap.pptx
 manuscript/fisba48428.pdf
 manuscript/thesis_bibliography_wordsources.xml
 manuscript/https *.txt
+manuscript/
 
 # Agent / local tooling configuration. Not part of the engineering record. The
 # equivalent project status for a reader lives in docs/CHANGELOG.md and

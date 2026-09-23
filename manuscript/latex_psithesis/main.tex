@@ -163,15 +163,21 @@ consistentlayout,
 % that `python md2tex.py --zip` puts in the Overleaf project -- everywhere else.
 \graphicspath{{../figures/}{./figures/}}
 
+% Four parts, as in the DOCX build: a body file marked ::part:: in
+% ../draft_v5_en becomes chapters/partN.tex (md2tex.py).
+\input{chapters/part1.tex}
 \input{chapters/chapter01.tex}
 \input{chapters/chapter02.tex}
 \input{chapters/chapter03.tex}
+\input{chapters/part2.tex}
 \input{chapters/chapter04.tex}
 \input{chapters/chapter05.tex}
+\input{chapters/part3.tex}
 \input{chapters/chapter06.tex}
 \input{chapters/chapter07.tex}
 \input{chapters/chapter08.tex}
 \input{chapters/chapter09.tex}
+\input{chapters/part4.tex}
 \input{chapters/chapter10.tex}
 \input{chapters/chapter11.tex}
 \input{chapters/chapter12.tex}

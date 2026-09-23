@@ -2,7 +2,7 @@
 
 ## 2.1 Purpose and structure of the chapter
 
-This chapter puts the relevant literature into a map and, most importantly, points out the places where lines of work do not connect, which is what this thesis tries to handle together. The review is selective: it focuses on work from the last seven years and on work that has clearly influenced the academic or standards discussion. It goes from general to specific: reinforcement learning in driving (§2.2), groups of safety approaches (§2.3), scenario-based validation (§2.4), standards (§2.5), life cycle adaptations (§2.6) and the sim-to-real gap (§2.7). It ends with a summary that places the thesis in this map (§2.8).
+This chapter puts the relevant literature into a map and, most importantly, points out the places where lines of work do not connect, which is what this thesis tries to handle together. The review is selective: it focuses on work from the last ten years and on work that has clearly influenced the academic or standards discussion. It goes from general to specific: reinforcement learning in driving (§2.2), groups of safety approaches (§2.3), scenario-based validation (§2.4), standards (§2.5), life cycle adaptations (§2.6) and the sim-to-real gap (§2.7). It ends with a summary that places the thesis in this map (§2.8).
 
 ## 2.2 Reinforcement learning in autonomous driving
 

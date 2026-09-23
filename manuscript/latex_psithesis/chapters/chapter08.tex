@@ -21,17 +21,17 @@ The library has twenty-eight scenarios in four families\sidenote{Scenario IDs sh
 
 Each scenario states its starting conditions, perturbation, end condition, main metrics and an explicit pass criterion. No run is interpreted unless that criterion was written beforehand.
 
-\subsection{The two modes as a counterfactual}
+\subsection{The two operating modes as a counterfactual}
 \label{sec:8.2.2}
 
 Each scenario runs in enforcement mode, where the cage corrects the command, and in monitoring mode, where the cage checks the same rules and logs the same activations but does not change the command. Comparing the two, on the same scenario and the same seed, is the main tool of this chapter. It does not compare two different systems, but the same system with and without the envelope, which removes the most obvious confounding factor. Everything this chapter says about \enquote{what the cage contributes} is based on this comparison.
 
-\subsection{How verdicts are combined, and what to do with indeterminate results}
+\subsection{Verdict aggregation and indeterminate results}
 \label{sec:8.2.3}
 
 The verdict for a requirement is built from the verdicts of its scenarios, using two rules defined in advance. The first is about having enough evidence. A requirement only gets a verdict if it has at least a minimum number of runs, spread across a nominal family and an adverse one. Otherwise it is marked as insufficient evidence, which is not the same as a failure. The second is a veto rule: only class A requirements can make the global verdict fail.
 
-One implementation detail turned out to be important. A per-run verdict can be indeterminate when the scenario's criterion uses a quantity that the log does not record. That is not a failure. It is removed from the denominator and passed on as insufficient evidence. An early version of the aggregator counted it as a failure, and that produced \enquote{unsatisfied} requirements that were really gaps in the instrumentation. This may sound like a minor detail, but it is exactly what separates a gap from a result. The two requirements that this work closes in a non-trivial way (one satisfied, one not) could only be closed because the instrumentation gap was fixed and the measurement could really be taken.
+One implementation detail turned out to be important. A per-run verdict can be indeterminate when the scenario's criterion uses a quantity that the log does not record; that is not a failure, it is removed from the denominator and passed on as insufficient evidence. An early version of the aggregator counted it as a failure, producing \enquote{unsatisfied} requirements that were really gaps in the instrumentation. It sounds minor, but it is exactly what separates a gap from a result: the two requirements this work closes in a non-trivial way, one satisfied and one not, could only be closed after the gap was fixed and the measurement really taken.
 
 \section{The reference campaign}
 \label{sec:8.3}
@@ -41,7 +41,7 @@ The reference campaign runs 1,890 runs with no errors: twenty-seven scenarios in
 \subsection{Global verdict}
 \label{sec:8.3.1}
 
-The literal global verdict is \verdictnot{}\sidenote{Literal: the verdict exactly as the aggregator computes it from the scenario criteria, before any reading of why a criterion failed.}, built as shown in Table~\ref{tab:8.1}. It is blocked by two class A requirements, heading stability and predictive time to lane departure, and only through one scenario and one clause. It is worth looking at in detail, because the difference between \enquote{the system is not safe} and what actually happens is the key point of the chapter:
+The literal global verdict is \verdictnot{}\sidenote{Literal: the verdict exactly as the aggregator computes it from the scenario criteria, before any reading of why a criterion failed.}, built as shown in Table~\ref{tab:8.1}. It is blocked by two class A requirements, heading stability and predictive time to lane departure, and only through one scenario and one clause. It is worth examining in detail, because the difference between \enquote{the system is not safe} and what actually happens is the central point of the chapter:
 
 % layout: table*, fixed, \small, 164 of 165 mm
 \begin{table*}[htbp]
@@ -86,12 +86,12 @@ So both requirements are met on their own documented criterion. The heading requ
 
 The verdict is recorded as literal, with the explanation noted next to it, and it is not rewritten as satisfied. This was a conscious decision. A framework whose value is that no claim goes without evidence would lose its meaning if it rewrote the verdict every time it was uncomfortable. Instead, the text explains exactly what is broken and what is not.
 
-\subsection{The clause, audited instead of excused}
+\subsection{Audit of the recovery clause}
 \label{sec:8.3.2}
 
 The same clause blocked the verdict in two campaigns in a row. That is a reason to suspect the clause, not only the system. It was audited, and it had a real defect. Its recovery band was a \emph{fixed} value, calibrated on an older controller and an older layout. Since the heading error oscillates around zero with an amplitude that depends on the controller and the layout, asking for several consecutive samples inside that band measured the ripple, not the recovery. When applied to runs with no perturbation at all, the metric said that 100\,\% of them \enquote{never recover}.
 
-The fix sets the band relative to the steady-state envelope of each run. It was applied once, with its acceptance criterion fixed beforehand: the false positives on unperturbed scenarios must go away. They did. Two conclusions follow, and both matter. First, when this campaign is re-scored with the corrected metric, it still fails the scenario, while the previous policy would pass. In other words, the fix helps the option that the thesis does not present, so it cannot be seen as a convenient adjustment. Second, the failure is not a measurement error. This policy's recovery really does \emph{ring} (13.6° $\rightarrow$ 1.4° $\rightarrow$ 5.9°, settling towards 2.5 s), and it does so on a straight section. That is what the jerky command documented in \S\ref{sec:8.5} looks like in closed loop. It is a performance property, not a safety one, and the explanation now rests on firmer ground than \enquote{the clause is inherited}.
+The fix sets the band relative to the steady-state envelope of each run. It was applied once, with its acceptance criterion fixed beforehand: the false positives on unperturbed scenarios had to go away, and they did. Two conclusions follow. First, re-scoring this campaign with the corrected metric still fails the scenario, while the previous policy would pass. The fix therefore helps the option the thesis does \emph{not} present, and cannot be seen as a convenient adjustment. Second, the failure is not a measurement error. This policy's recovery really does \emph{ring} (13.6° $\rightarrow$ 1.4° $\rightarrow$ 5.9°, settling towards 2.5 s), and it does so on a straight section: that is what the jerky command documented in \S\ref{sec:8.5} looks like in closed loop. It is a performance property, not a safety one, and the explanation now rests on firmer ground than \enquote{the clause is inherited}.
 
 The 2.0 s limit was left unchanged on purpose: the audit fixes a measurement, it does not lower the bar.
 
@@ -100,19 +100,19 @@ The 2.0 s limit was left unchanged on purpose: the audit fixes a measurement, it
 
 This is the main result of the work. It counts contacts with the road edge and splits the runs by whether their starting condition is inside or outside the operational domain\sidenote{A run counts as outside the ODD when its starting condition is beyond the declared domain. The system is not required to cope with it, but the cage is measured there anyway.}:
 
-% layout: table, natural, \small, 95 of 107 mm
-\begin{table}[htbp]
-\caption{Contacts with the road edge by mode and by whether the run starts inside the domain.}\label{tab:8.3}
+% layout: table*, natural, \small, 152 of 165 mm
+\begin{table*}[htbp]
+\caption[Contacts with the road edge by mode and by whether the run starts inside the domain.]{Contacts with the road edge by mode and by whether the run starts inside the domain. The 945 runs of each mode split into 555 inside the domain (nominal and perturbed families) and 390 outside (edge and frontier families).}\label{tab:8.3}
 \small\setlength{\tabcolsep}{4pt}
 \begin{tabular}{@{}lrr@{}}
   \toprule
-   & \tabhead{Inside the ODD} & \tabhead{Outside the ODD} \\
+   & \tabhead{Inside the ODD (555 runs/mode)} & \tabhead{Outside the ODD (390 runs/mode)} \\
   \midrule
   \textbf{Enforcement} (cage active) & \textbf{0} & 56 \\
   Monitoring (cage inactive) & 60 & 217 \\
   \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
 \textbf{Inside the operational domain, with the cage active, there is not a single contact with the road edge.} The policy alone makes sixty, and the cage removes all of them at the cost of 406 controlled stops\sidenote{A controlled stop is the response of \cagerule{05}: steering frozen and braking at a minimum rate until the vehicle stands still. It is safe, but it ends the run early.}. Outside the domain, where the system is not required to work, the improvement over the previous policy is large: 56 contacts against 117, concentrated exactly where the boundary conditions are hardest.
 
@@ -121,10 +121,10 @@ This is the main result of the work. It counts contacts with the road edge and s
   \caption[Road edge contacts by mode and by domain membership.]{Contacts with the road edge by mode and by whether the run starts inside the operational domain, for the reference campaign and the two earlier ones, \texttt{margin022} and \texttt{GE4-V2} (Table~\ref{tab:7.1}). The \enquote{inside the ODD, enforcement} block is zero in all three. The differences between policies are outside the domain.}\label{fig:8.1}
 \end{figure*}
 
-\subsection{Latent inside, active where perception gets worse}
+\subsection{Cage activity against perception quality}
 \label{sec:8.4.1}
 
-In the clean nominal scenario the cage is latent. The policy drives 5.32 laps with 8.6 mm mean lateral error, zero emergencies and zero safety interventions, and only the rate limiter acts. But comparing the modes scenario by scenario (Table~\ref{tab:8.4}) shows where the cage stops being latent:
+In the clean nominal scenario the cage is latent, with the figures \S\ref{sec:7.5.2} already gave when the checkpoint was chosen: only the rate limiter acts. But comparing the modes scenario by scenario (Table~\ref{tab:8.4}) shows where the cage stops being latent:
 
 % layout: table, natural, \small, 84 of 107 mm
 \begin{table}[htbp]
@@ -150,7 +150,7 @@ This is the evidence behind the main claim. The cage removes failures that the p
   \caption[Pass fraction by scenario and mode.]{Share of runs passed per scenario in the reference campaign (\texttt{2-D PPO 550k}, Table~\ref{tab:7.1}; scenario IDs without the \texttt{SC-} prefix), enforcement against monitoring, sorted by how much the cage contributes. In the scenarios at the top, the envelope makes the difference between finishing and not finishing.}\label{fig:8.2}
 \end{figure*}
 
-\section{The uncomfortable finding: the rate limiter keeps the car in the lane}
+\section{The role of the rate limiter in lane keeping}
 \label{sec:8.5}
 
 The 300 s endurance test shows a reversal that the verdict tables hide, and it turned out to be the most informative finding of the campaign. With the cage active, all twenty-five runs finish without any real excursion. With the cage inactive, seventeen out of twenty-five end off the road. None of the earlier policies, not even the worst ones, did this.
@@ -192,7 +192,7 @@ There are two limits to this explanation. The dependency is measured, but its or
 
 This has three consequences for reading the rest of the work. \enquote{The cage is latent inside the domain} is still true for the safety rules, but it must not be read as \enquote{the cage does nothing}: for this policy, the safety rules are latent \emph{because} the limiter acts first. The class B label of the smoothness requirement underestimates what that rule is doing. And on the physical platform, where the actuator dynamics are not the simulated limiter, a policy so tied to one specific parameter of the envelope is a transfer risk. Chapter~\ref{ch:12} states this explicitly.
 
-\section{The negative verdict: combining rules}
+\section{Rule composition and the negative verdict}
 \label{sec:8.6}
 
 Of the fourteen requirements, one is closed as not satisfied, and it is reported that way instead of being explained away.
@@ -201,25 +201,25 @@ Its criterion says that when two or more rules fire in the same cycle, the resul
 
 Looking at which rules fire together shows the problem clearly. The violations are concentrated where the lateral limit and heading rules fire together (15 out of 20 runs fail, with 11 violations) and in the triple that includes them. They are milder when the lateral rule fires with the predictive rule (4 violations). They disappear completely where lateral and heading corrections do not conflict: speed together with the rate limiter produces no violation and no failure.
 
-Training a better policy cuts the problem in half, but it does not change what kind of problem it is. That is the main conclusion. How the cage arbitrates when rules fire together is a design property of the cage, not a defect of the policy, and the evidence is that two very different policies show the same pattern, only weaker. It is exactly the hazard the register predicted when it included a hazard for the mitigation mechanism itself, and it is kept as stated future work.
+Training a better policy cuts the problem in half, but it does not change what kind of problem it is. That is the main conclusion. How the cage arbitrates when rules fire together is a design property of the cage, not a defect of the policy. The evidence is that two very different policies show the same pattern, only weaker. This is exactly the hazard the register predicted when it included a hazard for the mitigation mechanism itself, and it is kept as stated future work.
 
 The requirement is class B, so it does not block the global verdict, and no class A safety condition is involved. Having a negative verdict in the matrix, next to the claim of zero contacts inside the domain, is what makes that claim believable.
 
-\subsection{The two requirements closed out of band}
+\subsection{Requirements closed out of band}
 \label{sec:8.6.1}
 
 Two requirements are closed on their own metric instead of through scenario results. In both cases the reason is documented.
 
-The actuation smoothness requirement is checked directly on the trace of the command that was actually applied. In enforcement, 840 out of 840 runs stay within the per-cycle limit. In monitoring, only 263 out of 945 do. This is also the most direct measure of what the limiter is worth.
+The actuation smoothness requirement is checked directly on the trace of the command that was actually applied, counting only the cycles that the emergency stop does not override. In enforcement, the 840 runs that have such cycles all stay within the per-cycle limit; the remaining 105 end in emergency and contribute no sample. In monitoring, where the cage overrides nothing and all 945 runs score, only 263 stay within it. This is also the most direct measure of what the limiter is worth.
 
 The \emph{liveness} requirement is closed on its own measurements.\sidenote{Liveness: the vehicle keeps making progress. A policy that learns to park avoids every penalty but is useless, which is hazard \hz{08}.} Its scenario, a two-arm meta-test that adds an incentive to stop, was left out of the campaign because it does not depend on the policy and had already been closed separately, with three measured parts. The nominal policy never stops. A deliberate attempt to make it stop does not work, which is positive evidence that the training mitigation works. And the detector does fire on a real stop injected by a script. So: a mitigation that works, a failure mode that is resisted, and a metric that works.
 
 \section{Comparison with the perfect perception arm}
 \label{sec:8.7}
 
-The control arm uses the same cage and the same scenarios, but the state comes from ground truth instead of the camera. It closes with a global verdict of satisfied, and it gives a finding that puts everything above into context: with perfect perception, the cage is completely latent inside the domain. Its boundary violation metric is zero in both modes, and there is no difference between enforcement and monitoring.
+The control arm uses the same cage and the same scenarios, but takes the state from ground truth instead of the camera. It closes with a global verdict of satisfied, and gives a finding that puts everything above into context: with perfect perception the cage is completely latent inside the domain, with its boundary violation metric at zero in both modes and no difference between enforcement and monitoring.
 
-Read together, the two arms give the empirical contribution of the work: how much the cage is worth depends on how good perception is. When perception is perfect, the envelope has nothing to correct, and its value only shows outside the domain. When perception is a network learning from degraded pixels, the envelope goes from latent to active and removes failures that can be measured. Without the control arm, the result of the camera arm would be unclear: it would not be possible to tell whether the cage helps because the problem is hard or because the policy is bad.
+Read together, the two arms give the empirical contribution of the work: how much the cage is worth depends on how good perception is. With perfect perception it has nothing to correct and its value only shows outside the domain; with a network learning from degraded pixels it goes from latent to active and removes measurable failures. Without the control arm there would be no way to tell whether the cage helps because the problem is hard or because the policy is bad.
 
 \section{Threats to validity}
 \label{sec:8.8}

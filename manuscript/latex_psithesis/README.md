@@ -37,12 +37,15 @@ cannot build this template (fontspec + TTF/OTF fonts).
 make            # lualatex -shell-escape, biber, lualatex, lualatex
 ```
 
-**Verified build (17.09.2026).** Compiled on the Windows authoring host with
+**Verified build (23.09.2026).** Compiled on the Windows authoring host with
 TinyTeX (LuaHBTeX 1.24.0, TeX Live 2026, biber 2.22), from the unpacked Overleaf
-zip: 0 errors, 0 undefined references or citations, 0 missing glyphs, no
-overfull box above 1.3 pt outside the template's own chapter-title line.
-**155 pages:** 18 front matter, 98 body (Chapters 1–12), 36 appendices,
-3 references. Two packages the template needs are no longer where `deps.txt`
+zip: 0 errors, 0 undefined references or citations, 0 missing glyphs; the
+overfull boxes above 1.3 pt are the same classes as in the 17.09 build (the
+running head on even pages, the template's chapter-title line, the declaration's
+signature line), none from the content.
+**161 pages:** 18 front matter, 108 body (Parts I–IV, Chapters 1–12; the four
+part dividers take 8 of those pages), 32 appendices, 3 references. The 17.09
+build had 155 pages. Two packages the template needs are no longer where `deps.txt`
 used to say: `scrhack` was split out of `koma-script`, and `centernot` lives in
 `oberdiek`; `deps.txt` lists both now.
 
@@ -51,6 +54,7 @@ used to say: `scrhack` was split out of `koma-script`, and `centernot` lives in
 | Markdown | LaTeX |
 | --- | --- |
 | `# Chapter N — Title`, `## N.M …` | `\chapter` + `\label{ch:NN}`, `\section` + `\label{sec:N.M}` |
+| a body file marked `::part::` (`# Part N — Title`, `## what it groups`) | `chapters/partN.tex` with `\thesispart{Title}{…}`; `main.tex` places it |
 | `(Author et al., 2025)` | `\cite{key}`, e.g. `[CLL25]` (the template's alphabetic style) |
 | `Author et al. (2025)` | names kept as written + `\cite{key}` |
 | `Chapter 8`, `Figure 7.1`, `Table F.1`, `Appendix G`, `§9.3.6` | same words, number linked with `\ref` |
@@ -117,7 +121,7 @@ a note explains or points, it adds no result; anchors must be in running text
 | `fonts/` | **verbatim** — Roboto (Apache 2.0) and Iosevka SS04 (OFL), vendored so the project builds offline. Cochineal comes from TeX Live. |
 | `deps.txt` | upstream list + `scrhack`, `setspaceenhanced`, `oberdiek` |
 | `misc/titlepage.tex` | **rewritten** for Hochschule Esslingen |
-| `main.tex` | **rewritten** — thesis information, front matter, 12 chapters, 9 appendices, full-width appendix geometry |
+| `main.tex` | **rewritten** — thesis information, front matter, 4 parts, 12 chapters, 9 appendices, full-width appendix geometry |
 | `misc/thesis-commands.tex` | **new** — project macros, float placement, see below |
 | `md2tex.py`, `margin_notes.md`, `latexmkrc` | **new** |
 | `chapters/`, `appendices/`, `front/`, `literature.bib` | **generated** by `md2tex.py` |
@@ -156,8 +160,9 @@ the one that budget was set against:
 | Line spacing | 1.15 | single |
 | Body face | Arial 11 pt | Cochineal 11 pt |
 
-Measured here: **98 body pages** (17.09.2026 build). That number describes this
-rendering only; the submission budget is measured on the DOCX with
+Measured here: **108 body pages**, 100 without the part dividers (23.09.2026
+build). That number describes this rendering only; the submission budget is
+measured on the DOCX with
 `tools/thesis_page_budget.py`.
 
 ## Static checks
@@ -181,8 +186,10 @@ must match, running-word ratio must stay in 0.90–1.12, margin notes excluded �
 and lists the files that trip a threshold for a reason checked by hand.
 `check_refs.pl` finds `\ref` targets that are never labelled.
 
-**Status (17.09.2026): all three pass** — 0 errors; 0 unexplained completeness
-flags (4 verified exceptions); 245 labels, none dangling or duplicated. Now that
+**Status (23.09.2026): all three pass** — 0 errors; 0 unexplained completeness
+flags (4 verified exceptions); 248 labels, none dangling or duplicated. The part
+dividers are not in `check_complete.pl`'s list: a two-heading file has no
+running text to compare. Now that
 a real build exists these checks are a fast pre-flight, not a substitute.
 
 ## Known gaps

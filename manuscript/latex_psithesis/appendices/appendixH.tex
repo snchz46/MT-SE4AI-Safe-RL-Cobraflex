@@ -39,7 +39,7 @@ where \texttt{progress} is the normalised progress along the centre line, \textt
 \end{tabular}
 \end{table}
 
-The forward term uses normalised progress, not speed. Since speed is fixed, a \texttt{w\_fwd·speed} term would be a constant that does not tell behaviours apart, and it left \texttt{explained\_\allowbreak{}variance ≈ 0} (F3 review, first run). The high termination penalty (25.0) gives priority to staying on the \textbf{road}. It only applies when the vehicle leaves the road: a \cagerule{05} emergency ends the episode with no penalty, because the cage's intervention is part of the dynamics and not a punishment (\dec{34}, \S\ref{sec:7.2.4}). The weights are \texttt{[provisional, M-P1..M-P4]}. Details are in \texttt{docs/\allowbreak{}10\_\allowbreak{}reward\_\allowbreak{}function.\allowbreak{}md}.
+The forward term uses normalised progress, not speed. Since speed is fixed, a \texttt{w\_fwd·speed} term would be a constant that does not tell behaviours apart, and it left \texttt{explained\_\allowbreak{}variance ≈ 0}. The high termination penalty (25.0) gives priority to staying on the \textbf{road}. It only applies when the vehicle leaves the road: a \cagerule{05} emergency ends the episode with no penalty, because the cage's intervention is part of the dynamics and not a punishment (\S\ref{sec:7.2.4}). The weights are \texttt{[provisional, M-P1..M-P4]}. Details are in \texttt{docs/\allowbreak{}10\_\allowbreak{}reward\_\allowbreak{}function.\allowbreak{}md}.
 
 \section{Hyperparameters}
 \label{sec:H.2}
@@ -74,7 +74,7 @@ The table shows the full effective configuration. The E-main column is the camer
 \end{tabular}
 \end{table}
 
-The four stability settings of the E-main run (\texttt{target\_kl}, linear LR decay, \texttt{VecNormalize(\allowbreak{}norm\_\allowbreak{}reward)} and \texttt{clip\_range\_vf}) are not in the F baseline. They were added after seeing that PPO with a CNN and visual randomization is much less stable than with the state vector (\S\ref{sec:7.3}). \texttt{norm\_obs} is left False, so evaluation and inference are not affected and \texttt{ep\_rew\_mean} in the curve stays unnormalised (comparable with the baseline). The camera budget is at least 1M steps (\dec{41} accepts that the end-to-end approach needs more data), and a pilot of about 20k steps checks that the loop works before that budget is spent.
+The four stability settings of the E-main run (\texttt{target\_kl}, linear LR decay, \texttt{VecNormalize(\allowbreak{}norm\_\allowbreak{}reward)} and \texttt{clip\_range\_vf}) are not in the F baseline. They were added after seeing that PPO with a CNN and visual randomization is much less stable than with the state vector (\S\ref{sec:7.3}). \texttt{norm\_obs} is left False, so evaluation and inference are not affected and \texttt{ep\_rew\_mean} in the curve stays unnormalised (comparable with the baseline). The camera budget is at least 1M steps, and a pilot of about 20k steps checks that the loop works before that budget is spent.
 
 \section{Comparative study of algorithms and checkpoints}
 \label{sec:H.3}

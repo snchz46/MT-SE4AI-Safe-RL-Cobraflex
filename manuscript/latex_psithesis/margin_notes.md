@@ -73,7 +73,7 @@ An orphan is an identifier with a missing link: for example a cage rule that no 
 @ like Class I technology
 TR 5469 classes: Class I can be handled with existing functional safety methods, Class II also needs extra methods, and for Class III no known method is enough (§2.5).
 
-@ ends with a review gate
+@ each with defined deliverables and a review gate
 A review gate is the check at the end of a phase. The project moves on only when the deliverables of the phase exist and the traceability checker reports no orphans.
 
 ## body/04_domain_hazards_requirements.md
@@ -84,7 +84,7 @@ ODD, operational design domain: the conditions (layout, lighting, speed, latency
 @ follows the structure of a HARA as in ISO 26262
 HARA, hazard analysis and risk assessment: the ISO 26262 step that lists hazards, rates them and derives the safety goals that the requirements must meet.
 
-@ severity (from S0, no injury
+@ Each hazard is rated on three axes with explicit scales
 The three ratings follow ISO 26262 Part 3, adapted to a 1:14 vehicle on a closed track. §C.2.7 explains what each level means here.
 
 @ a light systemic analysis based on control theory is also carried out
@@ -138,9 +138,6 @@ PPO samples its actions from a distribution whose width, the standard deviation,
 @ It has to be chosen by closed-loop evaluation on scenarios
 Closed loop: the policy drives, its actions change what the camera sees next, and the outcome is measured. The training reward is collected with exploration and visual randomisation switched on.
 
-@ A policy trained with the on-policy method
-The on-policy method is PPO and the off-policy method is SAC (§2.2).
-
 ## body/08_experimental_evaluation.md
 
 @ The library has twenty-eight scenarios in four families
@@ -172,19 +169,19 @@ Liveness: the vehicle keeps making progress. A policy that learns to park avoids
 
 ## body/09_sim_to_real_gap.md
 
-@ **What follows is the *bring-up* of the physical step, not its results campaign**
+@ What follows is the *bring-up* of the physical step, not its results campaign.
 Bring-up: getting the hardware chain to run end to end and calibrating it. It comes before, and is not the same as, a campaign run under the scenario protocol.
 
 @ The item marked as blocking was the effective field of view of the onboard camera.
 The effective field of view is the horizontal angle the camera really sees. Converting pixels to millimetres depends on it, so a wrong value scales every lateral quantity.
 
-@ is not to change the estimator's parameters but to rectify the real image to the standard camera model
+@ This diagnosis decided the fix: rectify the image
 Rectifying removes the lens distortion, so that the image follows the same ideal pinhole camera model that the simulator uses.
 
-@ The policy memorised the handedness of the track as a steering bias.
+@ The policy learned the handedness of the track as a steering bias.
 Handedness is the balance between left and right curves. Driven clockwise, `complex_b` has about 13 m of left curves and 2 m of right curves per lap.
 
-@ observation and action are mirrored per episode
+@ observation and action are mirrored in each episode
 Mirroring flips the image left to right and the sign of the steering together, so in about half of the episodes the policy effectively drives a right-handed circuit.
 
 @prelim **And it transfers: first measurement, one run.**
@@ -192,13 +189,13 @@ Mirroring flips the image left to right and the sign of the steering together, s
 @ latched the emergency stop
 Latched: once C-05 fires it stays active until an explicit reset, even after the trigger has gone. This avoids switching on and off at the edge of the trigger.
 
-@ When the stereo camera's visual odometry closes a loop
+@ when its visual odometry closes a loop
 Loop closure: when the camera recognises a place it has already seen, it corrects its accumulated drift in a single step. That step is what reaches the cage as a pose jump.
 
 @ on a closed circuit, the curvature integrated over one lap equals 2π
 Over one closed lap the heading turns through one full circle, whatever the shape of the circuit. The check needs no reference position, and the measured values are ratios to that expected total.
 
-@prelim The table now has a physical column
+@prelim The first thing to notice in the table is not a row but a column heading
 
 ## body/10_operational_validation.md
 
@@ -210,5 +207,5 @@ Trivially satisfied: the requirement was never challenged, because the speed nev
 
 ## body/11_discussion.md
 
-@ That difference, checking the *execution* versus checking the *reference*
+@ That difference, checking the *execution* rather than the *reference*
 Checking the reference: every scenario ID points to a requirement that exists. Checking the execution: the scenario really injects its starting conditions and logs what its criterion needs.

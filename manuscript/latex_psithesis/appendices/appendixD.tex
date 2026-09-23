@@ -7,13 +7,13 @@
 \chapter{Operational domain specification}
 \label{app:D}
 
-This is the full table of parameters for the four operational domains. Each parameter has a name, a value for each domain and a source. Whenever a named parameter exists, no claim about the domain in the main text relies on a qualitative description.
+Full table of parameters for the four operational domains. Each parameter has a name, a value for each domain and a source. Whenever a named parameter exists, no claim about the domain in the main text relies on a qualitative description.
 
 % layout: longtable, fixed, \footnotesize, 164 of 165 mm
 \begingroup
 \footnotesize\setlength{\tabcolsep}{4pt}
 \setlength{\LTleft}{0pt}\setlength{\LTright}{\fill}\setlength{\LTcapwidth}{\textwidth}
-\begin{longtable}{@{}>{\RaggedRight\arraybackslash}p{22.6mm}>{\RaggedRight\arraybackslash}p{29.3mm}>{\RaggedRight\arraybackslash}p{15.4mm}>{\RaggedRight\arraybackslash}p{11.2mm}>{\RaggedRight\arraybackslash}p{11.9mm}>{\RaggedRight\arraybackslash}p{11.9mm}>{\RaggedRight\arraybackslash}p{44.3mm}@{}}
+\begin{longtable}{@{}>{\RaggedRight\arraybackslash}p{22.6mm}>{\RaggedRight\arraybackslash}p{31.3mm}>{\RaggedRight\arraybackslash}p{14.8mm}>{\RaggedRight\arraybackslash}p{11.2mm}>{\RaggedRight\arraybackslash}p{12.2mm}>{\RaggedRight\arraybackslash}p{11.2mm}>{\RaggedRight\arraybackslash}p{43.3mm}@{}}
 \caption{Parameters of the four operational domains.}\label{tab:D.1} \\
   \toprule
   \tabhead{Parameter} & \tabhead{Meaning} & \tabhead{\mbox{ODD-1}} & \tabhead{\mbox{ODD-2}} & \tabhead{\mbox{ODD-3}} & \tabhead{\mbox{ODD-4}} & \tabhead{Source} \\
@@ -29,6 +29,20 @@ This is the full table of parameters for the four operational domains. Each para
   \endfoot
   \bottomrule
   \endlastfoot
+  Parameter ID & Quantity & \mbox{ODD-1} & \mbox{ODD-2} & \mbox{ODD-3} & \mbox{ODD-4} & Source \\
+  \addlinespace[2pt]
+  ------------ & -------- & ----- & ----- & ----- & ----- & ------ \\
+  \addlinespace[2pt]
+  \texttt{*.LANE\_WIDTH} & Lane width (m) & 0.245 & 0.245 & 0.245 & 0.245 & Centerline configs (\texttt{complex\_\allowbreak{}b\_\allowbreak{}centerline.\allowbreak{}yaml}) \\
+  \addlinespace[2pt]
+  \texttt{*.ROAD\_WIDTH} & Total road width (m) & 0.52 & 0.52 & 0.52 & 0.52 & complex\_b configs (oval legacy 0.50) \\
+  \addlinespace[2pt]
+  \texttt{*.ROAD\_LENGTH} & Loop / segment length (m) & straight portion & straight portion & 19.22 (centre) / 19.93 (driven) & 19.22 / 19.93 & complex\_b perimeter (oval legacy $\approx$ 8.79) \\
+  \addlinespace[2pt]
+  \texttt{*.GRADIENT} & Road gradient & 0 & 0 & 0 & 0 & Map convention \\
+  \addlinespace[2pt]
+  \texttt{*.FRICTION} & Surface friction coeff. & 1.0 & 1.0 & 1.0 & 1.0 & Gazebo ODE default \\
+  \addlinespace[2pt]
   \texttt{*.V\_MAX} / \texttt{*.V\_MAX\_STRAIGHT} & Speed ceiling, straight (m/s) & 0.5 & 0.5 & 0.5 & 0.5 & \sr{004}; \cagerule{04}. Operating point = 0.20 \\
   \addlinespace[2pt]
   \texttt{*.V\_MAX\_CURVE} & Speed ceiling, curve (m/s) & n/a & n/a & 0.25 & 0.25 & \sr{004}; \cagerule{04} \\
@@ -37,7 +51,7 @@ This is the full table of parameters for the four operational domains. Each para
   \addlinespace[2pt]
   \texttt{*.KAPPA\_MAX} & Max local curvature (1/m) & 0 & 0 & 1.14 & 1.14 & 1 / 0.876 m (complex\_b centre R\_min); driven $\approx$ 1.00; oval legacy 1.25 \\
   \addlinespace[2pt]
-  \texttt{*.A\_LAT\_MAX} & Max commanded lateral accel. (m/s\textsuperscript{2}) & 9.81 & 9.81 & \mbox{TBD-Q10} & \mbox{TBD-Q10} & Coulomb ceiling FRICTION$\times$g (\mbox{ODD-1}); \mbox{ODD-3} deferred to \mbox{M-4} \\
+  \texttt{*.A\_LAT\_MAX} & Max commanded lateral accel. (m/s\textsuperscript{2}) & 9.81 & 9.81 & 9.81 & 9.81 & Coulomb ceiling FRICTION$\times$g \\
   \addlinespace[2pt]
   \texttt{*.T\_CTRL} & Control cycle period (ms) & 50 & 50 & 50 & 50 & cage.yaml (20 Hz deployment); sim train/eval 10 Hz (control\_dt 0.10 s) \\
   \addlinespace[2pt]
@@ -53,59 +67,8 @@ This is the full table of parameters for the four operational domains. Each para
   \addlinespace[2pt]
   \texttt{*.STUCK\_TIMEOUT} & Stuck criterion timeout (s) & n/a & n/a & n/a & n/a & Subsumed by env truncation (500 $\times$ 0.10 s = 50 s); \mbox{TBD-Q11} \\
   \addlinespace[2pt]
-  \texttt{*.OBS\_DIM} & Observation & camera 84$\times$84$\times$4 (policy); CV lane-estimate (cage) & same & same & same & Track \enquote*{E} (\dec{43}). F-track baseline: 6-D state vector \\
+  \texttt{*.OBS\_DIM} & Observation & camera 84$\times$84$\times$4 (policy); CV lane-estimate (cage) & same & same & same & Track \enquote*{E}. F-track baseline: 6-D state vector \\
   \addlinespace[2pt]
-  \texttt{*.ACT\_DIM} & GE4-realised action vector dimension & 1 & 1 & 1 & 1 & Steering-only verdict parameter (\dec{49}). Posterior Gazebo and Isaac configs set 2 locally (\dec{50}/\allowbreak{}\dec{59}/\allowbreak{}\dec{60}) without changing this ODD value \\
-\end{longtable}
-\endgroup
-
-\section{Open questions of the domain and their closure}
-\label{sec:D.1}
-
-Of the twelve quantitative questions that were opened when the specification was written, eleven are closed with an explicit value and a date. The twelfth is still open because it depends on hardware, not because it was forgotten.
-
-% layout: longtable, fixed, \footnotesize, 164 of 165 mm
-\begingroup
-\footnotesize\setlength{\tabcolsep}{4pt}
-\setlength{\LTleft}{0pt}\setlength{\LTright}{\fill}\setlength{\LTcapwidth}{\textwidth}
-\begin{longtable}{@{}>{\RaggedRight\arraybackslash}p{11.9mm}>{\RaggedRight\arraybackslash}p{25.7mm}>{\RaggedRight\arraybackslash}p{9.7mm}>{\RaggedRight\arraybackslash}p{12.1mm}>{\RaggedRight\arraybackslash}p{92.9mm}@{}}
-\caption{Open quantitative questions of the domain and their closure.}\label{tab:D.2} \\
-  \toprule
-  \tabhead{ID} & \tabhead{Question} & \tabhead{Owner} & \tabhead{Status} & \tabhead{Resolution} \\
-  \midrule
-  \endfirsthead
-  \multicolumn{5}{@{}l}{\emph{(continued)}} \\
-  \toprule
-  \tabhead{ID} & \tabhead{Question} & \tabhead{Owner} & \tabhead{Status} & \tabhead{Resolution} \\
-  \midrule
-  \endhead
-  \midrule
-  \multicolumn{5}{r@{}}{\emph{(continued on next page)}} \\
-  \endfoot
-  \bottomrule
-  \endlastfoot
-  \mbox{TBD-Q1} & Friction coefficient of the road surface? & SS & closed & 1.0 — world SDFs ship an empty \texttt{<surface><friction>} block; Gazebo ODE defaults \texttt{mu1=mu2=1.0}. Inferred, not explicit \texttt{<mu>}; re-read if a future world sets one. (2026-05-14) \\
-  \addlinespace[2pt]
-  \mbox{TBD-Q2} & Max commanded lateral accel., \mbox{ODD-1}? & SS & closed & 9.81 — Coulomb ceiling FRICTION$\times$g. Physical envelope, not a typical value (operational \texttt{a\_lat ≈ 0} at $\kappa$=0). (2026-05-14) \\
-  \addlinespace[2pt]
-  \mbox{TBD-Q3} & Numerical drivable-corridor edge; why differ from LANE\_EDGE? & SS & closed & 0.1225 — the env terminates at \texttt{|ey| > lane\_width/2}; CORRIDOR\_EDGE = LANE\_EDGE, no separate margin. (Track \enquote*{E} adds off-road-by-road-centre-distance vs ROAD\_EDGE = 0.26 for self-approaching loops, docs/11 \S\ref{sec:3.5}.) (2026-05-14) \\
-  \addlinespace[2pt]
-  \mbox{TBD-Q4} & Lighting-degradation + noise in the nominal-adverse profile? & SS & closed & Superseded on track \enquote*{E} by the camera visual-degradation stressors (\S\ref{sec:5.5}): glare/low-light/motion-blur (\hz{10}), levels grounded in the GE2 oracle. F-track legacy value in \texttt{adverse\_\allowbreak{}profiles.\allowbreak{}yaml}. (2026-06-03; retargeted 2026-07-07) \\
-  \addlinespace[2pt]
-  \mbox{TBD-Q5} & Latency / jitter / actuation-imperfection profile? & SS & closed & Superseded on track \enquote*{E} — the perception channel, not state-vector latency, is the \mbox{ODD-2} axis; F-track legacy \texttt{odd2\_\allowbreak{}adverse\_\allowbreak{}with\_\allowbreak{}latency} retained historically. (2026-06-03; retargeted 2026-07-07) \\
-  \addlinespace[2pt]
-  \mbox{TBD-Q6} & Obstacle geometry / position / quantity? & SS & closed (retired) & Retired — no obstacle observation channel; no obstacle scenario in the verdict library. The F4 spec-only box profile is withdrawn. (2026-07-07) \\
-  \addlinespace[2pt]
-  \mbox{TBD-Q7} & Full parameterisation of the adverse-full profile? & SS & closed & On track \enquote*{E} = the union/compound of the \S\ref{sec:5.5} camera stressors (e.g. \scn{PERT-13} = worn markings + glare). (2026-06-03; retargeted 2026-07-07) \\
-  \addlinespace[2pt]
-  \mbox{TBD-Q8} & Total loop length of the curvy world? & SS & closed & complex\_b: 19.22 m (centre) / 19.93 m (driven), from \texttt{complex\_\allowbreak{}b\_\allowbreak{}centerline.\allowbreak{}yaml} (\texttt{perimeter\_m}). Oval legacy $\approx$ 8.0232 m (centre) / 8.79 m (driven). (2026-05-21; retargeted 2026-07-07) \\
-  \addlinespace[2pt]
-  \mbox{TBD-Q9} & Minimum curvature radius / KAPPA\_MAX? & SS & closed & complex\_b: R\_min $\approx$ 0.876 m (centre) / 0.998 m (driven) $\rightarrow$ KAPPA\_MAX $\approx$ 1.14 m\textsuperscript{$-1$} (centre) / 1.00 (driven); shaped to the \S\ref{sec:6.2} monocular boundary. Oval legacy R\_min 0.80 $\rightarrow$ 1.25 m\textsuperscript{$-1$}. (2026-05-21; retargeted 2026-07-07) \\
-  \addlinespace[2pt]
-  \mbox{TBD-Q10} & Max commanded lateral accel., \mbox{ODD-3}, from FRICTION + V\_MAX\_CURVE? & SS & \mbox{M-4} (F5) & OPEN, and now closed \emph{as} open (Phase 5 ended 01.09.2026 without \mbox{M-4}, and no further physical measurement is planned). Coulomb upper bound \texttt{A\_LAT\_MAX ≤ FRICTION×g = 9.81 m/s²}; operational value at V\_MAX\_CURVE=0.25 on driven R\_min$\approx$1.0 m is \texttt{V²/R ≈ 0.063 m/s²} — well below. The 2-D verdict-of-record campaign ran at $\approx$0.216 m/s (\texttt{a\_lat ≈ 0.047 m/s²}), so it neither approaches nor could bound the envelope: in Gazebo \texttt{A\_LAT\_MAX} is a \emph{property of the friction model that was assumed}, so measuring it there would return the assumption. Unmeasurable in simulation by construction (\dec{33}) — a hardware dependency, not an outstanding action item — and the hardware phase closed without taking it. The figure would close with \textbf{\mbox{M-4}}; it is carried as future work, and this spec stays below v1.0 by design. \\
-  \addlinespace[2pt]
-  \mbox{TBD-Q11} & Stuck-criterion timeout? & SS & closed & n/a — no separate stuck monitor; env truncation \texttt{max\_\allowbreak{}episode\_\allowbreak{}steps × control\_dt = 500 × 0.10 s = 50 s} is the implicit timeout. (2026-05-21, F3 update 2026-06-01) \\
-  \addlinespace[2pt]
-  \mbox{TBD-Q12} & Do \mbox{ODD-4} profiles add any stressor beyond \mbox{ODD-2}? & SS & closed & No — \mbox{ODD-4} = \mbox{ODD-3} geometry $\times$ \mbox{ODD-2} perception stressors (\S\ref{sec:7.1}), realised as curve-traversing complex\_b scenarios (\scn{PERT-11}/\allowbreak{}12/13, \scn{FRONT-07}). (2026-06-03; retargeted 2026-07-07) \\
+  \texttt{*.ACT\_DIM} & GE4-realised action vector dimension & 1 & 1 & 1 & 1 & Steering-only verdict parameter. Posterior Gazebo and Isaac configs set 2 locally without changing this ODD value \\
 \end{longtable}
 \endgroup

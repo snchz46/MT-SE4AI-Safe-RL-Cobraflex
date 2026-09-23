@@ -63,7 +63,7 @@ The analysis follows the structure of a HARA as in ISO 26262\sidenote{HARA, haza
   \caption[The HARA procedure as applied.]{The HARA procedure as applied: five steps from listing the functions to documenting the consequence and the root-cause hypothesis. A light systemic pass refines the constraints on selected hazards, and the output is the hazard register.}\label{fig:4.2}
 \end{figure*}
 
-Each hazard is rated on three axes with explicit scales: severity (from S0, no injury\sidenote{The three ratings follow ISO 26262 Part 3, adapted to a 1:14 vehicle on a closed track. \S\ref{sec:C.2.7} explains what each level means here.}, to S3, a serious consequence on the full-size equivalent), exposure (from E0 to E4, based on how often the situation happens inside the domain) and controllability (from C0 to C3, based on how well the system or a supervisor can avoid the damage). Together they give the criticality, which decides whether the hazard needs a deterministic rule, a training constraint, or both.
+Each hazard is rated on three axes with explicit scales\sidenote{The three ratings follow ISO 26262 Part 3, adapted to a 1:14 vehicle on a closed track. \S\ref{sec:C.2.7} explains what each level means here.}. Severity runs from S0, no injury, to S3, a serious consequence on the full-size equivalent. Exposure runs from E0 to E4, based on how often the situation happens inside the domain. Controllability runs from C0 to C3, based on how well the system or a supervisor can avoid the damage. Together they give the criticality, which decides whether the hazard needs a deterministic rule, a training constraint, or both.
 
 \subsection{Hazard register}
 \label{sec:4.4.2}
@@ -94,7 +94,7 @@ The register, summarised in Table~\ref{tab:4.1}, contains twelve hazards: nine a
 \end{tabular}
 \end{table*}
 
-Three entries need a comment, because they would not appear in a classical analysis. \hz{08} is specific to the learned component. It is reward exploitation: the policy ends up doing nothing, or doing something harmful, because that earns more reward than normal lane following. \hz{09} is specific to the \emph{mitigation}. If two or more cage rules fire in the same cycle and their combined output is a command outside the safe envelope, the cage is no longer a guarantee and becomes a source of unsafe commands. Recording the hazards created by the safety mechanism itself is a basic matter of honesty, and Chapter~\ref{ch:08} shows that this was not just a formal precaution. \hz{12} is the camera-track version of the same idea: the cage estimator produces a lane that is false but looks plausible, and applies a wrong envelope over the real lane.
+Three entries need a comment, because they would not appear in a classical analysis. \hz{08} is specific to the learned component. It is reward exploitation: the policy ends up doing nothing, or doing something harmful, because that earns more reward than normal lane following. \hz{09} is specific to the \emph{mitigation}. Two or more cage rules may fire in the same cycle. If their combined output is a command outside the safe envelope, the cage is no longer a guarantee and becomes a source of unsafe commands. Recording the hazards created by the safety mechanism itself is a basic matter of honesty, and Chapter~\ref{ch:08} shows that this was not just a formal precaution. \hz{12} is the camera-track version of the same idea: the cage estimator produces a lane that is false but looks plausible, and applies a wrong envelope over the real lane.
 
 \subsection{Systemic analysis}
 \label{sec:4.4.3}

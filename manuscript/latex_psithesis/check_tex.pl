@@ -23,7 +23,7 @@ binmode(STDOUT, ':encoding(UTF-8)');
 # Everything the document may legally call.
 # ---------------------------------------------------------------------------
 my @project = qw(
-  hz sr cagerule scn met dec gate phase nbh
+  hz sr cagerule scn met dec gate phase nbh thesispart
   verdictsat verdictnot verdictind verdictna verdictopen
   enf mon prelimflag retracted caveat
   fig figwide figmargin figmissing tabnote

@@ -29,6 +29,30 @@
 \newcommand{\option}[1]{\texttt{\itshape#1}}
 
 % ---------------------------------------------------------------------------
+% Part dividers
+% ---------------------------------------------------------------------------
+% The Markdown groups the twelve chapters into four parts (Part I--IV); md2tex.py
+% writes each divider as \thesispart{Title}{what it groups}. The book class's
+% \part sets the page and the number; the second argument goes under the title
+% and stays out of the table of contents. No \par inside the title: nameref
+% reads it with a non-\long macro. The \parbox keeps the subtitle's line
+% spacing its own instead of the \Huge of the title around it.
+
+\newcommand{\thesispart}[2]{%
+  \part[#1]{#1\\[3ex]\parbox{\textwidth}{\centering\normalfont\large #2}}}
+
+% The ToC line for a part, in the idiom of the class's chapter line
+% (PSIThesis.cls): the number in small caps hanging in the left margin, and
+% \nobreak so the line never ends a ToC page apart from its first chapter.
+\etocsetstyle{part}
+   {}
+   {}
+   {\addvspace{2ex}%
+    \makebox[0pt][r]{\textsc{\MakeTextLowercase\partname\ \MakeTextLowercase\etocthenumber}\hspace{\tocsep}}%
+    {\large\bfseries\color{ubblue}\etocname}\par\nobreak\vspace{3ex}}%
+   {}
+
+% ---------------------------------------------------------------------------
 % Identifier space
 % ---------------------------------------------------------------------------
 % Usage: \hz{01} \sr{003} \cagerule{06} \scn{NOM-01} \met{S1} \dec{69}

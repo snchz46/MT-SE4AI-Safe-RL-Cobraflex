@@ -37,7 +37,15 @@ idempotent and the page budget is the acceptance check.
 The layout choices live in one place — `tools/build_thesis_docx.py`, top of file — and **that
 file is the authority; this section describes it**:
 
-- A4, justified, paragraphs indented; **1.0" margins on all four sides**.
+- A4, justified, paragraphs indented **and 6 pt apart** (23.09.2026, author's choice: at 0 pt
+  they read as one block); **1.0" margins on all four sides**.
+- **Table columns sized to their content** (23.09.2026), not split evenly: every cell is
+  measured with the font's own widths and wrapped as Word wraps it, and each table gets the
+  widths that make it the fewest lines tall without breaking a word. Where the words cannot
+  fit side by side, the cell margins tighten from 5.4 to 3 pt, and only then does Word break
+  words -- code identifiers first; the build lists those tables. Checked against Word's own
+  layout: the predicted height matched on 762 of the 763 rows compared, both languages, and
+  the one miss came out a line shorter in Word.
 - Preliminary pages in **lower-case roman, centred at the bottom**; the title page carries no
   number, header or footer. Body in **arabic, upper right**, restarting at 1.
 - **Running header and footer** on every numbered page, 8.5 pt grey with a hairline rule:
@@ -66,12 +74,14 @@ top and bottom (the same as the lateral margins, so more text fits per page) and
 running header and footer above. Measured in Word on that day, the body went from 93 to 90
 pages (ES) and from 91 to 85 (EN).
 
-> **Open item — the page budget is unverified.** `tools/thesis_page_budget.py` drives Word and
-> needs **Word COM (pywin32)**, so it runs only on a Windows host with Word installed — not on
-> the Ubuntu compute host. It has not been run since the typography change above, nor since
-> chapters 9–12 were rewritten with the Phase-5 evidence. **Run it before trimming or adding
-> anything.** The last measured figure, 96 pages, dates from the 31.07.2026 build under
-> different settings and should not be quoted.
+> **Page budget — measured 23.09.2026.** `tools/thesis_page_budget.py` drives Word through
+> PowerShell and reads the exported PDF with PyMuPDF (no pywin32), so it runs on the Windows
+> authoring host, not on the Ubuntu compute host. Body of the text with the 6 pt paragraph gap
+> and the fitted table columns: **92 pages (ES)**, from the tool; **88 (EN)**, from Word's
+> pagination, because the tool only recognises the Spanish headings (*Capítulo*, *Anexo*,
+> *Bibliografía*). With the gap alone: 95 and 91; with neither: 94 and 90. The dividers of Parts
+> II–IV fall inside the count. **Re-run it after any change to the text or the layout**; the 96
+> pages of 31.07.2026 were measured under different settings and should not be quoted.
 
 **Open item:** the guidelines ask for standard English; the manuscript is in Spanish. Confirm
 with the supervisor before final submission.

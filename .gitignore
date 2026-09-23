@@ -248,7 +248,7 @@ manuscript/thesis_recap.pptx
 manuscript/fisba48428.pdf
 manuscript/thesis_bibliography_wordsources.xml
 manuscript/https *.txt
-manuscript/
+manuscript/*
 
 # Agent / local tooling configuration. Not part of the engineering record. The
 # equivalent project status for a reader lives in docs/CHANGELOG.md and

@@ -8,7 +8,7 @@
 <table>
 <tr>
 <td width="32%" valign="middle">
-<img src="manuscript/figures/fig_3_5_vehicle_cad.png" alt="CobraFlex 1:14 CAD render" width="100%">
+<img src="figures/fig_3_5_vehicle_cad.png" alt="CobraFlex 1:14 CAD render" width="100%">
 </td>
 <td width="68%" valign="middle">
 
@@ -32,16 +32,16 @@
 ## See it in action
 
 <p align="center">
-  <a href="manuscript/media/PPO_Eval.gif">
-    <img src="manuscript/media/PPO_Eval.gif" alt="The end-to-end camera PPO policy driving the complex_b circuit under the safety cage in Gazebo" width="840">
+  <a href="media/PPO_Eval.gif">
+    <img src="media/PPO_Eval.gif" alt="The end-to-end camera PPO policy driving the complex_b circuit under the safety cage in Gazebo" width="840">
   </a>
   <br>
   <sub>The trained <b>end-to-end camera PPO policy</b> driving the <code>complex_b</code> circuit under the cage in <b>Gazebo</b> (left). The <b>RViz</b> panel (centre) shows the two consumers of the same frame: the <i>Camera Lane</i> overlay of the cage's own deterministic CV lane-estimator (green centreline) and the grayscale observation the CNN actually sees; the map (right) tracks the vehicle against the lane boundaries.</sub>
 </p>
 
 <p align="center">
-  <a href="manuscript/media/PPO_Training.gif">
-    <img src="manuscript/media/PPO_Training.gif" alt="Training the end-to-end camera PPO policy in Gazebo on the complex_b circuit" width="840">
+  <a href="media/PPO_Training.gif">
+    <img src="media/PPO_Training.gif" alt="Training the end-to-end camera PPO policy in Gazebo on the complex_b circuit" width="840">
   </a>
   <br>
   <sub>Training the same <b>end-to-end camera</b> policy in <b>Gazebo</b> on <code>complex_b</code> (left), with the live camera / lane-estimate views and the ego-centric lane view (right). Training runs <b>with the cage enabled in enforcement mode</b> and with camera domain randomisation on.</sub>
@@ -81,11 +81,11 @@ A standard RL agent learns a policy by interacting with its environment. We keep
 <table>
 <tr>
 <td width="50%" valign="top">
-<img src="manuscript/figures/fig_2_1_classical_rl_framework.png" alt="Classical reinforcement-learning loop" width="100%">
+<img src="figures/fig_2_1_classical_rl_framework.png" alt="Classical reinforcement-learning loop" width="100%">
 <br><sub><b>Standard RL loop.</b> The agent observes a state, acts, and receives a reward from the environment.</sub>
 </td>
 <td width="50%" valign="top">
-<img src="manuscript/figures/fig_2_2_safety_cage_idea.png" alt="The same RL loop wrapped in a runtime safety cage" width="65%">
+<img src="figures/fig_2_2_safety_cage_idea.png" alt="The same RL loop wrapped in a runtime safety cage" width="65%">
 <br><sub><b>…wrapped in a cage.</b> The raw action is filtered to a <i>safe action</i> before it reaches the environment.</sub>
 </td>
 </tr>
@@ -122,7 +122,7 @@ The system is the end-to-end camera PPO driver `ppo_gz2d_cap022_1M_2024` (seed 2
 </p>
 
 <p align="center">
-  <img src="manuscript/figures/auto/fig_7_4_ppo2d_training_curve.png" alt="Training reward of the 2-D camera PPO policy — rises to a stable high plateau, peak 1755 at 472k, with the evaluated checkpoint candidates marked" width="720">
+  <img src="figures/auto/fig_7_4_ppo2d_training_curve.png" alt="Training reward of the 2-D camera PPO policy — rises to a stable high plateau, peak 1755 at 472k, with the evaluated checkpoint candidates marked" width="720">
   <br>
   <sub>Training reward of the policy (top curve): a stable high plateau, <code>ep_rew_mean</code> peaking at <b>1755 @ 472 k</b>. The marked points are the three checkpoints that were evaluated by driving. The two lower curves are earlier camera-policy variants, shown only for scale.</sub>
 </p>
@@ -144,7 +144,7 @@ The system is the end-to-end camera PPO driver `ppo_gz2d_cap022_1M_2024` (seed 2
 The project follows a V-model **adapted for an AI component**: the classical left/right arms are kept, but the implementation tier is split into a **cage side** (specified, then unit-tested) and a **learned side** (a training specification, then behavioural evaluation), with a **runtime-monitoring** layer running underneath all of it. Compulsory traceability links each left-arm artefact to its right-arm counterpart.
 
 <p align="center">
-  <img src="manuscript/figures/fig_3_3_adapted_v_model.png" alt="Adapted V-model: cage and training specification on the left arm, cage unit tests and policy behavioural evaluation on the right, with runtime monitoring underneath" width="500">
+  <img src="figures/fig_3_3_adapted_v_model.png" alt="Adapted V-model: cage and training specification on the left arm, cage unit tests and policy behavioural evaluation on the right, with runtime monitoring underneath" width="500">
 </p>
 
 The work advances through gated phases. Each Gate is blocked until traceability passes with no orphans.

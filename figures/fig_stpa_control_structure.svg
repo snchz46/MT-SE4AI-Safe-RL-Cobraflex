@@ -1,0 +1,72 @@
+<svg viewBox="0 0 980 700" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif" role="img" aria-labelledby="ttl desc">
+  <title id="ttl">STPA control structure of the CobraFlex lane-following system</title>
+  <desc id="desc">A closed control loop with four blocks — Controller, Actuator, Controlled Process and Sensors — each annotated with its unsafe control actions and the hazards/safety requirements that cover them. Blue blocks are covered in simulation; amber blocks have execution-level faults deferred to the physical platform (Phase 5).</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+  </defs>
+
+  <text x="490" y="34" text-anchor="middle" font-size="21" font-weight="700" fill="#1a1a1a">STPA control structure — CobraFlex lane-following</text>
+  <text x="490" y="56" text-anchor="middle" font-size="13" fill="#666">Unsafe control actions (UCA) per block → mitigating hazards / safety requirements</text>
+
+  <!-- loop arrows (clockwise: Controller → Actuator → Process → Sensors → Controller) -->
+  <g stroke="#555" stroke-width="2.2" fill="none" marker-end="url(#arrow)">
+    <path d="M430,170 C350,205 290,235 250,283"/>
+    <path d="M250,388 C270,440 330,485 392,512"/>
+    <path d="M588,512 C650,485 712,440 730,388"/>
+    <path d="M730,283 C690,235 630,205 555,170"/>
+  </g>
+  <g font-size="11.5" fill="#444" font-style="italic">
+    <text x="300" y="212" text-anchor="middle">control action</text>
+    <text x="300" y="226" text-anchor="middle">/safe_action → /cmd_vel</text>
+    <text x="305" y="470" text-anchor="middle">actuation (wheel torque)</text>
+    <text x="678" y="470" text-anchor="middle">measured output (motion)</text>
+    <text x="680" y="212" text-anchor="middle">feedback</text>
+    <text x="680" y="226" text-anchor="middle">camera frame, odometry</text>
+  </g>
+
+  <!-- CONTROLLER (covered) -->
+  <g>
+    <rect x="325" y="78" width="330" height="92" rx="9" fill="#e8f0fe" stroke="#3b6ea5" stroke-width="2.4"/>
+    <text x="490" y="106" text-anchor="middle" font-size="17" font-weight="700" fill="#16314f">CONTROLLER</text>
+    <text x="490" y="126" text-anchor="middle" font-size="12.5" fill="#456">RL policy (CNN) + safety cage C-01..C-06</text>
+    <text x="490" y="148" text-anchor="middle" font-size="11" fill="#345">UCA1–4 · cage conflict · inaction → H-01/02/03/04/09 · H-08</text>
+  </g>
+
+  <!-- ACTUATOR (partial / Phase 5) -->
+  <g>
+    <rect x="95" y="285" width="280" height="105" rx="9" fill="#fdf0e0" stroke="#c77d2e" stroke-width="2.4"/>
+    <text x="235" y="313" text-anchor="middle" font-size="17" font-weight="700" fill="#7a4a13">ACTUATOR</text>
+    <text x="235" y="333" text-anchor="middle" font-size="12.5" fill="#765">diff-drive motors (4 wheels)</text>
+    <text x="235" y="356" text-anchor="middle" font-size="11" fill="#654">command not executed / distorted</text>
+    <text x="235" y="372" text-anchor="middle" font-size="11" fill="#654">→ H-05 (C-06) · fault/saturation = Phase 5</text>
+  </g>
+
+  <!-- SENSORS (covered) -->
+  <g>
+    <rect x="605" y="285" width="280" height="105" rx="9" fill="#e8f0fe" stroke="#3b6ea5" stroke-width="2.4"/>
+    <text x="745" y="313" text-anchor="middle" font-size="17" font-weight="700" fill="#16314f">SENSORS</text>
+    <text x="745" y="333" text-anchor="middle" font-size="12.5" fill="#456">camera, CV estimator (D-43), odom</text>
+    <text x="745" y="356" text-anchor="middle" font-size="11" fill="#345">stale / degraded / lost / false feedback</text>
+    <text x="745" y="372" text-anchor="middle" font-size="11" fill="#345">→ H-06 / H-10 / H-11 / H-12</text>
+  </g>
+
+  <!-- CONTROLLED PROCESS (partial / Phase 5) -->
+  <g>
+    <rect x="305" y="505" width="370" height="92" rx="9" fill="#fdf0e0" stroke="#c77d2e" stroke-width="2.4"/>
+    <text x="490" y="533" text-anchor="middle" font-size="17" font-weight="700" fill="#7a4a13">CONTROLLED PROCESS</text>
+    <text x="490" y="553" text-anchor="middle" font-size="12.5" fill="#765">vehicle pose / kinematics on the lane</text>
+    <text x="490" y="575" text-anchor="middle" font-size="11" fill="#654">stall → H-08 (SR-009) · disturbance / low-friction skid = Phase 5</text>
+  </g>
+
+  <!-- legend -->
+  <g font-size="12" fill="#333">
+    <rect x="325" y="628" width="18" height="14" rx="3" fill="#e8f0fe" stroke="#3b6ea5" stroke-width="2"/>
+    <text x="350" y="640">covered in sim / ODD</text>
+    <rect x="505" y="628" width="18" height="14" rx="3" fill="#fdf0e0" stroke="#c77d2e" stroke-width="2"/>
+    <text x="530" y="640">identified · Phase-5 / ODD-excluded</text>
+  </g>
+  <text x="490" y="668" text-anchor="middle" font-size="10.5" fill="#999">STPA after J. Thomas (MIT, 2020) — four UCA types; control structure after Abdulkhaleq (2017). See docs/02.</text>
+</svg>

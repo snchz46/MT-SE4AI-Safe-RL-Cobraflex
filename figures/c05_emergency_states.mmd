@@ -1,0 +1,42 @@
+%% C-05 emergency mode — trigger set, latch semantics and controlled stop.
+%% Canonical figure source. Render to PNG (Phase 6 / POLISH):
+%%   mmdc -i c05_emergency_states.mmd -o c05_emergency_states.png -b transparent -w 1400
+%% (mmdc = mermaid-cli, https://github.com/mermaid-js/mermaid-cli)
+%%
+%% Two states only. Any of the eight numbered triggers — plus the sustained
+%% inter-cycle oscillation check (SR-010 Part 2) — moves the cage into
+%% Emergency; the mode is latched — it never self-exits — and deactivation
+%% requires BOTH an explicit reset signal AND the underlying condition cleared
+%% (prevents oscillatory entry/exit). On activation the policy command is substituted,
+%% not modified: brake to at least a_min, steering frozen at the transition
+%% value. Trigger 8 is the track-'E' perception trigger (D-43): the open-loop
+%% controlled stop needs no perception ("no valid lines => stop").
+%% Source of truth: docs/04 "C-05 Emergency mode" (cage YAML 0.6.0).
+%% WIRED (10.07.2026): Cap. 5 §5.5.5 as Figura 5.2, mermaid inline — keep the
+%% inline copy in sync with this file.
+
+stateDiagram-v2
+    direction LR
+    [*] --> Nominal
+
+    Nominal --> Emergency: T1 compound low-energy (|θ|>20° and |d|>0.12 m, >0.2 s)
+    Nominal --> Emergency: T2 compound high-energy (T1 and v>0.4 m/s, >0.1 s)
+    Nominal --> Emergency: T3 stale state (>0.2 s) · T4 field out of range · T5 missing state (5 cycles)
+    Nominal --> Emergency: T6 external stop · T7 joint-envelope failure (SR-010)
+    Nominal --> Emergency: T8 perception invalid — CV health / plausibility (track E, SR-013/014)
+    Nominal --> Emergency: sustained rule oscillation >5 Hz for >3 s (SR-010 Part 2)
+
+    Emergency --> Nominal: explicit reset AND condition cleared
+
+    note right of Emergency
+        Substitution, latched:
+        brake >= 0.3 m/s²
+        steering frozen at transition
+        emergency published on /cage_status
+    end note
+
+    note left of Nominal
+        Pipeline C-06..C-01 active
+        C-05 evaluated last:
+        override semantics guaranteed
+    end note
